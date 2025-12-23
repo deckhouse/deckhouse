@@ -34,7 +34,7 @@ extra_logind_conf="/etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
 bb-event-on 'inhibitor-unit-changed' '_inhibitor-unit-changed'
 _inhibitor-unit-changed() {
 systemctl daemon-reload
-systemctl enable $inhibitor_service_name
+systemctl is-enabled --quiet $inhibitor_service_name || systemctl enable $inhibitor_service_name
 systemctl restart $inhibitor_service_name
 }
 
@@ -76,7 +76,6 @@ Wants=network-online.target kubelet.service containerd-deckhouse.service
 After=network-online.target kubelet.service containerd-deckhouse.service
 [Service]
 Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
-ExecStartPre=/bin/bash -c 'until /opt/deckhouse/bin/nc -z 127.0.0.1 6445; do sleep 1; done'
 ExecStart=/opt/deckhouse/bin/d8-shutdown-inhibitor{{ if $noCordon }} --no-cordon{{ end }}
 Restart=always
 StartLimitInterval=0

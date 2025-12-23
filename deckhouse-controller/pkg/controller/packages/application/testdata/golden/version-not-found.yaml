@@ -11,11 +11,10 @@ spec:
   packageRepository: deckhouse
   version: v1.0.0
 status:
-  conditions:
+  resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: 'get ApplicationPackageVersion for test-app not found: applicationpackageversions.deckhouse.io
-      "deckhouse-test-v1.0.0" not found'
+    message: ApplicationPackageVersion '' not found
     reason: VersionNotFound
     status: "False"
     type: Processed

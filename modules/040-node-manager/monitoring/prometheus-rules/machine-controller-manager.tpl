@@ -36,9 +36,9 @@
         The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
 
         To check the Pod's status, run the following command:
-        
+
         ```shell
-        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        d8 k -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
         ```
 
   - alert: D8MachineControllerManagerTargetDown
@@ -81,19 +81,19 @@
         1. Check availability and status of `machine-controller-manager` Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
            ```
 
         2. Verify availability of the `machine-controller-manager` Deployment:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get deployment machine-controller-manager
            ```
 
         3. Check the Deployment’s status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager describe deployment machine-controller-manager
            ```
 
 - name: d8.machine-controller-manager.malfunctioning
@@ -119,9 +119,9 @@
         The `machine-controller-manager` is expected to run continuously without interruption.
 
         Check the logs for details:
-        
+
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
+        d8 k -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
         ```
 
 {{- else }}

@@ -368,6 +368,10 @@ Where:
 
 ### Pre-Installation Checks
 
+{% alert level="info" %}
+Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{% endalert %}
+
 {% offtopic title="Diagram of pre-installation checks execution..." %}
 ![Diagram of pre-installation checks execution](../images/installing/preflight-checks.png)
 {% endofftopic %}
@@ -397,7 +401,11 @@ List of checks performed by the installer before starting Deckhouse installation
      - at least 60 GB of disk space with 400+ IOPS performance;
      - Linux kernel version 5.8 or newer;
      - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
-     - access to standard OS package repositories.
+     - access to standard OS package repositories;
+     - **When using `ContainerdV2`** as the default container runtime on cluster nodes:
+        - Support for `CgroupsV2`;
+        - Systemd version `244`;
+        - Support for the `erofs` kernel module.
    - Python is installed on the master node server (VM).
    - The container image registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and the installer host.
@@ -436,6 +444,7 @@ List of checks performed by the installer before starting Deckhouse installation
 - `--preflight-skip-cidr-intersection` — skip the CIDR intersection check.
 - `--preflight-skip-deckhouse-user-check` — skip deckhouse user existence check.
 - `--preflight-skip-yandex-with-nat-instance-check` — skip the Yandex Cloud with NAT Instance configuration check.
+- `--preflight-skip-dvp-kubeconfig` — skip DVP kubeconfig check.
 
 Example of using the preflight skip flag:
 
@@ -578,24 +587,31 @@ Setup Steps:
 
 Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
-* Configure the registry:
-  * Go to `Administration` → `Registries` → `New Endpoint`.
-  * `Provider`: Docker Registry.
-  * `Name`: arbitrary value of your choice.
-  * `Endpoint URL`: `https://registry.deckhouse.io`.
-  * Set `Access ID` and `Access Secret` (your Deckhouse Kubernetes Platform license key).
+1. Configure the registry access:
+   * In the side menu, navigate to "Administration" → "Registries"
+     and click "New Endpoint" to add a new endpoint for the registry.
+   * In the "Provider" dropdown list, select "Docker Registry".
+   * In the "Name" field, enter an endpoint name of your choice.
+   * In the "Endpoint URL" field, enter `https://registry.deckhouse.io`.
+   * In the "Access ID" field, enter `license-token`.
+   * In the "Access Secret" field, enter your Deckhouse Kubernetes Platform license key.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new endpoint for the registry.
 
-    ![Registry Configuration](../images/registry/harbor/harbor1.png)
+   ![Configuring registry access](../images/registry/harbor/harbor1.png)
 
-* Create a new project:
-  * Navigate to `Projects → New Project`.
-  * `Project Name` will be part of the URL. Choose any name, e.g., `d8s`.
-  * `Access Level`: `Public`.
-  * Enable `Proxy Cache` and select the registry created in the previous step.
+1. Create a new project:
+   * In the side menu, navigate to "Projects" and click "New Project" to add a project.
+   * In the "Project Name" field, enter a project name of your choice (for example, `d8s`).
+     This name will be a part of the URL.
+   * In the "Access Level" field, select "Public".
+   * Enable "Proxy Cache" and in the dropdown list, select the registry created earlier.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new project.
 
-    ![Create New Project](../images/registry/harbor/harbor2.png)
+   ![Creating a new project](../images/registry/harbor/harbor2.png)
 
-    As a result, DKP images will be available at a URL like: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
+Once Harbor is configured, DKP images will be available at a URL as follows: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Manual loading of Deckhouse Kubernetes Platform images, vulnerability scanner DB, and DKP modules into a private registry
 

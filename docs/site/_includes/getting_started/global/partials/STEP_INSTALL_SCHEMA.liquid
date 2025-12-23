@@ -133,6 +133,10 @@ Scheme of Deckhouse installation in a private environment:<br />
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
    {% offtopic title="Requirements..." %}
 
+   {% alert level="info" %}
+   Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+   {% endalert %}
+
    {% alert level="warning" %}
    In the next step of this guide, `ContainerdV2` is specified as the default container runtime on the cluster nodes.
    To use `ContainerdV2` as the container runtime on cluster nodes, they must meet the following requirements:

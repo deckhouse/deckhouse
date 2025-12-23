@@ -53,7 +53,7 @@ https://github.com/kubernetes/ingress-nginx/issues/12158
 https://github.com/kubernetes/ingress-nginx/issues/12173
 https://github.com/deckhouse/deckhouse/issues/9933
 
-### 010-cve.patch
+### 010-cve-22122025.patch
 
 Fix cve vulnerabilities.
 
@@ -92,3 +92,6 @@ https://github.com/kubernetes/ingress-nginx/pull/14005
 ### 018-geoip-ver-metric.patch
 
 This patch adds a metric that reflects current GeoIP version in use (0 - no geoip, 1 - geoip, 2 - geoip2)
+
+### 019-skip-tls-verification-maxmind.patch
+Adds a flag to disable TLS verification when downloading from the MaxMind mirror.

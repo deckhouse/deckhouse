@@ -7,10 +7,14 @@ The [`VirtualMachineClass`](/modules/virtualization/cr.html#virtualmachineclass)
 
 During installation, a single VirtualMachineClass `generic` resource is automatically created. It represents a universal CPU type based on the older, but widely supported, Nehalem architecture. This enables running VMs on any nodes in the cluster and allows live migration.
 
-{% alert level="info" %}
-It is recommended that you create at least one VirtualMachineClass resource in the cluster with the `Discovery` type immediately after all nodes are configured and added to the cluster. This allows virtual machines to utilize a generic CPU with the highest possible CPU performance considering the CPUs on the cluster nodes. This allows the virtual machines to utilize the maximum CPU capabilities and migrate seamlessly between cluster nodes if necessary.
+The administrator can modify the parameters of the `generic` VirtualMachineClass resource (except for the `.spec.cpu` section) or delete this resource.
 
-For a configuration example, see [vCPU Discovery configuration example](#vcpu-discovery-configuration-example)
+{% alert level="info" %}
+It is not recommended to use the `generic` VirtualMachineClass for running workloads in production environments, since this class corresponds to a CPU with the smallest feature set.
+
+After all nodes are configured and added to the cluster, it is recommended to create at least one VirtualMachineClass resource of the `Discovery` type. This ensures that the best available CPU configuration compatible with all CPUs in your cluster is selected, allows virtual machines to make full use of CPU capabilities, and enables seamless migration between nodes.
+
+For a configuration example, see [vCPU Discovery configuration example](#vcpu-discovery-configuration-example).
 {% endalert %}
 
 To list all VirtualMachineClass resources, run the following command:

@@ -59,6 +59,7 @@ spec:
 
               # Disallow top-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 has_field(input.review.object.spec.securityContext, "seLinuxOptions")
                 not allowed_by_any_seLinuxOptions(input.review.object.spec.securityContext.seLinuxOptions)
                 msg := sprintf("SELinux options are not allowed, pod: %v. Allowed options: %v", [input.review.object.metadata.name, input.parameters.allowedSELinuxOptions])
@@ -66,6 +67,7 @@ spec:
 
               # Disallow container-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_security_context[_]
                 has_field(c.securityContext, "seLinuxOptions")
                 not allowed_by_any_seLinuxOptions(c.securityContext.seLinuxOptions)

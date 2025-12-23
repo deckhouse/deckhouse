@@ -80,6 +80,11 @@ func renewKubeconfigs() error {
 	return nil
 }
 
+func renewAdminKubeconfig() error {
+	log.Info("phase: renew admin kubeconfig for etcd-arbiter mode")
+	return renewKubeconfig("admin")
+}
+
 func renewKubeconfig(componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
 	log.Infof("generate or renew %s kubeconfig", path)

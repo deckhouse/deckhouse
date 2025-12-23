@@ -33,7 +33,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 const (
@@ -76,7 +75,7 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
+func (o *Operator) Update(reg registry.Registry, inst Instance) {
 	if inst.Namespace == "" {
 		inst.Namespace = "default"
 	}
@@ -103,7 +102,6 @@ func (o *Operator) Update(repo *v1alpha1.PackageRepository, inst Instance) {
 
 		packageName := inst.Definition.Name
 		packageVersion := inst.Definition.Version
-		reg := registry.BuildRegistryByRepository(repo)
 
 		o.logger.Debug("update package", slog.String("name", name), slog.String("version", packageVersion))
 

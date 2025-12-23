@@ -36,6 +36,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any(c)
                 msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])

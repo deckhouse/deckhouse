@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -60,9 +61,8 @@ import (
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
-	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
-	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -344,13 +344,28 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
 		}
 
-		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
+		err = applicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		packageOperator := applicationpackage.NewPackageOperator(logger.Named("package-operator"))
-		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
+		packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+		if err != nil {
+			return nil, fmt.Errorf("create package operator: %w", err)
+		}
+
+		// package should not run before converge done
+		operator.ConvergeState.SetOnConvergeStart(func() {
+			logger.Debug("start converge")
+			packageOperator.Scheduler().Pause()
+		})
+
+		operator.ConvergeState.SetOnConvergeFinish(func() {
+			logger.Debug("finish converge")
+			packageOperator.Scheduler().Resume()
+		})
+
+		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}

@@ -1500,10 +1500,12 @@ Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, 
 - applies the required system settings (including fixes for the NVIDIA Container Toolkit);
 - deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
 
+For the list of platforms supported by NVIDIA Container Toolkit, see [the official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+
 {% alert level="info" %}
 Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
 
-Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
+containerd on GPU nodes is configured automatically. Do not change its configuration manually (e.g. via `NodeGroupConfiguration` or TOML config).
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:

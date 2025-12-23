@@ -50,7 +50,7 @@
     ],
     "external": "true",
     "path": "/modules/code/stable/"
-  }, 
+  },
   "managed-postgres": {
     "editions": [
       "ee"
@@ -302,6 +302,7 @@
   "operator-argo": {
     "editions": [
       "ee",
+      "se-plus",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
@@ -315,6 +316,15 @@
     },
     "external": "true",
     "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/"
   },
   "payload-registry": {
     "editions": [

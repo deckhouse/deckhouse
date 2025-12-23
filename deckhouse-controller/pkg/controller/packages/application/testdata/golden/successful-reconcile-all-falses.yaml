@@ -20,28 +20,12 @@ metadata:
     kind: ApplicationPackage
     name: test
     uid: ""
-  resourceVersion: "4"
+  resourceVersion: "3"
 spec:
   packageName: test
   packageRepository: deckhouse
   version: v1.0.3
 status:
-  conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "False"
-    type: Processed
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: A critical issue has been detected in version v1.0.2.
-    reason: CriticalIssueDetected
-    status: "False"
-    type: SomeCriticalCondition
-  internalConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "False"
-    type: CriticalConditionMet
   resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"

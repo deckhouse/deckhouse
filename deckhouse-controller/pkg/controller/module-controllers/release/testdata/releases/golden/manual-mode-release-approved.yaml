@@ -30,6 +30,7 @@ metadata:
     modules.deckhouse.io/notified: "false"
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: echo
@@ -38,7 +39,7 @@ metadata:
     source: test
     status: deployed
   name: echo-v0.4.69
-  resourceVersion: "1004"
+  resourceVersion: "1006"
 spec:
   moduleName: echo
   version: 0.4.69
