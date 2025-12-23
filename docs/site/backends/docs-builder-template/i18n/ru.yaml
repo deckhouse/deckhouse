@@ -8,6 +8,13 @@ search_context_only_product_docs: Поиск выполняется по все�
 modules: модули
 modules2: модулей
 module: модуль
+module_enabling_details_title: Как явно включить или отключить модуль…
+module_enabling_message_first_part: Чтобы явно включить или выключить модуль, установите <code>spec.enabled</code> в <code>true</code> или <code>false</code> в <code>ModuleConfig/
+module_enabling_message_second_part: (создайте, при необходимости), или воспользуйтесь командой <code>deckhouse-controller module</code> в поде <code>d8-system/deckhouse</code>
+module_enabling_message_list_title_unable: Пример <b>включения</b> модуля
+module_enabling_message_list_title_disable: Пример <b>выключения</b> модуля
+module_enabling_message_list_resource: с помощью ресурса ModuleConfig
+module_enabling_message_list_command: с помощью команды <code>deckhouse-controller</code> (требуется kubectl, настроенный на работу с кластером)
 module_settings: Настройки
 module_settings_learn_more: подробнее о настройке Deckhouse…
 module_settings_message_first_part: Чтобы настроить модуль, используйте ресурс <code>ModuleConfig</code> с именем

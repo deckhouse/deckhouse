@@ -8,6 +8,13 @@ search_context_only_product_docs: The search is performed throughout the product
 modules: modules
 modules2: modules
 module: module
+module_enabling_details_title: How to explicitly enable the module…
+module_enabling_message_first_part: Set the <code>spec.enabled</code> module parameter to <code>true</code> or <code>false</code> in the <code>ModuleConfig/
+module_enabling_message_second_part: resource (create it, if necessary) to explicitly enable or disable the module, or use the <code>deckhouse-controller module</code> command in the <code>d8-system/deckhouse</code> pod
+module_enabling_message_list_title_unable: Example of <b>enabling</b> the module
+module_enabling_message_list_title_disable: Example of <b>disabling</b> the module
+module_enabling_message_list_resource: by using the ModuleConfig resource
+module_enabling_message_list_command: by using the <code>deckhouse-controller</code> command (you need a kubectl, configured to work with the cluster)
 module_settings: Settings
 module_settings_learn_more: learn more about setting up Deckhouse…
 module_settings_message_first_part: The module is configured using the <code>ModuleConfig</code> custom resource named

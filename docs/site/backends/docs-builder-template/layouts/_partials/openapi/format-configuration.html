@@ -22,6 +22,10 @@
 
   {{/* Show module requirements */}}
   {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}
+
+  {{/*  Rendering info about module enabling  */}}
+
+  {{- partial "openapi/module-enabling" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
   
   {{/* Rendering ModuleConfig Example*/}}
   <h2>{{ T "module_settings" }}</h2>
