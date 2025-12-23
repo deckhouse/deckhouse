@@ -313,14 +313,17 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		}
 
 		// Try to use frozen params
-		if params, err := values.State.InitParams.toParams(); err != nil {
-			input.Logger.Warn("cannot get params from state, update state params from input", "error", err)
+		if params, err := values.State.InitParams.toParams(); err == nil {
+			inputs.Params = params
+		} else {
+			input.Logger.Warn(
+				"cannot get params from state, updating state params from input",
+				"error", err,
+			)
 
 			// Regenerate frozen params from current inputs
 			state := inputs.Params.toState()
 			values.State.InitParams = &state
-		} else {
-			inputs.Params = params
 		}
 	} else {
 		values.State.InitParams = nil
