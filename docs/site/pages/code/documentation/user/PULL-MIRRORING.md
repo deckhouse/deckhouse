@@ -27,7 +27,7 @@ To configure pull mirroring of a repository, follow these steps:
 
 1. Specify the repository URL.
    Credentials in the URL are ignored.
-   Use the fields in the "Authentication" block below for authorization.
+   Use the fields in the "Authentication method" block below for authorization.
 
 1. Configure authentication:
    - If using HTTP(S) access, in the "Authentication method" field, select "Username and password" and enter:
