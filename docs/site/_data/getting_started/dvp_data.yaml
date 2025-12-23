@@ -32,7 +32,7 @@ installTypes:
     pages_title:
       en: "Deckhouse Virtualization Platform for bare metal"
       ru: "Deckhouse Virtualization Platform на bare metal"
-    type: baremetal
+    type: dvp
     name:
       en: Bare metal
       ru: Bare metal
@@ -44,20 +44,25 @@ installTypes:
         template: getting_started/dvp/<INSTALL_CODE>/STEP_INSTALL_SCHEMA.md
       step2:
         name:
-          en: Setting up cluster
-          ru: Настройка кластера
+          en: Cluster parameters
+          ru: Параметры кластера
         template: getting_started/dvp/global/step_cluster_setup.html
       step3:
+        name:
+          en: Pre-installation configuration
+          ru: Предварительная конфигурация
+        template: getting_started/dvp/global/STEP_PREPARE.md
+      step4:
         name:
           en: Platform installation
           ru: Установка платформы
         template: getting_started/dvp/global/STEP_INSTALL.md
-      step4:
+      step5:
         name:
           en: Finishing installation
           ru: Завершение установки
         template: getting_started/dvp/global/STEP_FINALIZE.md
-      step5:
+      step6:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
