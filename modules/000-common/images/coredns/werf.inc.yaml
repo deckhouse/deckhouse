@@ -4,12 +4,20 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
     - git clone --depth 1 -b v{{ $coredns_version }} $(cat /run/secrets/SOURCE_REPO)/coredns/coredns.git /src
+    - cd /src/coredns
+    - git apply /patches/*.patch --verbose
     - git clone --depth 1 -b v{{ $kubeforward_version }} -v "$(cat /run/secrets/SOURCE_REPO)/deckhouse/coredns-kubeforward" /src/coredns-kubeforward
     - cd /src
     - touch /src/coredns-kubeforward/go.mod # need for go build
