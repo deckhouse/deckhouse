@@ -29,7 +29,7 @@ env:
 
 
 {!{- define "if_not_test_repo" }!}
-if: github.repository == 'deckhouse/deckhouse-test-1'
+if: github.repository == 'deckhouse/deckhouse'
 {!{- end }!}
 {!{- define "semver_regexp" }!}^v?[0-9]+.[0-9]+.[0-9]+${!{ end }!}
 
