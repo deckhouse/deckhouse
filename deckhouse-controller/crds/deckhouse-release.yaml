@@ -21,7 +21,11 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Defines the state and parameters for applying Deckhouse Kubernetes Platform (DKP) releases in the cluster. Current DKP versions by update channel are available at [releases.deckhouse.io](https://releases.deckhouse.io).
+            Determines the state and parameters for applying a specific release (version) of the Deckhouse Kubernetes Platform (DKP) in the cluster.
+
+            DeckhouseRelease objects are automatically created by DKP upon the discovery of new DKP versions on the selected [release channel](/products/kubernetes-platform/documentation/latest/reference/release-channels.html). Modifying DeckhouseRelease enables the management of the process for applying the corresponding DKP version. More details about configuring DKP updates can be found in the [documentation](../../admin/configuration/update/configuration.html).
+
+            The current versions of DKP and modules by release channels can be found at [releases.deckhouse.ru](https://releases.deckhouse.ru).
           required:
             - spec
           properties:
@@ -31,9 +35,9 @@ spec:
               description: |
                 Allows or disables manual updates.
 
-                Used only if the `deckhouse` module is configured for `Manual` update mode (`update.mode: Manual`). Ignored if the update mode is set to `Auto` or `AutoPatch`.
+                Used only if the [`deckhouse` module](/modules/deckhouse/) is configured for manual update mode ([update.mode](/modules/deckhouse/configuration.html#parameters-update-mode) parameter is set to `Manual`). Ignored if the update mode is set to `Auto` or `AutoPatch`.
 
-                For more information on confirming manual updates, refer to the [`deckhouse` module documentation](/modules/deckhouse/usage.html#manual-update-confirmation).
+                For more information on confirming manual updates, refer to the [documentation](../../admin/configuration/update/configuration.html#manual-update-approval).
             spec:
               type: object
               required:
@@ -42,15 +46,19 @@ spec:
                 version:
                   type: string
                   description: DKP version.
-                  x-doc-examples: ['v1.24.20']
+                  x-doc-examples: ['v1.73.2']
                 applyAfter:
                   type: string
-                  description: Marks release as a part of [canary-release](../../user/network/canary-deployment.html). This release will be delayed until the specified time. If the release is waiting to be applied, check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for the reason.
+                  description: |
+                    Marks release as a part of [canary-release](../../user/network/canary-deployment.html). This release will be delayed until the specified time. If the release is waiting to be applied, check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for the reason.
                 requirements:
                   type: object
                   additionalProperties:
                     type: string
-                  description: DKP release requirements. If the requirements are not met, the release may be skipped or blocked. Check [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) for details (for example, requirements of active modules or the Kubernetes version).
+                  description: |
+                    A structure containing a list of requirements for installing the release. It is used by the DKP core. If the requirements are not met, the release may be skipped or blocked from installation.
+
+                    Reports on unmet requirements can be found in the field [`.status.message`](../../admin/configuration/update/notifications.html#notification-format) of the DeckhouseRelease object.
                 disruptions:
                   type: array
                   items:
@@ -59,7 +67,10 @@ spec:
                   description: Disruptive changes in the release.
                 changelog:
                   type: object
-                  description: Release's changelog for enabled modules. For more information about DKP release changelogs, refer to [Updating](../../architecture/updating.html#retrieving-the-changelog).
+                  description: |
+                    A structure containing a list of DKP changes (and modules included in the DKP) of the release.
+
+                    For more information about DKP release changelogs, refer to [Updating](../../architecture/updating.html#retrieving-the-changelog).
                   x-kubernetes-preserve-unknown-fields: true
                 changelogLink:
                   type: string
@@ -103,7 +114,7 @@ spec:
             - `Superseded`: The release is outdated and no longer used.
             - `Suspended`: The release has been canceled (typically before it was applied).
             - `Skipped`: The release was skipped because the requirements were not satisfied.
-            
+
             For more information about DKP and modules release statuses, refer to the [`deckhouse` module documentation](/modules/deckhouse/#deckhouse-releases-update).
         - name: transitionTime
           jsonPath: .status.transitionTime
