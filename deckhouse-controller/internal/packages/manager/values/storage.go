@@ -108,6 +108,22 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	return s.configValues
 }
 
+// ValidateConfigValues validate values against config openAPI
+func (s *Storage) ValidateConfigValues(settings addonutils.Values) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	if err := s.validateConfigValues(settings); err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+
+	return nil
+}
+
 // ApplyConfigValues validates and saves config values
 func (s *Storage) ApplyConfigValues(settings addonutils.Values) error {
 	s.mu.Lock()

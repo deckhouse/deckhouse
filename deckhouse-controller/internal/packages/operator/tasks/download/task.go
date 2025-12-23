@@ -63,7 +63,7 @@ func NewTask(name, pack, version string, reg registry.Registry, status statusSer
 }
 
 func (t *task) String() string {
-	return "Download"
+	return fmt.Sprintf("Download:%s", t.version)
 }
 
 func (t *task) Execute(ctx context.Context) error {

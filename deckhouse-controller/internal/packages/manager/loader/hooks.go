@@ -72,6 +72,8 @@ type hookLoader struct {
 	// readinessLoaded tracks if a readiness hook was found
 	readinessLoaded bool
 
+	settingsCheck *kind.SettingsCheck
+
 	logger *log.Logger
 }
 
@@ -239,6 +241,15 @@ func (l *hookLoader) searchPackageBatchHooks() ([]*kind.BatchHook, error) {
 				l.keepTmp, shapp.LogProxyHookJSON, logger)
 
 			result = append(result, hook)
+		}
+
+		if hookConfig.HasSettingsCheck {
+			if l.settingsCheck != nil {
+				return nil, fmt.Errorf("multiple settings checks found in '%s'", hookPath)
+			}
+
+			logger := l.logger.Named("settings-check")
+			l.settingsCheck = kind.NewSettingsCheck(hookPath, os.TempDir(), logger)
 		}
 
 		for key, cfg := range hookConfig.Hooks {

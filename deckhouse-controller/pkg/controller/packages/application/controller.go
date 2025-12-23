@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
@@ -111,6 +112,7 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(applicationController)
 }
 
@@ -339,8 +341,8 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
-			Name:         apv.Status.PackageName,
-			Version:      apv.Status.Version,
+			Name:         app.Spec.PackageName,
+			Version:      app.Spec.Version,
 			Requirements: requirements,
 		},
 		Settings: app.Spec.Settings.GetMap(),
