@@ -145,7 +145,7 @@ func moduleConfigValidationHandler(
 				if err != nil {
 					return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 				}
-				if m.IsExperimental() {
+				if m.IsExperimental() && !allowExperimentalModules {
 					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
 			}
