@@ -256,3 +256,11 @@ tests:
         object: test_samples/security_policy_exceptions/pods/042-disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
+
+  - name: 47-disallowed-by-exception-empty-spec
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/empty-spec.yaml
+    object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-empty-spec.yaml
+    assertions:
+    - violations: yes

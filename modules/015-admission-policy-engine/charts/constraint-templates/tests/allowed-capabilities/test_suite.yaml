@@ -194,3 +194,24 @@ tests:
     object: test_samples/security_policy_exceptions/pods/046-disallowed-by-exception-drop-mismatch.yaml
     assertions:
     - violations: yes
+  - name: 49-disallowed-by-add
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/security_policy_exceptions/pods/049-disallowed-add.yaml
+    assertions:
+    - violations: yes
+  - name: 37-49-allowed-by-exception-add
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/037-allow-multiple-capabilities.yaml
+    object: test_samples/security_policy_exceptions/pods/049-disallowed-add.yaml
+    assertions:
+    - violations: no
+
+  - name: 50-disallowed-by-exception-empty-spec
+    inventory:
+    - ../common/test_samples/ns.yaml
+    - test_samples/security_policy_exceptions/exceptions/empty-spec.yaml
+    object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-empty-spec.yaml
+    assertions:
+    - violations: yes
