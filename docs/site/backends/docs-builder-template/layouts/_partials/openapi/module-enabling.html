@@ -1,0 +1,45 @@
+{{ $moduleName := .ModuleName }}
+{{ $configVersion := .configVersion}}
+{{ $context := .Page }} 
+
+<div class="details">
+  <p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{T "module_enabling_details_title"}}</a></p>
+  <div class="details__content">
+    <div class="expand">
+
+      <p>{{ safeHTML (T "module_enabling_message_first_part")}}{{$moduleName}}</code> {{safeHTML (T "module_enabling_message_second_part")}}.</p>
+
+      <p>{{safeHTML (T "module_enabling_message_list_title_unable")}}:</p>
+      <ul>
+  <li>
+    <p>{{T "module_enabling_message_list_resource"}}:</p>
+
+    {{- partial "openapi/module-enabling-example" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion "enabled" true) }}
+  </li>
+  <li>
+    <p>{{safeHTML (T "module_enabling_message_list_command")}}:</p>
+
+    <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight code__transfer"><code class="wrap"><span data-copy="ignore" class="line-number">1</span>kubectl <span class="nt">-ti</span> <span class="nt">-n</span> d8-system <span class="nb">exec </span>svc/deckhouse-leader <span class="nt">-c</span> deckhouse <span class="nt">--</span> deckhouse-controller module <span class="nb">enable </span>{{$moduleName}}
+</code><button class="wrap__button"><img src="/images/wrap-button.svg" class="wrap__icon" style="display: none;"><img src="/images/unwrap-button.svg" class="wrap__icon"></button></pre></div>    </div>
+  </li>
+</ul>
+
+      <p>{{safeHTML (T "module_enabling_message_list_title_disable")}}</p>
+
+      <ul>
+  <li>
+    <p>{{T "module_enabling_message_list_resource"}}:</p>
+
+    {{- partial "openapi/module-enabling-example" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion "enabled" false) }}
+  </li>
+  <li>
+    <p>{{safeHTML (T "module_enabling_message_list_command")}}:</p>
+
+    <div class="language-shell highlighter-rouge"><div class="highlight"><pre class="highlight code__transfer"><code class="wrap"><span data-copy="ignore" class="line-number">1</span>kubectl <span class="nt">-ti</span> <span class="nt">-n</span> d8-system <span class="nb">exec </span>svc/deckhouse-leader <span class="nt">-c</span> deckhouse <span class="nt">--</span> deckhouse-controller module disable {{$moduleName}}
+</code><button class="wrap__button"><img src="/images/wrap-button.svg" class="wrap__icon" style="display: none;"><img src="/images/unwrap-button.svg" class="wrap__icon"></button></pre></div>    </div>
+  </li>
+</ul>
+
+    </div>
+  </div>
+</div>
