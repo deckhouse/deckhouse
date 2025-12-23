@@ -110,7 +110,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 2.1.2
+GOLANGCI_VERSION = 2.7.2
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -213,7 +213,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs 
+generate: generate-kubernetes generate-tools generate-docs generate-werf
 
 .PHONY: generate-tools
 generate-tools:
@@ -479,6 +479,18 @@ DECKHOUSE_CLI_VERSION ?= v0.25.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2
+
+## Generate werf
+.PHONY: generate-werf
+generate-werf: ## Generate changes in werf files.
+  ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
+	@if [ -n "$(GOLANGCI_VERSION)" ]; then \
+		sed -i 's/--branch v[0-9]\+\.[0-9]\+\.[0-9]\+/--branch $(GOLANGCI_VERSION)/g' .werf/werf-golang-ci-lint.yaml; \
+		echo "Updated golangci-lint version to $(GOLANGCI_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
+	else \
+		echo "No GOLANGCI_VERSION specified. Skipping update."; \
+	fi
+
 
 ## Generate tools documentation
 .PHONY: generate-docs
