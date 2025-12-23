@@ -35,8 +35,8 @@ resource "kubernetes_secret" "cloudinit-secret" {
 locals {
   additional_block_refs = tolist([
     for d in var.additional_disks : {
-      "kind" = "VirtualDisk"
-      "name" = d.name
+      kind = "VirtualDisk"
+      name = d.name
     }
   ])
 
@@ -70,12 +70,12 @@ locals {
       "blockDeviceRefs" = concat(
         [
         {
-          "kind" = "VirtualDisk"
-          "name" = var.root_disk.name
+          kind = "VirtualDisk"
+          name = var.root_disk.name
         },
         {
-          "kind" = "VirtualDisk"
-          "name" = var.kubernetes_data_disk.name
+          kind = "VirtualDisk"
+          name = var.kubernetes_data_disk.name
         },
         ],
         local.additional_block_refs
@@ -113,12 +113,6 @@ resource "kubernetes_manifest" "vm" {
       "namespace"   = var.namespace
     }
     "spec" = local.spec
-  }
-
-  wait {
-    fields = {
-      "status.phase" = "Running",
-    }
   }
 
   timeouts {

@@ -95,7 +95,6 @@ variable "additional_disks" {
   type = list(object({
     name          = string
     hash          = string
-    md5_id        = string
   }))
   default = []
 }

@@ -33,15 +33,6 @@ variable "clusterUUID" {
   type = string
 }
 
-variable "additional_disks" {
-  type = list(object({
-    size         = string
-    storageClass = optional(string)
-  }))
-  default = []
-}
-
-
 locals {
   prefix            = var.clusterConfiguration.cloud.prefix
   node_index        = var.nodeIndex
@@ -59,10 +50,38 @@ locals {
   root_disk_size          = local.instance_class.rootDisk.size
   root_disk_storage_class = lookup(local.instance_class.rootDisk, "storageClass", null)
 
+  root_disk_destructive_params = {
+    "rootDisk" = {
+      "storageClass" = local.root_disk_storage_class
+      "image" = {
+        "type" = local.root_disk_image.kind
+        "name" = local.root_disk_image.name
+      }
+    }
+  }
+  root_disk_destructive_params_json = jsonencode(local.root_disk_destructive_params)
+  root_disk_destructive_params_json_hash = substr(sha256(jsonencode(root_disk_destructive_params_json)), 0, 6)
+  root_disk_name = join("-", [local.prefix, local.node_group, local.node_index, local.root_disk_destructive_params_json_hash])
+
   additional_disks = [
     for d in try(local.instance_class.additionalDisks, []) : {
       size          = d.size
       storage_class = try(d.storageClass, null)
+      disk_destructive_params = {
+        "additionalDisk" = {
+          "storageClass" = storage_class
+        }
+      }
+      disk_destructive_params_json      = jsonencode(disk_destructive_params)
+      disk_destructive_params_json_hash = substr(sha256(jsonencode(disk_destructive_params_json)), 0, 6)
+      disk_name = join("-", [local.prefix, local.node_group, "additional-disk", tostring(d.disk_index), local.node_index, disk_destructive_params_json_hash])
+    }
+  ]
+
+  master_additional_disks = [
+    for d in local.additional_disks : {
+      name = d.disk_name
+      hash = d.disk_destructive_params_json_hash
     }
   ]
 
@@ -77,9 +96,19 @@ locals {
   ssh_public_key = var.providerClusterConfiguration.sshPublicKey
 
   ipv4_address = lookup(local.instance_class.virtualMachine, "ipAddresses", null) == null ? "Auto" : local.node_index + 1 > length(local.instance_class.virtualMachine.ipAddresses) ? "Auto" : local.instance_class.virtualMachine.ipAddresses[local.node_index]
+  ip_address_name   = lower(join("-", [local.hostname, replace(local.ipv4_address, ".", "-")]))
 
   kubernetes_data_disk_storage_class = lookup(local.instance_class.etcdDisk, "storageClass", null)
   kubernetes_data_disk_size          = local.instance_class.etcdDisk.size
+
+  data_disk_destructive_params = {
+    "kbernetesDataDisk" = {
+      "storageClass" = local.kubernetes_data_disk_storage_class
+    }
+  }
+  data_disk_destructive_params_json      = jsonencode(local.data_disk_destructive_params)
+  data_disk_destructive_params_json_hash = substr(sha256(jsonencode(local.data_disk_destructive_params_json)), 0, 6)
+  data_disk_name = join("-", [local.prefix, local.node_group, "kubernetes-data", local.node_index, local.data_disk_destructive_params_json_hash])
 
   region = lookup(var.providerClusterConfiguration, "region", "")
 
@@ -97,4 +126,3 @@ locals {
   hostname   = join("-", [local.prefix, local.node_group, local.node_index])
   user_data  = var.cloudConfig == "" ? "" : var.cloudConfig
 }
-
