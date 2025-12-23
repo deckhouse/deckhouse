@@ -31,7 +31,7 @@ func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 
 
 func (d *EventHandler) NotifyLeave(node *memberlist.Node) {
-	d.logger.Info("Node left", zap.String("node", node.Name))
+	d.logger.Info("Node left, have to notify cilium", zap.String("node", node.Name))
 	//if d.memberlist.NumMembers() == 1 {
 	//	d.memberlist.SetAlone(true)
 	//}

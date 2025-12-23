@@ -21,12 +21,20 @@ func NewMemberList(logger *zap.Logger, memberListPort string, nodeName string, n
 	config := memberlist.DefaultLANConfig()
 	config.Logger = log.New(NewZapAdapter(logger), "[memberlist] ", 0)
 
-	config.ProbeInterval = 50 * time.Millisecond
-	config.ProbeTimeout = 25 * time.Millisecond
-	config.SuspicionMult = 1
-	config.IndirectChecks = 2 // TODO discuss with team, experiment
-	config.GossipInterval = 50 * time.Millisecond
-	config.RetransmitMult = 2
+	//config.ProbeInterval = 50 * time.Millisecond
+	//config.ProbeTimeout = 25 * time.Millisecond
+	//config.SuspicionMult = 1
+	//config.IndirectChecks = 2 // TODO discuss with team, experiment
+	//config.GossipInterval = 50 * time.Millisecond
+	//config.RetransmitMult = 2
+
+	config.ProbeInterval = 200 * time.Millisecond
+	config.ProbeTimeout = 100 * time.Millisecond
+	config.SuspicionMult = 2
+	config.IndirectChecks = 3
+	config.GossipInterval = 100 * time.Millisecond
+	config.RetransmitMult = 3
+	config.GossipToTheDeadTime = 2 * time.Second
 	if memberListPort != "" {
 		memberListPortInt, err := strconv.Atoi(memberListPort)
 		if err != nil {

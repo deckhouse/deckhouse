@@ -39,7 +39,7 @@ func main() {
 
 	logger := common.NewLogger()
 	defer func() { _ = logger.Sync() }()
-
+	logger.Info("Start v0.0.1")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
 		syscall.SIGHUP,
