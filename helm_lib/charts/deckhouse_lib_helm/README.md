@@ -125,7 +125,6 @@
 | [_helm_lib_additional_tolerations_storage_problems](#_helm_lib_additional_tolerations_storage_problems) |
 | [_helm_lib_additional_tolerations_no_csi](#_helm_lib_additional_tolerations_no_csi) |
 | [_helm_lib_additional_tolerations_cloud_provider_uninitialized](#_helm_lib_additional_tolerations_cloud_provider_uninitialized) |
-| [helm_lib_affinity_arch_require](#helm_lib_affinity_arch_require) |
 | **Pod Disruption Budget** |
 | [helm_lib_pdb_daemonset](#helm_lib_pdb_daemonset) |
 | **Priority Class** |
@@ -1425,16 +1424,6 @@ list:
 #### Usage
 
 `{{ include "helm_lib_tolerations" (tuple . "any-node" "with-cloud-provider-uninitialized") }} `
-
-
-
-### helm_lib_affinity_arch_require
-
- Returns nodeAffinity that schedules pods only on specified architectures.
-
-#### Usage
-
-`{{- include "helm_lib_affinity_arch_require" (list . (list "amd64" "arm64")) `
 
 
 ## Pod Disruption Budget

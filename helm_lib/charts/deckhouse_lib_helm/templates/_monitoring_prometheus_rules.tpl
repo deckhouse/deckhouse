@@ -87,7 +87,7 @@ metadata:
 spec:
   groups:
     {{- $definition | nindent 4 }}
-      {{- end }} 
+      {{- end }}
     {{- end }}
     {{- end }}
     {{- end }}
