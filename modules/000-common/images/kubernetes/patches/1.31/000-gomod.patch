@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index f9292dc961f..a35445adaad 100644
+index f9292dc961f..5c520cdd903 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -6,7 +6,9 @@
@@ -13,6 +13,15 @@ index f9292dc961f..a35445adaad 100644
  
  require (
  	bitbucket.org/bertimus9/systemstat v0.5.0
+@@ -46,7 +48,7 @@ require (
+ 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822
+ 	github.com/onsi/ginkgo/v2 v2.19.0
+ 	github.com/onsi/gomega v1.33.1
+-	github.com/opencontainers/runc v1.1.13
++	github.com/opencontainers/runc v1.1.14
+ 	github.com/opencontainers/selinux v1.11.0
+ 	github.com/pkg/errors v0.9.1
+ 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2
 @@ -71,14 +73,14 @@ require (
  	go.opentelemetry.io/proto/otlp v1.3.1
  	go.uber.org/goleak v1.3.0
@@ -48,7 +57,7 @@ index f9292dc961f..a35445adaad 100644
  	google.golang.org/genproto/googleapis/api v0.0.0-20240528184218-531527333157 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
 diff --git a/go.sum b/go.sum
-index 84f1888aa7f..ccb5e97d5f1 100644
+index 84f1888aa7f..e2bebbe57cc 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,126 +1,8 @@
@@ -305,6 +314,17 @@ index 84f1888aa7f..ccb5e97d5f1 100644
  github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f h1:y5//uYreIhSUg3J1GEMiLbxo1LJaP8RfCpH6pymGZus=
  github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f/go.mod h1:ZdcZmHo+o7JKHSa8/e818NopupXU1YMK5fe1lsApnBw=
  github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
+@@ -472,8 +335,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
+ github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
+ github.com/opencontainers/image-spec v1.0.2 h1:9yCKha/T5XdGtO0q9Q9a6T5NUCsTn/DrBg0D7ufOcFM=
+ github.com/opencontainers/image-spec v1.0.2/go.mod h1:BtxoFyWECRxE4U/7sNtV5W15zMzWCbyJoFRP3s7yZA0=
+-github.com/opencontainers/runc v1.1.13 h1:98S2srgG9vw0zWcDpFMn5TRrh8kLxa/5OFUstuUhmRs=
+-github.com/opencontainers/runc v1.1.13/go.mod h1:R016aXacfp/gwQBYw2FDGa9m+n6atbLWrYY8hNMT/sA=
++github.com/opencontainers/runc v1.1.14 h1:rgSuzbmgz5DUJjeSnw337TxDbRuqjs6iqQck/2weR6w=
++github.com/opencontainers/runc v1.1.14/go.mod h1:E4C2z+7BxR7GHXp0hAY53mek+x49X1LjPNeMTfRGvOA=
+ github.com/opencontainers/runtime-spec v1.0.2/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
+ github.com/opencontainers/runtime-spec v1.0.3-0.20200929063507-e6143ca7d51d/go.mod h1:jwyrGlmzljRJv/Fgzds9SsS/C5hL+LL3ko9hs6T5lQ0=
+ github.com/opencontainers/runtime-spec v1.0.3-0.20220909204839-494a5a6aca78 h1:R5M2qXZiK/mWPMT4VldCOiSL9HIAMuxQZWdG0CSM5+4=
 @@ -580,7 +443,6 @@ github.com/vishvananda/netns v0.0.4 h1:Oeaw1EM2JMxD51g9uhtC0D7erkIjgmj8+JZc26m1Y
  github.com/vishvananda/netns v0.0.4/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
  github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
