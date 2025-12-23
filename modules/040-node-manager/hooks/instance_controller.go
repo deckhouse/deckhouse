@@ -146,6 +146,16 @@ var (
 	}
 )
 
+func newDrainingAnnotationPatch() map[string]interface{} {
+	return map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/draining": "instance-deletion",
+			},
+		},
+	}
+}
+
 func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng d8v1.NodeGroup
 
@@ -239,6 +249,23 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
+				// Set draining annotation on the node when Instance is being deleted
+				nodeName := machine.NodeName
+				if nodeName == "" {
+					// Try to get node name from Instance status as fallback
+					nodeName = ic.Status.NodeRef.Name
+				}
+				if nodeName != "" {
+					input.Logger.Info("Setting draining annotation on node due to Instance deletion",
+						slog.String("instance", ic.Name),
+						slog.String("node", nodeName))
+					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
+				} else {
+					input.Logger.Warn("Cannot set draining annotation: node name is empty",
+						slog.String("instance", ic.Name),
+						slog.String("machine", machine.Name))
+				}
+
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
 					input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name)
@@ -268,6 +295,23 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
+				// Set draining annotation on the node when Instance is being deleted
+				nodeName := machine.NodeName
+				if nodeName == "" {
+					// Try to get node name from Instance status as fallback
+					nodeName = ic.Status.NodeRef.Name
+				}
+				if nodeName != "" {
+					input.Logger.Info("Setting draining annotation on node due to Instance deletion",
+						slog.String("instance", ic.Name),
+						slog.String("node", nodeName))
+					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
+				} else {
+					input.Logger.Warn("Cannot set draining annotation: node name is empty",
+						slog.String("instance", ic.Name),
+						slog.String("machine", machine.Name))
+				}
+
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
 					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name)
@@ -290,6 +334,19 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 		_, clusterAPIMachineExists := clusterAPIMachines[ic.Name]
 
 		if !machineExists && !clusterAPIMachineExists {
+			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
+				nodeName := ic.Status.NodeRef.Name
+				if nodeName != "" {
+					input.Logger.Info("Setting draining annotation on node due to Instance deletion (no machine found)",
+						slog.String("instance", ic.Name),
+						slog.String("node", nodeName))
+					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
+				} else {
+					input.Logger.Warn("Cannot set draining annotation: node name is empty in Instance status",
+						slog.String("instance", ic.Name))
+				}
+			}
+
 			input.PatchCollector.PatchWithMerge(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
 			ds := ic.DeletionTimestamp
