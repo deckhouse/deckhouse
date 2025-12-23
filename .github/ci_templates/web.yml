@@ -276,7 +276,7 @@ steps:
 {!{- $webEnv := printf "web-%s" $env -}!}
 {!{- $ns := printf "deckhouse-web-%s" $env -}!}
 {!{- $url := printf "deckhouse.%s.flant.dev" $env -}!}
-{!{- $urlRu := printf "deckhouse.ru.%s.flant.dev" $env -}!}
+{!{- $urlRu := printf "deckhouse-ru.%s.flant.dev" $env -}!}
 {!{- $kubeConfig := "${{ secrets.KUBECONFIG_BASE64_DEV }}" -}!}
 {!{- $dcName := "dev" -}!}
 {!{- $s3BucketPublicUrl := "${{ secrets.DOC_S3_BUCKET_PUBLIC_URL_DEV }}" -}!}
