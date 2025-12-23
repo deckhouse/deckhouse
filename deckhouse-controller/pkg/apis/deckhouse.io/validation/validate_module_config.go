@@ -138,11 +138,10 @@ func moduleConfigValidationHandler(
 				// Second try to reject the module by spec.settings.allowExperimentalModules policy
 				// using definition from the API server (when module is not downloaded yet)
 				m := new(v1alpha1.Module)
-				err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m)
-				if apierrors.IsNotFound(err) {
-					return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
-				}
-				if err != nil {
+				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+					if apierrors.IsNotFound(err) {
+						return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+					}
 					return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 				}
 				if m.IsExperimental() && !allowExperimentalModules {
