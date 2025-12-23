@@ -1137,6 +1137,34 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8DexAuthRequestsQuotaHigh
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` is approaching its limit.
+
+        **Current usage:** {{ $value | printf "%.1f" }}%
+
+        When the quota is exhausted, Dex will be unable to create new AuthRequest CRs, which may cause:
+        * Dex health checks to fail
+        * Authentication through external identity providers (GitLab, GitHub, etc.) to stop working
+
+        **Investigation steps:**
+
+        1. Check for stale AuthRequest objects that Dex should have cleaned up:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn
+           ```
+
+        2. Review Dex configuration for AuthRequest TTL settings
+
+        3. Consider temporarily increasing the ResourceQuota limit if needed
+      summary: |
+        Dex AuthRequest objects quota usage is higher than 80% in namespace "d8-user-authn".
+      severity: "5"
+      markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager

@@ -44,7 +44,7 @@
       } != 0
     for: 5m
     labels:
-      severity_level: "6"
+      severity_level: "5"
       tier: cluster
       d8_module: user-authn
       d8_component: dex
