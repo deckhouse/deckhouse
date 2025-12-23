@@ -51,9 +51,10 @@
     {{- $useObservabilityRules := has "observability.deckhouse.io/v1alpha1/ClusterObservabilityMetricsRulesGroup" $context.Values.global.discovery.apiVersions }}
     {{- if and $hasObservabilityModule $useObservabilityRules }}
       {{- range $idx, $group := $definitionStruct.Rules }}
-        {{- $_ := unset $group "name" }}
-        {{- $resourceName = $resourceName | replace "propagated-" "" }}
-        {{- $groupResourceName := printf "%s-%d" $resourceName $idx }}
+        {{- if $group.rules }}
+          {{- $_ := unset $group "name" }}
+          {{- $resourceName = $resourceName | replace "propagated-" "" }}
+          {{- $groupResourceName := printf "%s-%d" $resourceName $idx }}
 ---
 apiVersion: observability.deckhouse.io/v1alpha1
 kind: {{ $propagated | ternary "ClusterObservabilityPropagatedMetricsRulesGroup" "ClusterObservabilityMetricsRulesGroup" }}
@@ -62,8 +63,10 @@ metadata:
   {{- include "helm_lib_module_labels" (list $context (dict "app" "prometheus" "prometheus" "main" "component" "rules")) | nindent 2 }}
 spec:
   {{- $group | toYaml | nindent 2 }}
+        {{- end }}
       {{- end }}
     {{- else }}
+      {{- if $definitionStruct.Rules }}
         {{- $definition := $definitionStruct.Rules | toYaml }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -75,6 +78,7 @@ metadata:
 spec:
   groups:
     {{- $definition | nindent 4 }}
+      {{- end }}
     {{- end }}
   {{- end }}
 

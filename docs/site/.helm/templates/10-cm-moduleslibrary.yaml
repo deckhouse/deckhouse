@@ -56,7 +56,13 @@ data:
           "deckhouse.ru"   "ru";
           "*.deckhouse.ru"   "ru";
           # for test environments
-          "deckhouse.ru.*" "ru";
+          "deckhouse-ru.*" "ru";
+          "deckhouse-ru-2.*" "ru";
+          "deckhouse-ru-3.*" "ru";
+          "deckhouse-ru-4.*" "ru";
+          "deckhouse-ru-5.*" "ru";
+          "deckhouse-ru-6.*" "ru";
+          "deckhouse-ru-7.*" "ru";
           default       "en";
       }
 
@@ -79,6 +85,10 @@ data:
 
         charset utf-8;
         access_log     /dev/stdout json_combined;
+
+        rewrite ^/modules$ /modules/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)$ /modules/$module/ redirect;
+        rewrite ^/modules/(?<module>[^/.]+)/(?<channel>alpha|beta|early-access|stable|rock-solid)$ /modules/$module/$channel/ redirect;
 
         location /link_test_report.txt {
             deny all;

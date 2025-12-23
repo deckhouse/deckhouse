@@ -757,12 +757,12 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule should not exist", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
 
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).To(BeFalse())
 				})
 			})
 
@@ -801,12 +801,12 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule should not exist", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
 
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).To(BeFalse())
 				})
 			})
 

@@ -12,34 +12,6 @@
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
 
-{{- range $module, $data := $modulesList }}
-  {{- $moduleTitle := "" }}
-  {{- $moduleChannel := "" }}
-  {{- $isActiveItem := false }}
-  {{- $moduleStatus := "" }}
-
-  {{- if eq $currentModuleName $module }}
-    {{- $moduleChannel = $currentModuleChannel }}
-    {{- $isActiveItem = true }}
-  {{- end }}
-
-  {{- range sort $channelsInfo "stability" "desc" }}
-    {{- $code := .code }}
-    {{- if eq $code "rock-solid" }}{{ continue }}{{ end }}
-    {{- with $.GetPage ( printf "modules/%s/%s/README.md" $module $code  ) }}
-      {{- if and .Params.menuTitle (not $moduleTitle ) }}{{ $moduleTitle = .Params.menuTitle }}{{ end }}
-      {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
-      {{- if not $moduleChannel }}{{ $moduleChannel = $code }}{{ end }}
-    {{- end }}
-  {{- end }}
-  {{- if not $moduleTitle }}{{ $moduleTitle = $module }}{{ end }}
-  {{- if $moduleChannel }}
-    {{- $sidebarRootMenu = $sidebarRootMenu | append (dict "module" $module "title" $moduleTitle "channel" $moduleChannel "isActive" $isActiveItem "moduleStatus" $moduleStatus) }}
-  {{- end }}
-{{- end}}
-
-{{- $sidebarRootMenu = sort $sidebarRootMenu "title" "asc" }}
-
 <div class="navigation__container">
   <div class="navigation__container--versions">
     <div>
@@ -90,19 +62,18 @@
   </div>
   <div class="layout-sidebar__content">
 
-{{- $channelsInfo := .Site.Data.channels.info }}
 {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` $.File.Dir 1 ) 0 }}
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
 
 {{- $d8Edition := "" }}
-{{- $moduleStatus := "" }}
+{{- $moduleStageFallBackLegacy := "" }}
 
 {{- range sort $channelsInfo "stability" "desc" }}
   {{- if eq .code "rock-solid" }}{{ continue }}{{ end }}
   {{- with $.GetPage ( printf "modules/%s/%s/README.md" $currentModuleName .code  ) }}
     {{- if and .Params.d8Edition ( not $d8Edition ) }}{{ $d8Edition = .Params.d8Edition }}{{ end }}
-    {{- if and .Params.moduleStatus ( not $moduleStatus ) }}{{ $moduleStatus = .Params.moduleStatus }}{{ end }}
+    {{- if and .Params.moduleStatus ( not $moduleStageFallBackLegacy ) }}{{ $moduleStageFallBackLegacy = .Params.moduleStatus }}{{ end }}
   {{- end}}
 {{- end}}
 
@@ -113,18 +84,11 @@
 
       <div class="post-content">
 
+        {{- partial "module-stage-badge" (dict "ctx" $ "module" $currentModuleName "channel" $currentModuleChannel "stageFallBackLegacy" $moduleStageFallBackLegacy) }}
+
         {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
-
-        {{- if $moduleStatus }}
-          {{- $statusKey := replace (lower $moduleStatus) " " "_" -}}
-          {{- if (T (printf "module_alert_%s_long" $statusKey )) }}
-             {{- $level := "warn" -}}
-             {{- if eq $statusKey "general_availability" }}{{ $level = "info" }}{{ end -}}
-             {{- partial "alert" ( dict "level" $level "content" (T (printf "module_alert_%s_long" $statusKey )) ) }}
-          {{- end }}
-       {{- end }}
 
         {{.Content}}
 
@@ -149,7 +113,7 @@
               {{- else if eq .File.ContentBaseName "CONFIGURATION" }} {{/* Render module configuration JSONschema */}}
                 {{- $type = "configuration" }}
               {{- end }}
-              {{- partial "module-resources" (dict "name" $moduleName "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
+              {{- partial "module-resources" (dict "name" $moduleName "channel" $moduleChannel "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
             {{- end }}
           {{- end }}
         {{- end }}

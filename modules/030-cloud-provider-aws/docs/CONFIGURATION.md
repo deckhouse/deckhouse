@@ -10,6 +10,8 @@ The module automatically creates StorageClasses that are available in AWS: `gp3`
 
 {% include module-alerts.liquid %}
 
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 {% include module-settings.liquid %}
