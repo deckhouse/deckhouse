@@ -3,7 +3,6 @@ package gossip
 import (
 	agentconfig "fencing-controller/internal/config"
 	"log"
-	"time"
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -19,13 +18,13 @@ type Memberlist struct {
 func NewMemberList(logger *zap.Logger, config agentconfig.Config, nodeAddr string) (Gossip, error) {
 	configML := memberlist.DefaultLANConfig()
 	configML.Logger = log.New(NewZapAdapter(logger), "[memberlist] ", 0)
-	configML.ProbeInterval = config.ProbeInterval * time.Millisecond
-	configML.ProbeTimeout = config.ProbeTimeout * time.Millisecond
+	configML.ProbeInterval = config.ProbeInterval
+	configML.ProbeTimeout = config.ProbeTimeout
 	configML.SuspicionMult = config.SuspicionMult
-	configML.IndirectChecks = 3
-	configML.GossipInterval = 100 * time.Millisecond
-	configML.RetransmitMult = 4
-	configML.GossipToTheDeadTime = 2 * time.Second
+	configML.IndirectChecks = config.IndirectChecks
+	configML.GossipInterval = config.GossipInterval
+	configML.RetransmitMult = config.RetransmitMult
+	configML.GossipToTheDeadTime = config.GossipToTheDeadTime
 	configML.BindPort = config.MemberListPort
 	configML.AdvertisePort = config.MemberListPort
 	configML.Name = config.NodeName

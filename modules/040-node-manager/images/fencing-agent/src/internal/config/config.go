@@ -38,7 +38,7 @@ type Config struct {
 	IndirectChecks             int           `env:"INDIRECT_CHECKS"`
 	GossipInterval             time.Duration `env:"GOSSIP_INTERVAL"`
 	RetransmitMult             int           `env:"RETRANSMIT_MULT"`
-	GossipToTheDeadTime        time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME"`
+	GossipToTheDeadTime        time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME_S"`
 	MinEventInterval           time.Duration `env:"MIN_EVENT_INTERVAL"`
 }
 
