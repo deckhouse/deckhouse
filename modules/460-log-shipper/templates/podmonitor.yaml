@@ -40,7 +40,7 @@ spec:
     - regex: file
       action: labeldrop
   - port: https-metrics
-    path: /reloader-metrics
+    path: /reloader/metrics
     scheme: https
     bearerTokenSecret:
       name: "prometheus-token"

@@ -205,7 +205,7 @@ func main() {
 	go func() {
 		mux := http.NewServeMux()
 
-		mux.Handle("/reloader-metrics", promhttp.Handler())
+		mux.Handle("/reloader/metrics", promhttp.Handler())
 
 		server := &http.Server{
 			Addr:              "127.0.0.1:9255",

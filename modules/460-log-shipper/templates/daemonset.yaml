@@ -159,8 +159,8 @@ spec:
                     resource: daemonsets
                     subresource: http
                     name: log-shipper-agent
-              - upstream: http://127.0.0.1:9255/reloader-metrics
-                path: /reloader-metrics
+              - upstream: http://127.0.0.1:9255/reloader/metrics
+                path: /reloader/metrics
                 authorization:
                   resourceAttributes:
                     namespace: d8-{{ $.Chart.Name }}
