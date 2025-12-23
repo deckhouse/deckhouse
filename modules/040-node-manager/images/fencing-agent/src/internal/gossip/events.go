@@ -25,7 +25,9 @@ func NewEventHandler(logger *zap.Logger, minEventIntervalJoin, minEventIntervalL
 		onNodeFailure:        onNodeFailure,
 		onNodeJoin:           onNodeJoin,
 		nodesLeft:            make(map[string]time.Time),
+		nodesJoin:            make(map[string]time.Time),
 		muJoin:               &sync.Mutex{},
+		muLeft:               &sync.Mutex{},
 		minEventIntervalJoin: minEventIntervalJoin,
 		minEventIntervalLeft: minEventIntervalLeft,
 	}
