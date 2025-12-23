@@ -16,6 +16,9 @@ package cloud
 
 import (
 	"context"
+	"fmt"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -24,13 +27,17 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 )
 
+type ClusterInfraDestroyer interface {
+	DestroyCluster(ctx context.Context, autoApprove bool) error
+}
+
 type DestroyerParams struct {
 	LoggerProvider log.LoggerProvider
 	KubeProvider   kube.ClientProviderWithCleanup
 	State          *State
 
 	StateLoader  controller.StateLoader
-	ClusterInfra *controller.ClusterInfra
+	ClusterInfra ClusterInfraDestroyer
 
 	CommanderMode bool
 	SkipResources bool
@@ -107,6 +114,10 @@ func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
 }
 
 func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
+	if govalue.IsNil(d.params.ClusterInfra) {
+		return fmt.Errorf("Internal error. Cluster infra destroy is nil")
+	}
+
 	return d.params.ClusterInfra.DestroyCluster(ctx, autoApprove)
 }
 

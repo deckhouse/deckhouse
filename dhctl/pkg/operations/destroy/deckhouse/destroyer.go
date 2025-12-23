@@ -50,21 +50,22 @@ func NewDestroyer(opts DestroyerParams) *Destroyer {
 	}
 }
 
-func (g *Destroyer) CheckCommanderUUID(ctx context.Context) error {
-	if !g.CommanderMode {
+func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
+	if !d.CommanderMode {
+		d.logger().LogDebugF("Check commander UUID skipped. No in commander mode\n")
 		return nil
 	}
 
-	if g.isSkipResources("CheckCommanderUUID") {
+	if d.isSkipResources("CheckCommanderUUID") {
 		return nil
 	}
 
-	kubeCl, err := g.KubeProvider.KubeClientCtx(ctx)
+	kubeCl, err := d.KubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return err
 	}
 
-	_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, g.CommanderUUID)
+	_, err = commander.CheckShouldUpdateCommanderUUID(ctx, kubeCl, d.CommanderUUID)
 	if err != nil {
 		return fmt.Errorf("UUID consistency check failed: %w", err)
 	}
@@ -72,37 +73,37 @@ func (g *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 	return nil
 }
 
-func (g *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
-	logger := g.logger()
+func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {
+	logger := d.logger()
 
-	if g.isSkipResources("DeleteResources") {
+	if d.isSkipResources("DeleteResources") {
 		return nil
 	}
 
-	return g.PhasedActionProvider().Run(phases.DeleteResourcesPhase, false, func() (phases.DefaultContextType, error) {
-		return nil, g.deleteResources(ctx, logger)
+	return d.PhasedActionProvider().Run(phases.DeleteResourcesPhase, false, func() (phases.DefaultContextType, error) {
+		return nil, d.deleteResources(ctx, logger)
 	})
 }
 
-func (g *Destroyer) Finalize(context.Context) error {
-	if g.isSkipResources("Finalize") {
+func (d *Destroyer) Finalize(context.Context) error {
+	if d.isSkipResources("Finalize") {
 		return nil
 	}
 
-	alreadyDestroyed, err := g.State.IsResourcesDestroyed()
+	alreadyDestroyed, err := d.State.IsResourcesDestroyed()
 	if err != nil {
 		return err
 	}
 
-	logger := g.logger()
+	logger := d.logger()
 
 	if alreadyDestroyed {
 		logger.LogDebugLn("Resources already destroyed. Skip set as destroyed")
 		return nil
 	}
 
-	err = g.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
-		return nil, g.State.SetResourcesDestroyed()
+	err = d.PhasedActionProvider().Run(phases.SetDeckhouseResourcesDeletedPhase, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetResourcesDestroyed()
 	})
 
 	if err != nil {
@@ -113,8 +114,8 @@ func (g *Destroyer) Finalize(context.Context) error {
 	return nil
 }
 
-func (g *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {
-	resourcesDestroyed, err := g.State.IsResourcesDestroyed()
+func (d *Destroyer) deleteResources(ctx context.Context, logger log.Logger) error {
+	resourcesDestroyed, err := d.State.IsResourcesDestroyed()
 	if err != nil {
 		return err
 	}
@@ -124,17 +125,17 @@ func (g *Destroyer) deleteResources(ctx context.Context, logger log.Logger) erro
 		return nil
 	}
 
-	kubeCl, err := g.KubeProvider.KubeClientCtx(ctx)
+	kubeCl, err := d.KubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return err
 	}
 
 	return logger.LogProcess("common", "Delete resources from the Kubernetes cluster", func() error {
-		return g.deleteEntities(ctx, kubeCl)
+		return d.deleteEntities(ctx, kubeCl)
 	})
 }
 
-func (g *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
+func (d *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	err := deckhouse.DeleteDeckhouseDeployment(ctx, kubeCl)
 	if err != nil {
 		return err
@@ -198,15 +199,15 @@ func (g *Destroyer) deleteEntities(ctx context.Context, kubeCl *client.Kubernete
 	return nil
 }
 
-func (g *Destroyer) isSkipResources(phase string) bool {
-	if g.SkipResources {
-		g.logger().LogInfoF("Deckhouse resources destroyer '%s': skipped by flag\n", phase)
+func (d *Destroyer) isSkipResources(phase string) bool {
+	if d.SkipResources {
+		d.logger().LogInfoF("Deckhouse resources destroyer '%s': skipped by flag\n", phase)
 		return true
 	}
 
 	return false
 }
 
-func (g *Destroyer) logger() log.Logger {
-	return log.SafeProvideLogger(g.LoggerProvider)
+func (d *Destroyer) logger() log.Logger {
+	return log.SafeProvideLogger(d.LoggerProvider)
 }

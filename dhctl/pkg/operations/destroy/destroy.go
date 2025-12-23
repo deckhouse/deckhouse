@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -212,7 +213,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 
 		commanderMode: params.CommanderMode,
 		skipResources: params.SkipResources,
-		cloudStateProvider: func() (controller.StateLoader, *controller.ClusterInfra, error) {
+		cloudStateProvider: func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error) {
 			return terraStateLoader, controller.NewClusterInfraWithOptions(
 				terraStateLoader,
 				params.StateCache,

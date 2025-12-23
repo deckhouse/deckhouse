@@ -39,7 +39,7 @@ type infraDestroyerProvider struct {
 
 	commanderMode      bool
 	skipResources      bool
-	cloudStateProvider func() (controller.StateLoader, *controller.ClusterInfra, error)
+	cloudStateProvider func() (controller.StateLoader, cloud.ClusterInfraDestroyer, error)
 
 	sshClientProvider sshclient.SSHProvider
 	tmpDir            string

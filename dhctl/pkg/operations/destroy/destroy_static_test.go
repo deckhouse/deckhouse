@@ -43,10 +43,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/static"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -323,7 +321,7 @@ func TestStaticDestroy(t *testing.T) {
 				switchedHosts := make([]testHostWithBastion, 0)
 				tst.assertClientSwitches(t, switchedHosts)
 				tst.assertPrivateKeyWritten(t, len(switchedHosts))
-				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned)
+				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned, false)
 
 				tt.assert(t, tst)
 			})
@@ -1220,7 +1218,7 @@ func TestStaticDestroy(t *testing.T) {
 					tst.assertMasterIPsSavedInCache(t, mastersIPSInCache)
 				}
 				tst.assertNodeUserExistsSavedInCache(t, tt.nodeUserExistsSavedInCache)
-				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned)
+				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned, false)
 				tst.assertResourcesDestroyed(t, tt.resourcesDestroyedShouldSet)
 				tst.assertHasMetaConfigInCache(t, tt.metaConfigSavedInCache)
 
@@ -1309,19 +1307,14 @@ func (w *testNodeUserWaiter) goWaitNodeUserAddUserToNodes(ctx context.Context, k
 
 type testStaticDestroyTest struct {
 	*baseTest
+
 	params testStaticDestroyTestParams
 
 	destroyer *ClusterDestroyer
-	logger    *log.InMemoryLogger
 
 	kubeCl *client.KubernetesClient
 
-	sshProvider  *testssh.SSHProvider
-	kubeProvider kube.ClientProviderWithCleanup
-
-	stateCache dhctlstate.Cache
-	d8State    *deckhouse.State
-	metaConfig *config.MetaConfig
+	sshProvider *testssh.SSHProvider
 
 	cleanCommandsRanOnHosts     map[string][]struct{}
 	cleanCommandsRanOverBastion map[string][]testssh.Bastion
@@ -1331,32 +1324,6 @@ type testStaticDestroyTest struct {
 
 	nodeUser      *v1.NodeUser
 	nodeUserCreds *static.NodesWithCredentials
-
-	tmpDir string
-}
-
-func (ts *testStaticDestroyTest) getStateCache() dhctlstate.Cache {
-	return ts.stateCache
-}
-
-func (ts *testStaticDestroyTest) clean(t *testing.T) {
-	require.NotEmpty(t, ts.tmpDir)
-	require.False(t, govalue.IsNil(ts.logger))
-
-	err := os.RemoveAll(ts.tmpDir)
-	if err != nil {
-		ts.logger.LogErrorF("Couldn't remove tmp dir '%s': %v\n", ts.tmpDir, err)
-		return
-	}
-
-	ts.logger.LogInfoF("tmp dir '%s' removed\n", ts.tmpDir)
-}
-
-func (ts *testStaticDestroyTest) setResourcesDestroyed(t *testing.T) {
-	require.False(t, govalue.IsNil(ts.stateCache))
-
-	err := ts.d8State.SetResourcesDestroyed()
-	require.NoError(t, err, "resources destroyed should save in cache")
 }
 
 func (ts *testStaticDestroyTest) setNodeUserExistsInCache(t *testing.T) {
@@ -1364,14 +1331,6 @@ func (ts *testStaticDestroyTest) setNodeUserExistsInCache(t *testing.T) {
 
 	err := static.NewDestroyState(ts.stateCache).SetNodeUserExists()
 	require.NoError(t, err, "node user exists flag should in cache")
-}
-
-func (ts *testStaticDestroyTest) saveMetaConfigToCache(t *testing.T) {
-	require.False(t, govalue.IsNil(ts.stateCache))
-	require.False(t, govalue.IsNil(ts.metaConfig))
-
-	err := ts.stateCache.SaveStruct(metaConfigKey, ts.metaConfig)
-	require.NoError(t, err, "metaconfig should be saved in cache")
 }
 
 type testNodeUserSaveParams struct {
@@ -1444,28 +1403,6 @@ func (ts *testStaticDestroyTest) assertNodeUserIsNotUpdated(t *testing.T, checkI
 	require.NoError(t, err, "node user should unmarshal")
 
 	require.Equal(t, ts.nodeUser.Spec, nodeUser.Spec, "node user specs should not change in cluster")
-}
-
-func (ts *testStaticDestroyTest) assertHasMetaConfigInCache(t *testing.T, saved bool) {
-	require.False(t, govalue.IsNil(ts.stateCache))
-
-	inCache, err := ts.stateCache.InCache(metaConfigKey)
-
-	if !saved {
-		require.NoError(t, err, "metaconfig should not save in cache")
-		return
-	}
-
-	require.NoError(t, err, "metaconfig should in cache")
-	require.True(t, inCache, "metaconfig should in cache")
-}
-
-func (ts *testStaticDestroyTest) assertResourcesDestroyed(t *testing.T, destroyed bool) {
-	require.False(t, govalue.IsNil(ts.d8State))
-
-	destroyedInCache, err := ts.d8State.IsResourcesDestroyed()
-	require.NoError(t, err, "resources destroyed flag should be set")
-	require.Equal(t, destroyed, destroyedInCache, "resources destroyed should be set correct flag")
 }
 
 func (ts *testStaticDestroyTest) assertNodeUserExistsSavedInCache(t *testing.T, saved bool) {
@@ -1633,23 +1570,6 @@ func (ts *testStaticDestroyTest) assertNodeUserDidNotCreate(t *testing.T) {
 	ts.assertNodeUserCreated(t, false)
 }
 
-func (ts *testStaticDestroyTest) assertKubeProviderCleaned(t *testing.T, cleaned bool) {
-	require.False(t, govalue.IsNil(ts.kubeProvider))
-
-	kubeProvider, ok := ts.kubeProvider.(*fakeKubeClientProvider)
-	if !cleaned && !ok {
-		return
-	}
-	require.True(t, ok, "correct kube provider")
-	require.Equal(t, cleaned, kubeProvider.cleaned, "kube provider should cleaned")
-	require.False(t, kubeProvider.stopSSH, "kube provider ssh should not stop")
-}
-
-func (ts *testStaticDestroyTest) assertKubeProviderIsErrorProvider(t *testing.T) {
-	require.False(t, govalue.IsNil(ts.kubeProvider))
-	require.IsType(t, &kubeClientErrorProvider{}, ts.kubeProvider, "kube provider should be error provider")
-}
-
 func testAddRunToMap[T any](hostsMap map[string][]T, hostIP string, val T) {
 	list, ok := hostsMap[hostIP]
 	if !ok || len(list) == 0 {
@@ -1746,17 +1666,13 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 
 	ctx := context.TODO()
 
-	clusterUUID := uuid.Must(uuid.NewRandom())
+	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 
-	testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{
-		"cluster-configuration.yaml": []byte(staticClusterGeneralConfig),
-	})
+	testCreateClusterConfigSecret(t, kubeCl, staticClusterGeneralConfigYAML)
 
-	testCreateKubeSystemCM(t, kubeCl, "d8-cluster-uuid", map[string]string{
-		"cluster-uuid": clusterUUID.String(),
-	})
+	testCreateClusterUUIDCM(t, kubeCl, clusterUUID)
 
-	metaConfig, err := config.ParseConfigFromCluster(context.TODO(), kubeCl, config.DummyPreparatorProvider())
+	metaConfig, err := config.ParseConfigFromCluster(ctx, kubeCl, config.DummyPreparatorProvider())
 	require.NoError(t, err)
 
 	const commanderMode = false
@@ -1839,31 +1755,27 @@ func createTestStaticDestroyTest(t *testing.T, params testStaticDestroyTestParam
 	}
 
 	tst := &testStaticDestroyTest{
+		baseTest: &baseTest{
+			logger:       logger,
+			stateCache:   stateCache,
+			tmpDir:       tmpDir,
+			kubeProvider: kubeProviderForInfraDestroyer,
+			metaConfig:   metaConfig,
+		},
+
 		params: params,
 
 		destroyer: destroyer,
-		logger:    logger,
-
-		stateCache: stateCache,
-		d8State:    d8State,
-		metaConfig: metaConfig,
 
 		kubeCl: kubeCl,
 
-		sshProvider:  sshProvider,
-		kubeProvider: kubeProviderForInfraDestroyer,
+		sshProvider: sshProvider,
 
 		cleanCommandsRanOnHosts:     make(map[string][]struct{}),
 		cleanCommandsRanOverBastion: make(map[string][]testssh.Bastion),
 
 		downloadDiscoveryIPRanOnHosts:     make(map[string][]struct{}),
 		downloadDiscoveryIPRanOverBastion: make(map[string][]testssh.Bastion),
-
-		tmpDir: tmpDir,
-	}
-
-	tst.baseTest = &baseTest{
-		childTest: tst,
 	}
 
 	return tst

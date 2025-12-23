@@ -130,7 +130,7 @@ func (ts *testAbortStaticTest) getStateCache() dhctlstate.Cache {
 func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestParams) *testAbortStaticTest {
 	require.NotEmpty(t, params.host.Host)
 
-	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfig, config.DummyPreparatorProvider())
+	metaConfig, err := config.ParseConfigFromData(context.TODO(), staticClusterGeneralConfigYAML, config.DummyPreparatorProvider())
 	require.NoError(t, err, "parsing config from data")
 	metaConfig.UUID = uuid.Must(uuid.NewRandom()).String()
 
@@ -150,9 +150,11 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 
 	sshProvider := testCreateAbortSSHProvider(params, logger)
 
+	stateCache := cache.NewTestCache()
+
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,
-		StateCache:             cache.NewTestCache(),
+		StateCache:             stateCache,
 		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil),
 		LoggerProvider:         loggerProvider,
 		TmpDir:                 tmpDir,
@@ -165,14 +167,17 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 	}
 
 	tst := &testAbortStaticTest{
+		baseTest: &baseTest{
+			stateCache:   stateCache,
+			tmpDir:       tmpDir,
+			logger:       logger,
+			kubeProvider: newKubeClientErrorProvider("kube api does not use in abort"),
+		},
+
 		params: params,
 
 		abortParams: abortParams,
 		sshProvider: sshProvider,
-	}
-
-	tst.baseTest = &baseTest{
-		childTest: tst,
 	}
 
 	return tst

@@ -30,7 +30,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
-	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -41,15 +40,11 @@ func TestInitStateLoader(t *testing.T) {
 		return newFakeKubeClientProvider(kubeCl)
 	}
 
-	createLogger := func() log.Logger {
-		return log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
-	}
-
 	clusterUUID := uuid.Must(uuid.NewRandom()).String()
 
 	noBeforeFunc := func(t *testing.T, tst *testInitStateLoader) {}
 	fillCommanderStateBeforeFunc := func(t *testing.T, tst *testInitStateLoader) {
-		testAddCloudStatesToCache(t, tst.getStateCache(), tst.clusterUUID)
+		testAddCloudStatesToCache(t, tst.stateCache, tst.clusterUUID)
 	}
 
 	noAssertFunc := func(t *testing.T, tst *testInitStateLoader) {}
@@ -62,11 +57,9 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "happy case with state in kube",
 			params: &Params{
-				StateCache:          cache.NewTestCache(),
 				SkipResources:       false,
 				CommanderMode:       false,
 				CommanderModeParams: nil,
-				LoggerProvider:      log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: noCommanderHappyCaseKubeProvider,
 			before:       testCreateMetaConfigForInitLoaderTestInCluster,
@@ -85,11 +78,9 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "skip resources: keys not in cache",
 			params: &Params{
-				StateCache:          cache.NewTestCache(),
 				SkipResources:       true,
 				CommanderMode:       false,
 				CommanderModeParams: nil,
-				LoggerProvider:      log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: createKubeProvider(),
 			before:       noBeforeFunc,
@@ -109,16 +100,14 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "skip resources: keys in cache",
 			params: &Params{
-				StateCache:          cache.NewTestCache(),
 				SkipResources:       true,
 				CommanderMode:       false,
 				CommanderModeParams: nil,
-				LoggerProvider:      log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: createKubeProvider(),
 			before: func(t *testing.T, tst *testInitStateLoader) {
 				testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-				loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, createLogger())
+				loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
 				ctx := context.TODO()
 				_, err := loader.PopulateMetaConfig(ctx)
 				require.NoError(t, err, "populate metaconfig before test")
@@ -150,14 +139,12 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "happy case with state in kube",
 			params: &Params{
-				StateCache:    cache.NewTestCache(),
 				SkipResources: false,
 				CommanderMode: true,
 				CommanderModeParams: commander.NewCommanderModeParams(
 					[]byte(cloudClusterGenericConfigYAML),
 					[]byte(providerConfigYAML),
 				),
-				LoggerProvider: log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: commanderKubeProvider,
 			before:       fillCommanderStateBeforeFunc,
@@ -176,14 +163,12 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "skip resources does not matter",
 			params: &Params{
-				StateCache:    cache.NewTestCache(),
 				SkipResources: true,
 				CommanderMode: true,
 				CommanderModeParams: commander.NewCommanderModeParams(
 					[]byte(cloudClusterGenericConfigYAML),
 					[]byte(providerConfigYAML),
 				),
-				LoggerProvider: log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: commanderKubeProvider,
 			before:       fillCommanderStateBeforeFunc,
@@ -202,14 +187,12 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "state cache is empty",
 			params: &Params{
-				StateCache:    cache.NewTestCache(),
 				SkipResources: true,
 				CommanderMode: true,
 				CommanderModeParams: commander.NewCommanderModeParams(
 					[]byte(cloudClusterGenericConfigYAML),
 					[]byte(providerConfigYAML),
 				),
-				LoggerProvider: log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: commanderKubeProvider,
 			before:       noBeforeFunc,
@@ -228,14 +211,12 @@ func TestInitStateLoader(t *testing.T) {
 		newTestInitStateLoader(&testInitStateLoader{
 			name: "incorrect config",
 			params: &Params{
-				StateCache:    cache.NewTestCache(),
 				SkipResources: true,
 				CommanderMode: true,
 				CommanderModeParams: commander.NewCommanderModeParams(
 					[]byte(`{"a": "b"}`),
 					[]byte(`{"c": "d"}`),
 				),
-				LoggerProvider: log.SimpleLoggerProvider(createLogger()),
 			},
 			kubeProvider: commanderKubeProvider,
 			before:       fillCommanderStateBeforeFunc,
@@ -279,15 +260,20 @@ type testInitStateLoader struct {
 }
 
 func newTestInitStateLoader(tst *testInitStateLoader) *testInitStateLoader {
+	stateCache := cache.NewTestCache()
+	logger := log.NewInMemoryLoggerWithParent(log.GetDefaultLogger())
+
 	tst.baseTest = &baseTest{
-		childTest: tst,
+		stateCache:   stateCache,
+		tmpDir:       "",
+		logger:       logger,
+		kubeProvider: tst.kubeProvider,
 	}
 
-	return tst
-}
+	tst.params.StateCache = stateCache
+	tst.params.LoggerProvider = log.SimpleLoggerProvider(logger)
 
-func (ts *testInitStateLoader) getStateCache() dhctlstate.Cache {
-	return ts.params.StateCache
+	return tst
 }
 
 func (ts *testInitStateLoader) do(t *testing.T) {
@@ -378,18 +364,11 @@ func testCreateMetaConfigForInitLoaderTestInCluster(t *testing.T, tst *testInitS
 	client, err := tst.kubeProvider.KubeClientCtx(ctx)
 	require.NoError(t, err, "kube client should returned")
 
-	testCreateKubeSystemSecret(t, client, "d8-provider-cluster-configuration", map[string][]byte{
-		"cloud-provider-cluster-configuration.yaml": []byte(providerConfigYAML),
-		"cloud-provider-discovery-data.json":        []byte(`{"a": "b"}`),
-	})
+	testCreateProviderClusterConfigSecret(t, client, providerConfigYAML)
 
-	testCreateKubeSystemSecret(t, client, "d8-cluster-configuration", map[string][]byte{
-		"cluster-configuration.yaml": []byte(cloudClusterGenericConfigYAML),
-	})
+	testCreateClusterConfigSecret(t, client, cloudClusterGenericConfigYAML)
 
-	testCreateKubeSystemCM(t, client, "d8-cluster-uuid", map[string]string{
-		"cluster-uuid": tst.clusterUUID,
-	})
+	testCreateClusterUUIDCM(t, client, tst.clusterUUID)
 
 	testCreateSystemSecret(t, client, manifests.InfrastructureClusterStateName, map[string][]byte{
 		"cluster-tf-state.json": []byte(`{}`),

@@ -17,6 +17,7 @@ package destroy
 import (
 	"context"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 
@@ -41,15 +42,19 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/testssh"
 )
 
 const (
-	staticClusterGeneralConfig = `
+	staticClusterGeneralConfigYAML = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
@@ -209,7 +214,9 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 			},
 		}
 		_, err := kubeCl.CoreV1().Namespaces().Create(ctx, &obj, metav1.CreateOptions{})
-		require.NoError(t, err)
+		if err != nil {
+			require.True(t, k8errors.IsAlreadyExists(err), "failed to create namespace")
+		}
 	}
 
 	_, err := kubeCl.AppsV1().Deployments(deckhouseDeployment.GetNamespace()).Create(ctx, deckhouseDeployment, metav1.CreateOptions{})
@@ -681,6 +688,25 @@ func testCreateKubeSystemCM(t *testing.T, kubeCl *client.KubernetesClient, name 
 	require.NoError(t, err)
 }
 
+func testCreateProviderClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {
+	testCreateKubeSystemSecret(t, kubeCl, "d8-provider-cluster-configuration", map[string][]byte{
+		"cloud-provider-cluster-configuration.yaml": []byte(configYAML),
+		"cloud-provider-discovery-data.json":        []byte(`{"a": "b"}`),
+	})
+}
+
+func testCreateClusterConfigSecret(t *testing.T, kubeCl *client.KubernetesClient, configYAML string) {
+	testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{
+		"cluster-configuration.yaml": []byte(configYAML),
+	})
+}
+
+func testCreateClusterUUIDCM(t *testing.T, kubeCl *client.KubernetesClient, clusterUUID string) {
+	testCreateKubeSystemCM(t, kubeCl, "d8-cluster-uuid", map[string]string{
+		"cluster-uuid": clusterUUID,
+	})
+}
+
 func createAssertError(shouldReturnError bool, noErrorMSg, errorMsg string) func(t *testing.T, err error) {
 	errorAssert := require.NoError
 	errorAssertMsg := noErrorMSg
@@ -699,27 +725,96 @@ func assertClusterDestroyError(t *testing.T, shouldReturnError bool, err error) 
 	errorAssert(t, err)
 }
 
-type childTest interface {
-	getStateCache() dhctlstate.Cache
-}
-
 type baseTest struct {
-	childTest childTest
+	stateCache   dhctlstate.Cache
+	tmpDir       string
+	logger       *log.InMemoryLogger
+	kubeProvider kube.ClientProviderWithCleanup
+	metaConfig   *config.MetaConfig
 }
 
 func (ts *baseTest) stateCacheKeys(t *testing.T) []string {
-	stateCache := ts.childTest.getStateCache()
-	require.False(t, govalue.IsNil(stateCache))
+	require.False(t, govalue.IsNil(ts.stateCache))
 
 	keys := make([]string, 0)
 
-	err := stateCache.Iterate(func(k string, _ []byte) error {
+	err := ts.stateCache.Iterate(func(k string, _ []byte) error {
 		keys = append(keys, k)
 		return nil
 	})
 	require.NoError(t, err, "state cache keys getting")
 
 	return keys
+}
+
+func (ts *baseTest) clean(t *testing.T) {
+	tmpDir := ts.tmpDir
+	logger := ts.logger
+
+	require.NotEmpty(t, tmpDir)
+	require.False(t, govalue.IsNil(logger))
+
+	err := os.RemoveAll(tmpDir)
+	if err != nil {
+		logger.LogErrorF("Couldn't remove tmp dir '%s': %v\n", tmpDir, err)
+		return
+	}
+
+	logger.LogInfoF("tmp dir '%s' removed\n", tmpDir)
+}
+
+func (ts *baseTest) setResourcesDestroyed(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	err := deckhouse.NewState(ts.stateCache).SetResourcesDestroyed()
+	require.NoError(t, err, "resources destroyed should save in cache")
+}
+
+func (ts *baseTest) saveMetaConfigToCache(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+	require.False(t, govalue.IsNil(ts.metaConfig))
+
+	err := ts.stateCache.SaveStruct(metaConfigKey, ts.metaConfig)
+	require.NoError(t, err, "metaconfig should be saved in cache")
+}
+
+func (ts *baseTest) assertHasMetaConfigInCache(t *testing.T, saved bool) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	inCache, err := ts.stateCache.InCache(metaConfigKey)
+
+	if !saved {
+		require.NoError(t, err, "metaconfig should not save in cache")
+		return
+	}
+
+	require.NoError(t, err, "metaconfig should in cache")
+	require.True(t, inCache, "metaconfig should in cache")
+}
+
+func (ts *baseTest) assertResourcesDestroyed(t *testing.T, destroyed bool) {
+	require.False(t, govalue.IsNil(ts.stateCache))
+
+	destroyedInCache, err := deckhouse.NewState(ts.stateCache).IsResourcesDestroyed()
+	require.NoError(t, err, "resources destroyed flag should be set")
+	require.Equal(t, destroyed, destroyedInCache, "resources destroyed should be set correct flag")
+}
+
+func (ts *baseTest) assertKubeProviderCleaned(t *testing.T, cleaned bool, shouldStop bool) {
+	require.False(t, govalue.IsNil(ts.kubeProvider))
+
+	kubeProvider, ok := ts.kubeProvider.(*fakeKubeClientProvider)
+	if !cleaned && !ok {
+		return
+	}
+	require.True(t, ok, "correct kube provider")
+	require.Equal(t, cleaned, kubeProvider.cleaned, "kube provider should cleaned")
+	require.Equal(t, shouldStop, kubeProvider.stopSSH, "kube provider ssh should or not stop")
+}
+
+func (ts *baseTest) assertKubeProviderIsErrorProvider(t *testing.T) {
+	require.False(t, govalue.IsNil(ts.kubeProvider))
+	require.IsType(t, &kubeClientErrorProvider{}, ts.kubeProvider, "kube provider should be error provider")
 }
 
 func (ts *baseTest) assertStateCacheIsEmpty(t *testing.T) {
@@ -816,4 +911,18 @@ func assertStringSliceContainsUniqVals(t *testing.T, list []string, msg string) 
 		uniq[v] = struct{}{}
 	}
 	require.Len(t, uniq, len(list), msg)
+}
+
+type cloudInfraDestroyer struct {
+	err error
+}
+
+func newCloudInfraDestroyer(err error) *cloudInfraDestroyer {
+	return &cloudInfraDestroyer{
+		err: err,
+	}
+}
+
+func (d *cloudInfraDestroyer) DestroyCluster(context.Context, bool) error {
+	return d.err
 }
