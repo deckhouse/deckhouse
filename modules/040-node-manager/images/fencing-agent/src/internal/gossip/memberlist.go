@@ -38,7 +38,7 @@ func NewMemberList(logger *zap.Logger, config agentconfig.Config, nodeAddr strin
 		list:    list,
 		isAlone: true,
 	}
-	eventHandler := NewEventHandler(logger, config.MinEventInterval, nil, memList.SetAlone)
+	eventHandler := NewEventHandler(logger, config.MinEventIntervalJoin, config.MinEventIntervalLeft, nil, memList.SetAlone)
 	configML.Events = eventHandler
 	return &memList, nil
 }

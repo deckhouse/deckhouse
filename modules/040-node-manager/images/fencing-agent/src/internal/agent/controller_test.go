@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"fencing-controller/internal/agent"
+	agentconfig "fencing-controller/internal/config"
 	"fencing-controller/internal/watchdog/fakedog"
-
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -65,7 +65,7 @@ var _ = Describe("FencingAgent", func() {
 			ginkgo.It("should return no error", func() {
 				var fakeWDEvents []byte
 				wd := fakedog.NewWatchdog(&fakeWDEvents)
-				fa := agent.NewFencingAgent(logger, agent.Config{NodeName: testNodeName, KubernetesAPICheckInterval: 2 * time.Second, HealthProbeBindAddress: ""}, fakeKubeClient, wd)
+				fa := agent.NewFencingAgent(logger, agentconfig.Config{NodeName: testNodeName, KubernetesAPICheckInterval: 2 * time.Second, HealthProbeBindAddress: ""}, fakeKubeClient, wd)
 				node := v1.Node{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:        strings.ToLower(testNodeName),

@@ -39,7 +39,8 @@ type Config struct {
 	GossipInterval             time.Duration `env:"GOSSIP_INTERVAL"`
 	RetransmitMult             int           `env:"RETRANSMIT_MULT"`
 	GossipToTheDeadTime        time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME"`
-	MinEventInterval           time.Duration `env:"MIN_EVENT_INTERVAL"`
+	MinEventIntervalJoin       time.Duration `env:"MIN_EVENT_INTERVAL_JOIN"`
+	MinEventIntervalLeft       time.Duration `env:"MIN_EVENT_INTERVAL_LEFT"`
 }
 
 func (c *Config) Load() error {

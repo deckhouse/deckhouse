@@ -8,35 +8,39 @@ import (
 )
 
 type EventHandler struct {
-	logger      *zap.Logger
-	nodesEvents   map[string]time.Time
-	mu            *sync.Mutex
-	onNodeFailure func(nodeName string, nodeAddr string)
-	onNodeJoin       func(status bool)
-	minEventInterval time.Duration
+	logger               *zap.Logger
+	nodesLeft            map[string]time.Time
+	nodesJoin            map[string]time.Time
+	muJoin               *sync.Mutex
+	muLeft               *sync.Mutex
+	onNodeFailure        func(nodeName string, nodeAddr string)
+	onNodeJoin           func(status bool)
+	minEventIntervalJoin time.Duration
+	minEventIntervalLeft time.Duration
 }
 
-func NewEventHandler(logger *zap.Logger, minEventInterval time.Duration, onNodeFailure func(nodeName string, nodeAddr string), onNodeJoin func(status bool)) *EventHandler {
+func NewEventHandler(logger *zap.Logger, minEventIntervalJoin, minEventIntervalLeft time.Duration, onNodeFailure func(nodeName string, nodeAddr string), onNodeJoin func(status bool)) *EventHandler {
 	return &EventHandler{
-		logger:           logger,
-		onNodeFailure:    onNodeFailure,
-		onNodeJoin:       onNodeJoin,
-		nodesEvents:      make(map[string]time.Time),
-		mu:               &sync.Mutex{},
-		minEventInterval: minEventInterval,
+		logger:               logger,
+		onNodeFailure:        onNodeFailure,
+		onNodeJoin:           onNodeJoin,
+		nodesLeft:            make(map[string]time.Time),
+		muJoin:               &sync.Mutex{},
+		minEventIntervalJoin: minEventIntervalJoin,
+		minEventIntervalLeft: minEventIntervalLeft,
 	}
 }
 
 func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if t, ok := d.nodesEvents[node.Name]; ok {
-		if time.Since(t) < d.minEventInterval {
+	d.muJoin.Lock()
+	defer d.muJoin.Unlock()
+	if t, ok := d.nodesJoin[node.Name]; ok {
+		if time.Since(t) < d.minEventIntervalJoin {
 			d.logger.Debug("False joining", zap.String("node", node.Name))
 			return
 		}
 	}
-	d.nodesEvents[node.Name] = time.Now()
+	d.nodesJoin[node.Name] = time.Now()
 	d.logger.Info("Node joined", zap.String("node", node.Name))
 	d.onNodeJoin(false)
 	// mean that node is not alone in cluster
@@ -46,15 +50,15 @@ func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 }
 
 func (d *EventHandler) NotifyLeave(node *memberlist.Node) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if t, ok := d.nodesEvents[node.Name]; ok {
-		if time.Since(t) < d.minEventInterval {
+	d.muLeft.Lock()
+	defer d.muLeft.Unlock()
+	if t, ok := d.nodesLeft[node.Name]; ok {
+		if time.Since(t) < d.minEventIntervalLeft {
 			d.logger.Debug("False leaving", zap.String("node", node.Name))
 			return
 		}
 	}
-	d.nodesEvents[node.Name] = time.Now()
+	d.nodesLeft[node.Name] = time.Now()
 	d.logger.Info("Node left, have to notify cilium", zap.String("node", node.Name))
 
 	//if d.memberlist.NumMembers() == 1 {
