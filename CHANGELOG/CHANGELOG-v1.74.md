@@ -24,6 +24,7 @@
  - **[cni-cilium]** Added support for configuring the `mapDynamicSizeRatio` parameter for specific nodes using CiliumNodeConfig. [#16326](https://github.com/deckhouse/deckhouse/pull/16326)
  - **[cni-cilium]** Added SCTP protocol support. [#16297](https://github.com/deckhouse/deckhouse/pull/16297)
  - **[cni-cilium]** Added Prometheus metric `bpf_progs_complexity_max_verified_insts ` for maximum BPF instruction complexity (available with kernel >= 5.16). [#14723](https://github.com/deckhouse/deckhouse/pull/14723)
+ - **[common]** Resource quota ignore mechanism for pvc and pods [#17068](https://github.com/deckhouse/deckhouse/pull/17068)
  - **[control-plane-manager]** Made the `terminated-pod-gc-threshold` setting dynamic based on the number of nodes in a cluster. [#16266](https://github.com/deckhouse/deckhouse/pull/16266)
     Kube-controller-manager will be restarted, and the default value of `terminated-pod-gc-threshold` will be reconfigured.
  - **[control-plane-manager]** Added Kubernetes feature gate management via the `control-plane-manager` module. [#16185](https://github.com/deckhouse/deckhouse/pull/16185)
@@ -35,6 +36,7 @@
  - **[deckhouse-controller]** Moved the `collect-debug-info` command from `deckhouse-controller` to the `d8` tool. [#15767](https://github.com/deckhouse/deckhouse/pull/15767)
  - **[deckhouse-controller]** Restricted the `d8ms-*` prefix for internal Deckhouse objects. [#15147](https://github.com/deckhouse/deckhouse/pull/15147)
     Users won't be able to create objects with the `d8ms-` prefix in their Deckhouse clusters.
+ - **[dhctl]** Skipped application edition validation for standalone builds. [#17154](https://github.com/deckhouse/deckhouse/pull/17154)
  - **[dhctl]** Isolated temporary directory for singleshot RPC and dhctl to avoid cleanup race. [#15794](https://github.com/deckhouse/deckhouse/pull/15794)
  - **[dhctl]** Skipped application edition validation for standalone builds. [#15493](https://github.com/deckhouse/deckhouse/pull/15493)
  - **[ingress-nginx]** Updated Nginx versions of NGINX Ingress Controller 1.10 and 1.12 to version 1.26.1. [#16476](https://github.com/deckhouse/deckhouse/pull/16476)
@@ -58,6 +60,8 @@
 
 
  - **[admission-policy-engine]** Allow DELETE operations, add containerPorts check in case of hostNetwork [#17084](https://github.com/deckhouse/deckhouse/pull/17084)
+ - **[candi]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
+ - **[candi]** Add pause and kubernetes-api-proxy registry packages to bashible `bb-package-fetch` to prevent node failures during containerd major upgrades. [#17047](https://github.com/deckhouse/deckhouse/pull/17047)
  - **[candi]** Added a Netplan override to force the secondary NIC to use the main routing table, fixing cloud-init PBR conflicts. [#16625](https://github.com/deckhouse/deckhouse/pull/16625)
  - **[candi]** Added `registry.d8-system.svc` to `no_proxy` list to bypass proxy for internal registry requests. [#16595](https://github.com/deckhouse/deckhouse/pull/16595)
  - **[candi]** Improved node-user retry logic to skip failing API servers. [#16493](https://github.com/deckhouse/deckhouse/pull/16493)
@@ -81,6 +85,8 @@
  - **[common]** Added `registry.d8-system.svc` to `no_proxy` list in `helm_lib` `_envs_for_proxy.tpl`. [#16595](https://github.com/deckhouse/deckhouse/pull/16595)
  - **[control-plane-manager]** Added explicit `etcd join` phase for control-plane scaling in 1.33. [#16609](https://github.com/deckhouse/deckhouse/pull/16609)
     Allows scaling control-plane from 1 to 3 in clusters where `ControlPlaneKubeletLocalMode=true`.
+ - **[deckhouse]** Fix module docs rendering. [#17245](https://github.com/deckhouse/deckhouse/pull/17245)
+ - **[deckhouse]** Fix module enabling. [#17057](https://github.com/deckhouse/deckhouse/pull/17057)
  - **[deckhouse]** Fix module enabling. [#17009](https://github.com/deckhouse/deckhouse/pull/17009)
  - **[deckhouse-controller]** Fixed "multiple readiness hooks found" error on hook registration retry after a failure. [#16778](https://github.com/deckhouse/deckhouse/pull/16778)
  - **[deckhouse-controller]** Fix conversions for external modules [#16772](https://github.com/deckhouse/deckhouse/pull/16772)
@@ -97,10 +103,16 @@
  - **[dhctl]** Now the dhctl dependency validation can run within a single SSH connection. [#16120](https://github.com/deckhouse/deckhouse/pull/16120)
  - **[dhctl]** Isolated temporary directory for singleshot RPC and dhctl to avoid cleanup race. [#15794](https://github.com/deckhouse/deckhouse/pull/15794)
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
+ - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
  - **[istio]** Correction  in Kiali of an insignificant error [#16880](https://github.com/deckhouse/deckhouse/pull/16880)
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)
  - **[loki]** Fixed the `LokiDiscardedSamplesWarning` alert. [#16374](https://github.com/deckhouse/deckhouse/pull/16374)
+ - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
+    Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
  - **[multitenancy-manager]** Fixed indentation in the manifest of `multitenancy-manager`. [#16471](https://github.com/deckhouse/deckhouse/pull/16471)
+ - **[node-manager]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
+ - **[node-manager]** It fixes issues in the DaemonSet manifest for fencing module. [#17087](https://github.com/deckhouse/deckhouse/pull/17087)
  - **[node-manager]** Fixed `mig-manager` reconfigure script to correctly handle auto-approved disruptive node group changes. [#16655](https://github.com/deckhouse/deckhouse/pull/16655)
  - **[node-manager]** Set to rescan power-button input devices and refreshes stale descriptors, ensuring the shutdown inhibitor continues receiving button-press events. [#16651](https://github.com/deckhouse/deckhouse/pull/16651)
  - **[node-manager]** Fixed `bashible-apiserver` checksum update. [#16621](https://github.com/deckhouse/deckhouse/pull/16621)
@@ -110,7 +122,9 @@
  - **[prometheus]** Added `ingressClassName` to the `grafana/prometheus` redirect Ingress. [#16116](https://github.com/deckhouse/deckhouse/pull/16116)
  - **[registrypackages]** Added `which` to RPP. [#16563](https://github.com/deckhouse/deckhouse/pull/16563)
  - **[terraform-manager]** yandex terraform version was updated [#16779](https://github.com/deckhouse/deckhouse/pull/16779)
+ - **[user-authn]** Quote service names to prevent digit-only names from breaking yaml parser [#17020](https://github.com/deckhouse/deckhouse/pull/17020)
  - **[user-authn]** Added a warning that DexAuthenticator only works over HTTPS. [#16721](https://github.com/deckhouse/deckhouse/pull/16721)
+ - **[user-authz]** Allow project-scoped roles to access Cluster-wide objects [#16896](https://github.com/deckhouse/deckhouse/pull/16896)
 
 ## Chore
 
@@ -118,6 +132,7 @@
  - **[candi]** Bumped patch versions of Kubernetes images and CVE fixes. [#16455](https://github.com/deckhouse/deckhouse/pull/16455)
     Kubernetes control-plane components and kubelet will restart.
  - **[deckhouse]** Bumped `addon-operator` dependency to ignore absent chart file. [#15949](https://github.com/deckhouse/deckhouse/pull/15949)
+ - **[dhctl]** Expand SSH output logs on errors for debug, verbose purposes. [#16915](https://github.com/deckhouse/deckhouse/pull/16915)
  - **[dhctl]** Set default ssh port to 22, to backward compatibility with cli ssh behavior in dhctl. [#16947](https://github.com/deckhouse/deckhouse/pull/16947)
  - **[dhctl]** Fixed `gossh` client reconnections. [#16709](https://github.com/deckhouse/deckhouse/pull/16709)
  - **[dhctl]** Disabled Bashible debug console when launched via `commander` and capped retries to 10 restarts and 5 attempts per step. [#15738](https://github.com/deckhouse/deckhouse/pull/15738)
