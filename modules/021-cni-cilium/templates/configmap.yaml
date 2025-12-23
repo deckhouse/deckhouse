@@ -81,6 +81,7 @@ data:
 
   {{- if eq .Values.cniCilium.internal.masqueradeMode "BPF" }}
   enable-bpf-masquerade: "true"
+  enable-loadbalancer-icmp-reply: "true"
   enable-ipv4-egress-gateway: "true"
     {{- if has .Values.cniCilium.internal.mode (list "Direct" "DirectWithNodeRoutes") }}
   # install-no-conntrack-iptables-rules requires the agent to run in direct routing mode
