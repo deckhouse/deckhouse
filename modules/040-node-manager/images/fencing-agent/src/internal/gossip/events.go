@@ -36,7 +36,7 @@ func NewEventHandler(logger *zap.Logger, minEventIntervalJoin, minEventIntervalL
 func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 	d.muJoin.Lock()
 	defer d.muJoin.Unlock()
-	if t, ok := d.nodesJoin[node.Name]; ok {
+	if t, ok := d.nodesLeft[node.Name]; ok {
 		if time.Since(t) < d.minEventIntervalJoin {
 			d.logger.Debug("False joining", zap.String("node", node.Name))
 			return
@@ -54,7 +54,7 @@ func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 func (d *EventHandler) NotifyLeave(node *memberlist.Node) {
 	d.muLeft.Lock()
 	defer d.muLeft.Unlock()
-	if t, ok := d.nodesLeft[node.Name]; ok {
+	if t, ok := d.nodesJoin[node.Name]; ok {
 		if time.Since(t) < d.minEventIntervalLeft {
 			d.logger.Debug("False leaving", zap.String("node", node.Name))
 			return
