@@ -33,6 +33,7 @@ import (
 
 const (
 	SubjectDeckhouse = "Deckhouse"
+	SubjectModule    = "Module"
 )
 
 type ReleaseNotifier struct {
@@ -47,6 +48,7 @@ func NewReleaseNotifier(settings *Settings) *ReleaseNotifier {
 
 type WebhookData struct {
 	Subject       string            `json:"subject"`
+	ModuleName    string            `json:"moduleName,omitempty"`
 	Version       string            `json:"version"`
 	Requirements  map[string]string `json:"requirements,omitempty"`
 	ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -112,9 +114,13 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		Subject:       u.settings.Subject,
 	}
 
+	if u.settings.Subject == SubjectModule {
+		data.ModuleName = release.GetModuleName()
+	}
+
 	var message string
-	if u.settings.Subject != SubjectDeckhouse {
-		message = fmt.Sprintf("New %s Release %s is available. Release will be applied at: %s", u.settings.Subject, release.GetVersion().String(), applyTime.Format(time.RFC850))
+	if u.settings.Subject == SubjectModule {
+		message = fmt.Sprintf("New %s Release %s is available. Release will be applied at: %s", release.GetModuleName(), release.GetVersion().String(), applyTime.Format(time.RFC850))
 	} else {
 		message = fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850))
 	}

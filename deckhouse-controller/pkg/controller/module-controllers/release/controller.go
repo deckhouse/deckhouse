@@ -827,7 +827,7 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		NotificationConfig: config,
 		Mode:               v1alpha2.ParseUpdateMode(policy.Spec.Update.Mode),
 		Windows:            policy.Spec.Update.Windows,
-		Subject:            release.GetModuleName(),
+		Subject:            releaseUpdater.SubjectModule,
 	}
 
 	err = r.patchManualRelease(ctx, release, us)
