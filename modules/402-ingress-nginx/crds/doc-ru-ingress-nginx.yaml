@@ -112,7 +112,7 @@ spec:
                         Работает только при включении `behindL7Proxy`.
                     trustedCIDRs:
                       description: |
-                        Список доверенных подсетей в формате CIDR, из которых запросы поступают к Ingress-контроллеру через L7-прокси. Используется для заполнения параметра NGINX `proxy-real-ip-cidr` и определения доверенных источников заголовков `X-Forwarded-*`.                    
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithProxyProtocol:
                   description: |
                     Секция настроек для инлета `LoadBalancerWithProxyProtocol`.
@@ -134,6 +134,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
+                    trustedCIDRs:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки X-Forwarded-*`/`ProxyProtocol`.
                 hostPort:
                   description: |
                     Секция настроек для инлета `HostPort`.
@@ -164,7 +167,7 @@ spec:
                         Работает **только** при включении `behindL7Proxy`.
                     trustedCIDRs:
                       description: |
-                        Список доверенных подсетей в формате CIDR, из которых запросы поступают к Ingress-контроллеру через L7-прокси. Используется для заполнения параметра NGINX `proxy-real-ip-cidr` и определения доверенных источников заголовков `X-Forwarded-*`. 
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithProxyProtocol:
                   description: |
                     Секция настроек для инлета `HostPortWithProxyProtocol`.
@@ -184,6 +187,9 @@ spec:
                         Если параметр не указан, возможность подключения по HTTPS отсутствует.
 
                         **Обязательный параметр**, если не указан `httpPort`.
+                    trustedCIDRs:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки X-Forwarded-*`/`ProxyProtocol`.
                 acceptRequestsFrom:
                   description: |
                     Список адресов в формате CIDR, которым разрешено подключаться к контроллеру.

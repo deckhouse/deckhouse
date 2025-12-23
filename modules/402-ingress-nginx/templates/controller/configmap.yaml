@@ -8,6 +8,8 @@
 {{- $hstsOptions := $crd.spec.hstsOptions | default dict }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $loadBalancer := $crd.spec.loadBalancer | default dict }}
+{{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
+{{- $loadBalancerWithProxyProtocol := $crd.spec.loadBalancerWithProxyProtocol | default dict }}
 
 ---
 apiVersion: v1
@@ -98,11 +100,7 @@ data:
 
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
     {{- if $loadBalancer.behindL7Proxy }}
-      {{- if $loadBalancer.trustedCIDRs }}
   proxy-real-ip-cidr: "{{ join "," $loadBalancer.trustedCIDRs }}"
-      {{- else if $crd.spec.acceptRequestsFrom }}
-  proxy-real-ip-cidr: "{{ join "," $crd.spec.acceptRequestsFrom }}"
-      {{- end }}
   use-forwarded-headers: "true"
       {{- if $loadBalancer.realIPHeader }}
   forwarded-for-header: {{ $loadBalancer.realIPHeader }}
@@ -112,11 +110,7 @@ data:
 
   {{- if eq $crd.spec.inlet "HostPort" }}
     {{- if $hostPort.behindL7Proxy }}
-      {{- if $hostPort.trustedCIDRs }}
   proxy-real-ip-cidr: "{{ join "," $hostPort.trustedCIDRs }}"
-      {{- else if $crd.spec.acceptRequestsFrom }}
-  proxy-real-ip-cidr: "{{ join "," $crd.spec.acceptRequestsFrom }}"
-      {{- end }}
   use-forwarded-headers: "true"
       {{- if $hostPort.realIPHeader }}
   forwarded-for-header: {{ $hostPort.realIPHeader }}
@@ -124,13 +118,27 @@ data:
     {{- end }}
   {{- end }}
 
-  {{- if or (eq $crd.spec.inlet "HostPortWithProxyProtocol") $failover }}
+  {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
   use-proxy-protocol: "true"
+    {{- if $hostPortWithProxyProtocol }}
+  proxy-real-ip-cidr: "{{ join "," $hostPortWithProxyProtocol.trustedCIDRs }}"
+    {{- else }}
   proxy-real-ip-cidr: "0.0.0.0/0"
+    {{- end }}
   {{- end }}
 
   {{- if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
   use-proxy-protocol: "true"
+    {{- if  $loadBalancerWithProxyProtocol }}
+  proxy-real-ip-cidr: "{{ join "," $loadBalancerWithProxyProtocol.trustedCIDRs }}"
+    {{- else }}
+  proxy-real-ip-cidr: "0.0.0.0/0"
+    {{- end }}
+  {{- end }}
+
+  {{- if $failover }}
+  use-proxy-protocol: "true"
+  proxy-real-ip-cidr: "0.0.0.0/0"
   {{- end }}
 
   {{- if $geoIP2 }}

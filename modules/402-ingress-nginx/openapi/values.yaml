@@ -156,6 +156,10 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
+                    trustedCIDRs:
+                      type: array
+                      items:
+                        type: string
                 loadBalancerWithSSLPassthrough:
                   type: object
                   default: {}
@@ -193,6 +197,10 @@ properties:
                       type: integer
                     httpsPort:
                       type: integer
+                    trustedCIDRs:
+                      type: array
+                      items:
+                        type: string
                 hostPortWithSSLPassthrough:
                   type: object
                   default: {}
