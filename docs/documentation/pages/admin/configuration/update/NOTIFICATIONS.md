@@ -71,7 +71,6 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
-  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -213,7 +212,6 @@ Example request body for module release:
 ```json
 {
   "subject": "observability",
-  "moduleName": "observability",
   "version": "0.7.14",
   "requirements": {"deckhouse": ">= 1.69"},
   "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-observability-v0.7.14.md",
@@ -225,7 +223,6 @@ Example request body for module release:
 Field descriptions:
 
 - `subject`: Release subject ("Deckhouse" for Deckhouse releases or module name for module releases).
-- `moduleName`: Module name (present only for module releases).
 - `version`: Minor version number (a string).
 - `requirements`: Object with requirements for the new version (for example, the minimum Kubernetes or Deckhouse version).
 - `changelogLink`: Link to the changelog describing changes in the new minor version.

@@ -67,7 +67,6 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
-  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -198,7 +197,6 @@ DKP отправляет на указанный вебхук POST-запрос 
 ```json
 {
   "subject": "observability",
-  "moduleName": "observability",
   "version": "0.7.14",
   "requirements": {"deckhouse": ">= 1.69"},
   "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-observability-v0.7.14.md",
@@ -210,7 +208,6 @@ DKP отправляет на указанный вебхук POST-запрос 
 Описание полей в формате уведомлений:
 
 - `subject` — субъект релиза ("Deckhouse" для релизов Deckhouse или имя модуля для релизов модулей);
-- `moduleName` — имя модуля (присутствует только для релизов модулей);
 - `version` — номер минорной версии (строка);
 - `requirements` — объект с требованиями к новой версии (например, минимальная версия Kubernetes или Deckhouse);
 - `changelogLink` — ссылка на changelog с описанием изменений в новой минорной версии;
