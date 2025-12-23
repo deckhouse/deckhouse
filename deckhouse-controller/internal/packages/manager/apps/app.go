@@ -33,11 +33,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 )
 
 // DependencyContainer provides access to shared services needed by applications.
