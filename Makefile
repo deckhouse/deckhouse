@@ -110,7 +110,7 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 2.7.2
+GOLANGCI_VERSION = v2.7.2
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -175,7 +175,7 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_VERSION}
 
 .PHONY: lint lint-fix
 lint: ## Run linter.
@@ -485,7 +485,7 @@ YQ_VERSION ?= v4.47.2
 generate-werf: ## Generate changes in werf files.
   ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
 	@if [ -n "$(GOLANGCI_VERSION)" ]; then \
-		sed -i 's/--branch v[0-9]\+\.[0-9]\+\.[0-9]\+/--branch v$(GOLANGCI_VERSION)/g' .werf/werf-golang-ci-lint.yaml; \
+		sed -i 's/--branch v[0-9]\+\.[0-9]\+\.[0-9]\+/--branch $(GOLANGCI_VERSION)/g' .werf/werf-golang-ci-lint.yaml; \
 		echo "Updated golangci-lint version to $(GOLANGCI_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
 	else \
 		echo "No GOLANGCI_VERSION specified. Skipping update."; \
