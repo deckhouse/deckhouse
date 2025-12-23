@@ -158,6 +158,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/titanous/rocacheck v0.0.0-20171023193734-afe73141d399 // indirect
 	github.com/vbatts/tar-split v0.12.1 // indirect
 	github.com/weppos/publicsuffix-go v0.30.3-0.20240510084413-5f1d03393b3d // indirect
