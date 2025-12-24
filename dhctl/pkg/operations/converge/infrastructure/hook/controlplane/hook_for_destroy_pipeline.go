@@ -77,7 +77,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	return false, nil
 }
 
-func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
+func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastructure.RunnerInterface) error {
 	if h.commanderMode {
 		return nil
 	}
