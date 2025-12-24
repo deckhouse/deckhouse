@@ -1147,9 +1147,9 @@ alerts:
 
         **Current usage:** {{ $value | printf "%.1f" }}%
 
-        When the quota is exhausted, Dex will be unable to create new AuthRequest CRs, which may cause:
-        * Dex health checks to fail
-        * Authentication through external identity providers (GitLab, GitHub, etc.) to stop working
+        When the quota is exhausted, Dex will be unable to create new AuthRequest custom resources, which may cause:
+        * Dex health checks to fail.
+        * Authentication through external identity providers (GitLab, GitHub, etc.) to stop working.
 
         **Investigation steps:**
 
@@ -1158,9 +1158,9 @@ alerts:
            d8 k get authrequests.dex.coreos.com -n d8-user-authn
            ```
 
-        2. Review Dex configuration for AuthRequest TTL settings
+        2. Review Dex configuration for AuthRequest TTL settings.
 
-        3. Consider temporarily increasing the ResourceQuota limit if needed
+        3. Consider temporarily increasing the ResourceQuota limit if needed.
       summary: |
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
       severity: "5"
