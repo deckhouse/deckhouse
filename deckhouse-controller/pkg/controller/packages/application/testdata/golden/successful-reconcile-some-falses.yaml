@@ -60,6 +60,7 @@ metadata:
 spec:
   packageName: test
   packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
 status:
   conditions:
   - lastProbeTime: null

@@ -472,6 +472,7 @@ INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
 
+## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
 GOLANGCI_LINT_VERSION = v2.7.2
