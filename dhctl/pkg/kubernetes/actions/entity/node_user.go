@@ -95,7 +95,7 @@ type NodeUserPresentsWaiter struct {
 
 func NewNodeUserExistsWaiter(checker NodeUserPresentsChecker, kubeProvider kubernetes.KubeClientProviderWithCtx) *NodeUserPresentsWaiter {
 	params := retry.NewEmptyParams().
-		WithAttempts(30).
+		WithAttempts(50).
 		WithWait(5 * time.Second)
 
 	return &NodeUserPresentsWaiter{
