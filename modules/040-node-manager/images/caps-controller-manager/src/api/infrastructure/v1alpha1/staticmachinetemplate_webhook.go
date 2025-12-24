@@ -62,8 +62,19 @@ func (r *StaticMachineTemplate) ValidateCreate() (admission.Warnings, error) {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	oldStaticMachineTemplate := old.(*StaticMachineTemplate)
-	if !reflect.DeepEqual(r.Spec, oldStaticMachineTemplate.Spec) {
-		err := field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable")
+
+	// Allow changes to labelSelector as it's a valid operation for NodeGroup management
+	// Create copies to compare without labelSelector
+	newSpecCopy := r.Spec.DeepCopy()
+	oldSpecCopy := oldStaticMachineTemplate.Spec.DeepCopy()
+
+	// Clear labelSelector from both specs for comparison
+	newSpecCopy.Template.Spec.LabelSelector = nil
+	oldSpecCopy.Template.Spec.LabelSelector = nil
+
+	// Only reject if non-labelSelector fields have changed
+	if !reflect.DeepEqual(newSpecCopy, oldSpecCopy) {
+		err := field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable (except labelSelector)")
 		staticmachinetemplatelog.Error(err, "validate update rejected", "name", r.Name, "allowed", false)
 		return nil, err
 	}
