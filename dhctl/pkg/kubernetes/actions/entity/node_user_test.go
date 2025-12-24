@@ -289,7 +289,7 @@ func TestWaitNodeUserPresentOnNodeWithParams(t *testing.T) {
 	}
 
 	assertDefaultParams := func(t *testing.T, w *NodeUserPresentsWaiter) {
-		assertParams(t, w, 30, 5*time.Second)
+		assertParams(t, w, 50, 5*time.Second)
 	}
 
 	t.Run("nil params", func(t *testing.T) {
