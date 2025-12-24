@@ -110,7 +110,7 @@ func NewClientFromConfig(ctx context.Context, host string, cred *v1alpha2.SSHCre
 
 	var keys []session.AgentPrivateKey
 	if cred.PrivateSSHKey != "" {
-		tmpFile, err := os.CreateTemp("dhctl", "sshkey-for-staticinstance-*")
+		tmpFile, err := os.CreateTemp("", "sshkey-for-staticinstance-*")
 		if err != nil {
 			return nil, fmt.Errorf("cannot create temp file for SSH key: %w", err)
 		}
