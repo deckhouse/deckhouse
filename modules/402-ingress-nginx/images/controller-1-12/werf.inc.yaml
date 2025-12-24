@@ -16,7 +16,7 @@
 {{ $icuVersion := "release-77-1" }}
 {{ $pcreVersion := "8.45" }}
 {{ $libmaxminddbVersion := "1.12.2" }}
-{{ $curlVersion := "curl-8_12_1" }}
+{{ $curlVersion := "curl-8_17_0" }}
 {{ $zlibVersion := "v1.3.1" }}
 {{ $cAresVersion := "v1.34.5" }}
 {{ $opensslVersion := "3.6.0" }}
