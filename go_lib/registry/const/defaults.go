@@ -14,16 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package helpers
+package constant
 
-import (
-	"strings"
+const (
+	UnknownVersion    = "unknown"
+	LicenseUsername   = "license-token"
+	DefaultImagesRepo = "registry.deckhouse.io/deckhouse/ce"
+	DefaultScheme     = SchemeHTTPS
 )
-
-func RegistryAddressAndPathFromImagesRepo(imgRepo string) (string, string) {
-	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(imgRepo, "/")), "/", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
-	}
-	return parts[0], "/" + parts[1]
-}

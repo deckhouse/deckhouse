@@ -26,10 +26,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
-	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
@@ -42,6 +42,7 @@ import (
 type State struct {
 	Mode       registry_const.ModeType `json:"mode,omitempty"`
 	TargetMode registry_const.ModeType `json:"target_mode,omitempty"`
+	InitParams *ParamsState            `json:"init_params,omitempty"`
 
 	PKI             pki.State              `json:"pki,omitempty"`
 	Secrets         secrets.State          `json:"secrets,omitempty"`
@@ -98,6 +99,74 @@ func (state *State) setCondition(condition metav1.Condition) {
 
 func (state *State) clearConditions() {
 	state.Conditions = nil
+}
+
+func (state *State) initialize(log go_hook.Logger, inputs Inputs) error {
+	// Process PKI
+	if inputs.InitSecret.CA != nil {
+		state.PKI.CA = &pki.CertModel{
+			Cert: inputs.InitSecret.CA.Cert,
+			Key:  inputs.InitSecret.CA.Key,
+		}
+	}
+
+	_, err := state.PKI.Process(log)
+	if err != nil {
+		return fmt.Errorf("cannot process PKI: %w", err)
+	}
+
+	// Set Bashible ActualParams
+	var (
+		bashibleActualParams    *bashible.ModeParams
+		bashibleUnmanagedParams *bashible.UnmanagedModeParams
+	)
+
+	switch inputs.Params.Mode {
+	case registry_const.ModeDirect:
+		bashibleActualParams = &bashible.ModeParams{
+			Direct: &bashible.DirectModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			},
+		}
+
+		bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
+			ImagesRepo: inputs.Params.ImagesRepo,
+			Scheme:     inputs.Params.Scheme,
+			CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+			Username:   inputs.Params.UserName,
+			Password:   inputs.Params.Password,
+		}
+
+	case registry_const.ModeUnmanaged:
+		// Only for configurable unmanaged mode
+		if inputs.Params.ImagesRepo != "" {
+			bashibleActualParams = &bashible.ModeParams{
+				Unmanaged: &bashible.UnmanagedModeParams{
+					ImagesRepo: inputs.Params.ImagesRepo,
+					Scheme:     inputs.Params.Scheme,
+					CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+					Username:   inputs.Params.UserName,
+					Password:   inputs.Params.Password,
+				},
+			}
+
+			bashibleUnmanagedParams = &bashible.UnmanagedModeParams{
+				ImagesRepo: inputs.Params.ImagesRepo,
+				Scheme:     inputs.Params.Scheme,
+				CA:         string(encodeCertificateIfExist(inputs.Params.CA)),
+				Username:   inputs.Params.UserName,
+				Password:   inputs.Params.Password,
+			}
+		}
+	}
+
+	state.Bashible.ActualParams = bashibleActualParams
+	state.Bashible.UnmanagedParams = bashibleUnmanagedParams
+	return nil
 }
 
 func (state *State) process(log go_hook.Logger, inputs Inputs) error {
@@ -379,9 +448,17 @@ func (state *State) transitionToConfigurableUnmanaged(inputs Inputs) error {
 }
 
 func (state *State) transitionToUnmanaged(inputs Inputs) error {
-	if state.Mode != registry_const.ModeUnmanaged &&
-		state.Mode != registry_const.ModeProxy &&
-		state.Mode != registry_const.ModeDirect {
+	modeSupported := false
+
+	switch state.Mode {
+	case registry_const.ModeUnmanaged,
+		registry_const.ModeProxy,
+		registry_const.ModeDirect:
+
+		modeSupported = true
+	}
+
+	if !modeSupported {
 		return ErrTransitionNotSupported{
 			From: state.Mode,
 			To:   state.TargetMode,
@@ -391,9 +468,7 @@ func (state *State) transitionToUnmanaged(inputs Inputs) error {
 	// Reset checker
 	state.CheckerParams = checker.Params{}
 
-	if (state.Mode == registry_const.ModeProxy ||
-		state.Mode == registry_const.ModeDirect) &&
-		state.Bashible.UnmanagedParams != nil {
+	if state.Bashible.UnmanagedParams != nil {
 		unmanagedParams := *state.Bashible.UnmanagedParams
 
 		bashibleParams := bashible.Params{
@@ -663,7 +738,7 @@ func (state *State) processRegistrySwitcher(params registryswitcher.Params, inpu
 }
 
 func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs Inputs) (bool, error) {
-	checkerVersion, err := helpers.ComputeHash(
+	checkerVersion, err := registry_pki.ComputeHash(
 		params,
 		state.TargetMode,
 		inputs.Params.CheckMode,
@@ -672,7 +747,7 @@ func (state *State) processCheckerUpstream(params checker.RegistryParams, inputs
 		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
 	}
 
-	registryAddr, _ := helpers.RegistryAddressAndPathFromImagesRepo(params.Address)
+	registryAddr, _ := registry_helpers.SplitAddressAndPath(params.Address)
 	state.CheckerParams = checker.Params{
 		Registries: map[string]checker.RegistryParams{
 			registryAddr: params,
