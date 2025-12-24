@@ -5,7 +5,7 @@ metadata:
   labels:
     app: controller
     deckhouse-service-type: provider-managed
-    ingress-nginx/ingress-class: nginx
+    network.deckhouse.io/ingress-nginx-class: nginx
     heritage: deckhouse
     module: ingress-nginx
     name: test-without-hpa

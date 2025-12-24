@@ -83,7 +83,7 @@ spec:
         - --maxmind-edition-ids=GeoIPTest,GeoIPTest2
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-test
-        - --status-service-label=ingress-nginx/ingress-class=test
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=test
         env:
         - name: POD_NAME
           valueFrom:

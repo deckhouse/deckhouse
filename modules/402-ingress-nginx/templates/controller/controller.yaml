@@ -128,7 +128,7 @@ spec:
     metadata:
       labels:
       {{- if or (eq $crd.spec.inlet "HostWithFailover") (eq $crd.spec.inlet "HostPort") }}
-        ingress-nginx/ingress-class: {{ $crd.spec.ingressClass }}
+        network.deckhouse.io/ingress-nginx-class: {{ $crd.spec.ingressClass }}
       {{- end }}
       {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
         ingress.deckhouse.io/block-deleting: "true"
@@ -336,7 +336,7 @@ spec:
         {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
         - --enable-ssl-passthrough
         {{- end }}
-        - --status-service-label=ingress-nginx/ingress-class={{ $crd.spec.ingressClass }}
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class={{ $crd.spec.ingressClass }}
         lifecycle:
           preStop:
             exec:

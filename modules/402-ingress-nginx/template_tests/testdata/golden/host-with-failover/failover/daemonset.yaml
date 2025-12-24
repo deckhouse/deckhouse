@@ -56,7 +56,7 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
-        ingress-nginx/ingress-class: solid
+        network.deckhouse.io/ingress-nginx-class: solid
         app: proxy-failover
         name: solid
     spec:
