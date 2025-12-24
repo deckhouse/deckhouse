@@ -3,6 +3,7 @@
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
 {%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
 {%- assign productName = productMenuData.title %}
+productName - {{ productName }}, productCode - {{ productCode }}
 <div class="header header__product-menu">
   <div class="container">
     <div class="header__product-menu-logo">
