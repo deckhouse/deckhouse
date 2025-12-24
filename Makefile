@@ -482,13 +482,13 @@ YQ_VERSION ?= v4.47.2
 
 ## Generate werf
 .PHONY: generate-werf
-generate-werf: ## Generate changes in werf files.
+generate-werf: yq ## Generate changes in werf files.
   ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
 	@if [ -n "$(GOLANGCI_VERSION)" ]; then \
-		sed -i 's/--branch v[0-9]\+\.[0-9]\+\.[0-9]\+/--branch $(GOLANGCI_VERSION)/g' .werf/werf-golang-ci-lint.yaml; \
+		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
 		echo "Updated golangci-lint version to $(GOLANGCI_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
 	else \
-		echo "No GOLANGCI_VERSION specified. Skipping update."; \
+		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
 	fi
 
 
