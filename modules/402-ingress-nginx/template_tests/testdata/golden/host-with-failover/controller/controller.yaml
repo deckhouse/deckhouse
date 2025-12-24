@@ -73,8 +73,9 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
-        app: controller
+        network.deckhouse.io/ingress-nginx-class: solid
         ingress.deckhouse.io/block-deleting: "true"
+        app: controller
         name: solid
     spec:
       automountServiceAccountToken: true
@@ -93,6 +94,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid
         env:
         - name: POD_NAME
           valueFrom:
@@ -392,6 +394,7 @@ spec:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
+        network.deckhouse.io/ingress-nginx-class: solid
         name: solid-failover
     spec:
       automountServiceAccountToken: true
@@ -410,6 +413,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid
         env:
         - name: POD_NAME
           valueFrom:
