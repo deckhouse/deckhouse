@@ -16,17 +16,10 @@ package controller
 
 import (
 	"context"
-	"fmt"
-	"time"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type CloudPermanentNodeGroupHook struct {
@@ -54,10 +47,6 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	if err != nil {
 		return false, err
 	}
-	//err = deleteNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
-	//if err != nil {
-	//	return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
-	//}
 	return false, nil
 }
 
@@ -67,24 +56,4 @@ func (h *HookForDestroyPipeline) IsReady() error {
 
 func (h *HookForDestroyPipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
 	return nil
-}
-
-func deleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Delete node %s", nodeName),
-		10,
-		5*time.Second,
-	).RunContext(ctx, func() error {
-		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' already deleted. Skip\n", nodeName)
-				return nil
-			}
-			return err
-		}
-
-		log.InfoF("Node '%s' successfully deleted from cluster\n", nodeName)
-		return nil
-	})
 }
