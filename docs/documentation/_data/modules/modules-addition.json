@@ -51,6 +51,25 @@
     "external": "true",
     "path": "/modules/code/stable/"
   },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/stable/"
+  },
   "commander": {
     "editions": [
       "ce",
@@ -120,20 +139,49 @@
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-netapp/stable/"
   },
   "csi-hpe": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-hpe/stable/"
   },
   "csi-huawei": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -210,8 +258,18 @@
   },
   "neuvector": {
     "editions": [
-      "ee"
+      "ee",
+      "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/neuvector/stable/"
   },
@@ -243,10 +301,37 @@
   },
   "operator-argo": {
     "editions": [
+      "ee",
+      "se-plus",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
+    "external": "true",
+    "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/"
+  },
+  "payload-registry": {
+    "editions": [
       "ee"
     ],
     "external": "true",
-    "path": "/modules/operator-argo/stable/"
+    "path": "/modules/payload-registry/stable/"
   },
   "pod-reloader": {
     "editions": [
@@ -288,8 +373,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
-        "ru": "Ограничение на&nbsp;возможность создания снимков"
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots and volume&nbsp;wiping",
+        "ru": "Ограничение на&nbsp;возможность создания снимков и затирание&nbsp;томов"
       }
     },
     "external": "true",

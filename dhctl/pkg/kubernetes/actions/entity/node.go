@@ -429,3 +429,37 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 
 	return exists, err
 }
+
+func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient) error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", global.ConvergeNodeUserName), 30, 5*time.Second).
+		RunContext(ctx, func() error {
+			present := make(map[string]bool)
+
+			nodesForClient, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{
+				LabelSelector: "node.deckhouse.io/group=master",
+			})
+			if err != nil {
+				return err
+			}
+
+			for _, node := range nodesForClient.Items {
+				present[node.Name] = false
+
+				if node.Annotations != nil {
+					value, ok := node.Annotations[global.ConvergerNodeUserAnnotation]
+					if ok && value == "true" {
+						present[node.Name] = true
+					}
+				}
+
+			}
+
+			for node, ok := range present {
+				if !ok {
+					return fmt.Errorf("NodeUser %s is not present on %s yet", global.ConvergeNodeUserName, node)
+				}
+			}
+
+			return nil
+		})
+}

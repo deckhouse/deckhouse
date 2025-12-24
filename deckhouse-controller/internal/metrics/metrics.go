@@ -14,7 +14,7 @@
 
 // Package metrics provides centralized metric names for deckhouse-controller.
 // All metric names use constants to ensure consistency and prevent typos.
-// The {PREFIX} placeholder is replaced by the metrics storage with the appropriate prefix.
+// The deckhouse_ placeholder is replaced by the metrics storage with the appropriate prefix.
 package metrics
 
 import (
@@ -68,11 +68,10 @@ const (
 	// ============================================================================
 	// Module Release Controller Metrics
 	// ============================================================================
-	// Release operation metrics (with PREFIX placeholder)
-	ModulePullSecondsTotal     = "{PREFIX}module_pull_seconds_total"
-	ModuleSizeBytesTotal       = "{PREFIX}module_size_bytes_total"
-	ModuleUpdatePolicyNotFound = "{PREFIX}module_update_policy_not_found"
-	ModuleConfigurationError   = "{PREFIX}module_configuration_error"
+	ModulePullSecondsTotal     = "deckhouse_module_pull_seconds_total"
+	ModuleSizeBytesTotal       = "deckhouse_module_size_bytes_total"
+	ModuleUpdatePolicyNotFound = "deckhouse_module_update_policy_not_found"
+	ModuleConfigurationError   = "deckhouse_module_configuration_error"
 )
 
 // ============================================================================
@@ -82,6 +81,7 @@ const (
 	MigratedModuleNotFoundGroup = "migrated_module_not_found"
 	D8Updating                  = "d8_updating"
 	D8ModuleUpdatingGroup       = "d8_module_updating_group"
+	ModuleReleaseGroup          = "module_release_group"
 )
 
 // Group templates for dynamic metric names using fmt.Sprintf
@@ -89,6 +89,22 @@ const (
 	ObsoleteConfigMetricGroupTemplate = "obsoleteVersion_%s"
 	ModuleConflictMetricGroupTemplate = "module_%s_at_conflict"
 )
+
+// ModuleReleaseMetricsGroupName returns the unique metrics group name for a module release.
+// This is a convenience function to standardize the naming of module release metrics groups in a centralized way.
+func ModuleReleaseMetricsGroupName(moduleName, version string) string {
+	return ModuleReleaseGroup + moduleName + version
+}
+
+// ModuleConfigurationErrorLabels returns standard labels for the ModuleConfigurationError metric.
+// This ensures consistent label usage across the codebase and matches the registered metric labels.
+func ModuleConfigurationErrorLabels(moduleName, version, errorMsg string) map[string]string {
+	return map[string]string{
+		"module":  moduleName,
+		"version": version,
+		"error":   errorMsg,
+	}
+}
 
 // ============================================================================
 // Metric Registration Functions
@@ -235,7 +251,7 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 	configLabels := []string{"module"}
 
 	// Register counter for module operations
-	// Note: These metrics use {PREFIX} placeholder which is replaced by metrics storage
+	// Note: These metrics use deckhouse_ placeholder which is replaced by metrics storage
 	_, err := metricStorage.RegisterCounter(
 		ModuleUpdatePolicyNotFound,
 		moduleLabels,
@@ -264,9 +280,12 @@ func RegisterModuleControllerMetrics(metricStorage metricsstorage.Storage) error
 		return fmt.Errorf("failed to register %s: %w", ModuleSizeBytesTotal, err)
 	}
 
+	// ModuleConfigurationError uses different labels than other module metrics
+	// because it tracks configuration errors per module version, not per source
+	moduleConfigErrorLabels := []string{"module", "version", "error"}
 	_, err = metricStorage.RegisterGauge(
 		ModuleConfigurationError,
-		moduleLabels,
+		moduleConfigErrorLabels,
 		options.WithHelp("Gauge indicating module configuration errors (1.0 = error present, 0.0 = no error)"),
 	)
 	if err != nil {

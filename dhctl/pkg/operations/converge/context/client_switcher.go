@@ -15,6 +15,7 @@
 package context
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -64,7 +65,7 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 	}
 }
 
-func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) error {
+func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Switch to node user skipped. In commander mode")
 		return nil
@@ -90,6 +91,15 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 		if err != nil {
 			return fmt.Errorf("failed to create or update NodeUser: %w", err)
 		}
+		sshCl := s.ctx.KubeClient().NodeInterfaceAsSSHClient()
+		if sshCl == nil {
+			return fmt.Errorf("Node interface is not ssh")
+		}
+
+		err = entity.WaitForNodeUserPresentOnNode(ctx, s.ctx.KubeClient())
+		if err != nil {
+			return fmt.Errorf("Could not ensure %s is presented on control plane hosts: %w", global.ConvergeNodeUserName, err)
+		}
 
 		convergeState.NodeUserCredentials = nodeUserCredentials
 
@@ -99,14 +109,14 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(nodesState map[string][]byte) erro
 		}
 	}
 
-	return s.replaceKubeClient(convergeState, nodesState)
+	return s.replaceKubeClient(ctx, convergeState, nodesState)
 }
 
 func (s *KubeClientSwitcher) tmpDirForConverger() string {
 	return filepath.Join(s.params.TmpDir, "converger")
 }
 
-func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[string][]byte) (err error) {
+func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) (err error) {
 	s.logger.LogDebugLn("Starting replacing kube client")
 
 	tmpDir := s.tmpDirForConverger()
@@ -136,7 +146,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 
 	sshCl := kubeCl.NodeInterfaceAsSSHClient()
 	if sshCl == nil {
-		panic("Node interface is not ssh")
+		return fmt.Errorf("Node interface is not ssh")
 	}
 
 	settings := sshCl.Session()
@@ -212,11 +222,11 @@ func (s *KubeClientSwitcher) replaceKubeClient(convergeState *State, state map[s
 	var pkeys []session.AgentPrivateKey
 
 	if sshclient.IsLegacyMode() {
-		pkeys = append(pkeys, session.AgentPrivateKey(privateKey))
+		pkeys = append(pkeys, privateKey)
 	} else {
-		pkeys = append(sshCl.PrivateKeys(), session.AgentPrivateKey(privateKey))
+		pkeys = append(sshCl.PrivateKeys(), privateKey)
 	}
-	newSSHClient := sshclient.NewClient(sess, pkeys)
+	newSSHClient := sshclient.NewClient(ctx, sess, pkeys)
 
 	err = newSSHClient.Start()
 	if err != nil {

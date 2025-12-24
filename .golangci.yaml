@@ -45,7 +45,7 @@ linters:
       # Enforce using constants instead of raw keys.
       no-raw-keys: false
       # Enforce a single key naming convention.
-#      key-naming-case: ""
+      key-naming-case: "snake"
       # Enforce not using specific keys.
       forbidden-keys:
         - level
@@ -61,6 +61,20 @@ linters:
         - all
         - '-ST1003' # waiting for package name will be fixed (underscores)
         - '-QF1008' # not need to fix; we understand how to call nested structs
+    revive:
+      rules:
+        - name: var-naming # waiting for package name will be fixed (incorrect naming)
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - ["ID"] # AllowList
+            - ["VM"] # DenyList
+            - - skip-initialism-name-checks: false
+                upper-case-const: false
+                skip-package-name-checks: true
+                skip-package-name-collision-with-go-std: false
+                extra-bad-package-names: []
   exclusions:
     generated: lax
     presets:
@@ -91,6 +105,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - _test\.go$
 formatters:
   enable:
     - gci

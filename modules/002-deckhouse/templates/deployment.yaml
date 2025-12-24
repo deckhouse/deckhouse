@@ -107,6 +107,9 @@ spec:
 {{- if .Values.deckhouse.tolerations }}
       tolerations:
         {{- .Values.deckhouse.tolerations | toYaml | nindent 8 }}
+        - key: node.deckhouse.io/bashible-uninitialized
+          operator: "Exists"
+          effect: "NoSchedule"        
         - key: node.deckhouse.io/uninitialized
           operator: "Exists"
           effect: "NoSchedule"
@@ -166,6 +169,7 @@ spec:
               valueFrom: null # a hack for explicit wiping valueFrom field, helm has problems with arrays merge patching
             - name: KUBERNETES_SERVICE_PORT
               value: "6445"
+            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
   {{- else }}
   # bootstrap phase: use direct connection
             - name: KUBERNETES_SERVICE_HOST
@@ -175,10 +179,19 @@ spec:
                   fieldPath: status.hostIP
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
+            {{- $bootstrapContext := deepCopy . }}
+            {{- if and $bootstrapContext.Values.global.clusterConfiguration $bootstrapContext.Values.global.clusterConfiguration.proxy }}
+            {{- $_ := set $bootstrapContext.Values.global.clusterConfiguration.proxy "noProxy" (append ($bootstrapContext.Values.global.clusterConfiguration.proxy.noProxy | default list) "$(KUBERNETES_SERVICE_HOST)") }}
+            {{- end }}
+            {{- include "helm_lib_envs_for_proxy" $bootstrapContext | nindent 12 }}
   {{- end }}
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
+              value: "false"
+            - name: USE_NELM
+              value: "true"
             - name: LOG_TYPE
               value: "json"
             - name: DECKHOUSE_HA
@@ -250,7 +263,6 @@ spec:
               value: /tmp/.bash_history
             - name: DEBUG_HTTP_SERVER_ADDR
               value: "127.0.0.1:9652"
-            {{- include "helm_lib_envs_for_proxy" . | nindent 12 }}
 {{- if .Values.deckhouse.internal.chrootMode }}
             - name: ADDON_OPERATOR_SHELL_CHROOT_DIR
               value: "/chroot"

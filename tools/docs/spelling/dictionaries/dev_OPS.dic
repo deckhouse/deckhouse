@@ -1,4 +1,4 @@
-2510
+2533
 1GB
 2GB
 5XX
@@ -24,6 +24,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -56,8 +57,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 aren
 argocd
@@ -96,6 +97,7 @@ autoscaler
 autoscalers
 autoscaling
 autounattend
+Avi
 aws
 AWS
 awscli
@@ -265,8 +267,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -329,6 +331,7 @@ CVE
 CVEs
 CWND
 Cелектор
+Cертификат
 Cинхронизация
 cмаршрутизировать
 Cоздается
@@ -399,6 +402,7 @@ DisruptionFunc
 distros
 Django
 dkms
+dkp
 DKP
 DN
 DNAT
@@ -409,8 +413,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -460,6 +464,7 @@ elasticsearch
 Elasticsearch
 ELB
 EmailConfig
+emailVerified
 emptyDir
 enableMultiTenancy
 endofftopic
@@ -487,6 +492,7 @@ externalNetworkName
 externalNetworkNames
 ExternalSecret
 externalTargets
+ExtraConfig
 extraGroups
 extranet
 failover
@@ -555,6 +561,7 @@ Gitaly
 giterminism
 GitHub
 gitignore
+gitlab
 GitLab
 GitOps
 GKE
@@ -674,6 +681,7 @@ inodes
 inotify
 inplace
 insecureNoSSL
+insecureSkipEmailVerified
 instanceclass
 instanceClass
 InstanceClass
@@ -687,6 +695,7 @@ internalNetworkCIDRs
 internalNetworkDNSServers
 internalNetworkNames
 internalNetworkSecurity
+internet
 interoperate
 interpod
 InterPodAntiAffinity
@@ -819,6 +828,7 @@ loki
 longtermStorageClass
 LowNodeUtilization
 LRS
+lsblk
 LTS
 LUN
 lv
@@ -957,7 +967,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -966,6 +975,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1004,6 +1014,7 @@ OCI
 OFFLINE
 offtopic
 OICD
+oidc
 OIDC
 ok
 OK
@@ -1019,6 +1030,7 @@ openapi
 openAPI
 OpenAPI
 openAPIV
+openid
 OpenID
 OpenKruise
 OpenLDAP
@@ -1056,6 +1068,7 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+OVF
 ovh
 OVH
 ovirt
@@ -1124,6 +1137,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
@@ -1334,6 +1348,7 @@ SSZ
 stakater
 StandardSSD
 StandardWithInternalNetwork
+StandardWithNetwork
 StandardWithNoRouter
 Stapel
 startTLS
@@ -1438,6 +1453,7 @@ TODO
 TolerationSeconds
 toolchain
 Tooltip
+totp
 Tproger
 trdl
 trivy
@@ -1484,6 +1500,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDC
 VDI
 ve
 vectoradd
@@ -1659,6 +1676,7 @@ ZvirtInstanceClass
 аттрибутов
 Аудиофайлы
 аутентификатора
+аутентификаторе
 аутентификаторов
 аутентификаторы
 аутентификациии
@@ -1668,6 +1686,7 @@ ZvirtInstanceClass
 аутентифицировались
 аутентифицированному
 аутентифицированных
+аутентифицированный
 аутентифицировать
 аутентифицироваться
 аутентифицирует
@@ -1763,6 +1782,8 @@ ZvirtInstanceClass
 высокоуровневыми
 высокоуровневых
 г
+гайде
+гайде
 Гб
 Гбит
 геораспределенном
@@ -1973,12 +1994,15 @@ ZvirtInstanceClass
 майнеров
 майнинг
 маппинг
+маппинга
 маршрутизировать
 маршрутизируемой
 масштабироваться
 масштабируемости
 масштабируемость
 масштабируется
+Мб
+Мб
 МБ
 медиафайлов
 медиафайлы
@@ -2053,6 +2077,8 @@ ZvirtInstanceClass
 непринадлежности
 непубличного
 непубличный
+неразмеченным
+неразмеченным
 нереляционные
 несекретной
 несекретную

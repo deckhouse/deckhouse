@@ -20,9 +20,9 @@ If an update requires making changes to the cluster (for example, updating the K
 DKP generates designated alerts.
 These alerts include:
 
-- **D8NodeHasDeprecatedOSVersion**: Nodes with an unsupported OS version have been detected in the cluster.
-- **HelmReleasesHasResourcesWithDeprecatedVersions**: Some Helm releases use deprecated resources.
-- **KubernetesVersionEndOfLife**: The installed Kubernetes version is no longer supported.
+- [`D8NodeHasDeprecatedOSVersion`](../../../reference/alerts.html#monitoring-deckhouse-d8nodehasdeprecatedosversion): Nodes with an unsupported OS version have been detected in the cluster.
+- [`HelmReleasesHasResourcesWithDeprecatedVersions`](../../../reference/alerts.html#monitoring-kubernetes-helmreleaseshasresourceswithdeprecatedversions): Some Helm releases use deprecated resources.
+- [`D8KubernetesVersionIsDeprecated`](../../../reference/alerts.html#control-plane-manager-d8kubernetesversionisdeprecated): The installed Kubernetes version is no longer supported.
 
 If any of these alerts appear, make sure to resolve them before updating.
 This helps avoid disruptions and ensures the cluster remains stable after the update.
@@ -71,6 +71,7 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
+  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -194,10 +195,11 @@ spec:
 When the conditions for sending notifications are met,
 DKP sends a POST request to the specified webhook with the header `Content-Type: application/json`.
 
-Example request body:
+Example request body for Deckhouse release:
 
 ```json
 {
+  "subject": "Deckhouse",
   "version": "1.68",
   "requirements":  {"k8s": "1.29.0"},
   "changelogLink": "https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md",
@@ -206,8 +208,24 @@ Example request body:
 }
 ```
 
+Example request body for module release:
+
+```json
+{
+  "subject": "Module",
+  "moduleName": "test",
+  "version": "0.7.14",
+  "requirements": {"deckhouse": ">= 1.69"},
+  "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-test-v0.7.14.md",
+  "applyTime": "2025-12-17T12:32:24Z",
+  "message": "New test Release 0.7.14 is available. Release will be applied at: Wednesday, 17-Dec-25 12:32:24 UTC"
+}
+```
+
 Field descriptions:
 
+- `subject`: Release subject ("Deckhouse" for Deckhouse releases or "Module" for module releases).
+- `moduleName`: Module name (present only for module releases).
 - `version`: Minor version number (a string).
 - `requirements`: Object with requirements for the new version (for example, the minimum Kubernetes version).
 - `changelogLink`: Link to the changelog describing changes in the new minor version.

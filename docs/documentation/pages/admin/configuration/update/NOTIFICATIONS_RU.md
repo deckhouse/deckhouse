@@ -18,9 +18,9 @@ Deckhouse Kubernetes Platform (DKP) генерирует [алерты](#але�
 
 Если обновление требует внесения изменений в кластер (например, обновление версии Kubernetes или ОС), DKP сгенерирует специальные предупреждения. Среди них:
 
-- **D8NodeHasDeprecatedOSVersion** — в кластере обнаружены узлы с неподдерживаемой версией ОС;
-- **HelmReleasesHasResourcesWithDeprecatedVersions** — в некоторых Helm-релизах используются устаревшие ресурсы;
-- **KubernetesVersionEndOfLife** — установленная версия Kubernetes более не поддерживается.
+- [`D8NodeHasDeprecatedOSVersion`](../../../reference/alerts.html#monitoring-deckhouse-d8nodehasdeprecatedosversion) — в кластере обнаружены узлы с неподдерживаемой версией ОС;
+- [`HelmReleasesHasResourcesWithDeprecatedVersions`](../../../reference/alerts.html#monitoring-kubernetes-helmreleaseshasresourceswithdeprecatedversions) — в некоторых Helm-релизах используются устаревшие ресурсы;
+- [`D8KubernetesVersionIsDeprecated`](../../../reference/alerts.html#control-plane-manager-d8kubernetesversionisdeprecated) — установленная версия Kubernetes более не поддерживается.
 
 При появлении данных предупреждений обязательно устраните их причины перед обновлением. Это поможет избежать сбоев в работе кластера и обеспечить его стабильность после обновления.
 
@@ -67,6 +67,7 @@ import (
 // Payload structure Deckhouse sends in POST body.
 type WebhookData struct {
   Subject       string            `json:"subject"`
+  ModuleName    string            `json:"moduleName,omitempty"`
   Version       string            `json:"version"`
   Requirements  map[string]string `json:"requirements,omitempty"`
   ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -179,10 +180,11 @@ spec:
 При выполнении условий отправки уведомления
 DKP отправляет на указанный вебхук POST-запрос с заголовком `Content-Type: application/json`.
 
-Пример тела запроса:
+Пример тела запроса для релиза Deckhouse:
 
 ```json
 {
+  "subject": "Deckhouse",
   "version": "1.68",
   "requirements":  {"k8s": "1.29.0"},
   "changelogLink": "https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md",
@@ -191,8 +193,24 @@ DKP отправляет на указанный вебхук POST-запрос 
 }
 ```
 
+Пример тела запроса для релиза модуля:
+
+```json
+{
+  "subject": "Module",
+  "moduleName": "test",
+  "version": "0.7.14",
+  "requirements": {"deckhouse": ">= 1.69"},
+  "changelogLink": "https://github.com/deckhouse/modules/blob/main/CHANGELOG/CHANGELOG-test-v0.7.14.md",
+  "applyTime": "2025-12-17T12:32:24Z",
+  "message": "New test Release 0.7.14 is available. Release will be applied at: Wednesday, 17-Dec-25 12:32:24 UTC"
+}
+```
+
 Описание полей в формате уведомлений:
 
+- `subject` — субъект релиза ("Deckhouse" для релизов Deckhouse или "Module" для релизов модулей);
+- `moduleName` — имя модуля (присутствует только для релизов модулей);
 - `version` — номер минорной версии (строка);
 - `requirements` — объект с требованиями к новой версии (например, минимальная версия Kubernetes);
 - `changelogLink` — ссылка на changelog с описанием изменений в новой минорной версии;

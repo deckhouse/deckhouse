@@ -1,0 +1,87 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "8"
+spec:
+  packageRepository: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  completionTime: "2025-10-31T12:00:00Z"
+  conditions:
+  - lastProbeTime: "2019-10-17T15:33:00Z"
+    lastTransitionTime: "2019-10-17T15:33:00Z"
+    status: "True"
+    type: Processed
+  packages:
+    failed:
+    - errors:
+      - error: 'ensure application package version: create application package version:
+          simulated create error for v1.1.0'
+        name: v1.1.0
+      - error: 'ensure application package version: create application package version:
+          simulated create error for v1.2.0'
+        name: v1.2.0
+      name: test-package
+    processed:
+    - name: test-package
+      type: Application
+    processedOverall: 1
+    total: 1
+  phase: Completed
+  startTime: "2025-10-31T12:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test-package
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-package-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  packageName: test-package
+  packageRepository: deckhouse
+  version: v1.0.0
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "2"
+spec:
+  registry:
+    repo: registry.example.com/test
+status:
+  packages:
+  - name: test-package
+    type: Application
+  packagesCount: 1
+  phase: Active
+  syncTime: "2025-10-31T12:00:00Z"

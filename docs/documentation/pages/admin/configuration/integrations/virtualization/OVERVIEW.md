@@ -6,8 +6,9 @@ description: "Deploy Deckhouse Kubernetes Platform on virtualization systems inc
 
 Deckhouse Kubernetes Platform (DKP) supports the following virtualization systems:
 
-* [VMware Cloud Director](./vcd/connection-and-authorization.html)
-* [VMware vSphere](./vsphere/authorization.html)
-* [zVirt](./zvirt/authorization.html)
+* [Deckhouse Virtualization Platform (DVP)](./dvp/services.html);
+* [VMware Cloud Director](./vcd/connection-and-authorization.html);
+* [VMware vSphere](./vsphere/authorization.html);
+* [zVirt](./zvirt/authorization.html).
 
 The following sections describe how you can configure integration with each of these virtualization systems.

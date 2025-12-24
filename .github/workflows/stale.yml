@@ -26,14 +26,14 @@ jobs:
   # <template: skip_tests_repos>
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
       run: echo "Empty action to fulfil Github requirements."
   # </template: skip_tests_repos>
   stale:
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
       - skip_tests_repos
     steps:

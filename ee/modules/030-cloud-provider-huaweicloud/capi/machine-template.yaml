@@ -27,12 +27,26 @@ spec:
       {{- end }}
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
+      {{ end }}
+
+      {{- $ic := .nodeGroup.instanceClass -}}
+
+      {{- $primary := (default $subnetID $ic.mainNetwork) -}}
+      {{- $nets := list $primary -}}
+
+      {{- if $ic.additionalNetworks -}}
+        {{- $nets = concat $nets $ic.additionalNetworks -}}
+      {{- end -}}
+
+      {{- if $ic.subnets -}}
+        {{- $nets = concat $nets $ic.subnets -}}
+      {{- end -}}
+
+      subnets:
+      {{- range $n := (uniq $nets) }}
+        - {{ $n | quote }}
       {{- end }}
-      {{- if .nodeGroup.instanceClass.subnets }}
-      subnets: {{ prepend .nodeGroup.instanceClass.subnets $subnetID }}
-      {{- else }}
-      subnets: [{{ $subnetID }}]
-      {{- end }}
+
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
       {{- else }}
@@ -42,3 +56,6 @@ spec:
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
       availabilityZone: {{ .zoneName | quote }}
+      {{- if .nodeGroup.instanceClass.vipAddress}}
+      vipAddress: {{ .nodeGroup.instanceClass.vipAddress | quote }}
+      {{- end}}

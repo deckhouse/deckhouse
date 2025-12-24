@@ -36,7 +36,7 @@ layout: sidebar-guides
 
 Если указан автоматический выбор версии Kubernetes, Deckhouse может обновить версию Kubernetes в кластере при обновлении релиза Deckhouse (при обновлении минорной версии). Когда версия Kubernetes явно прописана в параметре [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), очередное обновление Deckhouse может завершиться неудачей, если окажется, что используемая в кластере версия Kubernetes более не поддерживается.
 
-Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/kubernetes-platform/documentation/v1/supported_versions.html), и [установите ее](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-обновить-версию-kubernetes-в-кластере).
+Если приложение использует устаревшие версии ресурсов или требует конкретной версии Kubernetes по какой-либо другой причине, проверьте, что эта версия [поддерживается](/products/kubernetes-platform/documentation/v1/supported_versions.html), и [установите ее](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Требования к ресурсам
 
@@ -141,6 +141,8 @@ Frontend-узлы балансируют входящий трафик. На н�
 Мониторинг будет работать сразу после установки Deckhouse, однако для production этого недостаточно. Чтобы получать уведомления об инцидентах, настройте [встроенный](/modules/prometheus/faq.html#как-добавить-alertmanager) в Deckhouse Alertmanager или [подключите свой](/modules/prometheus/faq.html#как-добавить-внешний-дополнительный-alertmanager) Alertmanager.
 
 С помощью custom resource [CustomAlertmanager](/modules/prometheus/cr.html#customalertmanager) можно настроить отправку уведомлений на [электронную почту](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), в [Slack](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), в [Telegram](/modules/prometheus/usage.html#отправка-алертов-в-telegram), через [webhook](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), а также другими способами.
+
+Список всех доступных алертов системы мониторинга Deckhouse Kubernetes Platform приведён на [отдельной странице документации](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
 
 ## Сбор логов
 

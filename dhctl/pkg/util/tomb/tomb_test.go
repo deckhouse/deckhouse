@@ -22,9 +22,12 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -32,6 +35,8 @@ const (
 	testWorkEnv     = "WORK_MSG"
 	testShutdownEnv = "SHUTDOWN_MSG"
 	testExitCodeEnv = "EXIT_CODE"
+
+	testShouldHandleInterruptEnv = "HANDLE_INTERRUPT"
 )
 
 type testRunResult struct {
@@ -42,6 +47,7 @@ type testRunResult struct {
 
 type testActionParams struct {
 	ready, work, shutdown string
+	handleInterrupt       string
 	signalAction          func(*exec.Cmd)
 	exitCode              int
 }
@@ -54,7 +60,9 @@ func runAction(p *testActionParams) *testRunResult {
 	workEnv := fmt.Sprintf("%s=%s", testWorkEnv, p.work)
 	shtEnv := fmt.Sprintf("%s=%s", testShutdownEnv, p.shutdown)
 	exitCodeEnv := fmt.Sprintf("%s=%v", testExitCodeEnv, p.exitCode)
-	cmd.Env = append(os.Environ(), readyEnv, workEnv, shtEnv, exitCodeEnv)
+	handleInterruptEnv := fmt.Sprintf("%s=%v", testShouldHandleInterruptEnv, p.handleInterrupt)
+
+	cmd.Env = append(os.Environ(), readyEnv, workEnv, shtEnv, exitCodeEnv, handleInterruptEnv)
 
 	var b bytes.Buffer
 	cmd.Stdout = &b
@@ -101,23 +109,14 @@ func runAction(p *testActionParams) *testRunResult {
 }
 
 func assertRunResult(t *testing.T, res, expected *testRunResult) {
-	if res.err != nil {
-		t.Fatalf("running error %v", res.err)
-	}
+	require.NoError(t, res.err)
 
-	if res.code != expected.code {
-		t.Fatalf("incorrect exit code. Need=%v, got=%v", expected.code, res.code)
-	}
-
-	if len(res.out) != len(expected.out) {
-		t.Fatalf("incorrect outputs len. Need=%v, got=%v", len(expected.out), len(res.out))
-	}
+	require.Equal(t, expected.code, res.code, fmt.Sprintf("incorrect exit code. Need=%v, got=%v", expected.code, res.code))
+	require.Equal(t, len(res.out), len(expected.out), fmt.Sprintf("incorrect outputs len. Need=%v, got=%v: %v", len(expected.out), len(res.out), res.out))
 
 	for i, e := range expected.out {
 		r := res.out[i]
-		if e != r {
-			t.Fatalf("incorrect output line %v. Need=%v, got=%v", i, e, r)
-		}
+		require.Equal(t, e, r, fmt.Sprintf("incorrect output line %v. Need=%v, got=%v", i, e, r))
 	}
 }
 
@@ -134,12 +133,14 @@ func sendSignalAction(t *testing.T, s os.Signal, wait time.Duration) func(cmd *e
 	}
 }
 
+// TestAction do not run directly!
 func TestAction(t *testing.T) {
 	ready := os.Getenv(testReadyEnv)
 	work := os.Getenv(testWorkEnv)
 	shutdown := os.Getenv(testShutdownEnv)
 
 	if ready == "" || work == "" || shutdown == "" {
+		t.Skip("Envs not set probably you can run test directly")
 		return
 	}
 
@@ -149,7 +150,13 @@ func TestAction(t *testing.T) {
 		t.Fatalf("incorrect exit code %s: %v", exitWithCodeStr, err)
 	}
 
-	go WaitForProcessInterruption()
+	msg := &beforeInterruptMsg{}
+
+	go WaitForProcessInterruption(BeforeInterrupted{
+		func(_ os.Signal) {
+			msg.Interrupt()
+		},
+	})
 
 	go func() {
 		time.Sleep(1 * time.Second)
@@ -169,6 +176,10 @@ func TestAction(t *testing.T) {
 	}()
 
 	exitCode := WaitShutdown()
+
+	handleInterruptMsgExpected := os.Getenv(testShouldHandleInterruptEnv)
+	require.Equal(t, handleInterruptMsgExpected, msg.Msg(), "before interruption msg will", handleInterruptMsgExpected)
+
 	os.Exit(exitCode)
 }
 
@@ -186,22 +197,24 @@ func TestTomb(t *testing.T) {
 		{
 			caseName: "Normal running exit with zero code and running shutdown",
 			params: &testActionParams{
-				ready:        ready,
-				work:         work,
-				shutdown:     shutdown,
-				signalAction: func(cmd *exec.Cmd) {},
+				ready:           ready,
+				work:            work,
+				shutdown:        shutdown,
+				signalAction:    func(cmd *exec.Cmd) {},
+				handleInterrupt: "", // normal exit does not interrupt
 			},
 			expectedCode: 0,
 			expectedOut:  []string{ready, work, shutdown},
 		},
 
 		{
-			caseName: "Send SIGTERM exit with zero code and running shutdown",
+			caseName: "Send SIGTERM exit with zero code and running shutdown and run before interruption funcs",
 			params: &testActionParams{
-				ready:        ready,
-				work:         work,
-				shutdown:     shutdown,
-				signalAction: sendSignalAction(t, syscall.SIGTERM, 1500*time.Millisecond),
+				ready:           ready,
+				work:            work,
+				shutdown:        shutdown,
+				signalAction:    sendSignalAction(t, syscall.SIGTERM, 1500*time.Millisecond),
+				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 0,
 			expectedOut: []string{
@@ -212,12 +225,13 @@ func TestTomb(t *testing.T) {
 		},
 
 		{
-			caseName: "Send SIGINT exit with zero code and running shutdown",
+			caseName: "Send SIGINT exit with zero code and running shutdown and run before interruption funcs",
 			params: &testActionParams{
-				ready:        ready,
-				work:         work,
-				shutdown:     shutdown,
-				signalAction: sendSignalAction(t, syscall.SIGINT, 1500*time.Millisecond),
+				ready:           ready,
+				work:            work,
+				shutdown:        shutdown,
+				signalAction:    sendSignalAction(t, syscall.SIGINT, 1500*time.Millisecond),
+				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 0,
 			expectedOut: []string{
@@ -228,12 +242,13 @@ func TestTomb(t *testing.T) {
 		},
 
 		{
-			caseName: "Send SIGUSR1 exit with 1 code and running shutdown",
+			caseName: "Send SIGUSR1 exit with 1 code and running shutdown and run before interruption funcs",
 			params: &testActionParams{
-				ready:        ready,
-				work:         work,
-				shutdown:     shutdown,
-				signalAction: sendSignalAction(t, syscall.SIGUSR1, 1500*time.Millisecond),
+				ready:           ready,
+				work:            work,
+				shutdown:        shutdown,
+				signalAction:    sendSignalAction(t, syscall.SIGUSR1, 1500*time.Millisecond),
+				handleInterrupt: beforeInterruptMsgStr, // need to handle
 			},
 			expectedCode: 1,
 			expectedOut: []string{
@@ -244,12 +259,13 @@ func TestTomb(t *testing.T) {
 		},
 
 		{
-			caseName: "Send another sig (exclude USR1,TERM,INT) should skipped (code 0 with shutdown)",
+			caseName: "Send another sig (exclude USR1,USR2,TERM,INT) should skipped (code 0 with shutdown)",
 			params: &testActionParams{
-				ready:        ready,
-				work:         work,
-				shutdown:     shutdown,
-				signalAction: sendSignalAction(t, syscall.SIGALRM, 1500*time.Millisecond),
+				ready:           ready,
+				work:            work,
+				shutdown:        shutdown,
+				signalAction:    sendSignalAction(t, syscall.SIGALRM, 1500*time.Millisecond),
+				handleInterrupt: "", // does not handle because we handle only USR1,USR2,TERM,INT in waitShutdown
 			},
 			expectedCode: 0,
 			expectedOut:  []string{ready, work, shutdown},
@@ -265,4 +281,25 @@ func TestTomb(t *testing.T) {
 			})
 		})
 	}
+}
+
+const beforeInterruptMsgStr = "Handle interrupt"
+
+type beforeInterruptMsg struct {
+	m   sync.Mutex
+	msg string
+}
+
+func (b *beforeInterruptMsg) Interrupt() {
+	b.m.Lock()
+	defer b.m.Unlock()
+
+	b.msg = beforeInterruptMsgStr
+}
+
+func (b *beforeInterruptMsg) Msg() string {
+	b.m.Lock()
+	defer b.m.Unlock()
+
+	return b.msg
 }

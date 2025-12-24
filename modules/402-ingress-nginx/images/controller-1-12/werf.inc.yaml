@@ -1,5 +1,6 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxVersion := "1.25.5" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.26.1" }}
+{{ $nginxVersion := "1.26.1" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
 {{ $modSecurityBranch := "v3.0.14" }}
@@ -18,7 +19,7 @@
 {{ $curlVersion := "curl-8_12_1" }}
 {{ $zlibVersion := "v1.3.1" }}
 {{ $cAresVersion := "v1.34.5" }}
-{{ $opensslVersion := "3.5.1" }}
+{{ $opensslVersion := "3.6.0" }}
 {{ $brotliVersion := "v1.1.0" }}
 {{ $libidn2Version := "v2.3.8" }}
 {{ $zstdVersion := "v1.5.7" }}
@@ -68,10 +69,12 @@ shell:
   - echo "export TAG=$(git describe --tags --always)" >> .env_pass
   #
   - mkdir -p /src/nginx-deps
-  - git clone -b {{ $controllerBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
+  - git clone -b {{ $nginxDepsBranch }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/ingress-nginx-deps.git /src/nginx-deps
     # Dependency for opentelemetry-cpp (source: opentelemetry-cpp/cmake/nlohmann-json.cmakee)
   - mkdir -p /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
   - git clone -b {{ $nlohmannJsonBranch }} $(cat /run/secrets/SOURCE_REPO)/nlohmann/json.git /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json
+  # Remove directory for fix CVE
+  - rm -rf /src/nginx-deps/opentelemetry-cpp/third_party/nlohmann-json/docs/
   #
   - cd /src/nginx-deps
   - git clone --depth=100 $(cat /run/secrets/SOURCE_REPO)/google/ngx_brotli.git
@@ -94,6 +97,8 @@ shell:
   - git submodule set-url others/mbedtls "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls.git"
   - git submodule update others/mbedtls
   - cd others/mbedtls
+  # Remove directory for fix CVE
+  - rm -rf /src/nginx-deps/ModSecurity/others/mbedtls/docs/
   - git submodule init
   - git submodule set-url framework "$(cat /run/secrets/SOURCE_REPO)/Mbed-TLS/mbedtls-framework"
   - cd ../..
@@ -102,7 +107,9 @@ shell:
   - cd /src/nginx-deps
   - git clone $(cat /run/secrets/SOURCE_REPO)/open-telemetry/opentelemetry-cpp-contrib.git opentelemetry-cpp-contrib
   - cd /src/nginx-deps/opentelemetry-cpp-contrib
+  # Remove directory for fix CVE
   - git reset --hard {{ $opentelemetryCppContribCommit }}
+  - rm -rf /src/nginx-deps/opentelemetry-cpp-contrib/instrumentation/nginx/test/
   #
   - cd /src/nginx-deps
   - git clone -b {{ $coreRulesetBranch }} $(cat /run/secrets/SOURCE_REPO)/coreruleset/coreruleset
@@ -649,7 +656,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 fromImage: builder/alpine-3.21
-fromCacheVersion: "2025-09-22"
 final: false
 mount:
 - from: build_dir
@@ -875,7 +881,6 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: base/distroless
-fromCacheVersion: "2025-09-18"
 mount:
 - from: build_dir
   to: /apps

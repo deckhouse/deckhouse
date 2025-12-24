@@ -23,7 +23,11 @@ const (
 	ConvergeNodeUserName = "d8-dhctl-converger"
 	ConvergeNodeUserUID  = 64536
 
+	ConvergerNodeUserAnnotation = "node.deckhouse.io/has-converger-nodeuser"
+
 	D8SystemNamespace = "d8-system"
 
 	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
+
+	ConfigsNS = "kube-system"
 )

@@ -1,3 +1,4 @@
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/shell-operator
 import:
@@ -10,11 +11,12 @@ import:
   - usr/bin/python3*
   - usr/lib/python3*
   - usr/lib/libc.so
+  excludePaths:
+  - usr/lib/python3.12/site-packages/pip-25.3*
 git:
 - add: /{{ $.ModulePath }}modules/300-{{ $.ModuleName }}/images/{{ $.ImageName }}/src/hooks
   to: /hooks
 {{- include "image mount points" . }}  
----
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
 fromImage: base/python
@@ -32,4 +34,5 @@ import:
   before: install
 shell:
   install:
+  - pip3 install -f file:///wheels --no-index --upgrade pip
   - pip3 install -f file:///wheels --no-index -r /requirements.txt

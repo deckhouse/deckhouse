@@ -573,6 +573,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 	}
 
 	enabledModulesChangelog := f.generateChangelogForEnabledModules(releaseMetadata)
+
 	changeCause := "check release"
 	if createProcess != "" {
 		changeCause += " (" + createProcess + ")"
@@ -596,7 +597,7 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 			ApplyAfter:    applyAfter,
 			Requirements:  releaseMetadata.Requirements,
 			Disruptions:   disruptions,
-			Changelog:     enabledModulesChangelog,
+			Changelog:     v1alpha1.MakeMappedFields(enabledModulesChangelog),
 			ChangelogLink: fmt.Sprintf("https://github.com/deckhouse/deckhouse/releases/tag/%s", releaseMetadata.Version),
 		},
 		Approved: false,
@@ -784,55 +785,7 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 		meta.Changelog = changelog
 	}
 
-	cooldown := f.fetchCooldown(img)
-	if cooldown != nil {
-		meta.Cooldown = cooldown
-	}
-
 	return meta, nil
-}
-
-func (f *DeckhouseReleaseFetcher) fetchCooldown(image registryv1.Image) *metav1.Time {
-	cfg, err := image.ConfigFile()
-	if err != nil {
-		f.logger.Warn("image config error", log.Err(err))
-		return nil
-	}
-
-	if cfg == nil {
-		return nil
-	}
-
-	if len(cfg.Config.Labels) == 0 {
-		return nil
-	}
-
-	if v, ok := cfg.Config.Labels["cooldown"]; ok {
-		t, err := parseTime(v)
-		if err != nil {
-			f.logger.Error("parse cooldown", slog.String("cooldown", v), log.Err(err))
-			return nil
-		}
-		mt := metav1.NewTime(t)
-
-		return &mt
-	}
-
-	return nil
-}
-
-func parseTime(s string) (time.Time, error) {
-	t, err := time.Parse("2006-01-02 15:04", s)
-	if err == nil {
-		return t, nil
-	}
-
-	t, err = time.Parse("2006-01-02 15:04:05", s)
-	if err == nil {
-		return t, nil
-	}
-
-	return time.Parse(time.RFC3339, s)
 }
 
 // FetchReleasesMetadata realize step by step update
@@ -1038,12 +991,10 @@ type ReleaseMetadata struct {
 	Changelog        map[string]interface{}  `json:"-"`
 	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
 
-	// TODO: review fields below. it can be useless now
 	Canary       map[string]canarySettings `json:"canary"`
 	Requirements map[string]string         `json:"requirements"`
 	Disruptions  map[string][]string       `json:"disruptions"`
 	Suspend      bool                      `json:"suspend"`
-	Cooldown     *metav1.Time              `json:"-"`
 }
 
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {

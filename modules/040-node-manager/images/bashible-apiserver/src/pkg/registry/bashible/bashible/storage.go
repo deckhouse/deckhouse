@@ -17,6 +17,7 @@ limitations under the License.
 package bashible
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -27,6 +28,7 @@ import (
 
 	"bashible-apiserver/pkg/apis/bashible"
 	"bashible-apiserver/pkg/template"
+	"bashible-apiserver/pkg/util"
 )
 
 const templateName = "bashible.sh.tpl"
@@ -76,6 +78,8 @@ func (s Storage) Render(name string) (runtime.Object, error) {
 	obj.Data = map[string]string{}
 	obj.Data[r.FileName] = r.Content.String()
 
+	util.SetConfigurationChecksumAnnotation(s.bashibleContext, ngName, &obj.ObjectMeta)
+
 	return &obj, nil
 }
 
@@ -87,7 +91,11 @@ func (s Storage) getContext(name string) (map[string]interface{}, error) {
 
 	context, err := s.bashibleContext.Get(contextKey)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get context data: %v", err)
+		var cnf *template.ContextNotFoundError
+		if errors.As(err, &cnf) {
+			return nil, fmt.Errorf("cannot get bashibles.bashible.deckhouse.io for nodeGroup %q: nodegroup not found", name)
+		}
+		return nil, fmt.Errorf("cannot get context data for nodegroup '%s': %w", name, err)
 	}
 
 	return context, nil

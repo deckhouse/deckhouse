@@ -76,7 +76,20 @@ spec:
   meshConfig:
     rootNamespace: d8-{{ $.Chart.Name }}
     trustDomain: {{ $.Values.global.discovery.clusterDomain | quote }}
-    accessLogFile: /dev/stdout
+
+    extensionProviders:
+    - envoyFileAccessLog:
+        path: /dev/stdout
+        logFormat:
+        {{- if eq $.Values.istio.dataPlane.accessLog.type "Text" }}
+          text: {{ $.Values.istio.dataPlane.accessLog.textFormat | toJson }}
+        {{- else if eq $.Values.istio.dataPlane.accessLog.type "JSON" }}
+          labels:
+          {{- range $key, $value := $.Values.istio.dataPlane.accessLog.jsonLabels }}
+            {{ $key }}: {{ $value | toJson }}
+          {{- end }}
+        {{- end }}
+      name: main-access-log-format
 
     # The rules below exclude upmeter-related namespaces from istiod's point of view.
     # So, upmeter's events used to affect the traffic between control-plane and data-plane will be reduced.

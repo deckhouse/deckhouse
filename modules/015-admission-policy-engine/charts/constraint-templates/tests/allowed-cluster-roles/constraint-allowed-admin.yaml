@@ -10,7 +10,7 @@ spec:
         kinds: ["RoleBinding"]
     namespaceSelector:
       matchLabels:
-        enforce: mypolicy
+        enforce: deny-all
     scope: Namespaced
   parameters:
     allowedClusterRoles:

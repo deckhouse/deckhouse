@@ -3,14 +3,14 @@ title: "Module development and debugging"
 permalink: en/architecture/module-development/development/
 ---
 
-{% raw %}
-
 When developing modules, you may want to pull and deploy a module bypassing the release channels. The [ModulePullOverride](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulepulloverride) resource is used for this purpose.
 
 {% alert level="warning" %}
 The ModulePullOverride resource is intended **for development and debugging environments only**.
 Using it in production clusters is **not recommended*. Support for the resource might be removed in future Deckhouse Kubernetes Platform versions.
 {% endalert %}
+
+{% raw %}
 
 An example of ModulePullOverride:
 
@@ -47,7 +47,7 @@ Requirements for the resource parameters:
 The `spec.scanInterval` time interval (optional) defines the interval for scanning images in the registry. The default interval is 15 seconds.
 To force scan you can change the interval or set the `renew=""` annotation on ModulePullOverride.
 
-The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the `ModulePullOverride`.
+The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the ModulePullOverride.
 
 You can get the result of applying ModulePullOverride in the message (column `MESSAGE`) when retrieving ModulePullOverride information. The value `Ready` indicates the successful application of ModulePullOverride parameters. Any other value indicates conflict.
 
@@ -284,7 +284,7 @@ The module will keep running after ModulePullOverride is removed. But if there i
 
 ## Module auto-update logic
 
-![Module auto-update logic](../../images/architecture/module-development/module_update_flow.svg)
+![Module auto-update logic](../../../images/architecture/module-development/module_update_flow.svg)
 
 > ModuleRelease versions v1.0.0 and v1.1.1 are provided as examples.
 

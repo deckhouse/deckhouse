@@ -9,6 +9,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -21,8 +23,8 @@ const (
 // e.g. for kubelet.
 // TODO "enabled" file should be created via systemd unit configuration.
 type StatusReporter struct {
-	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
-	UnlockInhibitorsCh <-chan struct{}
+	// UnlockCtx signals that inhibitors can be unlocked.
+	UnlockCtx context.Context
 }
 
 func (s *StatusReporter) Name() string {
@@ -46,9 +48,9 @@ func (s *StatusReporter) Run(ctx context.Context, errCh chan error) {
 	// Wait until inhibitors are unlocked.
 	select {
 	case <-ctx.Done():
-		fmt.Printf("statusReporter(s1): stop on global exit\n")
-	case <-s.UnlockInhibitorsCh:
-		fmt.Printf("statusReporter(s1): inhibitors unlocked, remove file reports\n")
+		dlog.Info("status reporter: stop on context cancel")
+	case <-s.UnlockCtx.Done():
+		dlog.Info("status reporter: inhibitors unlocked, cleaning up files")
 	}
 
 	s.cleanupFiles()

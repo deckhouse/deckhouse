@@ -9,16 +9,21 @@ import (
 	"context"
 	"fmt"
 
+	"log/slog"
+
 	"d8_shutdown_inhibitor/pkg/app/nodecondition"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // NodeConditionSetter set condition on start to prevent shutdown sequence in the kubelet
 // and remove it when inhibitors are unlocked so kubelet continue its shutdown sequence.
 type NodeConditionSetter struct {
 	NodeName string
-
-	// UnlockInhibitorsCh is a channel to get event about unlocking inhibitors.
-	UnlockInhibitorsCh <-chan struct{}
+	Klient   *kubernetes.Klient
+	// UnlockCtx signals that inhibitors can be unlocked.
+	UnlockCtx context.Context
 }
 
 func (n *NodeConditionSetter) Name() string {
@@ -26,23 +31,25 @@ func (n *NodeConditionSetter) Name() string {
 }
 
 func (n *NodeConditionSetter) Run(ctx context.Context, errCh chan error) {
-	err := nodecondition.GracefulShutdownPostpone().SetOnStart(n.NodeName)
+	nc := nodecondition.GracefulShutdownPostpone(n.Klient)
+
+	err := nc.SetOnStart(ctx, n.NodeName)
 	if err != nil {
 		errCh <- fmt.Errorf("nodeConditionSetter patch Node to set condition: %w", err)
 		return
 	}
-	fmt.Printf("nodeConditionSetter(s1): Node condition updated\n")
+	dlog.Info("node condition setter: condition updated", slog.String("node", n.NodeName))
 
 	// Wait until inhibitors are unlocked.
 	select {
 	case <-ctx.Done():
-		fmt.Printf("nodeConditionSetter(s2): stop on global exit\n")
-	case <-n.UnlockInhibitorsCh:
-		fmt.Printf("nodeConditionSetter(s2): inhibitors unlocked, unset Node condition\n")
+		dlog.Info("node condition setter: stop on context cancel", slog.String("node", n.NodeName))
+	case <-n.UnlockCtx.Done():
+		dlog.Info("node condition setter: inhibitors unlocked, removing condition", slog.String("node", n.NodeName))
 	}
 
-	err = nodecondition.GracefulShutdownPostpone().UnsetOnUnlock(n.NodeName)
+	err = nc.UnsetOnUnlock(ctx, n.NodeName)
 	if err != nil {
-		fmt.Printf("nodeConditionSetter(s2): failed to unset condition on Node: %v\n", err)
+		dlog.Error("node condition setter: failed to unset condition", slog.String("node", n.NodeName), dlog.Err(err))
 	}
 }

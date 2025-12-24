@@ -1,3 +1,143 @@
+## Version 1.74
+
+### Important
+
+- Support for Kubernetes 1.34 has been added, while support for Kubernetes 1.29 has been discontinued.
+  In future DKP releases, support for Kubernetes 1.30 will be removed.
+  The default Kubernetes version (used when the [`kubernetesVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`) has been changed to [1.32](https://deckhouse.io/products/kubernetes-platform/documentation/v1.74/reference/supported_versions.html#kubernetes).
+
+### Major changes
+
+- Added support for managing experimental and alpha Kubernetes features ([feature gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/))
+  using the [`enabledFeatureGates`](https://deckhouse.io/modules/control-plane-manager/v1.74/configuration.html#parameters-enabledfeaturegates) parameter of the `control-plane-manager` module.
+  For details on managing these features in DKP, refer to the [module documentation](https://deckhouse.io/modules/control-plane-manager/v1.74/#feature-gates).
+
+- The `--terminated-pod-gc-threshold` parameter (the termination threshold for evicted pods)
+  is now calculated automatically based on the number of nodes in the cluster.
+  This provides a balance between cluster stability and the ability to perform diagnostics.
+  Threshold values are available in the [`control-plane-manager` module documentation](https://deckhouse.io/modules/control-plane-manager/v1.74/#dynamic-terminated-pod-garbage-collection-threshold).
+
+- The maximum number of pods ([`maxPods`](https://deckhouse.io/modules/node-manager/v1.74/cr.html#nodegroup-v1-spec-kubelet-maxpods))
+  for a node group is now set automatically based on the [`podSubnetNodeCIDRPrefix`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) parameter from ClusterConfiguration (unless explicitly specified).
+  This ensures stable cluster operation.
+
+- Added the [`vipAddress`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cr.html#huaweicloudinstanceclass-v1-spec-vipaddress) parameter
+  to the HuaweiCloudInstanceClass resource of the Huawei Cloud provider,
+  allowing you to specify a virtual IP address for all nodes in the instance class.
+
+- The Huawei Cloud provider configuration now allows overriding the primary network for the main network interface ([`mainNetwork`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork))
+  and specifying subnets for additional network interfaces ([`additionalNetworks`](https://deckhouse.io/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) on both CloudPermanent and CloudEphemeral nodes.
+
+- The archive with debugging data is now collected using the [`d8`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.74/cli/d8/) tool.
+  If you need to collect diagnostic data, follow the [instructions](https://deckhouse.io/modules/deckhouse/v1.74/faq.html#how-to-collect-debug-info).
+
+- Now when hook execution fails, all metrics collected by that hook are preserved.
+  This prevents loss of debugging information and simplifies the following root-cause analysis.
+
+- Fixed a Deckhouse queue freeze in hybrid clusters that occurred when module configuration parameters were incomplete.
+
+### Security
+
+- Implemented module integrity control based on the EROFS filesystem to improve security and prevent unauthorized modifications.
+  The new system requires kernel support for dm-verity and EROFS.
+
+### Network
+
+- Added support for the SCTP (Stream Control Transmission Protocol).
+  Applications using this protocol can now run in a Deckhouse cluster.
+
+- Added a `geoproxy` auxiliary microservice to the [`ingress-nginx`](https://deckhouse.io/modules/ingress-nginx/) module.
+  This service is aimed at improving the stability of the Ingress NGINX Controller when working with GeoIP databases
+  and provides the following features:
+  - MaxMind license saving (databases are downloaded from a single point once a day).
+  - Persistent data storage (if components are restarted, it doesn't require accessing the MaxMind servers).
+  - Lets you specify a custom mirror for downloading databases.
+
+- Added the Prometheus metric `bpf_progs_complexity_max_verified_insts` to assess the number of instructions in eBPF programs
+  loaded into the kernel on cluster nodes.
+  This metric helps evaluate the compatibility of the networking subsystem with the node kernels.
+  The metric requires Linux kernel version 5.16 or newer.
+
+- Added a new metric (`geoip_version`) and dashboards for monitoring GeoIP functionality in the cluster.
+
+- Fixed issues with simultaneous updates of the [`node-local-dns`](https://deckhouse.io/modules/node-local-dns/) module
+  and the networking subsystem.
+
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.74.md) on GitHub.
+
+## Version 1.73
+
+### Important
+
+- This release includes several important security improvements. Multiple known vulnerabilities have been fixed, including one in the user-authn module (CVE-2025-22868) that could potentially allow bypassing authentication checks. It is recommended that you schedule this update. See the [Security](#security) section for details.
+
+- The `dashboard` module will be removed in future DKP versions. Use the [Deckhouse web UI](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) instead (requires the [`console`](https://deckhouse.io/modules/console/) module to be enabled).
+
+- The `runtime-audit-engine` module is now loaded from an external source (the `deckhouse` ModuleSource).
+
+- All DKP components will be restarted during the update.
+
+### Major changes
+
+- Added support for changing the registry settings (via the [`mode`](https://deckhouse.io/modules/deckhouse/v1.73/configuration.html#parameters-registry-mode) parameter) in `Unmanaged` mode, similar to `Direct` mode. A new parameter [`checkMode`](https://deckhouse.io/modules/deckhouse/v1.73/configuration.html#parameters-registry-direct-checkmode) has been added to control registry validation behavior:
+  - `Default`: Verifies the availability of all system module images and the deckhouse-controller images.
+  - `Relax`: Verifies only the deckhouse-controller images.
+
+- Updated requirements for the `email` field of the [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object: the email address must now be in lowercase. Existing users will not be affected.
+
+- Dex updated to **v2.44.0**. It now allows authentication through available identity providers if one of them is down, and supports authentication via identity providers through a proxy.
+
+- The [User](https://deckhouse.io/modules/user-authn/v1.73/cr.html#user) object status now displays the reason for user lockout (controlled by the [`lockout`](https://deckhouse.io/modules/user-authn/v1.73/configuration.html#parameters-passwordpolicy-lockout) parameter).
+
+- Added the [`additionalDisks`](https://deckhouse.io/modules/cloud-provider-dvp/v1.73/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-additionaldisks) parameter for the Deckhouse Virtualization Platform integration provider, allowing creation and attachment of additional disks to VMs in a NodeGroup (`size` and StorageClass must be specified). This simplifies data distribution across multiple disks.
+
+- Added support for [`additionalMetadata`](https://deckhouse.io/modules/cloud-provider-vcd/v1.73/cr.html#vcdinstanceclass-v1-spec-additionalmetadata) in objects (networks, VMs, disks) for the VMware Cloud Director integration provider. Metadata is merged with existing data, with `additionalMetadata` values taking precedence. Changing `additionalMetadata` triggers recreation of CloudEphemeral node groups that use the affected VCDInstanceClass.
+
+- For the VMware vSphere integration provider, you can now specify an SPBM storage policy ID (via the [`storagePolicyID`](https://deckhouse.io/modules/cloud-provider-vsphere/v1.73/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter) and configure automatic creation of a StorageClass for each available SPBM policy. You can now explicitly select a policy for master and worker nodes and use the corresponding storage classes.
+
+- Added alerts to help plan module deprecation or migration:
+  - [`ModuleIsDeprecated`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated): Notifies when a module is deprecated and nearing end of support.
+  - [`D8ModuleOutdatedByMajorVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion): Notifies when a module is behind by one or more major versions.
+
+- Added [`GeoIPDownloadErrorDetected`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected) alert to notify about MaxMind GeoIP database download issues.
+
+- The [update notification workflow](https://deckhouse.io/modules/deckhouse/v1.73/usage.html#deckhouse-update-notifications) has changed — a release is applied only after the notification is successfully delivered to the configured webhook. If delivery fails, the update is paused until the webhook is restored.
+
+- Reorganized in-cluster documentation. All module documentation (including connected ones) is now located under the [Modules section]((https://deckhouse.io/modules/)). Search has been updated.
+
+- For Ingress NGINX Controller v1.10, added the option to enable the profiler (via the [`nginxProfilingEnabled`](https://deckhouse.io/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled) parameter). Enabling the profiler increases resource consumption but may be useful for debugging controller issues.
+
+- Added support for custom HTTP authentication headers (via the [`headers`](https://deckhouse.io/modules/upmeter/v1.73/cr.html#upmeterremotewrite-v1-spec-config-headers) parameter of UpmeterRemoteWrite) when sending SLA monitoring metrics via Prometheus Remote Write protocol.
+
+- Optimized DKP core module loading, reducing startup time in clusters with many modules.
+
+- Audit logs now show which OIDC provider issued the authentication token
+
+- Deckhouse CLI (`d8`) updated to v0.23.0:
+  - Added the [`d8 status`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-status) command, which provides a quick cluster summary (nodes, releases, Deckhouse pods, alerts, registry, Deckhouse settings, CNI, queue state).
+  - Added the [`d8 k debug`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-k-debug) command, which runs the DKP built-in debug container (image can be overridden via `--image`). This simplifies interactive pod debugging.
+  - Added the `--watch` flag to the [`d8 system queue list`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-system-queue-list) command to track queue state changes.
+
+### Security
+
+- Improved baseline container security. Updated security profiles for the following modules to restrict privileges and access rights to the minimum required: `cni-cilium`, `cni-flannel`, `cni-simple-bridge`, `ingress-nginx`, `istio`, `keepalived`, `kube-dns`, `kube-proxy`, `node-local-dns`, `network-gateway`, `network-policy-engine`, `open-vpn`.
+
+- Added the [`allowRbacWildcards`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#securitypolicy-v1alpha1-spec-policies-allowrbacwildcards) flag to the SecurityPolicy, controlling whether wildcards are allowed in Role and RoleBinding definitions (set to `true` by default). Security policies can now also restrict interactive connections to pods (`CONNECT` for `pods/exec` and `pods/attach`) within namespaces.
+
+- Added support for preventing creation of pods with specific tolerations from a list ([`policies.disallowedTolerations`](https://deckhouse.io/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) parameter in the operational policy). This helps prevent user workloads from running on nodes reserved for special tasks.
+
+- Enhanced security in Ingress NGINX Controller v1.12 (distroless image, vulnerability fixes, and other improvements).
+
+- Fixed known vulnerabilities in the following modules: `operator-trivy`, `registry`, `user-authn`, `cloud-provider-dvp`, `multitenancy-manager`, `admission-policy-engine`, `ingress-nginx`, `alertmanager`, `metallb`, `istio`, `node-local-dns`, `kube-apiserver`.
+
+### Network
+
+- For the VMware Cloud Director integration provider, added support for [LoadBalancer](https://deckhouse.io/modules/cloud-provider-vcd/v1.73/environment.html#using-the-loadbalancer) backed by VMware NSX Advanced Load Balancer (ALB/Avi) when using `NSX-T`. Requires the Load Balancer feature to be enabled on the Edge Gateway. If LoadBalancer is enabled after cluster creation, DKP automatically detects and applies the change within an hour. For open ports, DKP creates corresponding `Pool + Virtual Service` pairs. If there is a firewall, add allow rules for the LoadBalancer’s external IP address and relevant ports.
+
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.73.md) on GitHub.
+
 ## Version 1.72
 
 ### Important
@@ -28,19 +168,14 @@
 
 - Added support for password policies for local users (configured in the [passwordPolicy](https://deckhouse.io/modules/user-authn/configuration.html#parameters-passwordpolicy) section). You can now enforce a minimum password complexity, set password expiration, require password rotation, prevent reuse of old passwords, and lock accounts after a specified number of failed login attempts. These changes allow administrators to centrally enforce password requirements and improve cluster security.
 
-### Component version updates
-
-The following DKP components have been updated:
-
-- Kubernetes control plane: 1.30.14, 1.31.11, 1.32.7, 1.33.3
-- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.6.0
-- `node-manager capi-controller-manager`: 1.10.4
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.72.md) on GitHub.
 
 ## Version 1.71
 
 ### Important
 
-- Prometheus has been replaced with Deckhouse Prom++. If you want to keep using Prometheus, disable the `prompp` module manually before upgrading DKP by running the command `d8 platform module disable prompp`.
+- Prometheus has been replaced with Deckhouse Prom++. If you want to keep using Prometheus, disable the `prompp` module manually before upgrading DKP by running the command `d8 system module disable prompp`.
 
 - Support for Kubernetes 1.33 has been added, while support for Kubernetes 1.28 has been discontinued. In future DKP releases, support for Kubernetes 1.29 will be removed. The default Kubernetes version (used when the [`kubernetesVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/installing/configuration.html#clusterconfiguration-kubernetesversion) parameter is set to `Automatic`) has been changed to [1.31](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/supported_versions.html#kubernetes).
 
@@ -58,7 +193,7 @@ The following DKP components have been updated:
 
 - Added support for GPUs on nodes. Three GPU resource sharing modes are now available: Exclusive (no sharing), TimeSlicing (time-based sharing), and MIG (a single GPU split into multiple instances). The NodeGroup [spec.gpu](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) parameter section is used to configure the GPU resource sharing mode. Using a GPU on a node requires installing the NVIDIA Container Toolkit and the GPU driver.
 
-- When enabling a module (with `d8 platform module enable`) or editing a ModuleConfig resource, a warning is now displayed if multiple module sources are found. In such a case, explicitly specify the module source using the [source](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) parameter in the module’s configuration.
+- When enabling a module (with `d8 system module enable`) or editing a ModuleConfig resource, a warning is now displayed if multiple module sources are found. In such a case, explicitly specify the module source using the [source](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) parameter in the module’s configuration.
 
 - Improved error handling for module configuration. Module-related errors no longer block DKP operations. Instead, they are now displayed in the status fields of Module and ModuleRelease objects.
 
@@ -118,49 +253,8 @@ The following DKP components have been updated:
   - Removed:
     - `49152`, `49153/TCP`: Previously used for live migration of virtual machines (in the `virtualization` module). Migration now occurs over the Pod network.
 
-### Component version updates
-
-The following DKP components have been updated:
-
-- `cilium`: 1.17.4
-- `golang.org/x/net`: v0.40.0
-- `etcd`: v3.6.1
-- `terraform-provider-azure`: 3.117.1
-- `Deckhouse CLI`: 0.13.2
-- `Falco`: 0.41.1
-- `falco-ctl`: 0.11.2
-- `gcpaudit`: v0.6.0
-- `Grafana`: 10.4.19
-- `Vertical pod autoscaler`: 1.4.1
-- `dhctl-kube-client`: v1.3.1
-- `cloud-provider-dynamix dynamix-common`: v0.5.0
-- `cloud-provider-dynamix capd-controller-manager`: v0.5.0
-- `cloud-provider-dynamix cloud-controller-manager`: v0.4.0
-- `cloud-provider-dynamix cloud-data-discoverer`: v0.6.0
-- `cloud-provider-huaweicloud huaweicloud-common`: v0.5.0
-- `cloud-provider-huaweicloud caphc-controller-manager`: v0.3.0
-- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.5.0
-- `registry-packages-containerdv2`: 2.1.3
-- `registry-packages-containerdv2-runc`: 1.3.0
-- `cilium`: 1.17.4
-- `cilium envoy-bazel`: 6.5.0
-- `cilium cni-plugins`: 1.7.1
-- `cilium protoc`: 30.2
-- `cilium grpc-go`: 1.5.1
-- `cilium protobuf-go`: 1.36.6
-- `cilium protoc-gen-go-json`: 1.5.0
-- `cilium gops`: 0.3.27
-- `cilium llvm`: 18.1.8
-- `cilium llvm-build-cache`: llvmorg-18.1.8-alt-p11-gcc11-v2-180225
-- `User-authn basic-auth-proxy go`: 1.23.0
-- `Prometheus alerts-reciever go`: 1.23.0
-- `Prometheus memcached_exporter`: 0.15.3
-- `Prometheus mimir`: 2.14.3
-- `Prometheus promxy`: 0.0.93
-- `Extended-monitoring k8s-image-availability-exporter`: 0.13.0
-- `Extended-monitoring x509-certificate-exporter`: 3.19.1
-- `Cilium-hubble hubble-ui`: 0.13.2
-- `Cilium-hubble hubble-ui-frontend-assets`: 0.13.2
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.71.md) on GitHub.
 
 ## Version 1.70
 
@@ -168,7 +262,7 @@ The following DKP components have been updated:
 
 - The `ceph-csi` module has been removed. Use the `csi-ceph` module instead. Deckhouse will not be updated as long as `ceph-csi` is enabled in the cluster. For `csi-ceph` migration instructions, refer to the [module documentation](https://deckhouse.io/products/kubernetes-platform/modules/csi-ceph/stable/).
 
-- Version 1.12 of the NGINX Ingress Controller has been added. The default controller version has been changed to 1.10. All Ingress controllers that do not have an explicitly specified version (via the [`controllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) parameter in the IngressNginxController resource or the [`defaultControllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) parameter in the `ingress-nginx` module) will be restarted.
+- Version 1.12 of the Ingress NGINX Controller has been added. The default controller version has been changed to 1.10. All Ingress controllers that do not have an explicitly specified version (via the [`controllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-controllerversion) parameter in the IngressNginxController resource or the [`defaultControllerVersion`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/ingress-nginx/configuration.html#parameters-defaultcontrollerversion) parameter in the `ingress-nginx` module) will be restarted.
 
 - The `falco_events` metric (from the `runtime-audit-engine` module) has been removed. The `falco_events` metric was considered deprecated since DKP 1.68. Use the [`falcosecurity_falcosidekick_falco_events_total`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.70/modules/runtime-audit-engine/faq.html#how-to-create-an-alert) metric instead. Dashboards and alerts based on the `falco_events` metric may stop working.
 
@@ -223,19 +317,8 @@ The following DKP components have been updated:
 
 - CVE vulnerabilities have been fixed in the following modules: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, and `vertical-pod-autoscaler`.
 
-### Component version updates
-
-The following DKP components have been updated:
-
-- `containerd`: 1.7.27
-- `runc`: 1.2.5
-- `go`: 1.24.2, 1.23.8
-- `golang.org/x/net`: v0.38.0
-- `mcm`: v0.36.0-flant.23
-- `ingress-nginx`: 1.12.1
-- `terraform-provider-aws`: 5.83.1
-- `Deckhouse CLI`: 0.12.1
-- `etcd`: v3.5.21
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.70.md) on GitHub.
 
 ## Version 1.69
 
@@ -307,27 +390,11 @@ The following DKP components have been updated:
 
 ### Security
 
-Known vulnerabilities have been addressed in the following modules:
+- Known vulnerabilities have been addressed in the following modules:
 `ingress-nginx`, `istio`, `prometheus`, and `local-path-provisioner`.
 
-### Component version updates
-
-The following DKP components have been updated:
-
-- `cert-manager`: 1.17.1
-- `dashboard`: 1.6.1
-- `dex`: 2.42.0
-- `go-vcloud-director`: 2.26.1
-- Grafana: 10.4.15
-- Kubernetes control plane: 1.29.14, 1.30.1, 1.31.6, 1.32.2
-- `kube-state-metrics` (`monitoring-kubernetes`): 2.15.0
-- `local-path-provisioner`: 0.0.31
-- `machine-controller-manager`: v0.36.0-flant.19
-- `pod-reloader`: 1.2.1
-- `prometheus`: 2.55.1
-- Terraform providers:
-  - OpenStack: 1.54.1
-  - vCD: 3.14.1
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.69.md) on GitHub.
 
 ## Version 1.68
 
@@ -423,27 +490,6 @@ Known vulnerabilities have been addressed in the following modules:
 - `vertical-pod-autoscaler`
 - `static-routing-manager`
 
-### Component version updates
-
-The following DKP components have been updated:
-
-- Kubernetes Control Plane: 1.29.14, 1.30.10, 1.31.6
-- `aws-node-termination-handler`: 1.22.1
-- `capcd-controller-manager`: 1.3.2
-- `cert-manager`: 1.16.2
-- `chrony`: 4.6.1
-- `cni-flannel`: 0.26.2
-- `docker_auth`: 1.13.0
-- `flannel-cni`: 1.6.0-flannel1
-- `gatekeeper`: 3.18.1
-- `jq`: 1.7.1
-- `kubernetes-cni`: 1.6.2
-- `kube-state-metrics`: 2.14.0
-- `vector` (`log-shipper`): 0.44.0
-- `prometheus`: 2.55.1
-- `snapshot-controller`: 8.2.0
-- `yq4`: 3.45.1
-
 ### Mandatory component restart
 
 The following components will be restarted after updating DKP to 1.68:
@@ -484,3 +530,6 @@ The following components will be restarted after updating DKP to 1.68:
 - `terraform-manager`
 - `user-authn`
 - `vertical-pod-autoscaler`
+
+The complete list of changes, including the updated components,
+is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md) on GitHub.

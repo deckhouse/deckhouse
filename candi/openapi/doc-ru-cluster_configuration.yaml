@@ -10,7 +10,7 @@ apiVersions:
       Чтобы изменить содержимое ресурса `ClusterConfiguration` в работающем кластере, выполните следующую команду:
 
       ```shell
-      d8 platform edit cluster-configuration
+      d8 system edit cluster-configuration
       ```
     properties:
       apiVersion:

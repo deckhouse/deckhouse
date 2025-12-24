@@ -27,7 +27,7 @@ git:
     - '**/go.sum'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-basic-auth-proxy-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/alt-go-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-basic-auth-proxy-src-artifact

@@ -1,0 +1,9 @@
+{% alert level="info" %}
+Если у вас компьютер на базе Apple Silicon, то перед запуском контейнера убедитесь, что в настройках Docker Desktop включена Rosetta.
+{% offtopic title="Как включить Rosetta..." %}
+1. Перейдите в настройки Docker Desktop, нажав на значок шестерёнки в правом верхнем углу главного окна программы.
+1. На вкладке «General» найдите раздел «Virtual Machine Options».
+1. Включите пункт «Use Rosetta for x86_64/amd64 emulation on Apple Silicon».
+   <img src="/images/gs/installer/enable-rosetta.png" alt="Включение Rosetta в настройках Docker Desktop">
+{% endofftopic %}
+{% endalert %}

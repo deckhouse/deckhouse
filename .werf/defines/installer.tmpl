@@ -23,6 +23,10 @@
   add: /version_map_{{ $context.Env }}.yml
   to: /deckhouse/candi/version_map.yml
   before: setup
+- image: libs/ncurses
+  add: /usr/share/terminfo/
+  to: /usr/share/terminfo/
+  before: install
 - image: ssh-static
   add: /ssh/bin
   to: /bin
@@ -39,6 +43,14 @@
 - image: tools/bash
   add: /usr/bin/bash
   to: /bin/bash
+  before: install
+- image: tools/bash-completion
+  add: /
+  to: /
+  includePaths:
+  - etc/bash_completion
+  - etc/bash_completion.d
+  - usr/share/bash-completion
   before: install
 - image: tools/jq
   add: /usr/bin/jq

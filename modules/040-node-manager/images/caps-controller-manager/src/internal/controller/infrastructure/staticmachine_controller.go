@@ -88,9 +88,10 @@ type StaticMachineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
-	logger := ctrl.LoggerFrom(ctx)
+	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachine", req.NamespacedName.String())
+	ctx = ctrl.LoggerInto(ctx, logger)
 
-	logger.Info("Reconciling StaticMachine")
+	logger.V(1).Info("Reconciling StaticMachine")
 
 	// Fetch the StaticMachine.
 	staticMachine := &infrav1.StaticMachine{}
@@ -100,11 +101,13 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get StaticMachine")
 		return ctrl.Result{}, err
 	}
 
 	machineScope, ok, err := controller.NewMachineScope(ctx, r.Client, r.Config, staticMachine)
 	if err != nil {
+		logger.Error(err, "failed to create machine scope")
 		return ctrl.Result{}, errors.Wrap(err, "failed to create machine scope")
 	}
 	if !ok {
@@ -119,6 +122,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	instanceScope, err := r.fetchStaticInstanceByStaticMachineUID(ctx, machineScope)
 	if err != nil {
+		logger.Error(err, "failed to fetch static instance by static machine uid")
 		return ctrl.Result{}, errors.Wrap(err, "failed to fetch static instance by static machine uid")
 	}
 
@@ -147,12 +151,17 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Handle deleted machines
 	if !staticMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		machineScope.Logger.Info("Reconciling delete StaticMachine")
+		machineScope.Logger.V(1).Info("Reconciling delete StaticMachine")
 
 		return r.reconcileDelete(ctx, machineScope, instanceScope)
 	}
 
-	return r.reconcileNormal(ctx, machineScope, instanceScope)
+	result, reconcileErr := r.reconcileNormal(ctx, machineScope, instanceScope)
+	if reconcileErr != nil {
+		machineScope.Logger.Error(reconcileErr, "failed to reconcile StaticMachine")
+	}
+
+	return result, reconcileErr
 }
 
 func (r *StaticMachineReconciler) reconcileNormal(
@@ -176,7 +185,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	}
 
 	if !machineScope.ClusterScope.Cluster.Status.InfrastructureReady {
-		machineScope.Logger.Info("Cluster infrastructure is not ready yet")
+		machineScope.Logger.V(1).Info("Cluster infrastructure is not ready yet")
 
 		conditions.MarkFalse(machineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.StaticMachineWaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
 
@@ -184,7 +193,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	}
 
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
-		machineScope.Logger.Info("Bootstrap Data Secret not available yet")
+		machineScope.Logger.V(1).Info("Bootstrap Data Secret not available yet")
 
 		conditions.MarkFalse(machineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.StaticMachineWaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
 
@@ -199,7 +208,7 @@ func (r *StaticMachineReconciler) reconcileNormal(
 			return ctrl.Result{}, errors.Wrap(err, "failed to pick StaticInstance")
 		}
 		if !ok {
-			machineScope.Logger.Info("No pending StaticInstance available, waiting...")
+			machineScope.Logger.V(1).Info("No pending StaticInstance available, waiting...")
 
 			r.Recorder.SendWarningEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
 
@@ -253,6 +262,7 @@ func (r *StaticMachineReconciler) reconcileDelete(
 	if instanceScope != nil {
 		result, err := r.cleanup(ctx, instanceScope)
 		if err != nil {
+			machineScope.Logger.Error(err, "failed to cleanup StaticInstance")
 			return result, errors.Wrap(err, "failed to cleanup StaticInstance")
 		}
 
@@ -270,7 +280,7 @@ func (r *StaticMachineReconciler) cleanup(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
 ) (ctrl.Result, error) {
-	instanceScope.Logger.Info("StaticInstance is cleaning")
+	instanceScope.Logger.V(1).Info("StaticInstance is cleaning")
 
 	if instanceScope.GetPhase() != deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning &&
 		instanceScope.Instance.Status.NodeRef != nil {
@@ -359,8 +369,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		}
 
 		instanceScope.MachineScope.SetNotReady()
-
-		instanceScope.Logger.Info("StaticInstance is adopting")
+		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
 
 		estimated := DefaultStaticInstanceAdoptTimeout -
 			time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
@@ -390,8 +399,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		return result, nil
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseBootstrapping:
 		instanceScope.MachineScope.SetNotReady()
-
-		instanceScope.Logger.Info("StaticInstance is bootstrapping")
+		instanceScope.Logger.V(1).Info("StaticInstance is bootstrapping")
 
 		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
@@ -416,8 +424,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		return result, nil
 	case deckhousev1.StaticInstanceStatusCurrentStatusPhaseRunning:
 		instanceScope.MachineScope.SetReady()
-
-		instanceScope.Logger.Info("StaticInstance is running")
+		instanceScope.Logger.V(1).Info("StaticInstance is running")
 	}
 
 	return ctrl.Result{}, nil
@@ -436,6 +443,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 		k8sClient.MatchingFieldsSelector{Selector: uidSelector},
 	)
 	if err != nil {
+		ctrl.LoggerFrom(ctx).Error(err, "failed to list StaticInstances by UID", "staticMachineUID", machineScope.StaticMachine.UID)
 		return nil, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", machineScope.StaticMachine.UID)
 	}
 
@@ -455,7 +463,7 @@ func (r *StaticMachineReconciler) fetchStaticInstanceByStaticMachineUID(
 		return nil, errors.Wrap(err, "failed to create an instance scope")
 	}
 
-	instanceScope.MachineScope = machineScope
+	instanceScope.AttachMachineScope(machineScope)
 
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {

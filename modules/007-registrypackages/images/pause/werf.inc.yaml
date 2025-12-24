@@ -1,4 +1,4 @@
-{{- $version := "28.08.25" }}
+{{- $version := "08.04.25" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: builder/scratch
@@ -42,9 +42,9 @@ dependencies:
     targetEnv: IMAGE_REPO
 secrets:
 - id: REGISTRY_USER
-  value: {{ .RegistryUser }}
+  env: REGISTRY_USER
 - id: REGISTRY_PASSWORD
-  value: {{ .RegistryPassword }}
+  env: REGISTRY_PASSWORD
 shell:
   setup:
   - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac

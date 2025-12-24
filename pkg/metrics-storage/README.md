@@ -13,7 +13,6 @@ A comprehensive metrics management package for Golang applications that provides
 - [Metric Registration](#metric-registration)
 - [Grouped Metrics](#grouped-metrics)
 - [Batch Operations with Operations API](#batch-operations-with-operations-api)
-- [Prefix Templates](#prefix-templates)
 - [Prometheus Integration](#prometheus-integration)
 - [Advanced Usage Patterns](#advanced-usage-patterns)
 - [Package Structure](#package-structure)
@@ -42,7 +41,7 @@ The `metrics-storage` package is a sophisticated wrapper around Prometheus clien
 
 The package consists of several key components:
 
-- **MetricStorage**: Main interface for metric operations and registration with support for prefix templates
+- **MetricStorage**: Main interface for metric operations and registration
 - **GroupedVault**: Internal storage that manages grouped metrics and collectors with automatic expiration
 - **Collectors**: Type-safe metric collectors (Counter, Gauge, Histogram) with consistent value handling
 - **Operations**: Batch operation system for efficient metric updates with validation and error handling
@@ -66,9 +65,9 @@ import (
 )
 
 func main() {
-    // Create a new metrics storage with prefix "app"
+    // Create a new metrics storage
     logger := log.NewLogger()
-    storage := metricsstorage.NewMetricStorage("app", 
+    storage := metricsstorage.NewMetricStorage(
         metricsstorage.WithNewRegistry(), 
         metricsstorage.WithLogger(logger),
     )
@@ -387,26 +386,6 @@ operation.ActionHistogramObserve  // Record histogram observation
 
 // Group management operations
 operation.ActionExpireMetrics     // Expire all metrics in a group
-```
-
-## Prefix Templates
-
-Metric names can use template variables for dynamic prefix resolution:
-
-```go
-// Create storage with prefix "myapp"
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// Use {PREFIX} template in metric names
-storage.GaugeSet("{PREFIX}_component_status", 1.0, map[string]string{
-    "component": "database",
-})
-// Results in metric name: "myapp_component_status"
-
-storage.CounterAdd("{PREFIX}_errors_total", 1.0, map[string]string{
-    "type": "connection",
-})
-// Results in metric name: "myapp_errors_total"
 ```
 
 ## Prometheus Integration
@@ -728,17 +707,7 @@ const (
 
 ## Best Practices
 
-### 1. Use Prefixes Consistently
-
-```go
-// Good: Use a consistent prefix for your application
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// Use template variables for dynamic prefixes
-storage.CounterAdd("{PREFIX}_requests_total", 1.0, labels)
-```
-
-### 2. Group Related Metrics
+### 1. Group Related Metrics
 
 ```go
 // Good: Group metrics that have related lifecycles
@@ -938,24 +907,6 @@ func handleRequest() {
         "method": "GET",
     })
 }
-```
-
-### From Other Metrics Libraries
-
-```go
-// From other libraries, the pattern is similar:
-// 1. Create MetricStorage with appropriate prefix
-storage := metricsstorage.NewMetricStorage("myapp")
-
-// 2. Replace direct metric calls with storage methods
-// Old: myCounter.Inc()
-// New: storage.CounterAdd("my_counter", 1.0, labels)
-
-// Old: myGauge.Set(42.0)  
-// New: storage.GaugeSet("my_gauge", 42.0, labels)
-
-// Old: myHistogram.Observe(0.5)
-// New: storage.HistogramObserve("my_histogram", 0.5, labels, buckets)
 ```
 
 ## Troubleshooting

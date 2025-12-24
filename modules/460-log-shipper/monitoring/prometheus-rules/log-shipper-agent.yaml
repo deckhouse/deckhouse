@@ -90,7 +90,7 @@
         To resolve this, check the pod logs or follow advanced instructions:
 
         ```bash
-        d8 k -n d8-log-shipper logs {{ $labels.host }}` -c vector
+        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector
         ```
 
   - alert: D8LogShipperCollectLogErrors

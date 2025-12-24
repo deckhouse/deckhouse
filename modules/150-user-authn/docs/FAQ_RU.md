@@ -53,7 +53,7 @@ title: "Модуль user-authn: FAQ"
    - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
       - `SERVICE_NAME` — имя сервиса (Service) аутентификатора. Как правило, оно соответствует формату `<NAME>-dex-authenticator` (`<NAME>` — это `metadata.name` DexAuthenticator).
       - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`.
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
 
    > **Важно:** Если имя DexAuthenticator (`<NAME>`) слишком длинное, имя сервиса (Service) может быть сокращено. Чтобы найти корректное имя сервиса, воспользуйтесь следующей командой (укажите имя пространства имен и имя аутентификатора):
    >
@@ -70,6 +70,10 @@ title: "Модуль user-authn: FAQ"
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+    {% alert level="warning" %}
+    Ingress приложения должен иметь настроенный TLS. DexAuthenticator не поддерживает Ingress-ресурсы, работающие только по HTTP.
+    {% endalert %}
 
 ### Настройка ограничений на основе CIDR
 
@@ -90,6 +94,14 @@ title: "Модуль user-authn: FAQ"
 ## Как работает аутентификация с помощью DexAuthenticator
 
 ![Как работает аутентификация с помощью DexAuthenticator](images/dex_login.svg)
+
+{% alert level="warning" %}
+DexAuthenticator работает только по HTTPS. Ingress-ресурсы, настроенные только на HTTP, не поддерживаются.
+
+Аутентификационные cookie устанавливаются с атрибутом `Secure`, что означает их передачу только через зашифрованные HTTPS-соединения.
+
+Убедитесь, что для Ingress вашего приложения настроен TLS, прежде чем интегрировать его с DexAuthenticator.
+{% endalert %}
 
 1. Dex в большинстве случаев перенаправляет пользователя на страницу входа провайдера и ожидает, что пользователь будет перенаправлен на его `/callback` URL. Однако такие провайдеры, как LDAP или Atlassian Crowd, не поддерживают этот вариант. Вместо этого пользователь должен ввести свои логин и пароль в форму входа в Dex, и Dex сам проверит их верность, сделав запрос к API провайдера.
 
@@ -148,6 +160,17 @@ title: "Модуль user-authn: FAQ"
 2. Kubeconfig generator сохраняет ID token и refresh token в файл kubeconfig.
 
 3. После получения запроса с ID token kube-apiserver идет проверять, что token подписан провайдером, который мы настроили на первом шаге, с помощью ключей, полученных с точки доступа JWKS. В качестве следующего шага он сравнивает значения claim'ов `iss` и `aud` из token'а со значениями из конфигурации.
+
+## Как настроить базовую аутентификацию для доступа к Kubernetes API через LDAP?
+
+1. Включите параметр [`publishAPI`](configuration.html#parameters-publishapi) в конфигурации модуля `user-authn`.
+1. Создайте ресурс [DexProvider](cr.html#dexprovider) типа `LDAP` и установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+1. Настройте [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) для групп, получаемых из LDAP.
+1. Передайте пользователям `kubeconfig` с настроенными параметрами базовой аутентификации (логин и пароль LDAP).
+
+> **Внимание**. В кластере может быть только один провайдер аутентификации со включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+
+Подробный пример настройки в разделе [Примеры конфигурации](usage.html#настройка-basic-authentication).
 
 ## Как Dex защищен от подбора логина и пароля?
 

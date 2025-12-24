@@ -39,7 +39,7 @@ DKP позволяет:
 1. Включите [модуль `log-shipper`](/modules/log-shipper/) с помощью следующей команды:
 
    ```shell
-   d8 platform module enable log-shipper
+   d8 system module enable log-shipper
    ```
 
 1. Создайте ресурс [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig), который задаёт правила сбора логов.

@@ -41,6 +41,7 @@ var (
 	DeckhouseVersion     = "dev"
 	AddonOperatorVersion = "dev"
 	ShellOperatorVersion = "dev"
+	NelmVersion          = "dev"
 )
 
 // Variables to configure with build flags.
@@ -53,7 +54,7 @@ const (
 )
 
 func version() string {
-	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, runtime.Version())
+	return fmt.Sprintf("deckhouse %s (addon-operator %s, shell-operator %s, nelm %s, Golang %s)", DeckhouseVersion, AddonOperatorVersion, ShellOperatorVersion, NelmVersion, runtime.Version())
 }
 
 // main is almost a copy from addon-operator. We compile addon-operator to inline
@@ -106,9 +107,6 @@ func main() {
 
 	// deckhouse-controller helper subcommands
 	helpers.DefineHelperCommands(kpApp, logger)
-
-	// deckhouse-controller collect-debug-info
-	debug.DefineCollectDebugInfoCommand(kpApp)
 
 	// deckhouse-controller requirements
 	debug.DefineRequirementsCommands(kpApp)

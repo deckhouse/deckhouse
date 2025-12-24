@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -39,7 +38,7 @@ type tunnelWaitResult struct {
 }
 
 type ReverseTunnel struct {
-	sshClient *ssh.Client
+	sshClient *Client
 	address   string
 
 	tunMutex sync.Mutex
@@ -51,7 +50,7 @@ type ReverseTunnel struct {
 	errorCh chan tunnelWaitResult
 }
 
-func NewReverseTunnel(sshClient *ssh.Client, address string) *ReverseTunnel {
+func NewReverseTunnel(sshClient *Client, address string) *ReverseTunnel {
 	return &ReverseTunnel{
 		sshClient: sshClient,
 		address:   address,
@@ -90,7 +89,7 @@ func (t *ReverseTunnel) upNewTunnel(oldId int) (int, error) {
 	localAddress := net.JoinHostPort(localBind, localPort)
 
 	// reverse listen on remote server port
-	listener, err := t.sshClient.Listen("tcp", remoteAddress)
+	listener, err := t.sshClient.GetClient().Listen("tcp", remoteAddress)
 	if err != nil {
 		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", remoteAddress))
 	}
@@ -178,10 +177,8 @@ func (t *ReverseTunnel) isStarted() bool {
 func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer node.ReverseTunnelKiller) (int, error) {
 	t.stop(id, false)
 	log.DebugF("[%d] Kill tunnel\n", id)
-	if out, err := killer.KillTunnel(ctx); err != nil {
-		log.DebugF("[%d] Kill tunnel was finished with error: %v; stdout: '%s'\n", id, err, out)
-		return id, err
-	}
+	// (k EmptyReverseTunnelKiller) KillTunnel won't return error anyways, so we couldn't check return values
+	killer.KillTunnel(ctx)
 	return t.upNewTunnel(id)
 }
 

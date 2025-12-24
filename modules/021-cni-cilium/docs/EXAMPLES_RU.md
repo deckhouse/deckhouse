@@ -4,7 +4,7 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE.{% endalert %}
 
 ### Принцип работы
 

@@ -18,3 +18,6 @@ import:
 {{ include "controller_and_install_image_labels" . }}
     user: "0:0"
     cmd: ["/bin/bash"]
+---
+{{- include "vex mitigation" (list $ "dev/install") }}
+---

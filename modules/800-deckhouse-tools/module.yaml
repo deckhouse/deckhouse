@@ -1,5 +1,6 @@
 name: deckhouse-tools
 namespace: d8-system
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"
+descriptions:
+  en: Creates a web UI with links to download Deckhouse CLI tool for various operating systems.
+  ru: Создает веб-интерфейс для скачивания из кластера утилиты Deckhouse CLI под различные операционные системы.

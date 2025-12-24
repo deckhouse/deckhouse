@@ -46,32 +46,6 @@
   EOF
   ```
 
-- Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
-
-  ```shell
-  cat /dev/shm/caps-id.pub
-  ```
-
-- **На подготовленной виртуальной машине** создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
-
-  ```shell
-  export KEY='<SSH-PUBLIC-KEY>' # Укажите публичную часть SSH-ключа пользователя.
-  useradd -m -s /bin/bash caps
-  usermod -aG sudo caps
-  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-  mkdir /home/caps/.ssh
-  echo $KEY >> /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps
-  chmod 700 /home/caps/.ssh
-  chmod 600 /home/caps/.ssh/authorized_keys
-  ```
-
-- **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
-
-  ```shell
-  pdpl-user -i 63 caps
-  ```
-
 - Создайте [StaticInstance](/modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на **master-узле** следующую команду, указав IP-адрес добавляемого узла:
 
   ```shell
@@ -91,7 +65,33 @@
   EOF
   ```
 
-- Убедитесь, что все узлы кластера находятся в статусе `Ready`.
+- Выведите публичную часть сгенерированного ранее SSH-ключа (он понадобится на следующем шаге). Для этого выполните на **master-узле** следующую команду:
+
+  ```shell
+  cat /dev/shm/caps-id.pub
+  ```
+
+- **На подготовленном worker-узле** создайте пользователя `caps`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге (при недостатке привилегий добавляйте к командам `sudo`):
+
+  ```shell
+  export KEY='<SSH-PUBLIC-KEY>' # Укажите публичную часть SSH-ключа пользователя.
+  useradd -m -s /bin/bash caps
+  usermod -aG sudo caps
+  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+  mkdir /home/caps/.ssh
+  echo $KEY | tee -a /home/caps/.ssh/authorized_keys
+  chown -R caps:caps /home/caps
+  chmod 700 /home/caps/.ssh
+  chmod 600 /home/caps/.ssh/authorized_keys
+  ```
+
+- **В операционных системах семейства Astra Linux**, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+
+  ```shell
+  pdpl-user -i 63 caps
+  ```
+
+- Дождитесь пока все узлы кластера перейдут в состояние `Ready`.
   Выполните на **master-узле** следующую команду, чтобы получить список узлов кластера:
 
   ```shell

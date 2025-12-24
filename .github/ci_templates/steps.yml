@@ -98,6 +98,28 @@
 # </template: login_readonly_registry_step>
 {!{- end -}!}
 
+{!{ define "login_stage_registry_step" }!}
+# <template: login_stage_registry_step>
+- name: Check stage registry credentials
+  id: check_stage_registry
+  env:
+    HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+  run: |
+    if [[ -n $HOST ]]; then
+      echo "has_credentials=true" >> $GITHUB_OUTPUT
+      echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+    fi
+- name: Login to stage registry
+  uses: {!{ index (ds "actions") "docker/login-action" }!}
+  if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+  with:
+    registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+    password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+    logout: false
+# </template: login_stage_registry_step>
+{!{- end -}!}
+
 {!{ define "login_rw_cse_registry_step" }!}
 # <template: login_rw_registry_step>
 - name: Check rw cse registry credentials
@@ -310,4 +332,55 @@
       {!{- index . 0 }!} {!{ index . 1 }!} | {!{ index . 2 }!} ;
       {!{ end }!}
 # </template: import_secrets>
+{!{- end -}!}
+
+
+{!{ define "check_tag_for_release_branch" }!}
+# </template: check-tag-for-release-branch>
+- name: Check tag for release branch
+  id: check-tag-for-release-branch
+  uses: {!{ index (ds "actions") "actions/github-script" }!}
+  with:
+    result-encoding: string
+    script: |
+      const branch = context.ref.replace('refs/heads/', '');
+      const match = branch.match(/^release-(\d+\.\d+)/);
+      const version = match[1];
+
+      const { data: tags } = await github.rest.repos.listTags({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        per_page: 100
+      });
+
+      const prefix = `v${version}.`;
+      const versionTags = tags.filter(tag => tag.name.startsWith(prefix));
+      console.log(`Filtered tags: ${versionTags.map(t => t.name).join(', ')}`);
+
+      if (versionTags.length === 0) {
+        console.log('No tags found for this version, skipping');
+        return false;
+      }
+
+      const compareTags = (a, b) => {
+        const aVersion = a.name.split('.').map(Number);
+        const bVersion = b.name.split('.').map(Number);
+        for (let i = 0; i < 3; i++) {
+          if (aVersion[i] !== bVersion[i]) {
+            return bVersion[i] - aVersion[i];
+          }
+        }
+        return 0;
+      };
+
+      versionTags.sort(compareTags);
+      const latestTag = versionTags[0];
+      console.log(`Latest tag for ${version}: ${latestTag.name}`);
+
+      const patchVersion = latestTag.name.split('.')[2];
+      const patchNumber = parseInt(patchVersion);
+      console.log(`Patch version: ${patchNumber}`);
+      return patchNumber >= 1;
+# example use ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
+# </template: check-tag-for-release-branch>
 {!{- end -}!}

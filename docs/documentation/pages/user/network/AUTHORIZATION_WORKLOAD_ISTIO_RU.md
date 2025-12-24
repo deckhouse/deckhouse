@@ -4,7 +4,7 @@ permalink: ru/user/network/authorization-workload-istio.html
 lang: ru
 ---
 
-Для управления авторизацией и контролем доступа к workload можно использовать модуль [`istio`](/modules/istio/).
+Для управления авторизацией и контролем доступа к workload можно использовать модуль [istio](/modules/istio/).
 Перед настройкой авторизации убедитесь, что модуль включен в кластере.
 
 <!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/istio/#%D0%B0%D0%B2%D1%82%D0%BE%D1%80%D0%B8%D0%B7%D0%B0%D1%86%D0%B8%D1%8F -->

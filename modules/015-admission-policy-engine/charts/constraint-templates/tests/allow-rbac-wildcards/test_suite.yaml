@@ -1,5 +1,12 @@
-template: allow-rbac-wildcards.yaml
-constraint: constraint.yaml
+
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-allowed-capabilities
+tests:
+  - name: security-policy
+    template: ../../templates/security/allow-rbac-wildcards.yaml
+    constraint: constraint.yaml
 cases:
   - name: Role without wildcards (allowed)
     object: role-valid.yaml

@@ -1,5 +1,28 @@
 {{- define "istiod_rules_v-1-19" -}}
 - apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts
+  verbs:
+  - get
+  - watch
+  - list
+  - update
+  - patch
+  - create
+  - delete
+- apiGroups:
   - admissionregistration.k8s.io
   resources:
   - mutatingwebhookconfigurations
@@ -159,7 +182,9 @@
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses
+  - gateways
   verbs:
+  - list
   - create
   - update
   - patch

@@ -8,6 +8,7 @@ description: |-
   roles for the PostgreSQL database.
 ---
 
+{% raw %}
 PostgreSQL это один из поддерживаемых плагинов для механизма секретов баз данных. Этот плагин генерирует
 учетные данные базы данных динамически на основе настроенных ролей для базы данных PostgreSQL, а также
 поддерживает Static Roles.
@@ -72,3 +73,5 @@ lease_renewable    true
 password           SsnoaA-8Tv4t34f41baD
 username           v-strongholduse-my-role-x
 ```
+
+{% endraw %}

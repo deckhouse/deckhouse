@@ -16,7 +16,6 @@ package preflight
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -75,8 +74,7 @@ func NewChecker(
 func (pc *Checker) Static(ctx context.Context) error {
 	ready, err := pc.bootstrapState.StaticPreflightchecksWasRan()
 	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot get state for static preflight checks from cache: %v", err)
 	}
 
 	if ready {
@@ -99,11 +97,7 @@ func (pc *Checker) Static(ctx context.Context) error {
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
 		},
-		{
-			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel between installer and node is possible",
-			skipFlag:       app.SSHForwardArgName,
-		},
+		pc.getCheckSSHTunnelStep(),
 		{
 			fun:            pc.CheckDeckhouseUser,
 			successMessage: "deckhouse user and group aren't present on node",
@@ -160,8 +154,7 @@ func (pc *Checker) Static(ctx context.Context) error {
 func (pc *Checker) StaticSudo(ctx context.Context) error {
 	_, err := pc.bootstrapState.StaticPreflightchecksWasRan()
 	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot get state for static sudo preflight checks from cache: %v", err)
 	}
 
 	err = pc.do(ctx, "Preflight checks for SSH and sudo", []checkStep{
@@ -170,11 +163,7 @@ func (pc *Checker) StaticSudo(ctx context.Context) error {
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
 		},
-		{
-			fun:            pc.CheckSSHTunnel,
-			successMessage: "ssh tunnel between installer and node is possible",
-			skipFlag:       app.SSHForwardArgName,
-		},
+		pc.getCheckSSHTunnelStep(),
 		{
 			fun:            pc.CheckSudoIsAllowedForUser,
 			successMessage: "sudo is allowed for user",
@@ -204,24 +193,19 @@ func (pc *Checker) Cloud(ctx context.Context) error {
 
 	ready, err := pc.bootstrapState.CloudPreflightchecksWasRan()
 	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot get state for cloud preflight checks from cache: %v", err)
 	}
 
 	if ready {
 		return nil
 	}
 
+	// todo move to meta config preparator
 	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
 		{
 			fun:            pc.CheckCloudMasterNodeSystemRequirements,
 			successMessage: "cloud master node system requirements are met",
 			skipFlag:       app.SystemRequirementsArgName,
-		},
-		{
-			fun:            pc.CheckYandexWithNatInstanceConfig,
-			successMessage: "Yandex NAT instance config",
-			skipFlag:       app.YandexWithNatInstance,
 		},
 	})
 	if err != nil {
@@ -234,21 +218,27 @@ func (pc *Checker) Cloud(ctx context.Context) error {
 func (pc *Checker) PostCloud(ctx context.Context) error {
 	ready, err := pc.bootstrapState.PostCloudPreflightchecksWasRan()
 	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot get state for post cloud preflight checks from cache: %v", err)
 	}
 
 	if ready {
 		return nil
 	}
 
-	err = pc.do(ctx, "Cloud deployment preflight checks", []checkStep{
-		{
+	cloudSteps := []checkStep{
+		pc.getCheckSSHTunnelStep(),
+	}
+
+	if needCheckCloudAPI(pc.metaConfig) {
+		// todo move to packet infrastructureprovider.cloud
+		cloudSteps = append(cloudSteps, checkStep{
 			fun:            pc.CheckCloudAPIAccessibility,
 			successMessage: "access to cloud api from master host",
 			skipFlag:       app.CloudAPIAccessibilityArgName,
-		},
-	})
+		})
+	}
+
+	err = pc.do(ctx, "Cloud deployment preflight checks", cloudSteps)
 	if err != nil {
 		return err
 	}
@@ -259,14 +249,14 @@ func (pc *Checker) PostCloud(ctx context.Context) error {
 func (pc *Checker) Global(ctx context.Context) error {
 	ready, err := pc.bootstrapState.GlobalPreflightchecksWasRan()
 	if err != nil {
-		msg := fmt.Sprintf("Can not get state from cache: %v", err)
-		return errors.New(msg)
+		return fmt.Errorf("Cannot get state for global preflight checks from cache: %v", err)
 	}
 
 	if ready {
 		return nil
 	}
 
+	// todo implement another function in meta config preparator
 	err = pc.do(ctx, "Global preflight checks", []checkStep{
 		{
 			fun:            pc.CheckPublicDomainTemplate,
@@ -343,4 +333,12 @@ func (pc *Checker) doRequired(ctx context.Context, title string, checks []requir
 		}
 		return nil
 	})
+}
+
+func (pc *Checker) getCheckSSHTunnelStep() checkStep {
+	return checkStep{
+		fun:            pc.CheckSSHTunnel,
+		successMessage: "ssh tunnel between installer and node is possible",
+		skipFlag:       app.SSHForwardArgName,
+	}
 }

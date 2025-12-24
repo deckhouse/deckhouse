@@ -99,7 +99,7 @@ func ApplyPipeline(
 			return err
 		}
 
-		err = r.Plan(ctx, false)
+		err = r.Plan(ctx, false, false)
 		if err != nil {
 			return err
 		}
@@ -125,6 +125,7 @@ func CheckPipeline(
 	r RunnerInterface,
 	name string,
 	destroy bool,
+	noout bool,
 ) (int, plan.Plan, *plan.DestructiveChanges, error) {
 	isChange := plan.HasNoChanges
 	var destructiveChanges *plan.DestructiveChanges
@@ -136,12 +137,15 @@ func CheckPipeline(
 			return err
 		}
 
-		err = r.Plan(ctx, destroy)
+		err = r.Plan(ctx, destroy, noout)
 		if err != nil {
 			return err
 		}
 
 		isChange = r.GetChangesInPlan()
+		if noout {
+			return nil
+		}
 		destructiveChanges = r.GetPlanDestructiveChanges()
 
 		rawPlan, err := r.ShowPlan(ctx)
@@ -188,7 +192,7 @@ func CheckBaseInfrastructurePipeline(
 			return err
 		}
 
-		err = r.Plan(ctx, false)
+		err = r.Plan(ctx, false, false)
 		if err != nil {
 			return err
 		}

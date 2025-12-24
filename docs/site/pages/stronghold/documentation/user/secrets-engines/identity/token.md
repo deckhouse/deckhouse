@@ -4,6 +4,8 @@ permalink: en/stronghold/documentation/user/secrets-engines/identity/token.html
 description: Details and best practices for identity tokens.
 ---
 
+{% raw %}
+
 ## Introduction
 
 Identity information is used throughout Stronghold, but it can also be exported for
@@ -184,3 +186,5 @@ may be configured explicitly. This address must point to the identity/oidc path
 for the Stronghold instance (e.g.
 `https://stronghold.example.com:8200/v1/identity/oidc`) and should be
 reachable by any client trying to validate identity tokens.
+
+{% endraw %}

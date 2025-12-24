@@ -120,3 +120,10 @@ The metric `geoip_errors_total` has been added, which indicates the number of er
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
 
 https://github.com/kubernetes/ingress-nginx/pull/14005
+
+### 021-geoip-ver-metric.patch
+
+This patch adds a metric that reflects current GeoIP version in use (0 - no geoip, 1 - geoip, 2 - geoip2)
+
+### 022-skip-tls-verification-maxmind.patch
+Adds a flag to disable TLS verification when downloading from the MaxMind mirror.

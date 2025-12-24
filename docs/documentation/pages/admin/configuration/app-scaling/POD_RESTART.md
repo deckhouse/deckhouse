@@ -164,7 +164,7 @@ You can enable or disable the pod restart functionality in the following ways:
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
    ```console
-   d8 platform module enable pod-reloader
+   d8 system module enable pod-reloader
    ```
 
 1. Through the [Deckhouse web interface](/modules/console/):

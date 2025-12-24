@@ -20,10 +20,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 )
 
 func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
@@ -65,16 +65,11 @@ func (b *ClusterBootstrapper) ExecuteBashible(ctx context.Context) error {
 		}
 	}
 
-	if err := RunBashiblePipeline(
-		ctx,
-		b.NodeInterface,
-		metaConfig,
-		app.InternalNodeIP,
-		infrastructure.DataDevices{
-			KubeDataDevicePath:           app.KubeDataDevicePath,
-			SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
-		},
-	); err != nil {
+	dataDevices := infrastructure.DataDevices{
+		KubeDataDevicePath:           app.KubeDataDevicePath,
+		SystemRegistryDataDevicePath: app.SystemRegistryDataDevicePath,
+	}
+	if err := RunBashiblePipeline(ctx, b.NodeInterface, metaConfig, app.InternalNodeIP, dataDevices, b.CommanderMode); err != nil {
 		return err
 	}
 

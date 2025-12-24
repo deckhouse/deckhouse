@@ -24,7 +24,7 @@ YAML-файл конфигурации установки содержит па�
 
 Например, при планировании параметров кластера были выбраны следующие значения:
 
-- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0./16`;
+- Подсети подов и сервисов — `10.88.0.0/16` и `10.99.0.0/16`;
 - Узлы связаны между собой через подсеть `192.168.1.0/24`;
 - Публичный wildcard-домен кластера `my-dvp-cluster.example.com`;
 - Канал обновлений `early-access`.
@@ -170,7 +170,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    docker run -it --pull=always \
      -v "$PWD/config.yaml:/config.yaml" \
-     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.io/deckhouse/ce/install:stable bash
+     -v "$HOME/.kube/config:/kubeconfig" registry.deckhouse.ru/deckhouse/ce/install:stable bash
    ```
 
 1. Запустите внутри контейнера установщик платформы с помощью команды `dhctl bootstrap-phase install-deckhouse`.

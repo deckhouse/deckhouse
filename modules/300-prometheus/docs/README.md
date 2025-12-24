@@ -13,11 +13,8 @@ The module expands the monitoring stack with preset parameters for DKP and appli
 Module features:
 
 - The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/).
-- The load is optimized by using caches and Deckhouse Prom++.
 - It is possible to store historical data using downsampling.
 - The module covers all the basic tasks of basic monitoring of the platform and applications.
-
-The module covers all the basic tasks of basic monitoring of DKP and applications.
 
 ## Monitoring hardware resources
 
@@ -76,6 +73,8 @@ The capabilities of the DKP monitoring system can be expanded by using the [Obse
 ## Alerts
 
 The Deckhouse monitoring includes event notifications. The standard edition includes a set of basic alerts covering the health of the cluster and its components. Also, you can add custom alerts.
+
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
 
 ### Sending alerts to external systems
 

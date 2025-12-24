@@ -8,7 +8,7 @@ DNS management in a Kubernetes cluster is implemented using the [`kube-dns`](/mo
 The module installs CoreDNS components for managing DNS in the Kubernetes cluster.
 
 {% alert level="info" %}
-The module deletes Deployments, ConfigMaps as well as RBAC for CoreDNS that were previously created using the `kubeadm` tool.
+The module deletes Deployments, ConfigMaps as well as RBAC for CoreDNS that were previously created using the `kubeadm` tool. When deploying your own CoreDNS, avoid using the names `coredns` or `system:coredns` for any resources (Deployment, Service, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding). Use alternative names like `infra-dns` to prevent automatic removal by Deckhouse Kubernetes Platform.
 {% endalert %}
 
 ## Configuration example

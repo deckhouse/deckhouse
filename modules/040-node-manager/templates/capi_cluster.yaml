@@ -28,7 +28,7 @@ spec:
   infrastructureRef:
     apiVersion: {{ .Values.nodeManager.internal.cloudProvider.capiClusterAPIVersion }}
     kind: {{ .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
-    namespace:  {{ .Values.nodeManager.internal.cloudProvider.capiClusterNamespace }}
+    namespace:  d8-cloud-instance-manager
     name: {{ $prefix }}
   controlPlaneRef:
     apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1

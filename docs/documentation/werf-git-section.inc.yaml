@@ -11,8 +11,8 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /dhctl/pkg/config/base.go
-  to: /srv/jekyll-data/documentation/_data/dhctl-base.go
+- add: /candi/feature_gates_map.yml
+  to: /srv/jekyll-data/documentation/_data/feature_gates_map.yml
   owner: jekyll
   group: jekyll
   stageDependencies:
@@ -53,7 +53,9 @@
   excludePaths:
     - docs
     - candi
+    - deckhouse-controller/crds/
   includePaths:
     - '**/docs/README.md'
     - '**/docs/readme.md'
     - '**/oss.yaml'
+    - '**/module.yaml'

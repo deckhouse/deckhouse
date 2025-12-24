@@ -7,7 +7,12 @@ permalink: en/admin/configuration/monitoring/configuring/network-and-nodes.html
 
 DKP can perform monitoring of network interaction between all cluster nodes, as well as between cluster nodes and external hosts. When monitoring is configured, each node sends ICMP packets twice per second to all other cluster nodes (and to optional external nodes) and exports data to the monitoring system.
 
-You can analyze monitoring results using monitoring dashboards. For more details, see the [Grafana](../../../../user/web/grafana.html) section.
+Features of network interaction monitoring:
+
+- Automatically checks the availability of all cluster nodes (and, optionally, external systems) using ICMP (ping) — testing is started every two seconds.
+- All results are exported in metrics format to the Prometheus monitoring system.
+- Included is a ready-made dashboard for Grafana, where current availability, delay schedules, and potential network connectivity issues are visualized in real time (for details, refer to [Grafana](../../../../user/web/grafana.html)).
+- Allows you to quickly identify nodes with degraded connectivity and speeds up the response to incidents.
 
 The [`monitoring-ping`](/modules/monitoring-ping/) module tracks any changes to the `.status.addresses` field of a node. If changes are detected, a hook is triggered that collects the complete list of node names and their addresses, and passes it to the DaemonSet, which recreates the pods. Thus, `ping` checks always the current list of nodes.
 
@@ -45,7 +50,7 @@ spec:
 To enable cluster node monitoring, you need to enable the [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) module if it's not already enabled. You can enable cluster monitoring in the [Deckhouse web interface](/modules/console/), or using the following command:
 
 ```shell
-d8 platform module enable monitoring-kubernetes
+d8 system module enable monitoring-kubernetes
 ```
 
 Similarly, you can enable the [`monitoring-kubernetes-control-plane`](/monitoring-kubernetes-control-plane/) and [`extended-monitoring`](/modules/extended-monitoring/) modules.

@@ -48,7 +48,7 @@ The example uses the [experimental role-based](./#experimental-role-based-model)
 
 To grant a network administrator access to manage the network subsystem of the cluster, use the role `d8:manage:networking:manager` in `ClusterRoleBinding`.
 
-Example of assigning rights to a network administrator (User `joe`):
+Example of assigning rights to a network administrator (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1

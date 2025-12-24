@@ -164,11 +164,11 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.vNetCIDR is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetCIDR is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.sshPublicKey is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`provider in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`vNetCIDR in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`subnetCIDR in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`masterNodeGroup in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`sshPublicKey in body is required`))
 		})
 	})
 
@@ -181,10 +181,10 @@ data:
 		It("All values should be gathered from discovered data and provider cluster configuration", func() {
 			Expect(f).To(Not(ExecuteSuccessfully()))
 
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.resourceGroupName is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.vnetName is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.subnetName is required`))
-			Expect(f.GoHookError.Error()).Should(ContainSubstring(`.zones is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`resourceGroupName in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`vnetName in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`subnetName in body is required`))
+			Expect(f.GoHookError.Error()).Should(ContainSubstring(`zones in body is required`))
 		})
 	})
 })

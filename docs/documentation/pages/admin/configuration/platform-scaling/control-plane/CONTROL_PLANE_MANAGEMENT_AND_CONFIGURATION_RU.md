@@ -15,7 +15,7 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 
 - Настройка компонентов. DKP генерирует все необходимые конфигурации и манифесты (kube-apiserver, etcd и др.), снижая вероятность ручных ошибок.
 
-- Upgrade/downgrade компонентов. DKP поддерживает согласованное обновление или понижение версии control plane, что позволяет поддерживать единообразие версий в кластере.
+- Upgrade/downgrade компонентов. DKP поддерживает согласованное обновление или понижение версии control plane, что позволяет поддерживать единообразие версий в кластере. В редакциях CSE поддерживается только upgrade.
 
 - Управление конфигурацией etcd-кластера и его членов. DKP масштабирует master-узлы, выполняет миграцию из single-master в multi-master и обратно.
 
@@ -43,13 +43,13 @@ Deckhouse Kubernetes Platform (DKP) управляет компонентами 
 1. Используйте команду:
 
    ```bash
-   d8 platform module enable control-plane-manager
+   d8 system module enable control-plane-manager
    ```
 
    или
 
    ```bash
-   d8 platform module disable control-plane-manager
+   d8 system module disable control-plane-manager
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):
@@ -114,7 +114,7 @@ spec:
 1. Получите список очередей и активных заданий:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Пример вывода:

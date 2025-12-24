@@ -35,13 +35,13 @@ metadata:
 
 During an update:
 
-- The `DeckhouseUpdating` alert is active.
+- The [`DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) alert is active.
 - The `deckhouse` Pod is not in the `Ready` state.
   If the Pod stays in a non-`Ready` state for a long time, it may indicate an issue with DKP that requires investigation.
 
 ## How can I tell that the update was successful?
 
-If the `DeckhouseUpdating` alert is gone, the update has finished.
+If the [`DeckhouseUpdating`](../../../reference/alerts.html#monitoring-deckhouse-deckhouseupdating) alert is gone, the update has finished.
 
 You can also check the status of DKP releases in the cluster with the following command:
 
@@ -95,7 +95,7 @@ deckhouse-7844b47bcd-qtbx9  1/1   Running  0       1d
 
 As soon as a new version appears on the configured release channel:
 
-- The `DeckhouseReleaseIsWaitingManualApproval` alert will appear if the cluster is in [manual update mode](configuration.html#manual-update-approval).
+- The [`DeckhouseReleaseIsWaitingManualApproval`](../../../reference/alerts.html#monitoring-deckhouse-deckhousereleaseiswaitingmanualapproval) alert will appear if the cluster is in [manual update mode](configuration.html#manual-update-approval).
 - A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) custom resource will be created.
   To see the list of releases, run `d8 k get deckhousereleases`.
   If the new version is in `Pending` state, it means it hasn’t been installed yet. Possible reasons:
@@ -111,7 +111,7 @@ As soon as a new version appears on the configured release channel:
 You can get information about upcoming minor DKP version updates on the release channel in one of the following ways:
 
 - Enable [manual update mode](configuration.html#manual-update-approval).
-  A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource and the DeckhouseReleaseIsWaitingManualApproval alert will appear when a new version is available.
+  A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource and the [`DeckhouseReleaseIsWaitingManualApproval`](../../../reference/alerts.html#monitoring-deckhouse-deckhousereleaseiswaitingmanualapproval) alert will appear when a new version is available.
 - Enable [automatic update mode](configuration.html#automatic-update-mode) and set a delay using the [`minimalNotificationTime`](/modules/deckhouse/configuration.html#parameters-update-notification-minimalnotificationtime) parameter.
   A new [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) resource will appear when a new version is available.
   If you also set a webhook URL in the [`update.notification.webhook`](/modules/deckhouse/configuration.html#parameters-update-notification-webhook) parameter,

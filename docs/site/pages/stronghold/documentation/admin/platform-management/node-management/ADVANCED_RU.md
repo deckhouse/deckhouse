@@ -4,10 +4,12 @@ permalink: ru/stronghold/documentation/admin/platform-management/node-management
 lang: ru
 ---
 
+{% raw %}
+
 ## Восстановление master-узла, если kubelet не может загрузить компоненты control plane
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы
-компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
+компонентов control plane (например, удалена директория `/var/lib/containerd`). В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.ru`.
 
 Ниже инструкция по восстановлению master-узла.
 
@@ -18,7 +20,7 @@ lang: ru
 ```shell
 d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
+jq -r '.auths."registry.deckhouse.ru".auth'
 ```
 
 Вывод команды нужно скопировать и присвоить переменной AUTH на поврежденном master-узле.
@@ -437,3 +439,5 @@ metadata:
     werf.io/fail-mode: IgnoreAndContinueDeployProcess
     werf.io/track-termination-mode: NonBlocking
 ```
+
+{% endraw %}

@@ -65,7 +65,7 @@ If the parameter is not specified, no group-based filtering will be applied.
    Enable the module via CL:
 
    ```shell
-   d8 platform module enable user-authn
+   d8 system module enable user-authn
    ```
 
 1. Configure the [`user-authn`](/modules/user-authn/) module.
@@ -106,7 +106,7 @@ Specify the `clientID` and `clientSecret` obtained during setup in the [DexProvi
 
 {% alert level="info" %}
 When registering an application with any OIDC provider, you must specify a redirect URI.  
-For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
+For integration with DexProvider, use the following format: `https://dex.<publicDomainTemplate>/callback`, where [`publicDomainTemplate`](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) is the DNS name template of your cluster as defined in the `global` module.
 {% endalert %}
 
 {% alert level="info" %}
@@ -125,7 +125,7 @@ During Keycloak configuration, select the appropriate `realm`, add a user in the
 
 1. In the [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) section, create a `scope` named `groups` and assign it a mapper `Group Membership` ("Client scopes" → "Client scope details" → "Mappers" → "Configure a new mapper"). Set values of "Name" and "Token Claim Name" as `groups` and turn off "Full group path".
 1. In the previously created client, add this `scope` in the [Client scopes tab](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) ("Clients" → "Client details" → "Client Scopes" → "Add client scope").
-1. In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields in the [client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is the [cluster DNS name template](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) defined in the `global` module.
+1. In the "Valid redirect URIs", "Valid post logout redirect URIs", and "Web origins" fields in the [client configuration](https://www.keycloak.org/docs/latest/server_admin/#general-settings), specify `https://dex.<publicDomainTemplate>/*`, where `publicDomainTemplate` is the [cluster DNS name template](../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) defined in the `global` module.
 
 Example provider configuration for Keycloak integration:
 
@@ -260,6 +260,8 @@ However, using authenticated access is recommended for improved security.
 The `bindPW` parameter must contain the password in plain text. Dex does not support hashed passwords in this field.
 {% endalert %}
 
+You can also enable Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the `enableBasicAuth: true` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource. For more details, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
+
 Example configuration for integrating with Active Directory:
 
 ```yaml
@@ -276,6 +278,8 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
+
+    enableBasicAuth: true
 
     usernamePrompt: Email Address
 
@@ -320,6 +324,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company GitHub
+  # Optional: disable the provider without deleting CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -331,8 +337,8 @@ You need to create a new application in your GitLab project.
 
 To do this, follow these steps:
 
-1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
-1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback url)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
+1. For self-hosted GitLab: go to "Admin Area → Applications → New application" and set the "Redirect URI (Callback URL)" to `https://dex.<publicDomainTemplate>/callback`. Also, select the following scopes: `read_user`, `openid`.
+1. For GitLab Cloud (gitlab.com): under the main account of the project, go to "User Settings → Applications → Add new application", set the "Redirect URI (Callback URL)" to `https://dex.<publicDomainTemplate>/callback`, and select the **scopes**: `read_user`, `openid`.
 1. Use the obtained `Application ID` and secret in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource.
 
 {% alert level="info" %}

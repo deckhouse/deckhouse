@@ -266,7 +266,7 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 <li><p><strong>Создание пользователя</strong> для доступа в веб-интерфейсы кластера</p>
 <p>Создайте на <strong>master-узле</strong> файл <code>user.yml</code> содержащий описание учетной записи пользователя и прав доступа:</p>
 {% snippetcut name="user.yml" selector="user-yml" %}
-{% include_file "_includes/getting_started/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
+{% include_file "_includes/getting_started/stronghold/{{ page.platform_code }}/partials/user.yml.inc" syntax="yaml" %}
 {% endsnippetcut %}
 <p>Примените его, выполнив на <strong>master-узле</strong> следующую команду:</p>
 {% snippetcut %}
@@ -289,7 +289,8 @@ sudo -i d8 k create -f $PWD/user.yml
         получили выше, для следующих DNS-имен сервисов Deckhouse в вашем кластере:
         <div class="highlight">
 <pre class="highlight">
-<code example-hosts>api.example.com
+<code example-hosts>stronghold.example.com
+api.example.com
 argocd.example.com
 dashboard.example.com
 documentation.example.com
@@ -316,6 +317,7 @@ upmeter.example.com</code>
 ```bash
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
+$PUBLIC_IP stronghold.example.com
 $PUBLIC_IP api.example.com
 $PUBLIC_IP argocd.example.com
 $PUBLIC_IP dashboard.example.com

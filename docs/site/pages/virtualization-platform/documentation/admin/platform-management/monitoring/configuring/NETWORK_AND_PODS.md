@@ -43,7 +43,7 @@ spec:
 To enable cluster node monitoring, you need to enable the `monitoring-kubernetes` module if it is not already enabled. You can enable cluster monitoring in the [Deckhouse web interface](/modules/console/stable/), or using the following command:
 
 ```shell
-d8 platform module enable monitoring-kubernetes
+d8 system module enable monitoring-kubernetes
 ```
 
 Similarly, you can enable the `monitoring-kubernetes-control-plane` and `extended-monitoring` modules.

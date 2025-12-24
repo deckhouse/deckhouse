@@ -42,13 +42,13 @@ Deckhouse Virtualization Platform (DVP) управляет компонента�
 1. Используйте команду:
 
    ```bash
-   d8 platform module enable control-plane-manager
+   d8 system module enable control-plane-manager
    ```
 
    или
 
    ```bash
-   d8 platform module disable control-plane-manager
+   d8 system module disable control-plane-manager
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):
@@ -113,7 +113,7 @@ spec:
 1. Получите список очередей и активных заданий:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
    Пример вывода:

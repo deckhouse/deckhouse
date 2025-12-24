@@ -31,7 +31,8 @@ import (
 
 // Validator is a validator for values in ModuleConfig.
 type Validator struct {
-	valuesValidator ValuesValidator
+	valuesValidator  ValuesValidator
+	conversionsStore *conversion.ConversionsStore
 }
 
 // ValuesValidator is a part of ValuesValidator from addon-operator with needed
@@ -41,9 +42,10 @@ type ValuesValidator interface {
 	GetModule(name string) *modules.BasicModule
 }
 
-func NewValidator(valuesValidator ValuesValidator) *Validator {
+func NewValidator(valuesValidator ValuesValidator, conversionsStore *conversion.ConversionsStore) *Validator {
 	return &Validator{
-		valuesValidator: valuesValidator,
+		valuesValidator:  valuesValidator,
+		conversionsStore: conversionsStore,
 	}
 }
 
@@ -65,9 +67,11 @@ func (v ValidationResult) HasError() bool {
 func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	result := ValidationResult{}
 
+	settings := config.Spec.Settings.GetMap()
+
 	if config.Spec.Version == 0 {
 		// Resource is not valid when spec.settings are specified without version.
-		if len(config.Spec.Settings) > 0 {
+		if len(settings) > 0 {
 			result.Error = "spec.version is required when spec.settings are specified"
 		}
 		// Resource is valid without spec.version and spec.settings.
@@ -75,12 +79,12 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 	}
 
 	// Can run conversions and validations if spec.version and spec.settings are specified.
-	if len(config.Spec.Settings) == 0 {
+	if len(settings) == 0 {
 		// Warn about spec.version without spec.settings.
 		result.Warning = "spec.version has no effect without spec.settings, defaults from the latest version of settings schema will be applied"
 	}
 
-	converter := conversion.Store().Get(config.GetName())
+	converter := v.conversionsStore.Get(config.GetName())
 	latestVersion := converter.LatestVersion()
 
 	// Check if version is unknown.
@@ -101,7 +105,7 @@ func (v *Validator) validateCR(config *v1alpha1.ModuleConfig) ValidationResult {
 		return result
 	}
 
-	newVersion, newSettings, err := converter.ConvertToLatest(config.Spec.Version, config.Spec.Settings)
+	newVersion, newSettings, err := converter.ConvertToLatest(config.Spec.Version, settings)
 	if err != nil {
 		result.Error = fmt.Sprintf("spec.settings conversion from version %d to %d: %v", config.Spec.Version, newVersion, err)
 		return result
@@ -217,5 +221,5 @@ func cleanupMultilineError(err error) string {
 }
 
 func hasVersionedSettings(cfg *v1alpha1.ModuleConfig) bool {
-	return cfg != nil && cfg.Spec.Version > 0 && cfg.Spec.Settings != nil
+	return cfg != nil && cfg.Spec.Version > 0 && len(cfg.Spec.Settings.Raw) > 0
 }

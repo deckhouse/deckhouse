@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-containers-both-allowed
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        procMount: Unmasked
+    - name: redis
+      image: redis
+      securityContext:
+        procMount: Default
+
+

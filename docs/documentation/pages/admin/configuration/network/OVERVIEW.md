@@ -54,6 +54,6 @@ For more information on configuring inter-cluster communication, refer to [Inter
 
 ## Network policies
 
-Network policies in DKP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
+[Network policies](./policy/configuration.html) in DKP define rules that regulate traffic flow between pods, nodes, namespaces, and external systems.
 Network policies ensure pod isolation, protect against internal cluster attacks,
 and provide control over access to external services as well as incoming and outgoing connections.

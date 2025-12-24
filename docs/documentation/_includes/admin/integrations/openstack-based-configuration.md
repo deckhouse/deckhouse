@@ -370,7 +370,7 @@ The DKP module responsible for the integration is automatically configured based
 To modify the configuration in a running cluster, run the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 {% alert level="info" %}

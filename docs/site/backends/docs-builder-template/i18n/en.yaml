@@ -1,4 +1,6 @@
 allowed_values: allowed values
+additional_property_name: item (key) name
+pattern_property_name: regular expression for parameter name
 search_placeholder_text: Search...
 search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
 search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
@@ -8,6 +10,7 @@ modules2: modules
 module: module
 module_versions: Module versions
 module_version: Module version
+module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 channel_or_version: "Channel/version"
 channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse
@@ -19,6 +22,14 @@ category: category
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_title: Requirements
+requirements_deckhouse_title: To the Deckhouse version
+requirements_kubernetes_title: To the Kubernetes version
+requirements_modules_title: To the versions of other modules
+requirements_modules_any_version: any version
+requirements_version_and_above: and above
+requirements_version_above: above
+module_lifecycle_stage: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
 conversion_global_action_message: Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version

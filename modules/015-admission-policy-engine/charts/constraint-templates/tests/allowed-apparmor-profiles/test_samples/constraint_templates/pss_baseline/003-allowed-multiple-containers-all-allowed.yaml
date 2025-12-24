@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-containers-all-allowed
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        appArmorProfile:
+          type: RuntimeDefault
+    - name: redis
+      image: redis
+      securityContext:
+        appArmorProfile:
+          type: Localhost
+          localhostProfile: redis-profile
+

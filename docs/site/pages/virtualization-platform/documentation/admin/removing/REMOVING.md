@@ -7,18 +7,18 @@ To delete a cluster, several steps need to be followed:
 
 1. Remove all additional nodes from the cluster:
 
-   1.1. Remove the node from the Kubernetes cluster:
+   1. Remove the node from the Kubernetes cluster:
 
-   ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
-   d8 k delete node <node>
-   ```
+      ```shell
+      d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
+      d8 k delete node <node>
+      ```
 
-   1.2. Run the cleanup script on the node:
+   1. Run the cleanup script on the node:
 
-   ```shell
-   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
-   ```
+      ```shell
+      bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+      ```
 
 1. Check the release channel set in the cluster. To do this, run the command:
 
@@ -30,7 +30,7 @@ To delete a cluster, several steps need to be followed:
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
-      registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
+      registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
    ```
 
    where:
@@ -48,7 +48,7 @@ To delete a cluster, several steps need to be followed:
    ```shell
    docker run -it --pull=always \
       -v "$PWD/dhctl-tmp:/tmp/dhctl" \
-      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.ru/deckhouse/ce/install:stable bash
+      -v "$HOME/.ssh/:/tmp/.ssh/" registry.deckhouse.io/deckhouse/ce/install:stable bash
    ```
 
 1. Execute the cluster removal command:
@@ -61,7 +61,7 @@ To delete a cluster, several steps need to be followed:
    ```
 
    where:
-   - `<USER>` — the user of the remote machine from which the installation was performed;
+   - `<USER>` — the user of the remote machine from which the installation was performed. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
    - `<MASTER_IP>` — IP address of the master node in the cluster.
 
    The installer will connect to the master node and remove all Deckhouse components and the Kubernetes cluster from it.

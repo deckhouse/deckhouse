@@ -24,10 +24,12 @@
     "cloud"
   ],
   "cloud-provider-dvp": [
-    "virtualization"
+    "virtualization",
+    "cloud"
   ],
   "cloud-provider-dynamix": [
-    "bare-metal"
+    "bare-metal",
+    "cloud"
   ],
   "cloud-provider-gcp": [
     "cloud"
@@ -169,9 +171,6 @@
   "operator-prometheus": [
     "observability"
   ],
-  "operator-trivy": [
-    "security"
-  ],
   "pod-reloader": [
     "core"
   ],
@@ -185,7 +184,8 @@
     "observability"
   ],
   "registry": [
-    "core"
+    "core",
+    "registry"
   ],
   "runtime-audit-engine": [
     "security"

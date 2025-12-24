@@ -11,7 +11,7 @@ spec:
   podMetricsEndpoints:
   - targetPort: 10055
     relabelings:
-    - regex: endpoint|namespace
+    - regex: endpoint
       action: labeldrop
     - targetLabel: scrape_endpoint
       replacement: skydns
@@ -20,7 +20,7 @@ spec:
       action: keep
   - targetPort: 10054
     relabelings:
-    - regex: endpoint|namespace
+    - regex: endpoint
       action: labeldrop
     - targetLabel: scrape_endpoint
       replacement: dnsmasq

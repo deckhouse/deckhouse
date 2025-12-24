@@ -22,7 +22,7 @@ spec:
     kind: DaemonSet
     name: d8-kube-proxy
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "kube-proxy"

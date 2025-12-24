@@ -76,3 +76,8 @@ variable "subnet" {
 variable "enterprise_project_id" {
   type = string
 }
+
+variable "additional_networks" {
+  type        = list(string)
+  default     = []
+}

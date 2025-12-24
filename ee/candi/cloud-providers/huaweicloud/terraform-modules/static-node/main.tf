@@ -4,10 +4,7 @@
 locals {
   metadata_tags       = merge(var.tags, var.additional_tags)
   server_group_policy = lookup(var.server_group, "policy", "")
-}
-
-data "huaweicloud_vpc_subnet" "subnet" {
-  name = var.subnet
+  subnet_ids_ordered  = distinct(concat([var.subnet], var.additional_networks))
 }
 
 data "huaweicloud_compute_servergroups" "node" {
@@ -25,8 +22,12 @@ resource "huaweicloud_compute_instance" "node" {
   security_group_ids = var.security_group_ids
   enterprise_project_id = var.enterprise_project_id
 
-  network {
-    uuid = data.huaweicloud_vpc_subnet.subnet.id
+
+  dynamic "network" {
+    for_each = local.subnet_ids_ordered
+    content {
+      uuid = network.value
+    }
   }
 
   system_disk_type = var.volume_type

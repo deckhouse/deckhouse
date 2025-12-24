@@ -57,6 +57,7 @@ type Config struct {
 	LastAppliedConfigurationChecksum string
 	TmpPath                          string
 	AllowedKubernetesVersions        string
+	EtcdArbiter                      bool
 }
 
 var (
@@ -87,8 +88,7 @@ func NewConfig() (*Config, error) {
 
 func (c *Config) readEnvs() error {
 	var (
-		ok  bool
-		err error
+		ok bool
 	)
 	if c.MyPodName, ok = os.LookupEnv("MY_POD_NAME"); !ok || len(c.MyPodName) == 0 {
 		return errors.New("MY_POD_NAME env should be set")
@@ -106,17 +106,19 @@ func (c *Config) readEnvs() error {
 		return errors.New("ALLOWED_KUBERNETES_VERSIONS env should be set")
 	}
 
+	if _, ok := os.LookupEnv("ETCD_ARBITER"); ok {
+		c.EtcdArbiter = true
+		log.Info("ETCD_ARBITER mode enabled: running only etcd without control-plane components")
+	}
+
 	if err := c.checkKubernetesVersion(); err != nil {
 		return err
 	}
 
-	c.NodeName, err = os.Hostname()
-	if err != nil {
-		return err
+	if c.NodeName, ok = os.LookupEnv("NODE_NAME"); !ok || len(c.NodeName) == 0 {
+		return errors.New("NODE_NAME env should be set")
 	}
-	if c.NodeName == "" {
-		return errors.New("node name should be set")
-	}
+
 	return nil
 }
 

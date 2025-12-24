@@ -25,16 +25,33 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func enabledLabel(labels map[string]string) float64 {
-	if val, ok := labels[namespacesEnabledLabel]; ok {
-		if b, err := strconv.ParseBool(val); err == nil && !b {
-			return 0
-		}
+func boolToFloat64(b bool) float64 {
+	if b {
+		return 1
 	}
-	return 1
+	return 0
 }
 
-func thresholdLabel(labels map[string]string, threshold string, def float64) float64 {
+func enabledOnNamespace(labels map[string]string) bool {
+	_, ok := labels[namespacesEnabledLabel]
+	return ok
+}
+
+func enabledLabel(labels map[string]string) bool {
+	val, ok := labels[namespacesEnabledLabel]
+
+	if !ok {
+		return true
+	}
+
+	if b, err := strconv.ParseBool(val); err == nil {
+		return b
+	}
+
+	return true
+}
+
+func thresholdValue(labels map[string]string, threshold string, def float64) float64 {
 	if val, ok := labels[labelThresholdPrefix+threshold]; ok {
 		if f, err := strconv.ParseFloat(val, 64); err == nil {
 			return f
@@ -44,17 +61,25 @@ func thresholdLabel(labels map[string]string, threshold string, def float64) flo
 	return def
 }
 
+func eventLabels(labels map[string]string, deleteEvent bool) (string, map[string]string) {
+	logLabel := "EVENT"
+	if deleteEvent {
+		logLabel = "DELETE EVENT"
+		labels = map[string]string{namespacesEnabledLabel: "false"}
+	}
+	return logLabel, labels
+}
+
 func runInformer[T any](
 	ctx context.Context,
 	informer cache.SharedIndexInformer,
-	update func(*T),
-	delete func(*T),
+	eventHandler func(*T, bool),
 	name string,
 ) {
 	if _, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(obj interface{}) { update(obj.(*T)) },
-		UpdateFunc: func(_, obj interface{}) { update(obj.(*T)) },
-		DeleteFunc: func(obj interface{}) { delete(obj.(*T)) },
+		AddFunc:    func(obj any) { eventHandler(obj.(*T), false) },
+		UpdateFunc: func(_, obj any) { eventHandler(obj.(*T), false) },
+		DeleteFunc: func(obj any) { eventHandler(obj.(*T), true) },
 	}); err != nil {
 		log.Printf("[%s] AddEventHandler failed: %v", name, err)
 		return
@@ -66,24 +91,27 @@ func runInformer[T any](
 }
 
 func (w *Watcher) updateMetrics(
-	enabledMetric func(...string) prometheus.Gauge,
-	thresholdMetric func(...string) prometheus.Gauge,
-	labels map[string]string,
+	enabledVec *prometheus.GaugeVec,
+	thresholdVec *prometheus.GaugeVec,
+	resourceLabels map[string]string,
+	namespaceLabels map[string]string,
 	thresholds map[string]float64,
-	labelValues ...string,
+	labels prometheus.Labels,
 ) {
-	enabled := enabledLabel(labels)
-	enabledMetric(labelValues...).Set(enabled)
+	enabled := enabledLabel(resourceLabels)
+	enabledVec.With(labels).Set(boolToFloat64(enabled))
 
-	if enabled == 1 {
-		for key, def := range thresholds {
-			thresholdMetric(append(labelValues, key)...).
-				Set(thresholdLabel(labels, key, def))
+	if enabled {
+		for key, defaultValue := range thresholds {
+			labels["threshold"] = key
+			value := thresholdValue(resourceLabels, key, defaultValue)
+			if value == defaultValue && namespaceLabels != nil {
+				value = thresholdValue(namespaceLabels, key, defaultValue)
+			}
+			thresholdVec.With(labels).Set(value)
 		}
 	} else {
-		for key := range thresholds {
-			thresholdMetric(append(labelValues, key)...).Set(0)
-		}
+		thresholdVec.DeletePartialMatch(labels)
 	}
 	met.UpdateLastObserved()
 }
@@ -105,4 +133,21 @@ func (w *Watcher) cleanupNamespaceResources(ns string) {
 	w.metrics.IngressThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
 
 	w.metrics.CronJobEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+}
+
+func thresholdLabelsChangedForMap(oldLabels, newLabels map[string]string, thresholdMap map[string]float64) bool {
+	if oldLabels == nil {
+		return false
+	}
+
+	for key := range thresholdMap {
+		labelKey := labelThresholdPrefix + key
+		oldVal, oldExists := oldLabels[labelKey]
+		newVal, newExists := newLabels[labelKey]
+
+		if oldExists != newExists || oldVal != newVal {
+			return true
+		}
+	}
+	return false
 }

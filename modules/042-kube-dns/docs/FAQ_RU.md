@@ -64,7 +64,7 @@ search: DNS, domain, домен, clusterdomain
 1. Поменяйте `clusterDomain` на новый. Для этого выполните команду:
 
    ```bash
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Перезапустите поды deckhouse:

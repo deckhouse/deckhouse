@@ -37,7 +37,7 @@ If the automatic Kubernetes version selection is enabled, Deckhouse can upgrade 
 
 You must decide for yourself whether to use automatic version selection or set a specific version and update it manually every now and then.
 
-If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster).
+If your application uses outdated versions of resources or depends on a particular version of Kubernetes for some other reason, check whether it is [supported](/products/kubernetes-platform/documentation/v1/supported_versions.html) and [set it explicitly](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html).
 
 ## Resource requirements
 
@@ -141,6 +141,8 @@ You can send alerts using the [internal](/modules/prometheus/faq.html#how-do-i-a
 Monitoring will work out of the box once Deckhouse is installed, however, it is not enough for production clusters. Configure the Alertmanager [built in](/modules/prometheus/faq.html#how-do-i-add-alertmanager) Deckhouse  or [connect your](/modules/prometheus/faq.html#how-do-i-add-an-additional-alertmanager) own Alertmanager to receive incident notifications.
 
 Using the [CustomAlertmanager](/modules/prometheus/cr.html#customalertmanager) custom resource, you can configure sending alerts to an [e-mail](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-emailconfigs), [Slack](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-slackconfigs), [Telegram](/modules/prometheus/usage.html#sending-alerts-to-telegram), via the [webhook](/modules/prometheus/cr.html#customalertmanager-v1alpha1-spec-internal-receivers-webhookconfigs), or by other means.
+
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
 
 ## Collecting logs
 

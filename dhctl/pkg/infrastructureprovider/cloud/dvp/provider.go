@@ -15,3 +15,7 @@
 package dvp
 
 const ProviderName = "dvp"
+
+type DVPProviderSpec struct {
+	KubeconfigDataBase64 string `json:"kubeconfigDataBase64"`
+}

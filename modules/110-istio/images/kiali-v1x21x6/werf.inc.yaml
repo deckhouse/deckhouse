@@ -25,7 +25,7 @@ imageSpec:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-backend-build-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: builder/golang-alpine-1.25
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -43,8 +43,8 @@ shell:
   setup:
   - cd /src/kiali/
   - echo {{ $kialiVersion }} > version
-  - export GOOS=linux GOARCH=amd64
-  - export LDFLAGS='-X main.version=${kialiVersion}'
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export LDFLAGS='-extldflags -static -s -w -X main.version=${kialiVersion}'
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -o /src/kiali/out/kiali /src/kiali/
   - strip /src/kiali/out/kiali

@@ -3,59 +3,53 @@
 **Caution!** Back up your etcd files on the node before any recovery attempts.
 Before doing this, make sure that etcd is not running. To stop etcd, remove the etcd static Pod manifest from the manifest directory.
 
+## High‑level notes (read first)
+
+- From etcd v3.6, use `etcdutl` for `snapshot restore` and related operations; older clusters use `etcdctl snapshot restore`. Make sure commands match your etcd version.
+- Start with official Deckhouse docs: [Backup and restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html) and [Managing control plane: FAQ](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/faq.html).
+- Use `--force-new-cluster` only for disaster recovery when restoring normal operation from snapshots is impossible; it rebuilds a one-member cluster from the chosen node.
+
 ## Single-master
 
 ### Restoring from a backup
 
-Follow these steps to restore from a backup:
-
-1. If necessary restore etcd-server access keys and certificates into `/etc/kubernetes` directory.
-
-1. Upload [etcdctl](https://github.com/etcd-io/etcd/releases) to the server (best if it has the same version as the etcd version on the server).
-
-   ```shell
-   wget "https://github.com/etcd-io/etcd/releases/download/v3.5.4/etcd-v3.5.4-linux-amd64.tar.gz"
-   tar -xzvf etcd-v3.5.4-linux-amd64.tar.gz && mv etcd-v3.5.4-linux-amd64/etcdctl /usr/local/bin/etcdctl
-   ```
-
-1. Stop etcd.
-
-   ```shell
-   mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml
-   ```
-
-1. Back up your files.
-
-   ```shell
-   cp -r /var/lib/etcd/member/ /var/lib/deckhouse-etcd-backup
-   ```
-
-1. Delete the data directory.
-
-   ```shell
-   rm -rf /var/lib/etcd/member/
-   ```
-
-1. Copy backup file to `~/etc-backup.snapshot`.
-
-1. Restore the etcd database.
-
-   ```shell
-   ETCDCTL_API=3 etcdctl snapshot restore ~/etc-backup.snapshot --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-     --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/  --data-dir=/var/lib/etcd
-   ```
-
-1. Start etcd.
-
-   ```shell
-   mv ~/etcd.yaml /etc/kubernetes/manifests/etcd.yaml
-   ```
+See the official Deckhouse docs:  
+[Restoring a cluster with a single control-plane node](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node)
 
 ## Multi-master
 
-### Complete data loss or recovery to previous state from a backup
+### Recovery to previous state from a backup (multi‑master cluster is still alive)
 
-If there is a complete loss of data, perform the following steps on all nodes of the etcd cluster:
+**Short multi‑master checklist (based on official flows):**
+
+1. Enable HA mode in the Global configuration so that the control plane is officially in High Availability mode.  
+   See: [Global highAvailability parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability).
+
+2. Temporarily detach all except one control‑plane nodes: remove their control‑plane labels (for example `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master`, `node.deckhouse.io/group`) so that only one control‑plane node remains active.  
+   See: [Removing the master role from a node without deleting the node itself](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself).
+
+3. On the detached nodes, stop kubelet (optional, if you plan to remove all containers) and stop etcd by moving its static Pod manifest out of `/etc/kubernetes/manifests`. Then perform a hard cleanup of the Kubernetes control-plane state: remove etcd data and almost all configuration files under `/etc/kubernetes/*` (manifests, kubeconfigs, PKI) similar to the "Clear a node" steps below, except `kube-proxy`.  
+   See: [Scaling and changing master nodes](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself).
+
+4. (Optional) On the detached nodes, you may additionally remove **all** containers so that only containers that existed at the time of the backup remain in the cluster after the restore.
+
+5. On the remaining master node, restore the cluster from a backup as a single‑master control plane.  
+   See: [Restoring a cluster with a single control-plane node](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#restoring-a-cluster-with-a-single-control-plane-node).
+
+6. Wait until Deckhouse and control‑plane‑manager on the remaining master fully stabilize (the main queue is empty, 1 Deckhouse Pod and 1 control‑plane‑manager Pod are `Ready`).
+
+7. On the detached nodes, start kubelet again (if you stopped it).
+
+8. Return the control‑plane labels back to the two detached nodes so they join the control plane again and the cluster returns to multi‑master mode.  
+   If required by control‑plane-manager (see its logs), add the `control-plane-manager.deckhouse.io/approved` annotation to the node objects.
+
+9. If there are persistent errors for these nodes in the Deckhouse main queue, consider running `kubectl -n d8-system rollout restart deployment deckhouse` and wait until everything becomes `Ready`.
+
+### Complete data loss (multi‑master, cluster is down)
+
+If etcd data is completely lost or the control plane is not functional enough to enable HA mode and safely detach masters, use the following low‑level recovery flow with `--force-new-cluster` instead of the checklist above.
+
+Perform the following steps on all nodes of the etcd cluster:
 1. Stop etcd.
 
    ```shell
@@ -127,12 +121,12 @@ On the selected node do the following:
    ```
 
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest after successful up etcd.
-1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) to prevent removing HA-mode (for example we can lose one Prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 Start kubelet on another nodes:
@@ -171,7 +165,7 @@ On the first recovered node do the following steps:
 Add control-plane role for each other control-plane nodes:
 
 ```shell
-kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -193,12 +187,12 @@ Perform the following steps to restore the quorum in the etcd cluster:
 1. Add the `--force-new-cluster` flag to the `/etc/kubernetes/manifests/etcd.yaml` manifest on the running node.
 1. Wait for etcd to start.
 1. Remove the `--force-new-cluster` flag from the `/etc/kubernetes/manifests/etcd.yaml` manifest.
-1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) for prevent removing HA-mode (for example we can lose one prometheus replica and data for lost replica).
+1. Set [HA-mode](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) to prevent removing HA-mode (for example we can lose one Prometheus replica and data for lost replica).
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node LOST_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 If nodes have been lost permanently, add new ones using the `dhctl converge` command (or manually if the cluster is static).
@@ -258,7 +252,7 @@ To turn them into cluster members, do the following on those nodes:
 Add a control-plane role for each lost nodes:
 
 ```shell
-kubectl label no LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+kubectl label node LOST_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
 ```
 
 Wait for all control plane Pods to roll over and become `Ready`:
@@ -351,7 +345,8 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
      --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-1. Defragment etcd (if necessary):
+1. Defragment etcd (if necessary):  
+   see: [How to defragment etcd](https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-etcd)
 
    ```shell
    kubectl -n kube-system exec -ti ETCD_POD_ON_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
@@ -361,6 +356,12 @@ The solution is based on this [issue](https://github.com/etcd-io/etcd/issues/119
 ### Second method
 
 #### Single-master
+
+**Prefer this first:** Use the [Single control-plane restore](https://deckhouse.io/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html) procedure: stop etcd, remove `/var/lib/etcd`, restore from snapshot with the correct tool, start etcd.
+
+Your steps here largely repeat that flow.
+
+**If that doesn’t help:** use your fallback with `--skip-hash-check` as documented below.
 
 This method can be used if the first one has failed.
 
@@ -419,7 +420,8 @@ Do the following:
      --endpoints https://127.0.0.1:2379/ alarm disarm
    ```
 
-1. Defragment etcd (if necessary).
+1. Defragment etcd (if necessary).  
+   See: [How to defragment an etcd node in a single-master cluster](https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-an-etcd-node-in-a-single-master-cluster)
 
    ```shell
    ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
@@ -430,7 +432,8 @@ Do the following:
 
 ##### If this error affect one node
 
-1. Defragment etcd on another (two) nodes (if necessary).
+1. Defragment etcd on another (two) nodes (if necessary).  
+   See: [How to defragment etcd in a cluster with multiple master nodes](https://deckhouse.io/modules/control-plane-manager/faq.html#how-to-defragment-etcd-in-a-cluster-with-multiple-master-nodes)
 
    ```shell
    kubectl -n kube-system exec -ti ETCD_POD_NOT_AFFECTED_HOST -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
@@ -440,7 +443,7 @@ Do the following:
 1. Remove control-plane role label from affected node.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On the affected node:
@@ -460,7 +463,7 @@ On the affected node:
 1. Add control-plane role to affected node.
 
    ```shell
-   kubectl label no AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node AFFECTED_NODE node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
 Wait for all control plane Pods rolling over and becoming `Ready`:
@@ -580,8 +583,8 @@ On the selected node do the following:
 1. Remove control-plane role label from nodes objects expect selected (recover in current time).
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
-   kubectl label no NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_1 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
+   kubectl label node NOT_SELECTED_NODE_2 node.deckhouse.io/group- node-role.kubernetes.io/control-plane-
    ```
 
 On another nodes, start kubelet:
@@ -622,18 +625,18 @@ For each another control-plane nodes:
 1. Add control-plane role.
 
    ```shell
-   kubectl label no NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
+   kubectl label node NOT_SELECTED_NODE_I node.deckhouse.io/group= node-role.kubernetes.io/control-plane=
    ```
 
-Wait for all control plane Pods rolling over and becoming `Ready`.
+1. Wait for all control plane Pods rolling over and becoming `Ready`.
 
-```shell
-watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
-```
+   ```shell
+   watch "kubectl -n kube-system get po -o wide | grep d8-control-plane-manager"
+   ```
 
-Make sure that all etcd instances are now cluster members:
+1. Make sure that all etcd instances are now cluster members:
 
-```shell
-ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
-  --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
-```
+   ```shell
+   ETCDCTL_API=3 etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt \
+   --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```

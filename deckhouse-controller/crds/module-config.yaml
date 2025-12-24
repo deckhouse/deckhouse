@@ -45,7 +45,7 @@ spec:
                   type: boolean
                   description: |
                     Enables or disables the module.
-                  x-doc-examples: ['false']
+                  x-doc-examples: [false]
                 maintenance:
                   type: string
                   enum: ["NoResourceReconciliation"]
@@ -65,7 +65,7 @@ spec:
                   type: number
                   description: |
                     Version of settings schema.
-                  x-doc-examples: ['1']
+                  x-doc-examples: [1]
                 settings:
                   type: object
                   description: |

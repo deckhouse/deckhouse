@@ -140,7 +140,7 @@ The static cluster settings are stored in the [StaticClusterConfiguration](/prod
 To modify the static cluster parameters, run the following command:
 
 ```shell
-d8 platform edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ## Moving a static node between NodeGroups

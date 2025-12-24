@@ -18,12 +18,26 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/rand"
+	"strconv"
 )
 
 func RandomStrElement(list []string) (string, int) {
 	indx := rand.Intn(len(list)) // this call is thread safe
 
 	return list[indx], indx
+}
+
+func FirstLetters(s string, count int) string {
+	l := len(s)
+	if l == 0 || count < 1 || count >= l {
+		return s
+	}
+
+	runesCountStr := strconv.Itoa(count)
+
+	// "%.8s"
+	f := `%.` + runesCountStr + "s"
+	return fmt.Sprintf(f, s)
 }
 
 func Index(list []string, elem string) int {
@@ -61,10 +75,34 @@ func Sha256Encode(input string) string {
 	return fmt.Sprintf("%x", hasher.Sum(nil))
 }
 
+func Sha256EncodeWithFirstLettersOfHash(input string, count int) string {
+	hash := Sha256Encode(input)
+	return FirstLetters(hash, count)
+}
+
 func Sha256EncodeBytes(input []byte) string {
 	hasher := sha256.New()
 
 	hasher.Write(input)
 
 	return fmt.Sprintf("%x", hasher.Sum(nil))
+}
+
+func TrimLeftChars(s string, n int) string {
+	if s == "" {
+		return ""
+	}
+
+	if n <= 0 {
+		return s
+	}
+
+	m := 0
+	for i := range s {
+		if m >= n {
+			return s[i:]
+		}
+		m++
+	}
+	return s[:0]
 }

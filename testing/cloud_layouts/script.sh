@@ -265,6 +265,16 @@ function prepare_environment() {
   fi
   DEV_BRANCH="${DECKHOUSE_IMAGE_TAG}"
 
+  if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    export DECKHOUSE_DOCKERCFG=$STAGE_DECKHOUSE_DOCKERCFG
+  else
+    echo "DEV_BRANCH = $DEV_BRANCH: detected dev branch"
+  fi
+
+  decode_dockercfg=$(base64 -d <<< "${DECKHOUSE_DOCKERCFG}")
+  IMAGES_REPO=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")/sys/deckhouse-oss
+
   if [[ -z "$PREFIX" ]]; then
     # shellcheck disable=SC2016
     >&2 echo 'PREFIX environment variable is required.'
@@ -278,7 +288,7 @@ function prepare_environment() {
     if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
       DEV_BRANCH="${INITIAL_IMAGE_TAG}"
       SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
-      update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+      update_release_channel "$(echo -n "${STAGE_DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')/${REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
       echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
     else
       echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch. Update command politely ignored."
@@ -368,6 +378,7 @@ function prepare_environment() {
         VCD_SERVER="$LAYOUT_VCD_SERVER" \
         VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
         VCD_ORG="$LAYOUT_VCD_ORG" \
+        IMAGES_REPO="$IMAGES_REPO" \
         envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
 
     [ -f "$cwd/resources.tpl.yaml" ] && \

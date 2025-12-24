@@ -5,5 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-cloud-provider-openstack
 stage: General Availability
-requirements:
-  deckhouse: ">= 1.68"
+descriptions:
+  en: Manages interaction with OpenStack-based cloud resources. Allows to use OpenStack resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами OpenStack. Позволяет использовать ресурсы OpenStack при создании узлов.

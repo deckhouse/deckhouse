@@ -70,6 +70,7 @@ debug: true
     capabilities:
       drop:
         - ALL
+    privileged: false
     runAsUser:   64535
     runAsGroup:  64535
     runAsNonRoot: true
@@ -123,6 +124,7 @@ debug: true
     capabilities:
       drop:
         - ALL
+    privileged: false
     runAsUser:   64535
     runAsGroup:  64535
     runAsNonRoot: true

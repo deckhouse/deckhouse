@@ -1,5 +1,7 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
+To install Deckhouse Kubernetes Platform on VMware vSphere, you need vSphere version `7.x` or `8.x` with support for the [`Online volume expansion`](https://github.com/kubernetes-sigs/vsphere-csi-driver/blob/v2.3.0/docs/book/features/volume_expansion.md#vsphere-csi-driver---volume-expansion) mechanism.
+
 ## List of required vSphere resources
 
 {% alert %}
@@ -81,7 +83,7 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 {% alert %}
 We've intentionally skipped User creation since there are many ways to authenticate a user in the vSphere.
 
-This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/modules/cloud-provider-vsphere/configuration.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
+This all-encompassing Role should be enough for all Deckhouse components. For a detailed list of privileges, refer to the [documentation](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges). If you need a more granular Role, please contact your Deckhouse support.
 {% endalert %}
 
 Create a role with the corresponding permissions:
@@ -90,7 +92,9 @@ Create a role with the corresponding permissions:
 govc role.create deckhouse \
    Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
    Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
+   VcIdentityProviders.Read \
+   Infraprofile.Read\
+   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.')
 ```
 
 Assign the role to a user on the `vCenter` object:

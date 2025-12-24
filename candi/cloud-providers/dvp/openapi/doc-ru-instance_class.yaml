@@ -8,7 +8,7 @@ spec:
               properties:
                 virtualMachine:
                   description: |
-                    Настройки виртуальной машины для созданного master-узла.
+                    Настройки виртуальной машины для созданного узла.
                   properties:
                     cpu:
                       description: |

@@ -140,7 +140,7 @@ kind: AWSClusterConfiguration
 Чтобы отредактировать этот ресурс в работающем кластере, выполните команду:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 После внесения изменений их необходимо применить с помощью команды:

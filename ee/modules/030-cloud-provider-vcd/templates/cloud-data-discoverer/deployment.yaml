@@ -69,14 +69,15 @@ spec:
       annotations:
         kubectl.kubernetes.io/default-exec-container: cloud-data-discoverer
         kubectl.kubernetes.io/default-logs-container: cloud-data-discoverer
-        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/cloud-data-discoverer/secret.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
+        checksum/config: {{ printf "%s%s" (include (print $.Template.BasePath "/connection-info.yaml") . | toString) (include (print $.Template.BasePath "/secret.yaml") . | toString) | sha256sum }}
     spec:
       imagePullSecrets:
       - name: deckhouse-registry
       {{- include "helm_lib_priority_class" (tuple . "cluster-low") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
-      {{- include "helm_lib_tolerations" (tuple . "any-node") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
+      dnsPolicy: {{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }}
       automountServiceAccountToken: true
       serviceAccountName: cloud-data-discoverer
       containers:
@@ -91,22 +92,27 @@ spec:
           valueFrom:
             secretKeyRef:
               key: insecure
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_HREF
           valueFrom:
             secretKeyRef:
               key: host
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_VDC
           valueFrom:
             secretKeyRef:
               key: vdc
-              name: cloud-data-discoverer
+              name: vcd-connection-info
         - name: VCD_ORG
           valueFrom:
             secretKeyRef:
               key: org
-              name: cloud-data-discoverer
+              name: vcd-connection-info
+        - name: VCD_NETWORK
+          valueFrom:
+            secretKeyRef:
+              key: network
+              name: vcd-connection-info
         - name: VCD_USER
           valueFrom:
             secretKeyRef:

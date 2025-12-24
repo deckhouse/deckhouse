@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  creationTimestamp: null
+  name: pending-missing-ttl
+  resourceVersion: "1000"
+spec:
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    name: my-pod
+    namespace: default
+    uid: 01235684-9342-4c63-94a2-15c455f4dc30
+  mode: FollowObjectWithTTL
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T15:00:00Z"
+    message: TTL is required for FollowObjectWithTTL mode
+    reason: MissingTTL
+    status: "False"
+    type: Active
+  message: TTL is required for FollowObjectWithTTL mode
+  phase: Pending

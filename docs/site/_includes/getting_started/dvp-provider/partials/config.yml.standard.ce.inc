@@ -13,14 +13,14 @@ cloud:
   # [<ru>] Возможно, захотите изменить.
   prefix: cloud-demo
 # [<en>] Address space of the cluster's Pods.
-# [<en>] Must not overlap with the address space of DVP Pods.
+# [<en>] You might consider changing this. Must not overlap with the address space of DVP Pods and serviceSubnetCIDR.
 # [<ru>] Адресное пространство подов кластера.
-# [<ru>] Не должно пересекаться с адресным пространством подов DVP.
+# [<ru>] Возможно, захотите изменить. Не должно пересекаться с адресным пространством подов DVP и serviceSubnetCIDR.
 podSubnetCIDR: 10.112.0.0/16
 # [<en>] Address space of the cluster's services.
-# [<en>] Must not overlap with the address space of DVP services.
+# [<en>] You might consider changing this. Must not overlap with the address space of DVP services and podSubnetCIDR.
 # [<ru>] Адресное пространство для сервисов кластера.
-# [<ru>] Не должно пересекаться с адресным пространством сервисов DVP.
+# [<ru>] Возможно, захотите изменить. Не должно пересекаться с адресным пространством сервисов DVP и podSubnetCIDR.
 serviceSubnetCIDR: 10.223.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
@@ -262,9 +262,9 @@ spec:
     minPerZone: 1
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing parameters of the NGINX Ingress controller.
+# [<en>] Section containing parameters of the Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/402-ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/402-ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-privileged-false
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-privileged-false
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        privileged: false
+

@@ -76,7 +76,7 @@ properties:
     description: |
       A list of external BGP routers to use with the module.
 
-      Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#bgp-configuration).
+      Format — a data array similar to that of [MetalLB's](https://metallb.io/configuration/#bgp-configuration).
     items:
       type: object
       required: ["peer-address", "peer-asn", "my-asn"]
@@ -172,7 +172,7 @@ properties:
     description: |
       A list of IP ranges to assign to services.
 
-      Format — a data array similar to that of [MetalLB's](https://metallb.universe.tf/configuration/#advanced-address-pool-configuration).
+      Format — a data array similar to that of [MetalLB's](https://metallb.io/configuration/#advanced-address-pool-configuration).
     items:
       type: object
       required: ["protocol", "name", "addresses"]

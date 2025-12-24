@@ -44,6 +44,15 @@ grafana: {}
 https:
   mode: CustomCertificate
 internal:
+  customCertificateData:
+    tls.crt: |
+      -----BEGIN CERTIFICATE-----
+      TEST
+      -----END CERTIFICATE-----
+    tls.key: |
+      -----BEGIN PRIVATE KEY-----
+      TEST
+      -----END PRIVATE KEY-----
   alertmanagers:
     byAddress: []
     byService: []

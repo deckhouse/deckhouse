@@ -53,10 +53,16 @@ func NewHookForDestroyPipeline(getter kubernetes.KubeClientProvider, nodeToDestr
 func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
 	if err != nil {
-		log.ErrorF("Get master node pipeline outputs: %v", err)
+		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
 	}
 
-	h.oldMasterIPForSSH = outputs.MasterIPForSSH
+	masterIP := outputs.MasterIPForSSH
+	if masterIP == "" {
+		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToDestroy)
+		return false, nil
+	}
+
+	h.oldMasterIPForSSH = masterIP
 
 	err = removeControlPlaneRoleFromNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, h.commanderMode)
 	if err != nil {
@@ -77,7 +83,10 @@ func (h *HookForDestroyPipeline) AfterAction(_ context.Context, runner infrastru
 		return nil
 	}
 
-	cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
+	if h.oldMasterIPForSSH != "" {
+		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToDestroy})
+	}
+
 	return nil
 }
 

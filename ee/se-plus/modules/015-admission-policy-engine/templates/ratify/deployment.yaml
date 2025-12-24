@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: ratify
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: ratify
@@ -118,7 +118,7 @@ spec:
           {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
           {{- end }}
-      volumes:        
+      volumes:
         - name: config
           configMap:
             name: ratify-configuration

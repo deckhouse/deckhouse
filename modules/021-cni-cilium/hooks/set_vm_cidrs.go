@@ -53,7 +53,13 @@ func applyVMCIDRsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert virtualization moduleconfig: %v", err)
 	}
-	return mc.Spec.Settings["virtualMachineCIDRs"], nil
+
+	settings := mc.Spec.Settings.GetMap()
+	if len(settings) == 0 {
+		return nil, nil
+	}
+
+	return settings["virtualMachineCIDRs"], nil
 }
 
 func applyVMCIDRs(_ context.Context, input *go_hook.HookInput) error {

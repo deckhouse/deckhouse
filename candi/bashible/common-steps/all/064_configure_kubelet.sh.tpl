@@ -96,6 +96,10 @@ fi
 {{- if not (eq .cri "NotManaged") }}
 # Get CRI directory for eviction thresholds calculation
 criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+# fallback
+if [ -z "$criDir" ] || [ "$criDir" = "null" ]; then
+  criDir="/var/lib/containerd"
+fi
 imagefsSize=$(df --output=size "$criDir" | tail -n1)
 imagefsInodes=$(df --output=itotal "$criDir" | tail -n1)
 
@@ -294,7 +298,14 @@ evictionSoftGracePeriod:
 evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
+{{- if ((.nodeGroup).kubelet).memorySwap }}
+  {{- $swapBehavior := .nodeGroup.kubelet.memorySwap.swapBehavior | default "NoSwap" }}
+failSwapOn: false
+memorySwap:
+  swapBehavior: {{ $swapBehavior }}
+{{- else }}
 failSwapOn: true
+{{- end }}
 tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
 {{- if ne .runType "ClusterBootstrap" }}
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
@@ -306,12 +317,18 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
-{{- if semverCompare "< 1.30" .kubernetesVersion }}
-  ValidatingAdmissionPolicy: true
-{{- end }}
   RotateKubeletServerCertificate: true
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
+{{- end }}
+{{- if semverCompare "<=1.32" .kubernetesVersion }}
+  InPlacePodVerticalScaling: true
+{{- end }}
+{{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
+  DynamicResourceAllocation: true
+{{- end }}
+{{- range .allowedKubeletFeatureGates }}
+  {{ . }}: true
 {{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
@@ -322,9 +339,20 @@ kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-{{- $max_pods := 110 }}
-{{- if hasKey .nodeGroup "kubelet" }}
-  {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
+{{- $max_pods := 120 }}
+{{- if (((.nodeGroup).kubelet).maxPods) }}
+  {{- $max_pods = .nodeGroup.kubelet.maxPods | int }}
+{{- else }}
+  {{- $prefix := .normal.podSubnetNodeCIDRPrefix | default "24" | int }}
+  {{- if ge $prefix 24 }}
+    {{- $max_pods = 120 }}
+  {{- else if eq $prefix 23 }}
+    {{- $max_pods = 250 }}
+  {{- else if eq $prefix 22 }}
+    {{- $max_pods = 500 }}
+  {{- else if le $prefix 21 }}
+    {{- $max_pods = 1000 }}
+  {{- end }}
 {{- end }}
 maxPods: {{ $max_pods }}
 nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s

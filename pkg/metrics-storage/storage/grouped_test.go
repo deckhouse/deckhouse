@@ -35,7 +35,7 @@ func Test_CounterAdd(t *testing.T) {
 	buf := &bytes.Buffer{}
 	logger.SetOutput(buf)
 
-	v := NewGroupedVault(func(name string) string { return name })
+	v := NewGroupedVault()
 
 	v.CounterAdd("group1", "metric_total", 1.0, map[string]string{"lbl": "val"})
 

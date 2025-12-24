@@ -6,6 +6,34 @@
   "statements": [
     {
       "vulnerability": {
+        "name": "CVE-2025-1767"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере.",
+      "timestamp": "2025-10-16T07:13:22.026446Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-5187"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "cluster-autoscaler не запускает kube-apiserver и не экспонирует API, позволяющие нодам удалять сами себя, k8s.io/kubernetes используется только как библиотечная зависимость для клиентских операций, уязвимый код не исполняется.",
+      "timestamp": "2025-10-16T07:20:22.663692Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2023-45142"
       },
       "products": [
@@ -20,31 +48,17 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2024-3177"
+        "name": "CVE-2025-52881"
       },
       "products": [
         {
-          "@id": "pkg:golang/k8s.io/kubernetes"
+          "@id": "pkg:golang/github.com/opencontainers/selinux"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Проблема относится к kube-apiserver, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в cluster-autoscaler",
-      "timestamp": "2025-10-10T09:28:39.411142Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2024-3177"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/k8s.io/kubernetes"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo как исполнение кода - библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в cluster-autoscaler",
-      "timestamp": "2025-10-10T09:28:39.438645Z"
+      "impact_statement": "Уязвимость затрагивает runc при запуске контейнеров, позволяя перенаправление записей в /proc на другие файлы через специальные условия. Cluster-autoscaler не использует runc для запуска контейнеров и управляет только масштабированием узлов Kubernetes через API, уязвимый код не исполняется.",
+      "timestamp": "2025-11-07T09:55:00Z"
     }
   ],
   "timestamp": "2025-10-10T11:41:47Z"

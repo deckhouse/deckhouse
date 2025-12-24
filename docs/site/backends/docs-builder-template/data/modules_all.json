@@ -100,6 +100,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -113,6 +122,15 @@
     "tags": [
       "storage"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -135,6 +153,15 @@
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -224,6 +251,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "security"
     ],
@@ -270,13 +306,35 @@
   },
   "operator-argo": {
     "editions": [
-      "ee"
+      "ee",
+      "se-plus"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "delivery"
     ],
     "external": "true",
     "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/",
+    "tags": [
+      "security"
+    ]
   },
   "pod-reloader": {
     "tags": [
@@ -291,6 +349,16 @@
     ],
     "external": "true",
     "path": "/modules/pod-reloader/stable/"
+  },
+  "payload-registry": {
+    "tags": [
+      "registry"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
   },
   "runtime-audit-engine": {
     "tags": [
@@ -327,8 +395,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on the ability to create snapshots and volume wiping",
+        "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
     "tags": [

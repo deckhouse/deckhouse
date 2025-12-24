@@ -98,13 +98,13 @@ To ensure the CNI switching from Flannel to Cilium was completed successfully, f
    - If using a single master node:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
    - If using a multi-master installation:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
 1. Check the Cilium agents. They must be in the `Running` status:

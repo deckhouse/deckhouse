@@ -3,7 +3,7 @@ title: "Managing request balancing between service endpoints with Istio"
 permalink: en/user/network/managing_request_between_service_istio.html
 ---
 
-You can use the [`istio`](/modules/istio/) module to manage request load balancing between service endpoints.
+You can use the [istio](/modules/istio/) module to manage request load balancing between service endpoints.
 Before configuring load balancing, make sure the module is enabled in the cluster.
 
 The main resource for managing request load balancing is [DestinationRule](#destinationrule-resource) from Istio.

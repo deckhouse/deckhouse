@@ -15,7 +15,9 @@
 package config
 
 import (
+	"context"
 	"fmt"
+
 	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
 )
 
@@ -109,4 +111,24 @@ type RegistryDetachedModeProperties struct {
 
 type VCDProviderInfo struct {
 	ApiVersion string
+}
+type ByClusterType[T any] interface {
+	Cloud(context.Context, *MetaConfig) (T, error)
+	Static(context.Context, *MetaConfig) (T, error)
+	Incorrect(context.Context, *MetaConfig) (T, error)
+}
+
+func DoByClusterType[T any](ctx context.Context, metaConfig *MetaConfig, actor ByClusterType[T]) (T, error) {
+	switch metaConfig.ClusterType {
+	case CloudClusterType:
+		return actor.Cloud(ctx, metaConfig)
+	case StaticClusterType:
+		return actor.Static(ctx, metaConfig)
+	default:
+		return actor.Incorrect(ctx, metaConfig)
+	}
+}
+
+func UnsupportedClusterTypeErr(metaConfig *MetaConfig) error {
+	return fmt.Errorf("Unsupported cluster type: '%s'", metaConfig.ClusterType)
 }

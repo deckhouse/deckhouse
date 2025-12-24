@@ -146,7 +146,7 @@ kind: AWSClusterConfiguration
 To edit this resource in a running cluster, run the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 After editing, apply the changes with the following command:
