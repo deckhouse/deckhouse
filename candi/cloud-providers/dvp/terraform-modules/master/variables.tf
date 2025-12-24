@@ -144,8 +144,8 @@ variable "live_migration_policy" {
   description = "Live migration policy for VirtualMachine (masters only)."
 
   validation {
-    condition     = var.live_migration_policy == null || contains(["AlwaysForced", "PreferForced"], var.live_migration_policy)
-    error_message = "live_migration_policy must be one of: AlwaysForced, PreferForced."
+    condition = var.live_migration_policy == null || contains(["AlwaysSafe", "PreferSafe", "AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: AlwaysSafe, PreferSafe, AlwaysForced, PreferForced."
   }
 }
 variable "run_policy" {
@@ -154,8 +154,8 @@ variable "run_policy" {
   description = "Run policy for VirtualMachine."
 
   validation {
-    condition     = var.run_policy == null || contains(["AlwaysOn", "AlwaysOnUnlessStoppedManually"], var.run_policy)
-    error_message = "run_policy must be one of: AlwaysOn, AlwaysOnUnlessStoppedManually."
+    condition = var.run_policy == null || contains(["AlwaysOn", "AlwaysOff", "Manual", "AlwaysOnUnlessStoppedManually"], var.run_policy)
+    error_message = "run_policy must be one of: AlwaysOn, AlwaysOff, Manual, AlwaysOnUnlessStoppedManually."
   }
 }
 
