@@ -9,8 +9,8 @@ metadata:
   resourceVersion: "4"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
@@ -24,7 +24,8 @@ status:
       ru: Ru Test package
     stage: Preview
   packageName: test-package
-  version: 1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: 1.0.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -16,7 +16,7 @@ metadata:
     uid: ""
   resourceVersion: "8"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -56,8 +56,8 @@ metadata:
   resourceVersion: "1"
 spec:
   packageName: v1.0.0
-  packageRepository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1
