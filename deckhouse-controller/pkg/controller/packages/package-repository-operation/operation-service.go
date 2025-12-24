@@ -247,8 +247,8 @@ func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageN
 	switch list := versionList.(type) {
 	case *v1alpha1.ApplicationPackageVersionList:
 		for _, item := range list.Items {
-			if item.Status.Version != "" {
-				versionTags = append(versionTags, item.Status.Version)
+			if item.Status.PackageVersion != "" {
+				versionTags = append(versionTags, item.Status.PackageVersion)
 			}
 		}
 	default:
@@ -383,9 +383,9 @@ func (s *OperationService) ensureApplicationPackageVersion(ctx context.Context, 
 			},
 		},
 		Spec: v1alpha1.ApplicationPackageVersionSpec{
-			PackageName:       packageName,
-			Version:           version,
-			PackageRepository: s.repo.Name,
+			PackageName:           packageName,
+			PackageVersion:        version,
+			PackageRepositoryName: s.repo.Name,
 		},
 	}
 
