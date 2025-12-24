@@ -164,7 +164,7 @@ EOF
     # every pod can use two IP (one in terminating phase + one in starting phase)
     if (( 2 * maxPods > availableIPs )); then
       cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":".spec.kubelet.maxPods ($maxPods) is too high: each pod may need 2 IPs (one terminating + one starting), but only $availableIPs IPs available in podSubnetNodeCIDRPrefix /$prefix"}
+{"allowed": true, "warnings": [".spec.kubelet.maxPods ($maxPods) is too high: may lead to IP exhaustion"]}
 EOF
       return 0
     fi
