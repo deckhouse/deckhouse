@@ -70,7 +70,7 @@
 
         2. Review Dex configuration for AuthRequest TTL settings.
 
-        3. Consider temporarily increasing the ResourceQuota limit if needed
+        3. Consider temporarily increasing the ResourceQuota limit if needed.
 
   - alert: D8DexAuthRequestsQuotaExhausted
     expr: |
@@ -112,10 +112,10 @@
       description: |-
         The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` has been fully exhausted.
 
-        Dex is currently unable to create new AuthRequest CRs, which will cause:
-        * Dex health checks to fail immediately
-        * Authentication through external identity providers to stop working
-        * Users unable to log in via OAuth/OIDC flows
+        Dex is currently unable to create new AuthRequest custom resources, which will cause:
+        * Dex health checks to fail immediately.
+        * Authentication through external identity providers to stop working.
+        * Users unable to log in via OAuth/OIDC flows.
 
         **Immediate actions required:**
 
@@ -130,6 +130,6 @@
            d8 k patch resourcequota authrequest-quota -n d8-user-authn --type='json' -p='[{"op": "replace", "path": "/spec/hard/count\/authrequests.dex.coreos.com", "value": "20000"}]'
            ```
 
-        3. Investigate why Dex is not cleaning up AuthRequest objects automatically
+        3. Investigate why Dex is not cleaning up AuthRequest objects automatically.
 
-        4. Review Dex configuration for AuthRequest TTL settings
+        4. Review Dex configuration for AuthRequest TTL settings.
