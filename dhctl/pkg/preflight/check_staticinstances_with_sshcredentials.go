@@ -146,7 +146,7 @@ func findSSHCredentials(docs []string, name string) (*v1alpha2.SSHCredentialsSpe
 }
 
 func testSSHConnection(ctx context.Context, address string, cred *v1alpha2.SSHCredentialsSpec) error {
-	sshClient, err := sshclient.NewClientFromConfig(ctx, address, cred.User, cred.SSHPort, cred.SudoPasswordEncoded, cred.PrivateSSHKey)
+	sshClient, err := sshclient.NewClientFromConfig(ctx, address, cred)
 	if err != nil {
 		return fmt.Errorf("cannot create SSH client: %w", err)
 	}
