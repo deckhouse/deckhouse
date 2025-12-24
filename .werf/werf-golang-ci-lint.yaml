@@ -16,6 +16,6 @@ shell:
   - export GOLANGCI_LINT_VERSION=v2.7.2
   - git clone --depth 1 $(cat /run/secrets/SOURCE_REPO)/golangci/golangci-lint --branch $GOLANGCI_LINT_VERSION
   - cd golangci-lint/
-  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static" -X "main.version=$GOLANGCI_LINT_VERSION"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
+  - CGO_ENABLED=0 GOOS=linux go build -ldflags '-s -w -extldflags "-static" -X "main.version=$GOLANGCI_LINT_VERSION" -X "main.date=$(date -u +%Y-%m-%d)"' -o /usr/local/bin/golangci-lint cmd/golangci-lint/main.go
   - rm -rf /golangci-lint/.git
 ---
