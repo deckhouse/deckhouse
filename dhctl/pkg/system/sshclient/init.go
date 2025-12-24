@@ -16,7 +16,9 @@ package sshclient
 import (
 	"context"
 	"fmt"
+	"os"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha2"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
@@ -96,6 +98,35 @@ func NewClientFromFlagsWithHosts(ctx context.Context) (node.SSHClient, error) {
 	}
 
 	return NewClientFromFlags(ctx)
+}
+
+func NewClientFromConfig(ctx context.Context, host string, cred *v1alpha2.SSHCredentialsSpec) (node.SSHClient, error) {
+	settings := session.NewSession(session.Input{
+		AvailableHosts: []session.Host{{Host: host}},
+		User:           cred.User,
+		Port:           fmt.Sprintf("%d", cred.SSHPort),
+		BecomePass:     cred.SudoPasswordEncoded,
+	})
+
+	var keys []session.AgentPrivateKey
+	if cred.PrivateSSHKey != "" {
+		tmpFile, err := os.CreateTemp("", "sshkey-for-staticinstance-*")
+		if err != nil {
+			return nil, fmt.Errorf("cannot create temp file for SSH key: %w", err)
+		}
+		defer tmpFile.Close()
+		_, err = tmpFile.WriteString(cred.PrivateSSHKey)
+		if err != nil {
+			return nil, fmt.Errorf("cannot write SSH key to temp file: %w", err)
+		}
+
+		keys = []session.AgentPrivateKey{
+			{Key: tmpFile.Name()},
+		}
+	}
+
+	client := gossh.NewClient(ctx, settings, keys)
+	return client, nil
 }
 
 func IsModernMode() bool {

@@ -445,7 +445,7 @@ List of checks performed by the installer before starting Deckhouse installation
 - `--preflight-skip-deckhouse-user-check` — skip deckhouse user existence check.
 - `--preflight-skip-yandex-with-nat-instance-check` — skip the Yandex Cloud with NAT Instance configuration check.
 - `--preflight-skip-dvp-kubeconfig` — skip DVP kubeconfig check.
-
+- `--preflight-skip-staticinstances-with-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
 Example of using the preflight skip flag:
 
   ```shell
