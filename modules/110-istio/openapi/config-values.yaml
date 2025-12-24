@@ -1,5 +1,6 @@
 x-config-version: 3
 type: object
+required: ["globalVersion"]
 properties:
   globalVersion:
     type: string
