@@ -9,7 +9,7 @@
 
             <p>{{safeHTML (T "module_enabling_message_first_part")}}{{$moduleName}}</code> {{safeHTML (T "module_enabling_message_second_part")}}.</p>
 
-            <p>{{safeHTML (T "module_enabling_message_list_title_unable")}}:</p>
+            <p>{{safeHTML (T "module_enabling_message_list_title_enable")}}:</p>
             <ul>
                 <li>
                     <p>{{T "module_enabling_message_list_resource"}}:</p>
@@ -24,7 +24,7 @@
                 </li>
 
                 <li>
-                    <p>{{safeHTML (T "module_enabling_message_ui_command")}}</p>
+                    <p>{{safeHTML (T "module_enabling_message_ui_command")}}:</p>
 
                     {{ $imageName := "module-enabling-ui" }}
                     {{ $langSuffix := site.Language.Lang }}
@@ -40,7 +40,7 @@
                 </li>
             </ul>
 
-            <p>{{safeHTML (T "module_enabling_message_list_title_disable")}}</p>
+            <p>{{safeHTML (T "module_enabling_message_list_title_disable")}}:</p>
 
             <ul>
                 <li>
