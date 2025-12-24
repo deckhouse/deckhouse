@@ -1,6 +1,6 @@
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
-Чтобы явно включить или выключить модуль `{{ include.moduleKebabName }}`, установите `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}` (создайте, при необходимости), или воспользуйтесь командой `deckhouse-controller module` в поде `d8-system/deckhouse`.
+Явно включить или выключить модуль можно несколькими способами: с помощью команды `d8 system module`, установив `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}` (создайте, при необходимости), либо через веб-интерфейс платформы.
 
 Пример **включения** модуля:
 - с помощью ресурса ModuleConfig:
@@ -14,11 +14,15 @@
     enabled: true
   ```
 
-- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+- с помощью команды `d8 system module enable` (требуется Deckhouse CLI (d8), настроенный на работу с кластером):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  d8 system module enable {{ include.moduleKebabName }}
   ```
+
+- через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и включите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите `spec.enabled` в `true` в ресурсе ModuleConfig):
+
+  <img src="/images/modules-docs/module-enabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
 
 Пример **выключения** модуля:
 
@@ -33,16 +37,20 @@
     enabled: false
   ```
 
-- с помощью команды `deckhouse-controller` (требуется kubectl, настроенный на работу с кластером):
+- с помощью команды `d8 system module` (требуется Deckhouse CLI (d8), настроенный на работу с кластером):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  d8 system module disable {{ include.moduleKebabName }}
   ```
+
+- через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и выключите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите `spec.enabled` в `false` в ресурсе ModuleConfig):
+
+  <img src="/images/modules-docs/module-disabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
 
 {% endofftopic %}
 {% else %}
 {% offtopic title="How to explicitly enable the module..." %}
-Set the `spec.enabled` [module parameter]({{ "/#configuring-the-module" | true_relative_url }}) to `true` or `false` in the `ModuleConfig/{{ moduleKebabName }}` resource (create it, if necessary) to explicitly enable or disable the module, or use the `deckhouse-controller module` command in the `d8-system/deckhouse` pod.
+There are several ways to explicitly enable or disable a module: using the `d8 system module` command, setting `spec.enabled` to `true` or `false` in `ModuleConfig/{{ moduleKebabName }}` resource (create it, if necessary) or via the platform's web interface.
 
 Example of enabling the module:
 - by using the ModuleConfig resource:
@@ -56,11 +64,15 @@ Example of enabling the module:
     enabled: true
   ```
 
-- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
+- by using the `d8 system module` command (you need a Deckhouse CLI (d8), configured to work with the cluster):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module enable {{ include.moduleKebabName }}
+  d8 system module enable {{ include.moduleKebabName }}
   ```
+
+- via the web interface (in the "Modules" subsection, click on the desired module and enable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set `spec.enabled` to `true` in the ModuleConfig resource):
+
+  <img src="/images/modules-docs/module-enabling-ui-en.png" alt="Module enable/disable interface">
 
 Example of disabling the module:
 - by using the ModuleConfig resource:
@@ -74,10 +86,15 @@ Example of disabling the module:
     enabled: false
   ```
 
-- by using the `deckhouse-controller` command (you need a kubectl, configured to work with the cluster):
+- by using the `d8 system module` command (you need a Deckhouse CLI (d8), configured to work with the cluster):
 
   ```shell
-  kubectl -ti -n d8-system exec svc/deckhouse-leader -c deckhouse -- deckhouse-controller module disable {{ include.moduleKebabName }}
+  d8 system module disable {{ include.moduleKebabName }}
   ```
+
+- via the web interface (in the "Modules" subsection, click on the desired module and disable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set `spec.enabled` to `false` in the ModuleConfig resource):
+
+  <img src="/images/modules-docs/module-disabling-ui-en.png" alt="Module enable/disable interface">
+
 {% endofftopic %}
 {% endif %}
