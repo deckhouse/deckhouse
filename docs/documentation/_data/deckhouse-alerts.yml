@@ -1163,7 +1163,40 @@ alerts:
         3. Consider temporarily increasing the ResourceQuota limit if needed
       summary: |
         Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
-      severity: "5"
+      severity: "4"
+      markupFormat: markdown
+    - name: D8DexAuthRequestsQuotaExhausted
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` has been fully exhausted.
+
+        Dex is currently unable to create new AuthRequest CRs, which will cause:
+        * Dex health checks to fail immediately
+        * Authentication through external identity providers to stop working
+        * Users unable to log in via OAuth/OIDC flows
+
+        **Immediate actions required:**
+
+        1. Check current AuthRequest objects and clean up stale ones:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn --no-headers | wc -l
+           d8 k delete authrequests.dex.coreos.com --all -n d8-user-authn
+           ```
+
+        2. Temporarily increase the ResourceQuota limit:
+           ```bash
+           d8 k patch resourcequota authrequest-quota -n d8-user-authn --type='json' -p='[{"op": "replace", "path": "/spec/hard/count\/authrequests.dex.coreos.com", "value": "20000"}]'
+           ```
+
+        3. Investigate why Dex is not cleaning up AuthRequest objects automatically
+
+        4. Review Dex configuration for AuthRequest TTL settings
+      summary: |
+        Dex AuthRequest objects ResourceQuota is exhausted in namespace &quot;d8-user-authn&quot;.
+      severity: "3"
       markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
