@@ -261,6 +261,65 @@ func parseDocument(doc string, metaConfig *MetaConfig, schemaStore *SchemaStore,
 	return found, nil
 }
 
+// detectMergedDocuments checks if a document contains multiple YAML documents merged together
+// (indicated by multiple top-level "kind:" or "apiVersion:" fields). This happens when the "---" separator is missing.
+func detectMergedDocuments(doc string) error {
+	doc = strings.TrimSpace(doc)
+	if doc == "" {
+		return nil
+	}
+
+	// Look for multiple root-level (indent 0) apiVersion and kind fields
+	// A merged document will have:
+	// apiVersion: ...
+	// kind: ...
+	// ... (content, possibly nested with kind: fields)
+	// apiVersion: ...  <- second document starts here (at root level)
+	// kind: ...
+	var rootLevelKinds []string
+	var rootLevelAPIVersions []string
+	lines := strings.Split(doc, "\n")
+	
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		// Skip comments and empty lines
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		
+		// Calculate current indent level (number of leading spaces/tabs)
+		leadingWhitespace := len(line) - len(strings.TrimLeft(line, " \t"))
+		
+		// Only consider fields at root level (indent 0)
+		if leadingWhitespace == 0 {
+			if strings.HasPrefix(trimmed, "apiVersion:") {
+				apiVersionValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "apiVersion:"))
+				if apiVersionValue != "" {
+					rootLevelAPIVersions = append(rootLevelAPIVersions, apiVersionValue)
+				}
+			} else if strings.HasPrefix(trimmed, "kind:") {
+				kindValue := strings.TrimSpace(strings.TrimPrefix(trimmed, "kind:"))
+				if kindValue != "" {
+					rootLevelKinds = append(rootLevelKinds, kindValue)
+				}
+			}
+		}
+	}
+
+	// If we have multiple root-level apiVersion or kind fields, documents are likely merged
+	// We check for multiple of both to avoid false positives from nested structures
+	if len(rootLevelAPIVersions) > 1 && len(rootLevelKinds) > 1 {
+		return fmt.Errorf(
+			"invalid config.yml format: missing '---' separator between documents. "+
+				"Found multiple root-level 'kind' fields: %v. "+
+				"Please ensure each YAML document is separated by '---' on its own line.",
+			rootLevelKinds,
+		)
+	}
+
+	return nil
+}
+
 func ParseConfigFromData(ctx context.Context, configData string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	schemaStore := NewSchemaStore()
 
@@ -270,10 +329,23 @@ func ParseConfigFromData(ctx context.Context, configData string, preparatorProvi
 	resourcesDocs := make([]string, 0, len(docs))
 
 	metaConfig := MetaConfig{}
+	var initConfigFound bool
 	for _, doc := range docs {
+		// Check for merged documents before parsing
+		if err := detectMergedDocuments(doc); err != nil {
+			return nil, fmt.Errorf("config validation failed: %w\ndata:\n%s\n", err, numerateManifestLines([]byte(doc)))
+		}
+
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err
+		}
+		if found {
+			// Check if InitConfiguration was found
+			var index SchemaIndex
+			if err := yaml.Unmarshal([]byte(doc), &index); err == nil && index.Kind == "InitConfiguration" {
+				initConfigFound = true
+			}
 		}
 		if !found && strings.TrimSpace(doc) != "" {
 			var index SchemaIndex
@@ -289,12 +361,21 @@ func ParseConfigFromData(ctx context.Context, configData string, preparatorProvi
 
 	// init configuration can be empty, but we need default from openapi spec
 	if len(metaConfig.InitClusterConfig) == 0 {
+		// If we have multiple documents but InitConfiguration wasn't found, it might be due to missing separator
+		if len(docs) > 1 && !initConfigFound {
+			log.WarnF(
+				"InitConfiguration not found in config.yml, but multiple documents detected. " +
+					"This might indicate a missing '---' separator between InitConfiguration and other documents. " +
+					"Using empty InitConfiguration as fallback.\n",
+			)
+		} else {
+			log.DebugF("Init configuration not found use empty")
+		}
 		doc := `
 apiVersion: deckhouse.io/v1
 kind: InitConfiguration
 deckhouse: {}
 `
-		log.DebugF("Init configuration not found use empty: %s", doc)
 		found, err := parseDocument(doc, &metaConfig, schemaStore, opts...)
 		if err != nil {
 			return nil, err
