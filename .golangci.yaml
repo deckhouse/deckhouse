@@ -61,6 +61,20 @@ linters:
         - all
         - '-ST1003' # waiting for package name will be fixed (underscores)
         - '-QF1008' # not need to fix; we understand how to call nested structs
+    revive:
+      rules:
+        - name: var-naming
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - ["ID"] # AllowList
+            - ["VM"] # DenyList
+            - - skip-initialism-name-checks: false
+                upper-case-const: false
+                skip-package-name-checks: true
+                skip-package-name-collision-with-go-std: false
+                extra-bad-package-names: []
   exclusions:
     generated: lax
     presets:
