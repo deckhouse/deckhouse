@@ -63,7 +63,7 @@ linters:
         - '-QF1008' # not need to fix; we understand how to call nested structs
     revive:
       rules:
-        - name: var-naming
+        - name: var-naming # waiting for package name will be fixed (incorrect naming)
           severity: warning
           disabled: false
           exclude: [""]
