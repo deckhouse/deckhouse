@@ -19,10 +19,10 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/v1alpha2"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -32,7 +32,6 @@ func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
 	for _, doc := range docs {
 		var res map[string]interface{}
 		if err := yaml.Unmarshal([]byte(doc), &res); err != nil {
-			fmt.Printf("[DEBUG] cannot unmarshal YAML: %v\n", err)
 			return fmt.Errorf("cannot unmarshal YAML: %w", err)
 		}
 
@@ -46,21 +45,15 @@ func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
 		instanceName := meta["name"].(string)
 		address := spec["address"].(string)
 
-		fmt.Printf("[DEBUG] Checking StaticInstance '%s' at %s\n", instanceName, address)
-
 		credRef := spec["credentialsRef"].(map[string]interface{})
 		credName := credRef["name"].(string)
 
 		cred, err := findSSHCredentials(docs, credName)
 		if err != nil {
-			fmt.Printf("[DEBUG] Cannot find SSH credentials '%s' for instance '%s': %v\n", credName, instanceName, err)
 			return fmt.Errorf("instance %s: %w", instanceName, err)
 		}
 
-		fmt.Printf("[DEBUG] Using SSH credentials '%s' (user: %s, port: %d)\n", credName, cred.User, cred.SSHPort)
-
 		if err := testSSHConnection(ctx, address, cred); err != nil {
-			fmt.Printf("[DEBUG] SSH test failed for '%s': %v\n", instanceName, err)
 			return fmt.Errorf(
 				"cannot connect to %s (%s:%d): %w",
 				instanceName,
@@ -69,10 +62,7 @@ func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
 				err,
 			)
 		}
-
-		fmt.Printf("[DEBUG] SSH test passed for '%s'\n", instanceName)
 	}
-
 	return nil
 }
 
@@ -141,7 +131,6 @@ func findSSHCredentials(docs []string, name string) (*v1alpha2.SSHCredentialsSpe
 			SSHPort:             port,
 		}, nil
 	}
-
 	return nil, fmt.Errorf("SSHCredentials %s not found", name)
 }
 
@@ -171,6 +160,5 @@ func testSSHConnection(ctx context.Context, address string, cred *v1alpha2.SSHCr
 			string(cmd.StderrBytes()),
 		)
 	}
-
 	return nil
 }
