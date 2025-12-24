@@ -428,6 +428,15 @@ func (r *DeckhouseMachineReconciler) createVM(
 		runPolicy = string(v1alpha2.AlwaysOnUnlessStoppedManually)
 	}
 
+	// LiveMigrationPolicy: apply from spec or use default for masters
+	liveMigrationPolicy := dvpMachine.Spec.LiveMigrationPolicy
+	if liveMigrationPolicy == "" {
+		// For control plane nodes (masters), default to PreferForced due to high memory activity
+		if machine != nil && capiutil.IsControlPlaneMachine(machine) {
+			liveMigrationPolicy = string(v1alpha2.PreferForcedMigrationPolicy)
+		}
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -436,7 +445,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
-			RunPolicy:                v1alpha2.RunPolicy(runPolicy),
+			RunPolicy:           v1alpha2.RunPolicy(runPolicy),
+			LiveMigrationPolicy: v1alpha2.LiveMigrationPolicy(liveMigrationPolicy),
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,

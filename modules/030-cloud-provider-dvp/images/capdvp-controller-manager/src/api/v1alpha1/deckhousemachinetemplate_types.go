@@ -78,7 +78,7 @@ type DeckhouseMachineSpecTemplate struct {
 
 	// LiveMigrationPolicy specifies the live migration policy for the virtual machine.
 	// For master nodes, PreferForced is recommended due to high memory activity.
-	// +kubebuilder:validation:Enum=AlwaysSafe;PreferSafe;AlwaysForced;PreferForced
+	// +kubebuilder:validation:Enum=Manual;Never;AlwaysSafe;PreferSafe;AlwaysForced;PreferForced
 	// +optional
 	LiveMigrationPolicy string `json:"liveMigrationPolicy,omitempty"`
 }

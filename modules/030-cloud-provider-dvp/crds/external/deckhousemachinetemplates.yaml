@@ -161,6 +161,8 @@ spec:
                           LiveMigrationPolicy specifies the live migration policy for the virtual machine.
                           For master nodes, PreferForced is recommended due to high memory activity.
                         enum:
+                        - Manual
+                        - Never
                         - AlwaysSafe
                         - PreferSafe
                         - AlwaysForced
