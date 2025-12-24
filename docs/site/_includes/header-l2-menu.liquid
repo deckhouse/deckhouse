@@ -3,11 +3,10 @@
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
 {%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
 {%- assign productName = productMenuData.title %}
-productName - {{ productName }}, productCode - {{ productCode }}
 <div class="header header__product-menu">
   <div class="container">
     <div class="header__product-menu-logo">
-      {%- if productName == "Code" %}
+      {%- if productCode == "code" %}
       <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
         <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
@@ -20,6 +19,12 @@ productName - {{ productName }}, productCode - {{ productCode }}
         <use xlink:href="{{ productLogoURL }}"></use>
       </svg>
       {%- endif %}
+      <script>
+        if (window.location.hostname.includes('.test.') || window.location.hostname.includes('.stage.')) {
+            let img = document.querySelector('.header__product-menu-logo > img');
+            img.src = '{{ site.urls[page.lang] }}' + img.getAttribute('src');
+        }
+      </script>
       <span>{{ productName }}</span>
     </div>
     <ul class="nav header__nav">
