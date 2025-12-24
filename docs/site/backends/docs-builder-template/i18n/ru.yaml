@@ -11,16 +11,16 @@ module: модуль
 module_enabling_details_title: Как явно включить или отключить модуль…
 module_enabling_message_first_part: Явно включить или выключить модуль можно несколькими способами&colon; с помощью команды <code>d8 system module</code>, установив <code>spec.enabled</code> в <code>true</code> или <code>false</code> в <code>ModuleConfig/
 module_enabling_message_second_part: (создайте, при необходимости), либо через веб-интерфейс платформы
-module_enabling_message_list_title_unable: Пример <b>включения</b> модуля
+module_enabling_message_list_title_enable: Пример <b>включения</b> модуля
 module_enabling_message_list_title_disable: Пример <b>выключения</b> модуля
 module_enabling_message_list_resource: с помощью ресурса ModuleConfig
 module_enabling_message_list_command: с помощью команды <code>d8 system module</code> (требуется Deckhouse CLI (d8), настроенный на работу с кластером)
 module_enabling_message_ui_command: через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и включите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите <code>spec.enabled</code> в <code>true</code> в ресурсе ModuleConfig)
-module_disabling_message_ui_command: через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и выключите переключатель «Модуль включен» на вкладке «Конфигурация» либо на вкладке «YAML» установите <code>spec.enabled</code> в <code>false</code> в ресурсе ModuleConfig)
+module_disabling_message_ui_command: через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и выключите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите <code>spec.enabled</code> в <code>false</code> в ресурсе ModuleConfig)
 module_ui_enabling_disabling: Интерфейс включения и выключения модуля
 module_settings: Настройки
 module_settings_learn_more: подробнее о настройке Deckhouse…
-module_settings_message_first_part: Чтобы настроить модуль, используйте ресурс <code>ModuleConfig</code> с именем
+module_settings_message_first_part: Чтобы настроить модуль, используйте ресурс ModuleConfig с именем
 module_settings_message_second_part: Пример ресурса <code>ModuleConfig/
 module_settings_message_third_part: </code> для настройки модуля
 module_settings_example_comment: Параметры модуля из раздела "Параметры" ниже

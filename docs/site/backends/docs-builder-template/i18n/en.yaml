@@ -11,16 +11,16 @@ module: module
 module_enabling_details_title: How to explicitly enable the module…
 module_enabling_message_first_part: There are several ways to explicitly enable or disable a module&colon; using the <code>d8 system module</code> command, setting <code>spec.enabled</code> to <code>true</code> or <code>false</code> in <code>ModuleConfig/
 module_enabling_message_second_part: resource (create it, if necessary) or via the platform's web interface
-module_enabling_message_list_title_unable: Example of <b>enabling</b> the module
+module_enabling_message_list_title_enable: Example of <b>enabling</b> the module
 module_enabling_message_list_title_disable: Example of <b>disabling</b> the module
 module_enabling_message_list_resource: by using the ModuleConfig resource
 module_enabling_message_list_command: by using the <code>d8 system module</code> command (you need a Deckhouse CLI (d8), configured to work with the cluster)
-module_enabling_message_ui_command:  via the web interface (in the "Modules" subsection, click on the desired module and enable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set <code>spec.enabled</code> to <code>true</code> in the ModuleConfig resource)
-module_disabling_message_ui_command: via the web interface (in the "Modules" subsection, click on the desired module and disable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set <code>spec.enabled</code> to <code>false</code> in the ModuleConfig resource)
+module_enabling_message_ui_command:  via the web UI (in the "Modules" subsection, click on the desired module and enable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set <code>spec.enabled</code> to <code>true</code> in the ModuleConfig resource)
+module_disabling_message_ui_command: via the web UI (in the "Modules" subsection, click on the desired module and disable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set <code>spec.enabled</code> to <code>false</code> in the ModuleConfig resource)
 module_ui_enabling_disabling:  Module enable/disable interface
 module_settings: Settings
 module_settings_learn_more: learn more about setting up Deckhouse…
-module_settings_message_first_part: The module is configured using the <code>ModuleConfig</code> custom resource named
+module_settings_message_first_part: The module is configured using the ModuleConfig custom resource named
 module_settings_message_second_part: Example of the <code>ModuleConfig/
 module_settings_message_third_part: </code> resource for configuring the module
 module_settings_example_comment: Module parameters from the "Parameters" section below
