@@ -18,12 +18,15 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
+    - jsonPath: .spec.registry.repo
+      name: Repo
+      type: string
     - jsonPath: .status.syncTime
       name: Sync
       type: string
+      priority: 1
     - jsonPath: .status.packagesCount
       name: Packages
-      priority: 1
       type: integer
     name: v1alpha1
     schema:

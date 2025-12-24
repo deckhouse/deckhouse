@@ -18,6 +18,9 @@ spec:
     - jsonPath: .status.packages.total
       name: Count
       type: integer
+    - jsonPath: .spec.packageRepository
+      name: Repository
+      type: string
     - jsonPath: .status.conditions[?(@.type=='Processed')].status
       name: Processed
       type: string
