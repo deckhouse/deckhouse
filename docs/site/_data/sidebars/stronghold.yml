@@ -44,6 +44,10 @@ entries:
                 en: HSM Support
                 ru: Поддержка HSM
               url: /stronghold/documentation/admin/standalone/hsm.html
+            - title:
+                en: Recover from lost quorum
+                ru: Восстановление после потери кворума
+              url: /stronghold/documentation/admin/standalone/raft-lost-quorum-recovery.html
         - title:
             en: Launch in DKP
             ru: Запуск в DKP
