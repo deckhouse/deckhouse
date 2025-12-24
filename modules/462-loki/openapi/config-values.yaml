@@ -210,6 +210,16 @@ properties:
             type: string
             description: |
               VPA operating mode.
+
+              - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                Resource values are not changed automatically afterwards.
+
+              - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                If in-place updates are not possible, the pod will be recreated.
+
+              - `Auto` — VPA automatically recreates pods to apply updated resource values.
+                > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                > It is recommended to use `InPlaceOrRecreate` instead.
             enum:
               - Initial
               - InPlaceOrRecreate
