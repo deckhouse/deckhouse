@@ -423,6 +423,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		})
 	}
 
+	runPolicy := dvpMachine.Spec.RunPolicy
+	if runPolicy == "" {
+		runPolicy = string(v1alpha2.AlwaysOnUnlessStoppedManually)
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -431,7 +436,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
-			RunPolicy:                v1alpha2.AlwaysOnUnlessStoppedManually,
+			RunPolicy:                v1alpha2.RunPolicy(runPolicy),
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,
