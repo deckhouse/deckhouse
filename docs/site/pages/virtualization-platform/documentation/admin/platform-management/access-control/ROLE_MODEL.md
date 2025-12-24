@@ -40,7 +40,7 @@ metadata:
   namespace: vms
 subjects:
 - kind: User
-  name: joe@example.com # For users.deckhouse.io, the parameter is .spec.email
+  name: joe@example.com # The .spec.email parameter for user joe from users.deckhouse.io
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -58,7 +58,7 @@ metadata:
   namespace: vms
 subjects:
 - kind: Group
-  name: vms-admins # For groups.deckhouse.io, the parameter is .spec.name
+  name: vms-admins # the .spec.name parameter for the vms-admins group from groups.deckhouse.io
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -104,7 +104,7 @@ metadata:
   name: cluster-admin-joe
 subjects:
 - kind: User
-  name: joe@example.com # For users.deckhouse.io, the parameter is .spec.email
+  name: joe@example.com # The .spec.email parameter for user joe from users.deckhouse.io
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -123,7 +123,7 @@ metadata:
   name: network-admin-joe
 subjects:
 - kind: User
-  name: joe@example.com # For users.deckhouse.io, the parameter is .spec.email
+  name: joe@example.com # The .spec.email parameter for user joe from users.deckhouse.io
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
