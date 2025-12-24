@@ -74,7 +74,7 @@ func TestStaticDestroy(t *testing.T) {
 
 	t.Run("single-master", func(t *testing.T) {
 		assertStateHasMetaConfigAndResourcesDestroyed := func(t *testing.T, tst *testStaticDestroyTest) {
-			tst.assertResourcesDestroyed(t, true)
+			tst.assertResourcesSetDestroyedInCache(t, true)
 			tst.assertHasMetaConfigInCache(t, true)
 		}
 
@@ -1219,7 +1219,7 @@ func TestStaticDestroy(t *testing.T) {
 				}
 				tst.assertNodeUserExistsSavedInCache(t, tt.nodeUserExistsSavedInCache)
 				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned, false)
-				tst.assertResourcesDestroyed(t, tt.resourcesDestroyedShouldSet)
+				tst.assertResourcesSetDestroyedInCache(t, tt.resourcesDestroyedShouldSet)
 				tst.assertHasMetaConfigInCache(t, tt.metaConfigSavedInCache)
 
 				tt.assert(t, tst)

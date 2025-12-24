@@ -56,6 +56,7 @@ const (
 	UpdateStaticDestroyerIPs           OperationPhase = "UpdateStaticDestroyerIPs"
 	WaitStaticDestroyerNodeUserPhase   OperationPhase = "WaitStaticDestroyerNodeUser"
 	SetDeckhouseResourcesDeletedPhase  OperationPhase = "SetDeckhouseResourcesDelete"
+	CommanderUUIDWasChecked            OperationPhase = "CommanderUUIDWasChecked"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )

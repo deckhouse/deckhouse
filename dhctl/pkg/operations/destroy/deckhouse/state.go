@@ -14,10 +14,15 @@
 
 package deckhouse
 
-import "github.com/deckhouse/deckhouse/dhctl/pkg/state"
+import (
+	"strings"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+)
 
 const (
-	resourcesDestroyedKey = "resources-were-deleted"
+	resourcesDestroyedKey   = "resources-were-deleted"
+	commanderUUIDCheckedKey = "commander-uuid-checked"
 )
 
 type State struct {
@@ -36,4 +41,25 @@ func (s *State) IsResourcesDestroyed() (bool, error) {
 
 func (s *State) SetResourcesDestroyed() error {
 	return s.cache.Save(resourcesDestroyedKey, []byte("yes"))
+}
+
+func (s *State) CommanderUUID() (string, error) {
+	inCache, err := s.cache.InCache(commanderUUIDCheckedKey)
+	if err != nil {
+		return "", err
+	}
+	if !inCache {
+		return "", nil
+	}
+
+	uuidInCache, err := s.cache.Load(commanderUUIDCheckedKey)
+	if err != nil {
+		return "", err
+	}
+
+	return strings.TrimSpace(string(uuidInCache)), nil
+}
+
+func (s *State) SetCommanderUUID(uuid string) error {
+	return s.cache.Save(commanderUUIDCheckedKey, []byte(uuid))
 }

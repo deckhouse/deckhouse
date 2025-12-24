@@ -24,8 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
 	"github.com/stretchr/testify/require"
@@ -34,6 +32,7 @@ import (
 
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/controller"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
@@ -45,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/fs"
 )
@@ -86,7 +86,7 @@ func TestCloudDestroy(t *testing.T) {
 		assertAllStateInCacheAfterDestroy := func(t *testing.T, tst *testCloudDestroyTest) {
 			tst.assertHasMetaConfigInCache(t, true)
 			tst.assertConvergeLockSetInCache(t, true)
-			tst.assertResourcesDestroyed(t, true)
+			tst.assertResourcesSetDestroyedInCache(t, true)
 			tst.assertInfraStateInCache(t, true)
 		}
 
@@ -220,7 +220,7 @@ func TestCloudDestroy(t *testing.T) {
 				assert: func(t *testing.T, tst *testCloudDestroyTest) {
 					tst.assertHasMetaConfigInCache(t, true)
 					tst.assertConvergeLockSetInCache(t, true)
-					tst.assertResourcesDestroyed(t, true)
+					tst.assertResourcesSetDestroyedInCache(t, true)
 					tst.assertInfraStateInCache(t, false)
 				},
 			},
@@ -268,7 +268,7 @@ func TestCloudDestroy(t *testing.T) {
 				assert: func(t *testing.T, tst *testCloudDestroyTest) {
 					tst.assertHasMetaConfigInCache(t, false)
 					tst.assertConvergeLockSetInCache(t, false)
-					tst.assertResourcesDestroyed(t, false)
+					tst.assertResourcesSetDestroyedInCache(t, false)
 					tst.assertInfraStateInCache(t, false)
 					tst.assertKubeProviderIsErrorProvider(t)
 				},
@@ -296,7 +296,7 @@ func TestCloudDestroy(t *testing.T) {
 				assert: func(t *testing.T, tst *testCloudDestroyTest) {
 					tst.assertHasMetaConfigInCache(t, true)
 					tst.assertConvergeLockSetInCache(t, false)
-					tst.assertResourcesDestroyed(t, false)
+					tst.assertResourcesSetDestroyedInCache(t, false)
 					tst.assertInfraStateInCache(t, false)
 					tst.assertKubeProviderIsErrorProvider(t)
 				},
@@ -372,6 +372,201 @@ func TestCloudDestroy(t *testing.T) {
 		}
 	})
 
+	t.Run("in commander", func(t *testing.T) {
+		noBeforeFunc := func(t *testing.T, tst *testCloudDestroyTest) {}
+		noAssertFunc := func(t *testing.T, tst *testCloudDestroyTest) {}
+
+		setAllInCache := func(t *testing.T, tst *testCloudDestroyTest) {
+			tst.setCommanderUUIDInCache(t, tst.params.commanderUUIDInCluster.String())
+			tst.setResourcesDestroyed(t)
+		}
+
+		commanderTest := func(tst testCloudDestroyTestParams) testCloudDestroyTestParams {
+			tst.commanderMode = true
+
+			tst.commanderModeParams = commander.NewCommanderModeParams(
+				[]byte(cloudClusterGenericConfigYAML),
+				[]byte(providerConfigYAML),
+			)
+
+			commanderUUID := uuid.Must(uuid.NewRandom())
+
+			tst.commanderUUID = commanderUUID
+			tst.commanderUUIDInCluster = commanderUUID
+
+			// skip resources should not pass in commander mode
+			tst.skipResources = false
+
+			return tst
+		}
+
+		commanderTestRewriteUUIDs := func(tst testCloudDestroyTestParams, commanderUUID, commanderUUIDInCluster uuid.UUID) testCloudDestroyTestParams {
+			tst.commanderUUID = commanderUUID
+			tst.commanderUUIDInCluster = commanderUUIDInCluster
+			return tst
+		}
+
+		commanderTests := []struct {
+			testCloudDestroyTestParams
+			name string
+
+			stateCacheShouldEmpty            bool
+			resourcesShouldDeleted           bool
+			destroyClusterShouldReturnsError bool
+			kubeProviderShouldCleaned        bool
+			kubeProviderSSHNotStop           bool
+
+			before func(t *testing.T, tst *testCloudDestroyTest)
+			assert func(t *testing.T, tst *testCloudDestroyTest)
+		}{
+			{
+				name: "happy case",
+
+				testCloudDestroyTestParams: commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: nil,
+				}),
+
+				stateCacheShouldEmpty:            true,
+				resourcesShouldDeleted:           true,
+				destroyClusterShouldReturnsError: false,
+				kubeProviderShouldCleaned:        true,
+
+				before: noBeforeFunc,
+				assert: noAssertFunc,
+			},
+
+			{
+				name: "set resources destroyed",
+
+				testCloudDestroyTestParams: commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: nil,
+				}),
+
+				stateCacheShouldEmpty: true,
+				// test we cannot use kube api for destroy resources
+				resourcesShouldDeleted:           false,
+				destroyClusterShouldReturnsError: false,
+				kubeProviderShouldCleaned:        true,
+
+				before: func(t *testing.T, tst *testCloudDestroyTest) {
+					tst.setResourcesDestroyed(t)
+				},
+				assert: noAssertFunc,
+			},
+
+			{
+				name: "all in cache",
+
+				testCloudDestroyTestParams: commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: nil,
+					// test that we do not use kube api
+					errorKubeProvider: true,
+				}),
+
+				stateCacheShouldEmpty: true,
+				// test we cannot use kube api for destroy resources
+				resourcesShouldDeleted:           false,
+				destroyClusterShouldReturnsError: false,
+				// error provider used here
+				kubeProviderShouldCleaned: false,
+
+				before: setAllInCache,
+				assert: noAssertFunc,
+			},
+
+			{
+				name: "all in cache, but infra destroyer returns error",
+
+				testCloudDestroyTestParams: commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: errors.New("error"),
+					// test that we do not use kube api
+					errorKubeProvider: true,
+				}),
+
+				stateCacheShouldEmpty: false,
+				// test we cannot use kube api for destroy resources
+				resourcesShouldDeleted:           false,
+				destroyClusterShouldReturnsError: true,
+				// error provider used here
+				kubeProviderShouldCleaned: false,
+
+				before: setAllInCache,
+				assert: func(t *testing.T, tst *testCloudDestroyTest) {
+					require.False(t, govalue.IsNil(tst.d8State))
+					inCacheUUID, err := tst.d8State.CommanderUUID()
+					require.NoError(t, err)
+					require.Equal(t, tst.params.commanderUUIDInCluster.String(), inCacheUUID, "in cache commander UUID should same in cluster")
+				},
+			},
+
+			{
+				name: "incorrect uuid in cluster",
+
+				testCloudDestroyTestParams: commanderTestRewriteUUIDs(commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: nil,
+				}), uuid.Must(uuid.NewRandom()), uuid.Must(uuid.NewRandom())),
+
+				stateCacheShouldEmpty: false,
+				// test we cannot use kube api for destroy resources
+				resourcesShouldDeleted:           false,
+				destroyClusterShouldReturnsError: true,
+				kubeProviderShouldCleaned:        false,
+				kubeProviderSSHNotStop:           true,
+
+				before: noBeforeFunc,
+				assert: func(t *testing.T, tst *testCloudDestroyTest) {
+					tst.assertFileKeysInCacheAfterLoad(t)
+				},
+			},
+
+			{
+				name: "incorrect uuid in cache",
+
+				testCloudDestroyTestParams: commanderTest(testCloudDestroyTestParams{
+					infraDestroyerErr: nil,
+					// test that we do not use kube api
+					errorKubeProvider: true,
+				}),
+
+				stateCacheShouldEmpty: false,
+				// test we cannot use kube api for destroy resources
+				resourcesShouldDeleted:           false,
+				destroyClusterShouldReturnsError: true,
+				kubeProviderShouldCleaned:        false,
+				kubeProviderSSHNotStop:           true,
+
+				before: func(t *testing.T, tst *testCloudDestroyTest) {
+					tst.setCommanderUUIDInCache(t, uuid.Must(uuid.NewRandom()).String())
+				},
+				assert: noAssertFunc,
+			},
+		}
+
+		for _, tt := range commanderTests {
+			t.Run(tt.name, func(t *testing.T) {
+				tst := createTestCloudDestroyTest(t, tt.testCloudDestroyTestParams)
+				defer tst.clean(t)
+
+				resources := testCreateResourcesForCloud(t, tst.kubeCl)
+
+				tt.before(t, tst)
+
+				err := tst.destroyer.DestroyCluster(context.TODO(), true)
+				assertClusterDestroyError(t, tt.destroyClusterShouldReturnsError, err)
+
+				tst.assertStateCache(t, tt.stateCacheShouldEmpty)
+				assertResources(t, tst.kubeCl, resources, tt.resourcesShouldDeleted)
+
+				tst.assertDestroyLocked(t, false)
+				tst.assertConvergeLockSetInCache(t, false)
+				tst.assertSkipCheckCommanderUUID(t, false)
+				tst.assertKubeProviderCleaned(t, tt.kubeProviderShouldCleaned, !tt.kubeProviderSSHNotStop)
+
+				tt.assert(t, tst)
+			})
+		}
+	})
+
 }
 
 type testCloudDestroyTestParams struct {
@@ -416,6 +611,13 @@ func (ts *testCloudDestroyTest) saveInfraStateKeys(t *testing.T) {
 
 	err = ts.stateCache.SaveStruct(nodesStateKey, nodesState)
 	require.NoError(t, err)
+}
+
+func (ts *testCloudDestroyTest) setCommanderUUIDInCache(t *testing.T, uuid string) {
+	require.False(t, govalue.IsNil(ts.d8State))
+
+	err := ts.d8State.SetCommanderUUID(uuid)
+	require.NoError(t, err, "resources destroyed should save in cache")
 }
 
 func (ts *testCloudDestroyTest) assertInfraStateInCache(t *testing.T, inCache bool) {

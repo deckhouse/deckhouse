@@ -51,13 +51,31 @@ func NewDestroyer(opts DestroyerParams) *Destroyer {
 }
 
 func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
+	logger := d.logger()
+
 	if !d.CommanderMode {
-		d.logger().LogDebugF("Check commander UUID skipped. No in commander mode\n")
+		logger.LogDebugF("Check commander UUID skipped. No in commander mode\n")
 		return nil
 	}
 
 	if d.isSkipResources("CheckCommanderUUID") {
 		return nil
+	}
+
+	uuidInCache, err := d.State.CommanderUUID()
+	if err != nil {
+		return err
+	}
+
+	passedUUID := d.CommanderUUID.String()
+
+	if uuidInCache != "" {
+		if uuidInCache == passedUUID {
+			logger.LogDebugF("Commander UUID found and correct. Skipping commander UUID check\n")
+			return nil
+		}
+
+		return fmt.Errorf("Commander UUID found but incorrect. UUID in cache '%s' - UUID passed '%s'\n", uuidInCache, passedUUID)
 	}
 
 	kubeCl, err := d.KubeProvider.KubeClientCtx(ctx)
@@ -70,7 +88,9 @@ func (d *Destroyer) CheckCommanderUUID(ctx context.Context) error {
 		return fmt.Errorf("UUID consistency check failed: %w", err)
 	}
 
-	return nil
+	return d.PhasedActionProvider().Run(phases.CommanderUUIDWasChecked, false, func() (phases.DefaultContextType, error) {
+		return nil, d.State.SetCommanderUUID(passedUUID)
+	})
 }
 
 func (d *Destroyer) CheckAndDeleteResources(ctx context.Context) error {

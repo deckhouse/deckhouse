@@ -792,7 +792,7 @@ func (ts *baseTest) assertHasMetaConfigInCache(t *testing.T, saved bool) {
 	require.True(t, inCache, "metaconfig should in cache")
 }
 
-func (ts *baseTest) assertResourcesDestroyed(t *testing.T, destroyed bool) {
+func (ts *baseTest) assertResourcesSetDestroyedInCache(t *testing.T, destroyed bool) {
 	require.False(t, govalue.IsNil(ts.stateCache))
 
 	destroyedInCache, err := deckhouse.NewState(ts.stateCache).IsResourcesDestroyed()
@@ -834,6 +834,22 @@ func (ts *baseTest) assertStateCache(t *testing.T, empty bool) {
 	}
 
 	ts.assertStateCacheNotEmpty(t)
+}
+
+func (ts *baseTest) assertFileKeysInCacheAfterLoad(t *testing.T) {
+	stateKeys := ts.stateCacheKeys(t)
+	expectedKeys := []string{
+		uuidKey,
+		baseInfraKey,
+		nodeStateKey,
+		nodeBackupStateKey,
+	}
+
+	require.Len(t, stateKeys, len(expectedKeys), "state cache should contain keys")
+
+	for _, key := range expectedKeys {
+		require.Contains(t, stateKeys, key, "state cache should contain key", key)
+	}
 }
 
 const (

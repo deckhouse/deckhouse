@@ -16,7 +16,6 @@ package destroy
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -52,192 +51,200 @@ func TestInitStateLoader(t *testing.T) {
 		tst.assertStateCacheIsEmpty(t)
 	}
 
-	noCommanderHappyCaseKubeProvider := createKubeProvider()
-	noCommanderTests := []*testInitStateLoader{
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "happy case with state in kube",
-			params: &Params{
-				SkipResources:       false,
-				CommanderMode:       false,
-				CommanderModeParams: nil,
-			},
-			kubeProvider: noCommanderHappyCaseKubeProvider,
-			before:       testCreateMetaConfigForInitLoaderTestInCluster,
-			assertBefore: assertEmptyCacheFunc,
-			assertLoader: assertFromClusterKeysInCacheAfterLoad,
-			clusterUUID:  clusterUUID,
+	t.Run("no commander", func(t *testing.T) {
+		noCommanderHappyCaseKubeProvider := createKubeProvider()
+		noCommanderTests := []*testInitStateLoader{
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "happy case with state in kube",
+				params: &Params{
+					SkipResources:       false,
+					CommanderMode:       false,
+					CommanderModeParams: nil,
+				},
+				kubeProvider: noCommanderHappyCaseKubeProvider,
+				before:       testCreateMetaConfigForInitLoaderTestInCluster,
+				assertBefore: assertEmptyCacheFunc,
+				assertLoader: assertFromClusterKeysInCacheAfterLoad,
+				clusterUUID:  clusterUUID,
 
-			expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
-			expectedKubeProviderType: noCommanderHappyCaseKubeProvider,
-			hasInitError:             false,
-			kubeProviderAsPassed:     true,
-			hasLoadMetaConfigError:   false,
-			hasLoadStateError:        false,
-		}),
+				expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
+				expectedKubeProviderType: noCommanderHappyCaseKubeProvider,
+				hasInitError:             false,
+				kubeProviderAsPassed:     true,
+				hasLoadMetaConfigError:   false,
+				hasLoadStateError:        false,
+			}),
 
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "skip resources: keys not in cache",
-			params: &Params{
-				SkipResources:       true,
-				CommanderMode:       false,
-				CommanderModeParams: nil,
-			},
-			kubeProvider: createKubeProvider(),
-			before:       noBeforeFunc,
-			assertBefore: assertEmptyCacheFunc,
-			assertLoader: assertFromClusterKeysInCacheAfterLoad,
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "skip resources: keys not in cache",
+				params: &Params{
+					SkipResources:       true,
+					CommanderMode:       false,
+					CommanderModeParams: nil,
+				},
+				kubeProvider: createKubeProvider(),
+				before:       noBeforeFunc,
+				assertBefore: assertEmptyCacheFunc,
+				assertLoader: assertFromClusterKeysInCacheAfterLoad,
 
-			clusterUUID: clusterUUID,
+				clusterUUID: clusterUUID,
 
-			expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
-			expectedKubeProviderType: &kubeClientErrorProvider{},
-			hasInitError:             false,
-			kubeProviderAsPassed:     false,
-			hasLoadMetaConfigError:   true,
-			hasLoadStateError:        true,
-		}),
+				expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
+				expectedKubeProviderType: &kubeClientErrorProvider{},
+				hasInitError:             false,
+				kubeProviderAsPassed:     false,
+				hasLoadMetaConfigError:   true,
+				hasLoadStateError:        true,
+			}),
 
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "skip resources: keys in cache",
-			params: &Params{
-				SkipResources:       true,
-				CommanderMode:       false,
-				CommanderModeParams: nil,
-			},
-			kubeProvider: createKubeProvider(),
-			before: func(t *testing.T, tst *testInitStateLoader) {
-				testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
-				loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
-				ctx := context.TODO()
-				_, err := loader.PopulateMetaConfig(ctx)
-				require.NoError(t, err, "populate metaconfig before test")
-				_, _, err = loader.PopulateClusterState(ctx)
-				require.NoError(t, err, "populate state before test")
-			},
-			assertBefore: assertFromClusterKeysInCacheAfterLoad,
-			assertLoader: assertFromClusterKeysInCacheAfterLoad,
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "skip resources: keys in cache",
+				params: &Params{
+					SkipResources:       true,
+					CommanderMode:       false,
+					CommanderModeParams: nil,
+				},
+				kubeProvider: createKubeProvider(),
+				before: func(t *testing.T, tst *testInitStateLoader) {
+					testCreateMetaConfigForInitLoaderTestInCluster(t, tst)
+					loader := infrastructurestate.NewCachedTerraStateLoader(tst.kubeProvider, tst.params.StateCache, tst.params.LoggerProvider())
+					ctx := context.TODO()
+					_, err := loader.PopulateMetaConfig(ctx)
+					require.NoError(t, err, "populate metaconfig before test")
+					_, _, err = loader.PopulateClusterState(ctx)
+					require.NoError(t, err, "populate state before test")
+				},
+				assertBefore: assertFromClusterKeysInCacheAfterLoad,
+				assertLoader: assertFromClusterKeysInCacheAfterLoad,
 
-			clusterUUID: clusterUUID,
+				clusterUUID: clusterUUID,
 
-			expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
-			expectedKubeProviderType: &kubeClientErrorProvider{},
-			hasInitError:             false,
-			kubeProviderAsPassed:     false,
-			hasLoadMetaConfigError:   false,
-			hasLoadStateError:        false,
-		}),
-	}
+				expectedStateLoaderType:  &infrastructurestate.LazyTerraStateLoader{},
+				expectedKubeProviderType: &kubeClientErrorProvider{},
+				hasInitError:             false,
+				kubeProviderAsPassed:     false,
+				hasLoadMetaConfigError:   false,
+				hasLoadStateError:        false,
+			}),
+		}
 
-	for _, tst := range noCommanderTests {
-		t.Run(fmt.Sprintf("no commander: %s", tst.name), func(t *testing.T) {
-			tst.do(t)
-		})
-	}
+		for _, tst := range noCommanderTests {
+			t.Run(tst.name, func(t *testing.T) {
+				tst.do(t)
+			})
+		}
+	})
 
-	commanderKubeProvider := createKubeProvider()
-	commanderTests := []*testInitStateLoader{
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "happy case with state in kube",
-			params: &Params{
-				SkipResources: false,
-				CommanderMode: true,
-				CommanderModeParams: commander.NewCommanderModeParams(
-					[]byte(cloudClusterGenericConfigYAML),
-					[]byte(providerConfigYAML),
-				),
-			},
-			kubeProvider: commanderKubeProvider,
-			before:       fillCommanderStateBeforeFunc,
-			assertBefore: noAssertFunc,
-			assertLoader: assertFileKeysInCacheAfterLoad,
-			clusterUUID:  clusterUUID,
+	t.Run("in commander", func(t *testing.T) {
+		assertFileKeysInCacheAfterLoad := func(t *testing.T, tst *testInitStateLoader) {
+			tst.assertFileKeysInCacheAfterLoad(t)
+		}
 
-			expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
-			expectedKubeProviderType: commanderKubeProvider,
-			hasInitError:             false,
-			kubeProviderAsPassed:     true,
-			hasLoadMetaConfigError:   false,
-			hasLoadStateError:        false,
-		}),
+		commanderKubeProvider := createKubeProvider()
+		commanderTests := []*testInitStateLoader{
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "happy case with state in kube",
+				params: &Params{
+					SkipResources: false,
+					CommanderMode: true,
+					CommanderModeParams: commander.NewCommanderModeParams(
+						[]byte(cloudClusterGenericConfigYAML),
+						[]byte(providerConfigYAML),
+					),
+				},
+				kubeProvider: commanderKubeProvider,
+				before:       fillCommanderStateBeforeFunc,
+				assertBefore: noAssertFunc,
+				assertLoader: assertFileKeysInCacheAfterLoad,
+				clusterUUID:  clusterUUID,
 
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "skip resources does not matter",
-			params: &Params{
-				SkipResources: true,
-				CommanderMode: true,
-				CommanderModeParams: commander.NewCommanderModeParams(
-					[]byte(cloudClusterGenericConfigYAML),
-					[]byte(providerConfigYAML),
-				),
-			},
-			kubeProvider: commanderKubeProvider,
-			before:       fillCommanderStateBeforeFunc,
-			assertBefore: noAssertFunc,
-			assertLoader: assertFileKeysInCacheAfterLoad,
-			clusterUUID:  clusterUUID,
+				expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
+				expectedKubeProviderType: commanderKubeProvider,
+				hasInitError:             false,
+				kubeProviderAsPassed:     true,
+				hasLoadMetaConfigError:   false,
+				hasLoadStateError:        false,
+			}),
 
-			expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
-			expectedKubeProviderType: commanderKubeProvider,
-			hasInitError:             false,
-			kubeProviderAsPassed:     true,
-			hasLoadMetaConfigError:   false,
-			hasLoadStateError:        false,
-		}),
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "skip resources does not matter",
+				params: &Params{
+					SkipResources: true,
+					CommanderMode: true,
+					CommanderModeParams: commander.NewCommanderModeParams(
+						[]byte(cloudClusterGenericConfigYAML),
+						[]byte(providerConfigYAML),
+					),
+				},
+				kubeProvider: commanderKubeProvider,
+				before:       fillCommanderStateBeforeFunc,
+				assertBefore: noAssertFunc,
+				assertLoader: assertFileKeysInCacheAfterLoad,
+				clusterUUID:  clusterUUID,
 
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "state cache is empty",
-			params: &Params{
-				SkipResources: true,
-				CommanderMode: true,
-				CommanderModeParams: commander.NewCommanderModeParams(
-					[]byte(cloudClusterGenericConfigYAML),
-					[]byte(providerConfigYAML),
-				),
-			},
-			kubeProvider: commanderKubeProvider,
-			before:       noBeforeFunc,
-			assertBefore: noAssertFunc,
-			assertLoader: noAssertFunc,
-			clusterUUID:  clusterUUID,
+				expectedStateLoaderType:  &infrastructurestate.FileTerraStateLoader{},
+				expectedKubeProviderType: commanderKubeProvider,
+				hasInitError:             false,
+				kubeProviderAsPassed:     true,
+				hasLoadMetaConfigError:   false,
+				hasLoadStateError:        false,
+			}),
 
-			expectedStateLoaderType:  nil,
-			expectedKubeProviderType: nil,
-			hasInitError:             true,
-			kubeProviderAsPassed:     true,
-			hasLoadMetaConfigError:   true,
-			hasLoadStateError:        true,
-		}),
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "state cache is empty",
+				params: &Params{
+					SkipResources: true,
+					CommanderMode: true,
+					CommanderModeParams: commander.NewCommanderModeParams(
+						[]byte(cloudClusterGenericConfigYAML),
+						[]byte(providerConfigYAML),
+					),
+				},
+				kubeProvider: commanderKubeProvider,
+				before:       noBeforeFunc,
+				assertBefore: noAssertFunc,
+				assertLoader: noAssertFunc,
+				clusterUUID:  clusterUUID,
 
-		newTestInitStateLoader(&testInitStateLoader{
-			name: "incorrect config",
-			params: &Params{
-				SkipResources: true,
-				CommanderMode: true,
-				CommanderModeParams: commander.NewCommanderModeParams(
-					[]byte(`{"a": "b"}`),
-					[]byte(`{"c": "d"}`),
-				),
-			},
-			kubeProvider: commanderKubeProvider,
-			before:       fillCommanderStateBeforeFunc,
-			assertBefore: noAssertFunc,
-			assertLoader: assertFileKeysInCacheAfterLoad,
-			clusterUUID:  clusterUUID,
+				expectedStateLoaderType:  nil,
+				expectedKubeProviderType: nil,
+				hasInitError:             true,
+				kubeProviderAsPassed:     true,
+				hasLoadMetaConfigError:   true,
+				hasLoadStateError:        true,
+			}),
 
-			expectedStateLoaderType:  nil,
-			expectedKubeProviderType: nil,
-			hasInitError:             true,
-			kubeProviderAsPassed:     false,
-			hasLoadMetaConfigError:   true,
-			hasLoadStateError:        true,
-		}),
-	}
+			newTestInitStateLoader(&testInitStateLoader{
+				name: "incorrect config",
+				params: &Params{
+					SkipResources: true,
+					CommanderMode: true,
+					CommanderModeParams: commander.NewCommanderModeParams(
+						[]byte(`{"a": "b"}`),
+						[]byte(`{"c": "d"}`),
+					),
+				},
+				kubeProvider: commanderKubeProvider,
+				before:       fillCommanderStateBeforeFunc,
+				assertBefore: noAssertFunc,
+				assertLoader: assertFileKeysInCacheAfterLoad,
+				clusterUUID:  clusterUUID,
 
-	for _, tst := range commanderTests {
-		t.Run(fmt.Sprintf("commander: %s", tst.name), func(t *testing.T) {
-			tst.do(t)
-		})
-	}
+				expectedStateLoaderType:  nil,
+				expectedKubeProviderType: nil,
+				hasInitError:             true,
+				kubeProviderAsPassed:     false,
+				hasLoadMetaConfigError:   true,
+				hasLoadStateError:        true,
+			}),
+		}
+
+		for _, tst := range commanderTests {
+			t.Run(tst.name, func(t *testing.T) {
+				tst.do(t)
+			})
+		}
+	})
 }
 
 type testInitStateLoader struct {
@@ -333,22 +340,6 @@ func assertFromClusterKeysInCacheAfterLoad(t *testing.T, tst *testInitStateLoade
 		clusterStateKey,
 		nodesStateKey,
 	}
-
-	for _, key := range expectedKeys {
-		require.Contains(t, stateKeys, key, "state cache should contain key", key)
-	}
-}
-
-func assertFileKeysInCacheAfterLoad(t *testing.T, tst *testInitStateLoader) {
-	stateKeys := tst.stateCacheKeys(t)
-	expectedKeys := []string{
-		uuidKey,
-		baseInfraKey,
-		nodeStateKey,
-		nodeBackupStateKey,
-	}
-
-	require.Len(t, stateKeys, len(expectedKeys), "state cache should contain keys")
 
 	for _, key := range expectedKeys {
 		require.Contains(t, stateKeys, key, "state cache should contain key", key)
