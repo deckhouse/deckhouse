@@ -10,7 +10,7 @@ modules2: modules
 module: module
 module_enabling_details_title: How to explicitly enable the module…
 module_enabling_message_first_part: There are several ways to explicitly enable or disable a module&colon; using the <code>d8 system module</code> command, setting <code>spec.enabled</code> to <code>true</code> or <code>false</code> in <code>ModuleConfig/
-module_enabling_message_second_part: resource (create it, if necessary) or via the platform's web interface
+module_enabling_message_second_part: resource (create it, if necessary) or via the Deckhouse web UI
 module_enabling_message_list_title_enable: Example of <b>enabling</b> the module
 module_enabling_message_list_title_disable: Example of <b>disabling</b> the module
 module_enabling_message_list_resource: by using the ModuleConfig resource

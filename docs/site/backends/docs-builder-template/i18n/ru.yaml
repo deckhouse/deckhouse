@@ -10,7 +10,7 @@ modules2: модулей
 module: модуль
 module_enabling_details_title: Как явно включить или отключить модуль…
 module_enabling_message_first_part: Явно включить или выключить модуль можно несколькими способами&colon; с помощью команды <code>d8 system module</code>, установив <code>spec.enabled</code> в <code>true</code> или <code>false</code> в <code>ModuleConfig/
-module_enabling_message_second_part: (создайте, при необходимости), либо через веб-интерфейс платформы
+module_enabling_message_second_part: (создайте, при необходимости), либо через веб-интерфейс Deckhouse
 module_enabling_message_list_title_enable: Пример <b>включения</b> модуля
 module_enabling_message_list_title_disable: Пример <b>выключения</b> модуля
 module_enabling_message_list_resource: с помощью ресурса ModuleConfig
