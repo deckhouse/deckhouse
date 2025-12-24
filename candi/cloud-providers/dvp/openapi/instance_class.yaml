@@ -99,6 +99,8 @@ spec:
                     liveMigrationPolicy:
                       type: string
                       enum:
+                        - Manual
+                        - Never
                         - AlwaysSafe
                         - PreferSafe
                         - AlwaysForced
@@ -107,6 +109,8 @@ spec:
                       description: |
                         Live migration policy for the virtual machine.
 
+                        * `Manual`: Migration is controlled manually.
+                        * `Never`: Migration is disabled.
                         * `AlwaysSafe`: Always use safe migration (may fail if VM has high memory changes).
                         * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
                         * `AlwaysForced`: Always use forced migration with VM slowdown.

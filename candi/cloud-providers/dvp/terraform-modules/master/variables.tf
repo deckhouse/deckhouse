@@ -144,8 +144,8 @@ variable "live_migration_policy" {
   description = "Live migration policy for VirtualMachine (masters only)."
 
   validation {
-    condition = var.live_migration_policy == null || contains(["AlwaysSafe", "PreferSafe", "AlwaysForced", "PreferForced"], var.live_migration_policy)
-    error_message = "live_migration_policy must be one of: AlwaysSafe, PreferSafe, AlwaysForced, PreferForced."
+    condition = var.live_migration_policy == null || contains(["Manual", "Never", "AlwaysSafe", "PreferSafe", "AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: Manual, Never, AlwaysSafe, PreferSafe, AlwaysForced, PreferForced."
   }
 }
 variable "run_policy" {
