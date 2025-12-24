@@ -330,15 +330,6 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 
 	logger.LogDebugLn("Private key written")
 
-	if sshclient.IsModernMode() {
-		logger.LogDebugF("Old SSH Client: %-v\n", oldSSHClient)
-		logger.LogDebugLn("Stopping old SSH client")
-		oldSSHClient.Stop()
-
-		// wait for keep-alive goroutine will exit
-		time.Sleep(2 * time.Second)
-	}
-
 	sess := session.NewSession(session.Input{
 		User: d.nodesWithCredentials.NodeUser.Name,
 		// use input because we cannot discovery sshd port for another hosts
@@ -369,7 +360,7 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 		}
 	}
 
-	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys)
+	newSSHClient, err := d.params.SSHClientProvider.SwitchClient(ctx, sess, privateKeys, oldSSHClient)
 	if err != nil {
 		return nil, err
 	}

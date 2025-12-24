@@ -167,7 +167,7 @@ func NewClusterDestroyer(ctx context.Context, params *Params) (*ClusterDestroyer
 		return sshClient, nil
 	})
 
-	sshClientProvider := sshclient.NewDefaultSSHProviderWithFunc(sshClientProviderOnceFunc)
+	sshClientProvider := sshclient.NewDefaultSSHProviderWithFunc(sshClientProviderOnceFunc).WithLoggerProvider(params.LoggerProvider)
 
 	logger := log.SafeProvideLogger(params.LoggerProvider)
 

@@ -17,8 +17,13 @@ package sshclient
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
@@ -29,18 +34,24 @@ type SSHProviderFunc func() (node.SSHClient, error)
 
 type SSHProvider interface {
 	Client() (node.SSHClient, error)
-	SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error)
+	SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, oldSSHClient node.SSHClient) (node.SSHClient, error)
 }
 
 type DefaultSSHProviderWithFunc struct {
-	provider SSHProviderFunc
-	opts     *ClientOptions
+	provider       SSHProviderFunc
+	opts           *ClientOptions
+	loggerProvider log.LoggerProvider
+
+	mu                     sync.Mutex
+	legacyPrivateKeysAdded map[string]struct{}
 }
 
 func NewDefaultSSHProviderWithFunc(provider SSHProviderFunc) *DefaultSSHProviderWithFunc {
 	return &DefaultSSHProviderWithFunc{
-		provider: provider,
-		opts:     nil,
+		provider:               provider,
+		opts:                   nil,
+		legacyPrivateKeysAdded: make(map[string]struct{}),
+		loggerProvider:         log.SilentLoggerProvider(),
 	}
 }
 
@@ -49,18 +60,79 @@ func (p *DefaultSSHProviderWithFunc) WithOptions(opts *ClientOptions) *DefaultSS
 	return p
 }
 
+func (p *DefaultSSHProviderWithFunc) WithLoggerProvider(provider log.LoggerProvider) *DefaultSSHProviderWithFunc {
+	p.loggerProvider = provider
+	return p
+}
+
 func (p *DefaultSSHProviderWithFunc) Client() (node.SSHClient, error) {
-	if p.provider != nil {
-		return p.provider()
+	if govalue.IsNil(p.provider) {
+		return nil, fmt.Errorf("SSH provider not passed")
 	}
 
-	return nil, fmt.Errorf("SSH provider not passed")
-}
-func (p *DefaultSSHProviderWithFunc) SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error) {
-	if p.opts != nil {
-		return NewClientWithOptions(ctx, sess, privateKeys, *p.opts), nil
+	client, err := p.provider()
+	if err != nil {
+		return nil, err
 	}
-	return NewClient(ctx, sess, privateKeys), nil
+
+	// only add key for provide ssh
+	_ = p.getAndAddPrivateKeysAdded(client.PrivateKeys())
+
+	return client, nil
+}
+func (p *DefaultSSHProviderWithFunc) SwitchClient(ctx context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, oldSSHClient node.SSHClient) (node.SSHClient, error) {
+	if IsModernMode() {
+		logger := p.logger()
+		logger.LogDebugF("Old SSH Client: %-v\n", oldSSHClient)
+		logger.LogDebugLn("Stopping old SSH client")
+		oldSSHClient.Stop()
+
+		// wait for keep-alive goroutine will exit
+		time.Sleep(10 * time.Second)
+	}
+
+	privateKeysToAdd := p.getAndAddPrivateKeysAdded(privateKeys)
+
+	if p.opts != nil {
+		return NewClientWithOptions(ctx, sess, privateKeysToAdd, *p.opts), nil
+	}
+	return NewClient(ctx, sess, privateKeysToAdd), nil
+}
+
+func (p *DefaultSSHProviderWithFunc) logger() log.Logger {
+	return log.SafeProvideLogger(p.loggerProvider)
+}
+
+func (p *DefaultSSHProviderWithFunc) getAndAddPrivateKeysAdded(newKeys []session.AgentPrivateKey) []session.AgentPrivateKey {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	modernNode := IsModernMode()
+	initNewAgent := p.isInitNewAgent()
+	// for modern mode add new agent
+	if modernNode || initNewAgent {
+		p.logger().LogDebugF("Return all keys: modern mode = '%v'; init new agent = '%v'\n", modernNode, initNewAgent)
+		return newKeys
+	}
+
+	toAdd := make([]session.AgentPrivateKey, 0, len(newKeys))
+	for _, key := range newKeys {
+		keyPath := key.Key
+		if _, ok := p.legacyPrivateKeysAdded[keyPath]; !ok {
+			toAdd = append(toAdd, key)
+			p.legacyPrivateKeysAdded[keyPath] = struct{}{}
+		}
+	}
+
+	return toAdd
+}
+
+func (p *DefaultSSHProviderWithFunc) isInitNewAgent() bool {
+	if govalue.IsNil(p.opts) {
+		return false
+	}
+
+	return p.opts.InitializeNewAgent
 }
 
 type ClientOptions struct {

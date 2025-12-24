@@ -182,7 +182,7 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 				InfrastructureContext:  b.InfrastructureContext,
 				PhasedExecutionContext: b.PhasedExecutionContext,
 
-				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider),
+				SSHClientProvider: sshclient.NewDefaultSSHProviderWithFunc(staticSSHClientProvider).WithLoggerProvider(loggerProvider),
 				LoggerProvider:    loggerProvider,
 
 				TmpDir:        b.TmpDir,

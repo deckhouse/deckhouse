@@ -129,7 +129,7 @@ func (p *SSHProvider) Client() (node.SSHClient, error) {
 
 	return p.newClient(p.initSession, p.initPrivateKeys)
 }
-func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey) (node.SSHClient, error) {
+func (p *SSHProvider) SwitchClient(_ context.Context, sess *session.Session, privateKeys []session.AgentPrivateKey, _ node.SSHClient) (node.SSHClient, error) {
 	privateKeysCpy := make([]session.AgentPrivateKey, len(privateKeys))
 	copy(privateKeysCpy, privateKeys)
 
