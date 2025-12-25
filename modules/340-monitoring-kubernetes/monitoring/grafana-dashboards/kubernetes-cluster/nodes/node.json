@@ -17364,16 +17364,25 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "(sds_lvm_lv_size_bytes{node=~\"$node\"} / on(vg_name, node) group_left(lv_name) sds_lvm_vg_size_bytes{node=~\"$node\"}) * 100",
+              "expr": "(sds_node_configurator_lvm_logical_volume_used_bytes{node=~\"$node\"} / on(volume_group, node) group_left(logical_volume) sds_node_configurator_lvm_volume_group_size_bytes{node=~\"$node\"}) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{vg_name}} / {{lv_name}}",
+              "legendFormat": "{{volume_group}} / {{logical_volume}}",
               "refId": "A",
+              "step": 240
+            },
+            {
+              "expr": "(sds_node_configurator_lvm_thin_pool_used_bytes{node=~\"$node\", logical_volume!~\"pvc.*\"} / on(volume_group, node) group_left(thin_pool) sds_node_configurator_lvm_volume_group_size_bytes{node=~\"$node\"}) * 100",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{volume_group}} / {{thin_pool}} (thin pool)",
+              "refId": "B",
               "step": 240
             }
           ],
-          "title": "LV Usage as % of VG (Stacked by LV)",
+          "title": "LV + Thin Pool Usage as % of VG (Stacked)",
           "type": "timeseries"
         }
       ],
