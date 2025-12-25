@@ -305,8 +305,11 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 			Name:      vmBDAName,
 			Namespace: c.namespace,
 			Labels: map[string]string{
-				attachmentDiskNameLabel:    diskName,
-				attachmentMachineNameLabel: vmHostname,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": vm.Labels["dvp.deckhouse.io/cluster-uuid"],
+				"dvp.deckhouse.io/hostname":     vmHostname,
+				attachmentDiskNameLabel:         diskName,
+				attachmentMachineNameLabel:      vmHostname,
 			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
@@ -402,11 +405,16 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
-func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
+			Labels: map[string]string{
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
+				"dvp.deckhouse.io/hostname":     vmHostname,
+			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},

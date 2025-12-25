@@ -25,6 +25,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+
+	"dvp-common/api"
 )
 
 func (c *Cloud) GetLoadBalancer(
@@ -100,10 +102,14 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 
 	lbName := defaultLoadBalancerName(service)
 
+	// TODO: add "dvp.deckhouse.io/cluster-uuid" label
 	lb := api.LoadBalancer{
 		Name:    lbName,
 		Service: service,
 		Nodes:   nodes,
+		ServiceLabels: map[string]string{
+			"deckhouse.io/managed-by": "deckhouse",
+		},
 	}
 
 	svc, err := c.dvpService.LoadBalancerService.CreateOrUpdateLoadBalancer(ctx, lb)

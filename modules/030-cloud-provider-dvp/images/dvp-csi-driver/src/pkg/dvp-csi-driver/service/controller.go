@@ -127,8 +127,11 @@ func (c *ControllerService) CreateVolume(
 		return result, nil
 	}
 
+	// TODO: add clusterUUID and vmHostname to PV disks
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
+		"",
+		"",
 		diskName,
 		requiredSize,
 		dvpStorageClass,
