@@ -5,10 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
-
-	"dvp-common/config"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -19,6 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilyaml "k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
@@ -31,7 +32,46 @@ const (
 
 	npTypeIsolated      = "Isolated"
 	npTypeNotRestricted = "NotRestricted"
+
+	envDVPKubernetesConfigBase64 = "DVP_KUBERNETES_CONFIG_BASE64"
+	envDVPNamespace              = "DVP_NAMESPACE"
 )
+
+type cloudConfig struct {
+	KubernetesConfigBase64 string
+	Namespace              string
+}
+
+func newCloudConfig() (*cloudConfig, error) {
+	kubeconfigBase64 := os.Getenv(envDVPKubernetesConfigBase64)
+	if kubeconfigBase64 == "" {
+		return nil, fmt.Errorf("environment variable %q is required", envDVPKubernetesConfigBase64)
+	}
+
+	namespace := os.Getenv(envDVPNamespace)
+	if namespace == "" {
+		return nil, fmt.Errorf("environment variable %q is required", envDVPNamespace)
+	}
+
+	return &cloudConfig{
+		KubernetesConfigBase64: kubeconfigBase64,
+		Namespace:              namespace,
+	}, nil
+}
+
+func (c *cloudConfig) getKubernetesClientConfig() (*rest.Config, error) {
+	kubeConfig, err := clientcmd.NewClientConfigFromBytes([]byte(c.KubernetesConfigBase64))
+	if err != nil {
+		return nil, fmt.Errorf("unable to load kubernetes config: %w", err)
+	}
+
+	clientConfig, err := kubeConfig.ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("unable to get kubernetes client config: %w", err)
+	}
+
+	return clientConfig, nil
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/cloud-provider-dvp/ensure_project_network_policies_external",
@@ -77,7 +117,7 @@ func ensureProjectNetworkPoliciesExternal(ctx context.Context, input *go_hook.Ho
 		return nil
 	}
 
-	cloudCfg, err := config.NewCloudConfig()
+	cloudCfg, err := newCloudConfig()
 	if err != nil {
 		return fmt.Errorf("failed to init dvp cloud config: %w", err)
 	}
@@ -102,11 +142,11 @@ func ensureProjectNetworkPoliciesExternal(ctx context.Context, input *go_hook.Ho
 	}
 
 	if err := ensureNamespaceExists(ctx, extClient, projectNamespace); err != nil {
-		if err == client.IgnoreNotFound(err) {
+		if client.IgnoreNotFound(err) == nil {
 			input.Logger.Debug("external namespace not found yet, skipping", "namespace", projectNamespace)
 			return nil
 		}
-		return err
+		return fmt.Errorf("failed to get external namespace %q: %w", projectNamespace, err)
 	}
 
 	templateNP, err := getTemplateNetworkPolicy(cm, npType, projectNamespace)
@@ -162,8 +202,8 @@ func getTemplatesConfigMap(input *go_hook.HookInput) (*corev1.ConfigMap, bool, e
 	return cm, true, nil
 }
 
-func newExternalClient(cloudCfg *config.CloudConfig) (client.Client, error) {
-	restCfg, err := cloudCfg.GetKubernetesClientConfig()
+func newExternalClient(cloudCfg *cloudConfig) (client.Client, error) {
+	restCfg, err := cloudCfg.getKubernetesClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get external kube client config: %w", err)
 	}
