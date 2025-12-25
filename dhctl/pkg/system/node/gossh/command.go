@@ -147,10 +147,13 @@ func (c *SSHCommand) Start() error {
 
 	if c.WaitHandler != nil || c.timeout > 0 {
 		c.ProcessWait()
-		if c.waitCh != nil {
-			<-c.waitCh
-		} else {
-			c.logDebugF("Wait channel is nil. Possible bug. Returns immediately")
+		// wait only with timeout because WaitHandler run in long time commands like kube proxy
+		if c.timeout > 0 {
+			if c.waitCh != nil {
+				<-c.waitCh
+			} else {
+				c.logDebugF("Wait channel is nil. Possible bug. Returns immediately")
+			}
 		}
 	} else {
 		err = c.wait()
