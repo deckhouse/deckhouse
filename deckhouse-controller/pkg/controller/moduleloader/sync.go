@@ -260,19 +260,19 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
-	downloaded, err := l.installer.GetDownloaded()
+	installed, err := l.installer.GetInstalled()
 	if err != nil {
-		return fmt.Errorf("get downloaded modules: %w", err)
+		return fmt.Errorf("get installed modules: %w", err)
 	}
 
-	l.logger.Debug("found downloaded modules", slog.Any("downloaded", downloaded))
+	l.logger.Debug("found installed modules", slog.Any("downloaded", installed))
 
 	// remove modules with release
 	for _, release := range releases.Items {
-		delete(downloaded, release.GetModuleName())
+		delete(installed, release.GetModuleName())
 	}
 
-	for module := range downloaded {
+	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
 			continue

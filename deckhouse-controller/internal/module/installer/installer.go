@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/erofs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/symlink"
@@ -63,14 +64,14 @@ func (i *Installer) SetClusterUUID(id string) {
 	i.registry.SetClusterUUID(id)
 }
 
-// GetDownloaded gets all downloaded modules from downloaded dir
-func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
-	entries, err := os.ReadDir(i.downloaded)
+// GetInstalled gets all installed modules from <downloaded>/modules dir
+func (i *Installer) GetInstalled() (map[string]struct{}, error) {
+	entries, err := os.ReadDir(filepath.Join(i.downloaded, "modules"))
 	if err != nil {
-		return nil, fmt.Errorf("read downloaded dir: %w", err)
+		return nil, fmt.Errorf("read installed dir: %w", err)
 	}
 
-	downloaded := make(map[string]struct{})
+	installed := make(map[string]struct{})
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -81,10 +82,10 @@ func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
 			continue
 		}
 
-		downloaded[entry.Name()] = struct{}{}
+		installed[entry.Name()] = struct{}{}
 	}
 
-	return downloaded, nil
+	return installed, nil
 }
 
 func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {

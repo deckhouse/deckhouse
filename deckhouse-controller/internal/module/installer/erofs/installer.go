@@ -148,6 +148,18 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger.Debug("uninstall module")
 
+	// migration
+	// TODO(ipaqsa): delete after 1.74
+	symlink, err := i.getModuleSymlink(module)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("get module symlink: %w", err)
+	}
+	if len(symlink) > 0 {
+		logger.Debug("delete module symlink", slog.String("path", symlink))
+		os.RemoveAll(symlink)
+	}
+
 	// clear module dir
 	defer func() {
 		// /deckhouse/downloaded/<module>
