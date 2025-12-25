@@ -162,7 +162,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	if err != nil {
 		fa.logger.Error("Unable to start memberlist", zap.Error(err))
 	}
-	fa.gs.PrintNodes()
+	//fa.gs.PrintNodes()
 	for {
 		select {
 		case <-ticker.C:
@@ -230,15 +230,14 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 				// except this node
 				num := fa.gs.NumMembers() - 1
 
-				if num == 0 && fa.gs.IsAlone() {
-					fa.logger.Debug("Feeding the watchdog from gossip check (alone node)")
+				if (num == 0 && fa.gs.IsAlone()) || num > 0{
+					fa.logger.Debug("Feeding the watchdog from gossip check", zap.Bool("alone", fa.gs.IsAlone()))
 					err = fa.watchDog.Feed()
 					if err != nil {
 						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
 					}
-				}
-				if num > 0 {
-					fa.logger.Debug("Feeding the watchdog from gossip check (not alone node)")
+				} else {
+					fa.logger.Debug("(Fake)Not feeding the watchdog from gossip check")
 					err = fa.watchDog.Feed()
 					if err != nil {
 						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
