@@ -1,0 +1,18 @@
+diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
+index 51536010663..8d3778286e3 100644
+--- a/pkg/kubelet/cm/container_manager_linux.go
++++ b/pkg/kubelet/cm/container_manager_linux.go
+@@ -432,7 +432,12 @@ func setupKernelTunables(option KernelTunableBehavior) error {
+ 			continue
+ 		}
+ 
+-		switch option {
++		customOption := option
++		if flag == utilsysctl.KernelPanic {
++			customOption = KernelTunableWarn
++		}
++
++		switch customOption {
+ 		case KernelTunableError:
+ 			errList = append(errList, fmt.Errorf("invalid kernel flag: %v, expected value: %v, actual value: %v", flag, expectedValue, val))
+ 		case KernelTunableWarn:
