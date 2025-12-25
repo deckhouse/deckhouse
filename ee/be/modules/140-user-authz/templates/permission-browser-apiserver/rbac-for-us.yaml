@@ -26,7 +26,7 @@ rules:
   verbs: ["get"]
 # Access to admission webhooks for generic apiserver
 - apiGroups: ["admissionregistration.k8s.io"]
-  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings"]
   verbs: ["get", "list", "watch"]
 # Access to API priority and fairness for generic apiserver
 - apiGroups: ["flowcontrol.apiserver.k8s.io"]

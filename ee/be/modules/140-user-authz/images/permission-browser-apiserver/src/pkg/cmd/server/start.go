@@ -17,6 +17,8 @@ import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	basecompatibility "k8s.io/component-base/compatibility"
+	baseversion "k8s.io/component-base/version"
 
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/apiserver"
@@ -102,6 +104,13 @@ func (o *PermissionBrowserServerOptions) Config(stopCh <-chan struct{}) (*apiser
 	}
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
+
+	// Set EffectiveVersion explicitly for k8s.io/apiserver v0.34.x Config.Complete() expectations.
+	// Use current binary version as the default emulation/min-compat versions.
+	{
+		bin := baseversion.Get().String()
+		serverConfig.EffectiveVersion = basecompatibility.NewEffectiveVersionFromString(bin, "", "")
+	}
 
 	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		generatedopenapi.GetOpenAPIDefinitions,

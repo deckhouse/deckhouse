@@ -8,6 +8,7 @@ package multitenancy
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -16,6 +17,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/discovery"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -172,7 +174,13 @@ func (e *Engine) authorizeClusterScopedRequest(attrs authorizer.Attributes, entr
 
 // isResourceNamespaced checks if a resource is namespaced using discovery
 func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, error) {
-	cacheKey := group + "/" + version + "/" + resource
+	// Use schema.GroupVersionResource for type-safe cache key
+	gvr := schema.GroupVersionResource{
+		Group:    group,
+		Version:  version,
+		Resource: resource,
+	}
+	cacheKey := gvr.String()
 
 	// Check cache with proper defer unlock
 	var namespaced, ok bool
@@ -186,12 +194,12 @@ func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, er
 	}
 
 	// Query apiserver for preferred version of this API resource
-	apiVersion, err := e.getPreferredAPIVersion(group, version)
+	gv, err := e.getPreferredGroupVersion(group, version)
 	if err != nil {
 		return false, err
 	}
 
-	resourceList, err := e.discoveryClient.ServerResourcesForGroupVersion(apiVersion)
+	resourceList, err := e.discoveryClient.ServerResourcesForGroupVersion(gv.String())
 	if err != nil {
 		return false, err
 	}
@@ -208,36 +216,39 @@ func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, er
 	return false, nil
 }
 
-// getPreferredAPIVersion returns the preferred API version for a group
-func (e *Engine) getPreferredAPIVersion(group, version string) (string, error) {
+// getPreferredGroupVersion returns the preferred GroupVersion for a group.
+// Uses schema.GroupVersion for type-safe group/version handling.
+func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVersion, error) {
 	// If version is specified, use it
 	if version != "" {
-		if group == "" {
-			return version, nil
-		}
-		return group + "/" + version, nil
+		return schema.GroupVersion{Group: group, Version: version}, nil
 	}
 
 	// For core API group
 	if group == "" {
-		return "v1", nil
+		return schema.GroupVersion{Version: "v1"}, nil
 	}
 
 	// Query apiserver for preferred version
 	apiGroupList, err := e.discoveryClient.ServerGroups()
 	if err != nil {
 		// Fallback to v1 if discovery fails
-		return group + "/v1", nil
+		return schema.GroupVersion{Group: group, Version: "v1"}, nil
 	}
 
 	for _, g := range apiGroupList.Groups {
 		if g.Name == group {
-			return g.PreferredVersion.GroupVersion, nil
+			// Parse the preferred version string into GroupVersion
+			gv, parseErr := schema.ParseGroupVersion(g.PreferredVersion.GroupVersion)
+			if parseErr != nil {
+				return schema.GroupVersion{}, fmt.Errorf("failed to parse preferred version %q for group %q: %w", g.PreferredVersion.GroupVersion, group, parseErr)
+			}
+			return gv, nil
 		}
 	}
 
-	// Fallback to v1 if group not found
-	return group + "/v1", nil
+	// Group not found - this should not happen in a properly functioning cluster
+	return schema.GroupVersion{}, fmt.Errorf("API group %q not found in server groups", group)
 }
 
 // combineDirEntries combines multiple directory entries into one
