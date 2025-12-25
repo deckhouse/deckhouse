@@ -392,7 +392,7 @@ entries:
             - title:
                 en: Overview
                 ru: Обзор
-              url: /stronghold/documentation/user/auth/jwt/oidc-providers/overview.html
+              url: /stronghold/documentation/agent/overview.html
             - title:
                 en: Use cases
                 ru: Сценарии использования
