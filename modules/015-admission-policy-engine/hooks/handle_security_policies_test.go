@@ -102,6 +102,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 					"labelSelector": {}
 				},
 				"policies": {
+					"allowedCapabilities": [],
 					"allowedAppArmor": [
 						"runtime/default"
 					],
@@ -218,6 +219,64 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 			`))
 		})
 	})
+
+	Context("Preserve explicit empty arrays in Values for selected fields", func() {
+		Context("Case A: allowedHostPaths is omitted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicyAllowedHostPathsOmitted))
+				f.RunHook()
+			})
+			It("should not include allowedHostPaths key in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				p := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+				Expect(p).To(HaveLen(1))
+				Expect(p[0].Get("spec.policies.allowedHostPaths").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("Case B: allowedHostPaths is explicitly set to []", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicyAllowedHostPathsEmpty))
+				f.RunHook()
+			})
+			It("should include allowedHostPaths key with empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				p := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+				Expect(p).To(HaveLen(1))
+				Expect(p[0].Get("spec.policies.allowedHostPaths").Exists()).To(BeTrue())
+				Expect(p[0].Get("spec.policies.allowedHostPaths").Array()).To(HaveLen(0))
+			})
+		})
+
+		Context("Case C: allowedHostPaths is set with one item", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicyAllowedHostPathsNonEmpty))
+				f.RunHook()
+			})
+			It("should include allowedHostPaths key with non-empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				p := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+				Expect(p).To(HaveLen(1))
+				Expect(p[0].Get("spec.policies.allowedHostPaths").Exists()).To(BeTrue())
+				Expect(p[0].Get("spec.policies.allowedHostPaths").Array()).To(HaveLen(1))
+			})
+		})
+
+		Context("Nested: seccompProfiles.allowedProfiles is explicitly set to []", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testSecurityPolicySeccompAllowedProfilesEmpty))
+				f.RunHook()
+			})
+			It("should include seccompProfiles.allowedProfiles key with empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				p := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+				Expect(p).To(HaveLen(1))
+				Expect(p[0].Get("spec.policies.seccompProfiles").Exists()).To(BeTrue())
+				Expect(p[0].Get("spec.policies.seccompProfiles.allowedProfiles").Exists()).To(BeTrue())
+				Expect(p[0].Get("spec.policies.seccompProfiles.allowedProfiles").Array()).To(HaveLen(0))
+			})
+		})
+	})
 })
 
 var testSecurityPolicy = `
@@ -321,4 +380,78 @@ spec:
       publicKeys:
       - someKey2
       ca: someCA2
+`
+
+var testSecurityPolicyAllowedHostPathsOmitted = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: false
+`
+
+var testSecurityPolicyAllowedHostPathsEmpty = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: false
+    allowedHostPaths: []
+`
+
+var testSecurityPolicyAllowedHostPathsNonEmpty = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: false
+    allowedHostPaths:
+    - pathPrefix: /dev
+      readOnly: true
+`
+
+var testSecurityPolicySeccompAllowedProfilesEmpty = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: false
+    seccompProfiles:
+      allowedProfiles: []
 `

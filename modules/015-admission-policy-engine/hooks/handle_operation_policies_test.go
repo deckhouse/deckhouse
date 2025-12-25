@@ -37,14 +37,60 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 	f.RegisterCRD("templates.gatekeeper.sh", "v1", "ConstraintTemplate", false)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "OperationPolicy", false)
 
-	Context("Operation policy is set", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
-			f.RunHook()
+	Context("Preserve explicit empty arrays in Values for selected fields", func() {
+		Context("Case A: allowedRepos is omitted", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicyAllowedReposOmitted))
+				f.RunHook()
+			})
+			It("should not include allowedRepos key in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+				Expect(ops).To(HaveLen(1))
+				Expect(ops[0].Get("spec.policies.allowedRepos").Exists()).To(BeFalse())
+			})
 		})
-		It("should have generated resources", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()).To(HaveLen(1))
+
+		Context("Case B: allowedRepos is explicitly set to []", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicyAllowedReposEmpty))
+				f.RunHook()
+			})
+			It("should include allowedRepos key with empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+				Expect(ops).To(HaveLen(1))
+				Expect(ops[0].Get("spec.policies.allowedRepos").Exists()).To(BeTrue())
+				Expect(ops[0].Get("spec.policies.allowedRepos").Array()).To(HaveLen(0))
+			})
+		})
+
+		Context("Case C: allowedRepos is set with one item", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
+				f.RunHook()
+			})
+			It("should include allowedRepos key with non-empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+				Expect(ops).To(HaveLen(1))
+				Expect(ops[0].Get("spec.policies.allowedRepos").Exists()).To(BeTrue())
+				Expect(ops[0].Get("spec.policies.allowedRepos").Array()).To(HaveLen(1))
+			})
+		})
+
+		Context("Nested: requiredResources.limits is explicitly set to []", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicyRequiredResourcesLimitsEmpty))
+				f.RunHook()
+			})
+			It("should include requiredResources.limits key with empty array in Values", func() {
+				Expect(f).To(ExecuteSuccessfully())
+				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+				Expect(ops).To(HaveLen(1))
+				Expect(ops[0].Get("spec.policies.requiredResources.limits").Exists()).To(BeTrue())
+				Expect(ops[0].Get("spec.policies.requiredResources.limits").Array()).To(HaveLen(0))
+			})
 		})
 	})
 })
@@ -119,6 +165,55 @@ spec:
     replicaLimits:
       minReplicas: 1
       maxReplicas: 3
+  match:
+    namespaceSelector:
+      matchNames:
+        - default
+`
+
+var testOperationPolicyAllowedReposOmitted = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: foo
+spec:
+  policies:
+    requiredProbes:
+      - livenessProbe
+  match:
+    namespaceSelector:
+      matchNames:
+        - default
+`
+
+var testOperationPolicyAllowedReposEmpty = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: foo
+spec:
+  policies:
+    allowedRepos: []
+    requiredProbes:
+      - livenessProbe
+  match:
+    namespaceSelector:
+      matchNames:
+        - default
+`
+
+var testOperationPolicyRequiredResourcesLimitsEmpty = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: foo
+spec:
+  policies:
+    requiredResources:
+      limits: []
   match:
     namespaceSelector:
       matchNames:
