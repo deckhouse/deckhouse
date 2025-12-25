@@ -17739,7 +17739,7 @@
               "step": 240
             }
           ],
-          "title": "VG Free Space",
+          "title": "Volume Group Free Space",
           "type": "timeseries"
         },
         {
@@ -17834,7 +17834,7 @@
               "step": 240
             }
           ],
-          "title": "VG Free Space %",
+          "title": "Volume Group Free Space %",
           "type": "timeseries"
         }
       ],
