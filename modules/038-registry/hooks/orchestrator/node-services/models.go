@@ -25,9 +25,11 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -223,7 +225,7 @@ func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, nodeIP s
 	nsc.Config.HTTPSecret = params.HTTPSecret
 	nsc.Config.UserRO = mapUser(params.UserRO)
 
-	nsc.Version, err = helpers.ComputeHash(nsc.Config)
+	nsc.Version, err = registry_pki.ComputeHash(nsc.Config)
 	if err != nil {
 		return fmt.Errorf("cannot compute config hash: %w", err)
 	}
@@ -253,7 +255,7 @@ func (nsc *NodeServicesConfig) processLocalMode(params LocalModeParams, nodeIP s
 }
 
 func (nsc *NodeServicesConfig) processProxyMode(params ProxyModeParams) {
-	host, path := helpers.RegistryAddressAndPathFromImagesRepo(params.ImagesRepo)
+	host, path := registry_helpers.SplitAddressAndPath(params.ImagesRepo)
 
 	cfg := nodeservices.ProxyMode{
 		Upstream: nodeservices.UpstreamRegistry{

@@ -23,6 +23,8 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -119,7 +121,9 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) err
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
-	if !pc.installConfig.Registry.IsDirect() {
+	if registry_const.ShouldRunStaticPodRegistry(
+		pc.installConfig.Registry.Settings.Mode,
+	) {
 		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, false); err != nil {
 			return fmt.Errorf("Registry disk capacity: %v", err)
 		}

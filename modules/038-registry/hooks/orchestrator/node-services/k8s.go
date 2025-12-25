@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -157,7 +158,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 
 				nodeName := strings.TrimPrefix(secret.Name, configSecretPrefix)
 
-				hash, err := helpers.ComputeHash(secret.Data)
+				hash, err := registry_pki.ComputeHash(secret.Data)
 				if err != nil {
 					return nil, fmt.Errorf("cannot compute hash: %w", err)
 				}

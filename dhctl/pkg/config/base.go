@@ -68,13 +68,6 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, err
 	}
 
-	if !metaConfig.Registry.IsDirect() {
-		if metaConfig.Images["systemRegistry"] == nil {
-			return nil, fmt.Errorf("RegistryMode allowed only in Enterprise / Standard editions.\n" +
-				"Please remove mode from InitConfiguration, or set it to 'Direct'.")
-		}
-	}
-
 	err = metaConfig.LoadInstallerVersion()
 	if err != nil {
 		return nil, err

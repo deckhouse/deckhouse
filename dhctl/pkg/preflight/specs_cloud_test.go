@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 )
 
 //go:embed testdata/specs_test_pcc_for_happy_path.yml
@@ -47,7 +48,9 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "happy path",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: validPCC,
-				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+				),
 			}},
 			wantErr: assert.NoError,
 		},
@@ -55,7 +58,9 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "invalid ProviderClusterConfiguration",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: invalidPCC,
-				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+				),
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.ErrorContains(t, err, "expected at least")
@@ -65,7 +70,9 @@ func TestCloudMasterNodeSystemRequirementsCheck(t *testing.T) {
 			name: "malformed ProviderClusterConfiguration",
 			fields: fields{installConfig: &config.DeckhouseInstaller{
 				ProviderClusterConfig: malformedPCC,
-				Registry: config.Registry{ModeSpecificFields: config.ProxyModeRegistryData{}},
+				Registry: registry_mocks.ConfigBuilder(
+					registry_mocks.WithModeUnmanaged(),
+				),
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...interface{}) bool {
 				return assert.ErrorContains(t, err, "malformed provider cluster configuration")

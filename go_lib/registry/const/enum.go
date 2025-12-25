@@ -21,16 +21,27 @@ import (
 	"strings"
 )
 
-type ModeType = string
-
 const (
 	ModeUnmanaged ModeType = "Unmanaged"
 	ModeDirect    ModeType = "Direct"
 	ModeProxy     ModeType = "Proxy"
+	ModeLocal     ModeType = "Local"
 
-	// The same:
-	ModeDetached ModeType = "Detached" // TODO: remove
-	ModeLocal    ModeType = "Local"
+	CheckModeDefault CheckModeType = "Default"
+	CheckModeRelax   CheckModeType = "Relax"
+
+	SchemeHTTP  SchemeType = "HTTP"
+	SchemeHTTPS SchemeType = "HTTPS"
+
+	CRIContainerdV1 CRIType = "Containerd"
+	CRIContainerdV2 CRIType = "ContainerdV2"
+)
+
+type (
+	ModeType      string
+	CheckModeType string
+	SchemeType    string
+	CRIType       string
 )
 
 func ToModeType(mode string) ModeType {
@@ -40,8 +51,6 @@ func ToModeType(mode string) ModeType {
 		return ModeDirect
 	case "proxy":
 		return ModeProxy
-	case "detached":
-		return ModeDetached
 	case "local":
 		return ModeLocal
 	default:
@@ -49,8 +58,24 @@ func ToModeType(mode string) ModeType {
 	}
 }
 
-func ShouldRunStaticPodRegistry(mode ModeType) bool {
-	staticPodsRegistryModes := []string{ModeProxy, ModeDetached, ModeLocal}
+func ToCheckModeType(mode string) CheckModeType {
+	val := strings.ToLower(mode)
+	switch val {
+	case "relax":
+		return CheckModeRelax
+	default:
+		return CheckModeDefault
+	}
+}
 
+func ToScheme(scheme string) SchemeType {
+	if strings.EqualFold(scheme, string(SchemeHTTP)) {
+		return SchemeHTTP
+	}
+	return SchemeHTTPS
+}
+
+func ShouldRunStaticPodRegistry(mode ModeType) bool {
+	staticPodsRegistryModes := []ModeType{ModeProxy, ModeLocal}
 	return slices.Contains(staticPodsRegistryModes, mode)
 }

@@ -44,9 +44,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/mirror"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/imgbundle/pkgproxy"
@@ -440,7 +442,7 @@ func isSystemRegistryLockFileExists(ctx context.Context, nodeInterface node.Inte
 	return false, nil
 }
 
-func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) error {
+func waitAndPushDockerImages(ctx context.Context, nodeInterface node.Interface) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -476,20 +478,13 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config config.RegistryData) (*registryClientConfigGetter, error) {
-	auth, err := config.Auth()
-	if err != nil {
-		return nil, fmt.Errorf("registry auth: %v", err)
-	}
-
-	repo := fmt.Sprintf("%s/%s", strings.Trim(config.Address, "/"), strings.Trim(config.Path, "/"))
-
+func newRegistryClientConfigGetter(config registry_config.Data) (*registryClientConfigGetter, error) {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
-			Repository: repo,
-			Scheme:     config.Scheme,
+			Repository: config.ImagesRepo,
+			Scheme:     strings.ToLower(string(config.Scheme)),
 			CA:         config.CA,
-			Auth:       auth,
+			Auth:       config.AuthBase64(),
 		},
 	}, nil
 }
@@ -498,38 +493,45 @@ func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, erro
 	return &r.ClientConfig, nil
 }
 
-func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry, rppSignCheck string, clusterDomain string) error {
-	var clientConfigGetter registry.ClientConfigGetter
-	var client registry.Client
-	var err error
-
-	switch modeSpecificFields := registryCfg.ModeSpecificFields.(type) {
-	case config.ProxyModeRegistryData:
-		client = &registry.DefaultClient{}
-		registryData, err := modeSpecificFields.UpstreamRegistryData.ToRegistryData()
-		if err != nil {
-			return err
-		}
-		clientConfigGetter, err = newRegistryClientConfigGetter(registryData)
-		if err != nil {
-			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
-		}
-	case config.DetachedModeRegistryData:
+func rppClientAndConfigGetter(
+	ctx context.Context,
+	registryCfg registry_config.Config,
+) (registry.Client, registry.ClientConfigGetter, error) {
+	switch registryCfg.Settings.Mode {
+	case constant.ModeDirect:
 		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
 			context.Background(),
-			modeSpecificFields.ImagesBundlePath,
+			registryCfg.Settings.BundlePath,
 		)
 		if err != nil {
-			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+			return nil, nil, err
 		}
-		client = pkgproxy.NewClient(unpackedImagesPath)
-		clientConfigGetter = pkgproxy.ClientConfigGetter{}
+
+		client := pkgproxy.NewClient(unpackedImagesPath)
+		clientConfigGetter := pkgproxy.ClientConfigGetter{}
+		return client, clientConfigGetter, nil
+
 	default:
-		client = &registry.DefaultClient{}
-		clientConfigGetter, err = newRegistryClientConfigGetter(registryCfg.Data)
+		client := &registry.DefaultClient{}
+
+		clientConfigGetter, err := newRegistryClientConfigGetter(registryCfg.Settings.RemoteData)
 		if err != nil {
-			return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
+			return nil, nil, err
 		}
+
+		return client, clientConfigGetter, nil
+	}
+}
+
+func StartRegistryPackagesProxy(
+	ctx context.Context,
+	registryCfg registry_config.Config,
+	rppSignCheck string,
+	clusterDomain string,
+) error {
+	client, clientConfigGetter, err := rppClientAndConfigGetter(ctx, registryCfg)
+	if err != nil {
+		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
 	}
 
 	cert, err := generateTLSCertificate(clusterDomain)
@@ -543,6 +545,7 @@ func StartRegistryPackagesProxy(ctx context.Context, registryCfg config.Registry
 	if err != nil {
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
+
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
@@ -810,8 +813,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 				return err
 			}
 
-			detachedModeRegistryData, isDetachedRegistryMode := cfg.Registry.IsDetached()
-			if isDetachedRegistryMode {
+			if cfg.Registry.Settings.Mode == constant.ModeLocal {
 				// Run Docker pusher
 				log.DebugLn("Cleaning previous image push lock file if needed")
 				if cleanLockFileErr := removeSystemRegistryLockFile(ctx, nodeInterface); cleanLockFileErr != nil {
@@ -820,13 +822,13 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 
 				log.DebugLn("Starting SystemRegistry images pusher")
 				wg.Add(1)
-				go func(ctx context.Context, nodeInterface node.Interface, registryData *config.DetachedModeRegistryData) {
+				go func(ctx context.Context, nodeInterface node.Interface) {
 					defer func() {
 						log.DebugLn("Stopped SystemRegistry images pusher")
 						wg.Done()
 					}()
 
-					if err := waitAndPushDockerImages(ctx, nodeInterface, registryData); err != nil {
+					if err := waitAndPushDockerImages(ctx, nodeInterface); err != nil {
 						log.DebugF("RegistryImagesPusher: Done, err: %+v\n", err)
 
 						if ctx.Err() != nil {
@@ -839,7 +841,7 @@ func RunBashiblePipeline(ctx context.Context, nodeInterface node.Interface, cfg 
 						// Cancel context in case of error to stop bashible bundle execution
 						ctxCancel(fmt.Errorf("cannot push to system registry: %w", err))
 					}
-				}(ctx, nodeInterface, detachedModeRegistryData)
+				}(ctx, nodeInterface)
 			}
 
 			if err = context.Cause(ctx); err != nil {
@@ -1034,12 +1036,20 @@ func InstallDeckhouse(ctx context.Context, kubeCl *client.KubernetesClient, conf
 			return fmt.Errorf("deckhouse install: %v", err)
 		}
 
+		// Warning! This function must be called at the end of the Deckhouse installation phase.
+		// At the end of this function, the registry-init secret is deleted,
+		// which is used during DeckhouseInstall for certain registry operation modes.
+		err = registry_config.WaitForRegistryInitialization(ctx, kubeCl, config.Registry)
+		if err != nil {
+			return fmt.Errorf("registry initialization: %v", err)
+		}
+
 		return nil
 	})
+
 	if err != nil {
 		return nil, err
 	}
-
 	return res, nil
 }
 

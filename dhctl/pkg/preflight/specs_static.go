@@ -25,6 +25,8 @@ import (
 	"strconv"
 	"strings"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -47,7 +49,10 @@ func (pc *Checker) CheckStaticNodeSystemRequirements(ctx context.Context) error 
 	}
 
 	minimumRequiredFoldersSizesGB := map[string]int{}
-	if !pc.installConfig.Registry.IsDirect() {
+
+	if registry_const.ShouldRunStaticPodRegistry(
+		pc.installConfig.Registry.Settings.Mode,
+	) {
 		minimumRequiredFoldersSizesGB["/opt/deckhouse/registry"] = minimumRequiredRegistryDiskSizeGB
 	}
 

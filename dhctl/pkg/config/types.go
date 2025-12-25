@@ -18,7 +18,7 @@ import (
 	"context"
 	"fmt"
 
-	util_time "github.com/deckhouse/deckhouse/dhctl/pkg/util/time"
+	registry_initconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 )
 
 const (
@@ -64,7 +64,7 @@ type TerraNodeGroupSpec struct {
 	NodeTemplate map[string]interface{} `json:"nodeTemplate"`
 }
 
-type DeckhouseClusterConfigOld struct {
+type DeckhouseClusterConfig struct {
 	ReleaseChannel    string                 `json:"releaseChannel,omitempty"` // Deprecated
 	DevBranch         string                 `json:"devBranch,omitempty"`
 	Bundle            string                 `json:"bundle,omitempty"`   // Deprecated
@@ -76,42 +76,25 @@ type DeckhouseClusterConfigOld struct {
 	ConfigOverrides   map[string]interface{} `json:"configOverrides"` // Deprecated
 }
 
-type DeckhouseClusterConfig struct {
-	ReleaseChannel  string                 `json:"releaseChannel,omitempty"` // Deprecated
-	DevBranch       string                 `json:"devBranch,omitempty"`
-	Bundle          string                 `json:"bundle,omitempty"`   // Deprecated
-	LogLevel        string                 `json:"logLevel,omitempty"` // Deprecated
-	ConfigOverrides map[string]interface{} `json:"configOverrides"`    // Deprecated
+func (config DeckhouseClusterConfig) registryInitConfig() *registry_initconfig.Config {
+	if !config.hasRegistryInitConfig() {
+		return nil
+	}
+	return &registry_initconfig.Config{
+		ImagesRepo:        config.ImagesRepo,
+		RegistryDockerCfg: config.RegistryDockerCfg,
+		RegistryCA:        config.RegistryCA,
+		RegistryScheme:    config.RegistryScheme,
+	}
 }
 
-type RegistryClusterConfig struct {
-	Mode                   string                          `json:"mode,omitempty"`
-	DirectModeProperties   *RegistryDirectModeProperties   `json:"direct,omitempty"`
-	DetachedModeProperties *RegistryDetachedModeProperties `json:"detached,omitempty"`
-	ProxyModeProperties    *RegistryProxyModeProperties    `json:"proxy,omitempty"`
+func (config DeckhouseClusterConfig) hasRegistryInitConfig() bool {
+	return config.ImagesRepo != "" ||
+		config.RegistryScheme != "" ||
+		config.RegistryDockerCfg != "" ||
+		config.RegistryCA != ""
 }
 
-type RegistryDirectModeProperties struct {
-	ImagesRepo string `json:"imagesRepo,omitempty"`
-	Username   string `json:"username,omitempty"`
-	Password   string `json:"password,omitempty"`
-	DockerCfg  string `json:"dockerCfg,omitempty"`
-	CA         string `json:"ca,omitempty"`
-	Scheme     string `json:"scheme,omitempty"`
-}
-
-type RegistryProxyModeProperties struct {
-	RegistryDirectModeProperties
-	TTL util_time.Duration `json:"ttl,omitempty"`
-}
-
-type RegistryDetachedModeProperties struct {
-	ImagesBundlePath string `json:"imagesBundlePath,omitempty"`
-}
-
-type VCDProviderInfo struct {
-	ApiVersion string
-}
 type ByClusterType[T any] interface {
 	Cloud(context.Context, *MetaConfig) (T, error)
 	Static(context.Context, *MetaConfig) (T, error)

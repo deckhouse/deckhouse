@@ -25,6 +25,8 @@ import (
 	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -197,6 +199,98 @@ spec:
         value: system
   nodeType: CloudEphemeral
 `
+	// Registry
+	t.Run("Registry", func(t *testing.T) {
+		t.Run("InitConfiguration -> always unmanaged && legacy", func(t *testing.T) {
+			t.Run("Without CRI (module disable)", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+			t.Run("With CRI (module enable)", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+		})
+		t.Run("Default -> CE edition registry", func(t *testing.T) {
+			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeDirect, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+		})
+		t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
+			moduleConfigDeckhouse := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test/
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`
+			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
+				_, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse, DummyPreparatorProvider())
+				require.Error(t, err)
+			})
+			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "test-user", registry.Username)
+				require.Equal(t, "test-password", registry.Password)
+				require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
+			})
+		})
+	})
 
 	t.Run("Standard Static", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
@@ -212,31 +306,6 @@ spec:
 
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
-
-		require.Len(t, metaConfig.ResourcesYAML, 0)
-	})
-
-	t.Run("Without init configuration", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
-		require.NoError(t, err)
-
-		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
-		require.NoError(t, err)
-		require.Equal(t, 0, len(parsedStaticConfig))
-
-		parsedProviderConfig, err := metaConfig.ProviderClusterConfigYAML()
-		require.NoError(t, err)
-		require.Equal(t, 0, len(parsedProviderConfig))
-
-		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
-		require.Equal(t, "Static", metaConfig.ClusterType)
-
-		require.Equal(t, metaConfig.Registry.Data.Address, "registry.deckhouse.io")
-		require.Equal(t, metaConfig.Registry.Data.Address, "registry.deckhouse.io")
-		require.Equal(t, metaConfig.Registry.Data.Path, "/deckhouse/ce")
-		require.Equal(t, metaConfig.Registry.Data.DockerCfg, "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=")
-		require.Equal(t, metaConfig.Registry.Data.Scheme, "https")
-
 		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
@@ -370,7 +439,16 @@ func TestParseConfigFromFiles(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
-		require.Equal(t, "registry.deckhouse.io", metaConfig.Registry.Data.Address)
+
+		t.Run("Registry CE edition config", func(t *testing.T) {
+			registry := metaConfig.Registry.Settings.RemoteData
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "", registry.Username)
+			require.Equal(t, "", registry.Password)
+			require.Equal(t, "", registry.CA)
+		})
+
 		require.Len(t, metaConfig.ModuleConfigs, 3)
 	})
 }

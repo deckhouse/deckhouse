@@ -14,25 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package constant
+package helpers
 
 import (
 	"strings"
 )
 
-type CheckModeType = string
-
-const (
-	Default CheckModeType = "Default"
-	Relax   CheckModeType = "Relax"
-)
-
-func ToCheckModeType(mode string) CheckModeType {
-	val := strings.ToLower(mode)
-	switch val {
-	case "relax":
-		return Relax
-	default:
-		return Default
+func SplitAddressAndPath(ref string) (string, string) {
+	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(ref, "/")), "/", 2)
+	if len(parts) == 1 {
+		return parts[0], ""
 	}
+	return parts[0], "/" + parts[1]
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -34,7 +35,7 @@ const (
 )
 
 type DeckhouseInstaller struct {
-	Registry                       Registry
+	Registry                       registry.Config
 	LogLevel                       string
 	Bundle                         string
 	DevBranch                      string
@@ -64,10 +65,9 @@ type NodeDataDevices struct {
 	SystemRegistryDataDevicePath string
 }
 
-func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
-	registryNameTemplate := "%s%s:%s"
+func (c *DeckhouseInstaller) GetImageTag(forceVersionTag bool) string {
 	if tag, ok := os.LookupEnv("DHCTL_TEST_VERSION_TAG"); ok {
-		return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
+		return tag
 	}
 	tag := c.DevBranch
 	if forceVersionTag {
@@ -80,12 +80,17 @@ func (c *DeckhouseInstaller) GetImage(forceVersionTag bool) string {
 	if tag == "" {
 		panic("You are probably using a development image. please use devBranch")
 	}
-
-	return fmt.Sprintf(registryNameTemplate, c.Registry.Data.Address, c.Registry.Data.Path, tag)
+	return tag
 }
 
-func (c *DeckhouseInstaller) IsRegistryAccessRequired() bool {
-	return c.Registry.Data.DockerCfg != ""
+func (c *DeckhouseInstaller) GetInclusterImage(forceVersionTag bool) string {
+	tag := c.GetImageTag(forceVersionTag)
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().InClusterImagesRepo, tag)
+}
+
+func (c *DeckhouseInstaller) GetRemoteImage(forceVersionTag bool) string {
+	tag := c.GetImageTag(forceVersionTag)
+	return fmt.Sprintf("%s:%s", c.Registry.Settings.ToModel().RemoteImagesRepo, tag)
 }
 
 func ReadVersionTagFromInstallerContainer() (string, bool) {
@@ -149,6 +154,10 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 
 	bundle := DefaultBundle
 	logLevel := DefaultLogLevel
+	registry := metaConfig.
+		Registry.
+		DeckhouseSettings.
+		ToMap()
 
 	schemasStore := NewSchemaStore()
 
@@ -169,13 +178,20 @@ func PrepareDeckhouseInstallConfig(metaConfig *MetaConfig) (*DeckhouseInstaller,
 		if ok {
 			bundle = bundleRaw.(string)
 		}
+		if !metaConfig.Registry.LegacyMode {
+			mc.Spec.Settings["registry"] = registry
+		}
 	}
 
 	if deckhouseCm == nil {
-		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, map[string]any{
+		settings := map[string]any{
 			"bundle":   bundle,
 			"logLevel": logLevel,
-		})
+		}
+		if !metaConfig.Registry.LegacyMode {
+			settings["registry"] = registry
+		}
+		deckhouseCm, err = buildModuleConfig(schemasStore, "deckhouse", true, settings)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create ModuleConfig deckhouse: %s", err)
 		}

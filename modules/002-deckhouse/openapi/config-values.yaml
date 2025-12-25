@@ -390,6 +390,7 @@ properties:
         properties: &registryDirectProperties
           imagesRepo:
             type: string
+            default: registry.deckhouse.io/deckhouse/ce
             x-doc-required: true
             pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
             description: |

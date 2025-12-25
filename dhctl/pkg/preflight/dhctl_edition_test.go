@@ -17,11 +17,12 @@ package preflight
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 )
 
 func (s *PreflightChecksTestSuite) TestEditionBad() {
@@ -30,18 +31,15 @@ func (s *PreflightChecksTestSuite) TestEditionBad() {
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
 	app.PreflightSkipDeckhouseEditionCheck = false
-	image := s.checker.installConfig.GetImage(false)
+	image := s.checker.installConfig.GetRemoteImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.Registry{
-			Data: config.RegistryData{
-				Scheme:  "https",
-				Address: "test.registry.io",
-				CA:      "",
-			},
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
@@ -61,18 +59,15 @@ func (s *PreflightChecksTestSuite) TestOk() {
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
 	app.PreflightSkipDeckhouseEditionCheck = false
-	image := s.checker.installConfig.GetImage(false)
+	image := s.checker.installConfig.GetRemoteImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.Registry{
-			Data: config.RegistryData{
-				Scheme:  "https",
-				Address: "test.registry.io",
-				CA:      "",
-			},
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).
@@ -92,18 +87,15 @@ func (s *PreflightChecksTestSuite) TestCheckDisable() {
 	app.AppVersion = "dev"
 	app.AppEdition = "test"
 	app.PreflightSkipDeckhouseEditionCheck = true
-	image := s.checker.installConfig.GetImage(false)
+	image := s.checker.installConfig.GetRemoteImage(false)
 	ref, err := name.ParseReference(image)
 	t.NoError(err)
 
 	s.checker.metaConfig = &config.MetaConfig{
-		Registry: config.Registry{
-			Data: config.RegistryData{
-				Scheme:  "https",
-				Address: "test.registry.io",
-				CA:      "",
-			},
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("test.registry.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 	}
 
 	s.checker.imageDescriptorProvider = NewFakeImageDescriptorProvider(s.T()).

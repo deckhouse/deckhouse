@@ -40,6 +40,28 @@ properties:
               mode:
                 type: string
                 enum: [Unmanaged, Direct, Proxy, Local]
+              init_params:
+                type: object
+                properties:
+                  generation:
+                    format: int64
+                    type: integer
+                  mode:
+                    type: string
+                  images_repo:
+                    type: string
+                  user_name:
+                    type: string
+                  password:
+                    type: string
+                  ttl:
+                    type: string
+                  scheme:
+                    type: string
+                  ca:
+                    type: string
+                  check_mode:
+                    type: string
               pki:
                 type: object
                 properties:

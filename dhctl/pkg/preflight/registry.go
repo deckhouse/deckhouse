@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 var (
@@ -70,19 +71,14 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
-	registryData, err := pc.GetRegistryData()
-	if err != nil {
-		return err
-	}
-	if registryData == nil {
-		if _, isDetached := pc.metaConfig.Registry.IsDetached(); !isDetached {
-			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.Mode())
-		}
-		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.Mode())
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeDirect {
+		log.DebugLn("Direct registry mode, skipping check")
 		return nil
 	}
-
-	if shouldSkipProxyCheck(registryData.Address, noProxyAddresses) {
+	
+	registry := pc.metaConfig.Registry.Settings.RemoteData
+	registryAddress, _ := registry.AddressAndPath()
+	if shouldSkipProxyCheck(registryAddress, noProxyAddresses) {
 		log.DebugLn("Registry address found in proxy.noProxy list, skipping check")
 		return nil
 	}
@@ -95,8 +91,8 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer tun.Stop()
 
 	registryURL := &url.URL{
-		Scheme: registryData.Scheme,
-		Host:   registryData.Address,
+		Scheme: strings.ToLower(string(registry.Scheme)),
+		Host:   registryAddress,
 		Path:   "/v2/",
 	}
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
@@ -148,7 +144,9 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 		return nil
 	}
 
-	image := pc.installConfig.GetImage(true)
+	registry := pc.metaConfig.Registry.Settings.RemoteData
+	image := pc.installConfig.GetRemoteImage(true)
+
 	log.DebugF("Image: %s\n", image)
 	// skip for CE edition
 	if image == "registry.deckhouse.ru/deckhouse/ce" {
@@ -160,46 +158,25 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	registryData, err := pc.GetRegistryData()
-	if err != nil {
-		return err
-	}
-	if registryData == nil {
-		if _, isDetached := pc.metaConfig.Registry.IsDetached(); !isDetached {
-			return fmt.Errorf("Empty registry data for registry mode %s", pc.metaConfig.Registry.Mode())
-		}
-		log.DebugLn("Registry mode is %s, skipping check", pc.metaConfig.Registry.Mode())
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeDirect {
+		log.DebugLn("Direct registry mode, skipping check")
 		return nil
 	}
-
-	authData, err := registryData.Auth()
-	if err != nil {
-		return err
-	}
-
-	return checkRegistryAuth(ctx, registryData, authData)
-}
-
-func (pc *Checker) GetRegistryData() (*config.RegistryData, error) {
-	switch modeSpecificFields := pc.metaConfig.Registry.ModeSpecificFields.(type) {
-	case config.DetachedModeRegistryData:
-		return nil, nil
-	case config.ProxyModeRegistryData:
-		registryData, err := modeSpecificFields.UpstreamRegistryData.ToRegistryData()
-		return &registryData, err
-	default:
-		return &pc.metaConfig.Registry.Data, nil
-	}
+	
+	return checkRegistryAuth(ctx, pc.metaConfig, registry.AuthBase64())
 }
 
 func prepareRegistryRequest(
 	ctx context.Context,
-	registryData *config.RegistryData,
+	metaConfig *config.MetaConfig,
 	authData string,
 ) (*http.Request, error) {
+	registry := metaConfig.Registry.Settings.RemoteData
+	registryAddress, _ := registry.AddressAndPath()
+
 	registryURL := &url.URL{
-		Scheme: registryData.Scheme,
-		Host:   registryData.Address,
+		Scheme: strings.ToLower(string(registry.Scheme)),
+		Host:   registryAddress,
 		Path:   registryPath,
 	}
 
@@ -219,13 +196,16 @@ func prepareAuthRequest(
 	authURL string,
 	registryService string,
 	authData string,
-	registryData *config.RegistryData,
+	metaConfig *config.MetaConfig,
 ) (*http.Request, error) {
+	registry := metaConfig.Registry.Settings.RemoteData
+	_, registryPath := registry.AddressAndPath()
+
 	authURLValues := url.Values{}
 	authURLValues.Add("service", registryService)
 	authURLValues.Add(
 		"scope",
-		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(registryData.Path, "/")),
+		fmt.Sprintf("repository:%s:pull", strings.TrimLeft(registryPath, "/")),
 	)
 
 	authURL = fmt.Sprintf("%s?%s", authURL, authURLValues.Encode())
@@ -240,24 +220,25 @@ func prepareAuthRequest(
 	return req, nil
 }
 
-func prepareAuthHTTPClient(registryData *config.RegistryData) (*http.Client, error) {
+func prepareAuthHTTPClient(metaConfig *config.MetaConfig) (*http.Client, error) {
+	registry := metaConfig.Registry.Settings.RemoteData
+
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.ToLower(registryData.Scheme) == "http" {
+	if strings.ToLower(string(registry.Scheme)) == "http" {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true,
 		}
 	}
 
-	ca := registryData.CA
-	if len(ca) == 0 {
+	if len(registry.CA) == 0 {
 		client.Transport = httpTransport
 		return client, nil
 	}
 
 	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(ca)); !ok {
+	if ok := certPool.AppendCertsFromPEM([]byte(registry.CA)); !ok {
 		return nil, fmt.Errorf("invalid cert in CA PEM")
 	}
 
@@ -272,13 +253,13 @@ func prepareAuthHTTPClient(registryData *config.RegistryData) (*http.Client, err
 
 func getAuthRealmAndService(
 	ctx context.Context,
-	registryData *config.RegistryData,
+	metaConfig *config.MetaConfig,
 	client *http.Client,
 ) (string, string, error) {
 	authURL := ""
 	registryService := ""
 
-	req, err := prepareRegistryRequest(ctx, registryData, "")
+	req, err := prepareRegistryRequest(ctx, metaConfig, "")
 	if err != nil {
 		return authURL, registryService, err
 	}
@@ -345,11 +326,11 @@ func checkResponseError(resp *http.Response) error {
 
 func checkBasicRegistryAuth(
 	ctx context.Context,
-	registryData *config.RegistryData,
+	metaConfig *config.MetaConfig,
 	authData string,
 	client *http.Client,
 ) error {
-	req, err := prepareRegistryRequest(ctx, registryData, authData)
+	req, err := prepareRegistryRequest(ctx, metaConfig, authData)
 	if err != nil {
 		return err
 	}
@@ -372,16 +353,16 @@ func checkBasicRegistryAuth(
 
 func checkTokenRegistryAuth(
 	ctx context.Context,
-	registryData *config.RegistryData,
+	metaConfig *config.MetaConfig,
 	authData string,
 	client *http.Client,
 ) error {
-	authURL, registryService, err := getAuthRealmAndService(ctx, registryData, client)
+	authURL, registryService, err := getAuthRealmAndService(ctx, metaConfig, client)
 	if err != nil {
 		return err
 	}
 
-	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, registryData)
+	req, err := prepareAuthRequest(ctx, authURL, registryService, authData, metaConfig)
 	if err != nil {
 		return err
 	}
@@ -397,13 +378,13 @@ func checkTokenRegistryAuth(
 	return checkResponseError(resp)
 }
 
-func checkRegistryAuth(ctx context.Context, registryData *config.RegistryData, authData string) error {
-	client, err := prepareAuthHTTPClient(registryData)
+func checkRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, authData string) error {
+	client, err := prepareAuthHTTPClient(metaConfig)
 	if err != nil {
 		return err
 	}
 
-	err = checkBasicRegistryAuth(ctx, registryData, authData, client)
+	err = checkBasicRegistryAuth(ctx, metaConfig, authData, client)
 	if err == nil {
 		return nil
 	}
@@ -412,5 +393,5 @@ func checkRegistryAuth(ctx context.Context, registryData *config.RegistryData, a
 		return err
 	}
 
-	return checkTokenRegistryAuth(ctx, registryData, authData, client)
+	return checkTokenRegistryAuth(ctx, metaConfig, authData, client)
 }
