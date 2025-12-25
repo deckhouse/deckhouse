@@ -177,14 +177,14 @@ font-family: 'Noto Sans', sans-serif;
       }
 
       span {
-        font-weight: 500;
+        font-weight: 400;
       }
 
       p {
         margin: 0;
         grid-column: 2/-1;
         font-size: .875rem;
-        color: mixins.$ntrl-600;
+        color: mixins.$ntrl-300;
       }
     }
   }
