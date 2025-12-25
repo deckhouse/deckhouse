@@ -4739,12 +4739,12 @@ Configure the Kubernetes secret engine plugin.
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `disable_local_ca_jwt` | boolean (default: False) | no | Disable defaulting to the local CA certificate and service account JWT when running in a Kubernetes pod. |
-| `kubernetes_ca_cert` | string | no | PEM encoded CA certificate to use to verify the Kubernetes API server certificate. Defaults to the local pod's CA if found. |
-| `kubernetes_host` | string | no | Kubernetes API URL to connect to. Defaults to https://$KUBERNETES_SERVICE_HOST:KUBERNETES_SERVICE_PORT if those environment variables are set. |
-| `service_account_jwt` | string | no | The JSON web token of the service account used by the secret engine to manage Kubernetes credentials. Defaults to the local pod's JWT if found. |
+| Parameter | Type | Required | Description                                                                                                                                        |
+|----------|-----|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| `disable_local_ca_jwt` | boolean (default: False) | no | Disable defaulting to the local CA certificate and service account JWT when running in a Kubernetes pod.                                           |
+| `kubernetes_ca_cert` | string | no | PEM encoded CA certificate to use to verify the Kubernetes API server certificate. Defaults to the local pod's CA if found.                        |
+| `kubernetes_host` | string | no | Kubernetes API URL to connect to. Defaults to [https://$KUBERNETES_SERVICE_HOST:KUBERNETES_SERVICE_PORT](https://$KUBERNETES_SERVICE_HOST:KUBERNETES_SERVICE_PORT) if those environment variables are set. |
+| `service_account_jwt` | string | no | The JSON web token of the service account used by the secret engine to manage Kubernetes credentials. Defaults to the local pod's JWT if found.    |
 
 #### Responses
 
@@ -11420,12 +11420,12 @@ Generate a hash sum for input data
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 Defaults to "sha2-256". |
-| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex". |
-| `input` | string | no | The base64-encoded input data |
-| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter) |
+| Parameter | Type | Required | Description                                                                                                                                                                      |
+|----------|-----|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "ha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512". Defaults to "sha2-256". |
+| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex".                                                                                                             |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                    |
+| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter)                                                                                                                                            |
 
 #### Responses
 
@@ -11446,11 +11446,11 @@ Generate a hash sum for input data
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 Defaults to "sha2-256". |
-| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex". |
-| `input` | string | no | The base64-encoded input data |
+| Parameter | Type | Required | Description                                                                                                                                                                       |
+|----------|-----|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512". Defaults to "sha2-256". |
+| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex".                                                                                                              |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                     |
 
 #### Responses
 
@@ -11471,13 +11471,13 @@ Generate an HMAC for input data using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 Defaults to "sha2-256". |
+| Parameter | Type | Required | Description                                                                                                                                                                                                     |
+|----------|-----|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512". Defaults to "sha2-256".                               |
 | `batch_input` | array | no | Specifies a list of items to be processed in a single batch. When this parameter is set, if the parameter 'input' is also set, it will be ignored. Any batch output will preserve the order of the batch input. |
-| `input` | string | no | The base64-encoded input data |
-| `key_version` | integer | no | The version of the key to use for generating the HMAC. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key. |
-| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter) |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                                                   |
+| `key_version` | integer | no | The version of the key to use for generating the HMAC. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key.                                             |
+| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter)                                                                                                                                                                           |
 
 #### Responses
 
@@ -11499,12 +11499,12 @@ Generate an HMAC for input data using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 Defaults to "sha2-256". |
+| Parameter | Type | Required | Description                                                                                                                                                                                                     |
+|----------|-----|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512". Defaults to "sha2-256".                                      |
 | `batch_input` | array | no | Specifies a list of items to be processed in a single batch. When this parameter is set, if the parameter 'input' is also set, it will be ignored. Any batch output will preserve the order of the batch input. |
-| `input` | string | no | The base64-encoded input data |
-| `key_version` | integer | no | The version of the key to use for generating the HMAC. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key. |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                                                   |
+| `key_version` | integer | no | The version of the key to use for generating the HMAC. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key.                                             |
 
 #### Responses
 
@@ -11916,19 +11916,19 @@ Generate a signature for input data using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead. |
-| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input |
-| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys. |
-| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: * sha1 * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 * none Defaults to "sha2-256". Not valid for all key types, including ed25519. Using none requires setting prehashed=true and signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of the usual PKCSv1_5_DERnull signature. |
-| `input` | string | no | The base64-encoded input data |
-| `key_version` | integer | no | The version of the key to use for signing. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key. |
-| `marshaling_algorithm` | string (default: asn1) | no | The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types". |
-| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter. |
+| Parameter | Type | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                       |
+|----------|-----|--------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead.                                                                                                                                                                                                                                                                                                                                                                         |
+| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input                                                                                                              |
+| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys.                                                                                                                                                                                                                                                                                     |
+| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: "sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512" * none Defaults to "sha2-256". Not valid for all key types, including ed25519. Using none requires setting prehashed=true and signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of the usual PKCSv1_5_DERnull signature.       |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                                                                                                                                                                                                                                                     |
+| `key_version` | integer | no | The version of the key to use for signing. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key.                                                                                                                                                                                                                                                           |
+| `marshaling_algorithm` | string (default: asn1) | no | The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".                                                          |
+| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.                                                                                                                                                                                                              |
 | `salt_length` | string (default: auto) | no | The salt length used to sign. Currently only applies to the RSA PSS signature scheme. Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'. |
-| `signature_algorithm` | string | no | The signature algorithm to use for signing. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss' |
-| `urlalgorithm` | string | no | Hash algorithm to use (POST URL parameter) |
+| `signature_algorithm` | string | no | The signature algorithm to use for signing. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'                                                                                                                                                                                                                                                                           |
+| `urlalgorithm` | string | no | Hash algorithm to use (POST URL parameter)                                                                                                                                                                                                                                                                                                                                                                        |
 
 #### Responses
 
@@ -11950,18 +11950,18 @@ Generate a signature for input data using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead. |
-| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input |
-| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys. |
-| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: * sha1 * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 * none Defaults to "sha2-256". Not valid for all key types, including ed25519. Using none requires setting prehashed=true and signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of the usual PKCSv1_5_DERnull signature. |
-| `input` | string | no | The base64-encoded input data |
-| `key_version` | integer | no | The version of the key to use for signing. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key. |
-| `marshaling_algorithm` | string (default: asn1) | no | The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types". |
-| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter. |
+| Parameter | Type | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                      |
+|----------|-----|--------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead.                                                                                                                                                                                                                                                                                                                                                                        |
+| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input' or 'context' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input                                                                                                             |
+| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys.                                                                                                                                                                                                                                                                                    |
+| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: "sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512", none. Defaults to "sha2-256". Not valid for all key types, including ed25519. Using none requires setting prehashed=true and signature_algorithm=pkcs1v15, yielding a PKCSv1_5_NoOID instead of the usual PKCSv1_5_DERnull signature.      |
+| `input` | string | no | The base64-encoded input data                                                                                                                                                                                                                                                                                                                                                                                    |
+| `key_version` | integer | no | The version of the key to use for signing. Must be 0 (for latest) or a value greater than or equal to the min_encryption_version configured on the key.                                                                                                                                                                                                                                                          |
+| `marshaling_algorithm` | string (default: asn1) | no | The method by which to marshal the signature. The default is 'asn1' which is used by openssl and X.509. It can also be set to 'jws' which is used for JWT signatures; setting it to this will also cause the encoding of the signature to be url-safe base64 instead of using standard base64 encoding. Currently only valid for ECDSA P-256 key types".                                                         |
+| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.                                                                                                                                                                                                             |
 | `salt_length` | string (default: auto) | no | The salt length used to sign. Currently only applies to the RSA PSS signature scheme. Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'. |
-| `signature_algorithm` | string | no | The signature algorithm to use for signing. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss' |
+| `signature_algorithm` | string | no | The signature algorithm to use for signing. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'                                                                                                                                                                                                                                                                          |
 
 #### Responses
 
@@ -11982,20 +11982,20 @@ Verify a signature or HMAC for input data created using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead. |
-| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input |
-| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys. |
-| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: * sha1 * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 * none Defaults to "sha2-256". Not valid for all key types. See note about none on signing path. |
-| `hmac` | string | no | The HMAC, including vault header/key version |
-| `input` | string | no | The base64-encoded input data to verify |
-| `marshaling_algorithm` | string (default: asn1) | no | The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types". |
-| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter. |
+| Parameter | Type | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                        |
+|----------|-----|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead.                                                                                                                                                                                                                                                                                                                                                                          |
+| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input                                                                                                     |
+| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys.                                                                                                                                                                                                                                                                                      |
+| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: "sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512",none. Defaults to "sha2-256". Not valid for all key types. See note about none on signing path.                                                                                                                                              |
+| `hmac` | string | no | The HMAC, including vault header/key version                                                                                                                                                                                                                                                                                                                                                                       |
+| `input` | string | no | The base64-encoded input data to verify                                                                                                                                                                                                                                                                                                                                                                            |
+| `marshaling_algorithm` | string (default: asn1) | no | The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".                                                               |
+| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.                                                                                                                                                                                                               |
 | `salt_length` | string (default: auto) | no | The salt length used to sign. Currently only applies to the RSA PSS signature scheme. Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'. |
-| `signature` | string | no | The signature, including vault header/key version |
-| `signature_algorithm` | string | no | The signature algorithm to use for signature verification. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss' |
-| `urlalgorithm` | string | no | Hash algorithm to use (POST URL parameter) |
+| `signature` | string | no | The signature, including vault header/key version                                                                                                                                                                                                                                                                                                                                                                  |
+| `signature_algorithm` | string | no | The signature algorithm to use for signature verification. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'                                                                                                                                                                                                                                                             |
+| `urlalgorithm` | string | no | Hash algorithm to use (POST URL parameter)                                                                                                                                                                                                                                                                                                                                                                         |
 
 #### Responses
 
@@ -12017,19 +12017,19 @@ Verify a signature or HMAC for input data created using the named key
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead. |
-| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input |
-| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys. |
-| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: * sha1 * sha2-224 * sha2-256 * sha2-384 * sha2-512 * sha3-224 * sha3-256 * sha3-384 * sha3-512 * none Defaults to "sha2-256". Not valid for all key types. See note about none on signing path. |
-| `hmac` | string | no | The HMAC, including vault header/key version |
-| `input` | string | no | The base64-encoded input data to verify |
-| `marshaling_algorithm` | string (default: asn1) | no | The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types". |
-| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter. |
+| Parameter | Type | Required | Description                                                                                                                                                                                                                                                                                                                                                                                                        |
+|----------|-----|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Deprecated: use "hash_algorithm" instead.                                                                                                                                                                                                                                                                                                                                                                          |
+| `batch_input` | array | no | Specifies a list of items for processing. When this parameter is set, any supplied 'input', 'hmac' or 'signature' parameters will be ignored. Responses are returned in the 'batch_results' array component of the 'data' element of the response. Any batch output will preserve the order of the batch input                                                                                                     |
+| `context` | string | no | Base64 encoded context for key derivation. Required if key derivation is enabled; currently only available with ed25519 keys.                                                                                                                                                                                                                                                                                      |
+| `hash_algorithm` | string (default: sha2-256) | no | Hash algorithm to use (POST body parameter). Valid values are: "sha1", "sha2-224", "sha2-256", "sha2-384", "sha2-512", "sha3-224", "sha3-256", "sha3-384", "sha3-512", none. Defaults to "sha2-256". Not valid for all key types. See note about none on signing path.                                                                                                                                                     |
+| `hmac` | string | no | The HMAC, including vault header/key version                                                                                                                                                                                                                                                                                                                                                                       |
+| `input` | string | no | The base64-encoded input data to verify                                                                                                                                                                                                                                                                                                                                                                            |
+| `marshaling_algorithm` | string (default: asn1) | no | The method by which to unmarshal the signature when verifying. The default is 'asn1' which is used by openssl and X.509; can also be set to 'jws' which is used for JWT signatures in which case the signature is also expected to be url-safe base64 encoding instead of standard base64 encoding. Currently only valid for ECDSA P-256 key types".                                                               |
+| `prehashed` | boolean | no | Set to 'true' when the input is already hashed. If the key type is 'rsa-2048', 'rsa-3072' or 'rsa-4096', then the algorithm used to hash the input should be indicated by the 'algorithm' parameter.                                                                                                                                                                                                               |
 | `salt_length` | string (default: auto) | no | The salt length used to sign. Currently only applies to the RSA PSS signature scheme. Options are 'auto' (the default used by Golang, causing the salt to be as large as possible when signing), 'hash' (causes the salt length to equal the length of the hash used in the signature), or an integer between the minimum and the maximum permissible salt lengths for the given RSA key size. Defaults to 'auto'. |
-| `signature` | string | no | The signature, including vault header/key version |
-| `signature_algorithm` | string | no | The signature algorithm to use for signature verification. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss' |
+| `signature` | string | no | The signature, including vault header/key version                                                                                                                                                                                                                                                                                                                                                                  |
+| `signature_algorithm` | string | no | The signature algorithm to use for signature verification. Currently only applies to RSA key types. Options are 'pss' or 'pkcs1v15'. Defaults to 'pss'                                                                                                                                                                                                                                                             |
 
 #### Responses
 
@@ -15619,12 +15619,12 @@ Generate a hash sum for input data
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 Defaults to "sha2-256". |
-| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex". |
-| `input` | string | no | The base64-encoded input data |
-| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter) |
+| Parameter | Type | Required | Description                                                                                                                       |
+|----------|-----|--------------|-----------------------------------------------------------------------------------------------------------------------------------|
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "sha2-384", "sha2-512". Defaults to "sha2-256". |
+| `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex".                                                              |
+| `input` | string | no | The base64-encoded input data                                                                                                     |
+| `urlalgorithm` | string | no | Algorithm to use (POST URL parameter)                                                                                             |
 
 #### Responses
 
@@ -15650,7 +15650,7 @@ Generate a hash sum for input data
 
 | Parameter | Type | Required | Description |
 |----------|-----|--------------|----------|
-| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: * sha2-224 * sha2-256 * sha2-384 * sha2-512 Defaults to "sha2-256". |
+| `algorithm` | string (default: sha2-256) | no | Algorithm to use (POST body parameter). Valid values are: "sha2-224", "sha2-256", "sha2-384", "sha2-512". Defaults to "sha2-256". |
 | `format` | string (default: hex) | no | Encoding format to use. Can be "hex" or "base64". Defaults to "hex". |
 | `input` | string | no | The base64-encoded input data |
 
