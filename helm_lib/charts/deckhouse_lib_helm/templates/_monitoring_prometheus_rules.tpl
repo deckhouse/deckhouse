@@ -11,6 +11,7 @@
 
   {{- if gt (len .) 3 }} {{- $currentDir = index . 3 }} {{- else }} {{- $currentDir = $rootDir }} {{- end }}
   {{- if gt (len .) 4 }} {{- $fileList = index . 4 }} {{- end }}
+
   {{- $currentDirIndex := (sub ($currentDir | splitList "/" | len) 1) }}
   {{- $rootDirIndex := (sub ($rootDir | splitList "/" | len) 1) }}
   {{- $folderNamesIndex := (add1 $rootDirIndex) }}
@@ -21,6 +22,7 @@
     {{- if gt (len $fileList) 0 }}
       {{- $shouldProcess = has $path $fileList }}
     {{- end }}
+
     {{- if $shouldProcess }}
     {{- $fileName := ($path | splitList "/" | last ) }}
     {{- $definition := "" }}
@@ -88,7 +90,6 @@ spec:
   groups:
     {{- $definition | nindent 4 }}
       {{- end }}
-    {{- end }}
     {{- end }}
     {{- end }}
   {{- end }}
