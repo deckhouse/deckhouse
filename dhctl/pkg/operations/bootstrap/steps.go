@@ -498,9 +498,9 @@ func rppClientAndConfigGetter(
 	registryCfg registry_config.Config,
 ) (registry.Client, registry.ClientConfigGetter, error) {
 	switch registryCfg.Settings.Mode {
-	case constant.ModeDirect:
+	case constant.ModeLocal:
 		unpackedImagesPath, err := mirror.UnpackAndValidateImgBundle(
-			context.Background(),
+			ctx,
 			registryCfg.Settings.BundlePath,
 		)
 		if err != nil {

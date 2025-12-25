@@ -71,8 +71,8 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
-	if pc.metaConfig.Registry.Settings.Mode == constant.ModeDirect {
-		log.DebugLn("Direct registry mode, skipping check")
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeLocal {
+		log.DebugLn("Local registry mode, skipping check")
 		return nil
 	}
 	
@@ -158,8 +158,8 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
-	if pc.metaConfig.Registry.Settings.Mode == constant.ModeDirect {
-		log.DebugLn("Direct registry mode, skipping check")
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeLocal {
+		log.DebugLn("Local registry mode, skipping check")
 		return nil
 	}
 	
