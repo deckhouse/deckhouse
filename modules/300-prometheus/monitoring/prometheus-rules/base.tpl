@@ -130,3 +130,38 @@
              ```shell
              d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
              ```
+
+    - alert: D8PrometheusConfigReloadFailed
+      expr: prometheus_config_last_reload_successful{job="prometheus", service="prometheus", namespace="d8-monitoring"} == 0
+      for: 10m
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: prometheus
+        d8_component: prometheus
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: >
+          Prometheus configuration reload failed.
+        description: |-
+          The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
+
+          This usually happens when:
+          - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
+          - Invalid RemoteWrite configuration.
+
+          Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
+          Troubleshooting steps:
+
+          1. Check the Prometheus container logs for configuration errors:
+
+             ```shell
+             d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
+             ```
+
+          2. If using remote write, verify the remote write configuration.
+
+          Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.
