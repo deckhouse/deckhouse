@@ -42,3 +42,20 @@ linters-settings:
           name: agent
         - kind: DaemonSet
           name: safe-agent-updater
+
+  openapi:
+    exclude-rules:
+      enum:
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.extendedMetrics.properties.collectors.items.properties.name
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilter.properties.ip_version.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilter.properties.traffic_direction.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilter.properties.verdict.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.allowFilter.properties.drop_reason_desc.items
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilter.properties.ip_version.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilter.properties.traffic_direction.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilter.properties.verdict.items
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.denyFilter.properties.drop_reason_desc.items
+
+        - spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.flowLogs.properties.fieldMaskList.items

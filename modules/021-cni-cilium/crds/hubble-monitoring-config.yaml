@@ -1,0 +1,969 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: hubblemonitoringconfigs.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cni-cilium
+    backup.deckhouse.io/cluster-config: "true"
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: hubblemonitoringconfigs
+    singular: hubblemonitoringconfig
+    kind: HubbleMonitoringConfig
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              properties:
+                extendedMetrics:
+                  type: object
+                  description: |
+                    Configuration for exporting extended metrics from Cilium agents.
+                    Extended metrics provide deeper insight into cluster network behavior.
+
+                    > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
+
+                    For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics).
+                  x-examples:
+                    - enabled: true
+                      collectors:
+                        - name: drop
+                          contextOptions: labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod
+                        - name: flow
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                      description: Enables the export of extended metrics from Cilium agents.
+                    collectors:
+                      type: array
+                      description: |
+                        List of Hubble extended metrics to export. Each collector represents a specific metric type.
+
+                        For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
+                      x-examples:
+                        - - name: drop
+                            contextOptions: "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+                          - name: flow
+                      items:
+                        type: object
+                        properties:
+                          name:
+                            type: string
+                            description: Name of the extended metric to export.
+                            enum:
+                              - "dns"
+                              - "drop"
+                              - "flow"
+                              - "flows-to-world"
+                              - "http"
+                              - "httpV2"
+                              - "icmp"
+                              - "kafka"
+                              - "tcp"
+                          contextOptions:
+                            type: string
+                            description: |
+                              Optional context options for Hubble metrics.
+                              Context options allow customizing metric collection behavior.
+
+                              > **Warning.** A large number of labels on metrics can lead to Prometheus performance degradation.
+
+                              For more information about supported options, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#context-options).
+                flowLogs:
+                  type: object
+                  description: |
+                    Configuration for exporting event logs from Cilium agents.
+                    Event logs provide detailed visibility into Cilium's network events.
+
+                    > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
+
+                    For more details see [the Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#configuring-hubble-exporter).
+                  x-examples:
+                    - enabled: true
+                      allowFilter:
+                        verdict:
+                          - DROPPED
+                          - ERROR
+                      denyFilter:
+                        source_pod:
+                          - kube-system/
+                        destination_pod:
+                          - kube-system/
+                      fieldMaskList:
+                        - time
+                        - source.namespace
+                        - verdict
+                      fileMaxSizeMB: 50
+                  properties:
+                    enabled:
+                      type: boolean
+                      default: false
+                      description: |
+                        Enables event logging for Cilium agents.
+                        The log file is located on the node's filesystem at `/var/run/cilium/hubble/events.log`.
+                    allowFilter:
+                      type: object
+                      description: >
+                        Defines filters that control which events are exported for logging.
+                        Only events that match at least one of the specified filter objects
+                        will be exported. If no filters are specified, all events are allowed.
+
+                        For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+                      properties:
+                        uuid:
+                          type: array
+                          description: Filters by flow UUIDs.
+                          items:
+                            type: string
+                        source_ip:
+                          type: array
+                          description: Source IP or CIDR.
+                          items:
+                            type: string
+                        source_ip_xlated:
+                          type: array
+                          description: Post-translation (SNAT) source IP or CIDR.
+                          items:
+                            type: string
+                        source_pod:
+                          type: array
+                          description: Source Pod name prefixes.
+                          items:
+                            type: string
+                        source_fqdn:
+                          type: array
+                          description: Source fully qualified domain names (FQDN).
+                          items:
+                            type: string
+                        source_label:
+                          type: array
+                          description: Source label selectors.
+                          items:
+                            type: string
+                        source_service:
+                          type: array
+                          description: Source service names.
+                          items:
+                            type: string
+                        source_workload:
+                          type: array
+                          description: Source workloads.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                description: Workload name.
+                              kind:
+                                type: string
+                                description: Workload kind.
+                        source_cluster_name:
+                          type: array
+                          description: Source cluster names.
+                          items:
+                            type: string
+                        destination_ip:
+                          type: array
+                          description: Destination IP or CIDR.
+                          items:
+                            type: string
+                        destination_pod:
+                          type: array
+                          description: Destination Pod names.
+                          items:
+                            type: string
+                        destination_fqdn:
+                          type: array
+                          description: Destination fully qualified domain names (FQDN).
+                          items:
+                            type: string
+                        destination_label:
+                          type: array
+                          description: Destination label selectors.
+                          items:
+                            type: string
+                        destination_service:
+                          type: array
+                          description: Destination service names.
+                          items:
+                            type: string
+                        destination_workload:
+                          type: array
+                          description: Destination workloads.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                description: Workload name.
+                              kind:
+                                type: string
+                                description: Workload kind.
+                        destination_cluster_name:
+                          type: array
+                          description: Destination cluster names.
+                          items:
+                            type: string
+                        traffic_direction:
+                          type: array
+                          description: Traffic direction.
+                          items:
+                            type: string
+                            enum:
+                              - TRAFFIC_DIRECTION_UNKNOWN
+                              - INGRESS
+                              - EGRESS
+                        verdict:
+                          type: array
+                          description: Match by verdict.
+                          items:
+                            type: string
+                            enum:
+                              - VERDICT_UNKNOWN
+                              - FORWARDED
+                              - DROPPED
+                              - ERROR
+                              - AUDIT
+                              - REDIRECTED
+                              - TRACED
+                              - TRANSLATED
+                        drop_reason_desc:
+                          type: array
+                          description: Drop reason (only for DROPPED verdict).
+                          items:
+                            type: string
+                            enum:
+                              - DROP_REASON_UNKNOWN
+                              - INVALID_SOURCE_MAC
+                              - INVALID_DESTINATION_MAC
+                              - INVALID_SOURCE_IP
+                              - POLICY_DENIED
+                              - INVALID_PACKET_DROPPED
+                              - CT_TRUNCATED_OR_INVALID_HEADER
+                              - CT_MISSING_TCP_ACK_FLAG
+                              - CT_UNKNOWN_L4_PROTOCOL
+                              - CT_CANNOT_CREATE_ENTRY_FROM_PACKET
+                              - UNSUPPORTED_L3_PROTOCOL
+                              - MISSED_TAIL_CALL
+                              - ERROR_WRITING_TO_PACKET
+                              - UNKNOWN_L4_PROTOCOL
+                              - UNKNOWN_ICMPV4_CODE
+                              - UNKNOWN_ICMPV4_TYPE
+                              - UNKNOWN_ICMPV6_CODE
+                              - UNKNOWN_ICMPV6_TYPE
+                              - ERROR_RETRIEVING_TUNNEL_KEY
+                              - ERROR_RETRIEVING_TUNNEL_OPTIONS
+                              - INVALID_GENEVE_OPTION
+                              - UNKNOWN_L3_TARGET_ADDRESS
+                              - STALE_OR_UNROUTABLE_IP
+                              - NO_MATCHING_LOCAL_CONTAINER_FOUND
+                              - ERROR_WHILE_CORRECTING_L3_CHECKSUM
+                              - ERROR_WHILE_CORRECTING_L4_CHECKSUM
+                              - CT_MAP_INSERTION_FAILED
+                              - INVALID_IPV6_EXTENSION_HEADER
+                              - IP_FRAGMENTATION_NOT_SUPPORTED
+                              - SERVICE_BACKEND_NOT_FOUND
+                              - NO_TUNNEL_OR_ENCAPSULATION_ENDPOINT
+                              - FAILED_TO_INSERT_INTO_PROXYMAP
+                              - REACHED_EDT_RATE_LIMITING_DROP_HORIZON
+                              - UNKNOWN_CONNECTION_TRACKING_STATE
+                              - LOCAL_HOST_IS_UNREACHABLE
+                              - NO_CONFIGURATION_AVAILABLE_TO_PERFORM_POLICY_DECISION
+                              - UNSUPPORTED_L2_PROTOCOL
+                              - NO_MAPPING_FOR_NAT_MASQUERADE
+                              - UNSUPPORTED_PROTOCOL_FOR_NAT_MASQUERADE
+                              - FIB_LOOKUP_FAILED
+                              - ENCAPSULATION_TRAFFIC_IS_PROHIBITED
+                              - INVALID_IDENTITY
+                              - UNKNOWN_SENDER
+                              - NAT_NOT_NEEDED
+                              - IS_A_CLUSTERIP
+                              - FIRST_LOGICAL_DATAGRAM_FRAGMENT_NOT_FOUND
+                              - FORBIDDEN_ICMPV6_MESSAGE
+                              - DENIED_BY_LB_SRC_RANGE_CHECK
+                              - SOCKET_LOOKUP_FAILED
+                              - SOCKET_ASSIGN_FAILED
+                              - PROXY_REDIRECTION_NOT_SUPPORTED_FOR_PROTOCOL
+                              - POLICY_DENY
+                              - VLAN_FILTERED
+                              - INVALID_VNI
+                              - INVALID_TC_BUFFER
+                              - NO_SID
+                              - MISSING_SRV6_STATE
+                              - NAT46
+                              - NAT64
+                              - AUTH_REQUIRED
+                              - CT_NO_MAP_FOUND
+                              - SNAT_NO_MAP_FOUND
+                              - INVALID_CLUSTER_ID
+                              - UNSUPPORTED_PROTOCOL_FOR_DSR_ENCAP
+                              - NO_EGRESS_GATEWAY
+                              - UNENCRYPTED_TRAFFIC
+                              - TTL_EXCEEDED
+                              - NO_NODE_ID
+                              - DROP_RATE_LIMITED
+                              - IGMP_HANDLED
+                              - IGMP_SUBSCRIBED
+                              - MULTICAST_HANDLED
+                              - DROP_HOST_NOT_READY
+                              - DROP_EP_NOT_READY
+                              - DROP_NO_EGRESS_IP
+                        interface:
+                          type: array
+                          description: Network interface where flow was observed.
+                          items:
+                            type: object
+                            properties:
+                              index:
+                                type: integer
+                                format: int32
+                                minimum: 0
+                                description: Interface index.
+                              name:
+                                type: string
+                                description: Interface name.
+                        event_type:
+                          type: array
+                          description: Event types to filter on.
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: integer
+                                format: int32
+                                description: Primary event type.
+                              match_sub_type:
+                                type: boolean
+                                description: Whether to match on `sub_type`.
+                              sub_type:
+                                type: integer
+                                format: int32
+                                description: Secondary event type.
+                        http_status_code:
+                          type: array
+                          description: HTTP status code prefixes.
+                          items:
+                            type: string
+                        protocol:
+                          type: array
+                          description: L4 or L7 protocol.
+                          items:
+                            type: string
+                        source_port:
+                          type: array
+                          description: L4 source port.
+                          items:
+                            type: string
+                        destination_port:
+                          type: array
+                          description: L4 destination port.
+                          items:
+                            type: string
+                        dns_query:
+                          type: array
+                          description: DNS query regex patterns.
+                          items:
+                            type: string
+                        source_identity:
+                          type: array
+                          description: Source security identity.
+                          items:
+                            type: integer
+                            format: int32
+                            minimum: 0
+                        destination_identity:
+                          type: array
+                          description: Destination security identity.
+                          items:
+                            type: integer
+                            format: int32
+                            minimum: 0
+                        http_method:
+                          type: array
+                          description: HTTP methods.
+                          items:
+                            type: string
+                        http_path:
+                          type: array
+                          description: Regex list to match HTTP path.
+                          items:
+                            type: string
+                        http_url:
+                          type: array
+                          description: Regex list to match HTTP URL.
+                          items:
+                            type: string
+                        http_header:
+                          type: array
+                          description: HTTP headers to match.
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                description: Header key.
+                              value:
+                                type: string
+                                description: Header value.
+                        tcp_flags:
+                          type: array
+                          description: TCP flags to match.
+                          items:
+                            type: object
+                            properties:
+                              FIN: { type: boolean }
+                              SYN: { type: boolean }
+                              RST: { type: boolean }
+                              PSH: { type: boolean }
+                              ACK: { type: boolean }
+                              URG: { type: boolean }
+                              ECE: { type: boolean }
+                              CWR: { type: boolean }
+                              NS: { type: boolean }
+                        node_name:
+                          type: array
+                          description: Node name patterns.
+                          items:
+                            type: string
+                        node_labels:
+                          type: array
+                          description: Node label selectors.
+                          items:
+                            type: string
+                        ip_version:
+                          type: array
+                          description: IP version.
+                          items:
+                            type: string
+                            enum:
+                              - IP_NOT_USED
+                              - IPv4
+                              - IPv6
+                        trace_id:
+                          type: array
+                          description: Trace ID.
+                          items:
+                            type: string
+                    denyFilter:
+                      type: object
+                      description: >
+                        Defines filters that control which events are explicitly excluded from logging.
+                        Any event that matches at least one of the specified filter objects
+                        will be denied from being exported. If no filters are specified, no events are denied.
+                        This allows you to refine the set of events that are logged by excluding certain types.
+
+                        For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+                      properties:
+                        uuid:
+                          type: array
+                          description: Filters by flow UUIDs.
+                          items:
+                            type: string
+                        source_ip:
+                          type: array
+                          description: Source IP or CIDR.
+                          items:
+                            type: string
+                        source_ip_xlated:
+                          type: array
+                          description: Post-translation (SNAT) source IP or CIDR.
+                          items:
+                            type: string
+                        source_pod:
+                          type: array
+                          description: Source Pod name prefixes.
+                          items:
+                            type: string
+                        source_fqdn:
+                          type: array
+                          description: Source fully qualified domain names (FQDN).
+                          items:
+                            type: string
+                        source_label:
+                          type: array
+                          description: Source label selectors.
+                          items:
+                            type: string
+                        source_service:
+                          type: array
+                          description: Source service names.
+                          items:
+                            type: string
+                        source_workload:
+                          type: array
+                          description: Source workloads.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                description: Workload name.
+                              kind:
+                                type: string
+                                description: Workload kind.
+                        source_cluster_name:
+                          type: array
+                          description: Source cluster names.
+                          items:
+                            type: string
+                        destination_ip:
+                          type: array
+                          description: Destination IP or CIDR.
+                          items:
+                            type: string
+                        destination_pod:
+                          type: array
+                          description: Destination Pod names.
+                          items:
+                            type: string
+                        destination_fqdn:
+                          type: array
+                          description: Destination fully qualified domain names (FQDN).
+                          items:
+                            type: string
+                        destination_label:
+                          type: array
+                          description: Destination label selectors.
+                          items:
+                            type: string
+                        destination_service:
+                          type: array
+                          description: Destination service names.
+                          items:
+                            type: string
+                        destination_workload:
+                          type: array
+                          description: Destination workloads.
+                          items:
+                            type: object
+                            properties:
+                              name:
+                                type: string
+                                description: Workload name.
+                              kind:
+                                type: string
+                                description: Workload kind.
+                        destination_cluster_name:
+                          type: array
+                          description: Destination cluster names.
+                          items:
+                            type: string
+                        traffic_direction:
+                          type: array
+                          description: Traffic direction.
+                          items:
+                            type: string
+                            enum:
+                              - TRAFFIC_DIRECTION_UNKNOWN
+                              - INGRESS
+                              - EGRESS
+                        verdict:
+                          type: array
+                          description: Match by verdict.
+                          items:
+                            type: string
+                            enum:
+                              - VERDICT_UNKNOWN
+                              - FORWARDED
+                              - DROPPED
+                              - ERROR
+                              - AUDIT
+                              - REDIRECTED
+                              - TRACED
+                              - TRANSLATED
+                        drop_reason_desc:
+                          type: array
+                          description: Drop reason (only for DROPPED verdict).
+                          items:
+                            type: string
+                            enum:
+                              - DROP_REASON_UNKNOWN
+                              - INVALID_SOURCE_MAC
+                              - INVALID_DESTINATION_MAC
+                              - INVALID_SOURCE_IP
+                              - POLICY_DENIED
+                              - INVALID_PACKET_DROPPED
+                              - CT_TRUNCATED_OR_INVALID_HEADER
+                              - CT_MISSING_TCP_ACK_FLAG
+                              - CT_UNKNOWN_L4_PROTOCOL
+                              - CT_CANNOT_CREATE_ENTRY_FROM_PACKET
+                              - UNSUPPORTED_L3_PROTOCOL
+                              - MISSED_TAIL_CALL
+                              - ERROR_WRITING_TO_PACKET
+                              - UNKNOWN_L4_PROTOCOL
+                              - UNKNOWN_ICMPV4_CODE
+                              - UNKNOWN_ICMPV4_TYPE
+                              - UNKNOWN_ICMPV6_CODE
+                              - UNKNOWN_ICMPV6_TYPE
+                              - ERROR_RETRIEVING_TUNNEL_KEY
+                              - ERROR_RETRIEVING_TUNNEL_OPTIONS
+                              - INVALID_GENEVE_OPTION
+                              - UNKNOWN_L3_TARGET_ADDRESS
+                              - STALE_OR_UNROUTABLE_IP
+                              - NO_MATCHING_LOCAL_CONTAINER_FOUND
+                              - ERROR_WHILE_CORRECTING_L3_CHECKSUM
+                              - ERROR_WHILE_CORRECTING_L4_CHECKSUM
+                              - CT_MAP_INSERTION_FAILED
+                              - INVALID_IPV6_EXTENSION_HEADER
+                              - IP_FRAGMENTATION_NOT_SUPPORTED
+                              - SERVICE_BACKEND_NOT_FOUND
+                              - NO_TUNNEL_OR_ENCAPSULATION_ENDPOINT
+                              - FAILED_TO_INSERT_INTO_PROXYMAP
+                              - REACHED_EDT_RATE_LIMITING_DROP_HORIZON
+                              - UNKNOWN_CONNECTION_TRACKING_STATE
+                              - LOCAL_HOST_IS_UNREACHABLE
+                              - NO_CONFIGURATION_AVAILABLE_TO_PERFORM_POLICY_DECISION
+                              - UNSUPPORTED_L2_PROTOCOL
+                              - NO_MAPPING_FOR_NAT_MASQUERADE
+                              - UNSUPPORTED_PROTOCOL_FOR_NAT_MASQUERADE
+                              - FIB_LOOKUP_FAILED
+                              - ENCAPSULATION_TRAFFIC_IS_PROHIBITED
+                              - INVALID_IDENTITY
+                              - UNKNOWN_SENDER
+                              - NAT_NOT_NEEDED
+                              - IS_A_CLUSTERIP
+                              - FIRST_LOGICAL_DATAGRAM_FRAGMENT_NOT_FOUND
+                              - FORBIDDEN_ICMPV6_MESSAGE
+                              - DENIED_BY_LB_SRC_RANGE_CHECK
+                              - SOCKET_LOOKUP_FAILED
+                              - SOCKET_ASSIGN_FAILED
+                              - PROXY_REDIRECTION_NOT_SUPPORTED_FOR_PROTOCOL
+                              - POLICY_DENY
+                              - VLAN_FILTERED
+                              - INVALID_VNI
+                              - INVALID_TC_BUFFER
+                              - NO_SID
+                              - MISSING_SRV6_STATE
+                              - NAT46
+                              - NAT64
+                              - AUTH_REQUIRED
+                              - CT_NO_MAP_FOUND
+                              - SNAT_NO_MAP_FOUND
+                              - INVALID_CLUSTER_ID
+                              - UNSUPPORTED_PROTOCOL_FOR_DSR_ENCAP
+                              - NO_EGRESS_GATEWAY
+                              - UNENCRYPTED_TRAFFIC
+                              - TTL_EXCEEDED
+                              - NO_NODE_ID
+                              - DROP_RATE_LIMITED
+                              - IGMP_HANDLED
+                              - IGMP_SUBSCRIBED
+                              - MULTICAST_HANDLED
+                              - DROP_HOST_NOT_READY
+                              - DROP_EP_NOT_READY
+                              - DROP_NO_EGRESS_IP
+                        interface:
+                          type: array
+                          description: Network interface where flow was observed.
+                          items:
+                            type: object
+                            properties:
+                              index:
+                                type: integer
+                                format: int32
+                                minimum: 0
+                                description: Interface index.
+                              name:
+                                type: string
+                                description: Interface name.
+                        event_type:
+                          type: array
+                          description: Event types to filter on.
+                          items:
+                            type: object
+                            properties:
+                              type:
+                                type: integer
+                                format: int32
+                                description: Primary event type.
+                              match_sub_type:
+                                type: boolean
+                                description: Whether to match on `sub_type`.
+                              sub_type:
+                                type: integer
+                                format: int32
+                                description: Secondary event type.
+                        http_status_code:
+                          type: array
+                          description: HTTP status code prefixes.
+                          items:
+                            type: string
+                        protocol:
+                          type: array
+                          description: L4 or L7 protocol.
+                          items:
+                            type: string
+                        source_port:
+                          type: array
+                          description: L4 source port.
+                          items:
+                            type: string
+                        destination_port:
+                          type: array
+                          description: L4 destination port.
+                          items:
+                            type: string
+                        dns_query:
+                          type: array
+                          description: DNS query regex patterns.
+                          items:
+                            type: string
+                        source_identity:
+                          type: array
+                          description: Source security identity.
+                          items:
+                            type: integer
+                            format: int32
+                            minimum: 0
+                        destination_identity:
+                          type: array
+                          description: Destination security identity.
+                          items:
+                            type: integer
+                            format: int32
+                            minimum: 0
+                        http_method:
+                          type: array
+                          description: HTTP methods.
+                          items:
+                            type: string
+                        http_path:
+                          type: array
+                          description: Regex list to match HTTP path.
+                          items:
+                            type: string
+                        http_url:
+                          type: array
+                          description: Regex list to match HTTP URL.
+                          items:
+                            type: string
+                        http_header:
+                          type: array
+                          description: HTTP headers to match.
+                          items:
+                            type: object
+                            properties:
+                              key:
+                                type: string
+                                description: Header key.
+                              value:
+                                type: string
+                                description: Header value.
+                        tcp_flags:
+                          type: array
+                          description: TCP flags to match.
+                          items:
+                            type: object
+                            properties:
+                              FIN: { type: boolean }
+                              SYN: { type: boolean }
+                              RST: { type: boolean }
+                              PSH: { type: boolean }
+                              ACK: { type: boolean }
+                              URG: { type: boolean }
+                              ECE: { type: boolean }
+                              CWR: { type: boolean }
+                              NS: { type: boolean }
+                        node_name:
+                          type: array
+                          description: Node name patterns.
+                          items:
+                            type: string
+                        node_labels:
+                          type: array
+                          description: Node label selectors.
+                          items:
+                            type: string
+                        ip_version:
+                          type: array
+                          description: IP version.
+                          items:
+                            type: string
+                            enum:
+                              - IP_NOT_USED
+                              - IPv4
+                              - IPv6
+                        trace_id:
+                          type: array
+                          description: Trace ID.
+                          items:
+                            type: string
+                    fieldMaskList:
+                      type: array
+                      description: |
+                        List of fields that should be displayed in events.
+
+                        For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#field-mask).
+                      items:
+                        type: string
+                        enum:
+                          - time
+                          - uuid
+                          - verdict
+                          - drop_reason_desc
+                          - auth_type
+                          - ethernet
+                          - ethernet.source
+                          - ethernet.destination
+                          - IP
+                          - IP.source
+                          - IP.source_xlated
+                          - IP.destination
+                          - IP.ipVersion
+                          - IP.encrypted
+                          - l4
+                          - l4.TCP
+                          - l4.TCP.source_port
+                          - l4.TCP.destination_port
+                          - l4.TCP.flags
+                          - l4.TCP.flags.FIN
+                          - l4.TCP.flags.SYN
+                          - l4.TCP.flags.RST
+                          - l4.TCP.flags.PSH
+                          - l4.TCP.flags.ACK
+                          - l4.TCP.flags.URG
+                          - l4.TCP.flags.ECE
+                          - l4.TCP.flags.CWR
+                          - l4.TCP.flags.NS
+                          - l4.UDP
+                          - l4.UDP.source_port
+                          - l4.UDP.destination_port
+                          - l4.ICMPv4
+                          - l4.ICMPv4.type
+                          - l4.ICMPv4.code
+                          - l4.ICMPv6
+                          - l4.ICMPv6.type
+                          - l4.ICMPv6.code
+                          - l4.SCTP
+                          - l4.SCTP.source_port
+                          - l4.SCTP.destination_port
+                          - source
+                          - source.ID
+                          - source.identity
+                          - source.cluster_name
+                          - source.namespace
+                          - source.labels
+                          - source.pod_name
+                          - source.workloads
+                          - source.workloads.name
+                          - source.workloads.kind
+                          - destination
+                          - destination.ID
+                          - destination.identity
+                          - destination.cluster_name
+                          - destination.namespace
+                          - destination.labels
+                          - destination.pod_name
+                          - destination.workloads
+                          - destination.workloads.name
+                          - destination.workloads.kind
+                          - Type
+                          - node_name
+                          - node_labels
+                          - source_names
+                          - destination_names
+                          - l7
+                          - l7.type
+                          - l7.latency_ns
+                          - l7.record
+                          - l7.record.dns
+                          - l7.record.dns.query
+                          - l7.record.dns.ips
+                          - l7.record.dns.ttl
+                          - l7.record.dns.cnames
+                          - l7.record.dns.observation_source
+                          - l7.record.dns.rcode
+                          - l7.record.dns.qtypes
+                          - l7.record.dns.rrtypes
+                          - l7.record.http
+                          - l7.record.http.code
+                          - l7.record.http.method
+                          - l7.record.http.url
+                          - l7.record.http.protocol
+                          - l7.record.http.headers
+                          - l7.record.http.headers.key
+                          - l7.record.http.headers.value
+                          - l7.record.kafka
+                          - l7.record.kafka.error_code
+                          - l7.record.kafka.api_version
+                          - l7.record.kafka.api_key
+                          - l7.record.kafka.correlation_id
+                          - l7.record.kafka.topic
+                          - is_reply
+                          - event_type
+                          - event_type.type
+                          - event_type.sub_type
+                          - traffic_direction
+                          - trace_observation_point
+                          - trace_reason
+                          - file
+                          - file.name
+                          - file.line
+                          - debug_capture_point
+                          - interface
+                          - interface.index
+                          - interface.name
+                          - proxy_port
+                          - trace_context
+                          - trace_context.parent
+                          - trace_context.parent.trace_id
+                          - sock_xlate_point
+                          - socket_cookie
+                          - cgroup_id
+                          - extensions
+                          - egress_allowed_by
+                          - egress_allowed_by.name
+                          - egress_allowed_by.namespace
+                          - egress_allowed_by.labels
+                          - egress_allowed_by.revision
+                          - egress_allowed_by.kind
+                          - ingress_allowed_by
+                          - ingress_allowed_by.name
+                          - ingress_allowed_by.namespace
+                          - ingress_allowed_by.labels
+                          - ingress_allowed_by.revision
+                          - ingress_allowed_by.kind
+                          - egress_denied_by
+                          - egress_denied_by.name
+                          - egress_denied_by.namespace
+                          - egress_denied_by.labels
+                          - egress_denied_by.revision
+                          - egress_denied_by.kind
+                          - ingress_denied_by
+                          - ingress_denied_by.name
+                          - ingress_denied_by.namespace
+                          - ingress_denied_by.labels
+                          - ingress_denied_by.revision
+                          - ingress_denied_by.kind
+                          - source_service
+                          - source_service.name
+                          - source_service.namespace
+                          - destination_service
+                          - destination_service.name
+                          - destination_service.namespace
+                    fileMaxSizeMB:
+                      type: integer
+                      default: 10
+                      description: Size in MB at which to rotate the Hubble export file.
+      additionalPrinterColumns:
+        - jsonPath: .spec.extendedMetrics.enabled
+          name: Extended Metrics
+          description: 'Status Extended Metrics'
+          type: boolean
+        - jsonPath: .spec.flowLogs.enabled
+          name: Flow Logs
+          description: 'Status Flow Logs'
+          type: boolean

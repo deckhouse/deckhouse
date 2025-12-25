@@ -1,0 +1,329 @@
+spec:
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      schema:
+        openAPIV3Schema:
+          type: object
+          required: [ 'spec' ]
+          properties:
+            spec:
+              type: object
+              properties:
+                extendedMetrics:
+                  description: |
+                    Конфигурация для экспорта расширенных метрик с агентов Cilium.
+                    Расширенные метрики позволяют получить более глубокое понимание поведения сети кластера.
+
+                    > **Внимание.** Изменение этого параметра приведет к перезапуску агентов Cilium.
+
+                    Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#monitoring-metrics).
+                  properties:
+                    enabled:
+                      description: Включает экспорт расширенных метрик с агентов Cilium.
+                    collectors:
+                      description: |
+                        Список расширенных метрик Hubble для экспорта. Каждый коллектор представляет собой определённый тип метрики.
+
+                        Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
+                      items:
+                        properties:
+                          name:
+                            description: Название расширенной метрики для экспорта.
+                          contextOptions:
+                            description: |
+                              Необязательные параметры контекста для метрик Hubble.
+                              Параметры контекста позволяют настраивать поведение сбора метрик.
+
+                              > **Внимание.** Большое количество меток в метриках может привести к снижению производительности Prometheus.
+
+                              Для получения дополнительной информации о поддерживаемых параметрах смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#context-options).
+                flowLogs:
+                  description: |
+                    Конфигурация для экспорта журналов событий с агентов Cilium.
+                    Журналы событий предоставляют детальную информацию о сетевых событиях Cilium.
+
+                    > **Внимание.** Изменение этого параметра приведет к перезапуску агентов Cilium.
+
+                    Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#configuring-hubble-exporter).
+                  properties:
+                    enabled:
+                      description: |
+                        Включает ведение журналов событий для агентов Cilium.
+                        Файл журнала расположен на файловой системе узла по пути `/var/run/cilium/hubble/events.log`.
+                    allowFilter:
+                      description: >
+                        Определяет фильтры, которые управляют тем, какие события экспортируются в лог.
+                        Экспортируются только события, которые соответствуют хотя бы одному из указанных объектов фильтра.
+                        Если фильтры не заданы, разрешены все события.
+
+                        Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+                      properties:
+                        uuid:
+                          description: Фильтрация по UUID потоков (flow UUID).
+                        source_ip:
+                          description: IP-адрес или CIDR источника.
+                        source_ip_xlated:
+                          description: IP-адрес или CIDR источника после трансляции (SNAT).
+                        source_pod:
+                          description: Префиксы имён подов источника.
+                        source_fqdn:
+                          description: Полные доменные имена (FQDN) источника.
+                        source_label:
+                          description: Селекторы лейблов источника.
+                        source_service:
+                          description: Имена сервисов источника.
+                        source_workload:
+                          description: Нагрузки источника.
+                          items:
+                            properties:
+                              name:
+                                description: Имя нагрузки.
+                              kind:
+                                description: Тип нагрузки (kind).
+                        source_cluster_name:
+                          description: Имена кластеров источника.
+                        destination_ip:
+                          description: IP-адрес или CIDR назначения.
+                        destination_pod:
+                          description: Имена подов назначения.
+                        destination_fqdn:
+                          description: Полные доменные имена (FQDN) назначения.
+                        destination_label:
+                          description: Селекторы лейблов назначения.
+                        destination_service:
+                          description: Имена сервисов назначения.
+                        destination_workload:
+                          description: Нагрузки назначения.
+                          items:
+                            properties:
+                              name:
+                                description: Имя нагрузки.
+                              kind:
+                                description: Тип нагрузки (kind).
+                        destination_cluster_name:
+                          description: Имена кластеров назначения.
+                        traffic_direction:
+                          description: Направление трафика.
+                        verdict:
+                          description: Сопоставление по вердикту.
+                        drop_reason_desc:
+                          description: Описание причины отброса трафика (только для вердикта DROPPED).
+                        interface:
+                          description: Сетевой интерфейс, на котором был замечен поток.
+                          items:
+                            properties:
+                              index:
+                                description: Индекс интерфейса.
+                              name:
+                                description: Имя интерфейса.
+                        event_type:
+                          description: Типы событий для фильтрации.
+                          items:
+                            properties:
+                              type:
+                                description: Основной тип события.
+                              match_sub_type:
+                                description: Нужно ли сопоставлять также `sub_type`.
+                              sub_type:
+                                description: Вторичный тип события.
+                        http_status_code:
+                          description: Префиксы HTTP-кодов ответа.
+                        protocol:
+                          description: Протокол L4 или L7.
+                        source_port:
+                          description: Порт L4 источника.
+                        destination_port:
+                          description: Порт L4 назначения.
+                        dns_query:
+                          description: Шаблоны регулярных выражений для DNS-запросов.
+                        source_identity:
+                          description: Идентификатор безопасности (security identity) источника.
+                        destination_identity:
+                          description: Идентификатор безопасности (security identity) назначения.
+                        http_method:
+                          description: HTTP-методы.
+                        http_path:
+                          description: Список регулярных выражений для сопоставления с HTTP-путем.
+                        http_url:
+                          description: Список регулярных выражений для сопоставления с HTTP-адресом.
+                        http_header:
+                          description: HTTP-заголовки для сопоставления.
+                          items:
+                            properties:
+                              key:
+                                description: Ключ заголовка.
+                              value:
+                                description: Значение заголовка.
+                        tcp_flags:
+                          description: TCP-флаги для сопоставления.
+                          items:
+                            properties:
+                              FIN:
+                                description: FIN-флаг.
+                              SYN:
+                                description: SYN-флаг.
+                              RST:
+                                description: RST-флаг.
+                              PSH:
+                                description: PSH-флаг.
+                              ACK:
+                                description: ACK-флаг.
+                              URG:
+                                description: URG-флаг.
+                              ECE:
+                                description: ECE-флаг.
+                              CWR:
+                                description: CWR-флаг.
+                              NS:
+                                description: NS-флаг.
+                        node_name:
+                          description: Шаблоны имён узлов.
+                        node_labels:
+                          description: Селекторы лейблов узлов.
+                        ip_version:
+                          description: Версия IP.
+                        trace_id:
+                          description: ID трассировки.
+                    denyFilter:
+                      description: >
+                        Определяет фильтры, которые управляют тем, какие события явно исключаются из логирования.
+                        Любое событие, которое соответствует хотя бы одному из указанных объектов фильтра,
+                        будет запрещено к экспорту. Если фильтры не заданы, ничего не исключается.
+
+                        Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#performance-tuning).
+                      properties:
+                        uuid:
+                          description: Фильтрация по UUID потоков (flow UUID).
+                        source_ip:
+                          description: IP-адрес или CIDR источника.
+                        source_ip_xlated:
+                          description: IP-адрес или CIDR источника после трансляции (SNAT).
+                        source_pod:
+                          description: Префиксы имён подов источника.
+                        source_fqdn:
+                          description: Полные доменные имена (FQDN) источника.
+                        source_label:
+                          description: Селекторы лейблов источника.
+                        source_service:
+                          description: Имена сервисов источника.
+                        source_workload:
+                          description: Нагрузки источника.
+                          items:
+                            properties:
+                              name:
+                                description: Имя нагрузки.
+                              kind:
+                                description: Тип нагрузки.
+                        source_cluster_name:
+                          description: Имена кластеров источника.
+                        destination_ip:
+                          description: IP-адрес или CIDR назначения.
+                        destination_pod:
+                          description: Имена подов назначения.
+                        destination_fqdn:
+                          description: Полные доменные имена (FQDN) назначения.
+                        destination_label:
+                          description: Селекторы лейблов назначения.
+                        destination_service:
+                          description: Имена сервисов назначения.
+                        destination_workload:
+                          description: Нагрузки назначения.
+                          items:
+                            properties:
+                              name:
+                                description: Имя нагрузки.
+                              kind:
+                                description: Тип нагрузки (kind).
+                        destination_cluster_name:
+                          description: Имена кластеров назначения.
+                        traffic_direction:
+                          description: Направление трафика.
+                        verdict:
+                          description: Сопоставление по вердикту.
+                        drop_reason_desc:
+                          description: Описание причины отброса трафика (только для вердикта DROPPED).
+                        interface:
+                          description: Сетевой интерфейс, на котором был замечен поток.
+                          items:
+                            properties:
+                              index:
+                                description: Индекс интерфейса.
+                              name:
+                                description: Имя интерфейса.
+                        event_type:
+                          description: Типы событий для фильтрации.
+                          items:
+                            properties:
+                              type:
+                                description: Основной тип события.
+                              match_sub_type:
+                                description: Нужно ли сопоставлять также `sub_type`.
+                              sub_type:
+                                description: Вторичный тип события.
+                        http_status_code:
+                          description: Префиксы HTTP-кодов ответа.
+                        protocol:
+                          description: Протокол L4 или L7.
+                        source_port:
+                          description: Порт L4 источника.
+                        destination_port:
+                          description: Порт L4 назначения.
+                        dns_query:
+                          description: Шаблоны регулярных выражений для DNS-запросов.
+                        source_identity:
+                          description: Идентификатор безопасности (security identity) источника.
+                        destination_identity:
+                          description: Идентификатор безопасности (security identity) назначения.
+                        http_method:
+                          description: HTTP-методы.
+                        http_path:
+                          description: Список регулярных выражений для сопоставления с HTTP-путем.
+                        http_url:
+                          description: Список регулярных выражений для сопоставления с HTTP-адресом.
+                        http_header:
+                          description: HTTP-заголовки для сопоставления.
+                          items:
+                            properties:
+                              key:
+                                description: Ключ заголовка.
+                              value:
+                                description: Значение заголовка.
+                        tcp_flags:
+                          description: TCP-флаги для сопоставления.
+                          items:
+                            properties:
+                              FIN:
+                                description: FIN-флаг.
+                              SYN:
+                                description: SYN-флаг.
+                              RST:
+                                description: RST-флаг.
+                              PSH:
+                                description: PSH-флаг.
+                              ACK:
+                                description: ACK-флаг.
+                              URG:
+                                description: URG-флаг.
+                              ECE:
+                                description: ECE-флаг.
+                              CWR:
+                                description: CWR-флаг.
+                              NS:
+                                description: NS-флаг.
+                        node_name:
+                          description: Шаблоны имён узлов.
+                        node_labels:
+                          description: Селекторы лейблов узлов.
+                        ip_version:
+                          description: Версия IP.
+                        trace_id:
+                          description: ID трассировки.
+                    fieldMaskList:
+                      description: |
+                        Список полей, которые должны отображаться в событиях.
+
+                        Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/hubble/configuration/export/#field-mask).
+                    fileMaxSizeMB:
+                      description: Размер в МБ, при достижении которого будет выполняться ротация файла экспорта Hubble.
