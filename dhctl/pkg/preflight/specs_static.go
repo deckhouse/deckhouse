@@ -50,9 +50,8 @@ func (pc *Checker) CheckStaticNodeSystemRequirements(ctx context.Context) error 
 
 	minimumRequiredFoldersSizesGB := map[string]int{}
 
-	if registry_const.ShouldRunStaticPodRegistry(
-		pc.installConfig.Registry.Settings.Mode,
-	) {
+	if registry_const.IsStaticPodRegistry(
+		pc.installConfig.Registry.Settings.Mode) {
 		minimumRequiredFoldersSizesGB["/opt/deckhouse/registry"] = minimumRequiredRegistryDiskSizeGB
 	}
 

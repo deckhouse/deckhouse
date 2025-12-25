@@ -121,9 +121,8 @@ func (pc *Checker) CheckCloudMasterNodeSystemRequirements(_ context.Context) err
 	if err = validateIntegerPropertyAtPath(configObject, coreCountPropertyPath, minimumRequiredCPUCores, false); err != nil {
 		return fmt.Errorf("CPU cores count: %v", err)
 	}
-	if registry_const.ShouldRunStaticPodRegistry(
-		pc.installConfig.Registry.Settings.Mode,
-	) {
+	if registry_const.IsStaticPodRegistry(
+		pc.installConfig.Registry.Settings.Mode) {
 		if err = validateIntegerPropertyAtPath(configObject, registryDiskPropertyPath, minimumRequiredRegistryDiskSizeGB, false); err != nil {
 			return fmt.Errorf("Registry disk capacity: %v", err)
 		}

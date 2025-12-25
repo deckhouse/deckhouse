@@ -17,7 +17,6 @@ limitations under the License.
 package constant
 
 import (
-	"slices"
 	"strings"
 )
 
@@ -73,9 +72,4 @@ func ToScheme(scheme string) SchemeType {
 		return SchemeHTTP
 	}
 	return SchemeHTTPS
-}
-
-func ShouldRunStaticPodRegistry(mode ModeType) bool {
-	staticPodsRegistryModes := []ModeType{ModeProxy, ModeLocal}
-	return slices.Contains(staticPodsRegistryModes, mode)
 }
