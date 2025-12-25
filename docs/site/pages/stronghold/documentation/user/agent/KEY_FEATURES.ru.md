@@ -6,6 +6,8 @@ lang: ru
 
 ## Templating (Рендеринг шаблонов)
 
+{% raw %}
+
 Templating позволяет создавать файлы конфигурации, наполненные секретами из Stronghold, используя язык шаблонов [Consul Template](https://github.com/hashicorp/consul-template) для рендеринга файлов.
 
 Существует два режима шаблонов:
@@ -1225,3 +1227,5 @@ cat /etc/stronghold-agent/jwt-token | cut -d. -f2 | base64 -d | jq
 1. Используйте bound_subject или bound_claims для строгой проверки.
 1. Для production используйте OIDC discovery (автоматическое обновление ключей).
 1. Логируйте все аутентификации для аудита.
+
+{% endraw %}
