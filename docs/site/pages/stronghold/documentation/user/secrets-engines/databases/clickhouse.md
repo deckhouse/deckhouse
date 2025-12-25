@@ -68,18 +68,17 @@ Roles.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-Generate a new credential by reading from the `/creds` endpoint with the name
-    of the role:
+Generate a new credential by reading from the `/creds` endpoint with the name of the role:
 
-    ```shell-session
-    $ d8 stronghold read database/creds/my-role
-    Key                Value
-    ---                -----
-    lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
-    lease_duration     1h
-    lease_renewable    true
-    password           SsnoaA-8Tv4t34f41baD
-    username           v-strongholduse-my-role-x
-    ```
+```shell-session
+$ d8 stronghold read database/creds/my-role
+Key                Value
+---                -----
+lease_id           database/creds/my-role/2f6a614c-4aa2-7b19-24b9-ad944a8d4de6
+lease_duration     1h
+lease_renewable    true
+password           SsnoaA-8Tv4t34f41baD
+username           v-strongholduse-my-role-x
+```
 
 {% endraw %}
