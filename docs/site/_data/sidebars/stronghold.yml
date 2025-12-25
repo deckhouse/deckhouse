@@ -388,7 +388,27 @@ entries:
         - title:
             en: Stronghold agent
             ru: Stronghold агент
-          url: /stronghold/documentation/agent/
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /stronghold/documentation/user/auth/jwt/oidc-providers/overview.html
+            - title:
+                en: Use cases
+                ru: Сценарии использования
+              url: /stronghold/documentation/agent/use-cases.html
+            - title:
+                en: Key features
+                ru: Основные возможности
+              url: /stronghold/documentation/agent/key-features.html
+            - title:
+                en: Main settings
+                ru: Настройка конфигурации
+              url: /stronghold/documentation/agent/settings.html
+            - title:
+                en: Launch and control
+                ru: Запуск и управление
+              url: /stronghold/documentation/agent/launch-and-control.html
     - title:
         en: Reference
         ru: Справка

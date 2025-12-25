@@ -5018,12 +5018,12 @@ Write, Patch, Read, and Delete data in the Key-Value Store.
 
 #### Request body parameters
 
-| Parameter | Type | Required | Description |
-|----------|-----|--------------|----------|
-| `data` | object | no | The contents of the data map will be stored and returned on read. |
+| Parameter | Type | Required | Description                                                                                                                                                                                                                                                                                                                             |
+|----------|-----|--------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `data` | object | no | The contents of the data map will be stored and returned on read.                                                                                                                                                                                                                                                                       |
 | `options` | object | no | Options for writing a KV entry. Set the "cas" value to use a Check-And-Set operation. If not set the write will be allowed. If set to 0 a write will only be allowed if the key doesn’t exist. If the index is non-zero the write will only be allowed if the key’s current version matches the version specified in the cas parameter. |
-| `override_version` | integer | no | Only replication!!!!!!!! |
-| `version` | integer | no | If provided during a read, the value at the version number will be returned |
+| `override_version` | integer | no | **Only replication**                                                                                                                                                                                                                                                                                                                    |
+| `version` | integer | no | If provided during a read, the value at the version number will be returned                                                                                                                                                                                                                                                             |
 
 #### Responses
 

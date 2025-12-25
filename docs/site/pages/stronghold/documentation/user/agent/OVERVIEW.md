@@ -1,7 +1,6 @@
 ---
-title: "Stronghold Agent"
-permalink: en/stronghold/documentation/agent/
-lang: en
+title: "Overview"
+permalink: en/stronghold/documentation/agent/overview.html
 ---
 
 coming soon...
