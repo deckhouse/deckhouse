@@ -196,7 +196,7 @@ Use [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) to set ac
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: beeline
+  name: test-rule
 spec:
   accessLevel: Admin
   subjects:
