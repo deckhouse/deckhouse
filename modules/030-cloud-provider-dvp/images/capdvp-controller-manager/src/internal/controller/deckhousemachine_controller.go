@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
-	"github.com/docker/docker/daemon/logger"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -405,10 +404,6 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
-	// Delete existing cloud-init secret if it exists to ensure clean state
-	if err := r.DVP.ComputeService.DeleteCloudInitProvisioningSecret(ctx, cloudInitSecretName); err != nil {
-		logger.Info("Cloud-init secret does not exist or could not be deleted, will attempt to create", "secret", cloudInitSecretName, "error", err)
-	}
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
