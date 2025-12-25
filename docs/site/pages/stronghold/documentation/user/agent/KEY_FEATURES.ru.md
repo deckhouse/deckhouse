@@ -502,7 +502,7 @@ Agent автоматически:
 
 ### Примеры для разных языков программирования
 
-#### Go приложение:
+#### Go приложение
 
 ```hcl
 exec {
@@ -534,7 +534,7 @@ env_template "LOG_LEVEL" {
 }
 ```
 
-#### Docker контейнер на VM:
+#### Docker контейнер на VM
 
 ```hcl
 exec {
@@ -757,7 +757,7 @@ Secret ID:
 - Наиболее безопасный вариант для production.
 - Agent должен иметь `remove_secret_id_file_after_reading = true` в конфигураионном файле
 
-2. **Многоразовый (num_uses=0):**
+1. **Многоразовый (num_uses=0):**
 
    ```bash
    # На Stronghold сервере:
@@ -765,12 +765,13 @@ Secret ID:
      secret_id_num_uses=0 \
      policies="myapp-policy"
    ```
+
 Особенности:
 - Может использоваться множество раз.
 - Удобен для тестирования и разработки.
 - Менее безопасен (если скомпрометирован - требуется ручная ротация).
 
-3. **С ограниченным TTL:**
+1. **С ограниченным TTL:**
 
    ```bash
    # На Stronghold сервере:
@@ -1187,19 +1188,19 @@ cat /var/run/stronghold-agent/token
 Особенности JWT метода:
 
 1. **JWT токен vs Stronghold токен:**.
-  - JWT токен — это credential от Identity Provider (короткоживущий, обычно 5-60 минут).
-  - После аутентификации Agent получает Stronghold токен.
-  - Stronghold токен обновляется автоматически (как в AppRole).
-  - JWT токен НЕ обновляется Agent автоматически.
+   - JWT токен — это credential от Identity Provider (короткоживущий, обычно 5-60 минут).
+   - После аутентификации Agent получает Stronghold токен.
+   - Stronghold токен обновляется автоматически (как в AppRole).
+   - JWT токен НЕ обновляется Agent автоматически.
 
-2. **Периодическое обновление JWT:**.
-  - Если JWT истекает, нужно получить новый от IdP.
-  - Можно настроить cron job для периодического обновления:
+1. **Периодическое обновление JWT:**.
+   - Если JWT истекает, нужно получить новый от IdP.
+   - Можно настроить cron job для периодического обновления:
 
-   ```bash
-   # /etc/cron.d/refresh-jwt
-   */30 * * * * stronghold-agent /usr/local/bin/refresh-jwt-token.sh
-   ```
+      ```bash
+      # /etc/cron.d/refresh-jwt
+      */30 * * * * stronghold-agent /usr/local/bin/refresh-jwt-token.sh
+      ```
 
 Проверка JWT токена:
 

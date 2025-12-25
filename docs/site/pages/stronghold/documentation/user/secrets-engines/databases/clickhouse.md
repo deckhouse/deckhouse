@@ -48,7 +48,7 @@ Roles.
      Success! Data written to: database/roles/my-role
    ```
 
-2. Configure a role that maps a name in Stronghold to an SQL statement to execute to
+1. Configure a role that maps a name in Stronghold to an SQL statement to execute to
     create the database credential.
     The example assumes that the `readonly` role has been created in the `my_cluster` database cluster.
 
@@ -68,7 +68,7 @@ Roles.
 After the secrets engine is configured and a user/machine has an Stronghold token with
 the proper permission, it can generate credentials.
 
-1. Generate a new credential by reading from the `/creds` endpoint with the name
+Generate a new credential by reading from the `/creds` endpoint with the name
     of the role:
 
     ```shell-session
