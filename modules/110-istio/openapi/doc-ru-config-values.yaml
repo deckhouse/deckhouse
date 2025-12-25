@@ -1,4 +1,5 @@
 type: object
+required: ["globalVersion"]
 properties:
   globalVersion:
     description: Явно заданная версия control plane Istio, который обслуживает data plane по умолчанию (namespace с лейблом `istio-injection=enabled`, но не `istio.io/rev=`).

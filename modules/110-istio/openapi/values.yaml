@@ -1,6 +1,8 @@
 x-extend:
   schema: config-values.yaml
 type: object
+default: 
+  globalVersion: "1.21"
 properties:
   internal:
     type: object
