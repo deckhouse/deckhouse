@@ -38,7 +38,7 @@ entries:
               url: /stronghold/documentation/admin/standalone/installation.html
             - title:
                 en: Configuration
-                ru: Конфигурация
+                ru: Настройка
               url: /stronghold/documentation/admin/standalone/configuration.html
             - title:
                 en: HSM Support
@@ -403,7 +403,7 @@ entries:
               url: /stronghold/documentation/agent/key-features.html
             - title:
                 en: Main settings
-                ru: Настройка конфигурации
+                ru: Основные настройки
               url: /stronghold/documentation/agent/settings.html
             - title:
                 en: Launch and control
