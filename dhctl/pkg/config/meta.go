@@ -104,6 +104,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	if err := m.prepareRegistry(); err != nil {
 		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
+	m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable = registry_const.IsStaticPodRegistry(m.Registry.Settings.Mode)
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
