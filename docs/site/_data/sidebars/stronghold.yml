@@ -38,7 +38,7 @@ entries:
               url: /stronghold/documentation/admin/standalone/installation.html
             - title:
                 en: Configuration
-                ru: Настройка
+                ru: Конфигурация
               url: /stronghold/documentation/admin/standalone/configuration.html
             - title:
                 en: HSM Support
