@@ -1326,6 +1326,7 @@ function run-test() {
   for (( j=1; j<=5; j++ )); do
     sleep "$sleep_second"
     sleep_second=5
+    echo "Trying to connect to Commander"
 
     response=$(curl -s -X POST  \
       "https://${COMMANDER_HOST}/api/v1/clusters" \
