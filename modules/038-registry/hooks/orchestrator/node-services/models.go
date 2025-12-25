@@ -29,7 +29,6 @@ import (
 	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/users"
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
-	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -225,7 +224,7 @@ func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, nodeIP s
 	nsc.Config.HTTPSecret = params.HTTPSecret
 	nsc.Config.UserRO = mapUser(params.UserRO)
 
-	nsc.Version, err = registry_pki.ComputeHash(nsc.Config)
+	nsc.Version, err = pki.ComputeHash(nsc.Config)
 	if err != nil {
 		return fmt.Errorf("cannot compute config hash: %w", err)
 	}
