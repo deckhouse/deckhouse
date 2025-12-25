@@ -20,6 +20,7 @@ resource "kubernetes_manifest" "additional_disk" {
       "name"        = local.disk_name
       "namespace"   = var.namespace
       "annotations" = local.disk_annotations
+      "labels"      = local.disk_labels
     }
     "spec" = {
       "persistentVolumeClaim" = merge(
