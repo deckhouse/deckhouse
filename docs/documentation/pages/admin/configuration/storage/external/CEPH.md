@@ -4,216 +4,187 @@ permalink: en/admin/configuration/storage/external/ceph.html
 description: "Configure Ceph distributed storage integration in Deckhouse Kubernetes Platform. RBD and CephFS setup, authentication configuration, and high availability storage management."
 ---
 
-Ceph is a scalable distributed storage system that provides high availability and fault tolerance for data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClasses based on RADOS Block Device (RBD) or CephFS.
+Ceph is a scalable distributed storage system with high availability and fault tolerance. Deckhouse Kubernetes Platform (DKP) provides Ceph cluster integration using the [`csi-ceph`](/modules/csi-ceph/) module. This enables dynamic storage management and the use of StorageClass based on RADOS Block Device (RBD) or CephFS.
 
-This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
+This page provides instructions for connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
 
-{% alert level="warning" %}
-When switching to this module from the`ceph-csi` module, an automatic migration is performed, but it requires preparation:
-
-1. Scale all operators (redis, clickhouse, kafka, etc.) to zero replicas; during migration, operators in the cluster must not be running. The only exception is the [`prometheus`](/modules/prometheus/) operator in Deckhouse, which will be automatically disabled during migration.
-1. Disable the `ceph-csi` module and enable the [`csi-ceph`](/modules/csi-ceph/) module.
-1. Wait for the migration process to complete in the Deckhouse logs (indicated by "Finished migration from Ceph CSI module").
-1. Create test pod/PVC to verify CSI functionality.
-1. Restore operators to a working state.
-   If the CephCSIDriver resource has a `spec.cephfs.storageClasses.pool` field set to a value other than `cephfs_data`, the migration will fail with an error.
-   If a Ceph StorageClass was created manually and not via the CephCSIDriver resource, manual migration is required.
-   In these cases, contact the [Deckhouse technical support](/tech-support/).
+{% alert level="info" %}
+The [snapshot-controller](/modules/snapshot-controller/) module is required for working with snapshots.
 {% endalert %}
 
-## Enabling the module
+## Migration from `ceph-csi` module
 
-To connect a Ceph cluster in Deckhouse, you need to enable the [`csi-ceph`](/modules/csi-ceph/) module. To do this, apply the ModuleConfig resource:
+When switching from the `ceph-csi` module to `csi-ceph`, an automatic migration is performed, but its execution requires preliminary preparation:
 
-```shell
-d8 k apply -f - <<EOF
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: csi-ceph
-spec:
-  enabled: true
-EOF
-```
+1. Set the replica count to zero for all operators (redis, clickhouse, kafka, etc.). Exception: the `prometheus` operator will be disabled automatically.
 
-## Connecting to a Ceph cluster
+1. Disable the `ceph-csi` module and [enable](#connecting-to-ceph-cluster) `csi-ceph`.
 
-To configure a connection to a Ceph cluster, apply the [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection) resource. Example usage:
+1. Wait for the operation to complete. The Deckhouse logs should show the message "Finished migration from Ceph CSI module".
 
-```shell
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: CephClusterConnection
-metadata:
-  name: ceph-cluster-1
-spec:
-  # FSID/UUID of the Ceph cluster.
-  # The FSID/UUID of the Ceph cluster can be obtained using the `ceph fsid` command.
-  clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
-  # List of Ceph monitor IP addresses in the format `10.0.0.10:6789`.
-  monitors:
-    - 10.0.0.10:6789
-  # User name without `client.`.
-  # The user name can be obtained using the `ceph auth list` command.
-  userID: admin
-  # Authentication key corresponding to the userID.
-  # The authentication key can be obtained using the `ceph auth get-key client.admin` command.
-  userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
-EOF
-```
+1. Verify functionality. Create test pods and PVCs to test CSI.
 
-Verify the creation of the connection using the following command (`Phase` should be `Created`):
+1. Restore operators to working state.
 
-```shell
-d8 k get cephclusterconnection ceph-cluster-1
-```
+{% alert level="warning" %}
+**Note:** If Ceph StorageClass was created without using the CephCSIDriver resource, manual migration will be required. Contact technical support.
+{% endalert %}
 
-## Creating StorageClass
+## Connecting to Ceph cluster
 
-The creation of StorageClass objects is done through the [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resource, which defines the configuration for the desired StorageClass. Manually creating a StorageClass resource without [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) may lead to errors. Example of creating a StorageClass based on RBD:
+To connect to a Ceph cluster, follow the step-by-step instructions below. Execute all commands on a machine with administrative access to the Kubernetes API.
 
-```shell
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: CephStorageClass
-metadata:
-  name: ceph-rbd-sc
-spec:
-  clusterConnectionName: ceph-cluster-1
-  reclaimPolicy: Delete
-  type: RBD
-  rbd:
-    defaultFSType: ext4
-    pool: ceph-rbd-pool
-EOF
-```
+1. Execute the command to activate the `csi-ceph` module:
 
-Example of creating a StorageClass based on Ceph file system:
+   ```shell
+   d8 s module enable csi-ceph
+   ```
 
-```shell
-d8 k apply -f - <<EOF
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: CephStorageClass
-metadata:
-  name: ceph-fs-sc
-spec:
-  clusterConnectionName: ceph-cluster-1
-  reclaimPolicy: Delete
-  type: CephFS
-  cephFS:
-    fsName: cephfs
-EOF
-```
+1. Wait for the module to transition to `Ready` state:
 
-Check that the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources have transitioned to the `Created` phase by running the following command:
+   ```shell
+   d8 k get module csi-ceph -w
+   ```
 
-```shell
-d8 k get cephstorageclass
-```
+1. Ensure that all pods in the `d8-csi-ceph` namespace are in `Running` or `Completed` state and deployed on all cluster nodes:
 
-In the output, you should see information about the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources:
+   ```shell
+   d8 k -n d8-csi-ceph get pod -owide -w
+   ```
 
-```console
-NAME          PHASE     AGE
-ceph-rbd-sc   Created   1h
-ceph-fs-sc    Created   1h
-```
+1. To configure the connection to the Ceph cluster, apply the [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection) resource.
 
-Check the created StorageClass using the following command:
+   Example command:
 
-```shell
-d8 k get sc
-```
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: CephClusterConnection
+   metadata:
+     name: ceph-cluster-1
+   spec:
+     # FSID/UUID of the Ceph cluster.
+     # Get the FSID/UUID of the Ceph cluster using the command `ceph fsid`.
+     clusterID: 2bf085fc-5119-404f-bb19-820ca6a1b07e
+     # List of IP addresses of ceph-mon in format 10.0.0.10:6789.
+     monitors:
+       - 10.0.0.10:6789
+     # Username without `client.`.
+     # Get the username using the command `ceph auth list`.
+     userID: admin
+     # Authorization key corresponding to userID.
+     # Get the authorization key using the command `ceph auth get-key client.admin`.
+     userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
+   EOF
+   ```
 
-In the output, you should see information about the created StorageClass:
+1. Verify the connection creation with the command (`Phase` should be in `Created` status):
 
-```console
-NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
-ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
-ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
-```
+   ```shell
+   d8 k get cephclusterconnection ceph-cluster-1
+   ```
 
-If the StorageClass objects appear, it means the `csi-ceph` module configuration is complete. Users can now create PersistentVolumes by specifying the created StorageClass objects.
+1. Create a StorageClass object using the [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resource. Manual creation of StorageClass without using [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) may lead to errors.
 
-## Listing RBD volumes mounted on each node
+   Example of creating StorageClass based on RBD:
 
-To get a list of RBD volumes mounted on each node of the cluster, run the following command:
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: CephStorageClass
+   metadata:
+     name: ceph-rbd-sc
+   spec:
+     clusterConnectionName: ceph-cluster-1
+     reclaimPolicy: Delete
+     type: RBD
+     rbd:
+       defaultFSType: ext4
+       pool: ceph-rbd-pool
+   EOF
+   ```
+
+   Example of creating StorageClass based on Ceph filesystem:
+
+   ```yaml
+   d8 k apply -f - <<EOF
+   apiVersion: storage.deckhouse.io/v1alpha1
+   kind: CephStorageClass
+   metadata:
+     name: ceph-fs-sc
+   spec:
+     clusterConnectionName: ceph-cluster-1
+     reclaimPolicy: Delete
+     type: CephFS
+     cephFS:
+       fsName: cephfs
+   EOF
+   ```
+
+1. Verify that the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources have transitioned to `Created` state:
+
+   ```shell
+   d8 k get cephstorageclass
+   ```
+
+   This will output information about the created [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass) resources:
+
+   ```console
+   NAME          PHASE     AGE
+   ceph-rbd-sc   Created   1h
+   ceph-fs-sc    Created   1h
+   ```
+
+1. Verify the created StorageClass:
+
+   ```shell
+   d8 k get sc
+   ```
+
+   This will output information about the created StorageClass:
+
+   ```console
+   NAME          PROVISIONER        RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION   AGE
+   ceph-rbd-sc   rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+   ceph-fs-sc    rbd.csi.ceph.com   Delete          WaitForFirstConsumer   true                   15s
+   ```
+
+Ceph cluster connection setup is complete. You can use the created StorageClass to create PersistentVolumeClaim in your applications.
+
+## Additional Information
+
+### Getting RBD volumes list by nodes
+
+For monitoring and diagnostics, it's useful to know which RBD volumes are connected to each cluster node. The following command provides detailed information about volume mapping:
 
 ```shell
 d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName --no-headers \
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
 
-## Supported Ceph versions
+### Supported Ceph cluster versions
 
-- Official support: Ceph version 16.2.0 and above.
-- Compatibility: The solution works with Ceph clusters version 14.2.0 and above; however, upgrading to Ceph version 16.2.0 or above is recommended to ensure maximum stability and access to the latest fixes.
+The `csi-ceph` module has specific requirements for the Ceph cluster version to ensure compatibility and stable operation. Officially supported versions are >= 16.2.0. In practice, the current version works with clusters of versions >=14.2.0, but it's recommended to update Ceph to the latest version.
 
-## Supported volume access modes
+### Supported volume access modes
 
-- RBD: ReadWriteOnce (RWO): access to a block volume is only possible from a single node.
-- CephFS: ReadWriteOnce (RWO) and ReadWriteMany (RWX): simultaneous access to the file system from multiple nodes.
+Different types of Ceph storage support different volume access modes, which is important to consider when planning application architecture.
 
-## Examples
+- **RBD**: Supports only ReadWriteOnce (RWO) — access to volume from only one cluster node.
+- **CephFS**: Supports ReadWriteOnce (RWO) and ReadWriteMany (RWX) — simultaneous access to volume from multiple cluster nodes.
 
-Example definition of a [CephClusterConnection](/modules/csi-ceph/cr.html#cephclusterconnection):
+### Checking Ceph connection status
 
-```yaml
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: CephClusterConnection
-metadata:
-  name: ceph-cluster-1
-spec:
-  clusterID: 0324bfe8-c36a-4829-bacd-9e28b6480de9
-  monitors:
-  - 172.20.1.28:6789
-  - 172.20.1.34:6789
-  - 172.20.1.37:6789
-  userID: admin
-  userKey: AQDiVXVmBJVRLxAAg65PhODrtwbwSWrjJwssUg==
-```
+To diagnose storage issues, you need to be able to check the status of the connection to the Ceph cluster and created StorageClasses.
 
-You can verify that the object has been created with the following command (`Phase` should be `Created`):
+To check the connection status, execute the command:
 
 ```shell
-d8 k get cephclusterconnection <name-of-cephclusterconnection>
+d8 k get cephclusterconnection <connection-name>
 ```
 
-Example definition of a [CephStorageClass](/modules/csi-ceph/cr.html#cephstorageclass):
-
-- For RBD:
-
-  ```yaml
-  apiVersion: storage.deckhouse.io/v1alpha1
-  kind: CephStorageClass
-  metadata:
-    name: ceph-rbd-sc
-  spec:
-    clusterConnectionName: ceph-cluster-1
-    reclaimPolicy: Delete
-    type: RBD
-    rbd:
-      defaultFSType: ext4
-      pool: ceph-rbd-pool  
-  ```
-
-- For CephFS:
-
-    ```yaml
-  apiVersion: storage.deckhouse.io/v1alpha1
-  kind: CephStorageClass
-  metadata:
-    name: ceph-fs-sc
-  spec:
-    clusterConnectionName: ceph-cluster-1
-    reclaimPolicy: Delete
-    type: CephFS
-    cephFS:
-      fsName: cephfs
-  ```
-
-You can verify that the object has been created with the following command (`Phase` should be `Created`):
+To check the StorageClass status, execute the command:
 
 ```shell
-d8 k get cephstorageclass <name-of-cephstorageclass>
+d8 k get cephstorageclass <storageclass-name>
 ```
