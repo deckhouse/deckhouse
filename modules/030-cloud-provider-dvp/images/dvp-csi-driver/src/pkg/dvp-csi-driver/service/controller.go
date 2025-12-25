@@ -18,18 +18,20 @@ package service
 
 import (
 	"context"
-	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
 
-	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+
+	dvpapi "dvp-common/api"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 const (
@@ -126,8 +128,11 @@ func (c *ControllerService) CreateVolume(
 		return result, nil
 	}
 
+	// TODO: add clusterUUID and vmHostname to PV disks
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
+		"",
+		"",
 		diskName,
 		requiredSize,
 		dvpStorageClass,
