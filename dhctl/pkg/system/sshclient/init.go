@@ -87,8 +87,11 @@ func (p *DefaultSSHProviderWithFunc) SwitchClient(ctx context.Context, sess *ses
 		logger.LogDebugLn("Stopping old SSH client")
 		oldSSHClient.Stop()
 
+		sleep := 10 * time.Second
+		logger.LogInfoF("Switch to new client. Waiting for '%s' for stopped old SSH client\n", sleep)
+		// todo ugly solution we need to add waiting function after stop in clients
 		// wait for keep-alive goroutine will exit
-		time.Sleep(10 * time.Second)
+		time.Sleep(sleep)
 	}
 
 	privateKeysToAdd := p.getAndAddPrivateKeysAdded(privateKeys)

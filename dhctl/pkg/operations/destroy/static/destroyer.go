@@ -166,13 +166,20 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 	}
 
 	if len(ips) > 0 {
-		file := sshClient.File()
-		bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
-		if err != nil {
+		err := logger.LogProcess("default", "Get internal node IP for passed control-plane host", func() error {
+			file := sshClient.File()
+			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
+			if err != nil {
 
+				return err
+			}
+			hostToExclude = strings.TrimSpace(string(bytes))
+			logger.LogDebugF("Got internal node IP for passed control-plane host: %s\n", hostToExclude)
+			return nil
+		})
+		if err != nil {
 			return err
 		}
-		hostToExclude = strings.TrimSpace(string(bytes))
 	}
 
 	var additionalMastersHosts []session.Host
@@ -210,7 +217,7 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 
 		for _, host := range additionalMastersHosts {
 			if d.hostProcessed(host) {
-				logger.LogDebugF("Skipping additional master host: '%s'. Host already processed\n", host.String())
+				logger.LogInfoF("Skipping additional master host: '%s'. Host already processed\n", host.String())
 				continue
 			}
 			settings.SetAvailableHosts([]session.Host{host})
@@ -301,6 +308,8 @@ func (d *Destroyer) switchToNodeUser(ctx context.Context, oldSSHClient node.SSHC
 	}
 
 	logger := d.logger()
+
+	logger.LogInfoF("Switch to node user for next control-plane host\n")
 
 	tmpDir := filepath.Join(d.params.TmpDir, "destroy")
 
