@@ -1,27 +1,28 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
-    {{ $annotations := dict }}
-    {{ $sourceRanges := "" }}
-    {{ $loadBalancerClass := "" }}
-    {{ $loadBalancerIP := "" }}
-    {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
-      {{ $annotations = $crd.spec.loadBalancer.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancer.loadBalancerClass }}
-      {{ $loadBalancerIP = $crd.spec.loadBalancer.loadBalancerIP }}
-    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
-      {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerClass }}
-      {{ $loadBalancerIP = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerIP }}
-    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
-      {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
-      {{ $loadBalancerIP = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerIP }}
+    {{- $annotations := (dict) -}}
+    {{- $sourceRanges := "" -}}
+    {{- $loadBalancerClass := "" -}}
+    {{- $loadBalancerIP := "" -}}
+    {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer -}}
+      {{- $annotations = (deepCopy ($crd.spec.loadBalancer.annotations | default (dict))) -}}
+      {{- $sourceRanges = $crd.spec.loadBalancer.sourceRanges  -}}
+      {{- $loadBalancerClass = $crd.spec.loadBalancer.loadBalancerClass -}}
+      {{- $loadBalancerIP = $crd.spec.loadBalancer.loadBalancerIP -}}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol -}}
+      {{- $annotations = (deepCopy ($crd.spec.loadBalancerWithProxyProtocol.annotations | default (dict))) -}}
+      {{- $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  -}}
+      {{- $loadBalancerClass = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerClass -}}
+      {{- $loadBalancerIP = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerIP -}}
+    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough -}}
+      {{- $annotations = (deepCopy ($crd.spec.loadBalancerWithSSLPassthrough.annotations | default (dict))) -}}
+      {{- $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  -}}
+      {{- $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass -}}
+      {{- $loadBalancerIP = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerIP -}}
     {{- end }}
-    {{- $annotations = merge $annotations ((include "ingress_nginx_lb_cloud_provider_annotations" (dict "ctx" $context "loadBalancerIP" $loadBalancerIP)) | fromYaml) -}}
+    {{- $providerAnn := (include "ingress_nginx_lb_cloud_provider_annotations" (dict "ctx" $context "loadBalancerIP" $loadBalancerIP) | fromYaml | default (dict)) -}}
+    {{- $annotations = merge ($annotations | default (dict)) $providerAnn -}}
 ---
 apiVersion: v1
 kind: Service
