@@ -17275,7 +17275,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "",
+          "description": "Stacked view of LV sizes as percentage of total VG size. Each segment represents an LV, stacked to show total VG usage.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17285,11 +17285,11 @@
                 "axisBorderShow": false,
                 "axisCenteredZero": false,
                 "axisColorMode": "text",
-                "axisLabel": "bytes",
+                "axisLabel": "% of VG",
                 "axisPlacement": "auto",
                 "barAlignment": 0,
                 "drawStyle": "line",
-                "fillOpacity": 20,
+                "fillOpacity": 80,
                 "gradientMode": "none",
                 "hideFrom": {
                   "legend": false,
@@ -17307,373 +17307,10 @@
                 "spanNulls": false,
                 "stacking": {
                   "group": "A",
-                  "mode": "none"
+                  "mode": "normal"
                 },
                 "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "links": [],
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 12,
-            "x": 0,
-            "y": 0
-          },
-          "id": 401,
-          "options": {
-            "legend": {
-              "calcs": [
-                "mean",
-                "lastNotNull",
-                "max",
-                "min"
-              ],
-              "displayMode": "table",
-              "placement": "bottom",
-              "showLegend": true,
-              "sortBy": "Mean",
-              "sortDesc": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "expr": "sds_lvm_vg_size_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{vg_name}} - Size",
-              "refId": "A",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_vg_used_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{vg_name}} - Used",
-              "refId": "B",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_vg_free_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{vg_name}} - Free",
-              "refId": "C",
-              "step": 240
-            }
-          ],
-          "title": "Volume Group Space",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "bytes",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "stepAfter",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "links": [],
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 12,
-            "x": 12,
-            "y": 0
-          },
-          "id": 402,
-          "options": {
-            "legend": {
-              "calcs": [
-                "mean",
-                "lastNotNull",
-                "max",
-                "min"
-              ],
-              "displayMode": "table",
-              "placement": "bottom",
-              "showLegend": true,
-              "sortBy": "Mean",
-              "sortDesc": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "expr": "sds_lvm_lv_size_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{lv_name}} - Size",
-              "refId": "A",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_lv_used_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{lv_name}} - Used",
-              "refId": "B",
-              "step": 240
-            }
-          ],
-          "title": "Logical Volume Space",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "bytes",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "stepAfter",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "links": [],
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  },
-                  {
-                    "color": "red",
-                    "value": 80
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 10,
-            "w": 12,
-            "x": 0,
-            "y": 10
-          },
-          "id": 403,
-          "options": {
-            "legend": {
-              "calcs": [
-                "mean",
-                "lastNotNull",
-                "max",
-                "min"
-              ],
-              "displayMode": "table",
-              "placement": "bottom",
-              "showLegend": true,
-              "sortBy": "Mean",
-              "sortDesc": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "none"
-            }
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "expr": "sds_lvm_thinpool_size_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{thinpool_name}} - Size",
-              "refId": "A",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_thinpool_used_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{thinpool_name}} - Used",
-              "refId": "B",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_thinpool_data_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{thinpool_name}} - Data",
-              "refId": "C",
-              "step": 240
-            },
-            {
-              "expr": "sds_lvm_thinpool_metadata_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{thinpool_name}} - Metadata",
-              "refId": "D",
-              "step": 240
-            }
-          ],
-          "title": "Thin Pool Space",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "thresholds"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "stepAfter",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
+                  "mode": "line"
                 }
               },
               "links": [],
@@ -17702,44 +17339,41 @@
             "overrides": []
           },
           "gridPos": {
-            "h": 10,
-            "w": 12,
-            "x": 12,
-            "y": 10
+            "h": 12,
+            "w": 24,
+            "x": 0,
+            "y": 0
           },
-          "id": 404,
+          "id": 401,
           "options": {
             "legend": {
               "calcs": [
-                "mean",
-                "lastNotNull",
-                "max",
-                "min"
+                "lastNotNull"
               ],
               "displayMode": "table",
-              "placement": "bottom",
+              "placement": "right",
               "showLegend": true,
-              "sortBy": "Mean",
+              "sortBy": "Last *",
               "sortDesc": true
             },
             "tooltip": {
               "mode": "multi",
-              "sort": "none"
+              "sort": "desc"
             }
           },
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "100 - ((sds_node_configurator_lvm_volume_group_free_bytes{node=~\"$node\"} * 100) / sds_node_configurator_lvm_volume_group_size_bytes{node=~\"$node\"})",
+              "expr": "(sds_lvm_lv_size_bytes{node=~\"$node\"} / on(vg_name, node) group_left(lv_name) sds_lvm_vg_size_bytes{node=~\"$node\"}) * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{volume_group}} - Usage %",
+              "legendFormat": "{{vg_name}} / {{lv_name}}",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Volume Group Usage %",
+          "title": "LV Usage as % of VG (Stacked by LV)",
           "type": "timeseries"
         }
       ],
