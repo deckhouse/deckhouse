@@ -33,4 +33,4 @@ Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
 ### kubelet-disable-k-panic-check
 
-Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
+Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, this check is skipped. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
