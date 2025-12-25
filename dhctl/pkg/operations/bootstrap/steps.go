@@ -156,7 +156,7 @@ func checkBashibleAlreadyRun(ctx context.Context, nodeInterface node.Interface) 
 
 		log.DebugF("cat %s stdout: '%s'; stderr: '%s'\n", DHCTLEndBootstrapBashiblePipeline, stdout, stderr)
 
-		isReady = strings.TrimSpace(string(stdout)) == "OK"
+		isReady = strings.Contains(string(stdout), "OK")
 
 		return nil
 	})
