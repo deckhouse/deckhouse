@@ -69,7 +69,7 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToDestroy, err)
 	}
 
-	err = deleteNode(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
@@ -165,26 +165,6 @@ func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, 
 			return err
 		}
 
-		return nil
-	})
-}
-
-func deleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
-	return retry.NewLoop(
-		fmt.Sprintf("Delete node %s", nodeName),
-		10,
-		5*time.Second,
-	).RunContext(ctx, func() error {
-		err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
-		if err != nil {
-			if errors.IsNotFound(err) {
-				log.InfoF("Node '%s' already deleted. Skip\n", nodeName)
-				return nil
-			}
-			return err
-		}
-
-		log.InfoF("Node '%s' successfully deleted from cluster\n", nodeName)
 		return nil
 	})
 }
