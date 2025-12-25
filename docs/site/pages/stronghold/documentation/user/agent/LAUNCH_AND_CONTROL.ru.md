@@ -4,6 +4,8 @@ permalink: ru/stronghold/documentation/agent/launch-and-control.html
 lang: ru
 ---
 
+{% raw %}
+
 ## Запуск и управление
 
 ### Проверка конфигурации
