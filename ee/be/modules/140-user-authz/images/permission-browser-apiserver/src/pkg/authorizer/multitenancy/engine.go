@@ -174,22 +174,21 @@ func (e *Engine) authorizeClusterScopedRequest(attrs authorizer.Attributes, entr
 func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, error) {
 	cacheKey := group + "/" + version + "/" + resource
 
-	e.namespacedCacheMu.RLock()
-	if namespaced, ok := e.namespacedCache[cacheKey]; ok {
-		e.namespacedCacheMu.RUnlock()
+	// Check cache with proper defer unlock
+	var namespaced, ok bool
+	func() {
+		e.namespacedCacheMu.RLock()
+		defer e.namespacedCacheMu.RUnlock()
+		namespaced, ok = e.namespacedCache[cacheKey]
+	}()
+	if ok {
 		return namespaced, nil
 	}
-	e.namespacedCacheMu.RUnlock()
 
-	// Try to discover the resource
-	var apiVersion string
-	if group == "" {
-		apiVersion = "v1"
-	} else if version != "" {
-		apiVersion = group + "/" + version
-	} else {
-		// Try to find the preferred version
-		apiVersion = group + "/v1"
+	// Query apiserver for preferred version of this API resource
+	apiVersion, err := e.getPreferredAPIVersion(group, version)
+	if err != nil {
+		return false, err
 	}
 
 	resourceList, err := e.discoveryClient.ServerResourcesForGroupVersion(apiVersion)
@@ -197,16 +196,48 @@ func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, er
 		return false, err
 	}
 
+	e.namespacedCacheMu.Lock()
+	defer e.namespacedCacheMu.Unlock()
 	for _, r := range resourceList.APIResources {
 		if r.Name == resource || strings.HasPrefix(r.Name, resource+"/") {
-			e.namespacedCacheMu.Lock()
 			e.namespacedCache[cacheKey] = r.Namespaced
-			e.namespacedCacheMu.Unlock()
 			return r.Namespaced, nil
 		}
 	}
 
 	return false, nil
+}
+
+// getPreferredAPIVersion returns the preferred API version for a group
+func (e *Engine) getPreferredAPIVersion(group, version string) (string, error) {
+	// If version is specified, use it
+	if version != "" {
+		if group == "" {
+			return version, nil
+		}
+		return group + "/" + version, nil
+	}
+
+	// For core API group
+	if group == "" {
+		return "v1", nil
+	}
+
+	// Query apiserver for preferred version
+	apiGroupList, err := e.discoveryClient.ServerGroups()
+	if err != nil {
+		// Fallback to v1 if discovery fails
+		return group + "/v1", nil
+	}
+
+	for _, g := range apiGroupList.Groups {
+		if g.Name == group {
+			return g.PreferredVersion.GroupVersion, nil
+		}
+	}
+
+	// Fallback to v1 if group not found
+	return group + "/v1", nil
 }
 
 // combineDirEntries combines multiple directory entries into one

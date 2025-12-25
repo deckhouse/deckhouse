@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: permission-browser-apiserver
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: apiserver

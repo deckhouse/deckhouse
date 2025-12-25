@@ -85,8 +85,13 @@ func (o PermissionBrowserServerOptions) Validate(args []string) error {
 	return utilerrors.NewAggregate(errors)
 }
 
-// Complete fills in fields required to have valid data
+// Complete fills in fields required to have valid data and applies defaults.
+// This implements the standard Kubernetes Complete -> Validate -> Run pattern.
 func (o *PermissionBrowserServerOptions) Complete() error {
+	// Set default config path if not provided
+	if o.ConfigPath == "" {
+		o.ConfigPath = "/etc/user-authz-webhook/config.json"
+	}
 	return nil
 }
 
@@ -98,7 +103,7 @@ func (o *PermissionBrowserServerOptions) Config(stopCh <-chan struct{}) (*apiser
 
 	serverConfig := genericapiserver.NewRecommendedConfig(apiserver.Codecs)
 
-	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIConfig(
+	serverConfig.OpenAPIV3Config = genericapiserver.DefaultOpenAPIV3Config(
 		generatedopenapi.GetOpenAPIDefinitions,
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "PermissionBrowser"
@@ -137,8 +142,8 @@ func (o PermissionBrowserServerOptions) RunPermissionBrowserServer(stopCh <-chan
 
 	server.GenericAPIServer.AddPostStartHookOrDie(
 		"start-permission-browser-apiserver-informers",
-		func(context genericapiserver.PostStartHookContext) error {
-			config.GenericConfig.SharedInformerFactory.Start(context.StopCh)
+		func(hookCtx genericapiserver.PostStartHookContext) error {
+			config.GenericConfig.SharedInformerFactory.Start(hookCtx.Done())
 			return nil
 		},
 	)

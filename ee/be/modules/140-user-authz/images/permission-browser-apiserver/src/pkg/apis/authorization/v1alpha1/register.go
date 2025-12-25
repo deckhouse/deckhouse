@@ -26,9 +26,10 @@ var (
 )
 
 func init() {
-	// We only register manually written functions here. The registration of the
-	// generated functions takes place in the generated files. The separation
-	// makes the code compile even when the generated files are missing.
+	// We register manually written functions here. The generated functions
+	// (deepcopy, conversion, defaults) are registered in zz_generated.*.go files.
+	// NOTE: Generated files MUST be committed to the repository. The code will NOT
+	// compile without them. Run `make generate` or `hack/update-codegen.sh` to regenerate.
 	localSchemeBuilder.Register(addKnownTypes, addDefaultingFuncs)
 }
 

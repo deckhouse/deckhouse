@@ -11,9 +11,6 @@ var systemNamespaces = []string{
 	"kube-.*",
 	"d8-.*",
 	"default",
-	// legacy
-	"antiopa",
-	"loghouse",
 }
 
 var systemNamespacesRegex []*regexp.Regexp

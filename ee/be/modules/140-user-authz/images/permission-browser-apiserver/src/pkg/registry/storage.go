@@ -10,6 +10,8 @@ import (
 	"fmt"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
@@ -221,6 +223,16 @@ func (a *accessAttributes) GetPath() string {
 		return a.nonResourceAttributes.Path
 	}
 	return ""
+}
+
+func (a *accessAttributes) GetFieldSelector() (fields.Requirements, error) {
+	// FieldSelector is not supported in BulkSubjectAccessReview
+	return nil, nil
+}
+
+func (a *accessAttributes) GetLabelSelector() (labels.Requirements, error) {
+	// LabelSelector is not supported in BulkSubjectAccessReview
+	return nil, nil
 }
 
 // userInfo implements user.Info

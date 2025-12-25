@@ -10,6 +10,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 )
 
@@ -170,14 +172,16 @@ func (m *mockAttrs) GetVerb() string    { return m.verb }
 func (m *mockAttrs) IsReadOnly() bool {
 	return m.verb == "get" || m.verb == "list" || m.verb == "watch"
 }
-func (m *mockAttrs) GetNamespace() string    { return m.namespace }
-func (m *mockAttrs) GetResource() string     { return m.resource }
-func (m *mockAttrs) GetSubresource() string  { return m.subresource }
-func (m *mockAttrs) GetName() string         { return m.name }
-func (m *mockAttrs) GetAPIGroup() string     { return m.apiGroup }
-func (m *mockAttrs) GetAPIVersion() string   { return m.apiVersion }
-func (m *mockAttrs) IsResourceRequest() bool { return m.isResource }
-func (m *mockAttrs) GetPath() string         { return m.path }
+func (m *mockAttrs) GetNamespace() string                              { return m.namespace }
+func (m *mockAttrs) GetResource() string                               { return m.resource }
+func (m *mockAttrs) GetSubresource() string                            { return m.subresource }
+func (m *mockAttrs) GetName() string                                   { return m.name }
+func (m *mockAttrs) GetAPIGroup() string                               { return m.apiGroup }
+func (m *mockAttrs) GetAPIVersion() string                             { return m.apiVersion }
+func (m *mockAttrs) IsResourceRequest() bool                           { return m.isResource }
+func (m *mockAttrs) GetPath() string                                   { return m.path }
+func (m *mockAttrs) GetFieldSelector() (fields.Requirements, error)    { return nil, nil }
+func (m *mockAttrs) GetLabelSelector() (labels.Requirements, error)    { return nil, nil }
 
 // mockUser implements user.Info for testing
 type mockUser struct {
