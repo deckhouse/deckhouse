@@ -83,11 +83,6 @@ spec:
             - name: AMBIENT_ENABLED
               value: "true"
             {{- end }}
-            - name: CNI_NETWORK_CONFIG
-              valueFrom:
-                configMapKeyRef:
-                  key: cni_network_config
-                  name: istio-cni-config
             - name: CNI_NET_DIR
               value: /etc/cni/net.d
             - name: CHAINED_CNI_PLUGIN
