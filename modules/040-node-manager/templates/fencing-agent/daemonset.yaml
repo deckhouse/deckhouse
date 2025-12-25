@@ -88,7 +88,7 @@ spec:
             - name: GOSSIP_TO_THE_DEAD_TIME
               value: "2s"
             - name: MIN_EVENT_INTERVAL_JOIN
-              value: "600ms"
+              value: "200ms"
             - name: MIN_EVENT_INTERVAL_LEFT
               value: "600ms"
             - name: MEMBERLIST_PORT

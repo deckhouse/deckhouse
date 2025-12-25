@@ -229,7 +229,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			if !APIIsAvailable && !MaintenanceMode {
 				// except this node
 				num := fa.gs.NumMembers() - 1
-
+				fa.logger.Debug("Number of members in gossip", zap.Int("num", num))
 				if (num == 0 && fa.gs.IsAlone()) || num > 0{
 					fa.logger.Debug("Feeding the watchdog from gossip check", zap.Bool("alone", fa.gs.IsAlone()))
 					err = fa.watchDog.Feed()
