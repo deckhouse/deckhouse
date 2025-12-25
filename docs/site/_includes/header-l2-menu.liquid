@@ -1,8 +1,10 @@
 {%- assign productCode = page.product_code | default: "kubernetes-platform" %}
 {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
+{%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
 {%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
 {%- assign productName = productMenuData.title %}
+{%- assign productNameFallback = productMenuDataFallback.title %}
 <div class="header header__product-menu">
   <div class="container">
     <div class="header__product-menu-logo">
@@ -25,7 +27,7 @@
             img.src = '{{ site.urls[page.lang] }}' + img.getAttribute('src');
         }
       </script>
-      <span>{{ productName }}</span>
+      <span>{{ productName | default: productNameFallback }}</span>
     </div>
     <ul class="nav header__nav">
       {%- for item in productMenuData.items %}
