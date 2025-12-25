@@ -190,7 +190,7 @@ d8 k get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: beeline
+  name: test-rule
 spec:
   accessLevel: Admin
   subjects:
