@@ -6,11 +6,12 @@ directory.
 ### local-init-configuration.patch
 
 We want to include in join data the following:
+
 ```yaml
 apiVersion: kubeadm.k8s.io/v1beta2
 kind: InitConfiguration
 localAPIEndpoint:
-  advertiseAddress: {{ .nodeIP | quote }}
+  advertiseAddress: { { .nodeIP | quote } }
   bindPort: 6443
 ```
 
@@ -25,6 +26,7 @@ Supports DaemonSets in disruption controller by adding /scale subresource to dae
 ### fix-mount-hostaliases.patch
 
 Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
+
 > https://github.com/kubernetes/kubernetes/pull/126460
 
 ### resource-quota-ignore-mechanism.patch
@@ -37,3 +39,7 @@ This patch ensures that the Memory Manager state file is removed during a gracef
 
 The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
+
+### kubelet-disable-k-panic-check
+
+Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
