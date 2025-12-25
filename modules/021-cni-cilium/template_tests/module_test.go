@@ -71,6 +71,16 @@ internal:
         ca: CA
         key: KEY
         cert: CERT
+    settings:
+      extendedMetrics:
+        enabled: false
+        collectors: []
+      flowLogs:
+        enabled: false
+        allowFilter: {}
+        denyFilter: {}
+        fieldMaskList: []
+        fileMaxSizeMB: 10
   egressGatewaysMap:
     myeg:
       name: myeg
@@ -103,6 +113,23 @@ resourcesManagement:
       max: "2Gi"
 `
 )
+
+const hubbleSettings = `
+extendedMetrics:
+  enabled: true
+  collectors:
+    - name: drop
+      contextOptions: labelsContext=source_ip,source_namespace
+    - name: flow
+flowLogs:
+  enabled: true
+  allowFilter:
+    verdict: ["DROPPED","ERROR"]
+  denyFilter:
+    source_pod: ["kube-system/"]
+  fieldMaskList: ["time","verdict"]
+  fileMaxSizeMB: 30
+`
 
 func getSubdirs(dir string) ([]string, error) {
 	var subdirs []string
@@ -249,5 +276,67 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 ]`))
 		})
 
+	})
+
+	Context("ConfigMap cilium-config rendering (hubble enabled, extended metrics + flow logs)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+
+			// Enable cilium-hubble module
+			f.ValuesSetFromYaml("global.enabledModules", `[vertical-pod-autoscaler, prometheus, operator-prometheus, cilium-hubble]`)
+
+			// Enable hubble settings
+			f.ValuesSetFromYaml("cniCilium.internal.hubble.settings", hubbleSettings)
+
+			f.HelmRender()
+		})
+
+		It("Renders ConfigMap cilium-config with expected hubble keys", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+
+			Expect(cm.Field("data.enable-hubble").String()).To(Equal("true"))
+			Expect(cm.Field("data.enable-hubble-open-metrics").String()).To(Equal("true"))
+			Expect(cm.Field("data.hubble-metrics-server").String()).To(Equal("127.0.0.1:9091"))
+
+			metrics := cm.Field("data.hubble-metrics").String()
+			Expect(metrics).To(ContainSubstring("drop:labelsContext=source_ip,source_namespace"))
+			Expect(metrics).To(ContainSubstring("flow"))
+
+			Expect(cm.Field("data.hubble-export-file-path").String()).To(Equal("/var/run/cilium/hubble/events.log"))
+			Expect(cm.Field("data.hubble-export-file-max-size-mb").String()).To(Equal("30"))
+			Expect(cm.Field("data.hubble-export-allowlist").String()).To(MatchJSON(`{"verdict":["DROPPED","ERROR"]}`))
+			Expect(cm.Field("data.hubble-export-denylist").String()).To(MatchJSON(`{"source_pod":["kube-system/"]}`))
+			Expect(cm.Field("data.hubble-export-fieldmask").String()).To(Equal("time verdict"))
+		})
+	})
+
+	Context("ConfigMap cilium-config rendering (hubble module disabled)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cniCilium", cniCiliumValues)
+
+			f.HelmRender()
+		})
+
+		It("Renders ConfigMap cilium-config with disabled cilium-hubble module and without hubble export/metrics keys", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cm := f.KubernetesResource("ConfigMap", "d8-cni-cilium", "cilium-config")
+			Expect(cm.Exists()).To(BeTrue())
+
+			Expect(cm.Field("data.enable-hubble").String()).To(Equal("false"))
+			Expect(cm.Field("data.hubble-metrics-server").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-metrics").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-file-path").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-allowlist").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-denylist").Exists()).To(BeFalse())
+			Expect(cm.Field("data.hubble-export-fieldmask").Exists()).To(BeFalse())
+		})
 	})
 })
