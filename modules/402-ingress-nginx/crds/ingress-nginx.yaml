@@ -781,6 +781,11 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    loadBalancerIP:
+                      type: string
+                      description: |
+                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type).
+                      x-doc-examples: ['203.0.113.10']
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -830,6 +835,11 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    loadBalancerIP:
+                      type: string
+                      description: |
+                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type).
+                      x-doc-examples: ['203.0.113.10']
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -865,6 +875,11 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    loadBalancerIP:
+                      type: string
+                      description: |
+                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type).
+                      x-doc-examples: ['203.0.113.10']
                 hostPort:
                   type: object
                   description: |
