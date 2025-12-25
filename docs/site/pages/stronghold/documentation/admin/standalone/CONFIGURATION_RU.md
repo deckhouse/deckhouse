@@ -1,5 +1,5 @@
 ---
-title: "Конфигурация"
+title: "Настройка"
 permalink: ru/stronghold/documentation/admin/standalone/configuration.html
 lang: ru
 ---
