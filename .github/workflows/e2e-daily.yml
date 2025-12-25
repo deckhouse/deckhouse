@@ -3620,6 +3620,8 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_DOCKERCFG DECKHOUSE_E2E_DOCKERCFG | DECKHOUSE_E2E_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
 
@@ -3854,8 +3856,8 @@ jobs:
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
           export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
-          export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
-          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          export DECKHOUSE_E2E_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_DOCKERCFG }}
+          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
@@ -3925,8 +3927,8 @@ jobs:
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
           export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
           export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
-          export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
-          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          export DECKHOUSE_E2E_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_DOCKERCFG }}
+          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
           export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
