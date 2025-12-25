@@ -51,7 +51,6 @@ require (
 )
 
 require (
-	dvp-common v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
@@ -361,5 +360,3 @@ replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ./go_lib/d
 replace github.com/deckhouse/deckhouse/go_lib/dependency/vsphere => ./go_lib/dependency/vsphere
 
 replace github.com/deckhouse/deckhouse/go_lib/registry => ./go_lib/registry
-
-replace dvp-common => ./modules/030-cloud-provider-dvp/images/dvp-common
