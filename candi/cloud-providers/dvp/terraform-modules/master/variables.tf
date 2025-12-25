@@ -211,6 +211,7 @@ locals {
 
   vm_merged_labels = merge(
     {
+      "deckhouse.io/managed-by"         = "deckhouse"
       "dvp.deckhouse.io/cluster-prefix" = var.prefix
       "dvp.deckhouse.io/cluster-uuid"   = var.cluster_uuid
       "dvp.deckhouse.io/node-group"     = var.node_group
