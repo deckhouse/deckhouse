@@ -51,6 +51,9 @@ apiVersions:
               etcdDiskSizeGb:
                 description: |
                   Размер диска для etcd. Значение указывается в гигабайтах.
+              systemRegistryDiskSizeGb:
+                description: |
+                  Размер диска system registry. Значение указывается в гигабайтах.
           volumeTypeMap:
             description: |
               Словарь, сопоставляющий зонам доступности типы дисков для worker-узлов группы.

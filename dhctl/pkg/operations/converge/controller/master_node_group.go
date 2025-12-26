@@ -345,7 +345,7 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		return global.ErrConvergeInterrupted
 	}
 
-	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, []byte(outputs.KubeDataDevicePath))
+	err = infrastructurestate.SaveMasterNodeInfrastructureState(ctx.Ctx(), ctx.KubeClient(), nodeName, outputs.InfrastructureState, outputs.GetDataDevices())
 	if err != nil {
 		return err
 	}

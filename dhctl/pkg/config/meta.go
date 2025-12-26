@@ -50,6 +50,8 @@ type MetaConfig struct {
 	InitClusterConfig map[string]json.RawMessage `json:"-"`
 	ModuleConfigs     []*ModuleConfig            `json:"-"`
 
+	ProviderSecondaryDevicesConfig ProviderSecondaryDevicesConfig `json:"-"`
+
 	ProviderClusterConfig map[string]json.RawMessage `json:"providerClusterConfiguration,omitempty"`
 	StaticClusterConfig   map[string]json.RawMessage `json:"staticClusterConfiguration,omitempty"`
 
@@ -102,6 +104,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	if err := m.prepareRegistry(); err != nil {
 		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
+	m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable = registry_const.IsStaticPodRegistry(m.Registry.Settings.Mode)
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
 		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
@@ -232,6 +235,14 @@ func (m *MetaConfig) GetFullUUID() (string, error) {
 		return "", fmt.Errorf("Unable to get full UUID for provider '%s/%s'. It is empty", m.ClusterPrefix, m.ProviderName)
 	}
 	return m.UUID, nil
+}
+
+func (m *MetaConfig) GetClusterDomain() (string, error) {
+	var clusterDomain string
+	if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain); err != nil {
+		return clusterDomain, fmt.Errorf("unable to unmarshal clusterDomain from cluster configuration: %v", err)
+	}
+	return clusterDomain, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -467,6 +478,8 @@ func (m *MetaConfig) NodeGroupConfig(nodeGroupName string, nodeIndex int, cloudC
 
 	if nodeGroupName != "master" {
 		result["nodeGroupName"] = nodeGroupName
+	} else {
+		result[RegistryDataDeviceEnableTerraformVar] = m.ProviderSecondaryDevicesConfig.RegistryDataDeviceEnable
 	}
 
 	if len(m.UUID) > 0 {
@@ -521,6 +534,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	}
 
 	out.Registry = *m.Registry.DeepCopy()
+	out.ProviderSecondaryDevicesConfig = m.ProviderSecondaryDevicesConfig
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

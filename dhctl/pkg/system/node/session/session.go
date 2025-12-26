@@ -276,6 +276,7 @@ func (s *Session) Copy() *Session {
 	ses.BastionPassword = s.BastionPassword
 	ses.ExtraArgs = s.ExtraArgs
 	ses.host = s.host
+	ses.BecomePass = s.BecomePass
 
 	if s.AgentSettings != nil {
 		ses.AgentSettings = s.AgentSettings.Clone()

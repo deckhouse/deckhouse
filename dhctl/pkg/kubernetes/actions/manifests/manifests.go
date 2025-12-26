@@ -641,6 +641,15 @@ func SecretWithProviderClusterConfig(configData, discoveryData []byte) *apiv1.Se
 	)
 }
 
+func SecretWithProviderSecondaryDevicesConfig(providerSecondaryDevicesData []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-provider-secondary-devices-configuration",
+		"kube-system",
+		map[string][]byte{"cloud-provider-secondary-devices-configuration.yaml": providerSecondaryDevicesData},
+		map[string]string{"name": "d8-provider-secondary-devices-configuration"},
+	)
+}
+
 func SecretWithStaticClusterConfig(configData []byte) *apiv1.Secret {
 	data := make(map[string][]byte)
 	if configData != nil {
@@ -684,7 +693,7 @@ func PatchWithNodeInfrastructureState(stateData []byte) interface{} {
 	}
 }
 
-func SecretMasterDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
+func SecretMasterKubernetesDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
 	return generateSecret(
 		"d8-masters-kubernetes-data-device-path",
 		"d8-system",
@@ -703,6 +712,17 @@ func SecretConvergeState(state []byte) *apiv1.Secret {
 		"d8-system",
 		map[string][]byte{
 			"state.json": state,
+		},
+		map[string]string{},
+	)
+}
+
+func SecretMasterSystemRegistryDataDevicePath(nodeName string, devicePath []byte) *apiv1.Secret {
+	return generateSecret(
+		"d8-masters-system-registry-data-device-path",
+		"d8-system",
+		map[string][]byte{
+			nodeName: devicePath,
 		},
 		map[string]string{},
 	)
