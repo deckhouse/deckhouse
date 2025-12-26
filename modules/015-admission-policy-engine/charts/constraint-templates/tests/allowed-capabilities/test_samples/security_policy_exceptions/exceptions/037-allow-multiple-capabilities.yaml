@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  namespace: testns
+  name: allow-multiple-capabilities
+spec:
+  securityContext:
+    capabilities:
+      allowedValues:
+        add:
+          - SYS_PTRACE
+          - SYS_ADMIN
+          - NET_ADMIN
+        drop:
+        - ALL          
