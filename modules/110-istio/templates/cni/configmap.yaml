@@ -10,8 +10,8 @@ data:
   cni_network_config: |
     {
       "cniVersion": "0.3.1",
-      "name": "d8-istio-cni",
-      "type": "d8-istio-cni",
+      "name": "istio-cni",
+      "type": "istio-cni",
       "log_level": "info",
       "log_uds_address": "__LOG_UDS_ADDRESS__",
       "kubernetes": {
@@ -20,6 +20,7 @@ data:
         "exclude_namespaces": [
           "d8-istio",
           "d8-system",
+          "istio-system",
           "kube-system"
         ]
       }
