@@ -9,17 +9,16 @@ metadata:
 data:
   cni_network_config: |
     {
-      "cniVersion": "1.21.6",
-      "name": "d8-istio-cni",
-      "type": "d8-istio-cni",
+      "cniVersion": "0.3.1",
+      "name": "istio-cni",
+      "type": "istio-cni",
       "log_level": "info",
       "log_uds_address": "__LOG_UDS_ADDRESS__",
       "kubernetes": {
         "kubeconfig": "__KUBECONFIG_FILEPATH__",
         "cni_bin_dir": "/opt/cni/bin",
         "exclude_namespaces": [
-          "d8-istio",
-          "d8-system",
+          "istio-system",
           "kube-system"
         ]
       }
