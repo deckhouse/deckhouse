@@ -20,13 +20,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"geodownloader"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"geodownloader"
+	"github.com/fsnotify/fsnotify"
+	"k8s.io/klog/v2"
 )
 
 const (
@@ -39,11 +40,16 @@ const (
 var (
 	serverPort     string
 	prometheusPort string
+	grpcPort       string
 )
 
 func main() {
+	klog.InitFlags(nil)
+
 	flag.StringVar(&serverPort, "server-port", "127.0.0.1:8080", "server port")
 	flag.StringVar(&prometheusPort, "prometheus-port", "127.0.0.1:9090", "prometheus port")
+	flag.StringVar(&grpcPort, "grpc-port", ":50051", "grpc server port")
+	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -53,6 +59,47 @@ func main() {
 	cfg := geodownloader.NewConfig()
 	downloader := geodownloader.NewDownloader(watcher, leader)
 
+	geodb, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+	if err != nil {
+		log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+		return
+	}
+	defer geodb.Close()
+
+	fsWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		return
+	}
+	defer fsWatcher.Close()
+
+	grpcServer := geodownloader.NewGRPCServer(geodb)
+
+	if err := fsWatcher.Add(geodownloader.PathRawMMDB); err != nil {
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		return
+	}
+
+	// fs notify triger reinit GeoDB if raw MMDB was changed
+	go func() {
+		for {
+			select {
+			case <-fsWatcher.Events:
+				if err := geodb.Reload(geodownloader.PathRawMMDB); err != nil {
+					log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+				}
+
+			case err, ok := <-fsWatcher.Errors:
+				if !ok {
+					return
+				}
+				log.Error(fmt.Sprintf("fs watcher err: %v", err))
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	// start leader election
 	go func() {
 		if err := leader.AcquireLeaderElection(ctx); err != nil {
@@ -78,26 +125,39 @@ func main() {
 		}
 	}()
 
+	// Start GRPC Server
+	go func() {
+		if err := grpcServer.StartGRPCGeoIPService(grpcPort); err != nil {
+			log.Error(fmt.Sprintf("Failed start GRPC server: %v", err))
+			stop()
+		}
+	}()
+
+	downloadAndReload := func(force bool) {
+		if err := downloader.Download(ctx, geodownloader.PathDb, cfg, force); err != nil {
+			log.Error(fmt.Sprintf("Failed to download db: %v", err))
+			return
+		}
+		if err := geodb.Reload(geodownloader.PathRawMMDB); err != nil {
+			log.Error(fmt.Sprintf("Failed to reload mmdb: %v", err))
+			return
+		}
+	}
+
 	// interval update
 	go func() {
 		log.Info(fmt.Sprintf("Start cron in %s interval", cfg.MaxmindIntervalUpdate))
 
-		if err := downloader.Download(ctx, geodownloader.PathDb, cfg, false); err != nil {
-			log.Error(fmt.Sprintf("Failed to download db: %v", err))
-		}
+		downloadAndReload(false)
 
 		ticker := time.NewTicker(cfg.MaxmindIntervalUpdate)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
-				if err := downloader.Download(ctx, geodownloader.PathDb, cfg, false); err != nil {
-					log.Error(fmt.Sprintf("Failed to download db: %v", err))
-				}
+				downloadAndReload(false)
 			case <-watcher.Updated:
-				if err := downloader.Download(ctx, geodownloader.PathDb, cfg, true); err != nil {
-					log.Error(fmt.Sprintf("Failed to download db: %v", err))
-				}
+				downloadAndReload(true)
 			case <-ctx.Done():
 				return
 			}

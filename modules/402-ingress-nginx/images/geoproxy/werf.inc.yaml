@@ -1,6 +1,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2026-01-12.2"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
@@ -13,6 +14,7 @@ git:
 ---
 image: {{ .ModuleName }}/geoproxy-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: "2026-01-12.2"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -34,6 +36,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
+fromCacheVersion: "2026-01-12.2"
 import:
 - image: {{ .ModuleName }}/geoproxy-artifact
   add: /geoproxy

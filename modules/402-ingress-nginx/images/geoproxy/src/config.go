@@ -32,6 +32,7 @@ type Config struct {
 var (
 	PathDb              = "/data"
 	LastUpdateStateFile = "/data/geoip_last_update"
+	PathRawMMDB         = "/tmp/mmdb"
 )
 
 func NewConfig() *Config {
