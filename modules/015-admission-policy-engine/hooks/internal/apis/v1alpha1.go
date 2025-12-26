@@ -55,47 +55,47 @@ type SecurityPolicy struct {
 type SecurityPolicySpec struct {
 	EnforcementAction string `json:"enforcementAction"`
 	Policies          struct {
-		AllowedHostPaths []struct {
+		AllowedHostPaths *[]struct {
 			PathPrefix string `json:"pathPrefix"`
 			ReadOnly   bool   `json:"readOnly"`
 		} `json:"allowedHostPaths,omitempty"`
-		AllowHostIPC             *bool     `json:"allowHostIPC,omitempty"`
-		AllowHostPID             *bool     `json:"allowHostPID,omitempty"`
-		AllowPrivileged          *bool     `json:"allowPrivileged,omitempty"`
-		AllowPrivilegeEscalation *bool     `json:"allowPrivilegeEscalation,omitempty"`
-		AllowRbacWildcards       *bool     `json:"allowRbacWildcards,omitempty"`
-		AllowedProcMount         string    `json:"allowedProcMount,omitempty"`
-		AllowedCapabilities      []string  `json:"allowedCapabilities,omitempty"`
-		AllowedAppArmor          []string  `json:"allowedAppArmor,omitempty"`
-		RequiredDropCapabilities []string  `json:"requiredDropCapabilities,omitempty"`
-		AllowHostNetwork         *bool     `json:"allowHostNetwork,omitempty"`
-		AllowedHostPorts         []IDRange `json:"allowedHostPorts,omitempty"`
-		AllowedFlexVolumes       []struct {
+		AllowHostIPC             *bool      `json:"allowHostIPC,omitempty"`
+		AllowHostPID             *bool      `json:"allowHostPID,omitempty"`
+		AllowPrivileged          *bool      `json:"allowPrivileged,omitempty"`
+		AllowPrivilegeEscalation *bool      `json:"allowPrivilegeEscalation,omitempty"`
+		AllowRbacWildcards       *bool      `json:"allowRbacWildcards,omitempty"`
+		AllowedProcMount         string     `json:"allowedProcMount,omitempty"`
+		AllowedCapabilities      *[]string  `json:"allowedCapabilities,omitempty"`
+		AllowedAppArmor          *[]string  `json:"allowedAppArmor,omitempty"`
+		RequiredDropCapabilities *[]string  `json:"requiredDropCapabilities,omitempty"`
+		AllowHostNetwork         *bool      `json:"allowHostNetwork,omitempty"`
+		AllowedHostPorts         *[]IDRange `json:"allowedHostPorts,omitempty"`
+		AllowedFlexVolumes       *[]struct {
 			Driver string `json:"driver"`
 		} `json:"allowedFlexVolumes,omitempty"`
-		AllowedVolumes               []string           `json:"allowedVolumes,omitempty"`
-		AllowedServiceTypes          []string           `json:"allowedServiceTypes,omitempty"`
+		AllowedVolumes               *[]string          `json:"allowedVolumes,omitempty"`
+		AllowedServiceTypes          *[]string          `json:"allowedServiceTypes,omitempty"`
 		BlockWildcardDomains         bool               `json:"blockWildcardDomains,omitempty"`
 		ReadOnlyRootFilesystem       bool               `json:"readOnlyRootFilesystem,omitempty"`
 		AutomountServiceAccountToken *bool              `json:"automountServiceAccountToken,omitempty"`
-		AllowedClusterRoles          []string           `json:"allowedClusterRoles,omitempty"`
+		AllowedClusterRoles          *[]string          `json:"allowedClusterRoles,omitempty"`
 		FsGroup                      *SelectUIDStrategy `json:"fsGroup,omitempty"`
 		RunAsUser                    *SelectUIDStrategy `json:"runAsUser,omitempty"`
 		RunAsGroup                   *SelectUIDStrategy `json:"runAsGroup,omitempty"`
 		SupplementalGroups           *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
-		AllowedUnsafeSysctls         []string           `json:"allowedUnsafeSysctls,omitempty"`
-		ForbiddenSysctls             []string           `json:"forbiddenSysctls,omitempty"`
+		AllowedUnsafeSysctls         *[]string          `json:"allowedUnsafeSysctls,omitempty"`
+		ForbiddenSysctls             *[]string          `json:"forbiddenSysctls,omitempty"`
 		SeccompProfiles              struct {
-			AllowedProfiles       []string `json:"allowedProfiles,omitempty"`
-			AllowedLocalhostFiles []string `json:"allowedLocalhostFiles,omitempty"`
+			AllowedProfiles       *[]string `json:"allowedProfiles,omitempty"`
+			AllowedLocalhostFiles *[]string `json:"allowedLocalhostFiles,omitempty"`
 		} `json:"seccompProfiles,omitempty"`
-		SeLinux []struct {
+		SeLinux *[]struct {
 			Level string `json:"level,omitempty"`
 			Role  string `json:"role,omitempty"`
 			Type  string `json:"type,omitempty"`
 			User  string `json:"user,omitempty"`
 		} `json:"seLinux,omitempty"`
-		VerifyImageSignatures []ImageReference `json:"verifyImageSignatures,omitempty"`
+		VerifyImageSignatures *[]ImageReference `json:"verifyImageSignatures,omitempty"`
 	} `json:"policies"`
 	Match struct {
 		NamespaceSelector NamespaceSelector    `json:"namespaceSelector,omitempty"`
@@ -123,35 +123,35 @@ type IDRange struct {
 type OperationPolicySpec struct {
 	EnforcementAction string `json:"enforcementAction"`
 	Policies          struct {
-		AllowedRepos      []string `json:"allowedRepos,omitempty"`
+		AllowedRepos      *[]string `json:"allowedRepos,omitempty"`
 		RequiredResources struct {
-			Limits   []string `json:"limits,omitempty"`
-			Requests []string `json:"requests,omitempty"`
+			Limits   *[]string `json:"limits,omitempty"`
+			Requests *[]string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
-		DisallowedImageTags   []string     `json:"disallowedImageTags,omitempty"`
-		DisallowedTolerations []Toleration `json:"disallowedTolerations,omitempty"`
-		RequiredProbes        []string     `json:"requiredProbes,omitempty"`
+		DisallowedImageTags   *[]string     `json:"disallowedImageTags,omitempty"`
+		DisallowedTolerations *[]Toleration `json:"disallowedTolerations,omitempty"`
+		RequiredProbes        *[]string     `json:"requiredProbes,omitempty"`
 		RequiredLabels        struct {
-			Labels []struct {
+			Labels *[]struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
 			} `json:"labels,omitempty"`
-			WatchKinds []string `json:"watchKinds,omitempty"`
+			WatchKinds *[]string `json:"watchKinds,omitempty"`
 		} `json:"requiredLabels,omitempty"`
 		RequiredAnnotations struct {
-			Annotations []struct {
+			Annotations *[]struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
 			} `json:"annotations,omitempty"`
-			WatchKinds []string `json:"watchKinds,omitempty"`
+			WatchKinds *[]string `json:"watchKinds,omitempty"`
 		} `json:"requiredAnnotations,omitempty"`
-		MaxRevisionHistoryLimit   *int     `json:"maxRevisionHistoryLimit,omitempty"`
-		ImagePullPolicy           string   `json:"imagePullPolicy,omitempty"`
-		PriorityClassNames        []string `json:"priorityClassNames,omitempty"`
-		IngressClassNames         []string `json:"ingressClassNames,omitempty"`
-		StorageClassNames         []string `json:"storageClassNames,omitempty"`
-		CheckHostNetworkDNSPolicy bool     `json:"checkHostNetworkDNSPolicy,omitempty"`
-		CheckContainerDuplicates  bool     `json:"checkContainerDuplicates,omitempty"`
+		MaxRevisionHistoryLimit   *int      `json:"maxRevisionHistoryLimit,omitempty"`
+		ImagePullPolicy           string    `json:"imagePullPolicy,omitempty"`
+		PriorityClassNames        *[]string `json:"priorityClassNames,omitempty"`
+		IngressClassNames         *[]string `json:"ingressClassNames,omitempty"`
+		StorageClassNames         *[]string `json:"storageClassNames,omitempty"`
+		CheckHostNetworkDNSPolicy bool      `json:"checkHostNetworkDNSPolicy,omitempty"`
+		CheckContainerDuplicates  bool      `json:"checkContainerDuplicates,omitempty"`
 		ReplicaLimits             struct {
 			MinReplicas int `json:"minReplicas,omitempty"`
 			MaxReplicas int `json:"maxReplicas,omitempty"`

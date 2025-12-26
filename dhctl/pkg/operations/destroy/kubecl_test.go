@@ -22,20 +22,18 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 func TestCleanupsDoesNotPanic(t *testing.T) {
-	sshProvider := func() (node.SSHClient, error) {
+	sshProvider := sshclient.NewDefaultSSHProviderWithFunc(func() (node.SSHClient, error) {
 		return gossh.NewClientFromFlags(context.Background())
-	}
+	})
 
-	state := NewDestroyState(&cache.DummyCache{})
-
-	destroyer := NewDeckhouseDestroyer(sshProvider, state, DeckhouseDestroyerOptions{CommanderMode: false})
+	provider := newKubeClientProvider(sshProvider)
 
 	cleanupTest := func() {
-		destroyer.Cleanup(true)
+		provider.Cleanup(true)
 	}
 	require.NotPanics(t, cleanupTest)
 	// double call not panic
