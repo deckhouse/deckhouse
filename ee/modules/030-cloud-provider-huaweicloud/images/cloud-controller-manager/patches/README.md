@@ -12,8 +12,8 @@ For each `Service`, two load balancers were provisioned: one with the correct cl
 
 ### 003-enterprise-project-id.patch
 
-Add support enterprise-project-id
+Add supported enterprise-project-id
 
 ### 004-fix_providerid_and_exclude_loopback_in_node_IP_selection.patch
 
-Fix providerID format and exclude 127.0.0.0/8 in node IP selection
+Fix providerID format and exclude 127.0.0.0/8 in node IP selections
