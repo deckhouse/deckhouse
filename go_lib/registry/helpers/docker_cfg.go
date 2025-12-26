@@ -30,6 +30,39 @@ type authConfig struct {
 	Auth     string `json:"auth,omitempty"`
 }
 
+func (config *authConfig) decodeAuth() error {
+	if config.Auth != "" {
+		decoded, err := base64.StdEncoding.DecodeString(config.Auth)
+		if err != nil {
+			// Try decoding as if there's no padding
+			decoded, err = base64.RawStdEncoding.DecodeString(config.Auth)
+			if err != nil {
+				return fmt.Errorf("decode base64: %w", err)
+			}
+		}
+
+		parts := strings.SplitN(string(decoded), ":", 2)
+		if len(parts) != 2 {
+			return fmt.Errorf("invalid format: expected 'username:password'")
+		}
+
+		config.Username = parts[0]
+		config.Password = parts[1]
+	}
+
+	config.encodeAuth()
+	return nil
+}
+
+func (config *authConfig) encodeAuth() {
+	if config.Username != "" && config.Password != "" {
+		auth := fmt.Sprintf("%s:%s", config.Username, config.Password)
+		config.Auth = base64.StdEncoding.EncodeToString([]byte(auth))
+	} else {
+		config.Auth = ""
+	}
+}
+
 type dockerConfig struct {
 	Auths map[string]authConfig `json:"auths"`
 }
@@ -44,9 +77,7 @@ func DockerCfgFromCreds(username, password, host string) ([]byte, error) {
 		Username: username,
 		Password: password,
 	}
-	if username != "" && password != "" {
-		auth.Auth = encodeAuth(username, password)
-	}
+	auth.encodeAuth()
 
 	config := dockerConfig{
 		Auths: map[string]authConfig{
@@ -90,37 +121,12 @@ func CredsFromDockerCfg(rawConfig []byte, host string) (string, string, error) {
 		}
 	}
 
-	if auth.Auth != "" {
-		username, password, err := decodeAuth(auth.Auth)
-		if err != nil {
-			return "", "", fmt.Errorf("decode auth: %w", err)
-		}
-		return username, password, nil
+	err = auth.decodeAuth()
+	if err != nil {
+		return "", "", fmt.Errorf("decode auth: %w", err)
 	}
 
 	return auth.Username, auth.Password, nil
-}
-
-func encodeAuth(username, password string) string {
-	auth := fmt.Sprintf("%s:%s", username, password)
-	return base64.StdEncoding.EncodeToString([]byte(auth))
-}
-
-func decodeAuth(auth string) (string, string, error) {
-	decoded, err := base64.StdEncoding.DecodeString(auth)
-	if err != nil {
-		// Try decoding as if there's no padding
-		decoded, err = base64.RawStdEncoding.DecodeString(auth)
-		if err != nil {
-			return "", "", fmt.Errorf("decode base64: %w", err)
-		}
-	}
-
-	parts := strings.SplitN(string(decoded), ":", 2)
-	if len(parts) != 2 {
-		return "", "", fmt.Errorf("invalid format: expected 'username:password'")
-	}
-	return parts[0], parts[1], nil
 }
 
 func normalizeHost(host string) (string, error) {
