@@ -27,7 +27,7 @@ spec:
       {{- end }}
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
-      {{- end }}
+      {{ end }}
 
       {{- $ic := .nodeGroup.instanceClass -}}
 
@@ -56,6 +56,6 @@ spec:
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
       availabilityZone: {{ .zoneName | quote }}
-      {{- if .nodeGroup.instanceClass.vipAddress }}
+      {{- if .nodeGroup.instanceClass.vipAddress}}
       vipAddress: {{ .nodeGroup.instanceClass.vipAddress | quote }}
-      {{- end }}
+      {{- end}}
