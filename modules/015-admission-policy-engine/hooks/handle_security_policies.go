@@ -18,10 +18,8 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -36,34 +34,6 @@ import (
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
 )
 
-type securityPolicyFilterResult struct {
-	Policy                 *securityPolicy `json:"policy"`
-	ExplicitEmptySliceKeys []string        `json:"explicitEmptySliceKeys,omitempty"`
-}
-
-// securityPolicyEmptySlicePaths enumerates slice fields where explicit empty list ([]) must be
-// preserved in Values so Helm `hasKey`-guards can distinguish "omitted" vs "explicitly empty".
-//
-// We keep it strictly to fields that participate in constraint rendering logic.
-var securityPolicyEmptySlicePaths = []string{
-	"spec.policies.allowedClusterRoles",
-	"spec.policies.allowedFlexVolumes",
-	"spec.policies.allowedVolumes",
-	"spec.policies.allowedHostPaths",
-	"spec.policies.allowedHostPorts",
-	"spec.policies.allowedCapabilities",
-	"spec.policies.requiredDropCapabilities",
-	"spec.policies.allowedAppArmor",
-	"spec.policies.allowedUnsafeSysctls",
-	"spec.policies.forbiddenSysctls",
-	"spec.policies.seLinux",
-	"spec.policies.verifyImageSignatures",
-	"spec.policies.allowedServiceTypes",
-	// Nested: seccompProfiles is gated by `if $cr.spec.policies.seccompProfiles` and `hasKey` checks inside.
-	"spec.policies.seccompProfiles.allowedProfiles",
-	"spec.policies.seccompProfiles.allowedLocalhostFiles",
-}
-
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/admission-policy-engine/security_policies",
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -77,19 +47,18 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleSP)
 
 func handleSP(_ context.Context, input *go_hook.HookInput) error {
-	items, err := sdkobjectpatch.UnmarshalToStruct[securityPolicyFilterResult](input.Snapshots, "security-policies")
+	policies, err := sdkobjectpatch.UnmarshalToStruct[securityPolicy](input.Snapshots, "security-policies")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal security-policies snapshot: %w", err)
 	}
 
 	refs := make(map[string]set.Set)
 
-	for i := range items {
-		item := &items[i]
-		sp := item.Policy
+	for i := range policies {
+		sp := &policies[i]
 		// set observed status
 		input.PatchCollector.PatchWithMutatingFunc(
-			set_cr_statuses.SetObservedStatus(item, filterSP),
+			set_cr_statuses.SetObservedStatus(sp, filterSP),
 			"deckhouse.io/v1alpha1",
 			"securitypolicy",
 			"",
@@ -99,44 +68,25 @@ func handleSP(_ context.Context, input *go_hook.HookInput) error {
 		)
 		preprocesSecurityPolicy(sp)
 
-		for _, v := range sp.Spec.Policies.VerifyImageSignatures {
-			if keys, ok := refs[v.Reference]; ok {
-				for _, key := range v.PublicKeys {
-					if !keys.Has(key) {
-						keys.Add(key)
+		if sp.Spec.Policies.VerifyImageSignatures != nil {
+			for _, v := range *sp.Spec.Policies.VerifyImageSignatures {
+				if keys, ok := refs[v.Reference]; ok {
+					for _, key := range v.PublicKeys {
+						if !keys.Has(key) {
+							keys.Add(key)
+						}
 					}
+				} else {
+					refs[v.Reference] = set.New(v.PublicKeys...)
 				}
-			} else {
-				refs[v.Reference] = set.New(v.PublicKeys...)
 			}
 		}
 	}
 
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Policy.Metadata.Name < items[j].Policy.Metadata.Name
+	sort.Slice(policies, func(i, j int) bool {
+		return policies[i].Metadata.Name < policies[j].Metadata.Name
 	})
-
-	// Preserve explicit empty arrays for selected fields (see filterSP) while keeping the existing
-	// behavior for all other fields (omitempty etc).
-	policiesForValues := make([]map[string]any, 0, len(items))
-	for _, item := range items {
-		b, err := json.Marshal(item.Policy)
-		if err != nil {
-			return fmt.Errorf("failed to marshal SecurityPolicy for Values: %w", err)
-		}
-		var m map[string]any
-		if err := json.Unmarshal(b, &m); err != nil {
-			return fmt.Errorf("failed to unmarshal SecurityPolicy to map for Values: %w", err)
-		}
-		for _, key := range item.ExplicitEmptySliceKeys {
-			path := strings.Split(key, ".")
-			if err := unstructured.SetNestedField(m, []any{}, path...); err != nil {
-				return fmt.Errorf("failed to force empty slice %q in Values: %w", key, err)
-			}
-		}
-		policiesForValues = append(policiesForValues, m)
-	}
-	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policiesForValues)
+	input.Values.Set("admissionPolicyEngine.internal.securityPolicies", policies)
 
 	imageReferences := make([]ratifyReference, 0, len(refs))
 	for k, v := range refs {
@@ -161,32 +111,7 @@ func filterSP(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 		return nil, err
 	}
 
-	// Preserve semantic difference between omitted field and explicitly empty array for Helm templates
-	// guarded by `hasKey`.
-	explicitEmpty, err := detectExplicitEmptySliceKeys(obj.Object, securityPolicyEmptySlicePaths)
-	if err != nil {
-		return nil, err
-	}
-
-	return &securityPolicyFilterResult{
-		Policy:                 sp,
-		ExplicitEmptySliceKeys: explicitEmpty,
-	}, nil
-}
-
-func detectExplicitEmptySliceKeys(obj map[string]any, dotPaths []string) ([]string, error) {
-	out := make([]string, 0, len(dotPaths))
-	for _, p := range dotPaths {
-		path := strings.Split(p, ".")
-		s, found, err := unstructured.NestedSlice(obj, path...)
-		if err != nil {
-			return nil, err
-		}
-		if found && len(s) == 0 {
-			out = append(out, p)
-		}
-	}
-	return out, nil
+	return sp, nil
 }
 
 func hasItem(slice []string, value string) bool {
@@ -198,14 +123,33 @@ func hasItem(slice []string, value string) bool {
 	return false
 }
 
+func hasItemPtr(slice *[]string, value string) bool {
+	if slice == nil {
+		return false
+	}
+	for _, v := range *slice {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
+func sliceLenPtr[T any](slice *[]T) int {
+	if slice == nil {
+		return 0
+	}
+	return len(*slice)
+}
+
 func preprocesSecurityPolicy(sp *securityPolicy) {
 	// Check if we really need to create a constraint
 	// AllowedCapabilities with 'ALL' and empty RequiredDropCapabilities list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedCapabilities, "ALL") && len(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedCapabilities, "ALL") && sliceLenPtr(sp.Spec.Policies.RequiredDropCapabilities) == 0 {
 		sp.Spec.Policies.AllowedCapabilities = nil
 	}
 	// AllowedUnsafeSysctls with '*' and empty ForbiddenSysctls list result in a sensless constraint
-	if hasItem(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && len(sp.Spec.Policies.ForbiddenSysctls) == 0 {
+	if hasItemPtr(sp.Spec.Policies.AllowedUnsafeSysctls, "*") && sliceLenPtr(sp.Spec.Policies.ForbiddenSysctls) == 0 {
 		sp.Spec.Policies.AllowedUnsafeSysctls = nil
 	}
 	// The rules set to 'RunAsAny' should be ignored
@@ -238,16 +182,16 @@ func preprocesSecurityPolicy(sp *securityPolicy) {
 		sp.Spec.Policies.AllowedProcMount = ""
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedVolumes, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedVolumes, "*") {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}
 	// Having all seccomp profiles allowed also isn't worth creating a constraint
-	if hasItem(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItem(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+	if hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
 		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
 		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
 	}
 	// Having rules allowing '*' volumes makes no sense
-	if hasItem(sp.Spec.Policies.AllowedClusterRoles, "*") {
+	if hasItemPtr(sp.Spec.Policies.AllowedClusterRoles, "*") {
 		sp.Spec.Policies.AllowedClusterRoles = nil
 	}
 }

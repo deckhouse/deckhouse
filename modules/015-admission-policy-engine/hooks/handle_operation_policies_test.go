@@ -19,10 +19,12 @@ package hooks
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v3"
 
 	v1alpha1 "github.com/deckhouse/deckhouse/modules/015-admission-policy-engine/hooks/internal/apis"
@@ -91,6 +93,158 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 				Expect(ops[0].Get("spec.policies.requiredResources.limits").Exists()).To(BeTrue())
 				Expect(ops[0].Get("spec.policies.requiredResources.limits").Array()).To(HaveLen(0))
 			})
+		})
+	})
+
+	Context("Pointer slice semantics: omit vs [] vs non-empty (operation policies)", func() {
+		type sliceCase struct {
+			name         string
+			path         string
+			omitSnippet  string
+			emptySnippet string
+			nonEmpty     string
+		}
+
+		operationPolicyYAML := func(policiesSnippet string) string {
+			return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      matchNames: ["default"]
+  policies:
+%s
+`, policiesSnippet)
+		}
+
+		runAndGet := func(yaml string) gjson.Result {
+			f.BindingContexts.Set(f.KubeStateSet(yaml))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			arr := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
+			Expect(arr).To(HaveLen(1))
+			return arr[0]
+		}
+
+		cases := []sliceCase{
+			{
+				name:         "allowedRepos",
+				path:         "spec.policies.allowedRepos",
+				omitSnippet:  "",
+				emptySnippet: "    allowedRepos: []",
+				nonEmpty: "    allowedRepos:\n" +
+					"      - foo",
+			},
+			{
+				name:         "requiredResources.limits",
+				path:         "spec.policies.requiredResources.limits",
+				omitSnippet:  "",
+				emptySnippet: "    requiredResources:\n      limits: []",
+				nonEmpty: "    requiredResources:\n" +
+					"      limits: [\"memory\"]",
+			},
+			{
+				name:         "requiredResources.requests",
+				path:         "spec.policies.requiredResources.requests",
+				omitSnippet:  "",
+				emptySnippet: "    requiredResources:\n      requests: []",
+				nonEmpty: "    requiredResources:\n" +
+					"      requests: [\"cpu\"]",
+			},
+			{
+				name:         "disallowedImageTags",
+				path:         "spec.policies.disallowedImageTags",
+				omitSnippet:  "",
+				emptySnippet: "    disallowedImageTags: []",
+				nonEmpty: "    disallowedImageTags:\n" +
+					"      - latest",
+			},
+			{
+				name:         "requiredProbes",
+				path:         "spec.policies.requiredProbes",
+				omitSnippet:  "",
+				emptySnippet: "    requiredProbes: []",
+				nonEmpty: "    requiredProbes:\n" +
+					"      - livenessProbe",
+			},
+			{
+				name:         "priorityClassNames",
+				path:         "spec.policies.priorityClassNames",
+				omitSnippet:  "",
+				emptySnippet: "    priorityClassNames: []",
+				nonEmpty: "    priorityClassNames:\n" +
+					"      - production-high",
+			},
+			{
+				name:         "ingressClassNames",
+				path:         "spec.policies.ingressClassNames",
+				omitSnippet:  "",
+				emptySnippet: "    ingressClassNames: []",
+				nonEmpty: "    ingressClassNames:\n" +
+					"      - nginx",
+			},
+			{
+				name:         "storageClassNames",
+				path:         "spec.policies.storageClassNames",
+				omitSnippet:  "",
+				emptySnippet: "    storageClassNames: []",
+				nonEmpty: "    storageClassNames:\n" +
+					"      - standard",
+			},
+			{
+				name:         "disallowedTolerations",
+				path:         "spec.policies.disallowedTolerations",
+				omitSnippet:  "",
+				emptySnippet: "    disallowedTolerations: []",
+				nonEmpty: "    disallowedTolerations:\n" +
+					"      - key: node-role.kubernetes.io/master\n" +
+					"        operator: Exists",
+			},
+		}
+
+		It("should preserve slice tri-state semantics in Values", func() {
+			for _, tc := range cases {
+				By("omit: " + tc.name)
+				o := runAndGet(operationPolicyYAML(tc.omitSnippet))
+				Expect(o.Get(tc.path).Exists()).To(BeFalse())
+
+				By("empty: " + tc.name)
+				e := runAndGet(operationPolicyYAML(tc.emptySnippet))
+				Expect(e.Get(tc.path).Exists()).To(BeTrue())
+				Expect(e.Get(tc.path).Array()).To(HaveLen(0))
+
+				By("non-empty: " + tc.name)
+				n := runAndGet(operationPolicyYAML(tc.nonEmpty))
+				Expect(n.Get(tc.path).Exists()).To(BeTrue())
+				Expect(n.Get(tc.path).Array()).ToNot(BeEmpty())
+			}
+		})
+
+		It("should preserve omit vs non-empty for requiredLabels/requiredAnnotations (CRD may forbid empty arrays)", func() {
+			// requiredLabels.labels
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.requiredLabels.labels").Exists()).To(BeFalse())
+
+			n := runAndGet(operationPolicyYAML("    requiredLabels:\n      labels:\n      - key: product-id\n        allowedRegex: ^P\\d{4}$\n      watchKinds: [\"/Namespace\"]"))
+			Expect(n.Get("spec.policies.requiredLabels.labels").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.requiredLabels.labels").Array()).ToNot(BeEmpty())
+			Expect(n.Get("spec.policies.requiredLabels.watchKinds").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.requiredLabels.watchKinds").Array()).ToNot(BeEmpty())
+
+			// requiredAnnotations.annotations
+			o2 := runAndGet(operationPolicyYAML(""))
+			Expect(o2.Get("spec.policies.requiredAnnotations.annotations").Exists()).To(BeFalse())
+
+			n2 := runAndGet(operationPolicyYAML("    requiredAnnotations:\n      annotations:\n      - key: foobar\n        allowedRegex: ^P\\d{4}$\n      watchKinds: [\"/Namespace\"]"))
+			Expect(n2.Get("spec.policies.requiredAnnotations.annotations").Exists()).To(BeTrue())
+			Expect(n2.Get("spec.policies.requiredAnnotations.annotations").Array()).ToNot(BeEmpty())
+			Expect(n2.Get("spec.policies.requiredAnnotations.watchKinds").Exists()).To(BeTrue())
+			Expect(n2.Get("spec.policies.requiredAnnotations.watchKinds").Array()).ToNot(BeEmpty())
 		})
 	})
 })

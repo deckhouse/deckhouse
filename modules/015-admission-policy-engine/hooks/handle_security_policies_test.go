@@ -17,10 +17,12 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -275,6 +277,213 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 				Expect(p[0].Get("spec.policies.seccompProfiles.allowedProfiles").Exists()).To(BeTrue())
 				Expect(p[0].Get("spec.policies.seccompProfiles.allowedProfiles").Array()).To(HaveLen(0))
 			})
+		})
+	})
+
+	Context("Pointer slice semantics: omit vs [] vs non-empty (full coverage for policy slice fields used by constraints)", func() {
+		type sliceCase struct {
+			name         string
+			path         string
+			omitSnippet  string
+			emptySnippet string
+			nonEmpty     string
+		}
+
+		securityPolicyYAML := func(policiesSnippet string) string {
+			return fmt.Sprintf(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: foo
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          security-policy.deckhouse.io/enabled: "true"
+  policies:
+    allowPrivileged: true
+%s
+`, policiesSnippet)
+		}
+
+		runAndGet := func(yaml string) gjson.Result {
+			f.BindingContexts.Set(f.KubeStateSet(yaml))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			arr := f.ValuesGet("admissionPolicyEngine.internal.securityPolicies").Array()
+			Expect(arr).To(HaveLen(1))
+			return arr[0]
+		}
+
+		cases := []sliceCase{
+			{
+				name:         "allowedHostPaths",
+				path:         "spec.policies.allowedHostPaths",
+				omitSnippet:  "",
+				emptySnippet: "    allowedHostPaths: []",
+				nonEmpty: "    allowedHostPaths:\n" +
+					"    - pathPrefix: /dev\n" +
+					"      readOnly: true",
+			},
+			{
+				name:         "allowedHostPorts",
+				path:         "spec.policies.allowedHostPorts",
+				omitSnippet:  "",
+				emptySnippet: "    allowedHostPorts: []",
+				nonEmpty: "    allowedHostPorts:\n" +
+					"    - min: 10\n" +
+					"      max: 11",
+			},
+			{
+				name:         "allowedVolumes",
+				path:         "spec.policies.allowedVolumes",
+				omitSnippet:  "",
+				emptySnippet: "    allowedVolumes: []",
+				nonEmpty: "    allowedVolumes:\n" +
+					"    - configMap",
+			},
+			{
+				name:         "allowedFlexVolumes",
+				path:         "spec.policies.allowedFlexVolumes",
+				omitSnippet:  "",
+				emptySnippet: "    allowedFlexVolumes: []",
+				nonEmpty: "    allowedFlexVolumes:\n" +
+					"    - driver: vmware",
+			},
+			{
+				name:         "allowedClusterRoles",
+				path:         "spec.policies.allowedClusterRoles",
+				omitSnippet:  "",
+				emptySnippet: "    allowedClusterRoles: []",
+				nonEmpty: "    allowedClusterRoles:\n" +
+					"    - view",
+			},
+			{
+				name:         "allowedCapabilities",
+				path:         "spec.policies.allowedCapabilities",
+				omitSnippet:  "",
+				emptySnippet: "    allowedCapabilities: []",
+				nonEmpty: "    allowedCapabilities:\n" +
+					"    - NET_ADMIN",
+			},
+			{
+				name:         "requiredDropCapabilities",
+				path:         "spec.policies.requiredDropCapabilities",
+				omitSnippet:  "",
+				emptySnippet: "    requiredDropCapabilities: []",
+				nonEmpty: "    requiredDropCapabilities:\n" +
+					"    - ALL",
+			},
+			{
+				name:         "allowedAppArmor",
+				path:         "spec.policies.allowedAppArmor",
+				omitSnippet:  "",
+				emptySnippet: "    allowedAppArmor: []",
+				nonEmpty: "    allowedAppArmor:\n" +
+					"    - runtime/default",
+			},
+			{
+				name:         "allowedUnsafeSysctls",
+				path:         "spec.policies.allowedUnsafeSysctls",
+				omitSnippet:  "",
+				emptySnippet: "    allowedUnsafeSysctls: []",
+				nonEmpty: "    allowedUnsafeSysctls:\n" +
+					"    - kernel.shm_rmid_forced",
+			},
+			{
+				name:         "forbiddenSysctls",
+				path:         "spec.policies.forbiddenSysctls",
+				omitSnippet:  "",
+				emptySnippet: "    forbiddenSysctls: []",
+				nonEmpty: "    forbiddenSysctls:\n" +
+					"    - kernel.shm_rmid_forced",
+			},
+			{
+				name:         "seLinux",
+				path:         "spec.policies.seLinux",
+				omitSnippet:  "",
+				emptySnippet: "    seLinux: []",
+				nonEmpty: "    seLinux:\n" +
+					"    - type: container_t",
+			},
+			{
+				name:         "verifyImageSignatures",
+				path:         "spec.policies.verifyImageSignatures",
+				omitSnippet:  "",
+				emptySnippet: "    verifyImageSignatures: []",
+				nonEmpty: "    verifyImageSignatures:\n" +
+					"    - reference: ghcr.io/*\n" +
+					"      publicKeys: [\"k1\"]",
+			},
+			{
+				name:         "allowedServiceTypes",
+				path:         "spec.policies.allowedServiceTypes",
+				omitSnippet:  "",
+				emptySnippet: "    allowedServiceTypes: []",
+				nonEmpty: "    allowedServiceTypes:\n" +
+					"    - ClusterIP",
+			},
+			{
+				name:         "seccompProfiles.allowedProfiles",
+				path:         "spec.policies.seccompProfiles.allowedProfiles",
+				omitSnippet:  "",
+				emptySnippet: "    seccompProfiles:\n      allowedProfiles: []",
+				nonEmpty: "    seccompProfiles:\n" +
+					"      allowedProfiles: [\"RuntimeDefault\"]",
+			},
+			{
+				name:         "seccompProfiles.allowedLocalhostFiles",
+				path:         "spec.policies.seccompProfiles.allowedLocalhostFiles",
+				omitSnippet:  "",
+				emptySnippet: "    seccompProfiles:\n      allowedLocalhostFiles: []",
+				nonEmpty: "    seccompProfiles:\n" +
+					"      allowedProfiles: [\"Localhost\"]\n" +
+					"      allowedLocalhostFiles: [\"*\"]",
+			},
+		}
+
+		It("should preserve slice tri-state semantics in Values", func() {
+			for _, tc := range cases {
+				By("omit: " + tc.name)
+				o := runAndGet(securityPolicyYAML(tc.omitSnippet))
+				Expect(o.Get(tc.path).Exists()).To(BeFalse())
+
+				By("empty: " + tc.name)
+				e := runAndGet(securityPolicyYAML(tc.emptySnippet))
+				Expect(e.Get(tc.path).Exists()).To(BeTrue())
+				Expect(e.Get(tc.path).Array()).To(HaveLen(0))
+
+				By("non-empty: " + tc.name)
+				n := runAndGet(securityPolicyYAML(tc.nonEmpty))
+				Expect(n.Get(tc.path).Exists()).To(BeTrue())
+				Expect(n.Get(tc.path).Array()).ToNot(BeEmpty())
+			}
+		})
+
+		It("should keep preprocess optimizations (nil out specific fields)", func() {
+			// allowedVolumes: ['*'] => should be dropped by preprocess
+			o1 := runAndGet(securityPolicyYAML("    allowedVolumes: ['*']"))
+			Expect(o1.Get("spec.policies.allowedVolumes").Exists()).To(BeFalse())
+
+			// allowedClusterRoles: ['*'] => should be dropped by preprocess
+			o2 := runAndGet(securityPolicyYAML("    allowedClusterRoles: ['*']"))
+			Expect(o2.Get("spec.policies.allowedClusterRoles").Exists()).To(BeFalse())
+
+			// allowedCapabilities: ['ALL'] with requiredDropCapabilities omitted => drop allowedCapabilities
+			o3 := runAndGet(securityPolicyYAML("    allowedCapabilities: ['ALL']"))
+			Expect(o3.Get("spec.policies.allowedCapabilities").Exists()).To(BeFalse())
+
+			// allowedUnsafeSysctls: ['*'] with forbiddenSysctls omitted => drop allowedUnsafeSysctls
+			o4 := runAndGet(securityPolicyYAML("    allowedUnsafeSysctls: ['*']"))
+			Expect(o4.Get("spec.policies.allowedUnsafeSysctls").Exists()).To(BeFalse())
+
+			// seccompProfiles allowedProfiles='*' and allowedLocalhostFiles='*' => drop both (and likely the whole seccompProfiles)
+			o5 := runAndGet(securityPolicyYAML("    seccompProfiles:\n      allowedProfiles: ['*']\n      allowedLocalhostFiles: ['*']"))
+			Expect(o5.Get("spec.policies.seccompProfiles.allowedProfiles").Exists()).To(BeFalse())
+			Expect(o5.Get("spec.policies.seccompProfiles.allowedLocalhostFiles").Exists()).To(BeFalse())
 		})
 	})
 })
