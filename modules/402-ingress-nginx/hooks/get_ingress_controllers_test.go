@@ -220,7 +220,10 @@ spec:
 "hostPort": {},
 "hostPortWithProxyProtocol": {
   "httpPort": 80,
-  "httpsPort": 443
+  "httpsPort": 443,
+  "trustedCIDRs": [
+    "0.0.0.0/0"
+  ]
 },
 "hostWithFailover": {},
 "hsts": false,

@@ -17,6 +17,8 @@ spec:
     sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
+    trustedCIDRs:
+    - 0.0.0.0/0
   maxReplicas: 6
   minReplicas: 2
   additionalHeaders:
