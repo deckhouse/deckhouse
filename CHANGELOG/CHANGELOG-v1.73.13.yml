@@ -1,0 +1,34 @@
+cni-cilium:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17224
+cni-flannel:
+  fixes:
+    - summary: Bump version and fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17227
+kube-dns:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17230
+kube-proxy:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17232
+loki:
+  fixes:
+    - summary: disable send analytics report to stats.grafana.org
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17109
+      impact: config module loki ↓
+network-policy-engine:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17234
+node-local-dns:
+  fixes:
+    - summary: Bump version and fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17238
+openvpn:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17239
+
