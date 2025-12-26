@@ -220,7 +220,6 @@ func (u *UploadScript) ExecuteBundle(ctx context.Context, parentDir, bundleDir s
 	bundleCmd.WithStdoutHandler(handler)
 	bundleCmd.CaptureStdout(nil)
 	bundleCmd.CaptureStderr(nil)
-
 	err = bundleCmd.Run(ctx)
 	if err != nil {
 		if lastStep != "" {
