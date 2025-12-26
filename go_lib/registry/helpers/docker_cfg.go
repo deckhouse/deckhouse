@@ -22,72 +22,121 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-
-	"github.com/google/go-containerregistry/pkg/authn"
 )
 
-type dockerCfg struct {
-	Auths map[string]authn.AuthConfig `json:"auths"`
+type authConfig struct {
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
+	Auth     string `json:"auth,omitempty"`
+}
+
+type dockerConfig struct {
+	Auths map[string]authConfig `json:"auths"`
 }
 
 func DockerCfgFromCreds(username, password, host string) ([]byte, error) {
-	targetHost, err := normalizeHost(host)
+	host, err := normalizeHost(host)
 	if err != nil {
-		return []byte{}, err
+		return nil, fmt.Errorf("normalize host: %w", err)
 	}
 
-	cfg := dockerCfg{
-		Auths: map[string]authn.AuthConfig{
-			targetHost: {
-				Username: username,
-				Password: password,
-				Auth:     base64.StdEncoding.EncodeToString([]byte(username + ":" + password)),
-			},
+	auth := authConfig{
+		Username: username,
+		Password: password,
+	}
+	if username != "" && password != "" {
+		auth.Auth = encodeAuth(username, password)
+	}
+
+	config := dockerConfig{
+		Auths: map[string]authConfig{
+			host: auth,
 		},
 	}
-	return json.Marshal(cfg)
+
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return nil, fmt.Errorf("marshal docker config: %w", err)
+	}
+	return configJSON, nil
 }
 
-func CredsFromDockerCfg(rawCfg []byte, host string) (string, string, error) {
-	if len(rawCfg) == 0 {
+func CredsFromDockerCfg(rawConfig []byte, host string) (string, string, error) {
+	if len(rawConfig) == 0 {
 		return "", "", nil
 	}
 
-	// Username and password added by unmarshal
-	// https://github.com/google/go-containerregistry/blob/main/pkg/authn/authn.go#L67-L94
-	var cfg dockerCfg
-	if err := json.Unmarshal(rawCfg, &cfg); err != nil {
-		return "", "", fmt.Errorf("failed to unmarshal docker config: %w", err)
+	var config dockerConfig
+	if err := json.Unmarshal(rawConfig, &config); err != nil {
+		return "", "", fmt.Errorf("unmarshal docker config: %w", err)
 	}
 
-	targetHost, err := normalizeHost(host)
+	host, err := normalizeHost(host)
 	if err != nil {
-		return "", "", err
+		return "", "", fmt.Errorf("normalize host: %w", err)
 	}
 
-	for repoKey, auth := range cfg.Auths {
-		repoHost, err := normalizeHost(repoKey)
+	var auth authConfig
+
+	for authHost, authConfig := range config.Auths {
+		authHost, err := normalizeHost(authHost)
 		if err != nil {
-			return "", "", err
+			return "", "", fmt.Errorf("normalize auth host: %w", err)
 		}
-		if repoHost == targetHost {
-			return auth.Username, auth.Password, nil
+
+		if authHost == host {
+			auth = authConfig
+			break
 		}
 	}
-	return "", "", nil
+
+	if auth.Auth != "" {
+		username, password, err := decodeAuth(auth.Auth)
+		if err != nil {
+			return "", "", fmt.Errorf("decode auth: %w", err)
+		}
+		return username, password, nil
+	}
+
+	return auth.Username, auth.Password, nil
+}
+
+func encodeAuth(username, password string) string {
+	auth := fmt.Sprintf("%s:%s", username, password)
+	return base64.StdEncoding.EncodeToString([]byte(auth))
+}
+
+func decodeAuth(auth string) (string, string, error) {
+	decoded, err := base64.StdEncoding.DecodeString(auth)
+	if err != nil {
+		// Try decoding as if there's no padding
+		decoded, err = base64.RawStdEncoding.DecodeString(auth)
+		if err != nil {
+			return "", "", fmt.Errorf("decode base64: %w", err)
+		}
+	}
+
+	parts := strings.SplitN(string(decoded), ":", 2)
+	if len(parts) != 2 {
+		return "", "", fmt.Errorf("invalid format: expected 'username:password'")
+	}
+	return parts[0], parts[1], nil
 }
 
 func normalizeHost(host string) (string, error) {
 	targetHost := host
+
 	if !strings.HasPrefix(host, "http://") && !strings.HasPrefix(host, "https://") {
 		targetHost = "//" + host
 	}
+
 	u, err := url.Parse(targetHost)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse input host %q: %w", host, err)
+		return "", fmt.Errorf("parse host %q: %w", host, err)
 	}
-	if u.Host == "" {
-		return "", fmt.Errorf("failed to parse input host %q: host component is empty", host)
+
+	if u.Host == "" || strings.HasPrefix(u.Host, ":") {
+		return "", fmt.Errorf("parse host %q: empty host component", host)
 	}
 	return u.Host, nil
 }
