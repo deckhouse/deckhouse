@@ -43,7 +43,7 @@ func newApplySettingsErr(err error) error {
 		Err: err,
 		Conditions: []status.Condition{
 			{
-				Name:    status.ConditionSettingsIsValid,
+				Name:    status.ConditionSettingsValid,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonValidationFailed,
 				Message: err.Error(),

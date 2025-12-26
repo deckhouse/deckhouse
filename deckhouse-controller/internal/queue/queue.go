@@ -280,13 +280,20 @@ func (q *queue) processOne() bool {
 			t.err = err
 			t.nextRetry = time.Now().Add(delay)
 
-			// Schedule retry signal after delay
-			time.AfterFunc(delay, func() {
+			// Schedule retry signal after delay with context-aware waiting
+			go func(tw *taskWrapper, d time.Duration) {
+				select {
+				case <-time.After(d):
+					// Backoff completed normally
+				case <-tw.ctx.Done():
+					// Context canceled during backoff - signal immediately for cleanup
+				}
+				// Signal queue to process (either retry or cleanup canceled task)
 				select {
 				case q.signal <- struct{}{}:
 				default:
 				}
-			})
+			}(t, delay)
 
 			return true // Task was processed (will retry later)
 		}
