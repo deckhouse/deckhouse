@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/erofs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/symlink"
@@ -77,11 +78,6 @@ func (i *Installer) GetInstalled() (map[string]struct{}, error) {
 			continue
 		}
 
-		// skip enabled dirs
-		if entry.Name() == "modules" || entry.Name() == "apps" {
-			continue
-		}
-
 		installed[entry.Name()] = struct{}{}
 	}
 
@@ -110,10 +106,29 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 }
 
 func (i *Installer) Uninstall(ctx context.Context, module string) error {
+	i.deleteWeightedModuleSymlinks(module)
+
 	return i.installer.Uninstall(ctx, module)
 }
 
 // Restore ensures the module image is present, verified, and mounted.
 func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
+	i.deleteWeightedModuleSymlinks(module)
+
 	return i.installer.Restore(ctx, ms, module, version)
+}
+
+// deleteModuleSymlink walks over the modules dir and deletes module symlinks by regexp
+// TODO(ipaqsa): delete after 1.74
+func (i *Installer) deleteWeightedModuleSymlinks(moduleName string) {
+	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
+	filepath.WalkDir(filepath.Join(i.downloaded, "modules"), func(path string, d os.DirEntry, _ error) error {
+		if !moduleRegexp.MatchString(d.Name()) {
+			return nil
+		}
+
+		os.RemoveAll(path)
+
+		return filepath.SkipDir
+	})
 }

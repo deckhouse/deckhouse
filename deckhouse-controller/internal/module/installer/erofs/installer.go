@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sync"
 
 	"go.opentelemetry.io/otel"
@@ -148,18 +147,6 @@ func (i *Installer) Uninstall(ctx context.Context, module string) error {
 
 	logger.Debug("uninstall module")
 
-	// migration
-	// TODO(ipaqsa): delete after 1.74
-	symlink, err := i.getModuleSymlink(module)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("get module symlink: %w", err)
-	}
-	if len(symlink) > 0 {
-		logger.Debug("delete module symlink", slog.String("path", symlink))
-		os.RemoveAll(symlink)
-	}
-
 	// clear module dir
 	defer func() {
 		// /deckhouse/downloaded/<module>
@@ -215,36 +202,24 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	logger := i.logger.With(slog.String("name", module), slog.String("version", version))
 	logger.Debug("restore module")
 
-	// migration
-	// TODO(ipaqsa): delete after 1.74
-	symlink, err := i.getModuleSymlink(module)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("get module symlink: %w", err)
-	}
-	if len(symlink) > 0 {
-		logger.Debug("delete module symlink", slog.String("path", symlink))
-		os.RemoveAll(symlink)
-	}
-
 	// /deckhouse/downloaded/modules/<module>
 	mountPoint := filepath.Join(i.mount, module)
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
-	if err = verity.Unmount(ctx, mountPoint); err != nil {
+	if err := verity.Unmount(ctx, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
 	}
 
 	logger.Debug("close old device mapper")
-	if err = verity.CloseMapper(ctx, module); err != nil {
+	if err := verity.CloseMapper(ctx, module); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("close module mapper: %w", err)
 	}
 
 	// /deckhouse/downloaded/<module>
 	modulePath := filepath.Join(i.downloaded, module)
-	if err = os.MkdirAll(modulePath, 0755); err != nil {
+	if err := os.MkdirAll(modulePath, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("create module dir '%s': %w", modulePath, err)
 	}
@@ -355,22 +330,4 @@ func (i *Installer) verifyModule(_ context.Context, module, version, _ string) e
 	// }
 
 	return nil
-}
-
-// getModuleSymlink walks over the root dir to find a module symlink by regexp
-func (i *Installer) getModuleSymlink(moduleName string) (string, error) {
-	var symlinkPath string
-
-	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	err := filepath.WalkDir(i.mount, func(path string, d os.DirEntry, _ error) error {
-		if !moduleRegexp.MatchString(d.Name()) {
-			return nil
-		}
-
-		symlinkPath = path
-
-		return filepath.SkipDir
-	})
-
-	return symlinkPath, err
 }
