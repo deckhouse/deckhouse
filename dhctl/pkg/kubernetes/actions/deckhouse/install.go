@@ -558,9 +558,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	err = beforeDeckhouseTask()
-	if err != nil {
-		return nil, err
+	if beforeDeckhouseTask != nil {
+		err := beforeDeckhouseTask()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(ctx, kubeCl)
