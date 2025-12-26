@@ -41,6 +41,25 @@ const (
 	ConditionSettingsIsValid ConditionName = "SettingsIsValid"
 )
 
+// AllConditions is the canonical list of all internal conditions.
+// This is the single source of truth for exhaustiveness tests.
+var AllConditions = []ConditionName{
+	ConditionDownloaded,
+	ConditionReadyOnFilesystem,
+	ConditionRequirementsMet,
+	ConditionReadyInRuntime,
+	ConditionHooksProcessed,
+	ConditionHelmApplied,
+	ConditionReadyInCluster,
+	ConditionSettingsIsValid,
+}
+
+// UnusedConditions lists conditions reserved for future use.
+// These are defined but intentionally not mapped to external conditions.
+var UnusedConditions = []ConditionName{
+	ConditionReadyInCluster,
+}
+
 // Error wraps an error with associated status conditions
 // Used to propagate both error details and status updates through the call stack
 type Error struct {
