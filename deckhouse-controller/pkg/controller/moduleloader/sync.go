@@ -265,7 +265,7 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		return fmt.Errorf("get installed modules: %w", err)
 	}
 
-	l.logger.Debug("found installed modules", slog.Any("downloaded", installed))
+	l.logger.Debug("found installed modules", slog.Any("installed", installed))
 
 	// remove modules with release
 	for _, release := range releases.Items {
