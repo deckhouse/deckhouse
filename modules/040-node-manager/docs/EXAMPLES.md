@@ -105,7 +105,7 @@ GPU nodes require the **NVIDIA driver** and the **NVIDIA Container Toolkit**. Th
 
 1. **Manual installation** — the administrator installs the driver before the node joins the cluster.
 1. **Automation via `NodeGroupConfiguration`** (more details in the
-   [Step-by-step procedure for adding a GPU node to the cluster](../node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster) section).
+   [Step-by-step procedure for adding a GPU node to the cluster](/modules/node-manager/faq.html#step-by-step-procedure-for-adding-a-gpu-node-to-the-cluster) section).
 
 After the driver is detected and the NodeGroup includes the `spec.gpu` section,
 `node-manager` enables full GPU support by deploying **NFD**, **GFD**, **NVIDIA Device
@@ -118,7 +118,7 @@ and `nodeSelector`.
 {% endalert %}
 
 See the full field reference in the
-[NodeGroup CR documentation](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+[NodeGroup CR documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
 
 Below are examples of NodeGroup manifests for typical GPU operating modes (Exclusive,
 TimeSlicing, MIG).
@@ -166,7 +166,7 @@ A hardware-partitioned GPU (A100, A30, etc.) is split into independent
 instances. The scheduler exposes resources like `nvidia.com/mig-1g.5gb`.
 
 For a complete list of supported GPUs and their profiles you can see it by using
-[instructions](../node-manager/faq.html#how-to-view-available-mig-profiles-in-a-cluster).(../node-manager/faq.html#how-to-list-available-mig-profiles).
+[instruction](/modules/node-manager/faq.html#how-to-view-available-mig-profiles-in-a-cluster).
 
 ```yaml
 spec:
@@ -214,7 +214,7 @@ Adding a static node can be done manually or using the Cluster API Provider Stat
 
 Follow the steps below to add a new static node (e.g., VM or bare metal server) to the cluster:
 
-1. For [CloudStatic nodes](../node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
+1. For [CloudStatic nodes](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) in the following cloud providers, refer to the steps outlined in the documentation:
    - [For AWS](/modules/cloud-provider-aws/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For GCP](/modules/cloud-provider-gcp/faq.html#adding-cloudstatic-nodes-to-a-cluster)
    - [For YC](/modules/cloud-provider-yandex/faq.html#adding-cloudstatic-nodes-to-a-cluster)
@@ -241,7 +241,7 @@ Follow the steps below to add a new static node (e.g., VM or bare metal server) 
 ### Using the Cluster API Provider Static
 
 {% alert level="warning" %}
-If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding regular nodes using CAPS, [make sure](../control-plane-manager/faq.html#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) that they will not be "captured".
+If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding regular nodes using CAPS, [make sure](/modules/control-plane-manager/faq.html#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) that they will not be "captured".
 {% endalert %}
 
 A brief example of adding a static node to a cluster using [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):

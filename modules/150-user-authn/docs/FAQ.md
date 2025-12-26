@@ -109,8 +109,8 @@ Make sure your application Ingress has TLS configured before integrating with De
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../upmeter/), because permissions to Upmeter entities are not highly grained.
-On the other hand, for the [Kubernetes Dashboard](../dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
+3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](/modules/upmeter/), because permissions to Upmeter entities are not highly grained.
+On the other hand, for the [Kubernetes Dashboard](/modules/dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
@@ -136,7 +136,7 @@ The name `kubeconfig` is reserved for accessing the web interface that allows ge
 
 ### Configuring kube-apiserver
 
-With the functional of the [control-plane-manager](../../modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
+With the functional of the [control-plane-manager](/modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 

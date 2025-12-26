@@ -123,7 +123,7 @@ In the case of using MetalLB, its speaker Pods must be run on the same Nodes as 
 
 The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to accept this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
 
-For this example [metallb module configuration](../metallb/configuration.html) should be like this:
+For this example [metallb module configuration](/modules/metallb/configuration.html) should be like this:
 
 ```yaml
 metallb:

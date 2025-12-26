@@ -28,7 +28,7 @@ The module allows you to manage HTTPS security policies for each Ingress NGINX C
 - HSTS parameters
 - Available SSL/TLS versions and encryption protocols
 
-The module integrates with the [`cert-manager`](../../modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
+The module integrates with the [`cert-manager`](/modules/cert-manager/) module. Thus, it can get SSL certificates automatically and pass them to Ingress NGINX Controllers for further use.
 
 ## Monitoring and statistics
 
@@ -56,7 +56,7 @@ The graphs are collected in convenient dashboards in Grafana, and there is a dri
 ### Basic principles of collecting statistics
 
 1. The module is called for each request (at the `log_by_lua_block` stage). It calculates the necessary data and forwards it to the buffer (each nginx worker has its own buffer).
-1. For every nginx worker at the `init_by_lua_block` stage), the process is run that asynchronously sends data in the `protobuf` format over a tcp socket to `protobuf_exporter` (DKP development) once a second.
+1. For every nginx worker at the `init_by_lua_block` stage, the process is run that asynchronously sends data in the `protobuf` format over a tcp socket to `protobuf_exporter` (DKP development) once a second.
 1. `protobuf_exporter` runs as a sidecar container in the ingress-controller's Pod. It receives messages in the protobuf format, parses them, aggregates them according to the specified rules, and exports them in the Prometheus format.
 1. Every 30 seconds, Prometheus scrapes both the ingress-controller (since it exports some of the required metrics) and protobuf_exporter. Then these data are used for stats.
 

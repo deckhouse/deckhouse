@@ -53,4 +53,4 @@ To enable cluster node monitoring, you need to enable the [`monitoring-kubernete
 d8 system module enable monitoring-kubernetes
 ```
 
-Similarly, you can enable the [`monitoring-kubernetes-control-plane`](/monitoring-kubernetes-control-plane/) and [`extended-monitoring`](/modules/extended-monitoring/) modules.
+Similarly, you can enable the [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) and [`extended-monitoring`](/modules/extended-monitoring/) modules.
