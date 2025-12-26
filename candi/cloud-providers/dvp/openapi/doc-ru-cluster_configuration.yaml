@@ -45,6 +45,8 @@ apiVersions:
                 virtualMachine: &instanceClassVirtualMachine
                   description: |
                     Настройки виртуальной машины для созданного master-узла.
+                    > Для виртуальных машин узлов используется `runPolicy: AlwaysOnUnlessStoppedManually`.
+                    > Это позволяет вручную останавливать ВМ (например, для обслуживания), не вызывая принудительный автозапуск.
                   properties:
                     cpu:
                       description: |
@@ -68,6 +70,17 @@ apiVersions:
                         Имя VirtualMachineClass.
 
                         Предназначен для централизованной конфигурации предпочтительных параметров виртуальных машин. Ресурс позволяет задавать инструкции CPU, политики конфигурации ресурсов CPU и памяти для виртуальных машин, а также устанавливать соотношения этих ресурсов.
+                    runPolicy:
+                      description: |
+                        Политика запуска виртуальной машины.
+
+                        * `AlwaysOn` — виртуальная машина всегда должна быть запущена;
+                        * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания).
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      example: AlwaysOnUnlessStoppedManually
                     bootloader:
                       description: |
                         Определяет загрузчик для виртуальной машины.
@@ -75,6 +88,12 @@ apiVersions:
                         * `BIOS` — используется BIOS;
                         * `EFI` — используется Unified Extensible Firmware (EFI/UEFI);
                         * `EFIWithSecureBoot` — используется UEFI/EFI c поддержкой Secure Boot.
+                    liveMigrationPolicy:
+                      description: |
+                        Политика live-миграции виртуальной машины.
+
+                        * `AlwaysForced` — всегда использовать forced migration;
+                        * `PreferForced` — предпочитать forced migration.
                     ipAddresses:
                       description: |
                         Статические IP-адреса, назначаемые сетевым интерфейсам виртуальных машин. Количество адресов должно соответствовать числу создаваемых реплик — каждый IP-адрес будет закреплён за конкретной репликой.

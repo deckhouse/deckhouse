@@ -241,16 +241,16 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// 	}
 		// }
 	case v1alpha2.MachineStopped:
-		// VM is stopped, this is unexpected as we use "AlwaysOn" run policy for VM's here.
-		// Let's wait and see what happens as this may be a part of migration process or this is a bug in the DVP VM controller.
-		logger.Info("VM is in Stopped state, waiting for DVP to bring it back up", "state", vm.Status.Phase)
+		// VM is stopped. With "AlwaysOnUnlessStoppedManually" run policy this can be expected
+		// (e.g., manual stop for maintenance). We do not force-start the VM here.
+		logger.Info("VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start", "state", vm.Status.Phase)
 		dvpMachine.Status.Ready = false
 		conditions.MarkFalse(
 			dvpMachine,
 			infrastructurev1a1.VMReadyCondition,
 			infrastructurev1a1.VMInStoppedStateReason,
 			clusterv1b1.ConditionSeverityWarning,
-			"VM is in Stopped state, waiting for DVP to bring it back up",
+			"VM is in Stopped state; manual stop is allowed by runPolicy. Not forcing start",
 		)
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	case v1alpha2.MachineDegraded:
@@ -404,6 +404,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
@@ -423,6 +424,23 @@ func (r *DeckhouseMachineReconciler) createVM(
 		})
 	}
 
+	runPolicy := dvpMachine.Spec.RunPolicy
+	if runPolicy == "" {
+		runPolicy = string(v1alpha2.AlwaysOnUnlessStoppedManually)
+	}
+
+	// LiveMigrationPolicy: apply from spec or use default for masters
+	liveMigrationPolicy := dvpMachine.Spec.LiveMigrationPolicy
+	if liveMigrationPolicy == "" {
+		// For control plane nodes (masters), default to PreferForced due to high memory activity
+		if machine != nil && capiutil.IsControlPlaneMachine(machine) {
+			liveMigrationPolicy = string(v1alpha2.PreferForcedMigrationPolicy)
+		} else {
+			// For worker nodes, default to PreferSafe for safer live migrations
+			liveMigrationPolicy = string(v1alpha2.PreferSafeMigrationPolicy)
+		}
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -431,7 +449,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
-			RunPolicy:                v1alpha2.AlwaysOnPolicy,
+			RunPolicy:                v1alpha2.RunPolicy(runPolicy),
+			LiveMigrationPolicy:      v1alpha2.LiveMigrationPolicy(liveMigrationPolicy),
 			OsType:                   v1alpha2.GenericOs,
 			Bootloader:               v1alpha2.BootloaderType(dvpMachine.Spec.Bootloader),
 			VirtualMachineClassName:  dvpMachine.Spec.VMClassName,

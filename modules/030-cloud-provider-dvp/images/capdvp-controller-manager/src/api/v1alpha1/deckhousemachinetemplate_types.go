@@ -68,6 +68,19 @@ type DeckhouseMachineSpecTemplate struct {
 	// +kubebuilder:default=EFI
 	// +kubebuilder:validation:Enum:={"BIOS", "EFI", "EFIWithSecureBoot"}
 	Bootloader string `json:"bootloader,omitempty"`
+
+	// RunPolicy specifies the run policy for the virtual machine.
+	// Defaults to AlwaysOnUnlessStoppedManually to allow manual VM stop for maintenance.
+	// +kubebuilder:validation:Enum=AlwaysOn;AlwaysOff;Manual;AlwaysOnUnlessStoppedManually
+	// +kubebuilder:default=AlwaysOnUnlessStoppedManually
+	// +optional
+	RunPolicy string `json:"runPolicy,omitempty"`
+
+	// LiveMigrationPolicy specifies the live migration policy for the virtual machine.
+	// For master nodes, PreferForced is recommended due to high memory activity.
+	// +kubebuilder:validation:Enum=Manual;Never;AlwaysSafe;PreferSafe;AlwaysForced;PreferForced
+	// +optional
+	LiveMigrationPolicy string `json:"liveMigrationPolicy,omitempty"`
 }
 
 // DeckhouseMachineTemplateStatus defines the observed state of DeckhouseMachineTemplate.
