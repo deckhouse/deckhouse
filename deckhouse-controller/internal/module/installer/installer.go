@@ -122,7 +122,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 // TODO(ipaqsa): delete after 1.74
 func (i *Installer) deleteWeightedModuleSymlinks(moduleName string) {
 	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-	filepath.WalkDir(filepath.Join(i.downloaded, "modules"), func(path string, d os.DirEntry, _ error) error {
+	_ = filepath.WalkDir(filepath.Join(i.downloaded, "modules"), func(path string, d os.DirEntry, _ error) error {
 		if !moduleRegexp.MatchString(d.Name()) {
 			return nil
 		}
