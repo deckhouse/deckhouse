@@ -23,18 +23,20 @@ index 40df3b0e08b..402772d3007 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 12dcb66ec77..fe8e4e32e66 100644
+index 12dcb66ec77..d14490c979c 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -21,6 +21,7 @@ limitations under the License.
+@@ -21,7 +21,9 @@ limitations under the License.
  package nodeshutdown
  
  import (
 +	"context"
  	"fmt"
++	"os"
  	"path/filepath"
  	"sync"
-@@ -37,6 +38,7 @@ import (
+ 	"time"
+@@ -37,6 +39,7 @@ import (
  	"k8s.io/kubernetes/pkg/kubelet/metrics"
  	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
  	"k8s.io/kubernetes/pkg/kubelet/prober"
@@ -42,7 +44,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  )
  
  const (
-@@ -69,6 +71,8 @@ type managerImpl struct {
+@@ -69,6 +72,8 @@ type managerImpl struct {
  	dbusCon     dbusInhibiter
  	inhibitLock systemd.InhibitLock
  
@@ -51,7 +53,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	nodeShuttingDownMutex sync.Mutex
  	nodeShuttingDownNow   bool
  	podManager            *podManager
-@@ -105,6 +109,10 @@ func NewManager(conf *Config) Manager {
+@@ -105,6 +110,10 @@ func NewManager(conf *Config) Manager {
  			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
  		},
  	}
@@ -62,7 +64,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	manager.logger.Info("Creating node shutdown manager",
  		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
  		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
-@@ -210,7 +218,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -210,7 +219,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, err
  	}
  
@@ -71,7 +73,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -219,6 +227,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -219,6 +228,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
  	}
  
@@ -102,7 +104,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -226,10 +258,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -226,10 +259,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
@@ -116,10 +118,13 @@ index 12dcb66ec77..fe8e4e32e66 100644
  					close(stop)
  					return
  				}
-@@ -248,6 +282,33 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -248,9 +283,41 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
+-				m.nodeShuttingDownMutex.Lock()
+-				m.nodeShuttingDownNow = isShuttingDown
+-				m.nodeShuttingDownMutex.Unlock()
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
 +					postponeStatus, err := m.conditionChecker.PostponeStatus()
@@ -143,17 +148,41 @@ index 12dcb66ec77..fe8e4e32e66 100644
 +						break
 +					}
 +
-+					m.logger.V(1).Info("managerImpl.start: Graceful shutdown postpone disabled, stopping GracefulShutdownPostpone monitor and proceeding with the shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
-+					m.conditionChecker.PauseMonitor()
-+				}
++				m.logger.V(1).Info("managerImpl.start: Graceful shutdown postpone disabled, stopping GracefulShutdownPostpone monitor and proceeding with the shutdown sequence", "GracefulShutdownPostpone", postponeStatus)
++				m.conditionChecker.PauseMonitor()
++			}
 +
- 				m.nodeShuttingDownMutex.Lock()
- 				m.nodeShuttingDownNow = isShuttingDown
- 				m.nodeShuttingDownMutex.Unlock()
-@@ -324,3 +385,124 @@ func (m *managerImpl) processShutdownEvent() error {
++			// Clean up memory manager state before shutdown
++			if isShuttingDown {
++				m.cleanupMemoryManagerState()
++			}
++
++			m.nodeShuttingDownMutex.Lock()
++			m.nodeShuttingDownNow = isShuttingDown
++			m.nodeShuttingDownMutex.Unlock()
+ 
+ 				if isShuttingDown {
+ 					// Update node status and ready condition
+@@ -324,3 +391,140 @@ func (m *managerImpl) processShutdownEvent() error {
  
  	return m.podManager.killPods(activePods)
  }
++
++// cleanupMemoryManagerState removes the memory manager state file before shutdown.
++// This ensures that the memory manager starts with a clean state after reboot.
++func (m *managerImpl) cleanupMemoryManagerState() {
++	memoryManagerStatePath := "/var/lib/kubelet/memory_manager_state"
++	
++	if err := os.Remove(memoryManagerStatePath); err != nil {
++		if !os.IsNotExist(err) {
++			m.logger.Error(err, "Failed to remove memory manager state file", "path", memoryManagerStatePath)
++		} else {
++			m.logger.V(1).Info("Memory manager state file does not exist, skipping removal", "path", memoryManagerStatePath)
++		}
++	} else {
++		m.logger.Info("Successfully removed memory manager state file before shutdown", "path", memoryManagerStatePath)
++	}
++}
 +
 +type conditionChecker struct {
 +	logger klog.Logger
