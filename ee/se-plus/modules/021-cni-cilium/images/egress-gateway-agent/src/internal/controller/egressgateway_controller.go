@@ -22,9 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
-
 	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
-
 	eeInternalCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 
@@ -53,88 +51,53 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	// Resource is deleted need to clean up finalizer
 	if !egressGatewayInstance.DeletionTimestamp.IsZero() {
 		logger.Info("Deletion detected! Proceeding to cleanup the finalizers", "name", egressGatewayInstance.Name)
-		err := r.cleanupAnouncerWithFinalizer(ctx, logger, &egressGatewayInstance)
+		err := r.cleanupAnnouncerWithFinalizer(ctx, logger, &egressGatewayInstance)
 		if err != nil {
 			logger.Error(err, "unable to cleanup egress gateway instance", "name", egressGatewayInstance.Name)
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
 
-	desiredVirtualIPsToAnnounce := make(map[string][]string)
-
-	// Get list of EG by label
-	var egressGatewayInstanceList eeInternalCrd.SDNInternalEgressGatewayInstanceList
-	if err := r.Client.List(ctx, &egressGatewayInstanceList, client.MatchingLabels{activeNodeLabelKey: r.NodeName}); err != nil {
-		logger.Error(err, "failed to list egress gateways")
-		return ctrl.Result{}, err
-	}
-
-	for _, egressGatewayInstance := range egressGatewayInstanceList.Items {
-		if egressGatewayInstance.Spec.SourceIP.Mode != eeCommon.VirtualIPAddress {
-			continue
-		}
-		desiredVirtualIPsToAnnounce[egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP] = egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.Interfaces
-	}
-
-	virtualIPsToAdd := make([]string, 0, 4)
-	virtualIPsToDel := make([]string, 0, 4)
-
-	actualVirtualIPsToAnnounce := r.VirtualIPAnnounces.GetIPSMap()
-
-	for ip := range desiredVirtualIPsToAnnounce {
-		if _, ok := actualVirtualIPsToAnnounce[ip]; ok {
-			continue
-		}
-		virtualIPsToAdd = append(virtualIPsToAdd, ip)
-	}
-	logger.Info("IPs chosen for announce", "count", len(virtualIPsToAdd))
-
-	for ip := range actualVirtualIPsToAnnounce {
-		if _, ok := desiredVirtualIPsToAnnounce[ip]; ok {
-			continue
-		}
-		virtualIPsToDel = append(virtualIPsToDel, ip)
-	}
-	logger.Info("IPs chosen for deletion", "count", len(virtualIPsToDel))
-
-	for _, ip := range virtualIPsToAdd {
+	// Handle Virtual IP Address
+	if egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
 		var ipAdvertisement layer2.IPAdvertisement
-		interfaces := desiredVirtualIPsToAnnounce[ip]
+		ip := egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP
+		interfaces := egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.Interfaces
+
 		if len(interfaces) == 0 {
-			// if the interface slice is empty, then IP will be announced from all interfaces
 			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), true, sets.Set[string]{})
 		} else {
-			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), false, sets.New[string](interfaces...))
+			ipAdvertisement = layer2.NewIPAdvertisement(net.ParseIP(ip), false, sets.New(interfaces...))
 		}
-		r.VirtualIPAnnounces.SetBalancer(ip, ipAdvertisement)
 
-		logger.Info("added virtual IP", "ip", ip)
+		r.VirtualIPAnnounces.SetBalancer(egressGatewayInstance.Name, ipAdvertisement)
+		logger.Info("ensured virtual IP announcement", "ip", ip)
 	}
 
-	for _, ip := range virtualIPsToDel {
-		r.VirtualIPAnnounces.DeleteBalancer(ip)
-		logger.Info("deleted virtual IP", "ip", ip)
-	}
-
+	// Update Status
 	condition := eeCommon.ExtendedCondition{
 		Condition: metav1.Condition{
 			Type:    "Ready",
 			Status:  metav1.ConditionTrue,
 			Reason:  "AnnouncingSucceed",
-			Message: fmt.Sprintf("Announcing %d Virtual IPs", len(r.VirtualIPAnnounces.GetIPSMap())),
+			Message: fmt.Sprintf("Virtual IP %s is announced on %v", egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP, egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.Interfaces),
 		},
 	}
-	if len(r.VirtualIPAnnounces.GetIPSMap()) == 0 {
+	if !r.VirtualIPAnnounces.AnnounceName(egressGatewayInstance.Name) &&
+		egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
 		condition.Status = metav1.ConditionFalse
 		condition.Reason = "AnnouncingFailed"
-		condition.Status = "Announcing Virtual IPs failed"
+		condition.Message = fmt.Sprintf("Virtual IP %s is NOT announced", egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP)
 	}
+
 	egressGatewayInstance.Status.ObservedGeneration = egressGatewayInstance.Generation
 	setStatusCondition(&egressGatewayInstance.Status.Conditions, condition)
 
 	if err := r.Client.Status().Update(ctx, &egressGatewayInstance); err != nil {
 		logger.Error(err, "failed to update egress gateway instance status", "name", egressGatewayInstance.Name)
 	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -148,7 +111,7 @@ func (r *EgressGatewayInstanceReconciler) SetupWithManager(mgr ctrl.Manager) err
 		Complete(r)
 }
 
-func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx context.Context, logger logr.Logger, egressGatewayInstance *eeInternalCrd.SDNInternalEgressGatewayInstance) error {
+func (r *EgressGatewayInstanceReconciler) cleanupAnnouncerWithFinalizer(ctx context.Context, logger logr.Logger, egressGatewayInstance *eeInternalCrd.SDNInternalEgressGatewayInstance) error {
 	if controllerutil.ContainsFinalizer(egressGatewayInstance, finalizerKey) {
 		if egressGatewayInstance.Spec.SourceIP.Mode == eeCommon.VirtualIPAddress {
 			r.VirtualIPAnnounces.DeleteBalancer(egressGatewayInstance.Spec.SourceIP.VirtualIPAddress.IP)
