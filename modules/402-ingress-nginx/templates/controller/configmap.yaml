@@ -79,9 +79,9 @@ data:
   {{- if $crd.spec.disableHTTP2 }}
   use-http2: "false"
   {{- end }}
-  {{- if $crd.spec.enableHTTP3 }}
+{{- if and $crd.spec.enableHTTP3 (not $failover) }} {{/* "listen" directive "proxy_protocol" parameter is incompatible with "quic" */}}
   use-http3: "true"
-  {{- end}}
+{{- end }}
   {{- if $crd.spec.legacySSL }}
   ssl-protocols: "TLSv1 TLSv1.1 TLSv1.2 TLSv1.3"
   ssl-ciphers: "ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:\

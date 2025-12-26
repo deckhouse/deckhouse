@@ -626,6 +626,7 @@ spec:
 
                     * `LoadBalancer`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned.
                     * `LoadBalancerWithProxyProtocol`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
+                      > **Note.** HTTP/3 (`enableHTTP3`) cannot be enabled with this inlet because QUIC is incompatible with PROXY protocol.
                     * `LoadBalancerWithSSLPassthrough`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
                       > The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: `443`) and routing it to a local TCP proxy. This implementation bypasses nginx completely and introduces a significant performance penalty.
@@ -642,6 +643,8 @@ spec:
                     * `HostPortWithProxyProtocol`: The Ingress controller is deployed and made available on node ports via `hostPort`. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
 
                       > **Caution.** When using this inlet, ensure that requests to the Ingress come from trusted sources only. To enforce it, use the `acceptRequestsFrom` parameter.
+                      >
+                      > **Note.** HTTP/3 (`enableHTTP3`) cannot be enabled with this inlet because QUIC is incompatible with PROXY protocol.
 
                     * `HostPortWithSSLPassthrough`: The Ingress controller is deployed and made available on node ports via `hostPort`. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
@@ -666,6 +669,8 @@ spec:
                       > To change the inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                       >
                       > This inlet cannot be used if the `enableIstioSidecar` parameter is enabled.
+                      >
+                      > **Note.** When HTTP/3 (`enableHTTP3`) is enabled, it is applied only to the primary controller; the failover controller always runs without HTTP/3.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
@@ -1090,7 +1095,11 @@ spec:
                   description: |
                     Enables HTTP/3 support.
 
-                    > HTTP3 is only available in Ingress controller version 1.10.
+                    > HTTP3 is only available in Ingress controller version 1.10 and 1.12
+                    >
+                    > HTTP/3 cannot be enabled when the inlet is set to `HostPortWithProxyProtocol` or `LoadBalancerWithProxyProtocol`.
+                    >
+                    > For the `HostWithFailover` inlet, HTTP/3 is applied only to the primary controller; the failover controller always runs without HTTP/3.
                   default: false
                 config:
                   type: object
@@ -1343,6 +1352,8 @@ spec:
               x-kubernetes-validations:
                 - message: .spec.controllerVersion should be explicitly set to 1.10 or 1.12 for .spec.enableHTTP3 to make effect
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
+                - message: .spec.enableHTTP3 cannot be enabled when inlet is HostPortWithProxyProtocol or LoadBalancerWithProxyProtocol
+                  rule: "!((has(self.enableHTTP3) && self.enableHTTP3 == true) && self.inlet in ['HostPortWithProxyProtocol', 'LoadBalancerWithProxyProtocol'])"
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
                 - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
