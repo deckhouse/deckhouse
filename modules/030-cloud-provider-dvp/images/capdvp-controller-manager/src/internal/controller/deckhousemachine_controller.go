@@ -435,6 +435,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 		// For control plane nodes (masters), default to PreferForced due to high memory activity
 		if machine != nil && capiutil.IsControlPlaneMachine(machine) {
 			liveMigrationPolicy = string(v1alpha2.PreferForcedMigrationPolicy)
+		} else {
+			// For worker nodes, default to PreferSafe for safer live migrations
+			liveMigrationPolicy = string(v1alpha2.PreferSafeMigrationPolicy)
 		}
 	}
 
