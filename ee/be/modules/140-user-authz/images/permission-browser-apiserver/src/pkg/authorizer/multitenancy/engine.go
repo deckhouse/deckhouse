@@ -232,8 +232,8 @@ func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVe
 	// Query apiserver for preferred version
 	apiGroupList, err := e.discoveryClient.ServerGroups()
 	if err != nil {
-		// Fallback to v1 if discovery fails
-		return schema.GroupVersion{Group: group, Version: "v1"}, nil
+		// Propagate discovery error. The caller will treat it as best-effort and return NoOpinion.
+		return schema.GroupVersion{}, fmt.Errorf("failed to discover server groups while resolving preferred version for group %q: %w", group, err)
 	}
 
 	for _, g := range apiGroupList.Groups {
