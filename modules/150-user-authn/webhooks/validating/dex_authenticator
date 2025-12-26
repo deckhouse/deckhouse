@@ -16,6 +16,32 @@
 
 source /shell_lib.sh
 
+function is_ipv4_address() {
+  local ip="$1"
+
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+
+  local IFS='.'
+  local o1 o2 o3 o4
+  read -r o1 o2 o3 o4 <<<"$ip"
+
+  for o in "$o1" "$o2" "$o3" "$o4"; do
+    [[ "$o" =~ ^[0-9]{1,3}$ ]] || return 1
+    (( o >= 0 && o <= 255 )) || return 1
+  done
+
+  return 0
+}
+
+function is_ipv6_address() {
+  local ip="$1"
+
+  # DNS names must not contain ':'; presence of ':' strongly indicates IPv6 (or host:port),
+  # both are invalid for Ingress host and therefore invalid for applicationDomain.
+  [[ "$ip" == *:* ]] || return 1
+  return 0
+}
+
 function __config__(){
   cat <<EOF
 configVersion: v1
@@ -60,28 +86,34 @@ function __main__() {
   
   if [[ "$apiVersion" == "deckhouse.io/v2alpha1" ]]; then
 
-    while read -r domain ingressClass; do
-      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
-        domains_to_check+=("$domain $ingressClass")
+    while IFS=$'\t' read -r domain ingressClass fieldPath; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
+        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.applications[]? | "\(.domain) \(.ingressClassName)"')
+    done < <(context::jq -r '.review.request.object.spec.applications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.applications[\(.key)].domain"')
   else
 
     main_domain=$(context::jq -r '.review.request.object.spec.applicationDomain')
     main_ingress_class=$(context::jq -r '.review.request.object.spec.applicationIngressClassName')
-    domains_to_check+=("$main_domain $main_ingress_class")
+    domains_to_check+=("$main_domain"$'\t'"$main_ingress_class"$'\t'".spec.applicationDomain")
 
 
-    while read -r domain ingressClass; do
-      if [[ "$domain" != "null" && "$ingressClass" != "null" ]]; then
-        domains_to_check+=("$domain $ingressClass")
+    while IFS=$'\t' read -r domain ingressClass fieldPath; do
+      if [[ "$domain" != "null" && "$ingressClass" != "null" && "$fieldPath" != "null" ]]; then
+        domains_to_check+=("$domain"$'\t'"$ingressClass"$'\t'"$fieldPath")
       fi
-    done < <(context::jq -r '.review.request.object.spec.additionalApplications[]? | "\(.domain) \(.ingressClassName)"')
+    done < <(context::jq -r '.review.request.object.spec.additionalApplications | to_entries[]? | "\(.value.domain)\t\(.value.ingressClassName)\t.spec.additionalApplications[\(.key)].domain"')
   fi
   
 
   for domain_pair in "${domains_to_check[@]}"; do
-    read -r domain ingressClass <<< "$domain_pair"
+    IFS=$'\t' read -r domain ingressClass fieldPath <<< "$domain_pair"
+
+    if is_ipv4_address "$domain" || is_ipv6_address "$domain"; then
+      msg="DexAuthenticator '$newAuthNamespace/$newAuthName' is invalid: '$fieldPath' must be a DNS name, not an IP address ('$domain')"
+      jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
+      return 0
+    fi
     
     result=$(context::jq -r --arg domain "$domain" --arg class "$ingressClass" '
       .snapshots.dexauthenticators[].filterResult | 
@@ -99,16 +131,13 @@ function __main__() {
         continue
       fi
       
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth' for domain '$domain'" }
-EOF
+      msg="Desired DexAuthenticator '$newAuthNamespace/$newAuthName' conflicts with the existing DexAuthenticator '$existingAuth' for domain '$domain'"
+      jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
       return 0
     fi
   done
   
-  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":true}
-EOF
+  jq -n '{allowed:true}' > "$VALIDATING_RESPONSE_PATH"
 }
 
 hook::run "$@"
