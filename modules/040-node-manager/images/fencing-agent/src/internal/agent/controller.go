@@ -17,11 +17,9 @@ package agent
 
 import (
 	"context"
-	"errors"
 	"fencing-controller/internal/config"
 	"fencing-controller/internal/gossip"
 	"fmt"
-	"net"
 	"net/http"
 	"time"
 
@@ -169,16 +167,17 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			// check kubernets API
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
-				var netErr net.Error
-				if errors.As(err, &netErr) && netErr.Timeout() {
-					// only API timeout is reasonable error
-					fa.logger.Error("API request timed out", zap.Error(err))
-					APIIsAvailable = false
-				} else {
-					// API is available but some error happened
-					fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
-					APIIsAvailable = true
-				}
+				//var netErr net.Error
+				//if errors.As(err, &netErr) && netErr.Timeout() {
+				//	// only API timeout is reasonable error
+				//	fa.logger.Error("API request timed out", zap.Error(err))
+				//	APIIsAvailable = false
+				//} else {
+				//	// API is available but some error happened
+				//	fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
+				//	APIIsAvailable = true
+				//}
+				APIIsAvailable = false
 			} else {
 				// show message just one time in an interval
 				if time.Since(lastMessageTime) > fa.config.KubernetesAPICheckInterval {
