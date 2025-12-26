@@ -36,6 +36,7 @@ import (
 	"bashible-apiserver/pkg/apiserver/readyz"
 	bashibleopenapi "bashible-apiserver/pkg/generated/openapi"
 	"bashible-apiserver/pkg/requestlog"
+	"bashible-apiserver/pkg/util/retry"
 )
 
 // BashibleServerOptions contains state for master/api server
@@ -119,7 +120,12 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIV3Config.Info.Title = "Bashible"
 	serverConfig.OpenAPIV3Config.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 
@@ -128,7 +134,12 @@ func (o *BashibleServerOptions) Config(stopCh <-chan struct{}) (*apiserver.Confi
 		openapi.NewDefinitionNamer(apiserver.Scheme))
 	serverConfig.OpenAPIConfig.Info.Title = "Bashible"
 	serverConfig.OpenAPIConfig.Info.Version = "0.1"
-	if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+	if err := retry.DoWithRetry(context.Background(), "apply recommended options (authn/authz)", retry.DefaultKubeAPIRetryBackoff, func(ctx context.Context) (bool, error) {
+		if err := o.RecommendedOptions.ApplyTo(serverConfig); err != nil {
+			return false, err
+		}
+		return true, nil
+	}); err != nil {
 		return nil, err
 	}
 
