@@ -55,7 +55,7 @@ shell:
 ---
 image: {{ .ModuleName }}/envoy-artifact
 fromImage: builder/debian
-final: false
+final: true
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src
@@ -82,7 +82,6 @@ shell:
         zip \
         vim \
         wget \
-        openjdk-11-jdk
   setup:
   - curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > /etc/apt/trusted.gpg.d/bazel.gpg
   - echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
@@ -91,4 +90,4 @@ shell:
       cmake \
       ninja \
       wheel
-  - bazel build -c opt //source/exe:envoy
+  - bazel build -c opt envoy
