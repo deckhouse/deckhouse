@@ -167,7 +167,7 @@ You now have a cluster with one server that can reach the quorum. Verify that th
 
 ```bash
 $ stronghold operator raft list-peers
-server          Address                                     State     Voter
+Node            Address                                     State     Voter
 ----            -------                                     -----     -----
 stronghold_0    https://stronghold-0.stronghold.tld:8201    leader    true
 ```

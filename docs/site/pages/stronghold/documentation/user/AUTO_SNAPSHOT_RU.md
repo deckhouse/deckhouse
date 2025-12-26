@@ -11,7 +11,7 @@ Deckhouse Stronghold позволяет настроить расписание 
 
 Резервные копии можно сохранять на локальный диск в выбранную директорию или в S3-совместимое хранилище.
 
-Управлять настройками резервных копий и просматривать их статус можно через API, Stronghold CLI и веб-интерфейс.
+Управлять настройками и просматривать статус работы автоматического создания резервных копий можно через API, Stronghold CLI и веб-интерфейс.
 
 ## Создание или обновление конфигурации автоматического резервного копирования
 
@@ -56,24 +56,65 @@ Deckhouse Stronghold позволяет настроить расписание 
 
 ### Примеры запросов
 
-#### Создание конфигурации
+#### Создание конфигурации автоматического резервного копирования на локальный диск
 
-Указываются все обязательные поля.
-
-```shell
-d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
+Следующий JSON файл `local-snapshot.json` описывает настройки для сохранения резервной копии на локальном диске по пути *`/stronghold/data/backups/`* с именем файла `main_stronghold_*.tar.gz`, где вместо `*` будет указана дата создания резервной копии. Резервная копия будет сохраняться каждые *5 минут* и общее количество файлов резервной копии не будет превышать *4*.
+```json
 {
     "interval":          "5m",
-    "path_prefix":       "backups",
+    "path_prefix":       "/stronghold/data/backups",
     "file_prefix":       "main_stronghold",
     "retain":            "4",
+    "storage_type":      "local"
+}
+```
+
+{{< alert level="info" >}}
+Перед созданием конфигурации убедитесь, что по пути, указанному в `path_prefix`, есть права на запись. Стандартная ошибка `failed to create snapshot directory at destination` указывает на отсутствие целевой директории или проблемы с её созданием.
+{{< /alert >}}
+
+Применяем конфигурацию
+```shell
+d8 stronghold write sys/storage/raft/snapshot-auto/config/my-local-snapshots @local-snapshot.json
+```
+
+Пример ответа:
+
+```console
+Key    Value
+---    -----
+msg    successfully created config
+```
+Первая резервная копия будет создана сразу после применения конфигурации, последующие копии – через интервал, указанный в настройках.
+
+#### Создание конфигурации автоматического резервного копирования на S3-совместимое хранилище
+
+В случае, когда созданную резервную копию требуется разместить в S3-совместимом хранилище (в примере *minio*), в настройках указываем тип хранилища *aws-s3* и необходимые данные для подключения к вашему хранилищу: название бакета, адрес хранилища, ID ключа доступа и секретный ключ доступа.
+
+Пример конфигурационного JSON файла `minio-snapshot.json`:
+```json
+{
+    "interval":          "3m",
+    "path_prefix":       "snapshots",
+    "file_prefix":       "stronghold_backup",
+    "retain":            "15",
     "storage_type":      "aws-s3",
     "aws_s3_bucket":         "my_bucket",
     "aws_s3_endpoint":       "minio.domain.ru",
     "aws_access_key_id":     "<ACCESS_KEY>",
     "aws_secret_access_key": "<SECRET_ACCESS_KEY>"
 }
-EOF
+```
+
+Объект с резервной копией будет расположен по адресу `minio.domain.ru/my_bucket/snapshots/stronghold_backup_*.tar.gz`, где вместо `*` будет указана дата создания.
+
+{{< alert level="info" >}}
+Перед созданием конфигурации убедитесь, что по адресу и пути, указанным в конфигурации, есть права на чтение и запись, и сам бакет существует.
+{{< /alert >}}
+
+Применяем конфигурацию
+```shell
+d8 stronghold write sys/storage/raft/snapshot-auto/config/my-remote-snapshots @minio-snapshot.json
 ```
 
 Пример ответа:
@@ -84,19 +125,22 @@ Key    Value
 msg    successfully created config
 ```
 
+Первая резервная копия будет создана сразу после применения конфигурации, последующие копии – через интервал, указанный в настройках.
+
 #### Обновление конфигурации
 
-Допускается указывать не все поля. Уже существующие поля не будут изменены.
-
-```shell
-d8 stronghold write sys/storage/raft/snapshot-auto/config/s3every5min - <<EOF
+В файл обновления конфигурации `local-snapshot-update.json` в формате JSON пишем поля и значения, которые хотим поменять:
+```json
 {
     "interval":          "3m",
-    "retain":            "10",
-    "aws_access_key_id":     "<ACCESS_KEY>",
-    "aws_secret_access_key": "<SECRET_ACCESS_KEY>"
+    "retain":            "10"
 }
-EOF
+```
+Допускается указывать не все поля. Уже существующие поля не будут изменены.
+
+Применяем обновление
+```shell
+d8 stronghold write sys/storage/raft/snapshot-auto/config/my-local-snapshots @local-snapshot-update.json
 ```
 
 Пример ответа:
@@ -126,8 +170,8 @@ d8 stronghold list sys/storage/raft/snapshot-auto/config
 ```console
 Keys
 ----
-s3every5min
-localEvery3min
+my-local-snapshots
+my-remote-snapshots
 ```
 
 ## Получение параметров конфигурации
@@ -141,7 +185,7 @@ localEvery3min
 ### Пример запроса
 
 ```shell
-d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min
+d8 stronghold read sys/storage/raft/snapshot-auto/config/my-remote-snapshots
 ```
 
 Пример ответа:
@@ -149,10 +193,10 @@ d8 stronghold read sys/storage/raft/snapshot-auto/config/s3every5min
 ```console
 Key                     Value
 ---                     -----
-interval                300
-path_prefix             backups
-file_prefix             main_stronghold
-retain                  4
+interval                180
+path_prefix             snapshots
+file_prefix             stronghold_backup
+retain                  10
 storage_type            aws-s3
 aws_s3_bucket           my_bucket
 aws_s3_disable_tls      false
@@ -161,18 +205,45 @@ aws_s3_region           n/a
 aws_s3_ca_certificate   n/a
 ```
 
+Для облачного типа хранилища значения полей: ID ключа доступа (`aws_access_key_id`) и секретного ключа доступа (`aws_secret_access_key`) не отображаются.
+
 ## Удаление конфигурации
 
 | Метод  | Путь |
 |--------|------|
 | DELETE | `/sys/storage/raft/snapshot-auto/config/:name` |
 
-Удаляет указанную конфигурацию и возвращает информацию о последней созданной резервной копии.
+Удаляет указанную конфигурацию.
 
 ### Пример запроса
 
 ```shell
-d8 stronghold delete sys/storage/raft/snapshot-auto/config/s3every5min
+d8 stronghold delete sys/storage/raft/snapshot-auto/config/my-remote-snapshots
+```
+
+Пример ответа:
+
+```console
+Key    Value
+---    -----
+msg    successfully deleted config
+```
+
+{{< alert level="info" >}}
+Операция удаления конфигурации автоматического резервного копирования не затрагивает созданные резервные копии хранилища Stronghold. Их можно будет обнаружить по тому же адресу, который был указан в удаленной конфигурации.
+{{< /alert >}}
+
+## Получение статуса работы автоматического резервного копирования
+
+| Метод | Путь |
+|-------|------|
+|  GET  | `/sys/storage/raft/snapshot-auto/status/:name` |
+
+
+### Пример запроса
+
+```shell
+d8 stronghold read sys/storage/raft/snapshot-auto/status/my-remote-snapshots
 ```
 
 Пример ответа:
@@ -184,30 +255,18 @@ consecutive_errors     0
 last_snapshot_end      2025-01-31T15:24:14Z
 last_snapshot_error    n/a
 last_snapshot_start    2025-01-31T15:24:12Z
-last_snapshot_url      https://minio.domain.ru/my_bucket/backups/main_stronghold_2025-01-31T15:24:12Z
+last_snapshot_url      s3://my_bucket/snapshots/stronghold_backup_2025-10-07T12:42:54Z.tar.gz
 next_snapshot_start    2025-01-31T15:29:12Z
 snapshot_start         2025-01-31T15:24:12Z
-snapshot_url           https://minio.domain.ru/my_bucket/backups/main_stronghold_2025-01-31T15:24:12Z
+snapshot_url           s3://my_bucket/snapshots/stronghold_backup_2025-01-31T15:24:12Z.tar.gz
 ```
 
-## Получение статуса резервной копии
-
-| Метод | Путь |
-|-------|------|
-|  GET  | `/sys/storage/raft/snapshot-auto/status/:name` |
-
-Возвращает информацию о текущем статусе указанной резервной копии.
-
-### Пример запроса
-
-```shell
-d8 stronghold read sys/storage/raft/snapshot-auto/status/s3every5min
-```
-
-Пример ответа:
-
-```console
-Key    Value
----    -----
-msg    successfully deleted config
-```
+Значения полей:
+- `consecutive_errors` - Количество аккумулированных ошибок, с момента первой ошибки резервного копирования. Обнуляется после успешно завершенной процедуры резервного копирования.
+- `last_snapshot_end` - Время завершения последнего резервного копирования.
+- `last_snapshot_error` - Текст последней ошибки при выполнении резервного копирования (или `n/a`, если ошибок не было).
+- `last_snapshot_start` - Время начала последнего завершенного резервного копирования.
+- `last_snapshot_url` - URL расположения последнего успешно созданного снэпшота.
+- `next_snapshot_start` - Время следующего запланированного резервного копирования.
+- `snapshot_start` - Время начала текущего (выполняющегося) резервного копирования.
+- `snapshot_url` - URL расположения снэпшота текущего (выполняющегося) резервного копирования.
