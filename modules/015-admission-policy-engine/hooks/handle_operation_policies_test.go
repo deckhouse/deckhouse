@@ -66,10 +66,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 		})
 
 		Context("Case C: allowedRepos is set with one item", func() {
-			BeforeEach(func() {
-				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
-				f.RunHook()
-			})
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
+			f.RunHook()
+		})
 			It("should include allowedRepos key with non-empty array in Values", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
@@ -85,7 +85,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 				f.RunHook()
 			})
 			It("should include requiredResources.limits key with empty array in Values", func() {
-				Expect(f).To(ExecuteSuccessfully())
+			Expect(f).To(ExecuteSuccessfully())
 				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
 				Expect(ops).To(HaveLen(1))
 				Expect(ops[0].Get("spec.policies.requiredResources.limits").Exists()).To(BeTrue())
