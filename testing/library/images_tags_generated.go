@@ -222,6 +222,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager133VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager133VexArtifact",
 		"controlPlaneManager134":              "imageHash-controlPlaneManager-controlPlaneManager134",
 		"controlPlaneManager134VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager134VexArtifact",
+		"envoyArtifact":                       "imageHash-controlPlaneManager-envoyArtifact",
 		"etcd":                                "imageHash-controlPlaneManager-etcd",
 		"etcdBackup":                          "imageHash-controlPlaneManager-etcdBackup",
 		"kubeApiserver130":                    "imageHash-controlPlaneManager-kubeApiserver130",
