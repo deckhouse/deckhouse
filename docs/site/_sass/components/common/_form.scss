@@ -3,7 +3,7 @@
 
 .form {
   &__request {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   &__row {
@@ -53,7 +53,7 @@
         align-items: center;
         text-align: left;
         user-select: none;
-        font-size: 14.7px;
+        font-size: 16px;
         cursor: pointer;
       }
 
@@ -139,7 +139,7 @@
       transition-duration: 0ms;
 
       &::placeholder {
-        color: color.adjust(variables.$color-main, $alpha: -0.15);
+        color: #BFC2D5;
       }
     }
 
@@ -152,15 +152,16 @@
     }
 
     &-request {
-      padding: 13px 20px;
-      border: 2px solid #cdd1e6;
+      padding: 12px;
+      border: 2px solid #D6D9ED;
       font-size: 15.7px;
+      border-radius: 2px;
 
       &:focus {
         border-color: #408bff;
 
         &::placeholder {
-          color: color.adjust(variables.$color-main, $alpha: -0.4);
+          color: #BFC2D5;
         }
       }
 
@@ -184,8 +185,13 @@
       align-items: flex-start;
       text-align: left;
       user-select: none;
-      font-size: 14.7px;
+      font-size: 12px;
+      color: #7D86B9;
       cursor: pointer;
+
+      a {
+        color: #0064FF;
+      }
     }
 
     input[type="checkbox"] {
@@ -193,7 +199,6 @@
       display: none;
       opacity: 0;
       z-index: -1;
-
       + label::before {
         content: "";
         height: 14px;

@@ -2,7 +2,7 @@ request-access:
   header:
     ru:
       title: "Запросить пробный доступ"
-      text: "Заполните форму, и&nbsp;в&nbsp;течение ближайшего рабочего дня мы&nbsp;свяжемся с&nbsp;вами для&nbsp;уточнения деталей — будьте на&nbsp;связи!"
+      text: "Заполните форму, в&nbsp;течение ближайшего рабочего дня мы&nbsp;свяжемся для уточнения деталей&nbsp;&mdash; будьте на&nbsp;связи!"
     en:
       title: " Request trial access"
       text: "Fill out the form, and we&nbsp;will contact you within the next business day&nbsp;&mdash; please stay in&nbsp;touch!"
@@ -24,7 +24,7 @@ request-callback:
   header:
     ru:
       title: "Связаться со специалистом Deckhouse"
-      text: "Ответим на вопросы о продуктах, разберем ваш кейс, назначим встречу с техническим экспертом"
+      text: "Ответим на вопросы о продуктах, разберём ваш кейс, назначим встречу с техническим экспертом"
     en:
       title: "Request callback"
       text: "Fill out this form, and we will contact you soon."

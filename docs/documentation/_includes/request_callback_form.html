@@ -65,7 +65,7 @@
       <div class="form-consent">
         <input type="checkbox" id="pcConsent_marketing" value="1" name="consent_marketing" required="required">
         <label for="pcConsent_marketing">
-          <div>Я&nbsp;даю АО&nbsp;&laquo;Флант&raquo; согласие на&nbsp;получение рекламных и&nbsp;иных маркетинговых сообщений и&nbsp;обработку моих персональных данных для указанной цели.</div>
+          <div>Я&nbsp;даю АО&nbsp;&laquo;Флант&raquo; <a href="/user-data-processing/" target="_blank">согласие на&nbsp;получение рекламных и&nbsp;иных маркетинговых сообщений</a> и&nbsp;обработку моих персональных данных для указанной цели.</div>
         </label>
       </div>
     </div>
@@ -141,12 +141,4 @@
     </div>
     {%- endif %}
   </form>
-</div>
-<div id="request_callback_success" data-success-message style="display: none;">
-  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['success-message'][page.lang]['title']}}</h3>
-  <p class="text">{{ site.data.modal['request-callback']['success-message'][page.lang]['text']}}</p>
-</div>
-<div id="request_callback_error" data-error-message style="display: none;">
-  <h3 class="text text_h3 text_alt">{{ site.data.modal['request-callback']['error-message'][page.lang]['title']}}</h3>
-  <p class="text">{{ site.data.modal['request-callback']['error-message'][page.lang]['text']}}</p>
 </div>
