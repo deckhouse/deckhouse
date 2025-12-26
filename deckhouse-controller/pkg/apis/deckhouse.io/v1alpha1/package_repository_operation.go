@@ -89,9 +89,9 @@ type PackageRepositoryOperation struct {
 }
 
 type PackageRepositoryOperationSpec struct {
-	PackageRepository string                            `json:"packageRepository"`
-	Type              string                            `json:"type"`
-	Update            *PackageRepositoryOperationUpdate `json:"update,omitempty"`
+	PackageRepositoryName string                            `json:"packageRepositoryName"`
+	Type                  string                            `json:"type"`
+	Update                *PackageRepositoryOperationUpdate `json:"update,omitempty"`
 }
 
 type PackageRepositoryOperationUpdate struct {

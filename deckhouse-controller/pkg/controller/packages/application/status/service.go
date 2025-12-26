@@ -116,7 +116,7 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 		app.Status.CurrentVersion = new(v1alpha1.ApplicationStatusVersion)
 	}
 
-	app.Status.CurrentVersion.Current = packageStatus.Version
+	app.Status.CurrentVersion.Version = packageStatus.Version
 
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
@@ -174,8 +174,8 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 
 	// Check if version changed (indicates update scenario)
 	versionChanged := app.Status.CurrentVersion != nil &&
-		app.Status.CurrentVersion.Current != "" &&
-		app.Spec.Version != app.Status.CurrentVersion.Current
+		app.Status.CurrentVersion.Version != "" &&
+		app.Spec.PackageVersion != app.Status.CurrentVersion.Version
 
 	// Find any failed condition
 	failedCond := s.findFailedCondition(internalConds)

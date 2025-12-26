@@ -110,7 +110,6 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = v2.7.2
 TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
@@ -175,13 +174,13 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_LINT_VERSION}
 
 .PHONY: lint lint-fix
-lint: ## Run linter.
+lint: golangci-lint ## Run linter.
 	golangci-lint run
 
-lint-fix: ## Fix lint violations.
+lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
@@ -439,7 +438,6 @@ build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 
 GO=$(shell which go)
 GIT=$(shell which git)
-GOLANGCI_LINT=$(shell which golangci-lint)
 
 .PHONY: go-check
 go-check:
@@ -466,6 +464,7 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
@@ -473,8 +472,10 @@ INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
 
+## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
+GOLANGCI_LINT_VERSION = v2.7.2
 DECKHOUSE_CLI_VERSION ?= v0.25.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
@@ -484,9 +485,9 @@ YQ_VERSION ?= v4.47.2
 .PHONY: generate-werf
 generate-werf: yq ## Generate changes in werf files.
   ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
-	@if [ -n "$(GOLANGCI_VERSION)" ]; then \
-		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
-		echo "Updated golangci-lint version to $(GOLANGCI_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
+	@if [ -n "$(GOLANGCI_LINT_VERSION)" ]; then \
+		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
+		echo "Updated golangci-lint version to $(GOLANGCI_LINT_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
 	else \
 		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
 	fi
@@ -546,6 +547,12 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 		github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2
 
 ## Tool installations
+
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
 
 ## Download deckhouse-cli locally if necessary.
 .PHONY: deckhouse-cli

@@ -200,7 +200,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 	logger.Debug("check application package version exists", slog.String("apv", apvName))
 
 	// check if application package version exists
@@ -292,8 +292,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
 	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repo); err != nil {
-		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepository, err)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
 	var requirements apps.Requirements
@@ -342,7 +342,7 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
 			Name:         app.Spec.PackageName,
-			Version:      app.Spec.Version,
+			Version:      app.Spec.PackageVersion,
 			Requirements: requirements,
 		},
 		Settings: app.Spec.Settings.GetMap(),
@@ -376,7 +376,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 		}
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 	logger.Debug("check if application package version exists", slog.String("package", apvName))
 
 	apv := new(v1alpha1.ApplicationPackageVersion)

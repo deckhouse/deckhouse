@@ -7,8 +7,8 @@ metadata:
   name: deckhouse-test-v1.0.0
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status:
   conditions:
   - lastProbeTime: null

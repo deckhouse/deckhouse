@@ -189,8 +189,8 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 			},
 		},
 		Spec: v1alpha1.PackageRepositoryOperationSpec{
-			PackageRepository: packageRepository.Name,
-			Type:              v1alpha1.PackageRepositoryOperationTypeUpdate,
+			PackageRepositoryName: packageRepository.Name,
+			Type:                  v1alpha1.PackageRepositoryOperationTypeUpdate,
 			Update: &v1alpha1.PackageRepositoryOperationUpdate{
 				FullScan: fullScan,
 				Timeout:  "5m",

@@ -23,7 +23,7 @@ metadata:
   name: deckhouse-scan-1234567890
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
