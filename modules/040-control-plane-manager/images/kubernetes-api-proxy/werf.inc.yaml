@@ -68,16 +68,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
-  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    autoconf \
-    curl \
-    libtool \
-    patch \
-    gnupg \
-    apt-transport-https \
-    python3-pip \
-    unzip \
-    virtualenv
+  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends  autoconf curl libtool patch gnupg apt-transport-https python3-pip virtualenv
   install:
   - curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
   - mv bazel-archive-keyring.gpg /usr/share/keyrings
