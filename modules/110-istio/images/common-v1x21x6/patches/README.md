@@ -13,7 +13,7 @@ Fix CVE
 Fix use expfmt library in pilot-agent. This library used for format metrics.
 
 > [!WARNING]
-> **After update istio to version 1.22.X and above need delete this patch! TODO**
+> **After update istio to version 1.22.X and above need delete this patch!**
 
 ## 001-kiali-go-mod.patch
 
