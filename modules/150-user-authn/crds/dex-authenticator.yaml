@@ -73,8 +73,7 @@ spec:
                   description: |-
                     An address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
 
-                    **Warning.** Must be specified without HTTP scheme.
-                    **Warning.** Must be a DNS name (RFC 1123 subdomain) and must not be an IP address.
+                    > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                   x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
@@ -255,8 +254,7 @@ spec:
                         description: |-
                           An application domain from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
-                          **Warning.** Must be a DNS name (RFC 1123 subdomain) and must not be an IP address.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
@@ -314,8 +312,7 @@ spec:
                         description: |-
                           An application domain (for Ingress resources) from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
-                          **Warning.** Must be a DNS name (RFC 1123 subdomain) and must not be an IP address.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
