@@ -67,7 +67,7 @@ secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
-  install:
+  beforeInstall:
   - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     autoconf \
     curl \
@@ -78,7 +78,7 @@ shell:
     python3-pip \
     unzip \
     virtualenv
-  beforeInstall:
+  install:
   - curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
   - mv bazel-archive-keyring.gpg /usr/share/keyrings
   - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/bazel-archive-keyring.gpg] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
