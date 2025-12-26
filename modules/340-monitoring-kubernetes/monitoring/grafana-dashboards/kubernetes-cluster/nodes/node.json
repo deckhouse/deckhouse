@@ -17354,7 +17354,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_used_size_bytes{node=~\"$node\"} / lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17448,7 +17448,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17542,7 +17542,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17637,7 +17637,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17731,7 +17731,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17825,7 +17825,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -17920,7 +17920,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "(lvg_vg_size_bytes{node=~\"$node\"} - lvg_vg_free_bytes{node=~\"$node\"}) / lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18014,7 +18014,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
@@ -18108,7 +18108,7 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "lvg_vg_size_bytes{node=~\"$node\"}",
+              "expr": "sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
