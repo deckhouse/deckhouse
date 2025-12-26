@@ -17275,101 +17275,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Unallocated space in thin pool (actual size minus allocated size)",
-          "fieldConfig": {
-            "defaults": {
-              "color": {
-                "mode": "palette-classic"
-              },
-              "custom": {
-                "axisBorderShow": false,
-                "axisCenteredZero": false,
-                "axisColorMode": "text",
-                "axisLabel": "",
-                "axisPlacement": "auto",
-                "barAlignment": 0,
-                "drawStyle": "line",
-                "fillOpacity": 20,
-                "gradientMode": "none",
-                "hideFrom": {
-                  "legend": false,
-                  "tooltip": false,
-                  "viz": false
-                },
-                "insertNulls": false,
-                "lineInterpolation": "stepAfter",
-                "lineWidth": 1,
-                "pointSize": 5,
-                "scaleDistribution": {
-                  "type": "linear"
-                },
-                "showPoints": "never",
-                "spanNulls": false,
-                "stacking": {
-                  "group": "A",
-                  "mode": "none"
-                },
-                "thresholdsStyle": {
-                  "mode": "off"
-                }
-              },
-              "links": [],
-              "mappings": [],
-              "min": 0,
-              "thresholds": {
-                "mode": "absolute",
-                "steps": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ]
-              },
-              "unit": "bytes"
-            },
-            "overrides": []
-          },
-          "gridPos": {
-            "h": 8,
-            "w": 12,
-            "x": 0,
-            "y": 0
-          },
-          "id": 401,
-          "options": {
-            "legend": {
-              "calcs": [
-                "lastNotNull"
-              ],
-              "displayMode": "table",
-              "placement": "bottom",
-              "showLegend": true
-            },
-            "tooltip": {
-              "mode": "multi",
-              "sort": "desc"
-            }
-          },
-          "pluginVersion": "10.4.5",
-          "targets": [
-            {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
-              "format": "time_series",
-              "hide": false,
-              "intervalFactor": 1,
-              "legendFormat": "{{thin_pool}} - Unallocated",
-              "refId": "A",
-              "step": 240
-            }
-          ],
-          "title": "Thin Pool Unallocated Space",
-          "type": "timeseries"
-        },
-        {
-          "datasource": {
-            "uid": "$ds_prometheus"
-          },
-          "description": "Percentage of unallocated space in thin pool",
+          "description": "Percentage of used space in thin pool (used / actual size)",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17427,6 +17333,100 @@
           "gridPos": {
             "h": 8,
             "w": 12,
+            "x": 0,
+            "y": 0
+          },
+          "id": 401,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "targets": [
+            {
+              "expr": "lvg_thin_pool_used_size_bytes{node=~\"$node\"} / lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{thin_pool}} - Used %",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Thin Pool Used Space % (real)",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "Actually free space in thin pool (actual size minus used size)",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
             "x": 12,
             "y": 0
           },
@@ -17448,23 +17448,23 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "(sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}) / sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} * 100",
+              "expr": "lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{thin_pool}} - Unallocated %",
+              "legendFormat": "{{thin_pool}} - Free",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Thin Pool Unallocated %",
+          "title": "Thin Pool Free Space (real)",
           "type": "timeseries"
         },
         {
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Actually used space in thin pool",
+          "description": "Actual size of thin pool",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17542,23 +17542,23 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "lvg_thin_pool_actual_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{thin_pool}} - Used",
+              "legendFormat": "{{thin_pool}} - Total",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Thin Pool Used Space",
+          "title": "Thin Pool Total (real)",
           "type": "timeseries"
         },
         {
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Actually free space in thin pool (actual size minus used size)",
+          "description": "Percentage of allocated space relative to allocation limit",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17598,6 +17598,7 @@
               },
               "links": [],
               "mappings": [],
+              "max": 100,
               "min": 0,
               "thresholds": {
                 "mode": "absolute",
@@ -17608,7 +17609,7 @@
                   }
                 ]
               },
-              "unit": "bytes"
+              "unit": "percent"
             },
             "overrides": []
           },
@@ -17636,23 +17637,23 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_thin_pool_actual_size_bytes{node=~\"$node\"} - sds_node_configurator_lvg_thin_pool_used_size_bytes{node=~\"$node\"}",
+              "expr": "lvg_thin_pool_allocated_size_bytes{node=~\"$node\"} / lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{thin_pool}} - Free",
+              "legendFormat": "{{thin_pool}} - Allocated %",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Thin Pool Free Space",
+          "title": "Thin Pool Allocated %",
           "type": "timeseries"
         },
         {
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Free space in volume group",
+          "description": "Unallocated space in thin pool (allocation limit minus allocated size)",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17730,23 +17731,117 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"}",
+              "expr": "lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"} - lvg_thin_pool_allocated_size_bytes{node=~\"$node\"}",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{volume_group}} - Free",
+              "legendFormat": "{{thin_pool}} - Unallocated",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Volume Group Free Space",
+          "title": "Thin Pool Unallocated Space",
           "type": "timeseries"
         },
         {
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "description": "Percentage of free space in volume group",
+          "description": "Maximum allocatable size of thin pool considering allocation limit",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 16
+          },
+          "id": 406,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "targets": [
+            {
+              "expr": "lvg_thin_pool_allocation_limit_bytes{node=~\"$node\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{thin_pool}} - Allocatable",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Thin Pool Total Allocatable Space",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "Percentage of used space in volume group",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -17804,10 +17899,10 @@
           "gridPos": {
             "h": 8,
             "w": 12,
-            "x": 12,
-            "y": 16
+            "x": 0,
+            "y": 24
           },
-          "id": 406,
+          "id": 407,
           "options": {
             "legend": {
               "calcs": [
@@ -17825,16 +17920,204 @@
           "pluginVersion": "10.4.5",
           "targets": [
             {
-              "expr": "sds_node_configurator_lvg_vg_free_bytes{node=~\"$node\"} / sds_node_configurator_lvg_vg_size_bytes{node=~\"$node\"} * 100",
+              "expr": "(lvg_vg_size_bytes{node=~\"$node\"} - lvg_vg_free_bytes{node=~\"$node\"}) / lvg_vg_size_bytes{node=~\"$node\"} * 100",
               "format": "time_series",
               "hide": false,
               "intervalFactor": 1,
-              "legendFormat": "{{volume_group}} - Free %",
+              "legendFormat": "{{volume_group}} - Used %",
               "refId": "A",
               "step": 240
             }
           ],
-          "title": "Volume Group Free Space %",
+          "title": "Volume Group Used Space %",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "Free space in volume group",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 12,
+            "y": 24
+          },
+          "id": 408,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "targets": [
+            {
+              "expr": "lvg_vg_free_bytes{node=~\"$node\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{volume_group}} - Free",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Volume Group Free Space",
+          "type": "timeseries"
+        },
+        {
+          "datasource": {
+            "uid": "$ds_prometheus"
+          },
+          "description": "Total size of volume group",
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "mode": "palette-classic"
+              },
+              "custom": {
+                "axisBorderShow": false,
+                "axisCenteredZero": false,
+                "axisColorMode": "text",
+                "axisLabel": "",
+                "axisPlacement": "auto",
+                "barAlignment": 0,
+                "drawStyle": "line",
+                "fillOpacity": 20,
+                "gradientMode": "none",
+                "hideFrom": {
+                  "legend": false,
+                  "tooltip": false,
+                  "viz": false
+                },
+                "insertNulls": false,
+                "lineInterpolation": "stepAfter",
+                "lineWidth": 1,
+                "pointSize": 5,
+                "scaleDistribution": {
+                  "type": "linear"
+                },
+                "showPoints": "never",
+                "spanNulls": false,
+                "stacking": {
+                  "group": "A",
+                  "mode": "none"
+                },
+                "thresholdsStyle": {
+                  "mode": "off"
+                }
+              },
+              "links": [],
+              "mappings": [],
+              "min": 0,
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ]
+              },
+              "unit": "bytes"
+            },
+            "overrides": []
+          },
+          "gridPos": {
+            "h": 8,
+            "w": 12,
+            "x": 0,
+            "y": 32
+          },
+          "id": 409,
+          "options": {
+            "legend": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "displayMode": "table",
+              "placement": "bottom",
+              "showLegend": true
+            },
+            "tooltip": {
+              "mode": "multi",
+              "sort": "desc"
+            }
+          },
+          "pluginVersion": "10.4.5",
+          "targets": [
+            {
+              "expr": "lvg_vg_size_bytes{node=~\"$node\"}",
+              "format": "time_series",
+              "hide": false,
+              "intervalFactor": 1,
+              "legendFormat": "{{volume_group}} - Total",
+              "refId": "A",
+              "step": 240
+            }
+          ],
+          "title": "Volume Group Total Space",
           "type": "timeseries"
         }
       ],
