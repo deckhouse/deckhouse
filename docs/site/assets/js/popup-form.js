@@ -313,7 +313,7 @@ document.addEventListener("DOMContentLoaded", function() {
   forms.forEach(form => {
     const submit = form.querySelector('button.button-request');
     const inputsRequired = form.querySelectorAll('input[type="text"][required="required"], input[type="email"][required="required"], input[type="tel"][required="required"]');
-    const checkboxesRequired = form.querySelectorAll('input[type="checkbox"][required="required"]');
+    const checkboxRequired = form.querySelector('input[type="checkbox"][required="required"]');
 
     function hasFilledInput() {
       let isFilled = true;
@@ -324,11 +324,9 @@ document.addEventListener("DOMContentLoaded", function() {
         }
       });
 
-      checkboxesRequired.forEach(checkbox => {
-        if(!checkbox.checked) {
-          isFilled = false;
-        }
-      });
+      if(!checkboxRequired.checked) {
+        isFilled = false;
+      };
 
       submit.disabled = !isFilled;
     }
