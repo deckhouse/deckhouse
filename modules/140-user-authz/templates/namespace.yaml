@@ -1,10 +1,10 @@
-{{- if .Values.userAuthz.enableMultiTenancy }}
 {{- define "labels" }}
 extended-monitoring.deckhouse.io/enabled: ""
 prometheus.deckhouse.io/rules-watcher-enabled: "true"
 security.deckhouse.io/pod-policy: "restricted"
 security.deckhouse.io/enable-security-policy-check: "true"
 {{- end }}
+{{- if .Values.userAuthz.enableMultiTenancy }}
 ---
 apiVersion: v1
 kind: Namespace
