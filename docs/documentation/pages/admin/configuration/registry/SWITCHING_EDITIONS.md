@@ -216,30 +216,37 @@ Removing this parameter will trigger a check for the presence of critical compon
        type: Ready
    ```
 
-1. To properly load digests of images after switching the edition, please note, that at the moment Deckhouse modules are not being reinitialized after this change. Check manually if there are any failed pods in `d8-*` namespaces:
+1. Check whether there are any submodules in the `d8-*` namespaces that are in an error state and cannot load images. This must be done manually, as Deckhouse modules are not currently reinitialized automatically after the changes described above.
 
-```
-d8 k get po -A
-d8 k describe po <pod_name> <namespace>
-```
+   Get a list of pods:
 
-If there are some, reinitialize their corresponding modules manually on each master node by deleting the module downloaded data:
+   ```shell
+   d8 k get po -A
+   ```
 
-```
-rm -rf /var/lib/deckhouse/downloaded/<module-name>/
-```
+   Get detailed information about problematic submissions:
 
-To get `<module-name>`, run:
+   ```shell
+   d8 k describe po <pod_name> <namespace>
+   ```
 
-```
-d8 k get modules
-```
+   Reload the modules related to the problematic submissions by executing the following command on all master nodes:
 
-After the data removal from all master nodes, restart Deckhouse:
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<module-name>/
+   ```
 
-```
-d8 k rollout restart deploy -n d8-system deckhouse
-```
+   To get `<module-name>`, run the command:
+
+   ```shell
+   d8 k get modules
+   ```
+
+   After the data removal from all master nodes, restart Deckhouse:
+
+   ```shell
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
 
 1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
 
