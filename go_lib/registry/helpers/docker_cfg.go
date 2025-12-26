@@ -63,8 +63,38 @@ func (config *authConfig) encodeAuth() {
 	}
 }
 
+func (config *authConfig) deepCopy() *authConfig {
+	if config == nil {
+		return nil
+	}
+	return &authConfig{
+		Username: config.Username,
+		Password: config.Password,
+		Auth:     config.Auth,
+	}
+}
+
 type dockerConfig struct {
 	Auths map[string]authConfig `json:"auths"`
+}
+
+func (config *dockerConfig) getAuth(host string) (*authConfig, error) {
+	host, err := normalizeHost(host)
+	if err != nil {
+		return nil, fmt.Errorf("normalize host: %w", err)
+	}
+
+	for authHost, authConfig := range config.Auths {
+		authHost, err := normalizeHost(authHost)
+		if err != nil {
+			return nil, fmt.Errorf("normalize auth host: %w", err)
+		}
+
+		if authHost == host {
+			return authConfig.deepCopy(), nil
+		}
+	}
+	return nil, nil
 }
 
 func DockerCfgFromCreds(username, password, host string) ([]byte, error) {
@@ -102,23 +132,13 @@ func CredsFromDockerCfg(rawConfig []byte, host string) (string, string, error) {
 		return "", "", fmt.Errorf("unmarshal docker config: %w", err)
 	}
 
-	host, err := normalizeHost(host)
+	auth, err := config.getAuth(host)
 	if err != nil {
-		return "", "", fmt.Errorf("normalize host: %w", err)
+		return "", "", fmt.Errorf("get auth: %w", err)
 	}
 
-	var auth authConfig
-
-	for authHost, authConfig := range config.Auths {
-		authHost, err := normalizeHost(authHost)
-		if err != nil {
-			return "", "", fmt.Errorf("normalize auth host: %w", err)
-		}
-
-		if authHost == host {
-			auth = authConfig
-			break
-		}
+	if auth == nil {
+		return "", "", nil
 	}
 
 	err = auth.decodeAuth()
