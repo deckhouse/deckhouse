@@ -224,11 +224,11 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 					fa.logger.Error("Unable to feed watchdog", zap.Error(err))
 				}
 			}
-
+			num := fa.gs.NumMembers() - 1
 			if !APIIsAvailable && !MaintenanceMode {
 				// except this node
-				num := fa.gs.NumMembers() - 1
-				fa.logger.Debug("Number of members in gossip", zap.Int("num", num))
+
+
 				if (num == 0 && fa.gs.IsAlone()) || num > 0{
 					fa.logger.Debug("Feeding the watchdog from gossip check", zap.Bool("alone", fa.gs.IsAlone()))
 					err = fa.watchDog.Feed()
@@ -243,7 +243,7 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 					}
 				}
 			}
-
+			fa.logger.Debug("Number of members in gossip", zap.Int("num", num))
 		case <-ctx.Done():
 			fa.logger.Debug("Finishing the API check")
 			if fa.watchDog.IsArmed() {
