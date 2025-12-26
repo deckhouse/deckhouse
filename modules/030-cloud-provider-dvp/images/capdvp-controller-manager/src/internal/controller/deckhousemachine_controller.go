@@ -404,10 +404,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
-	// Delete existing cloud-init secret if it exists to ensure clean state
-	if err := r.DVP.ComputeService.DeleteCloudInitProvisioningSecret(ctx, cloudInitSecretName); err != nil {
-		log.FromContext(ctx).Info("Cloud-init secret does not exist or could not be deleted, will attempt to create", "secret", cloudInitSecretName, "error", err)
-	}
+	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
