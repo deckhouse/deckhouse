@@ -42,10 +42,53 @@ git:
       install:
         - '**/*'
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-envoy
-fromImage: common/distroless
+image: {{ .ModuleName }}/{{ .ImageName }}-envoy-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
+  - rm -rf /src/envoy/.git
+---
+image: {{ .ModuleName }}/envoy-artifact
+fromImage: builder/debian
+final: false
 import:
-  - image: cni-cilium/cilium-envoy-artifact
-    add: /tmp/install/usr
-    to: /usr
-    before: install
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release \
+        software-properties-common \
+        build-essential \
+        git \
+        python3 \
+        python3-pip \
+        unzip \
+        zip \
+        vim \
+        wget \
+        openjdk-11-jdk
+  setup:
+  - curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > /etc/apt/trusted.gpg.d/bazel.gpg
+  - echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | tee /etc/apt/sources.list.d/bazel.list
+  - apt-get update && apt-get install -y bazel
+  - pip3 install --no-cache-dir \
+      cmake \
+      ninja \
+      wheel
+  - bazel build -c opt //source/exe:envoy
