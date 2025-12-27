@@ -162,11 +162,16 @@ apiServer:
       value: {{ $apiserverFeatureGatesStr | quote }}
     - name: runtime-config
       value: {{ $runtimeConfig }}
-    {{ if .apiserver.webhookURL }}
+    {{- if .apiserver.webhookURL }}
+    {{- if semverCompare ">=1.30" .clusterConfiguration.kubernetesVersion }}
+    - name: authorization-config
+      value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
+    {{- else }}
     - name: authorization-mode
       value: Node,Webhook,RBAC
     - name: authorization-webhook-config-file
       value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- end }}
     {{- end -}}
     {{ if .apiserver.authnWebhookURL }}
     - name: authentication-token-webhook-config-file
