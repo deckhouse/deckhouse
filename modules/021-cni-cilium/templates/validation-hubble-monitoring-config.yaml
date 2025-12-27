@@ -1,0 +1,29 @@
+{{- if and (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
+{{- $policyName := "hubble-monitoring-config.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [ "deckhouse.io" ]
+        apiVersions: [ "v1alpha1" ]
+        operations: [ "CREATE", "UPDATE" ]
+        resources: [ "hubblemonitoringconfigs" ]
+  validations:
+    - expression: "object.metadata.name == 'hubble-monitoring-config'"
+      reason: Forbidden
+      message: "Only one HubbleMonitoringConfig resource is allowed in the cluster, and it must be named 'hubble-monitoring-config'."
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list .  ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}
