@@ -20,13 +20,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"geodownloader"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"geodownloader"
 )
 
 const (
@@ -39,11 +38,13 @@ const (
 var (
 	serverPort     string
 	prometheusPort string
+	grpcPort       string
 )
 
 func main() {
 	flag.StringVar(&serverPort, "server-port", "127.0.0.1:8080", "server port")
 	flag.StringVar(&prometheusPort, "prometheus-port", "127.0.0.1:9090", "prometheus port")
+	flag.StringVar(&grpcPort, "grpc-port", "127.0.0.1:50051", "grpc server port")
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
