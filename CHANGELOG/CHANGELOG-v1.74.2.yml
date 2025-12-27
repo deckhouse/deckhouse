@@ -1,0 +1,27 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: this PR gives a lot more informational errors and messages to user
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17165
+common:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+ingress-nginx:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+kube-dns:
+  fixes:
+    - summary: Reverts https://github.com/deckhouse/deckhouse/pull/17120
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17315
+log-shipper:
+  fixes:
+    - summary: Fixed incorrect apiVersion in ClusterLogDestination documentation examples.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17306
+node-manager:
+  fixes:
+    - summary: Change NodeGroup maxPods validation from hard rejection to warning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17275
+
