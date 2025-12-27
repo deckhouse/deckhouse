@@ -28,19 +28,6 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-var metadata = map[string]interface{}{
-	"metadata": map[string]interface{}{
-		"labels": map[string]string{
-			"app.kubernetes.io/managed-by": "Helm",
-			"app.kubernetes.io/instance":   "kube-dns",
-		},
-		"annotations": map[string]string{
-			"meta.helm.sh/release-name":      "kube-dns",
-			"meta.helm.sh/release-namespace": "d8-system",
-		},
-	},
-}
-
 func applyServiceFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	service := &v1.Service{}
 	err := sdk.FromUnstructured(obj, service)
@@ -72,19 +59,21 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   applyServiceFilter,
 		},
 	},
-}, adoptKubeDNSResources)
+}, removeKubeDNSDeployAndService)
 
-func adoptKubeDNSResources(_ context.Context, input *go_hook.HookInput) error {
+func removeKubeDNSDeployAndService(_ context.Context, input *go_hook.HookInput) error {
 	input.PatchCollector.DeleteNonCascading("apps/v1", "Deployment", "kube-system", "coredns")
 
 	kubeDNSSVCIsClusterIPTypeSnap := input.Snapshots.Get("kube_dns_svc")
 	if len(kubeDNSSVCIsClusterIPTypeSnap) > 0 {
-		var isClusterIP bool
-		if err := kubeDNSSVCIsClusterIPTypeSnap[0].UnmarshalTo(&isClusterIP); err != nil {
+		var startKubeDNSSVCIsClusterIPTypeSnap bool
+		err := kubeDNSSVCIsClusterIPTypeSnap[0].UnmarshalTo(&startKubeDNSSVCIsClusterIPTypeSnap)
+		if err != nil {
 			return fmt.Errorf("failed to unmarshal kube_dns_svc snapshot: %w", err)
 		}
-		if isClusterIP {
-			input.PatchCollector.PatchWithMerge(metadata, "v1", "Service", "kube-system", "kube-dns")
+
+		if startKubeDNSSVCIsClusterIPTypeSnap {
+			input.PatchCollector.Delete("v1", "Service", "kube-system", "kube-dns")
 		}
 	}
 
