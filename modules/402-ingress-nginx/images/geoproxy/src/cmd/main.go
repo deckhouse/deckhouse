@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/fsnotify/fsnotify"
 )
 
 const (
@@ -54,6 +55,47 @@ func main() {
 	cfg := geodownloader.NewConfig()
 	downloader := geodownloader.NewDownloader(watcher, leader)
 
+	geodb, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+	if err != nil {
+		geodb.Close()
+		log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+		stop()
+	}
+	defer geodb.Close()
+
+	fsWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fsWatcher.Close()
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		stop()
+	}
+	defer fsWatcher.Close()
+
+	if err := fsWatcher.Add(geodownloader.PathRawMMDB); err != nil {
+		fsWatcher.Close()
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		stop()
+	}
+
+	// fs notify triger reinit GeoDB if raw MMDB was changed
+	go func() {
+		for {
+			select {
+			case <-fsWatcher.Events:
+				// reinit geoDB
+				geoDbForClose := geodb
+				geodb, err = geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+				if err != nil {
+					geodb.Close()
+					log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+					stop()
+				}
+				geoDbForClose.Close()
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	// start leader election
 	go func() {
 		if err := leader.AcquireLeaderElection(ctx); err != nil {
