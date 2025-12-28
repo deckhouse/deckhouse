@@ -1,6 +1,10 @@
 package geodownloader
 
 import (
+	"io/fs"
+	"path/filepath"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/oschwald/geoip2-golang"
@@ -23,4 +27,55 @@ const (
 type GeoDB struct {
 	mu      sync.Mutex
 	readers map[string]*geoip2.Reader
+}
+
+func NewGeoDB(mmdbDirPath string) (*GeoDB, error) {
+	var mmdbFilesPath []string
+
+	if err := filepath.WalkDir(mmdbDirPath, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !entry.IsDir() && strings.EqualFold(filepath.Ext(path), ".mmdb") {
+			absPath, err := filepath.Abs(path)
+			if err != nil {
+				return err
+			}
+
+			mmdbFilesPath = append(mmdbFilesPath, absPath)
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	geoDB := &GeoDB{
+		readers: make(map[string]*geoip2.Reader, len(mmdbFilesPath)),
+	}
+
+	sort.Strings(mmdbFilesPath)
+
+	for i := range mmdbFilesPath {
+		fileGeoDB := mmdbFilesPath[i]
+		reader, err := geoip2.Open(fileGeoDB)
+		if err != nil {
+			geoDB.Close()
+
+			return nil, err
+		}
+
+		geoDB.readers[fileGeoDB] = reader
+	}
+
+	return geoDB, nil
+}
+
+func (g *GeoDB) Close() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	for _, r := range g.readers {
+		r.Close()
+	}
 }
