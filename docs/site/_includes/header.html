@@ -266,6 +266,11 @@
     {%- unless site.mode == "module" %}
     <!-- Start L2 Menu -->
     {%- assign l2MenuData = site.data.topnav-l2-products[page.lang] %}
+    {%- if page.lang == "en" %}
+      {%- assign l2MenuDataFallback = site.data.topnav-l2-products["ru"] %}
+    {%- else %}
+      {%- assign l2MenuDataFallback = site.data.topnav-l2-products["en"] %}
+    {%- endif %}
     {%- if l2MenuData %}
     {% include header-l2-menu.liquid %}
     {%- endif %}
