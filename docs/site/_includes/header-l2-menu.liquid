@@ -2,11 +2,11 @@
 {%- assign _conditionProductURL = "/products/" | append: productCode | append: "/" %}
 {%- assign productMenuData = l2MenuData | where: "url", _conditionProductURL | first %}
 {%- assign productMenuDataFallback = l2MenuDataFallback | where: "url", _conditionProductURL | first %}
-{%- assign productLogoURL = "/images/sprite.svg#" | append: productCode | append: "-icon" %}
+{%- assign productLogoURL = "/images/sprite.svg?v2#" | append: productCode | append: "-icon" %}
 {%- assign productName = productMenuData.title %}
-{%- if productMenuData.size < 1 %}
+{%- unless productMenuData %}
   {%- assign productName = productMenuDataFallback.title %}
-{%- endif %}
+{%- endunless %}
 <div class="header header__product-menu">
   <div class="container">
     <div class="header__product-menu-logo">
@@ -16,7 +16,7 @@
       <span>{{ productName }}</span>
     </div>
     <ul class="nav header__nav">
-      {%- if productMenuData.size > 0 %}
+      {%- if productMenuData.items %}
         {%- for item in productMenuData.items %}
           {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.title == "Возможности" %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
           <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
