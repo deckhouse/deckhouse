@@ -15,60 +15,61 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // UpdateInstalledSpec defines the UpdateInstalled condition rules.
 // Only applies when version is changing after initial install.
-func UpdateInstalledSpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type: types.ConditionUpdateInstalled,
+func UpdateInstalledSpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type: status.ConditionUpdateInstalled,
 		// Only evaluate during version updates
-		AppliesWhen: types.Predicate{
+		AppliesWhen: statusmapper.Predicate{
 			Name: "version-changing-after-install",
-			Fn: func(input *types.MappingInput) bool {
+			Fn: func(input *statusmapper.Input) bool {
 				return !input.IsInitialInstall && input.VersionChanged
 			},
 		},
-		MappingRules: []types.MappingRule{
-			// Success
+		Rule: statusmapper.FirstMatch{
+			// Success: all installation conditions met
 			{
-				Name:    "update-complete",
-				Matcher: types.AllInstallationConditionsMet(),
-				Status:  corev1.ConditionTrue,
+				When: statusmapper.AllTrue(
+					status.ConditionDownloaded,
+					status.ConditionReadyOnFilesystem,
+					status.ConditionRequirementsMet,
+					status.ConditionReadyInRuntime,
+					status.ConditionHooksProcessed,
+					status.ConditionHelmApplied,
+				),
+				Status: metav1.ConditionTrue,
 			},
 			// Failure: download
 			{
-				Name:        "update-failed-download",
-				Matcher:     types.InternalFalse(status.ConditionDownloaded),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionDownloaded),
+				Status:      metav1.ConditionFalse,
 				Reason:      "UpdateFailed",
 				MessageFrom: status.ConditionDownloaded,
 			},
 			// Failure: requirements
 			{
-				Name:        "update-failed-requirements",
-				Matcher:     types.InternalFalse(status.ConditionRequirementsMet),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionRequirementsMet),
+				Status:      metav1.ConditionFalse,
 				Reason:      "RequirementsNotMet",
 				MessageFrom: status.ConditionRequirementsMet,
 			},
 			// In progress: downloading
 			{
-				Name:    "downloading",
-				Matcher: types.NotTrue(status.ConditionDownloaded),
-				Status:  corev1.ConditionFalse,
-				Reason:  "Downloading",
+				When:   statusmapper.NotTrue(status.ConditionDownloaded),
+				Status: metav1.ConditionFalse,
+				Reason: "Downloading",
 			},
 			// Default
 			{
-				Name:    "default-in-progress",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionFalse,
-				Reason:  "UpdateInProgress",
+				Status: metav1.ConditionFalse,
+				Reason: "UpdateInProgress",
 			},
 		},
 	}

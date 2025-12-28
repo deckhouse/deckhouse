@@ -19,22 +19,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 )
 
 func TestUpdateInstalledSpec_OnlyDuringUpdate(t *testing.T) {
 	spec := UpdateInstalledSpec()
 
-	allTrue := map[string]types.InternalCondition{
-		"Downloaded":        {Name: "Downloaded", Status: corev1.ConditionTrue},
-		"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: corev1.ConditionTrue},
-		"RequirementsMet":   {Name: "RequirementsMet", Status: corev1.ConditionTrue},
-		"ReadyInRuntime":    {Name: "ReadyInRuntime", Status: corev1.ConditionTrue},
-		"HooksProcessed":    {Name: "HooksProcessed", Status: corev1.ConditionTrue},
-		"HelmApplied":       {Name: "HelmApplied", Status: corev1.ConditionTrue},
+	allTrue := map[status.ConditionName]status.Condition{
+		"Downloaded":        {Name: "Downloaded", Status: metav1.ConditionTrue},
+		"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: metav1.ConditionTrue},
+		"RequirementsMet":   {Name: "RequirementsMet", Status: metav1.ConditionTrue},
+		"ReadyInRuntime":    {Name: "ReadyInRuntime", Status: metav1.ConditionTrue},
+		"HooksProcessed":    {Name: "HooksProcessed", Status: metav1.ConditionTrue},
+		"HelmApplied":       {Name: "HelmApplied", Status: metav1.ConditionTrue},
 	}
 
 	tests := []struct {
@@ -42,7 +43,7 @@ func TestUpdateInstalledSpec_OnlyDuringUpdate(t *testing.T) {
 		isInitial      bool
 		versionChanged bool
 		expectNil      bool
-		expectedStatus corev1.ConditionStatus
+		expectedStatus metav1.ConditionStatus
 	}{
 		{
 			name:           "initial install - should not apply",
@@ -61,16 +62,16 @@ func TestUpdateInstalledSpec_OnlyDuringUpdate(t *testing.T) {
 			isInitial:      false,
 			versionChanged: true,
 			expectNil:      false,
-			expectedStatus: corev1.ConditionTrue,
+			expectedStatus: metav1.ConditionTrue,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := &types.MappingInput{
+			input := &statusmapper.Input{
 				InternalConditions: allTrue,
-				CurrentConditions: map[types.ExternalConditionType]types.ExternalCondition{
-					types.ConditionInstalled: {Type: types.ConditionInstalled, Status: corev1.ConditionTrue},
+				ExternalConditions: map[status.ConditionName]status.Condition{
+					status.ConditionInstalled: {Name: status.ConditionInstalled, Status: metav1.ConditionTrue},
 				},
 				App:              &v1alpha1.Application{},
 				IsInitialInstall: tt.isInitial,
@@ -88,4 +89,3 @@ func TestUpdateInstalledSpec_OnlyDuringUpdate(t *testing.T) {
 		})
 	}
 }
-

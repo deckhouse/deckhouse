@@ -15,47 +15,42 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // ConfigurationAppliedSpec defines the ConfigurationApplied condition rules.
 // Composite: HelmApplied AND SettingsValid.
-func ConfigurationAppliedSpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type: types.ConditionConfigurationApplied,
-		MappingRules: []types.MappingRule{
+func ConfigurationAppliedSpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type: status.ConditionConfigurationApplied,
+		Rule: statusmapper.FirstMatch{
 			// Both helm and settings OK
 			{
-				Name: "configuration-applied",
-				Matcher: types.AllOf{
-					types.InternalTrue(status.ConditionHelmApplied),
-					types.InternalTrue(status.ConditionSettingsIsValid),
-				},
-				Status: corev1.ConditionTrue,
+				When: statusmapper.And(
+					statusmapper.IsTrue(status.ConditionHelmApplied),
+					statusmapper.IsTrue(status.ConditionSettingsIsValid),
+				),
+				Status: metav1.ConditionTrue,
 			},
 			// Settings invalid (higher priority than helm failure)
 			{
-				Name:        "settings-invalid",
-				Matcher:     types.InternalFalse(status.ConditionSettingsIsValid),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionSettingsIsValid),
+				Status:      metav1.ConditionFalse,
 				Reason:      "ConfigurationValidationFailed",
 				MessageFrom: status.ConditionSettingsIsValid,
 			},
 			// Helm failed
 			{
-				Name:        "helm-failed",
-				Matcher:     types.InternalFalse(status.ConditionHelmApplied),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionHelmApplied),
+				Status:      metav1.ConditionFalse,
 				MessageFrom: status.ConditionHelmApplied,
 			},
 			// Default
 			{
-				Name:    "default-not-applied",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionFalse,
+				Status: metav1.ConditionFalse,
 			},
 		},
 	}

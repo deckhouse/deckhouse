@@ -15,37 +15,33 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // ReadySpec defines the Ready condition rules.
 // Reflects current operational state.
-func ReadySpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type: types.ConditionReady,
-		MappingRules: []types.MappingRule{
+func ReadySpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type: status.ConditionReady,
+		Rule: statusmapper.FirstMatch{
 			// Ready when runtime is ready
 			{
-				Name:    "runtime-ready",
-				Matcher: types.InternalTrue(status.ConditionReadyInRuntime),
-				Status:  corev1.ConditionTrue,
+				When:   statusmapper.IsTrue(status.ConditionReadyInRuntime),
+				Status: metav1.ConditionTrue,
 			},
 			// Not ready with details
 			{
-				Name:        "runtime-not-ready",
-				Matcher:     types.InternalFalse(status.ConditionReadyInRuntime),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionReadyInRuntime),
+				Status:      metav1.ConditionFalse,
 				Reason:      "NotReady",
 				MessageFrom: status.ConditionReadyInRuntime,
 			},
 			// Default fallback
 			{
-				Name:    "default-not-ready",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionFalse,
+				Status:  metav1.ConditionFalse,
 				Reason:  "NotReady",
 				Message: "application is not fully operational",
 			},

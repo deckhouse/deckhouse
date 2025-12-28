@@ -15,13 +15,12 @@
 package specs
 
 import (
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // DefaultSpecs returns the standard condition specifications.
-
-func DefaultSpecs() []types.MappingSpec {
-	return []types.MappingSpec{
+func DefaultSpecs() []statusmapper.Spec {
+	return []statusmapper.Spec{
 		InstalledSpec(),
 		ReadySpec(),
 		PartiallyDegradedSpec(),

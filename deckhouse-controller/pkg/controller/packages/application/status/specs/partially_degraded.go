@@ -15,36 +15,32 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // PartiallyDegradedSpec defines the PartiallyDegraded condition rules.
 // Inverse of Ready; extensible for non-critical degradation.
-func PartiallyDegradedSpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type: types.ConditionPartiallyDegraded,
-		MappingRules: []types.MappingRule{
+func PartiallyDegradedSpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type: status.ConditionPartiallyDegraded,
+		Rule: statusmapper.FirstMatch{
 			// Not degraded when fully operational
 			{
-				Name:    "fully-operational",
-				Matcher: types.InternalTrue(status.ConditionReadyInRuntime),
-				Status:  corev1.ConditionFalse,
+				When:   statusmapper.IsTrue(status.ConditionReadyInRuntime),
+				Status: metav1.ConditionFalse,
 			},
 			// Future: add rules for non-critical degradation here
 			// {
-			//     Name:    "scaling-in-progress",
-			//     Matcher: types.Predicate{Name: "scaling", Fn: isScalingInProgress},
-			//     Status:  corev1.ConditionTrue,
-			//     Reason:  "ScalingInProgress",
+			//     When:   statusmapper.Predicate{Name: "scaling", Fn: isScalingInProgress},
+			//     Status: metav1.ConditionTrue,
+			//     Reason: "ScalingInProgress",
 			// },
 			// Default: degraded
 			{
-				Name:    "default-degraded",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionTrue,
+				Status: metav1.ConditionTrue,
 			},
 		},
 	}

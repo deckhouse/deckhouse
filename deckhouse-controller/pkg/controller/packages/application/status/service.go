@@ -24,9 +24,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/specs"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -34,7 +34,7 @@ import (
 type Service struct {
 	client client.Client
 	getter getter
-	mapper *ConditionMapper
+	mapper *statusmapper.Mapper
 	logger *log.Logger
 }
 
@@ -45,7 +45,7 @@ func NewService(client client.Client, getter getter, logger *log.Logger) *Servic
 	return &Service{
 		client: client,
 		getter: getter,
-		mapper: NewConditionMapper(specs.DefaultSpecs()),
+		mapper: statusmapper.NewMapper(specs.DefaultSpecs()),
 		logger: logger.Named("status-service"),
 	}
 }
@@ -102,7 +102,7 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 }
 
 // applyInternalConditions updates internal conditions and computes external conditions.
-func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []status.Condition) {
+func (s *Service) applyInternalConditions(app *v1alpha1.Application, internalConds []status.Condition) {
 	// Preserve LastTransitionTime for unchanged conditions
 	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
 	for _, cond := range app.Status.InternalConditions {
@@ -110,9 +110,9 @@ func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []sta
 	}
 
 	now := metav1.Now()
-	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(conds))
+	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(internalConds))
 
-	for _, c := range conds {
+	for _, c := range internalConds {
 		cond := v1alpha1.ApplicationInternalStatusCondition{
 			Type:               string(c.Name),
 			Status:             corev1.ConditionStatus(c.Status),
@@ -132,37 +132,26 @@ func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []sta
 	app.Status.InternalConditions = applied
 
 	// Compute external conditions and update Application status
-	s.computeConditions(app, conds)
+	s.computeExternalConditions(app, internalConds)
 }
 
-// computeConditions uses the mapper to compute external conditions.
-func (s *Service) computeConditions(app *v1alpha1.Application, internalConds []status.Condition) {
-	// Convert to InternalCondition slice
-	internal := make([]types.InternalCondition, len(internalConds))
-	for i, c := range internalConds {
-		internal[i] = types.InternalCondition{
-			Name:    string(c.Name),
-			Status:  corev1.ConditionStatus(c.Status),
-			Reason:  string(c.Reason),
-			Message: c.Message,
-		}
-	}
-
+// computeExternalConditions uses the mapper to compute external conditions from internal.
+func (s *Service) computeExternalConditions(app *v1alpha1.Application, internalConds []status.Condition) {
 	// Map and apply conditions
-	input := types.NewMappingInput(app, internal)
-	conditions := s.mapper.Map(input)
+	input := statusmapper.NewInput(app, internalConds)
+	externalConds := s.mapper.Map(input)
 
 	now := metav1.Now()
-	for _, cond := range conditions {
-		s.setCondition(app, string(cond.Type), cond.Status, cond.Reason, cond.Message, now)
+	for _, cond := range externalConds {
+		s.setCondition(app, string(cond.Name), cond.Status, string(cond.Reason), cond.Message, now)
 	}
 }
 
 // setCondition creates or updates a condition, preserving LastTransitionTime if unchanged.
-func (s *Service) setCondition(app *v1alpha1.Application, condType string, condStatus corev1.ConditionStatus, reason, message string, now metav1.Time) {
+func (s *Service) setCondition(app *v1alpha1.Application, condType string, condStatus metav1.ConditionStatus, reason, message string, now metav1.Time) {
 	newCond := v1alpha1.ApplicationStatusCondition{
 		Type:               condType,
-		Status:             condStatus,
+		Status:             corev1.ConditionStatus(condStatus),
 		Reason:             reason,
 		Message:            message,
 		LastTransitionTime: now,
@@ -171,7 +160,7 @@ func (s *Service) setCondition(app *v1alpha1.Application, condType string, condS
 
 	for i, cond := range app.Status.Conditions {
 		if cond.Type == condType {
-			if cond.Status == condStatus {
+			if cond.Status == corev1.ConditionStatus(condStatus) {
 				newCond.LastTransitionTime = cond.LastTransitionTime
 			}
 			app.Status.Conditions[i] = newCond

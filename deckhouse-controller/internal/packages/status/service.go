@@ -60,6 +60,36 @@ var UnusedConditions = []ConditionName{
 	ConditionReadyInCluster,
 }
 
+// =============================================================================
+// External Condition Types (computed from internal conditions)
+// =============================================================================
+
+const (
+	// ConditionInstalled indicates package was successfully installed
+	ConditionInstalled ConditionName = "Installed"
+	// ConditionReady indicates package is ready and operational
+	ConditionReady ConditionName = "Ready"
+	// ConditionPartiallyDegraded indicates package is partially degraded
+	ConditionPartiallyDegraded ConditionName = "PartiallyDegraded"
+	// ConditionUpdateInstalled indicates package update was installed
+	ConditionUpdateInstalled ConditionName = "UpdateInstalled"
+	// ConditionManaged indicates package is being managed
+	ConditionManaged ConditionName = "Managed"
+	// ConditionConfigurationApplied indicates configuration was applied
+	ConditionConfigurationApplied ConditionName = "ConfigurationApplied"
+)
+
+// AllExternalConditions is the canonical list of all external condition types.
+// Used by exhaustiveness tests to verify all types have corresponding specs.
+var AllExternalConditions = []ConditionName{
+	ConditionInstalled,
+	ConditionReady,
+	ConditionPartiallyDegraded,
+	ConditionUpdateInstalled,
+	ConditionManaged,
+	ConditionConfigurationApplied,
+}
+
 // Error wraps an error with associated status conditions
 // Used to propagate both error details and status updates through the call stack
 type Error struct {

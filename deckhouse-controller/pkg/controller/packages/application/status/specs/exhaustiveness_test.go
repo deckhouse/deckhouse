@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // TestEverySpecIsStructurallyValid ensures all specs have valid structure.
@@ -30,70 +30,65 @@ func TestEverySpecIsStructurallyValid(t *testing.T) {
 	for _, spec := range DefaultSpecs() {
 		t.Run(string(spec.Type), func(t *testing.T) {
 			require.NotEmpty(t, spec.Type, "spec has empty Type")
-			require.NotEmpty(t, spec.MappingRules, "spec has no rules")
-
-			// Check rule names are non-empty and unique
-			ruleNames := make(map[string]bool)
-			for _, rule := range spec.MappingRules {
-				require.NotEmpty(t, rule.Name, "rule has empty name")
-				require.False(t, ruleNames[rule.Name], "duplicate rule name: %s", rule.Name)
-				ruleNames[rule.Name] = true
-			}
+			require.NotEmpty(t, spec.Rule, "spec has no cases")
 		})
 	}
 }
 
-// TestEverySpecHasFallbackRule ensures every spec has Always{} as last rule.
+// TestEverySpecHasFallbackRule ensures every spec has a default case (When == nil) as last case.
 // This guarantees that Map() never returns nil for applicable conditions.
 func TestEverySpecHasFallbackRule(t *testing.T) {
 	for _, spec := range DefaultSpecs() {
 		t.Run(string(spec.Type), func(t *testing.T) {
-			require.NotEmpty(t, spec.MappingRules, "spec has no rules")
+			require.NotEmpty(t, spec.Rule, "spec has no cases")
 
-			lastRule := spec.MappingRules[len(spec.MappingRules)-1]
-			_, isAlways := lastRule.Matcher.(types.Always)
+			lastCase := spec.Rule[len(spec.Rule)-1]
+			isDefault := lastCase.When == nil
+			_, isAlways := lastCase.When.(statusmapper.Always)
 
-			assert.True(t, isAlways,
-				"last rule must be Always{} for exhaustiveness, got %s", lastRule.Matcher.String())
+			assert.True(t, isDefault || isAlways,
+				"last case must be default (When == nil) or Always{} for exhaustiveness")
 		})
 	}
 }
 
 // TestEveryExternalConditionHasSpec ensures every defined external condition type
-// has a corresponding MappingSpec in DefaultSpecs().
+// has a corresponding Spec in DefaultSpecs().
 func TestEveryExternalConditionHasSpec(t *testing.T) {
 	specs := DefaultSpecs()
-	specTypes := make(map[types.ExternalConditionType]bool)
+	specTypes := make(map[status.ConditionName]bool)
 	for _, s := range specs {
 		specTypes[s.Type] = true
 	}
 
-	for _, condType := range types.AllExternalConditions {
+	for _, condType := range status.AllExternalConditions {
 		assert.True(t, specTypes[condType],
-			"external condition %q has no MappingSpec", condType)
+			"external condition %q has no Spec", condType)
 	}
 
 	// Verify no orphan specs (specs for unknown condition types)
 	for _, s := range specs {
-		assert.True(t, slices.Contains(types.AllExternalConditions, s.Type),
+		assert.True(t, slices.Contains(status.AllExternalConditions, s.Type),
 			"spec exists for unknown condition type %q (add it to AllExternalConditions)", s.Type)
 	}
 }
 
 // TestEveryInternalConditionHasMapping ensures all internal conditions from operator
-// are used in at least one MappingSpec. Uses status.AllConditions as single source of truth.
+// are used in at least one Spec. Uses status.AllConditions as single source of truth.
 func TestEveryInternalConditionHasMapping(t *testing.T) {
 	usageMap := make(map[status.ConditionName]bool)
 	for _, name := range status.AllConditions {
 		usageMap[name] = false
 	}
 
-	// Scan all specs for internal condition references
+	// Scan all specs for condition references
 	for _, spec := range DefaultSpecs() {
-		for _, rule := range spec.MappingRules {
-			collectInternalConditionUsage(rule.Matcher, usageMap)
-			if rule.MessageFrom != "" {
-				usageMap[rule.MessageFrom] = true
+		for _, c := range spec.Rule {
+			if c.When != nil {
+				collectConditionUsage(c.When, usageMap)
+			}
+			if c.MessageFrom != "" {
+				usageMap[c.MessageFrom] = true
 			}
 		}
 	}
@@ -107,20 +102,20 @@ func TestEveryInternalConditionHasMapping(t *testing.T) {
 	}
 }
 
-// collectInternalConditionUsage recursively marks internal conditions as used.
-func collectInternalConditionUsage(m types.Matcher, usageMap map[status.ConditionName]bool) {
+// collectConditionUsage recursively marks conditions as used.
+func collectConditionUsage(m statusmapper.Matcher, usageMap map[status.ConditionName]bool) {
 	switch v := m.(type) {
-	case types.InternalIs:
+	case statusmapper.ConditionIs:
 		usageMap[v.Name] = true
-	case types.InternalNotTrue:
+	case statusmapper.ConditionNotTrue:
 		usageMap[v.Name] = true
-	case types.AllOf:
+	case statusmapper.AllOf:
 		for _, sub := range v {
-			collectInternalConditionUsage(sub, usageMap)
+			collectConditionUsage(sub, usageMap)
 		}
-	case types.AnyOf:
+	case statusmapper.AnyOf:
 		for _, sub := range v {
-			collectInternalConditionUsage(sub, usageMap)
+			collectConditionUsage(sub, usageMap)
 		}
 	}
 }

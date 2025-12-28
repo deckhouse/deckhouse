@@ -15,44 +15,39 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // ManagedSpec defines the Managed condition rules.
 // Currently follows Ready; extensible for managed/unmanaged modes.
-func ManagedSpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type: types.ConditionManaged,
-		MappingRules: []types.MappingRule{
+func ManagedSpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type: status.ConditionManaged,
+		Rule: statusmapper.FirstMatch{
 			// Actively managed when runtime ready
 			{
-				Name:    "actively-managed",
-				Matcher: types.InternalTrue(status.ConditionReadyInRuntime),
-				Status:  corev1.ConditionTrue,
+				When:   statusmapper.IsTrue(status.ConditionReadyInRuntime),
+				Status: metav1.ConditionTrue,
 			},
 			// Future: add unmanaged mode support
 			// {
-			//     Name:    "unmanaged-mode",
-			//     Matcher: types.Predicate{Name: "unmanaged", Fn: isUnmanagedMode},
-			//     Status:  corev1.ConditionFalse,
-			//     Reason:  "UnmanagedModeActivated",
+			//     When:   statusmapper.Predicate{Name: "unmanaged", Fn: isUnmanagedMode},
+			//     Status: metav1.ConditionFalse,
+			//     Reason: "UnmanagedModeActivated",
 			// },
 			// Hooks failed
 			{
-				Name:        "event-hooks-failed",
-				Matcher:     types.InternalFalse(status.ConditionHooksProcessed),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionHooksProcessed),
+				Status:      metav1.ConditionFalse,
 				Reason:      "OperationFailed",
 				MessageFrom: status.ConditionHooksProcessed,
 			},
 			// Default
 			{
-				Name:    "default-not-managed",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionFalse,
+				Status: metav1.ConditionFalse,
 			},
 		},
 	}

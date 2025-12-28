@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package statusmapper
 
 // AllOf matches when ALL sub-matchers match (logical AND).
 type AllOf []Matcher
 
-func (a AllOf) Match(input *MappingInput) bool {
+func (a AllOf) Match(input *Input) bool {
 	for _, m := range a {
 		if !m.Match(input) {
 			return false
@@ -43,7 +43,7 @@ func (a AllOf) String() string {
 // AnyOf matches when ANY sub-matcher matches (logical OR).
 type AnyOf []Matcher
 
-func (a AnyOf) Match(input *MappingInput) bool {
+func (a AnyOf) Match(input *Input) bool {
 	for _, m := range a {
 		if m.Match(input) {
 			return true
@@ -65,3 +65,9 @@ func (a AnyOf) String() string {
 	}
 	return s + ")"
 }
+
+// And combines matchers with logical AND (all must match).
+func And(matchers ...Matcher) AllOf { return matchers }
+
+// Or combines matchers with logical OR (any must match).
+func Or(matchers ...Matcher) AnyOf { return matchers }

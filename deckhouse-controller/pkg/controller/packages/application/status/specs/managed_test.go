@@ -19,10 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 )
 
 func TestManagedSpec(t *testing.T) {
@@ -30,32 +31,31 @@ func TestManagedSpec(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		runtimeStatus  corev1.ConditionStatus
-		hooksStatus    corev1.ConditionStatus
-		expectedStatus corev1.ConditionStatus
+		runtimeStatus  metav1.ConditionStatus
+		hooksStatus    metav1.ConditionStatus
+		expectedStatus metav1.ConditionStatus
 		expectedReason string
 	}{
-		{"actively managed", corev1.ConditionTrue, corev1.ConditionTrue, corev1.ConditionTrue, ""},
-		{"hooks failed", corev1.ConditionFalse, corev1.ConditionFalse, corev1.ConditionFalse, "OperationFailed"},
-		{"not managed", corev1.ConditionFalse, corev1.ConditionTrue, corev1.ConditionFalse, ""},
+		{"actively managed", metav1.ConditionTrue, metav1.ConditionTrue, metav1.ConditionTrue, ""},
+		{"hooks failed", metav1.ConditionFalse, metav1.ConditionFalse, metav1.ConditionFalse, "OperationFailed"},
+		{"not managed", metav1.ConditionFalse, metav1.ConditionTrue, metav1.ConditionFalse, ""},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := &types.MappingInput{
-				InternalConditions: map[string]types.InternalCondition{
+			input := &statusmapper.Input{
+				InternalConditions: map[status.ConditionName]status.Condition{
 					"ReadyInRuntime": {Name: "ReadyInRuntime", Status: tt.runtimeStatus},
 					"HooksProcessed": {Name: "HooksProcessed", Status: tt.hooksStatus},
 				},
-				CurrentConditions: make(map[types.ExternalConditionType]types.ExternalCondition),
-				App:               &v1alpha1.Application{},
+				ExternalConditions: make(map[status.ConditionName]status.Condition),
+				App:                &v1alpha1.Application{},
 			}
 
 			result := spec.Map(input)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedStatus, result.Status)
-			assert.Equal(t, tt.expectedReason, result.Reason)
+			assert.Equal(t, status.ConditionReason(tt.expectedReason), result.Reason)
 		})
 	}
 }
-

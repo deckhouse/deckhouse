@@ -19,10 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 )
 
 func TestPartiallyDegradedSpec(t *testing.T) {
@@ -30,22 +31,22 @@ func TestPartiallyDegradedSpec(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		runtimeStatus  corev1.ConditionStatus
-		expectedStatus corev1.ConditionStatus
+		runtimeStatus  metav1.ConditionStatus
+		expectedStatus metav1.ConditionStatus
 	}{
-		{"fully operational", corev1.ConditionTrue, corev1.ConditionFalse},
-		{"degraded", corev1.ConditionFalse, corev1.ConditionTrue},
-		{"unknown", corev1.ConditionUnknown, corev1.ConditionTrue},
+		{"fully operational", metav1.ConditionTrue, metav1.ConditionFalse},
+		{"degraded", metav1.ConditionFalse, metav1.ConditionTrue},
+		{"unknown", metav1.ConditionUnknown, metav1.ConditionTrue},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := &types.MappingInput{
-				InternalConditions: map[string]types.InternalCondition{
+			input := &statusmapper.Input{
+				InternalConditions: map[status.ConditionName]status.Condition{
 					"ReadyInRuntime": {Name: "ReadyInRuntime", Status: tt.runtimeStatus},
 				},
-				CurrentConditions: make(map[types.ExternalConditionType]types.ExternalCondition),
-				App:               &v1alpha1.Application{},
+				ExternalConditions: make(map[status.ConditionName]status.Condition),
+				App:                &v1alpha1.Application{},
 			}
 
 			result := spec.Map(input)
@@ -54,4 +55,3 @@ func TestPartiallyDegradedSpec(t *testing.T) {
 		})
 	}
 }
-

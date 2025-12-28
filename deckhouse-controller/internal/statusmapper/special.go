@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+package statusmapper
 
 // Always matches unconditionally (for default/fallback rules).
 type Always struct{}
 
-func (Always) Match(_ *MappingInput) bool { return true }
-func (Always) String() string             { return "Always" }
+func (Always) Match(_ *Input) bool { return true }
+func (Always) String() string      { return "Always" }
 
 // Predicate allows custom matching logic with access to full input.
 type Predicate struct {
 	Name string
-	Fn   func(input *MappingInput) bool
+	Fn   func(input *Input) bool
 }
 
-func (p Predicate) Match(input *MappingInput) bool {
+func (p Predicate) Match(input *Input) bool {
 	return p.Fn(input)
 }
 

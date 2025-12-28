@@ -15,62 +15,62 @@
 package specs
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 )
 
 // InstalledSpec defines the Installed condition rules.
 // Sticky: once True, never reverts to False.
-func InstalledSpec() types.MappingSpec {
-	return types.MappingSpec{
-		Type:   types.ConditionInstalled,
+func InstalledSpec() statusmapper.Spec {
+	return statusmapper.Spec{
+		Type:   status.ConditionInstalled,
 		Sticky: true,
-		MappingRules: []types.MappingRule{
-			// Success: all conditions met
+		Rule: statusmapper.FirstMatch{
+			// Success: all installation conditions met
 			{
-				Name:    "all-conditions-met",
-				Matcher: types.AllInstallationConditionsMet(),
-				Status:  corev1.ConditionTrue,
+				When: statusmapper.AllTrue(
+					status.ConditionDownloaded,
+					status.ConditionReadyOnFilesystem,
+					status.ConditionRequirementsMet,
+					status.ConditionReadyInRuntime,
+					status.ConditionHooksProcessed,
+					status.ConditionHelmApplied,
+				),
+				Status: metav1.ConditionTrue,
 			},
 			// Failure: download failed
 			{
-				Name:        "download-failed",
-				Matcher:     types.InternalFalse(status.ConditionDownloaded),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionDownloaded),
+				Status:      metav1.ConditionFalse,
 				Reason:      "DownloadWasFailed",
 				MessageFrom: status.ConditionDownloaded,
 			},
 			// Failure: requirements not met
 			{
-				Name:        "requirements-not-met",
-				Matcher:     types.InternalFalse(status.ConditionRequirementsMet),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionRequirementsMet),
+				Status:      metav1.ConditionFalse,
 				Reason:      "RequirementsNotMet",
 				MessageFrom: status.ConditionRequirementsMet,
 			},
 			// Failure: helm/manifests failed
 			{
-				Name:        "manifests-failed",
-				Matcher:     types.InternalFalse(status.ConditionHelmApplied),
-				Status:      corev1.ConditionFalse,
+				When:        statusmapper.IsFalse(status.ConditionHelmApplied),
+				Status:      metav1.ConditionFalse,
 				Reason:      "ManifestsDeploymentFailed",
 				MessageFrom: status.ConditionHelmApplied,
 			},
 			// In progress: downloading
 			{
-				Name:    "downloading",
-				Matcher: types.NotTrue(status.ConditionDownloaded),
-				Status:  corev1.ConditionFalse,
-				Reason:  "Downloading",
+				When:   statusmapper.NotTrue(status.ConditionDownloaded),
+				Status: metav1.ConditionFalse,
+				Reason: "Downloading",
 			},
 			// Default fallback
 			{
-				Name:    "default-in-progress",
-				Matcher: types.Always{},
-				Status:  corev1.ConditionFalse,
-				Reason:  "InstallationInProgress",
+				Status: metav1.ConditionFalse,
+				Reason: "InstallationInProgress",
 			},
 		},
 	}

@@ -19,10 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 )
 
 func TestConfigurationAppliedSpec_Composite(t *testing.T) {
@@ -30,33 +31,32 @@ func TestConfigurationAppliedSpec_Composite(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		helmApplied    corev1.ConditionStatus
-		settingsValid  corev1.ConditionStatus
-		expectedStatus corev1.ConditionStatus
+		helmApplied    metav1.ConditionStatus
+		settingsValid  metav1.ConditionStatus
+		expectedStatus metav1.ConditionStatus
 		expectedReason string
 	}{
-		{"both true", corev1.ConditionTrue, corev1.ConditionTrue, corev1.ConditionTrue, ""},
-		{"helm false", corev1.ConditionFalse, corev1.ConditionTrue, corev1.ConditionFalse, ""},
-		{"settings false", corev1.ConditionTrue, corev1.ConditionFalse, corev1.ConditionFalse, "ConfigurationValidationFailed"},
-		{"both false - settings priority", corev1.ConditionFalse, corev1.ConditionFalse, corev1.ConditionFalse, "ConfigurationValidationFailed"},
+		{"both true", metav1.ConditionTrue, metav1.ConditionTrue, metav1.ConditionTrue, ""},
+		{"helm false", metav1.ConditionFalse, metav1.ConditionTrue, metav1.ConditionFalse, ""},
+		{"settings false", metav1.ConditionTrue, metav1.ConditionFalse, metav1.ConditionFalse, "ConfigurationValidationFailed"},
+		{"both false - settings priority", metav1.ConditionFalse, metav1.ConditionFalse, metav1.ConditionFalse, "ConfigurationValidationFailed"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := &types.MappingInput{
-				InternalConditions: map[string]types.InternalCondition{
+			input := &statusmapper.Input{
+				InternalConditions: map[status.ConditionName]status.Condition{
 					"HelmApplied":     {Name: "HelmApplied", Status: tt.helmApplied},
 					"SettingsIsValid": {Name: "SettingsIsValid", Status: tt.settingsValid},
 				},
-				CurrentConditions: make(map[types.ExternalConditionType]types.ExternalCondition),
-				App:               &v1alpha1.Application{},
+				ExternalConditions: make(map[status.ConditionName]status.Condition),
+				App:                &v1alpha1.Application{},
 			}
 
 			result := spec.Map(input)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedStatus, result.Status)
-			assert.Equal(t, tt.expectedReason, result.Reason)
+			assert.Equal(t, status.ConditionReason(tt.expectedReason), result.Reason)
 		})
 	}
 }
-

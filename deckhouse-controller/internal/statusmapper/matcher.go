@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package types
+// Package statusmapper provides a rule-matching engine for condition mapping.
+// It maps internal conditions to external conditions based on declarative rules.
+package statusmapper
 
-// Matcher determines if a rule should trigger.
+// Matcher determines if a condition should match for a given input.
 // Implementations must be deterministic and side-effect free.
 type Matcher interface {
-	Match(input *MappingInput) bool
+	Match(input *Input) bool
 	String() string
 }

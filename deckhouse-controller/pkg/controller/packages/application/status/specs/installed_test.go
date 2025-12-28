@@ -19,22 +19,23 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/types"
 )
 
 func TestInstalledSpec_Sticky(t *testing.T) {
 	spec := InstalledSpec()
 
 	// Input where Installed was already True but internal conditions are now failing
-	input := &types.MappingInput{
-		InternalConditions: map[string]types.InternalCondition{
-			"ReadyInRuntime": {Name: "ReadyInRuntime", Status: corev1.ConditionFalse},
+	input := &statusmapper.Input{
+		InternalConditions: map[status.ConditionName]status.Condition{
+			"ReadyInRuntime": {Name: "ReadyInRuntime", Status: metav1.ConditionFalse},
 		},
-		CurrentConditions: map[types.ExternalConditionType]types.ExternalCondition{
-			types.ConditionInstalled: {Type: types.ConditionInstalled, Status: corev1.ConditionTrue},
+		ExternalConditions: map[status.ConditionName]status.Condition{
+			status.ConditionInstalled: {Name: status.ConditionInstalled, Status: metav1.ConditionTrue},
 		},
 		App:              &v1alpha1.Application{},
 		IsInitialInstall: false,
@@ -44,64 +45,64 @@ func TestInstalledSpec_Sticky(t *testing.T) {
 
 	// Should stay True despite ReadyInRuntime being False (sticky behavior)
 	require.NotNil(t, result)
-	assert.Equal(t, corev1.ConditionTrue, result.Status)
+	assert.Equal(t, metav1.ConditionTrue, result.Status)
 }
 
 func TestInstalledSpec_Initial(t *testing.T) {
 	spec := InstalledSpec()
 
 	tests := []struct {
-		name           string
-		internal       map[string]types.InternalCondition
-		expectedStatus corev1.ConditionStatus
-		expectedReason string
+		name               string
+		internalConditions map[status.ConditionName]status.Condition
+		expectedStatus     metav1.ConditionStatus
+		expectedReason     string
 	}{
 		{
 			name: "all conditions met",
-			internal: map[string]types.InternalCondition{
-				"Downloaded":        {Name: "Downloaded", Status: corev1.ConditionTrue},
-				"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: corev1.ConditionTrue},
-				"RequirementsMet":   {Name: "RequirementsMet", Status: corev1.ConditionTrue},
-				"ReadyInRuntime":    {Name: "ReadyInRuntime", Status: corev1.ConditionTrue},
-				"HooksProcessed":    {Name: "HooksProcessed", Status: corev1.ConditionTrue},
-				"HelmApplied":       {Name: "HelmApplied", Status: corev1.ConditionTrue},
+			internalConditions: map[status.ConditionName]status.Condition{
+				"Downloaded":        {Name: "Downloaded", Status: metav1.ConditionTrue},
+				"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: metav1.ConditionTrue},
+				"RequirementsMet":   {Name: "RequirementsMet", Status: metav1.ConditionTrue},
+				"ReadyInRuntime":    {Name: "ReadyInRuntime", Status: metav1.ConditionTrue},
+				"HooksProcessed":    {Name: "HooksProcessed", Status: metav1.ConditionTrue},
+				"HelmApplied":       {Name: "HelmApplied", Status: metav1.ConditionTrue},
 			},
-			expectedStatus: corev1.ConditionTrue,
+			expectedStatus: metav1.ConditionTrue,
 			expectedReason: "",
 		},
 		{
 			name: "download failed",
-			internal: map[string]types.InternalCondition{
-				"Downloaded": {Name: "Downloaded", Status: corev1.ConditionFalse, Reason: "GetImageReader", Message: "unauthorized"},
+			internalConditions: map[status.ConditionName]status.Condition{
+				"Downloaded": {Name: "Downloaded", Status: metav1.ConditionFalse, Reason: "GetImageReader", Message: "unauthorized"},
 			},
-			expectedStatus: corev1.ConditionFalse,
+			expectedStatus: metav1.ConditionFalse,
 			expectedReason: "DownloadWasFailed",
 		},
 		{
 			name: "requirements not met",
-			internal: map[string]types.InternalCondition{
-				"Downloaded":        {Name: "Downloaded", Status: corev1.ConditionTrue},
-				"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: corev1.ConditionTrue},
-				"RequirementsMet":   {Name: "RequirementsMet", Status: corev1.ConditionFalse, Reason: "RequirementsDeckhouse", Message: "deckhouse version >=1.70 required"},
+			internalConditions: map[status.ConditionName]status.Condition{
+				"Downloaded":        {Name: "Downloaded", Status: metav1.ConditionTrue},
+				"ReadyOnFilesystem": {Name: "ReadyOnFilesystem", Status: metav1.ConditionTrue},
+				"RequirementsMet":   {Name: "RequirementsMet", Status: metav1.ConditionFalse, Reason: "RequirementsDeckhouse", Message: "deckhouse version >=1.70 required"},
 			},
-			expectedStatus: corev1.ConditionFalse,
+			expectedStatus: metav1.ConditionFalse,
 			expectedReason: "RequirementsNotMet",
 		},
 		{
 			name: "downloading in progress",
-			internal: map[string]types.InternalCondition{
-				"Downloaded": {Name: "Downloaded", Status: corev1.ConditionUnknown},
+			internalConditions: map[status.ConditionName]status.Condition{
+				"Downloaded": {Name: "Downloaded", Status: metav1.ConditionUnknown},
 			},
-			expectedStatus: corev1.ConditionFalse,
+			expectedStatus: metav1.ConditionFalse,
 			expectedReason: "Downloading",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			input := &types.MappingInput{
-				InternalConditions: tt.internal,
-				CurrentConditions:  make(map[types.ExternalConditionType]types.ExternalCondition),
+			input := &statusmapper.Input{
+				InternalConditions: tt.internalConditions,
+				ExternalConditions: make(map[status.ConditionName]status.Condition),
 				App:                &v1alpha1.Application{},
 				IsInitialInstall:   true,
 			}
@@ -109,7 +110,7 @@ func TestInstalledSpec_Initial(t *testing.T) {
 			result := spec.Map(input)
 			require.NotNil(t, result)
 			assert.Equal(t, tt.expectedStatus, result.Status)
-			assert.Equal(t, tt.expectedReason, result.Reason)
+			assert.Equal(t, status.ConditionReason(tt.expectedReason), result.Reason)
 		})
 	}
 }
@@ -117,24 +118,23 @@ func TestInstalledSpec_Initial(t *testing.T) {
 func TestInstalledSpec_MessageFromInternal(t *testing.T) {
 	spec := InstalledSpec()
 
-	input := &types.MappingInput{
-		InternalConditions: map[string]types.InternalCondition{
+	input := &statusmapper.Input{
+		InternalConditions: map[status.ConditionName]status.Condition{
 			"Downloaded": {
 				Name:    "Downloaded",
-				Status:  corev1.ConditionFalse,
+				Status:  metav1.ConditionFalse,
 				Reason:  "GetImageReader",
 				Message: "unauthorized: access denied",
 			},
 		},
-		CurrentConditions: make(map[types.ExternalConditionType]types.ExternalCondition),
-		App:               &v1alpha1.Application{},
-		IsInitialInstall:  true,
+		ExternalConditions: make(map[status.ConditionName]status.Condition),
+		App:                &v1alpha1.Application{},
+		IsInitialInstall:   true,
 	}
 
 	result := spec.Map(input)
 	require.NotNil(t, result)
-	assert.Equal(t, corev1.ConditionFalse, result.Status)
-	assert.Equal(t, "DownloadWasFailed", result.Reason)
+	assert.Equal(t, metav1.ConditionFalse, result.Status)
+	assert.Equal(t, status.ConditionReason("DownloadWasFailed"), result.Reason)
 	assert.Equal(t, "unauthorized: access denied", result.Message)
 }
-
