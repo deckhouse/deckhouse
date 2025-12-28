@@ -72,6 +72,7 @@ spec:
           args:
             - "--server-port=127.0.0.1:8080"
             - "--prometheus-port=127.0.0.1:9090"
+            - "--grpc-port=127.0.0.1:50051"
           env:
             - name: POD_NAME
               valueFrom:
