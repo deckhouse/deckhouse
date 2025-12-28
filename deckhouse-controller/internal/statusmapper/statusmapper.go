@@ -26,9 +26,9 @@ type Mapper struct {
 	specs []Spec
 }
 
-// NewMapper creates a mapper with the given condition specs.
+// New creates a mapper with the given condition specs.
 // Specs are validated by unit tests, not at runtime.
-func NewMapper(specs []Spec) *Mapper {
+func New(specs []Spec) *Mapper {
 	return &Mapper{specs: specs}
 }
 

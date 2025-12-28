@@ -25,7 +25,7 @@ import (
 )
 
 func TestDefaultSpecs_NoDuplicateCases(t *testing.T) {
-	mapper := statusmapper.NewMapper(DefaultSpecs())
+	mapper := statusmapper.New(DefaultSpecs())
 	warnings := mapper.DetectDuplicateCases()
 
 	// No warnings expected for default specs
@@ -33,7 +33,7 @@ func TestDefaultSpecs_NoDuplicateCases(t *testing.T) {
 }
 
 func TestDefaultSpecs_FullWorkflow(t *testing.T) {
-	mapper := statusmapper.NewMapper(DefaultSpecs())
+	mapper := statusmapper.New(DefaultSpecs())
 
 	// Helper to convert results slice to map for easier assertions
 	toCondMap := func(results []status.Condition) map[status.ConditionName]status.Condition {

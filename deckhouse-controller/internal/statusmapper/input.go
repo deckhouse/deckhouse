@@ -19,7 +19,7 @@ import (
 )
 
 // Input contains all data needed for condition evaluation.
-// Create directly as a struct literal - no constructor needed.
+// Create directly as a struct literal.
 type Input struct {
 	// InternalConditions from the operator (keyed by condition name)
 	InternalConditions map[status.ConditionName]status.Condition

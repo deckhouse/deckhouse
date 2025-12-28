@@ -45,7 +45,7 @@ func NewService(client client.Client, getter getter, logger *log.Logger) *Servic
 	return &Service{
 		client: client,
 		getter: getter,
-		mapper: statusmapper.NewMapper(specs.DefaultSpecs()),
+		mapper: statusmapper.New(specs.DefaultSpecs()),
 		logger: logger.Named("status-service"),
 	}
 }

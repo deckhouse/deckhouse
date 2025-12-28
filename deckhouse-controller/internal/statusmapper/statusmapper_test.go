@@ -33,7 +33,7 @@ func TestDetectDuplicateCases(t *testing.T) {
 		},
 	}
 
-	mapper := NewMapper(testSpecs)
+	mapper := New(testSpecs)
 	warnings := mapper.DetectDuplicateCases()
 
 	// No warnings expected for well-formed specs
@@ -51,7 +51,7 @@ func TestDetectDuplicateCases_WithDuplicates(t *testing.T) {
 		},
 	}
 
-	mapper := NewMapper(testSpecs)
+	mapper := New(testSpecs)
 	warnings := mapper.DetectDuplicateCases()
 	assert.NotEmpty(t, warnings)
 	assert.Contains(t, warnings[0], "shadowed")
@@ -69,7 +69,7 @@ func TestDetectDuplicateCases_DefaultShadows(t *testing.T) {
 		},
 	}
 
-	mapper := NewMapper(testSpecs)
+	mapper := New(testSpecs)
 	warnings := mapper.DetectDuplicateCases()
 	assert.NotEmpty(t, warnings)
 	assert.Contains(t, warnings[0], "default case")
