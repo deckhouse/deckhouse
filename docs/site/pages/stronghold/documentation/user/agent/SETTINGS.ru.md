@@ -4,6 +4,8 @@ permalink: ru/stronghold/documentation/agent/settings.html
 lang: ru
 ---
 
+{% raw %}
+
 ## Структура конфигурационного файла
 
 Конфигурация Stronghold Agent описывается в HCL формате:
@@ -258,3 +260,5 @@ log_rotate_duration = "24h"
 log_rotate_bytes = 104857600  # 100MB
 log_rotate_max_files = 10
 ```
+
+{% endraw %}
