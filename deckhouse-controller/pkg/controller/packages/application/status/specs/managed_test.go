@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 func TestManagedSpec(t *testing.T) {
@@ -49,7 +48,6 @@ func TestManagedSpec(t *testing.T) {
 					"HooksProcessed": {Name: "HooksProcessed", Status: tt.hooksStatus},
 				},
 				ExternalConditions: make(map[status.ConditionName]status.Condition),
-				App:                &v1alpha1.Application{},
 			}
 
 			result := spec.Map(input)

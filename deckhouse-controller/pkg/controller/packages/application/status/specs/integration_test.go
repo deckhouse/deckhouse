@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package status
+package specs
 
 import (
 	"testing"
@@ -22,12 +22,10 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status/specs"
 )
 
 func TestDefaultSpecs_NoDuplicateCases(t *testing.T) {
-	mapper := statusmapper.NewMapper(specs.DefaultSpecs())
+	mapper := statusmapper.NewMapper(DefaultSpecs())
 	warnings := mapper.DetectDuplicateCases()
 
 	// No warnings expected for default specs
@@ -35,7 +33,7 @@ func TestDefaultSpecs_NoDuplicateCases(t *testing.T) {
 }
 
 func TestDefaultSpecs_FullWorkflow(t *testing.T) {
-	mapper := statusmapper.NewMapper(specs.DefaultSpecs())
+	mapper := statusmapper.NewMapper(DefaultSpecs())
 
 	// Helper to convert results slice to map for easier assertions
 	toCondMap := func(results []status.Condition) map[status.ConditionName]status.Condition {
@@ -207,7 +205,6 @@ func TestDefaultSpecs_FullWorkflow(t *testing.T) {
 			input := &statusmapper.Input{
 				InternalConditions: tt.internalConditions,
 				ExternalConditions: make(map[status.ConditionName]status.Condition),
-				App:                &v1alpha1.Application{},
 				IsInitialInstall:   tt.isInitialInstall,
 				VersionChanged:     tt.versionChanged,
 			}

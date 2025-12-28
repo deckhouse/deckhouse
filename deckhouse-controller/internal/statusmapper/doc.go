@@ -115,7 +115,12 @@ Matchers can be nested arbitrarily:
 	specs := []statusmapper.Spec{InstalledSpec(), ReadySpec(), ...}
 	mapper := statusmapper.NewMapper(specs)
 
-	input := statusmapper.NewInput(app, internalConditions)
+	input := &statusmapper.Input{
+	    InternalConditions: internalCondMap,
+	    ExternalConditions: externalCondMap,
+	    IsInitialInstall:   true,
+	    VersionChanged:     false,
+	}
 	results := mapper.Map(input)  // []status.Condition
 
 # Extending with Custom Matchers
@@ -123,21 +128,21 @@ Matchers can be nested arbitrarily:
 Implement the Matcher interface:
 
 	type MyMatcher struct {
-	    Field string
+	    ExpectedReason string
 	}
 
 	func (m MyMatcher) Match(input *statusmapper.Input) bool {
-	    // custom logic using input.InternalConditions, input.App, etc.
-	    return input.App.Spec.SomeField == m.Field
+	    cond := input.InternalConditions["SomeCondition"]
+	    return string(cond.Reason) == m.ExpectedReason
 	}
 
 	func (m MyMatcher) String() string {
-	    return "MyMatcher(" + m.Field + ")"
+	    return "MyMatcher(" + m.ExpectedReason + ")"
 	}
 
 Then use it in specs:
 
-	{When: MyMatcher{Field: "value"}, Status: metav1.ConditionTrue}
+	{When: MyMatcher{ExpectedReason: "Ready"}, Status: metav1.ConditionTrue}
 
 # Spec Options
 

@@ -137,13 +137,43 @@ func (s *Service) applyInternalConditions(app *v1alpha1.Application, internalCon
 
 // computeExternalConditions uses the mapper to compute external conditions from internal.
 func (s *Service) computeExternalConditions(app *v1alpha1.Application, internalConds []status.Condition) {
-	// Map and apply conditions
-	input := statusmapper.NewInput(app, internalConds)
+	// Build input for the mapper
+	input := s.buildInput(app, internalConds)
 	externalConds := s.mapper.Map(input)
 
 	now := metav1.Now()
 	for _, cond := range externalConds {
 		s.setCondition(app, string(cond.Name), cond.Status, string(cond.Reason), cond.Message, now)
+	}
+}
+
+// buildInput creates mapper input from Application and internal conditions.
+func (s *Service) buildInput(app *v1alpha1.Application, internalConds []status.Condition) *statusmapper.Input {
+	internalMap := make(map[status.ConditionName]status.Condition, len(internalConds))
+	for _, c := range internalConds {
+		internalMap[c.Name] = c
+	}
+
+	externalMap := make(map[status.ConditionName]status.Condition, len(app.Status.Conditions))
+	for _, c := range app.Status.Conditions {
+		externalMap[status.ConditionName(c.Type)] = status.Condition{
+			Name:    status.ConditionName(c.Type),
+			Status:  metav1.ConditionStatus(c.Status),
+			Reason:  status.ConditionReason(c.Reason),
+			Message: c.Message,
+		}
+	}
+
+	isInitialInstall := externalMap[status.ConditionInstalled].Status != metav1.ConditionTrue
+	versionChanged := app.Status.CurrentVersion != nil &&
+		app.Status.CurrentVersion.Current != "" &&
+		app.Spec.Version != app.Status.CurrentVersion.Current
+
+	return &statusmapper.Input{
+		InternalConditions: internalMap,
+		ExternalConditions: externalMap,
+		IsInitialInstall:   isInitialInstall,
+		VersionChanged:     versionChanged,
 	}
 }
 

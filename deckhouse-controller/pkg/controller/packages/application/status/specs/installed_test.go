@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 func TestInstalledSpec_Sticky(t *testing.T) {
@@ -37,7 +36,6 @@ func TestInstalledSpec_Sticky(t *testing.T) {
 		ExternalConditions: map[status.ConditionName]status.Condition{
 			status.ConditionInstalled: {Name: status.ConditionInstalled, Status: metav1.ConditionTrue},
 		},
-		App:              &v1alpha1.Application{},
 		IsInitialInstall: false,
 	}
 
@@ -103,7 +101,6 @@ func TestInstalledSpec_Initial(t *testing.T) {
 			input := &statusmapper.Input{
 				InternalConditions: tt.internalConditions,
 				ExternalConditions: make(map[status.ConditionName]status.Condition),
-				App:                &v1alpha1.Application{},
 				IsInitialInstall:   true,
 			}
 
@@ -128,7 +125,6 @@ func TestInstalledSpec_MessageFromInternal(t *testing.T) {
 			},
 		},
 		ExternalConditions: make(map[status.ConditionName]status.Condition),
-		App:                &v1alpha1.Application{},
 		IsInitialInstall:   true,
 	}
 

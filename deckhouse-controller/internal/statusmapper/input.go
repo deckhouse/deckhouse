@@ -15,55 +15,21 @@
 package statusmapper
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 // Input contains all data needed for condition evaluation.
+// Create directly as a struct literal - no constructor needed.
 type Input struct {
 	// InternalConditions from the operator (keyed by condition name)
 	InternalConditions map[status.ConditionName]status.Condition
 
-	// ExternalConditions from Application.Status.Conditions
+	// ExternalConditions currently set on the resource (keyed by condition name)
 	ExternalConditions map[status.ConditionName]status.Condition
-
-	// App provides access to spec/status for complex predicates
-	App *v1alpha1.Application
 
 	// VersionChanged indicates spec.version != status.currentVersion
 	VersionChanged bool
 
 	// IsInitialInstall indicates Installed condition was never True
 	IsInitialInstall bool
-}
-
-// NewInput builds input from Application and internal conditions.
-func NewInput(app *v1alpha1.Application, internalConds []status.Condition) *Input {
-	input := &Input{
-		InternalConditions: make(map[status.ConditionName]status.Condition),
-		ExternalConditions: make(map[status.ConditionName]status.Condition),
-		App:                app,
-	}
-
-	for _, c := range internalConds {
-		input.InternalConditions[c.Name] = c
-	}
-
-	for _, c := range app.Status.Conditions {
-		input.ExternalConditions[status.ConditionName(c.Type)] = status.Condition{
-			Name:    status.ConditionName(c.Type),
-			Status:  metav1.ConditionStatus(c.Status),
-			Reason:  status.ConditionReason(c.Reason),
-			Message: c.Message,
-		}
-	}
-
-	input.IsInitialInstall = input.ExternalConditions[status.ConditionInstalled].Status != metav1.ConditionTrue
-	input.VersionChanged = app.Status.CurrentVersion != nil &&
-		app.Status.CurrentVersion.Current != "" &&
-		app.Spec.Version != app.Status.CurrentVersion.Current
-
-	return input
 }

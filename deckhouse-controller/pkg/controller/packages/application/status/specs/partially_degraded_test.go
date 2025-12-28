@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/statusmapper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 func TestPartiallyDegradedSpec(t *testing.T) {
@@ -46,7 +45,6 @@ func TestPartiallyDegradedSpec(t *testing.T) {
 					"ReadyInRuntime": {Name: "ReadyInRuntime", Status: tt.runtimeStatus},
 				},
 				ExternalConditions: make(map[status.ConditionName]status.Condition),
-				App:                &v1alpha1.Application{},
 			}
 
 			result := spec.Map(input)
