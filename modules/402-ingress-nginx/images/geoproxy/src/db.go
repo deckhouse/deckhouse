@@ -25,7 +25,7 @@ const (
 )
 
 type GeoDB struct {
-	mu      sync.Mutex
+	MU      sync.Mutex
 	readers map[string]*geoip2.Reader
 }
 
@@ -73,8 +73,8 @@ func NewGeoDB(mmdbDirPath string) (*GeoDB, error) {
 }
 
 func (g *GeoDB) Close() {
-	g.mu.Lock()
-	defer g.mu.Unlock()
+	g.MU.Lock()
+	defer g.MU.Unlock()
 	for _, r := range g.readers {
 		r.Close()
 	}

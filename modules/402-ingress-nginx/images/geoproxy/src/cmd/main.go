@@ -57,7 +57,6 @@ func main() {
 
 	geodb, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
 	if err != nil {
-		geodb.Close()
 		log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
 		stop()
 	}
@@ -65,7 +64,6 @@ func main() {
 
 	fsWatcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		fsWatcher.Close()
 		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
 		stop()
 	}
@@ -82,15 +80,25 @@ func main() {
 		for {
 			select {
 			case <-fsWatcher.Events:
-				// reinit geoDB
-				geoDbForClose := geodb
-				geodb, err = geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+				old := geodb
+				old.MU.Lock()
+				newDB, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
 				if err != nil {
-					geodb.Close()
+					old.MU.Unlock()
 					log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
 					stop()
+					return
 				}
-				geoDbForClose.Close()
+				geodb = newDB
+				old.MU.Unlock()
+				old.Close()
+
+			case err, ok := <-fsWatcher.Errors:
+				if !ok {
+					return
+				}
+				log.Error(fmt.Sprintf("fs watcher err: %v", err))
+
 			case <-ctx.Done():
 				return
 			}
