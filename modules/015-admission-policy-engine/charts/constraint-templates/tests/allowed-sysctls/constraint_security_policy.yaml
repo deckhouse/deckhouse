@@ -16,6 +16,6 @@ spec:
           - baseline
           - restricted
   parameters:
-    allowedSysctls: []
-    forbiddenSysctls:
-      - "*"
+    allowedSysctls: 
+      - kernel.shm_rmid_forced
+      - net.core.rmem_max
