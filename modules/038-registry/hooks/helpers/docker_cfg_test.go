@@ -25,60 +25,145 @@ import (
 )
 
 func TestDockerCfgFromCreds(t *testing.T) {
+	type input struct {
+		username string
+		password string
+		host     string
+	}
+
+	type expected struct {
+		config string
+		err    bool
+	}
+
 	tests := []struct {
-		name      string
-		username  string
-		password  string
-		host      string
-		wantCfg   string
-		wantError bool
+		name     string
+		input    input
+		expected expected
 	}{
+		// Successful cases
 		{
-			name:     "valid credentials",
-			username: "foo",
-			password: "bar",
-			host:     "registry.io",
-			wantCfg: fmt.Sprintf(
-				`{"auths":{"registry.io":{"username":"foo","password":"bar","auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte("foo:bar")),
-			),
+			name: "valid credentials",
+			input: input{
+				username: "foo",
+				password: "bar",
+				host:     "registry.io",
+			},
+			expected: expected{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"username":"foo","password":"bar","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("foo:bar")),
+				),
+			},
 		},
 		{
-			name:     "host with scheme",
-			username: "user",
-			password: "1234",
-			host:     "https://registry.io",
-			wantCfg: fmt.Sprintf(
-				`{"auths":{"registry.io":{"username":"user","password":"1234","auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte("user:1234")),
-			),
+			name: "host with https scheme",
+			input: input{
+				username: "user",
+				password: "1234",
+				host:     "https://registry.io",
+			},
+			expected: expected{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"username":"user","password":"1234","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("user:1234")),
+				),
+			},
 		},
 		{
-			name:     "host with trailing slash",
-			username: "test",
-			password: "123",
-			host:     "https://registry.io/",
-			wantCfg: fmt.Sprintf(
-				`{"auths":{"registry.io":{"username":"test","password":"123","auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte("test:123")),
-			),
+			name: "host with http scheme and port",
+			input: input{
+				username: "test",
+				password: "pass",
+				host:     "http://registry.io:5000",
+			},
+			expected: expected{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io:5000":{"username":"test","password":"pass","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("test:pass")),
+				),
+			},
 		},
 		{
-			name:     "empty credentials",
-			username: "",
-			password: "",
-			host:     "https://registry.io",
-			wantCfg: fmt.Sprintf(
-				`{"auths":{"registry.io":{"auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte(":")),
-			),
+			name: "host with trailing slash",
+			input: input{
+				username: "test",
+				password: "123",
+				host:     "https://registry.io/",
+			},
+			expected: expected{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"username":"test","password":"123","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("test:123")),
+				),
+			},
 		},
 		{
-			name:      "invalid host",
-			username:  "x",
-			password:  "y",
-			host:      "#bad:url",
-			wantError: true,
+			name: "empty username and password",
+			input: input{
+				username: "",
+				password: "",
+				host:     "https://registry.io",
+			},
+			expected: expected{
+				config: `{"auths":{"registry.io":{}}}`,
+			},
+		},
+		{
+			name: "only username provided",
+			input: input{
+				username: "token",
+				password: "",
+				host:     "registry.io",
+			},
+			expected: expected{
+				config: `{"auths":{"registry.io":{"username":"token"}}}`,
+			},
+		},
+		{
+			name: "only password provided",
+			input: input{
+				username: "",
+				password: "secret",
+				host:     "registry.io",
+			},
+			expected: expected{
+				config: `{"auths":{"registry.io":{"password":"secret"}}}`,
+			},
+		},
+		// Error cases
+		{
+			name: "invalid host URL",
+			input: input{
+				username: "x",
+				password: "y",
+				host:     "#bad:url",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "empty host",
+			input: input{
+				username: "user",
+				password: "pass",
+				host:     "",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "host without domain",
+			input: input{
+				username: "user",
+				password: "pass",
+				host:     "://",
+			},
+			expected: expected{
+				err: true,
+			},
 		},
 	}
 
@@ -86,103 +171,256 @@ func TestDockerCfgFromCreds(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cfg, err := DockerCfgFromCreds(tt.username, tt.password, tt.host)
+			cfg, err := DockerCfgFromCreds(tt.input.username, tt.input.password, tt.input.host)
 
-			if tt.wantError {
+			if tt.expected.err {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.JSONEq(t, tt.wantCfg, string(cfg))
+				require.JSONEq(t, tt.expected.config, string(cfg))
 			}
 		})
 	}
 }
 
 func TestCredsFromDockerCfg(t *testing.T) {
+	type input struct {
+		config string
+		host   string
+	}
+
+	type expected struct {
+		username string
+		password string
+		err      bool
+	}
+
 	tests := []struct {
-		name      string
-		config    string
-		host      string
-		wantUser  string
-		wantPass  string
-		wantError bool
+		name     string
+		input    input
+		expected expected
 	}{
+		// Successful cases: different authentication formats
 		{
-			name:     "username and password present",
-			config:   `{"auths":{"registry.io":{"username":"admin","password":"s3cr3t"}}}`,
-			host:     "registry.io",
-			wantUser: "admin",
-			wantPass: "s3cr3t",
+			name: "username and password fields",
+			input: input{
+				config: `{"auths":{"registry.io":{"username":"admin","password":"s3cr3t"}}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "admin",
+				password: "s3cr3t",
+			},
 		},
 		{
 			name: "auth field only",
-			config: fmt.Sprintf(
-				`{"auths":{"registry.io":{"auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte("foo:bar")),
-			),
-			host:     "registry.io",
-			wantUser: "foo",
-			wantPass: "bar",
+			input: input{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("foo:bar")),
+				),
+				host: "registry.io",
+			},
+			expected: expected{
+				username: "foo",
+				password: "bar",
+			},
 		},
 		{
 			name: "auth field overrides username/password",
-			config: fmt.Sprintf(
-				`{"auths":{"registry.io":{"username":"admin","password":"s3cr3t","auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte("foo:bar")),
-			),
-			host:     "registry.io",
-			wantUser: "foo",
-			wantPass: "bar",
+			input: input{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"username":"admin","password":"s3cr3t","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("foo:bar")),
+				),
+				host: "registry.io",
+			},
+			expected: expected{
+				username: "foo",
+				password: "bar",
+			},
+		},
+		// Successful cases: different auth base64 formats
+		{
+			name: "base64 auth with padding",
+			input: input{
+				config: `{"auths":{"registry.io":{"auth": "dXNlcjpwYXNzd29yZA=="}}}`, // user:password
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "user",
+				password: "password",
+			},
 		},
 		{
-			name:     "empty credentials object",
-			config:   `{"auths":{"registry.io":{}}}`,
-			host:     "registry.io",
-			wantUser: "",
-			wantPass: "",
+			name: "base64 auth without padding",
+			input: input{
+				config: `{"auths":{"registry.io":{"auth": "dXNlcjpwYXNz"}}}`, // user:pass
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "user",
+				password: "pass",
+			},
+		},
+		// Successful cases: empty values
+		{
+			name: "empty credentials with colon in auth",
+			input: input{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"username":"","password":"","auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte(":")),
+				),
+				host: "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
 		},
 		{
-			name: "empty fields",
-			config: fmt.Sprintf(
-				`{"auths":{"registry.io":{"username":"","password":"","auth":"%s"}}}`,
-				base64.StdEncoding.EncodeToString([]byte(":")),
-			),
-			host:     "registry.io",
-			wantUser: "",
-			wantPass: "",
+			name: "empty auth field",
+			input: input{
+				config: `{"auths":{"registry.io":{"username":"","password":"","auth":""}}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
 		},
 		{
-			name:     "missing host entry",
-			config:   `{"auths":{"another.io":{"username":"x","password":"y"}}}`,
-			host:     "not-found.io",
-			wantUser: "",
-			wantPass: "",
+			name: "empty credentials object",
+			input: input{
+				config: `{"auths":{"registry.io":{}}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
 		},
 		{
-			name:      "invalid JSON",
-			config:    `not-even-json`,
-			host:      "registry.io",
-			wantError: true,
+			name: "empty auths",
+			input: input{
+				config: `{"auths":{}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
 		},
 		{
-			name:      "invalid base64 in auth",
-			config:    `{"auths":{"registry.io":{"auth":"!!!invalid"}}}`,
-			host:      "registry.io",
-			wantError: true,
+			name: "empty config",
+			input: input{
+				config: `{}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
 		},
 		{
-			name:     "empty credentials strings",
-			config:   `{"auths":{"registry.io":{"username":"","password":"","auth":""}}}`,
-			host:     "registry.io",
-			wantUser: "",
-			wantPass: "",
+			name: "empty string",
+			input: input{
+				config: ``,
+				host:   "registry.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
+		},
+		// Successful cases: host lookup
+		{
+			name: "multiple hosts in config",
+			input: input{
+				config: `{"auths":{"devregistry.io":{"username":"dev","password":"devPassword"}, "testregistry.io":{"username":"test","password":"testPassword"}}}`,
+				host:   "devregistry.io",
+			},
+			expected: expected{
+				username: "dev",
+				password: "devPassword",
+			},
 		},
 		{
-			name:     "missing auths section",
-			config:   `{}`,
-			host:     "registry.io",
-			wantUser: "",
-			wantPass: "",
+			name: "missing hosts in config",
+			input: input{
+				config: `{"auths":{"another.io":{"username":"x","password":"y"}}}`,
+				host:   "not-found.io",
+			},
+			expected: expected{
+				username: "",
+				password: "",
+			},
+		},
+		// Successful cases: host normalization
+		{
+			name: "host with port",
+			input: input{
+				config: `{"auths":{"registry.io:5000":{"username":"portuser","password":"portpass"}}}`,
+				host:   "registry.io:5000",
+			},
+			expected: expected{
+				username: "portuser",
+				password: "portpass",
+			},
+		},
+		// Error cases
+		{
+			name: "invalid JSON",
+			input: input{
+				config: `not-even-json`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "malformed base64 in auth",
+			input: input{
+				config: `{"auths":{"registry.io":{"auth":"!!!invalid"}}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "auth field without colon",
+			input: input{
+				config: fmt.Sprintf(
+					`{"auths":{"registry.io":{"auth":"%s"}}}`,
+					base64.StdEncoding.EncodeToString([]byte("user")),
+				),
+				host: "registry.io",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "invalid host in request",
+			input: input{
+				config: `{"auths":{"registry.io":{"username":"user","password":"pass"}}}`,
+				host:   "#bad:url",
+			},
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "invalid host in config",
+			input: input{
+				config: `{"auths":{"#bad:url":{"username":"user","password":"pass"}}}`,
+				host:   "registry.io",
+			},
+			expected: expected{
+				err: true,
+			},
 		},
 	}
 
@@ -190,55 +428,150 @@ func TestCredsFromDockerCfg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			user, pass, err := CredsFromDockerCfg([]byte(tt.config), tt.host)
+			user, pass, err := CredsFromDockerCfg([]byte(tt.input.config), tt.input.host)
 
-			if tt.wantError {
+			if tt.expected.err {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.wantUser, user)
-				require.Equal(t, tt.wantPass, pass)
+				require.Equal(t, tt.expected.username, user)
+				require.Equal(t, tt.expected.password, pass)
 			}
 		})
 	}
 }
 
 func TestNormalizeHost(t *testing.T) {
+	type expected struct {
+		host string
+		err  bool
+	}
+
 	tests := []struct {
 		name     string
-		input    string
-		expected string
-		wantErr  bool
+		host     string
+		expected expected
 	}{
+		// Successful cases
 		{
-			name:     "plain host",
-			input:    "docker.io",
-			expected: "docker.io",
+			name: "plain domain",
+			host: "docker.io",
+			expected: expected{
+				host: "docker.io",
+			},
 		},
 		{
-			name:     "https scheme",
-			input:    "https://docker.io",
-			expected: "docker.io",
+			name: "with www prefix",
+			host: "www.docker.io",
+			expected: expected{
+				host: "www.docker.io",
+			},
 		},
 		{
-			name:     "http with port",
-			input:    "http://example.com:5000",
-			expected: "example.com:5000",
+			name: "https scheme",
+			host: "https://docker.io",
+			expected: expected{
+				host: "docker.io",
+			},
 		},
 		{
-			name:    "empty input",
-			input:   "",
-			wantErr: true,
+			name: "http scheme",
+			host: "http://example.com",
+			expected: expected{
+				host: "example.com",
+			},
 		},
 		{
-			name:    "malformed URL",
-			input:   "#bad:url",
-			wantErr: true,
+			name: "http with port",
+			host: "http://example.com:5000",
+			expected: expected{
+				host: "example.com:5000",
+			},
 		},
 		{
-			name:     "trailing slash",
-			input:    "https://docker.io/",
-			expected: "docker.io",
+			name: "https with port",
+			host: "https://example.com:443",
+			expected: expected{
+				host: "example.com:443",
+			},
+		},
+		{
+			name: "with path and query",
+			host: "https://example.com:5000/v2/path?query=value",
+			expected: expected{
+				host: "example.com:5000",
+			},
+		},
+		{
+			name: "trailing slash",
+			host: "https://docker.io/",
+			expected: expected{
+				host: "docker.io",
+			},
+		},
+		{
+			name: "IP address",
+			host: "192.168.1.1",
+			expected: expected{
+				host: "192.168.1.1",
+			},
+		},
+		{
+			name: "IP address with port",
+			host: "192.168.1.1:5000",
+			expected: expected{
+				host: "192.168.1.1:5000",
+			},
+		},
+		{
+			name: "localhost",
+			host: "localhost",
+			expected: expected{
+				host: "localhost",
+			},
+		},
+		{
+			name: "localhost with port",
+			host: "localhost:5000",
+			expected: expected{
+				host: "localhost:5000",
+			},
+		},
+		// Error cases
+		{
+			name: "empty input",
+			host: "",
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "malformed URL",
+			host: "#bad:url",
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "only scheme",
+			host: "http://",
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "host without domain",
+			host: "://",
+			expected: expected{
+				err: true,
+			},
+		},
+		{
+			name: "port without domain",
+			host: ":9000",
+			expected: expected{
+				err: true,
+			},
 		},
 	}
 
@@ -246,13 +579,13 @@ func TestNormalizeHost(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			result, err := normalizeHost(tt.input)
+			host, err := normalizeHost(tt.host)
 
-			if tt.wantErr {
+			if tt.expected.err {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tt.expected, result)
+				require.Equal(t, tt.expected.host, host)
 			}
 		})
 	}
