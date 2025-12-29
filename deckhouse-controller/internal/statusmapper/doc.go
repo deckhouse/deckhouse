@@ -113,7 +113,7 @@ Matchers can be nested arbitrarily:
 # Using the Mapper
 
 	specs := []statusmapper.Spec{InstalledSpec(), ReadySpec(), ...}
-	mapper := statusmapper.NewMapper(specs)
+	mapper := statusmapper.New(specs)
 
 	input := &statusmapper.Input{
 	    InternalConditions: internalCondMap,
@@ -155,7 +155,7 @@ Then use it in specs:
 
 Use [Mapper.DetectDuplicateCases] to find shadowed or duplicate rules:
 
-	mapper := statusmapper.NewMapper(specs)
+	mapper := statusmapper.New(specs)
 	warnings := mapper.DetectDuplicateCases()
 	// warnings contains descriptions of any problematic cases
 */
