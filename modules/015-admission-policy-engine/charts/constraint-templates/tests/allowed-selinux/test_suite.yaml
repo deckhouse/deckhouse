@@ -85,6 +85,12 @@ tests:
     object: test_samples/constraint_templates/pss_baseline/009-disallowed-daemonset-custom-selinux-options-container.yaml
     assertions:
     - violations: no
+  - name: 014-allowed-container-t-level
+    inventory:
+    - ../common/test_samples/ns.yaml
+    object: test_samples/constraint_templates/pss_baseline/014-allowed-container-t-level.yaml
+    assertions:
+    - violations: no
 - name: security-policy
   template: ../../templates/security/allowed-selinux.yaml
   constraint: constraint_security_policy.yaml
