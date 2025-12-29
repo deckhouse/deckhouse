@@ -569,6 +569,15 @@ apiVersions:
 
                 > If not explicitly specified, the default namespace for kubeconfig will be used.
               type: string
+            networkPolicy:
+              type: string
+              description: |
+                NetworkPolicy mode for the Project where the cluster is deployed.
+
+              enum:
+                - Isolated
+                - NotRestricted
+              default: Isolated
           required:
             - kubeconfigDataBase64
             - namespace
