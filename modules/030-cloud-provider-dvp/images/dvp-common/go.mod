@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/deckhouse/virtualization/api v0.15.0
 	github.com/hashicorp/go-multierror v1.1.1
+	github.com/kubernetes-csi/external-snapshotter/client/v8 v8.4.0
 	k8s.io/api v0.32.1
 	k8s.io/apimachinery v0.32.1
 	k8s.io/client-go v0.32.1

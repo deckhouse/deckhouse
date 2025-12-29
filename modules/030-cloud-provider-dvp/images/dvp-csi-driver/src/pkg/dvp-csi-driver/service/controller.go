@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/klog/v2"
 )
 
@@ -427,4 +428,48 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 		)
 	}
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
+}
+
+func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
+
+	vd, err := d.dvpCloudAPI.DiskService.GetDiskByName(ctx, request.SourceVolumeId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get virtual disk %s: %v", request.SourceVolumeId, err)
+	}
+
+	volumeSnapshotClassName := vd.Spec.PersistentVolumeClaim.StorageClass
+
+	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId, *volumeSnapshotClassName)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshotCreationTimestamp := timestamppb.New(snapshot.CreationTimestamp.Time)
+
+	response := &csi.CreateSnapshotResponse{
+		Snapshot: &csi.Snapshot{
+			SnapshotId:     request.Name,
+			SourceVolumeId: request.SourceVolumeId,
+			ReadyToUse:     true,
+			CreationTime:   snapshotCreationTimestamp,
+		},
+	}
+
+	return response, nil
+}
+
+func (d *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+	klog.Infof("Deleting snapshot %v", request.SnapshotId)
+
+	err := d.dvpCloudAPI.DiskService.DeleteVolumeSnapshot(ctx, request.SnapshotId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete snapshot %s: %v", request.SnapshotId, err)
+	}
+
+	return &csi.DeleteSnapshotResponse{}, nil
+}
+
+func (d *ControllerService) ListSnapshots(_ context.Context, _ *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	return nil, nil
 }
