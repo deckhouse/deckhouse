@@ -74,7 +74,6 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle security
 				"policies": {
 					"allowRbacWildcards": true,
 					"automountServiceAccountToken": true,
- 					"seccompProfiles": {},
 					"verifyImageSignatures": [
 						{
 							"dockerCfg": "zxc=",
@@ -461,6 +460,27 @@ spec:
 				Expect(n.Get(tc.path).Exists()).To(BeTrue())
 				Expect(n.Get(tc.path).Array()).ToNot(BeEmpty())
 			}
+		})
+
+		It("should omit seccompProfiles object when not specified at all", func() {
+			o := runAndGet(securityPolicyYAML(""))
+			Expect(o.Get("spec.policies.seccompProfiles").Exists()).To(BeFalse())
+		})
+
+		It("should omit UID strategy objects when not specified and keep when set", func() {
+			o := runAndGet(securityPolicyYAML(""))
+			Expect(o.Get("spec.policies.fsGroup").Exists()).To(BeFalse())
+			Expect(o.Get("spec.policies.runAsUser").Exists()).To(BeFalse())
+			Expect(o.Get("spec.policies.runAsGroup").Exists()).To(BeFalse())
+			Expect(o.Get("spec.policies.supplementalGroups").Exists()).To(BeFalse())
+
+			n := runAndGet(securityPolicyYAML("    fsGroup:\n      rule: MustRunAs\n      ranges:\n      - min: 1\n        max: 2\n    supplementalGroups:\n      rule: MustRunAs\n      ranges:\n      - min: 3\n        max: 4"))
+			Expect(n.Get("spec.policies.fsGroup").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.fsGroup.ranges").Array()).ToNot(BeEmpty())
+			Expect(n.Get("spec.policies.fsGroup.rule").String()).To(Equal("MustRunAs"))
+			Expect(n.Get("spec.policies.supplementalGroups").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.supplementalGroups.ranges").Array()).ToNot(BeEmpty())
+			Expect(n.Get("spec.policies.supplementalGroups.rule").String()).To(Equal("MustRunAs"))
 		})
 
 		It("should keep preprocess optimizations (nil out specific fields)", func() {
