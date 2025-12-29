@@ -42,8 +42,6 @@ spec:
         {{- $nets = concat $nets $ic.subnets -}}
       {{- end -}}
 
-      subnets:
-{{- toYaml (uniq $nets) | nindent 8 }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
