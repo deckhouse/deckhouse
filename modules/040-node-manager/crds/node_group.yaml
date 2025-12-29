@@ -1666,7 +1666,7 @@ spec:
                     Parameter for provisioning static machines to the cluster.
                   type: object
                   x-kubernetes-validations:
-                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                    - message: "spec.staticInstances.labelSelector can be added but cannot be modified once set. To change it, create a new NodeGroup."
                       rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
