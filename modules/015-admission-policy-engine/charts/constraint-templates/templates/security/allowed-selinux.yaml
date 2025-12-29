@@ -84,6 +84,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
                 allowed_options := exception.spec.securityContext.seLinuxOptions.allowedValues
                 out := sprintf("SecurityPolicyException allowed options: %v", [allowed_options])
               }
@@ -96,6 +99,30 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "seLinuxOptions")
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                not has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
               }
 
               build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
@@ -134,6 +161,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
                 exception_params := exception.spec.securityContext.seLinuxOptions.allowedValues[_]
                 seLinuxOptions_fields_allowed(options, exception_params)
               }
@@ -160,6 +190,18 @@ spec:
 
               field_allowed(field, options, params) if {
                 not has_field(options, field)
+              }
+
+              # If level is empty in constraint, allow any level value
+              field_allowed(field, options, params) if {
+                field == "level"
+                not has_field(params, field)
+              }
+
+              field_allowed(field, options, params) if {
+                field == "level"
+                has_field(params, field)
+                params[field] == ""
               }
 
               input_security_context contains c if {

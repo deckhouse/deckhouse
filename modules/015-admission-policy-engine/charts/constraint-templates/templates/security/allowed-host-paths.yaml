@@ -56,6 +56,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                has_field(exception.spec.volumes.hostPath, "allowedValues")
                 allowed_paths := exception.spec.volumes.hostPath.allowedValues
                 formatted_paths := [{"hostPath": {"path": path.path, "type": ""}, "name": "<any>"} | path := allowed_paths[_]]
                 out := sprintf("SecurityPolicyException allowed: %v", [formatted_paths])
@@ -69,6 +72,30 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "volumes")
+              }
+
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                not has_field(exception.spec.volumes, "hostPath")
+              }
+
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                not has_field(exception.spec.volumes.hostPath, "allowedValues")
               }
 
               build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
@@ -163,6 +190,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                has_field(exception.spec.volumes.hostPath, "allowedValues")
                 allowedPaths := exception.spec.volumes.hostPath.allowedValues
                 input_hostpath_allowed_exact(allowedPaths, volume)
               }

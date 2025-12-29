@@ -77,6 +77,9 @@ spec:
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                   namespace := input.review.object.metadata.namespace
                   exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  has_field(exception.spec.securityContext.sysctls, "allowedValues")
                   allowed_sysctls := exception.spec.securityContext.sysctls.allowedValues
                   out := sprintf("SecurityPolicyException allowed sysctls: %v", [allowed_sysctls])
               }
@@ -89,6 +92,30 @@ spec:
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                   namespace := input.review.object.metadata.namespace
                   not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  not has_field(exception.spec, "securityContext")
+              }
+
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  not has_field(exception.spec.securityContext, "sysctls")
+              }
+
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  not has_field(exception.spec.securityContext.sysctls, "allowedValues")
               }
 
               build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
@@ -118,6 +145,9 @@ spec:
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                   namespace := input.review.object.metadata.namespace
                   exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  has_field(exception.spec.securityContext.sysctls, "allowedValues")
                   exception_params := exception.spec.securityContext.sysctls.allowedValues
                   sysctl in exception_params
               }
@@ -154,4 +184,13 @@ spec:
                   allowed := input.parameters.allowedSysctls[_]
                   endswith(allowed, "*")
                   startswith(sysctl, trim_suffix(allowed, "*"))
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }

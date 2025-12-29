@@ -146,6 +146,11 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsUser")
+                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
+                has_field(exception.spec.securityContext, "runAsNonRoot")
+                has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 container_user := get_field_value("runAsUser", container, input.review)
@@ -200,6 +205,11 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsUser")
+                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
+                has_field(exception.spec.securityContext, "runAsNonRoot")
+                has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 out := sprintf("SecurityPolicyException allowed: runAsUser: %v, runAsNonRoot: %v", [allowed_users, run_as_non_root])
@@ -213,6 +223,47 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "runAsUser")
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsUser")
+                not has_field(exception.spec.securityContext.runAsUser, "allowedValues")
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "runAsNonRoot")
+              }
+
+              exception_allowed_users_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsNonRoot")
+                not has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
               }
 
               build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
@@ -272,6 +323,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsGroup")
+                has_field(exception.spec.securityContext.runAsGroup, "allowedValues")
                 field == "runAsGroup"
                 allowed := exception.spec.securityContext.runAsGroup.allowedValues
                 out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
@@ -281,6 +335,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "supplementalGroups")
+                has_field(exception.spec.securityContext.supplementalGroups, "allowedValues")
                 field == "supplementalGroups"
                 allowed := exception.spec.securityContext.supplementalGroups.allowedValues
                 out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
@@ -290,6 +347,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "fsGroup")
+                has_field(exception.spec.securityContext.fsGroup, "allowedValues")
                 field == "fsGroup"
                 allowed := exception.spec.securityContext.fsGroup.allowedValues
                 out := sprintf("SecurityPolicyException allowed: %v: %v", [field, allowed])
@@ -303,6 +363,70 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "runAsGroup"
+                not has_field(exception.spec.securityContext, "runAsGroup")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "runAsGroup"
+                has_field(exception.spec.securityContext, "runAsGroup")
+                not has_field(exception.spec.securityContext.runAsGroup, "allowedValues")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "supplementalGroups"
+                not has_field(exception.spec.securityContext, "supplementalGroups")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "supplementalGroups"
+                has_field(exception.spec.securityContext, "supplementalGroups")
+                not has_field(exception.spec.securityContext.supplementalGroups, "allowedValues")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "fsGroup"
+                not has_field(exception.spec.securityContext, "fsGroup")
+              }
+
+              get_exception_allowed_group(field) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                field == "fsGroup"
+                has_field(exception.spec.securityContext, "fsGroup")
+                not has_field(exception.spec.securityContext.fsGroup, "allowedValues")
               }
 
               build_group_message(name, field, actual_value, allowed_by_policy, exception_allowed) := msg if {
@@ -363,4 +487,13 @@ spec:
 
               input_containers contains c if {
                 c := input.review.object.spec.ephemeralContainers[_]
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }

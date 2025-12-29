@@ -203,7 +203,7 @@ tests:
           - ../common/test_samples/ns.yaml
         object: test_samples/security_policy_exceptions/pods/044-disallowed-no-exception-container-port.yaml
         assertions:
-          - violations: yes          
+          - violations: yes
       - name: 018-031-allowed-by-exception-port-exactly-min-constraint-range
         inventory:
           - ../common/test_samples/ns.yaml
@@ -232,6 +232,14 @@ tests:
         object: test_samples/security_policy_exceptions/pods/046-disallowed-exception-container-port.yaml
         assertions:
           - violations: yes
+      - name: 023-047-disallowed-by-exception-empty-spec
+        inventory:
+          - ../common/test_samples/ns.yaml
+          - test_samples/security_policy_exceptions/exceptions/023-empty-spec.yaml
+        object: test_samples/security_policy_exceptions/pods/047-disallowed-by-exception-empty-spec.yaml
+        assertions:
+          - violations: yes
+
   - name: security-policy-restrictive-with-exception
     template: ../../templates/security/allow-host-network.yaml
     constraint: constraint_pss_deny_all.yaml
@@ -256,11 +264,3 @@ tests:
         object: test_samples/security_policy_exceptions/pods/042-disallowed-no-exception-label.yaml
         assertions:
           - violations: yes
-
-  - name: 47-disallowed-by-exception-empty-spec
-    inventory:
-    - ../common/test_samples/ns.yaml
-    - test_samples/security_policy_exceptions/exceptions/empty-spec.yaml
-    object: test_samples/security_policy_exceptions/pods/disallowed-by-exception-empty-spec.yaml
-    assertions:
-    - violations: yes
