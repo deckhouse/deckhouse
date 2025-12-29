@@ -186,9 +186,14 @@ func preprocesSecurityPolicy(sp *securityPolicy) {
 		sp.Spec.Policies.AllowedVolumes = nil
 	}
 	// Having all seccomp profiles allowed also isn't worth creating a constraint
-	if hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
-		sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
-		sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+	if sp.Spec.Policies.SeccompProfiles != nil {
+		if hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedProfiles, "*") && hasItemPtr(sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles, "*") {
+			sp.Spec.Policies.SeccompProfiles.AllowedProfiles = nil
+			sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles = nil
+		}
+		if sp.Spec.Policies.SeccompProfiles.AllowedProfiles == nil && sp.Spec.Policies.SeccompProfiles.AllowedLocalhostFiles == nil {
+			sp.Spec.Policies.SeccompProfiles = nil
+		}
 	}
 	// Having rules allowing '*' volumes makes no sense
 	if hasItemPtr(sp.Spec.Policies.AllowedClusterRoles, "*") {
