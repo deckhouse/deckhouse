@@ -427,7 +427,7 @@ properties:
               networkPolicy:
                 type: string
                 description: |
-                 NetworkPolicy mode for the Project where the cluster is deployed.
+                  NetworkPolicy mode for the Project where the cluster is deployed.
 
                enum:
                  - Isolated
