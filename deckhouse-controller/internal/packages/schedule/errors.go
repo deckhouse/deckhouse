@@ -33,7 +33,7 @@ func newRequirementsErr(reason, msg string) error {
 		Err: errors.New(msg),
 		Conditions: []status.Condition{
 			{
-				Name:    status.ConditionRequirementsMet,
+				Type:    status.ConditionRequirementsMet,
 				Status:  metav1.ConditionFalse,
 				Reason:  status.ConditionReason(reason),
 				Message: msg,
