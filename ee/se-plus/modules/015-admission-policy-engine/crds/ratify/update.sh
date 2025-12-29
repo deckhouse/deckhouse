@@ -4,7 +4,6 @@
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
 echo "Update ratify crds"
-current_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 script_path=$(dirname "${BASH_SOURCE[0]}")
 version=$(cat $script_path/../../images/ratify/werf.inc.yaml | grep "ratifyVersion :=" | sed -n 's/.*"\(.*\)".*/\1/p')
 echo Ratify version: $version

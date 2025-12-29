@@ -37,6 +37,7 @@ shell:
   # check if module crds/ratify are the same as ratify crds
   - | 
     echo "Checking if module crds/native are the same as ratify crds"
+    rm -f "/module_crds/ratify/!( *.yaml )"
     diff -qr "/src/config/crd/bases" "/module_crds/ratify"   
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
