@@ -150,7 +150,7 @@ spec:
                 has_field(exception.spec.securityContext, "runAsUser")
                 has_field(exception.spec.securityContext.runAsUser, "allowedValues")
                 has_field(exception.spec.securityContext, "runAsNonRoot")
-                has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
+                exception.spec.securityContext.runAsNonRoot.allowedValue
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 container_user := get_field_value("runAsUser", container, input.review)
@@ -209,7 +209,7 @@ spec:
                 has_field(exception.spec.securityContext, "runAsUser")
                 has_field(exception.spec.securityContext.runAsUser, "allowedValues")
                 has_field(exception.spec.securityContext, "runAsNonRoot")
-                has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
+                exception.spec.securityContext.runAsNonRoot.allowedValue
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 out := sprintf("SecurityPolicyException allowed: runAsUser: %v, runAsNonRoot: %v", [allowed_users, run_as_non_root])
@@ -263,7 +263,8 @@ spec:
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "runAsNonRoot")
-                not has_field(exception.spec.securityContext.runAsNonRoot, "allowedValue")
+                not exception.spec.securityContext.runAsNonRoot.allowedValue
+                exception.spec.securityContext.runAsNonRoot.allowedValue != false
               }
 
               build_user_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
