@@ -7,43 +7,43 @@ tests:
   template: ../../templates/security/allowed-ingresses.yaml
   constraint: constraint_pss_deny_all.yaml
   cases:
-  - name: 1-allowed-no-wildcard
+  - name: 001-allowed-no-wildcard
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/pss_deny_all/001-allowed-no-wildcard.yaml
     assertions:
-    - violations: no
-  - name: 3-disallowed-wildcard-in-host
+    - violations: 'no'
+  - name: 003-disallowed-wildcard-in-host
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/pss_deny_all/003-disallowed-wildcard-in-host.yaml
     assertions:
-    - violations: yes
-  - name: 4-disallowed-wildcard-only
+    - violations: 'yes'
+  - name: 004-disallowed-wildcard-only
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/pss_deny_all/004-disallowed-wildcard-only.yaml
     assertions:
-    - violations: yes
-  - name: 2-disallowed-multiple-rules-one-wildcard
+    - violations: 'yes'
+  - name: 002-disallowed-multiple-rules-one-wildcard
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/pss_deny_all/002-disallowed-multiple-rules-one-wildcard.yaml
     assertions:
-    - violations: yes
+    - violations: 'yes'
 - name: security-policy
   template: ../../templates/security/allowed-ingresses.yaml
   constraint: constraint_security_policy.yaml
   cases:
-  - name: 6-allowed-wildcard-when-disabled
+  - name: 006-allowed-wildcard-when-disabled
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/security_policy/006-allowed-wildcard-when-disabled.yaml
     assertions:
-    - violations: yes
-  - name: 5-allowed-no-wildcard-when-disabled
+    - violations: 'yes'
+  - name: 005-allowed-no-wildcard-when-disabled
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/constraint_templates/security_policy/005-allowed-no-wildcard-when-disabled.yaml
     assertions:
-    - violations: no
+    - violations: 'no'
