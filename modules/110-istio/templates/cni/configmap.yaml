@@ -19,7 +19,6 @@ data:
         "exclude_namespaces": [
           "d8-istio",
           "d8-system",
-          "istio-system",
           "kube-system"
         ]
       }
