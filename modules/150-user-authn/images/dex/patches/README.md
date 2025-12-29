@@ -46,7 +46,16 @@ Upstream PR: https://github.com/dexidp/dex/pull/4363
 
 ### 008-hide-internal-500-error-details.patch
 
-This patch fixes the behavior of `insecureSkipEmailVerified` flag in OIDC connector to completely remove the `email_verified` claim from identity when the flag is enabled.
+This patch prevents internal server error details from being exposed to end users in HTTP responses.
+It replaces detailed error messages (including stack traces, database errors, and internal implementation details)
+with safe, user-friendly messages while ensuring all error details are properly logged server-side.
+
+Key changes:
+- Centralized safe error messages in `server/errors.go`
+- Replaced `err.Error()` calls in HTTP responses with generic messages
+- Added proper logging for all internal errors
+- Added comprehensive tests to prevent future regressions
+- Maintained OAuth2/OIDC protocol compliance
 
 ### 009-kerberos-ldap-spnego.patch
 
