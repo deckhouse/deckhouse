@@ -1,0 +1,149 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.15.0
+  name: verifiers.config.ratify.deislabs.io
+spec:
+  group: config.ratify.deislabs.io
+  names:
+    kind: Verifier
+    listKind: VerifierList
+    plural: verifiers
+    singular: verifier
+  scope: Cluster
+  versions:
+  - deprecated: true
+    deprecationWarning: v1alpha1 of the Verifier API has been deprecated. Please migrate
+      to v1beta1.
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Verifier is the Schema for the verifiers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VerifierSpec defines the desired state of Verifier
+            properties:
+              address:
+                description: '# Optional. URL/file path'
+                type: string
+              artifactTypes:
+                description: The type of artifact this verifier handles
+                type: string
+              name:
+                description: Name of the verifier
+                type: string
+              parameters:
+                description: Parameters for this verifier
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              source:
+                description: OCI Artifact source to download the plugin from, optional
+                properties:
+                  artifact:
+                    description: OCI Artifact source to download the plugin from
+                    type: string
+                  authProvider:
+                    description: AuthProvider to use to authenticate to the OCI Artifact
+                      source, optional
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
+            type: object
+          status:
+            description: VerifierStatus defines the observed state of Verifier
+            type: object
+        type: object
+    served: true
+    storage: false
+  - additionalPrinterColumns:
+    - jsonPath: .status.issuccess
+      name: IsSuccess
+      type: boolean
+    - jsonPath: .status.brieferror
+      name: Error
+      type: string
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Verifier is the Schema for the verifiers API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: VerifierSpec defines the desired state of Verifier
+            properties:
+              address:
+                description: '# Optional. URL/file path'
+                type: string
+              artifactTypes:
+                description: The type of artifact this verifier handles
+                type: string
+              name:
+                description: Name of the verifier
+                type: string
+              version:
+                description: Version of the verifier plugin. Optional
+                type: string   
+              parameters:
+                description: Parameters for this verifier
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              source:
+                description: OCI Artifact source to download the plugin from, optional
+                properties:
+                  artifact:
+                    description: OCI Artifact source to download the plugin from
+                    type: string
+                  authProvider:
+                    description: AuthProvider to use to authenticate to the OCI Artifact
+                      source, optional
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                type: object
+            required:
+            - artifactTypes
+            - name
+            type: object
+          status:
+            description: VerifierStatus defines the observed state of Verifier
+            properties:
+              brieferror:
+                description: Truncated error message if the message is too long
+                type: string
+              error:
+                description: Error message if operation was unsuccessful
+                type: string
+              issuccess:
+                description: Is successful in finding the plugin
+                type: boolean
+            required:
+            - issuccess
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
