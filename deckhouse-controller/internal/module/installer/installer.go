@@ -72,13 +72,22 @@ func (i *Installer) GetInstalled() (map[string]struct{}, error) {
 		return nil, fmt.Errorf("read installed dir: %w", err)
 	}
 
+	// Pattern to match optional weight prefix: 920-modulename -> modulename
+	weightPattern := regexp.MustCompile(`^(?:[0-9]+-)?(.+)$`)
+
 	installed := make(map[string]struct{})
 	for _, entry := range entries {
 		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
 			continue
 		}
 
-		installed[entry.Name()] = struct{}{}
+		name := entry.Name()
+		// Remove weight prefix if present
+		if matches := weightPattern.FindStringSubmatch(name); len(matches) > 1 {
+			name = matches[1]
+		}
+
+		installed[name] = struct{}{}
 	}
 
 	return installed, nil
