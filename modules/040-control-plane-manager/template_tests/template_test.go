@@ -890,6 +890,20 @@ apiserver:
     webhookCacheTTL: "5m"
 `
 
+		const webhookAuthzMissingCATestValues = `
+internal:
+  effectiveKubernetesVersion: "1.31"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+`
+
 		const v1beta3TestValues = `
 internal:
   effectiveKubernetesVersion: "1.30"
@@ -949,6 +963,18 @@ apiserver:
 
 				// v1beta4 should NOT have the map syntax
 				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+			})
+		})
+
+		Context("v1beta4 with authz webhookURL but without webhookCA", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", webhookAuthzMissingCATestValues)
+				f.HelmRender()
+			})
+
+			It("should fail helm render with explicit error", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+				Expect(f.RenderError.Error()).To(ContainSubstring("controlPlaneManager.apiserver.authz.webhookCA is required"))
 			})
 		})
 
