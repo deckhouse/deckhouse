@@ -135,10 +135,16 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
 	if err != nil {
-		log.ErrorF("Get master node pipeline outputs: %v", err)
+		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
 	}
 
-	h.oldMasterIPForSSH = outputs.MasterIPForSSH
+	masterIP := outputs.MasterIPForSSH
+	if masterIP == "" {
+		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToConverge)
+		return false, nil
+	}
+
+	h.oldMasterIPForSSH = masterIP
 
 	return false, nil
 }
