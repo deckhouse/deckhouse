@@ -3,6 +3,7 @@ apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthorizationConfiguration
 authorizers:
   - type: Node
+    name: node
   - type: Webhook
     name: user-authz-webhook
     webhook:
@@ -14,7 +15,8 @@ authorizers:
       # Fail closed if webhook is unavailable/returns errors.
       failurePolicy: Deny
       connectionInfo:
-        type: KubeConfig
+        type: KubeConfigFile
         kubeConfigFile: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
   - type: RBAC
+    name: rbac
 {{- end -}}

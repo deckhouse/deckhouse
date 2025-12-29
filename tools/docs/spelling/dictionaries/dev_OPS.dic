@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 2539
+=======
+2529
+>>>>>>> 6fee35f3fb (minor fixes)
 1GB
 2GB
 5XX
@@ -175,6 +179,7 @@ ceph
 Ceph
 CEPH
 CephFS
+CertificateSigningRequest
 certExporter
 certmanager
 certManager
@@ -310,6 +315,7 @@ CSE
 csi
 CSI
 CSR
+CSRs
 css
 csv
 CUDA
@@ -1636,6 +1642,7 @@ ZvirtInstanceClass
 Автообновление
 автообновлений
 автообновления
+авторизаторами
 авторизовывать
 авторизовываться
 автоскейлерам
