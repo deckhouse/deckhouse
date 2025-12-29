@@ -70,6 +70,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     etcdDiskSizeGb: 10
+    systemRegistryDiskSizeGb: 100
     platform: standard-v2
     cores: 4
     memory: 8192
@@ -82,6 +83,10 @@ provider:
   cloudID: cloudId
   folderID: folderId
   serviceAccountJSON: "{}"
+`
+
+	providerSecondaryDevicesConfig = `
+RegistryDataDeviceEnable: false
 `
 )
 
@@ -125,6 +130,7 @@ internalNetworkCIDRs:
 		test.secretsToAssert = append(
 			test.secretsToAssert,
 			manifests.SecretWithStaticClusterConfig(params.commanderStateAfter.ProviderClusterConfigurationData),
+			manifests.SecretWithProviderSecondaryDevicesConfig([]byte(providerSecondaryDevicesConfig)),
 		)
 
 		test.assetAndRun(t)
@@ -163,6 +169,7 @@ internalNetworkCIDRs:
 		test.secretsToAssert = append(
 			test.secretsToAssert,
 			manifests.SecretWithStaticClusterConfig(params.commanderStateAfter.ProviderClusterConfigurationData),
+			manifests.SecretWithProviderSecondaryDevicesConfig([]byte(providerSecondaryDevicesConfig)),
 		)
 
 		test.assetAndRun(t)
@@ -193,6 +200,7 @@ masterNodeGroup:
   replicas: 3
   instanceClass:
     etcdDiskSizeGb: 10
+    systemRegistryDiskSizeGb: 100
     platform: standard-v2
     cores: 4
     memory: 8192
@@ -238,6 +246,9 @@ provider:
 			manifests.SecretWithProviderClusterConfig(
 				params.commanderStateAfter.ProviderClusterConfigurationData,
 				yandexProviderClusterDataDiscovery,
+			),
+			manifests.SecretWithProviderSecondaryDevicesConfig(
+				[]byte(providerSecondaryDevicesConfig),
 			),
 		)
 

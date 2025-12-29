@@ -286,11 +286,20 @@ function main() {
   export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
+  export RUN_TYPE="{{ .runType }}"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
   export REGISTRY_MODULE_ADDRESS="registry.d8-system.svc:5001" # Deprecated
 {{- if .packagesProxy }}
   export PACKAGES_PROXY_ADDRESSES="{{ .packagesProxy.addresses | join "," }}"
   export PACKAGES_PROXY_TOKEN="{{ .packagesProxy.token }}"
+{{- end }}
+{{- if .normal }}
+  {{- if .normal.apiserverEndpoints }}
+  export API_SERVER_ENDPOINTS="{{ .normal.apiserverEndpoints | join "," }}"
+  {{- end }}
+{{- end }}
+{{- if eq .runType "ClusterBootstrap" }}
+  export IGNITER_DIR="/opt/deckhouse/tmp/system_registry_igniter"
 {{- end }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy
 

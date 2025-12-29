@@ -27,14 +27,19 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "registryDataDeviceEnable" {
+  type    = bool
+  default = false
+}
+
 variable "mainNetwork" {
-  type        = string
-  default     = null
+  type    = string
+  default = null
 }
 
 variable "additionalNetworks" {
-  type        = list(string)
-  default     = []
+  type    = list(string)
+  default = []
 }
 
 locals {

@@ -77,8 +77,16 @@ type ConfigBuilder struct {
 type Config bashible.Config
 
 type ModeParams struct {
-	Direct    *DirectModeParams    `json:"direct,omitempty" yaml:"direct,omitempty"`
-	Unmanaged *UnmanagedModeParams `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+	Proxy     *ProxyLocalModeParams `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+	Local     *ProxyLocalModeParams `json:"local,omitempty" yaml:"local,omitempty"`
+	Direct    *DirectModeParams     `json:"direct,omitempty" yaml:"direct,omitempty"`
+	Unmanaged *UnmanagedModeParams  `json:"unmanaged,omitempty" yaml:"unmanaged,omitempty"`
+}
+
+type ProxyLocalModeParams struct {
+	CA       string `json:"ca,omitempty" yaml:"ca,omitempty"`
+	Username string `json:"username" yaml:"username"`
+	Password string `json:"password" yaml:"password"`
 }
 
 type UnmanagedModeParams struct {
@@ -261,6 +269,11 @@ func (b *ConfigBuilder) build() (*Config, error) {
 }
 
 func (b *ConfigBuilder) proxyEndpoints() []string {
+	for _, p := range append(slices.Clone(b.ActualParams), b.ModeParams) {
+		if p.Proxy != nil || p.Local != nil {
+			return registry_const.GenerateProxyEndpoints(b.MasterNodesIPs)
+		}
+	}
 	return []string{}
 }
 
@@ -274,6 +287,10 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 		)
 
 		switch {
+		case params.Proxy != nil:
+			host, mirrors = params.Proxy.hostMirrors()
+		case params.Local != nil:
+			host, mirrors = params.Local.hostMirrors()
 		case params.Direct != nil:
 			host, mirrors = params.Direct.hostMirrors()
 		case params.Unmanaged != nil:
@@ -330,6 +347,10 @@ func (p *ModeParams) mode() (registry_const.ModeType, error) {
 	switch {
 	case p == nil:
 		return "", fmt.Errorf("empty mode params")
+	case p.Proxy != nil:
+		return registry_const.ModeProxy, nil
+	case p.Local != nil:
+		return registry_const.ModeLocal, nil
 	case p.Direct != nil:
 		return registry_const.ModeDirect, nil
 	case p.Unmanaged != nil:
@@ -343,12 +364,20 @@ func (p *ModeParams) isEmpty() bool {
 	if p == nil {
 		return true
 	}
-	return p.Direct == nil &&
+	return p.Proxy == nil &&
+		p.Local == nil &&
+		p.Direct == nil &&
 		p.Unmanaged == nil
 }
 
 func (p *ModeParams) isEqual(other ModeParams) bool {
 	if p == nil {
+		return false
+	}
+	if !p.Proxy.isEqual(other.Proxy) {
+		return false
+	}
+	if !p.Local.isEqual(other.Local) {
 		return false
 	}
 	if !p.Direct.isEqual(other.Direct) {
@@ -371,6 +400,16 @@ func (p *UnmanagedModeParams) isEqual(other *UnmanagedModeParams) bool {
 }
 
 func (p *DirectModeParams) isEqual(other *DirectModeParams) bool {
+	switch {
+	case p == nil && other == nil:
+		return true
+	case p != nil && other != nil:
+		return *p == *other
+	}
+	return false
+}
+
+func (p *ProxyLocalModeParams) isEqual(other *ProxyLocalModeParams) bool {
 	switch {
 	case p == nil && other == nil:
 		return true
@@ -407,6 +446,18 @@ func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
 			From: registry_const.PathRegexp,
 			To:   strings.TrimLeft(path, "/"),
 		}},
+	}}
+}
+
+func (p *ProxyLocalModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
+	return registry_const.Host, []bashible.ConfigMirrorHost{{
+		Host:   registry_const.ProxyHost,
+		CA:     p.CA,
+		Scheme: registry_const.Scheme,
+		Auth: bashible.ConfigAuth{
+			Username: p.Username,
+			Password: p.Password,
+		},
 	}}
 }
 

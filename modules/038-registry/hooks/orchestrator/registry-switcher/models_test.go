@@ -308,7 +308,6 @@ func TestState_Process(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			state := &State{}
 			result, err := state.Process(tt.params, tt.inputs)
-
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
@@ -318,4 +317,29 @@ func TestState_Process(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildManagedRegistrySecret(t *testing.T) {
+	params := Params{
+		ManagedMode: &ManagedModeParams{
+			CA:       "test-ca",
+			Username: "user",
+			Password: "pass",
+		},
+	}
+
+	secret, err := buildRegistrySecret(params)
+	assert.NoError(t, err)
+
+	// Print the generated values for debugging
+	t.Logf("Generated Address: %s", secret.Address)
+	t.Logf("Generated Path: %s", secret.Path)
+	t.Logf("Generated Scheme: %s", secret.Scheme)
+	t.Logf("Generated DockerConfig: %s", secret.DockerConfig)
+
+	// Check expected values
+	assert.Equal(t, "registry.d8-system.svc:5001", secret.Address)
+	assert.Equal(t, "/system/deckhouse", secret.Path)
+	assert.Equal(t, "https", secret.Scheme)
+	assert.Equal(t, "test-ca", secret.CA)
 }

@@ -57,3 +57,8 @@ func IsCRISupported(cri CRIType) bool {
 func ModuleRequired(mode ModeType) bool {
 	return slices.Contains(ModesRequiringModule, mode)
 }
+
+func IsStaticPodRegistry(mode ModeType) bool {
+	staticPodsRegistryModes := []ModeType{ModeProxy, ModeLocal}
+	return slices.Contains(staticPodsRegistryModes, mode)
+}
