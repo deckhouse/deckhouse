@@ -79,18 +79,19 @@ type ApplicationPackageVersion struct {
 }
 
 type ApplicationPackageVersionSpec struct {
-	PackageName       string `json:"packageName,omitempty"`
-	PackageRepository string `json:"packageRepository,omitempty"`
-	Version           string `json:"version,omitempty"`
+	PackageName           string `json:"packageName,omitempty"`
+	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
+	PackageVersion        string `json:"packageVersion,omitempty"`
 }
 
 type ApplicationPackageVersionStatus struct {
-	PackageName     string                                    `json:"packageName,omitempty"`
-	PackageMetadata *ApplicationPackageVersionStatusMetadata  `json:"packageMetadata,omitempty"`
-	Version         string                                    `json:"version,omitempty"`
-	Conditions      []ApplicationPackageVersionCondition      `json:"conditions,omitempty"`
-	UsedBy          []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
-	UsedByCount     int                                       `json:"usedByCount,omitempty"`
+	PackageName           string                                    `json:"packageName,omitempty"`
+	PackageRepositoryName string                                    `json:"packageRepositoryName,omitempty"`
+	PackageMetadata       *ApplicationPackageVersionStatusMetadata  `json:"packageMetadata,omitempty"`
+	PackageVersion        string                                    `json:"packageVersion,omitempty"`
+	Conditions            []ApplicationPackageVersionCondition      `json:"conditions,omitempty"`
+	UsedBy                []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
+	UsedByCount           int                                       `json:"usedByCount,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {

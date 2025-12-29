@@ -103,10 +103,10 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	PackageName       string `json:"packageName"`
-	PackageRepository string `json:"packageRepository,omitempty"`
-	Version           string `json:"version"`
-	ReleaseChannel    string `json:"releaseChannel,omitempty"`
+	PackageName           string `json:"packageName"`
+	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
+	PackageVersion        string `json:"packageVersion"`
+	ReleaseChannel        string `json:"releaseChannel,omitempty"`
 	// +kubebuilder:pruning:PreserveUnknownFields
 	Settings *MappedFields `json:"settings,omitempty"`
 }
@@ -121,7 +121,7 @@ type ApplicationStatus struct {
 }
 
 type ApplicationStatusVersion struct {
-	Current string `json:"current,omitempty"`
+	Version string `json:"version,omitempty"`
 	Channel string `json:"channel,omitempty"`
 }
 
