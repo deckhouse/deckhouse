@@ -58,14 +58,9 @@ var CheckPhases = []PhaseWithSubPhases{ // currently no phases for this operatio
 }
 
 var DestroyPhases = []PhaseWithSubPhases{
-	{Phase: CommanderUUIDWasChecked},
-	{Phase: CreateStaticDestroyerNodeUserPhase},
-	{Phase: WaitStaticDestroyerNodeUserPhase},
 	{Phase: DeleteResourcesPhase},
-	{Phase: SetDeckhouseResourcesDeletedPhase},
 	{Phase: AllNodesPhase},
 	{Phase: BaseInfraPhase},
-	{Phase: UpdateStaticDestroyerIPs},
 }
 
 var CommanderAttachPhases = []PhaseWithSubPhases{
