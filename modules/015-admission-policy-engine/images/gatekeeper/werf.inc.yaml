@@ -40,7 +40,7 @@ shell:
   # check if module crds/native are the same as gatekeeper crds
   - | 
     echo "Checking if module crds/native are the same as gatekeeper crds"
-    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/native" 
+    diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
