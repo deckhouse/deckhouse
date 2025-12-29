@@ -149,8 +149,20 @@ spec:
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "runAsUser")
                 has_field(exception.spec.securityContext.runAsUser, "allowedValues")
+                not has_field(exception.spec.securityContext, "runAsNonRoot")
+                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
+                container_user := get_field_value("runAsUser", container, input.review)
+                container_user in allowed_users
+              }
+
+              allowed_by_securitypolicyexception(container) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsUser")
+                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
                 has_field(exception.spec.securityContext, "runAsNonRoot")
-                exception.spec.securityContext.runAsNonRoot.allowedValue
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 container_user := get_field_value("runAsUser", container, input.review)
@@ -176,10 +188,38 @@ spec:
                 rule := params.rule
                 provided_user := get_field_value("runAsUser", container, input.review)
                 not accept_users(rule, provided_user)
+                exception_has_mismatched_runAsNonRoot(container, provided_user)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := sprintf("Actual runAsUser: %v", [provided_user])
                 exception_allowed := exception_allowed_users_value
                 msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
+              }
+
+              # RunAsUser (separate due to "MustRunAsNonRoot")
+              get_user_violation(params, container) := msg if {
+                rule := params.rule
+                provided_user := get_field_value("runAsUser", container, input.review)
+                not accept_users(rule, provided_user)
+                not exception_has_mismatched_runAsNonRoot(container, provided_user)
+                allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
+                actual_value := sprintf("Actual runAsUser: %v", [provided_user])
+                exception_allowed := exception_allowed_users_value
+                msg := build_user_message(container.name, actual_value, allowed_by_policy, exception_allowed)
+              }
+
+              exception_has_mismatched_runAsNonRoot(container, provided_user) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "runAsUser")
+                has_field(exception.spec.securityContext.runAsUser, "allowedValues")
+                has_field(exception.spec.securityContext, "runAsNonRoot")
+                allowed_users := exception.spec.securityContext.runAsUser.allowedValues
+                provided_user in allowed_users
+                run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
+                container_run_as_non_root := get_field_value("runAsNonRoot", container, input.review)
+                run_as_non_root != container_run_as_non_root
               }
 
               get_user_violation(params, container) := msg if {
@@ -209,7 +249,6 @@ spec:
                 has_field(exception.spec.securityContext, "runAsUser")
                 has_field(exception.spec.securityContext.runAsUser, "allowedValues")
                 has_field(exception.spec.securityContext, "runAsNonRoot")
-                exception.spec.securityContext.runAsNonRoot.allowedValue
                 allowed_users := exception.spec.securityContext.runAsUser.allowedValues
                 run_as_non_root := exception.spec.securityContext.runAsNonRoot.allowedValue
                 out := sprintf("SecurityPolicyException allowed: runAsUser: %v, runAsNonRoot: %v", [allowed_users, run_as_non_root])
