@@ -164,7 +164,9 @@ func (s *Service) buildInput(app *v1alpha1.Application, internalConds []status.C
 		}
 	}
 
-	isInitialInstall := externalMap[status.ConditionInstalled].Status != metav1.ConditionTrue
+	installedCond, ok := externalMap[status.ConditionInstalled]
+	isInitialInstall := !ok || installedCond.Status != metav1.ConditionTrue
+
 	versionChanged := app.Status.CurrentVersion != nil &&
 		app.Status.CurrentVersion.Current != "" &&
 		app.Spec.Version != app.Status.CurrentVersion.Current
