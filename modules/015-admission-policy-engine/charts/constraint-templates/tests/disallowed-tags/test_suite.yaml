@@ -3,15 +3,15 @@ apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-disallowed-tags
 tests:
-  - name: operation-policy
-    template: ../../templates/operation/disallowed-tags.yaml
-    constraint: constraint.yaml
-    cases:
-      - name: example-allowed
-        object: allowed.yaml
-        assertions:
-          - violations: no
-      - name: example-disallowed
-        object: disallowed.yaml
-        assertions:
-          - violations: yes
+- name: operation-policy
+  template: ../../templates/operation/disallowed-tags.yaml
+  constraint: constraint.yaml
+  cases:
+  - name: example-allowed
+    object: allowed.yaml
+    assertions:
+    - violations: 'no'
+  - name: example-disallowed
+    object: disallowed.yaml
+    assertions:
+    - violations: 'yes'
