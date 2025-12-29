@@ -203,9 +203,7 @@ func TestData_DockerCfg(t *testing.T) {
 			},
 			output: output{
 				auths: map[string]any{
-					"registry.example.com": map[string]any{
-						"auth": "Og==", // ":"
-					},
+					"registry.example.com": map[string]any{},
 				},
 				err: false,
 			},
