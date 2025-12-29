@@ -86,9 +86,9 @@ Manage-роль определяет права на доступ:
 
 - Модуль реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC.
 - Настройка прав доступа происходит с помощью ресурсов.
-- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-allowscale)).
-- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-portforwarding)).
-- Управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
+- Управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale)).
+- Управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding)).
+- Управление списком разрешённых пространств имён в формате `labelSelector` (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 В модуле, кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 
@@ -251,7 +251,7 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-Вы можете получить дополнительный список правил доступа для роли из кластера существующие пользовательские правила и нестандартные правила из других модулей DVP):
+Вы можете получить дополнительный список правил доступа для роли из кластера (существующие пользовательские правила и нестандартные правила из других модулей DVP):
 
 ```bash
 D8_ROLE_NAME=Editor

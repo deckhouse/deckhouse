@@ -509,4 +509,4 @@ spec:
 
 ### Выдача прав пользователю или группе
 
-Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).
+Для настройки прав доступа используются параметры кастомного ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).

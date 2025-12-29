@@ -116,7 +116,7 @@ spec:
 Сервисам, которым нужен GPU, достаточно добавить `tolerations` и `nodeSelector`.
 {% endalert %}
 
-Подробная схема параметров находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+Подробная схема параметров доступна в описании [кастомного ресурса NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
 
 Ниже представлены примеры манифестов NodeGroup для типовых режимов работы GPU (Exclusive,
 TimeSlicing, MIG).
@@ -213,7 +213,7 @@ spec:
 
 Чтобы добавить новый статический узел (выделенная ВМ, bare-metal-сервер и т. п.) в кластер вручную, выполните следующие шаги:
 
-1. Для [CloudStatic-узлов](../node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
+1. Для [CloudStatic-узлов](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в облачных провайдерах, перечисленных ниже, выполните описанные в документации шаги:
    - [Для AWS](/modules/cloud-provider-aws/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для GCP](/modules/cloud-provider-gcp/faq.html#добавление-cloudstatic-узлов-в-кластер)
    - [Для YC](/modules/cloud-provider-yandex/faq.html#добавление-cloudstatic-узлов-в-кластер)
@@ -240,7 +240,7 @@ spec:
 ### С помощью Cluster API Provider Static
 
 {% alert level="warning" %}
-Если вы ранее увеличивали количество master-узлов в кластере в NodeGroup `master` (параметр [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), перед добавлением обычных узлов с помощью CAPS [убедитесь](../control-plane-manager/faq.html#как-добавить-master-узел-в-статическом-или-гибридном-кластере), что не произойдет их «перехват».
+Если вы ранее увеличивали количество master-узлов в кластере в NodeGroup `master` ([параметр `spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), перед добавлением обычных узлов с помощью CAPS [убедитесь](/modules/control-plane-manager/faq.html#как-добавить-master-узел-в-статическом-или-гибридном-кластере), что не произойдет их «перехват».
 {% endalert %}
 
 Простой пример добавления статического узла в кластер с помощью [Cluster API Provider Static (CAPS)](./#cluster-api-provider-static):

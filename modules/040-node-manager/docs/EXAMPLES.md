@@ -118,7 +118,7 @@ and `nodeSelector`.
 {% endalert %}
 
 See the full field reference in the
-[NodeGroup CR documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu).
+[NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) custom resource documentation.
 
 Below are examples of NodeGroup manifests for typical GPU operating modes (Exclusive,
 TimeSlicing, MIG).

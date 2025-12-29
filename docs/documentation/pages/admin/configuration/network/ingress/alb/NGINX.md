@@ -333,7 +333,7 @@ In many applications, the same backend serves both the public part and the admin
 - `https://example.com` is the public zone;
 - `https://admin.example.com` is the administrative zone, access to which must be restricted (`ACL`, `mTLS`, `IP whitelist`, and so on).
 
-For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
+For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
 
 #### Specifics of using a single Ingress controller
 
@@ -455,7 +455,7 @@ spec:
 In this example:
 
 - The Ingress controller is exposed on node ports through the `HostPort` inlet.
-- The [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
+- The [`acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
 - Even if an external load balancer or client can set its own `X-Forwarded-*` header values, the decision whether to allow the connection to reach the controller is made based on the actual source address, not on headers.
 - Administrative Ingress resources (in this example `admin-ingress`) are served by this controller according to the configured Ingress class.
 

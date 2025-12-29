@@ -502,6 +502,6 @@ Field description:
 After enabling 2FA, each user must register in the authenticator application during their first login.
 {% endalert %}
 
-## How to set permissions for a user or group
+### Assigning permissions to a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](/modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+For permission configuration, parameters of the custom resource [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) are used.

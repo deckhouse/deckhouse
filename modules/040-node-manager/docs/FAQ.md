@@ -4,13 +4,13 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 
-## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+## How do I add master nodes to a cloud cluster?
 
-See [the control-plane-manager module FAQ.](/modules/control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+For the procedure of converting a cluster with a single master node to a multi-master cluster, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-add-master-nodes-to-a-cloud-cluster) of the `control-plane-manager` module.
 
-## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+## How do I reduce the number of master nodes in a cloud cluster?
 
-See [the control-plane-manager module FAQ.](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+For the procedure of converting a multi-master cluster to a cluster with a single master node, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) of the `control-plane-manager` module.
 
 ## Static nodes
 
