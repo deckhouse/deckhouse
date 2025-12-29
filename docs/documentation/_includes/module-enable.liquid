@@ -1,100 +1,71 @@
+{%- assign moduleKebabName = include.moduleKebabName | default: '<module-name>' %}
+
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
-Явно включить или выключить модуль можно несколькими способами: с помощью команды `d8 system module`, установив `spec.enabled` в `true` или `false` в `ModuleConfig/{{ moduleKebabName }}` (создайте, при необходимости), либо через веб-интерфейс Deckhouse.
+Явно включить или выключить модуль можно одним из следующих способов:
+- **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `{{ moduleKebabName }}`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
 
-Пример **включения** модуля:
-- с помощью ресурса ModuleConfig:
+  Пример:
+
+  <img src="/images/module/module-enabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
+
+- **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+  Используйте команду [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) для включения модуля, или [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) для выключения модуля (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+
+  Пример включения модуля `{{ moduleKebabName }}`:
+
+  ```shell
+  d8 system module enable {{ moduleKebabName }}
+  ```
+
+- **С помощью ModuleConfig `{{ moduleKebabName }}`.**
+
+  Установите `spec.enabled` в `true` или `false` в ModuleConfig `{{ moduleKebabName }}` (создайте его, при необходимости).
+
+  Пример манифеста для включения модуля `{{ moduleKebabName }}`:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
-    name: {{ include.moduleKebabName }}
+    name: {{ moduleKebabName }}
   spec:
     enabled: true
   ```
-
-- с помощью команды `d8 system module enable` (требуется Deckhouse CLI (d8), настроенный на работу с кластером):
-
-  ```shell
-  d8 system module enable {{ include.moduleKebabName }}
-  ```
-
-- через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и включите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите `spec.enabled` в `true` в ресурсе ModuleConfig):
-
-  <img src="/images/modules-docs/module-enabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
-
-Пример **выключения** модуля:
-
-- с помощью ресурса ModuleConfig:
-
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: {{ include.moduleKebabName }}
-  spec:
-    enabled: false
-  ```
-
-- с помощью команды `d8 system module` (требуется Deckhouse CLI (d8), настроенный на работу с кластером):
-
-  ```shell
-  d8 system module disable {{ include.moduleKebabName }}
-  ```
-
-- через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и выключите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите `spec.enabled` в `false` в ресурсе ModuleConfig):
-
-  <img src="/images/modules-docs/module-disabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
-
 {% endofftopic %}
 {% else %}
 {% offtopic title="How to explicitly enable the module..." %}
-There are several ways to explicitly enable or disable a module: using the `d8 system module` command, setting `spec.enabled` to `true` or `false` in `ModuleConfig/{{ moduleKebabName }}` resource (create it, if necessary) or via the Deckhouse web UI.
+You may explicitly enable or disable the module in one of the following ways:
+- **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `{{ moduleKebabName }}` module and enable (or disable) the "Module enabled" toggle. Save changes.
 
-Example of enabling the module:
-- by using the ModuleConfig resource:
+  Example:
+
+  <img src="/images/module/module-enabling-ui-en.png" alt="Module enable/disable interface">
+
+- **Via [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+  Use the [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) command for enabling, or [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) command for disabling the module (you need [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), configured to work with the cluster).
+
+  Example of enabling the module:
+
+  ```shell
+  d8 system module enable {{ moduleKebabName }}
+  ```
+
+- **Using ModuleConfig `{{ moduleKebabName }}`.**
+
+  Set `spec.enabled` to `true` or `false` in ModuleConfig `{{ moduleKebabName }}` (create it if necessary);
+
+  Example of a manifest to enable module `{{ moduleKebabName }}`:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
   kind: ModuleConfig
   metadata:
-    name: {{ include.moduleKebabName }}
+    name: {{ moduleKebabName }}
   spec:
     enabled: true
   ```
-
-- by using the `d8 system module` command (you need a Deckhouse CLI (d8), configured to work with the cluster):
-
-  ```shell
-  d8 system module enable {{ include.moduleKebabName }}
-  ```
-
-- via the web UI (in the "Modules" subsection, click on the desired module and enable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set `spec.enabled` to `true` in the ModuleConfig resource):
-
-  <img src="/images/modules-docs/module-enabling-ui-en.png" alt="Module enable/disable interface">
-
-Example of disabling the module:
-- by using the ModuleConfig resource:
-
-  ```yaml
-  apiVersion: deckhouse.io/v1alpha1
-  kind: ModuleConfig
-  metadata:
-    name: {{ include.moduleKebabName }}
-  spec:
-    enabled: false
-  ```
-
-- by using the `d8 system module` command (you need a Deckhouse CLI (d8), configured to work with the cluster):
-
-  ```shell
-  d8 system module disable {{ include.moduleKebabName }}
-  ```
-
-- via the web UI (in the "Modules" subsection, click on the desired module and disable the "Module enabled" switch on the "Configuration" tab, or on the "YAML" tab, set `spec.enabled` to `false` in the ModuleConfig resource):
-
-  <img src="/images/modules-docs/module-disabling-ui-en.png" alt="Module enable/disable interface">
-
 {% endofftopic %}
 {% endif %}

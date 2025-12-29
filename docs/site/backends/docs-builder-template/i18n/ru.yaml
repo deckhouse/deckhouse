@@ -9,21 +9,82 @@ modules: модули
 modules2: модулей
 module: модуль
 module_enabling_details_title: Как явно включить или отключить модуль…
-module_enabling_message_first_part: Явно включить или выключить модуль можно несколькими способами&colon; с помощью команды <code>d8 system module</code>, установив <code>spec.enabled</code> в <code>true</code> или <code>false</code> в <code>ModuleConfig/
-module_enabling_message_second_part: (создайте, при необходимости), либо через веб-интерфейс Deckhouse
-module_enabling_message_list_title_enable: Пример <b>включения</b> модуля
-module_enabling_message_list_title_disable: Пример <b>выключения</b> модуля
-module_enabling_message_list_resource: с помощью ресурса ModuleConfig
-module_enabling_message_list_command: с помощью команды <code>d8 system module</code> (требуется Deckhouse CLI (d8), настроенный на работу с кластером)
-module_enabling_message_ui_command: через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и включите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите <code>spec.enabled</code> в <code>true</code> в ресурсе ModuleConfig)
-module_disabling_message_ui_command: через веб-интерфейс (в подразделе «Модули» кликните по нужному модулю и выключите переключатель «Модуль включен» на вкладке «Конфигурация», либо на вкладке «YAML» установите <code>spec.enabled</code> в <code>false</code> в ресурсе ModuleConfig)
-module_ui_enabling_disabling: Интерфейс включения и выключения модуля
-module_settings: Настройки
-module_settings_learn_more: подробнее о настройке Deckhouse…
-module_settings_message_first_part: Чтобы настроить модуль, используйте ресурс ModuleConfig с именем
-module_settings_message_second_part: Пример ресурса <code>ModuleConfig/
-module_settings_message_third_part: </code> для настройки модуля
-module_settings_example_comment: Параметры модуля из раздела "Параметры" ниже
+module_enabling_details_content: |
+  Явно включить или выключить модуль можно одним из следующих способов:
+  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
+
+    Пример:
+
+    <img src="/images/module/module-enabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
+
+  - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+    Используйте команду [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) для включения модуля, или [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) для выключения модуля (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+
+    Пример включения модуля `<ModuleName>`:
+
+    ```shell
+    d8 system module enable <ModuleName>
+    ```
+
+  - **С помощью ModuleConfig `<ModuleName>`.**
+
+    Установите `spec.enabled` в `true` или `false` в ModuleConfig `<ModuleName>` (создайте его, при необходимости).
+
+    Пример манифеста для включения модуля `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      enabled: true
+    ```
+module_settings: настройки
+module_settings_details_title: Как настроить модуль...
+module_settings_details_content: |
+  Настроить модуль можно одним из следующих способов:
+  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
+
+    В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите переключатель «Дополнительные настройки». Заполните необходимые поля формы на вкладке «Конфигурация», или укажите настройки модуля в формате YAML на вкладке «YAML», **не включая секцию settings**. Сохраните изменения.
+
+    Пример:
+
+    <img src="/images/module/settings/ui-conf-advanced-conf-ru.png" alt="Интерфейс настройки модуля">
+
+    Вы также можете отредактировать объект ModuleConfig `<ModuleName>` на вкладке «YAML» в окне настроек модуля («Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`), указав версию схемы в параметре `spec.version` и необходимые параметры модуля в секции `spec.settings`.
+
+  - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/)** (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+
+    Отредактируйте существующий ModuleConfig `<ModuleName>` (подробнее о настройке Deckhouse читайте [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/)), выполнив следующую команду:
+
+    ```shell
+    d8 k edit mc <ModuleName>
+    ```
+
+    Внесите необходимые изменения в секцию `spec.settings`. При необходимости укажите версию схемы в параметре `spec.version`. Сохраните изменения.
+
+    Вы также можете создать файл манифеста ModuleConfig `<ModuleName>`, используя пример ниже. Заполните секцию `spec.settings` необходимыми параметрами модуля. При необходимости укажите версию схемы в параметре `spec.version`.
+
+    Примените манифест с помощью следующей команды (укажите имя файла манифеста):
+
+    ```shell
+    d8 k apply -f <FILENAME>
+    ```
+
+    Пример файла манифеста ModuleConfig `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      version: <configVersion>
+      enabled: true
+      settings: # Параметры модуля из раздела "Параметры" ниже.
+    ```
 module_versions: Версии модуля
 module_version: Версия модуля
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
