@@ -64,3 +64,6 @@ shell:
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
+{{- end }}
