@@ -55,7 +55,7 @@ locals {
 
   # if user passes nat instance internal address directly (deprecated, keep for backward compatibility) use passed address,
   # else get 10 host address from cidr which got in previous step
-  nat_instance_internal_address_calculated = var.nat_instance_internal_address != null ? var.nat_instance_internal_address : cidrhost(local.nat_instance_internal_cidr, 10)
+  nat_instance_internal_address_calculated = var.nat_instance_internal_address != null ? var.nat_instance_internal_address : try(cidrhost(local.nat_instance_internal_cidr, 10), "")
 
   assign_external_ip_address = var.nat_instance_external_subnet_id == null ? true : false
 
