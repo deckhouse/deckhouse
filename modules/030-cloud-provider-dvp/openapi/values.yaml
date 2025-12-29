@@ -429,10 +429,10 @@ properties:
                 description: |
                   NetworkPolicy mode for the Project where the cluster is deployed.
 
-               enum:
-                 - Isolated
-                 - NotRestricted
-               default: Isolated
+                enum:
+                  - Isolated
+                  - NotRestricted
+                default: Isolated
             required:
               - kubeconfigDataBase64
               - namespace
