@@ -68,7 +68,7 @@ spec:
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
-                has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
+                exception.spec.securityContext.readOnlyRootFilesystem.allowedValue
                 out := sprintf("SecurityPolicyException allowed: readOnlyRootFilesystem: %v", [exception.spec.securityContext.readOnlyRootFilesystem.allowedValue])
               }
 
@@ -103,7 +103,8 @@ spec:
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
-                not has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
+                not exception.spec.securityContext.readOnlyRootFilesystem.allowedValue
+                exception.spec.securityContext.readOnlyRootFilesystem.allowedValue != false
               }
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
@@ -130,13 +131,23 @@ spec:
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
                 has_field(exception.spec, "securityContext")
                 has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
-                has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
+                exception.spec.securityContext.readOnlyRootFilesystem.allowedValue
                 allowed_value_by_exception := exception.spec.securityContext.readOnlyRootFilesystem.allowedValue
                 is_allowed_by_exception(container, allowed_value_by_exception)
               }
 
               is_allowed_by_exception(container, allowed_value_by_exception) if {
-                container.securityContext.readOnlyRootFilesystem == allowed_value_by_exception
+                allowed_value_by_exception == true
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "readOnlyRootFilesystem")
+                container.securityContext.readOnlyRootFilesystem == true
+              }
+
+              is_allowed_by_exception(container, allowed_value_by_exception) if {
+                allowed_value_by_exception == false
+                has_field(container, "securityContext")
+                has_field(container.securityContext, "readOnlyRootFilesystem")
+                container.securityContext.readOnlyRootFilesystem == false
               }
 
               is_allowed_by_exception(container, allowed_value_by_exception) if {
@@ -146,6 +157,7 @@ spec:
 
               is_allowed_by_exception(container, allowed_value_by_exception) if {
                 allowed_value_by_exception == false
+                has_field(container, "securityContext")
                 not has_field(container.securityContext, "readOnlyRootFilesystem")
               }
 
