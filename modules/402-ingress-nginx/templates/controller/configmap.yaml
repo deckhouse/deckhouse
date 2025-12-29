@@ -134,7 +134,7 @@ data:
   use-proxy-protocol: "true"
   {{- end }}
 
-  {{- if $geoIP2.maxmindLicenseKey }}
+  {{- if $geoIP2 }}
   use-geoip2: "true"
   {{- end }}
 

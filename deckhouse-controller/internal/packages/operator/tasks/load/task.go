@@ -35,7 +35,7 @@ const (
 
 type manager interface {
 	LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error)
-	ApplySettings(name string, settings addonutils.Values) error
+	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
 type statusService interface {
@@ -82,7 +82,7 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 
 	t.logger.Debug("apply initial settings", slog.String("name", t.packageName))
-	if err = t.manager.ApplySettings(t.packageName, t.settings); err != nil {
+	if err = t.manager.ApplySettings(ctx, t.packageName, t.settings); err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}

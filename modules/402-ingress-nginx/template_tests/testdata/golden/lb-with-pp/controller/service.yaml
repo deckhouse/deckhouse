@@ -8,6 +8,7 @@ metadata:
   labels:
     app: controller
     deckhouse-service-type: provider-managed
+    network.deckhouse.io/ingress-nginx-class: nginx
     heritage: deckhouse
     module: ingress-nginx
     name: test-lbwpp

@@ -45,6 +45,7 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $TricksterVersion }} $(cat /run/secrets/SOURCE_REPO)/trickstercache/trickster.git /src/trickster
   - cd /src/trickster
+  - git rev-parse HEAD > GITCOMMIT
   - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git
@@ -65,7 +66,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH={{ $.Commit.Hash }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH="$(cat GITCOMMIT)"
   - |
     export LDFLAGS="-X main.applicationBuildTime=$(date +%Y%m%d-%H:%M:%S) \
     -X main.applicationGitCommitID=${COMMIT_HASH} \

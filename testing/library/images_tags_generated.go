@@ -567,7 +567,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"selfSignedGenerator": "imageHash-userAuthn-selfSignedGenerator",
 	},
 	"userAuthz": map[string]interface{}{
-		"webhook": "imageHash-userAuthz-webhook",
+		"permissionBrowserApiserver": "imageHash-userAuthz-permissionBrowserApiserver",
+		"webhook":                    "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{
 		"admissionController": "imageHash-verticalPodAutoscaler-admissionController",

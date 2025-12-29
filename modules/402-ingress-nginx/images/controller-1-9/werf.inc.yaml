@@ -66,7 +66,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/007-geoip.patch
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve.patch
+  - patch -p1 < /patches/ingress-nginx/010-cve-22122025.patch
   - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
@@ -76,6 +76,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
   - patch -p1 < /patches/ingress-nginx/018-geoip-ver-metric.patch
   - patch -p1 < /patches/ingress-nginx/019-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/ingress-nginx/020-ingress-update-status.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -395,6 +396,15 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
+  before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh

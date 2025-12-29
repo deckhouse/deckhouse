@@ -121,6 +121,10 @@ func (c *Context) KubeClient() *client.KubernetesClient {
 	return c.kubeClient
 }
 
+func (c *Context) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+	return c.KubeClient(), nil
+}
+
 func (c *Context) InfrastructureContext(metaConfig *config.MetaConfig) *infrastructure.Context {
 	var ctx *infrastructure.Context
 	if c.infrastructureContext != nil {

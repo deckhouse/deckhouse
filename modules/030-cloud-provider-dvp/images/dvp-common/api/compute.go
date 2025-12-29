@@ -463,17 +463,37 @@ func (c *ComputeService) RemoveVMLabelByHostname(ctx context.Context, hostname, 
 
 func (c *ComputeService) WaitDiskAttaching(ctx context.Context, vmBDAName string) error {
 	klog.Infof("WaitDiskAttaching vmBDA %s", vmBDAName)
+
 	return c.Wait(ctx, vmBDAName, &v1alpha2.VirtualMachineBlockDeviceAttachment{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			klog.Infof("vmBDA %s not found yet; still waiting for creation", vmBDAName)
+			return false, nil
+		}
+
 		vmBDA, ok := obj.(*v1alpha2.VirtualMachineBlockDeviceAttachment)
-		if !ok {
+		if !ok || vmBDA == nil {
 			return false, fmt.Errorf("expected a VirtualMachineBlockDeviceAttachment but got a %T", obj)
 		}
-		klog.Infof("Phase vmBDA %s: %s", vmBDAName, vmBDA.Status.Phase)
 
-		if vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
-			return false, fmt.Errorf("disk attaching error to the vm, please check status VirtualMachineBlockDeviceAttachment %s in the parent cluster", vmBDAName)
+		phase := vmBDA.Status.Phase
+
+		if phase == v1alpha2.BlockDeviceAttachmentPhaseAttached {
+			klog.Infof("vmBDA %s is Attached", vmBDAName)
+		} else {
+			klog.Infof("vmBDA %s exists but still not attached: phase=%s", vmBDAName, phase)
 		}
 
-		return vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
+		if phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
+			return false, fmt.Errorf(
+				"disk attaching error to the vm, please check status VirtualMachineBlockDeviceAttachment %s in the parent cluster",
+				vmBDAName,
+			)
+		}
+
+		return phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
 	})
+}
+
+func (c *ComputeService) GetVMBDA(ctx context.Context, diskName, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	return c.getVMBDA(ctx, diskName, vmHostname)
 }

@@ -20,14 +20,10 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        #echo '[] Creating modules.yml ...'
-        #_tools/modules_list.sh 2>/dev/null | yq eval -j > _data/modules/internal.json
-        ## Creating list of ALL the modules...
-        #cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
-
-        ## The list of modules, which documentation should be excluded from the site...
-        ## TODO: Use docs/documentation/_data/modules/excludedModules.json instead!
-        #cat _tools/modules_menu_skip  | sed -E 's/^[0-9]+-//'  | jq -nRc '[inputs]' > _data/excludedModules.json
+        echo "[] Getting modules metadata from module.yaml files..."
+        export METADATA_SOURCE_DIR=/src/modules-metadata
+        export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
+        bash _tools/modules_generate_metadata.sh
 
         echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
@@ -80,7 +76,7 @@ shell:
 
         echo '[] Converting editions structure...'
         cd /srv/jekyll-data/documentation/_data
-        yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 {{ if eq .ModuleName "documentation" }}
         # "Converting public documentation links to modules to the internal relative..."
@@ -114,6 +110,15 @@ shell:
         cd /app/_site/
         find modules_en modules_ru -type d \( -path "*/docs/images" -o -path "*/docs/presentations" \) -exec sh -c 'module=$(basename $(dirname $(dirname $0)) | cut -d/ -f2-); lang=$(dirname $0 | cut -d/ -f1 | cut -d_ -f2); cp -rf "$0" "$lang/modules/$module" ; ' {} \;
         rm -rf modules_en modules_ru
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data
