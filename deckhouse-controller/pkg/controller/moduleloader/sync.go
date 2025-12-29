@@ -298,7 +298,11 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 
 	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
+		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); apierrors.IsNotFound(err) {
+			continue
+		}
+
+		if mpo.Status.Message == v1alpha1.ModulePullOverrideMessageReady {
 			continue
 		}
 
