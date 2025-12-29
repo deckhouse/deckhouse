@@ -10,9 +10,9 @@ tests:
   - name: example-allowed
     object: allowed.yaml
     assertions:
-    - violations: 'no'
+    - violations: no
   - name: example-disallowed
     object: disallowed.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes
       message: 'Deployment <disallowed> has .spec.revisionHistoryLimit: 10, required: 3'

@@ -16,7 +16,6 @@ spec:
           - baseline
           - restricted
   parameters:
-    allowedSysctls:
-      - "*"
+    allowedSysctls: []
     forbiddenSysctls:
-      - net.fake.sysctl
+      - "*"

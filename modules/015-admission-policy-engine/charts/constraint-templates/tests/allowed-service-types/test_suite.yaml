@@ -12,16 +12,16 @@ tests:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/001-allowed.yaml
     assertions:
-    - violations: 'no'
+    - violations: no
   - name: 002-disallowed_loadbalancer
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/002-disallowed_loadbalancer.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes
   - name: 003-disallowed_nodeport
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/003-disallowed_nodeport.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes
