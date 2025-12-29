@@ -491,7 +491,7 @@ shell:
   - echo "jit support"
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
   # cve bash scripts
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #- rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
 imageSpec:
   config:
     workingDir: /
