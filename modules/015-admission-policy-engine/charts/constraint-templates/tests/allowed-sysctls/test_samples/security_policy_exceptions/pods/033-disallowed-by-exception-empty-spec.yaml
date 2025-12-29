@@ -8,8 +8,8 @@ metadata:
 spec:
   securityContext:
     sysctls:
-      - name: net.core.rmem_max
-        value: "26214400"
+      - name: net.core.somaxconn
+        value: "1024"
   containers:
     - name: nginx
       image: nginx
