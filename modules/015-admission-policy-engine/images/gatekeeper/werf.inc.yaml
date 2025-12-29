@@ -37,7 +37,7 @@ shell:
   #- git apply /patches/*.patch --verbose
   - rm -rf website
   - rm -rf .git
-  # check if module crds/native are the same as gatekeeper crds
+  # check if module crds/gatekeeper are the same as gatekeeper crds
   - | 
     echo "Checking if module crds/native are the same as gatekeeper crds"
     diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
