@@ -66,6 +66,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
+                has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
                 out := sprintf("SecurityPolicyException allowed: readOnlyRootFilesystem: %v", [exception.spec.securityContext.readOnlyRootFilesystem.allowedValue])
               }
 
@@ -77,6 +80,30 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
+                not has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
               }
 
               build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
@@ -101,6 +128,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "readOnlyRootFilesystem")
+                has_field(exception.spec.securityContext.readOnlyRootFilesystem, "allowedValue")
                 allowed_value_by_exception := exception.spec.securityContext.readOnlyRootFilesystem.allowedValue
                 is_allowed_by_exception(container, allowed_value_by_exception)
               }
