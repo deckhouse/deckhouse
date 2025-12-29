@@ -27,11 +27,13 @@ import (
 const (
 	envDVPKubernetesConfigBase64 = "DVP_KUBERNETES_CONFIG_BASE64"
 	envDVPNamespace              = "DVP_NAMESPACE"
+	envClusterUUID               = "CLUSTER_UUID"
 )
 
 type CloudConfig struct {
 	KubernetesConfigBase64 string `json:"kubernetes_config_base64"`
 	Namespace              string `json:"namespace"`
+	ClusterUUID            string `json:"cluster_uuid"`
 }
 
 func NewCloudConfig() (*CloudConfig, error) {
@@ -47,6 +49,9 @@ func NewCloudConfig() (*CloudConfig, error) {
 		return nil, fmt.Errorf("environment variable %q is required", envDVPNamespace)
 	}
 	cloudConfig.Namespace = namespace
+
+	clusterUUID := os.Getenv(envClusterUUID)
+	cloudConfig.ClusterUUID = clusterUUID
 
 	return cloudConfig, nil
 }
