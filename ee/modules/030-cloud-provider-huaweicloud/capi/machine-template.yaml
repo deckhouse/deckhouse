@@ -48,9 +48,11 @@ spec:
       {{- end }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
-      securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
+      securityGroups:
+{{- toYaml (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) | nindent 8 }}
       {{- else }}
-      securityGroups: [{{ $securityGroupID }}]
+      securityGroups:
+        - {{ $securityGroupID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.serverGroupID }}
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
