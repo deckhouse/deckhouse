@@ -489,6 +489,8 @@ spec:
                     loadBalancerIP:
                       description: |
                         Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать её.
                     behindL7Proxy:
                       description: |
                         Включает обработку и передачу заголовков `X-Forwarded-*`.
@@ -532,6 +534,8 @@ spec:
                     loadBalancerIP:
                       description: |
                         Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать её.
                 loadBalancerWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
@@ -559,6 +563,8 @@ spec:
                     loadBalancerIP:
                       description: |
                         Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
+
+                        > **Внимание.** Облачный провайдер может не поддерживать данную опцию и игнорировать её.
                 hostPort:
                   description: |
                     Секция настроек инлета `HostPort`.
