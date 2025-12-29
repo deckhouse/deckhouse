@@ -66,7 +66,7 @@ func (d *DiskService) ListDisksByName(ctx context.Context, diskName string) (*v1
 	return &virtualDiskList, nil
 }
 
-func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize int64, diskStorageClass string) (*v1alpha2.VirtualDisk, error) {
+func (d *DiskService) CreateDisk(ctx context.Context, clusterUUID, vmHostname, diskName string, diskSize int64, diskStorageClass string) (*v1alpha2.VirtualDisk, error) {
 	vmd := v1alpha2.VirtualDisk{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha2.VirtualDiskKind,
@@ -76,7 +76,8 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 			Name:      diskName,
 			Namespace: d.namespace,
 			Labels: map[string]string{
-				diskNameLabel: diskName,
+				"deckhouse.io/managed-by": "deckhouse",
+				diskNameLabel:             diskName,
 			},
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
@@ -85,6 +86,14 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 				Size:         resource.NewQuantity(diskSize, resource.BinarySI),
 			},
 		},
+	}
+
+	if clusterUUID != "" {
+		vmd.Labels["dvp.deckhouse.io/cluster-uuid"] = clusterUUID
+	}
+
+	if vmHostname != "" {
+		vmd.Labels["dvp.deckhouse.io/hostname"] = vmHostname
 	}
 
 	err := d.client.Create(ctx, &vmd)
@@ -102,6 +111,8 @@ func (d *DiskService) CreateDisk(ctx context.Context, diskName string, diskSize 
 
 func (d *DiskService) CreateDiskFromDataSource(
 	ctx context.Context,
+	clusterUUID string,
+	vmHostname string,
 	diskName string,
 	diskSize resource.Quantity,
 	diskStorageClass string,
@@ -116,7 +127,10 @@ func (d *DiskService) CreateDiskFromDataSource(
 			Name:      diskName,
 			Namespace: d.namespace,
 			Labels: map[string]string{
-				diskNameLabel: diskName,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
+				"dvp.deckhouse.io/hostname":     vmHostname,
+				diskNameLabel:                   diskName,
 			},
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
