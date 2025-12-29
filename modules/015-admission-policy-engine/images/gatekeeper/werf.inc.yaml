@@ -40,8 +40,8 @@ shell:
   - | 
     diff_output=$(diff -qr "/src/charts/gatekeeper/crds" "/module_crds/native" )
     if [ -n "$diff_output" ]; then
-      echo "Differences found between module crds and gatekeeper crds:"
-      echo "$diff_output"
+      echo "Differences found between module crds and gatekeeper crds:" >&2
+      echo "$diff_output" >&2
       exit 1
     else
       exit 0
