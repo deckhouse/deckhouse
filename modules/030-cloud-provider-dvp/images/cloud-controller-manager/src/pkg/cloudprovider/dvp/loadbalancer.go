@@ -102,13 +102,13 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 
 	lbName := defaultLoadBalancerName(service)
 
-	// TODO: add "dvp.deckhouse.io/cluster-uuid" label
 	lb := api.LoadBalancer{
 		Name:    lbName,
 		Service: service,
 		Nodes:   nodes,
 		ServiceLabels: map[string]string{
-			"deckhouse.io/managed-by": "deckhouse",
+			"deckhouse.io/managed-by":       "deckhouse",
+			"dvp.deckhouse.io/cluster-uuid": c.config.ClusterUUID,
 		},
 	}
 
