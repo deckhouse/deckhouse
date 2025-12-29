@@ -24,6 +24,8 @@ git:
     - '**/*'
 - add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/crds
   to: /module_crds
+  includePaths:
+  - gatekeeper/*.yaml
   stageDependencies:
     install:
     - '**/*'    
@@ -40,7 +42,6 @@ shell:
   # check if module crds/gatekeeper are the same as gatekeeper crds
   - | 
     echo "Checking if module crds/gatekeeper are the same as gatekeeper crds"
-    rm -f "/module_crds/gatekeeper/!( *.yaml )"
     diff -qr "/src/charts/gatekeeper/crds" "/module_crds/gatekeeper" 
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
