@@ -43,7 +43,7 @@ spec:
       {{- end -}}
 
       subnets:
-{{- toYaml (unic $nets) | nindent 8 }}
+{{- toYaml (uniq $nets) | nindent 8 }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
