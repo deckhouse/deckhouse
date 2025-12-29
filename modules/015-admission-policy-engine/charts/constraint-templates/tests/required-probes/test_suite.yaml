@@ -10,12 +10,12 @@ tests:
   - name: example-allowed
     object: allowed.yaml
     assertions:
-    - violations: 'no'
+    - violations: no
   - name: example-disallowed
     object: disallowed.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes
   - name: example-disallowed-2
     object: disallowed2.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes

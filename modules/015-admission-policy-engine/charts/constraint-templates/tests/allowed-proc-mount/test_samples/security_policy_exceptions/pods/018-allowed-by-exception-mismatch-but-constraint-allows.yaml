@@ -10,5 +10,5 @@ spec:
     - name: nginx
       image: nginx
       securityContext:
-        procMount: Unmasked
+        procMount: Default
 

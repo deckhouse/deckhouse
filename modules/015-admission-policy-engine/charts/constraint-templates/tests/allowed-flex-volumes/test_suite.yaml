@@ -12,10 +12,10 @@ tests:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/001-allowed.yaml
     assertions:
-    - violations: 'no'
+    - violations: no
   - name: 002-example-disallowed
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/002-disallowed.yaml
     assertions:
-    - violations: 'yes'
+    - violations: yes

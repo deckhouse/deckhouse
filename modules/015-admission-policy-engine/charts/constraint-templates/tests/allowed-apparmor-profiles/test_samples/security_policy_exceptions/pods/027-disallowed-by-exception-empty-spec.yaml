@@ -6,7 +6,7 @@ metadata:
   labels:
     security.deckhouse.io/security-policy-exception: empty-spec
   annotations:
-    container.apparmor.security.beta.kubernetes.io/nginx: runtime/default
+    container.apparmor.security.beta.kubernetes.io/nginx: unconfined
 spec:
   containers:
     - name: nginx
