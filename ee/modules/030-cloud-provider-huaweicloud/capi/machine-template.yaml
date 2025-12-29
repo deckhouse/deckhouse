@@ -43,9 +43,7 @@ spec:
       {{- end -}}
 
       subnets:
-      {{- range $n := (uniq $nets) }}
-        - {{ $n | quote }}
-      {{- end }}
+{{- toYaml (unic $nets) | nindent 8 }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
