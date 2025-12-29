@@ -42,6 +42,10 @@ spec:
         {{- $nets = concat $nets $ic.subnets -}}
       {{- end -}}
 
+      subnets:
+      {{ range $n := (uniq $nets) }}
+        - {{ $n | quote }}
+      {{- end }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
