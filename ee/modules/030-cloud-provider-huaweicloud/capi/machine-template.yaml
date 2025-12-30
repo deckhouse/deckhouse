@@ -1,3 +1,4 @@
+
 {{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" -}}
 {{- $subnetID := $cloudProviderValues.subnetId -}}
 {{- $securityGroupID := $cloudProviderValues.securityGroupId }}
