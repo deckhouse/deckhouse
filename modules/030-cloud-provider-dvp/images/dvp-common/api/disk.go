@@ -22,7 +22,6 @@ import (
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	storagev1 "k8s.io/api/storage/v1"
-	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -252,21 +251,19 @@ func (c *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) erro
 	})
 }
 
-func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, source string, snapshotClass string) (*snapshotv1.VolumeSnapshot, error) {
-	volumeSnapshot := &snapshotv1.VolumeSnapshot{
+func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, source string) (*v1alpha2.VirtualDiskSnapshot, error) {
+	volumeSnapshot := &v1alpha2.VirtualDiskSnapshot{
 		TypeMeta: metav1.TypeMeta{
-			Kind:       "VolumeSnapshot",
-			APIVersion: "snapshot.storage.k8s.io/v1",
+			Kind:       v1alpha2.VirtualDiskSnapshotKind,
+			APIVersion: v1alpha2.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: fmt.Sprintf("%s-", name),
 			Namespace:    c.namespace,
 		},
-		Spec: snapshotv1.VolumeSnapshotSpec{
-			Source: snapshotv1.VolumeSnapshotSource{
-				PersistentVolumeClaimName: &source,
-			},
-			VolumeSnapshotClassName: &snapshotClass,
+		Spec: v1alpha2.VirtualDiskSnapshotSpec{
+			VirtualDiskName: source,
+			RequiredConsistency: true,
 		},
 	}
 
@@ -278,7 +275,7 @@ func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, sou
 }
 
 func (c *DiskService) DeleteVolumeSnapshot(ctx context.Context, id string) error {
-	volumeSnapshot := &snapshotv1.VolumeSnapshot{}
+	volumeSnapshot := &v1alpha2.VirtualDiskSnapshot{}
 
 	err := c.client.Get(ctx, types.NamespacedName{
 		Namespace: c.namespace,
