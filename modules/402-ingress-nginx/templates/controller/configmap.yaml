@@ -19,6 +19,11 @@ metadata:
   namespace: d8-ingress-nginx
   {{- include "helm_lib_module_labels" (list $context) | nindent 2 }}
 data:
+  # ModSecurity enabling
+  enable-modsecurity: "true"
+  # OWASP Core Rule Set enabling
+  enable-owasp-core-rules: "true"
+  modsecurity-transaction-id: "$request_id"
   # User snippets are disabled by default due to substantial security concerns
   allow-snippet-annotations: "true"
   # The default annotation risk level has been lowered to High in v1.12. Snippet annotations have an annotation risk level of Critical.

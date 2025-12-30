@@ -492,7 +492,12 @@ shell:
   - echo "jit support"
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
   # cve bash scripts
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #- rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
 imageSpec:
   config:
     workingDir: /

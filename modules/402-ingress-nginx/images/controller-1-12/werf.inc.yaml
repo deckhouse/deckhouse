@@ -612,7 +612,11 @@ shell:
     done
   - rm -rf /etc/nginx/owasp-modsecurity-crs/.git
   - rm -rf /etc/nginx/owasp-modsecurity-crs/tests
-
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
   # remove .a files
   - find /usr/local -name "*.a" -print | xargs /bin/rm
   setup:
