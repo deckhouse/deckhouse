@@ -87,7 +87,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   key: cni_network_config
-                  name: istio-cni-config
+                  name: d8-istio-cni-config
             - name: CNI_NET_DIR
               value: /etc/cni/net.d
             - name: CHAINED_CNI_PLUGIN
