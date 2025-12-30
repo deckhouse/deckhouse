@@ -48,7 +48,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - Ensure the user can execute commands using `sudo`.
 
 1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
-   - A private SSH key.
+   - A private SSH key in the encoded Base64 format.
    - The OS user.
    - The SSH port.
    - (Optional) A `sudo` password, if required.
@@ -61,16 +61,14 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
      metadata:
        name: static-nodes
      spec:
-       privateSSHKey: |
-         -----BEGIN OPENSSH PRIVATE KEY-----
-         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
-         -----END OPENSSH PRIVATE KEY-----
+       privateSSHKey: LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KTUlJRXZBSUJBREFOQmdrcWhraUc5dzBCQVFFRkFBT0NBZzhBTUlJQkNnS0NBUUVB
        sshPort: 22
        sudoPassword: password
        user: ubuntu
      ```
 
-     > **Important**. The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
+     > **Important**. The `privateSSHKey` field must contain a private SSH key encoded in Base64.
+     > The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
 
 1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 
