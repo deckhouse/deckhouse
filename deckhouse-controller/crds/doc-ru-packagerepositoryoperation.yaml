@@ -1,0 +1,112 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            PackageRepositoryOperation представляет операцию по сканированию/обновлению репозитория пакетов.
+          properties:
+            spec:
+              description: |
+                Spec определяет поведение PackageRepositoryOperation.
+              properties:
+                packageRepositoryName:
+                  description: |
+                    Название репозитория пакетов для выполнения операции.
+                type:
+                  description: |
+                    Тип выполняемой операции.
+                update:
+                  description: |
+                    Конфигурация для операций обновления.
+                  properties:
+                    fullScan:
+                      description: |
+                        Выполнять ли полное сканирование репозитория.
+                    timeout:
+                      description: |
+                        Таймаут для операции.
+            status:
+              description: |
+                Статус PackageRepositoryOperation.
+              properties:
+                completionTime:
+                  description: |
+                    Время завершения операции.
+                conditions:
+                  description: |
+                    Условия представляют последние доступные наблюдения за состоянием операции.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Последнее время проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали перехода.
+                      reason:
+                        description: |
+                          Программный идентификатор, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия, один из True, False, Unknown.
+                      type:
+                        description: |
+                          Тип условия операции.
+                packages:
+                  description: |
+                    Информация о пакетах, обработанных во время операции.
+                  properties:
+                    discovered:
+                      description: |
+                        Список пакетов, обнаруженных во время операции.
+                      items:
+                        properties:
+                          name:
+                            description: |
+                              Название обнаруженного пакета.
+                    failed:
+                      description: |
+                        Список пакетов, обработка которых не удалась.
+                      items:
+                        properties:
+                          errors:
+                            description: |
+                              Список ошибок, возникших при обработке этого пакета.
+                            items:
+                              properties:
+                                error:
+                                  description: |
+                                    Сообщение об ошибке.
+                                name:
+                                  description: |
+                                    Название ошибки.
+                          name:
+                            description: |
+                              Название пакета, обработка которого не удалась.
+                    processed:
+                      description: |
+                        Список пакетов, успешно обработанных.
+                      items:
+                        properties:
+                          name:
+                            description: |
+                              Название обработанного пакета.
+                          type:
+                            description: |
+                              Тип пакета.
+                    processedOverall:
+                      description: |
+                        Общее количество обработанных пакетов.
+                    total:
+                      description: |
+                        Общее количество найденных пакетов.
+                phase:
+                  description: |
+                    Текущая фаза операции.
+                startTime:
+                  description: |
+                    Время начала операции.

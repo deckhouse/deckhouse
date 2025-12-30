@@ -1,0 +1,111 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Представляет экземпляр приложения в пространстве имён.
+          properties:
+            spec:
+              description: |
+                Определяет поведение Приложения.
+              properties:
+                packageName:
+                  description: |
+                    Название пакета приложения для установки.
+                packageRepositoryName:
+                  description: |
+                    Название репозитория, где находится пакет.
+                    Если не указано, используется репозиторий по умолчанию.
+                packageVersion:
+                  description: |
+                    Версия пакета приложения для установки.
+                releaseChannel:
+                  description: |
+                    Канал релиза для пакета приложения.
+                settings:
+                  description: |
+                    Настройки конфигурации для приложения.
+            status:
+              description: |
+                Статус Приложения.
+              properties:
+                conditions:
+                  description: |
+                    Условия представляют последние доступные наблюдения за состоянием приложения.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Последнее время проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали перехода.
+                      reason:
+                        description: |
+                          Программный идентификатор, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия, один из True, False, Unknown.
+                      type:
+                        description: |
+                          Тип условия приложения.
+                currentVersion:
+                  description: |
+                    Информация о текущей установленной версии.
+                  properties:
+                    channel:
+                      description: |
+                        Канал релиза, из которого была установлена версия.
+                    version:
+                      description: |
+                        Семантическая версия установленного приложения.
+                internalConditions:
+                  description: |
+                    Внутренние условия представляют внутренние условия приложения.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Последнее время проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали перехода.
+                      reason:
+                        description: |
+                          Программный идентификатор, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия, один из True, False, Unknown.
+                      type:
+                        description: |
+                          Тип внутреннего условия приложения.
+                resourceConditions:
+                  description: |
+                    Условия ресурсов представляют условия, связанные с ресурсами приложения.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Последнее время проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали перехода.
+                      reason:
+                        description: |
+                          Программный идентификатор, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия, один из True, False, Unknown.
+                      type:
+                        description: |
+                          Тип условия ресурса.
