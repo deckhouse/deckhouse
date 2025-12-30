@@ -1288,7 +1288,6 @@ entries:
     - title:
         en: Projects (WIP)
         ru: Проекты (WIP)
-      draft: true
       folders:
         - title:
             en: Concepts
