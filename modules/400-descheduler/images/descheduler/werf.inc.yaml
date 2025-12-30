@@ -55,4 +55,4 @@ imageSpec:
   config:
     entrypoint: ["/descheduler"]
 ---
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version))) }}
