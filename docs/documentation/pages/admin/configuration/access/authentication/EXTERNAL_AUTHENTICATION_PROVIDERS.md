@@ -260,9 +260,12 @@ However, using authenticated access is recommended for improved security.
 The `bindPW` parameter must contain the password in plain text. Dex does not support hashed passwords in this field.
 {% endalert %}
 
-You can also enable Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the `enableBasicAuth: true` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource. For more details, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
+You can also enable support for:
 
-Example configuration for integrating with Active Directory:
+- Basic Authentication for accessing the Kubernetes API using LDAP credentials. To do this, set the `enableBasicAuth: true` parameter in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource. For more information, see [Access using Basic Authentication](k8s-api-lb.html#access-using-basic-authentication-ldap).
+- Kerberos SSO (SPNEGO) for LDAP. To do this, enable the `spec.ldap.kerberos` block in the [DexProvider](/modules/user-authn/cr.html#dexprovider) resource and configure the necessary parameters in it. For more details, see [Kerberos SSO (SPNEGO) for LDAP](k8s-api-lb.html#kerberos-spnego-sso-for-ldap).
+
+Example configuration for integrating with Active Directory (Basic Authentication):
 
 ```yaml
 apiVersion: deckhouse.io/v1

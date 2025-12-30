@@ -328,16 +328,16 @@ spec:
                             Способ сопоставления Kerberos principal с именем пользователя в LDAP: `localpart`, `sAMAccountName` или `userPrincipalName`.
                         fallbackToPassword:
                           description: |
-                            Если `true`, при отсутствии/некорректном заголовке `Authorization: Negotiate` будет показана форма пароля вместо ответа 401 с `WWW-Authenticate: Negotiate`.
+                            Если `true`, при отсутствии/некорректном заголовке `Authorization: Negotiate` будет показана форма ввода логина/пароля вместо ответа 401 с `WWW-Authenticate: Negotiate`.
                         keytabSecretName:
                           description: |
-                            Имя Secret в namespace `d8-user-authn`, содержащего ключ `krb5.keytab`, который монтируется в Pod Dex.
+                            Имя секрета в неймспейсе `d8-user-authn`, содержащего ключ `krb5.keytab`, который монтируется в под Dex.
                         krb5ConfConfigMapName:
                           description: |
                             Необязательное имя ConfigMap с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
                         krb5ConfSecretName:
                           description: |
-                            Необязательное имя Secret с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
+                            Необязательное имя секрета с ключом `krb5.conf` для монтирования в `/etc/krb5.conf` (обычно не требуется для офлайн‑проверки билетов).
     - name: v1
       schema:
         openAPIV3Schema:
