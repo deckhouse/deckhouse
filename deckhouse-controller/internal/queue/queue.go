@@ -227,11 +227,6 @@ func (q *queue) processOne() bool {
 		return false
 	}
 
-	if time.Now().Before(t.nextRetry) {
-		q.mu.Unlock()
-		return false // Task not ready for retry
-	}
-
 	q.mu.Unlock()
 
 	// Check for parent context cancellation
@@ -249,6 +244,10 @@ func (q *queue) processOne() bool {
 
 		return true // Task was processed (canceled)
 	default:
+	}
+
+	if time.Now().Before(t.nextRetry) {
+		return false // Task not ready for retry
 	}
 
 	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
