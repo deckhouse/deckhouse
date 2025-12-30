@@ -164,7 +164,7 @@ data:
       {{- end }}
     {{- end }}
     {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.enabled }}
-  hubble-export-file-path: /var/run/cilium/hubble/events.log
+  hubble-export-file-path: /var/log/cilium/hubble/flow.log
   hubble-export-file-max-backups: "0"
   hubble-export-file-max-size-mb: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fileMaxSizeMB | quote }}
       {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilter }}

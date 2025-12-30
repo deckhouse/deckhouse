@@ -307,7 +307,7 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 			Expect(metrics).To(ContainSubstring("drop:labelsContext=source_ip,source_namespace"))
 			Expect(metrics).To(ContainSubstring("flow"))
 
-			Expect(cm.Field("data.hubble-export-file-path").String()).To(Equal("/var/run/cilium/hubble/events.log"))
+			Expect(cm.Field("data.hubble-export-file-path").String()).To(Equal("/var/log/cilium/hubble/flow.log"))
 			Expect(cm.Field("data.hubble-export-file-max-size-mb").String()).To(Equal("30"))
 			Expect(cm.Field("data.hubble-export-allowlist").String()).To(MatchJSON(`{"verdict":["DROPPED","ERROR"]}`))
 			Expect(cm.Field("data.hubble-export-denylist").String()).To(MatchJSON(`{"source_pod":["kube-system/"]}`))

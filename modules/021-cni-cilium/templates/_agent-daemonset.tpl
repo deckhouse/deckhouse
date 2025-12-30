@@ -166,6 +166,8 @@ spec:
           mountPath: "/run/cilium/cgroupv2"
         - name: cilium-run
           mountPath: /var/run/cilium
+        - name: cilium-logs
+          mountPath: /var/log/cilium/hubble
         - name: cilium-netns
           mountPath: /var/run/cilium/netns
           mountPropagation: HostToContainer
@@ -539,6 +541,10 @@ spec:
       - name: cilium-run
         hostPath:
           path: "/var/run/cilium"
+          type: DirectoryOrCreate
+      - name: cilium-logs
+        hostPath:
+          path: "/var/log/cilium/hubble"
           type: DirectoryOrCreate
       - name: cilium-netns
         hostPath:

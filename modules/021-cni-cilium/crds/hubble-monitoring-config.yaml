@@ -113,7 +113,7 @@ spec:
                       default: false
                       description: |
                         Enables event logging for Cilium agents.
-                        The log file is located on the node's filesystem at `/var/run/cilium/hubble/events.log`.
+                        The log file is located on the node's filesystem at `/var/log/cilium/hubble/flow.log`.
                     allowFilter:
                       type: object
                       description: >
