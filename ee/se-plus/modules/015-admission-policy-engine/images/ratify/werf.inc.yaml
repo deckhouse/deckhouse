@@ -38,7 +38,7 @@ shell:
   - rm -rf .git
   # check if module crds/ratify are the same as ratify crds
   - | 
-    echo "Checking if module crds/native are the same as ratify crds"
+    echo "Checking if module crds/ratify are the same as ratify crds"
     diff -qr "/src/config/crd/bases" "/module_crds/ratify"   
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
