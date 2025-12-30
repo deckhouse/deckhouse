@@ -367,7 +367,8 @@ func (in *ApplicationPackageVersionStatusMetadata) DeepCopyInto(out *Application
 	}
 	if in.Changelog != nil {
 		in, out := &in.Changelog, &out.Changelog
-		*out = (*in).DeepCopy()
+		*out = new(PackageChangelog)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Compatibility != nil {
 		in, out := &in.Compatibility, &out.Compatibility

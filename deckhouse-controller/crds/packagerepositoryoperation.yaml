@@ -18,9 +18,6 @@ spec:
     - jsonPath: .status.packages.total
       name: Count
       type: integer
-    - jsonPath: .spec.packageRepository
-      name: Repository
-      type: string
     - jsonPath: .status.conditions[?(@.type=='Processed')].status
       name: Processed
       type: string
@@ -50,43 +47,61 @@ spec:
           spec:
             description: Spec defines the behavior of a PackageRepositoryOperation.
             properties:
-              packageRepository:
+              packageRepositoryName:
+                description: The name of the package repository to operate on.
                 type: string
               type:
+                description: The type of operation to perform.
                 type: string
               update:
+                description: Configuration for update operations.
                 properties:
                   fullScan:
+                    description: Whether to perform a full scan of the repository.
                     type: boolean
                   timeout:
+                    description: Timeout for the operation.
                     type: string
                 type: object
             required:
-            - packageRepository
+            - packageRepositoryName
             - type
             type: object
           status:
             description: Status of a PackageRepositoryOperation.
             properties:
               completionTime:
+                description: The time when the operation completed.
                 format: date-time
                 type: string
               conditions:
+                description: Conditions represent the latest available observations
+                  of the operation's state.
                 items:
                   properties:
                     lastProbeTime:
+                      description: The last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
+                      description: The last time the condition transitioned from one
+                        status to another.
                       format: date-time
                       type: string
                     message:
+                      description: A human readable message indicating details about
+                        the transition.
                       type: string
                     reason:
+                      description: A programmatic identifier indicating the reason
+                        for the condition's last transition.
                       type: string
                     status:
+                      description: The status of the condition, one of True, False,
+                        Unknown.
                       type: string
                     type:
+                      description: The type of operation condition.
                       type: string
                   required:
                   - status
@@ -94,25 +109,33 @@ spec:
                   type: object
                 type: array
               packages:
+                description: Information about packages processed during the operation.
                 properties:
                   discovered:
+                    description: List of packages discovered during the operation.
                     items:
                       properties:
                         name:
+                          description: The name of the discovered package.
                           type: string
                       required:
                       - name
                       type: object
                     type: array
                   failed:
+                    description: List of packages that failed processing.
                     items:
                       properties:
                         errors:
+                          description: List of errors encountered while processing
+                            this package.
                           items:
                             properties:
                               error:
+                                description: The error message.
                                 type: string
                               name:
+                                description: The name of the error.
                                 type: string
                             required:
                             - error
@@ -120,6 +143,7 @@ spec:
                             type: object
                           type: array
                         name:
+                          description: The name of the package that failed.
                           type: string
                       required:
                       - errors
@@ -127,24 +151,31 @@ spec:
                       type: object
                     type: array
                   processed:
+                    description: List of packages successfully processed.
                     items:
                       properties:
                         name:
+                          description: The name of the processed package.
                           type: string
                         type:
+                          description: The type of the package.
                           type: string
                       required:
                       - name
                       type: object
                     type: array
                   processedOverall:
+                    description: Total number of packages processed.
                     type: integer
                   total:
+                    description: Total number of packages found.
                     type: integer
                 type: object
               phase:
+                description: The current phase of the operation.
                 type: string
               startTime:
+                description: The time when the operation started.
                 format: date-time
                 type: string
             type: object

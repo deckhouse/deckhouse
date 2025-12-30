@@ -39,7 +39,7 @@ spec:
     - jsonPath: .status.resourceConditions[?(@.type=='Processed')].status
       name: Processed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+    - jsonPath: .status.resourceConditions[?(@.type=='Processed')].message
       name: Message
       type: string
     name: v1alpha1
@@ -68,40 +68,58 @@ spec:
             description: Spec defines the behavior of an Application.
             properties:
               packageName:
+                description: The name of the application package to install.
                 type: string
-              packageRepository:
+              packageRepositoryName:
+                description: |-
+                  The name of the repository where the package is located.
+                  If not specified, the default repository is used.
+                type: string
+              packageVersion:
+                description: The version of the application package to install.
                 type: string
               releaseChannel:
+                description: The release channel for the application package.
                 type: string
               settings:
-                description: MappedFields handles arbitrary JSON settings as a map[string]any.
+                description: Configuration settings for the application.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
-              version:
-                type: string
             required:
             - packageName
-            - version
+            - packageVersion
             type: object
           status:
             description: Status of an Application.
             properties:
               conditions:
+                description: Conditions represent the latest available observations
+                  of the application's state.
                 items:
                   properties:
                     lastProbeTime:
+                      description: The last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
+                      description: The last time the condition transitioned from one
+                        status to another.
                       format: date-time
                       type: string
                     message:
+                      description: A human readable message indicating details about
+                        the transition.
                       type: string
                     reason:
+                      description: A programmatic identifier indicating the reason
+                        for the condition's last transition.
                       type: string
                     status:
+                      description: The status of the condition, one of True, False,
+                        Unknown.
                       type: string
                     type:
+                      description: The type of application condition.
                       type: string
                   required:
                   - status
@@ -109,56 +127,83 @@ spec:
                   type: object
                 type: array
               currentVersion:
+                description: Information about the currently installed version.
                 properties:
                   channel:
+                    description: The release channel from which the version was installed.
                     type: string
-                  current:
+                  version:
+                    description: The semantic version of the installed application.
                     type: string
                 type: object
               internalConditions:
+                description: InternalConditions represent internal conditions of the
+                  application.
                 items:
                   properties:
                     lastProbeTime:
+                      description: The last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
-                      format: date-time
-                      type: string
-                    status:
-                      type: string
-                    type:
-                      type: string
-                  required:
-                  - status
-                  - type
-                  type: object
-                type: array
-              repository:
-                type: string
-              resourceConditions:
-                items:
-                  properties:
-                    lastProbeTime:
-                      format: date-time
-                      type: string
-                    lastTransitionTime:
+                      description: The last time the condition transitioned from one
+                        status to another.
                       format: date-time
                       type: string
                     message:
+                      description: A human readable message indicating details about
+                        the transition.
                       type: string
                     reason:
+                      description: A programmatic identifier indicating the reason
+                        for the condition's last transition.
                       type: string
                     status:
+                      description: The status of the condition, one of True, False,
+                        Unknown.
                       type: string
                     type:
+                      description: The type of internal application condition.
                       type: string
                   required:
                   - status
                   - type
                   type: object
                 type: array
-              status:
-                type: string
+              resourceConditions:
+                description: ResourceConditions represent conditions related to application
+                  resources.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: The last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: The last time the condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: A programmatic identifier indicating the reason
+                        for the condition's last transition.
+                      type: string
+                    status:
+                      description: The status of the condition, one of True, False,
+                        Unknown.
+                      type: string
+                    type:
+                      description: The type of resource condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
             type: object
         required:
         - spec

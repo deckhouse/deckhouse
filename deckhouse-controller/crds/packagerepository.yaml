@@ -18,15 +18,12 @@ spec:
     - jsonPath: .status.phase
       name: Phase
       type: string
-    - jsonPath: .spec.registry.repo
-      name: Repo
-      type: string
     - jsonPath: .status.syncTime
       name: Sync
       type: string
-      priority: 1
     - jsonPath: .status.packagesCount
       name: Packages
+      priority: 1
       type: integer
     name: v1alpha1
     schema:
@@ -54,14 +51,20 @@ spec:
             description: Spec defines the behavior of a PackageRepository.
             properties:
               registry:
+                description: Configuration for the package registry.
                 properties:
                   ca:
+                    description: Certificate authority data for TLS verification.
                     type: string
                   dockerCfg:
+                    description: Docker configuration for authentication.
                     type: string
                   repo:
+                    description: The repository path in the registry.
                     type: string
                   scheme:
+                    description: The scheme to use for accessing the registry (e.g.,
+                      https).
                     type: string
                 required:
                 - repo
@@ -73,13 +76,17 @@ spec:
             description: Status of a PackageRepository.
             properties:
               message:
+                description: A human-readable message about the repository status.
                 type: string
               packages:
+                description: List of packages available in this repository.
                 items:
                   properties:
                     name:
+                      description: The name of the package.
                       type: string
                     type:
+                      description: The type of the package.
                       type: string
                   required:
                   - name
@@ -87,10 +94,13 @@ spec:
                   type: object
                 type: array
               packagesCount:
+                description: Total number of packages in this repository.
                 type: integer
               phase:
+                description: The current phase of the repository.
                 type: string
               syncTime:
+                description: The last time the repository was synchronized.
                 format: date-time
                 type: string
             type: object

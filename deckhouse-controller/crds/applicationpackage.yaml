@@ -14,7 +14,11 @@ spec:
     singular: applicationpackage
   scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .status.installedOverall
+      name: Installed
+      type: integer
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: ApplicationPackage represents information about available application
@@ -41,6 +45,8 @@ spec:
             description: Status of an ApplicationPackage.
             properties:
               availableRepositories:
+                description: A list of repository names where this application package
+                  is available.
                 items:
                   type: string
                 type: array
@@ -49,11 +55,17 @@ spec:
                   items:
                     properties:
                       name:
+                        description: The name of the installed application.
                         type: string
                     type: object
                   type: array
+                description: |-
+                  Information about applications installed in each namespace.
+                  The key is the namespace name, and the value is a list of installed applications.
                 type: object
               installedOverall:
+                description: The total number of applications installed across all
+                  namespaces.
                 type: integer
             type: object
         type: object
