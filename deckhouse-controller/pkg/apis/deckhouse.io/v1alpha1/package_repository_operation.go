@@ -72,6 +72,7 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="Repository",type=string,JSONPath=`.spec.packageRepositoryName`
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -89,58 +90,125 @@ type PackageRepositoryOperation struct {
 }
 
 type PackageRepositoryOperationSpec struct {
-	PackageRepositoryName string                            `json:"packageRepositoryName"`
-	Type                  string                            `json:"type"`
-	Update                *PackageRepositoryOperationUpdate `json:"update,omitempty"`
+	// The name of the package repository to operate on.
+	PackageRepositoryName string `json:"packageRepositoryName"`
+
+	// The type of operation to perform.
+	Type string `json:"type"`
+
+	// Configuration for update operations.
+	// +optional
+	Update *PackageRepositoryOperationUpdate `json:"update,omitempty"`
 }
 
 type PackageRepositoryOperationUpdate struct {
-	FullScan bool   `json:"fullScan,omitempty"`
-	Timeout  string `json:"timeout,omitempty"`
+	// Whether to perform a full scan of the repository.
+	// +optional
+	FullScan bool `json:"fullScan,omitempty"`
+
+	// Timeout for the operation.
+	// +optional
+	Timeout string `json:"timeout,omitempty"`
 }
 
 type PackageRepositoryOperationStatus struct {
-	Phase          string                                      `json:"phase,omitempty"`
-	StartTime      *metav1.Time                                `json:"startTime,omitempty"`
-	CompletionTime *metav1.Time                                `json:"completionTime,omitempty"`
-	Packages       *PackageRepositoryOperationStatusPackages   `json:"packages,omitempty"`
-	Conditions     []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// The current phase of the operation.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// The time when the operation started.
+	// +optional
+	StartTime *metav1.Time `json:"startTime,omitempty"`
+
+	// The time when the operation completed.
+	// +optional
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
+
+	// Information about packages processed during the operation.
+	// +optional
+	Packages *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
+
+	// Conditions represent the latest available observations of the operation's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
-	Failed           []PackageRepositoryOperationStatusFailedPackage     `json:"failed,omitempty"`
-	Processed        []PackageRepositoryOperationStatusPackage           `json:"processed,omitempty"`
-	ProcessedOverall int                                                 `json:"processedOverall,omitempty"`
-	Total            int                                                 `json:"total,omitempty"`
+	// List of packages discovered during the operation.
+	// +optional
+	Discovered []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
+
+	// List of packages that failed processing.
+	// +optional
+	Failed []PackageRepositoryOperationStatusFailedPackage `json:"failed,omitempty"`
+
+	// List of packages successfully processed.
+	// +optional
+	Processed []PackageRepositoryOperationStatusPackage `json:"processed,omitempty"`
+
+	// Total number of packages processed.
+	// +optional
+	ProcessedOverall int `json:"processedOverall,omitempty"`
+
+	// Total number of packages found.
+	// +optional
+	Total int `json:"total,omitempty"`
 }
 
 type PackageRepositoryOperationStatusDiscoveredPackage struct {
+	// The name of the discovered package.
 	Name string `json:"name"`
 }
 
 type PackageRepositoryOperationStatusFailedPackage struct {
-	Name   string                                               `json:"name"`
+	// The name of the package that failed.
+	Name string `json:"name"`
+
+	// List of errors encountered while processing this package.
 	Errors []PackageRepositoryOperationStatusFailedPackageError `json:"errors"`
 }
 
 type PackageRepositoryOperationStatusFailedPackageError struct {
-	Name  string `json:"name"`
+	// The name of the error.
+	Name string `json:"name"`
+
+	// The error message.
 	Error string `json:"error"`
 }
 
 type PackageRepositoryOperationStatusPackage struct {
+	// The name of the processed package.
 	Name string `json:"name"`
+
+	// The type of the package.
+	// +optional
 	Type string `json:"type,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// The type of operation condition.
+	Type string `json:"type"`
+
+	// The status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// A programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// The last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

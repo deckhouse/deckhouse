@@ -52,6 +52,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="Registry",type=string,JSONPath=`.spec.registry.repo`
 
 // PackageRepository is a source of packages for Deckhouse.
 type PackageRepository struct {
@@ -69,26 +70,54 @@ type PackageRepository struct {
 }
 
 type PackageRepositorySpec struct {
+	// Configuration for the package registry.
 	Registry PackageRepositorySpecRegistry `json:"registry"`
 }
 
 type PackageRepositorySpecRegistry struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Repo      string `json:"repo"`
+	// The scheme to use for accessing the registry (e.g., https).
+	// +optional
+	Scheme string `json:"scheme,omitempty"`
+
+	// The repository path in the registry.
+	Repo string `json:"repo"`
+
+	// Docker configuration for authentication.
+	// +optional
 	DockerCFG string `json:"dockerCfg,omitempty"`
-	CA        string `json:"ca,omitempty"`
+
+	// Certificate authority data for TLS verification.
+	// +optional
+	CA string `json:"ca,omitempty"`
 }
 
 type PackageRepositoryStatus struct {
-	SyncTime      metav1.Time                      `json:"syncTime,omitempty"`
-	Packages      []PackageRepositoryStatusPackage `json:"packages,omitempty"`
-	PackagesCount int                              `json:"packagesCount,omitempty"`
-	Phase         string                           `json:"phase,omitempty"`
-	Message       string                           `json:"message,omitempty"`
+	// The last time the repository was synchronized.
+	// +optional
+	SyncTime metav1.Time `json:"syncTime,omitempty"`
+
+	// List of packages available in this repository.
+	// +optional
+	Packages []PackageRepositoryStatusPackage `json:"packages,omitempty"`
+
+	// Total number of packages in this repository.
+	// +optional
+	PackagesCount int `json:"packagesCount,omitempty"`
+
+	// The current phase of the repository.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// A human-readable message about the repository status.
+	// +optional
+	Message string `json:"message,omitempty"`
 }
 
 type PackageRepositoryStatusPackage struct {
+	// The name of the package.
 	Name string `json:"name"`
+
+	// The type of the package.
 	Type string `json:"type"`
 }
 
