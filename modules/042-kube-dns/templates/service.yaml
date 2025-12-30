@@ -47,6 +47,8 @@ metadata:
   name: kube-dns
   namespace: kube-system
   {{- include "helm_lib_module_labels" (list . (dict "k8s-app" "kube-dns")) | nindent 2 }}
+  annotations:
+    werf.io/weight: "-1"
 spec:
   type: ExternalName
   externalName: d8-kube-dns.kube-system.svc.{{ .Values.global.discovery.clusterDomain }}
