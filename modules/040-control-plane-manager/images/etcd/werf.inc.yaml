@@ -1,3 +1,6 @@
+# etcd version
+{{- $version := "v3.6.1" }}
+
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
@@ -64,3 +67,5 @@ shell:
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}

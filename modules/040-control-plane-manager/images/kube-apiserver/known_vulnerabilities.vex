@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-83ad327013f034fdd863cf73303584cf735337893acf934c4c3d37ba8b0609f3",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -73,7 +73,36 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
       "timestamp": "2025-11-07T13:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2025-12-29T21:05:25.941921Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-58181"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
+      "timestamp": "2025-12-29T21:05:57.881109Z"
     }
   ],
-  "timestamp": "2025-11-07T13:55:00Z"
+  "timestamp": "2025-11-07T13:55:00Z",
+  "last_updated": "2025-12-29T21:05:57Z"
 }
