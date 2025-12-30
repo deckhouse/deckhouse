@@ -43,9 +43,9 @@ spec:
       {{- end -}}
 
       subnets:
-{{- range $n := (uniq $nets) }}
+      {{- range $n := (uniq $nets) }}
         - {{ $n | quote }}
-{{- end }}
+      {{- end }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
