@@ -495,6 +495,8 @@ shell:
   #remove owasp-modsecurity-crs unnecessary files and folders
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
   - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
 imageSpec:
   config:
     workingDir: /
