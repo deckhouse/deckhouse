@@ -74,13 +74,10 @@ apiVersions:
                       description: |
                         Политика запуска виртуальной машины.
 
-                        * `AlwaysOn` — виртуальная машина всегда должна быть запущена;
+                        * `AlwaysOn` — Виртуальная машина всегда должна быть запущена;
+                        * `AlwaysOff` — Виртуальная машина должна быть всегда остановлена.
+                        * `Manual` — Состояние виртуальной машины контролируется вручную.
                         * `AlwaysOnUnlessStoppedManually` — виртуальную машину можно остановить вручную (например, для обслуживания).
-                      enum:
-                        - AlwaysOn
-                        - AlwaysOnUnlessStoppedManually
-                      default: AlwaysOnUnlessStoppedManually
-                      example: AlwaysOnUnlessStoppedManually
                     bootloader:
                       description: |
                         Определяет загрузчик для виртуальной машины.
@@ -92,6 +89,10 @@ apiVersions:
                       description: |
                         Политика live-миграции виртуальной машины.
 
+                        * `Manual` — миграция контролируется вручную.
+                        * `Never` — миграция отключена.
+                        * `AlwaysSafe` — всегда используйте безопасную миграцию (может завершиться сбоем, если виртуальная машина имеет значительные изменения в памяти).
+                        * `PreferSafe` — предпочитайте безопасную миграцию, при необходимости переходите к принудительной.
                         * `AlwaysForced` — всегда использовать forced migration;
                         * `PreferForced` — предпочитать forced migration.
                     ipAddresses:
