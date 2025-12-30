@@ -55,7 +55,7 @@
 
 {{- if $context.Values.admissionPolicyEngine.internal.bootstrapped }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
 {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
@@ -113,7 +113,7 @@ spec:
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
 {{- if or (and (eq $standard "baseline") (ne $defaultPolicy "privileged"))  (and (eq $standard "restricted") (ne $defaultPolicy "restricted")) }} 
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: {{ $policyCRDName }}
 metadata:
 {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}

@@ -56,7 +56,7 @@
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8AllowedRepos
 metadata:
   name: {{$cr.metadata.name}}
@@ -78,7 +78,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredResources
 metadata:
   name: {{$cr.metadata.name}}
@@ -106,7 +106,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DisallowedTags
 metadata:
   name: {{$cr.metadata.name}}
@@ -128,7 +128,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredLabels
 metadata:
   name: {{$cr.metadata.name}}
@@ -152,7 +152,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredAnnotations
 metadata:
   name: {{$cr.metadata.name}}
@@ -176,7 +176,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RequiredProbes
 metadata:
   name: {{$cr.metadata.name}}
@@ -198,7 +198,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8RevisionHistoryLimit
 metadata:
   name: {{$cr.metadata.name}}
@@ -220,7 +220,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ImagePullPolicy
 metadata:
   name: {{$cr.metadata.name}}
@@ -241,7 +241,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8PriorityClass
 metadata:
   name: {{$cr.metadata.name}}
@@ -262,7 +262,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8IngressClass
 metadata:
   name: {{$cr.metadata.name}}
@@ -283,7 +283,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8StorageClass
 metadata:
   name: {{$cr.metadata.name}}
@@ -304,7 +304,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DNSPolicy
 metadata:
   name: {{$cr.metadata.name}}
@@ -322,7 +322,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ContainerDuplicates
 metadata:
   name: {{$cr.metadata.name}}
@@ -340,7 +340,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8ReplicaLimits
 metadata:
   name: {{$cr.metadata.name}}
@@ -362,7 +362,7 @@ spec:
   {{- $tolerations := $cr.spec.policies.disallowedTolerations }}
   {{- if gt (len $tolerations) 0 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1
+apiVersion: constraints.gatekeeper.sh/v1beta1
 kind: D8DisallowedTolerations
 metadata:
   name: {{$cr.metadata.name}}
