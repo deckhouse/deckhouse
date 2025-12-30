@@ -123,6 +123,19 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
+	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
+	if err != nil {
+		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+	}
+
+	masterIP := outputs.MasterIPForSSH
+	if masterIP == "" {
+		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
+		return false, nil
+	}
+
+	h.oldMasterIPForSSH = masterIP
+
 	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
@@ -132,19 +145,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
-
-	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
-	if err != nil {
-		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
-	}
-
-	masterIP := outputs.MasterIPForSSH
-	if masterIP == "" {
-		log.InfoF("Got empty master IP for ssh for node %s. Skip removing control-plane from node.\n", h.nodeToConverge)
-		return false, nil
-	}
-
-	h.oldMasterIPForSSH = masterIP
 
 	return false, nil
 }
