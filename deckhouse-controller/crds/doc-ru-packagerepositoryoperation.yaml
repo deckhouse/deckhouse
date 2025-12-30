@@ -8,7 +8,7 @@ spec:
           properties:
             spec:
               description: |
-                Spec определяет поведение PackageRepositoryOperation.
+                Spec определяет поведение ресурса
               properties:
                 packageRepositoryName:
                   description: |
@@ -28,7 +28,7 @@ spec:
                         Таймаут для операции.
             status:
               description: |
-                Статус PackageRepositoryOperation.
+                Статус ресурса.
               properties:
                 completionTime:
                   description: |

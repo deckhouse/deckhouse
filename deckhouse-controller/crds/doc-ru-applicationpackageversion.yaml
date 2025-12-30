@@ -19,7 +19,7 @@ spec:
                     Версия пакета приложения.
             status:
               description: |
-                Статус ВерсииПакетаПриложения.
+                Статус ресурса.
               properties:
                 conditions:
                   description: |

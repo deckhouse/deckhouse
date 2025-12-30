@@ -8,7 +8,7 @@ spec:
           properties:
             spec:
               description: |
-                Определяет поведение Приложения.
+                Определяет поведение ресурса.
               properties:
                 packageName:
                   description: |
@@ -28,7 +28,7 @@ spec:
                     Настройки конфигурации для приложения.
             status:
               description: |
-                Статус Приложения.
+                Статус ресурса.
               properties:
                 conditions:
                   description: |

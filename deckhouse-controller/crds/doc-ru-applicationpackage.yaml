@@ -8,7 +8,7 @@ spec:
           properties:
             status:
               description: |
-                Статус ПакетаПриложения.
+                Статус ресурса.
               properties:
                 availableRepositories:
                   description: |
