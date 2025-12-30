@@ -110,7 +110,6 @@ spec:
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
-{{- end }}
 {{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
 {{- if or (and (eq $standard "baseline") (ne $defaultPolicy "privileged"))  (and (eq $standard "restricted") (ne $defaultPolicy "restricted")) }} 
 ---
@@ -164,6 +163,7 @@ spec:
   {{- end }} 
 {{- end }} 
 {{/* #### end of TODO */}}
+{{- end }}
 {{- end }}
 
 {{- define "trivy.provider.enabled" }}
