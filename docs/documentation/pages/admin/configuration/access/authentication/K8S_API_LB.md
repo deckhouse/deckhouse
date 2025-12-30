@@ -121,7 +121,7 @@ Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. The mec
 1. Dex matches the principal with the LDAP name, retrieves the groups, and completes the OIDC flow.
 
 {% alert level="info" %}
-To configure Kerberos (SPNEGO) SSO, LDAP must have an account with read-only privileges (service account). For more information on configuration, see the section [LDAP Integration](external-authentication-providers.html#integration-via-ldap).
+To configure Kerberos (SPNEGO) SSO, LDAP must have an account with read-only privileges (service account). For more information on configuration, see the section [LDAP Integration](external-authentication-providers.html#ldap-integration).
 {% endalert %}
 
 Enabling Kerberos (SPNEGO) SSO for LDAP:
