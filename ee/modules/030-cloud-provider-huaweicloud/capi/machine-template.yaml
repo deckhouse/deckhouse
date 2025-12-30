@@ -43,14 +43,17 @@ spec:
       {{- end -}}
 
       subnets:
-{{ range (uniq $nets) }}        - {{ . | quote }}
-{{ end }}
+      {{- range (uniq $nets) }}
+      - {{ . | quote }}
+      {{- end }}
 
       securityGroups:
       {{- if .nodeGroup.instanceClass.securityGroups }}
-{{ range (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}        - {{ . | quote }}
-{{ end }}      {{- else }}
-        - {{ $securityGroupID | quote }}
+      {{- range (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}
+      - {{ . | quote }}
+      {{- end }}
+      {{- else }}
+      - {{ $securityGroupID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.serverGroupID }}
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
