@@ -68,10 +68,10 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 		})
 
 		Context("Case C: allowedRepos is set with one item", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
-			f.RunHook()
-		})
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(testOperationPolicy))
+				f.RunHook()
+			})
 			It("should include allowedRepos key with non-empty array in Values", func() {
 				Expect(f).To(ExecuteSuccessfully())
 				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
@@ -87,7 +87,7 @@ var _ = Describe("Modules :: admission-policy-engine :: hooks :: handle operatio
 				f.RunHook()
 			})
 			It("should include requiredResources.limits key with empty array in Values", func() {
-			Expect(f).To(ExecuteSuccessfully())
+				Expect(f).To(ExecuteSuccessfully())
 				ops := f.ValuesGet("admissionPolicyEngine.internal.operationPolicies").Array()
 				Expect(ops).To(HaveLen(1))
 				Expect(ops[0].Get("spec.policies.requiredResources.limits").Exists()).To(BeTrue())
@@ -223,6 +223,82 @@ spec:
 				Expect(n.Get(tc.path).Exists()).To(BeTrue())
 				Expect(n.Get(tc.path).Array()).ToNot(BeEmpty())
 			}
+		})
+
+		It("should omit replicaLimits when not specified and include when set", func() {
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.replicaLimits").Exists()).To(BeFalse())
+
+			n := runAndGet(operationPolicyYAML("    replicaLimits:\n      minReplicas: 1\n      maxReplicas: 3"))
+			Expect(n.Get("spec.policies.replicaLimits").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.replicaLimits.minReplicas").Int()).To(Equal(int64(1)))
+			Expect(n.Get("spec.policies.replicaLimits.maxReplicas").Int()).To(Equal(int64(3)))
+		})
+
+		It("should omit requiredResources completely when not specified", func() {
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.requiredResources").Exists()).To(BeFalse())
+		})
+
+		It("should keep requiredResources when both limits and requests are empty slices", func() {
+			e := runAndGet(operationPolicyYAML("    requiredResources:\n      limits: []\n      requests: []"))
+			Expect(e.Get("spec.policies.requiredResources").Exists()).To(BeTrue())
+			Expect(e.Get("spec.policies.requiredResources.limits").Array()).To(HaveLen(0))
+			Expect(e.Get("spec.policies.requiredResources.requests").Array()).To(HaveLen(0))
+		})
+
+		It("should keep requiredResources when both limits and requests are non-empty", func() {
+			n := runAndGet(operationPolicyYAML("    requiredResources:\n      limits: [\"memory\"]\n      requests: [\"cpu\"]"))
+			Expect(n.Get("spec.policies.requiredResources").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.requiredResources.limits").Array()).ToNot(BeEmpty())
+			Expect(n.Get("spec.policies.requiredResources.requests").Array()).ToNot(BeEmpty())
+		})
+
+		It("should include maxRevisionHistoryLimit only when set", func() {
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.maxRevisionHistoryLimit").Exists()).To(BeFalse())
+
+			n := runAndGet(operationPolicyYAML("    maxRevisionHistoryLimit: 5"))
+			Expect(n.Get("spec.policies.maxRevisionHistoryLimit").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.maxRevisionHistoryLimit").Int()).To(Equal(int64(5)))
+		})
+
+		It("should include imagePullPolicy only when set", func() {
+			o := runAndGet(operationPolicyYAML(""))
+			Expect(o.Get("spec.policies.imagePullPolicy").Exists()).To(BeFalse())
+
+			n := runAndGet(operationPolicyYAML("    imagePullPolicy: Always"))
+			Expect(n.Get("spec.policies.imagePullPolicy").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.imagePullPolicy").String()).To(Equal("Always"))
+		})
+
+		It("should keep booleans when set", func() {
+			n := runAndGet(operationPolicyYAML("    checkHostNetworkDNSPolicy: true\n    checkContainerDuplicates: true"))
+			Expect(n.Get("spec.policies.checkHostNetworkDNSPolicy").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.checkHostNetworkDNSPolicy").Bool()).To(BeTrue())
+			Expect(n.Get("spec.policies.checkContainerDuplicates").Exists()).To(BeTrue())
+			Expect(n.Get("spec.policies.checkContainerDuplicates").Bool()).To(BeTrue())
+		})
+
+		It("should keep replicaLimits when only one of min/max is set", func() {
+			minOnly := runAndGet(operationPolicyYAML("    replicaLimits:\n      minReplicas: 2"))
+			Expect(minOnly.Get("spec.policies.replicaLimits").Exists()).To(BeTrue())
+			Expect(minOnly.Get("spec.policies.replicaLimits.minReplicas").Int()).To(Equal(int64(2)))
+			Expect(minOnly.Get("spec.policies.replicaLimits.maxReplicas").Exists()).To(BeFalse())
+
+			maxOnly := runAndGet(operationPolicyYAML("    replicaLimits:\n      maxReplicas: 4"))
+			Expect(maxOnly.Get("spec.policies.replicaLimits").Exists()).To(BeTrue())
+			Expect(maxOnly.Get("spec.policies.replicaLimits.maxReplicas").Int()).To(Equal(int64(4)))
+			Expect(maxOnly.Get("spec.policies.replicaLimits.minReplicas").Exists()).To(BeFalse())
+		})
+
+		It("should not add unrelated keys when only allowedRepos is set", func() {
+			only := runAndGet(operationPolicyYAML("    allowedRepos:\n      - foo.registry"))
+			Expect(only.Get("spec.policies.allowedRepos").Exists()).To(BeTrue())
+			Expect(only.Get("spec.policies.allowedRepos").Array()).ToNot(BeEmpty())
+			Expect(only.Get("spec.policies.requiredResources").Exists()).To(BeFalse())
+			Expect(only.Get("spec.policies.replicaLimits").Exists()).To(BeFalse())
+			Expect(only.Get("spec.policies.disallowedImageTags").Exists()).To(BeFalse())
 		})
 
 		It("should preserve omit vs non-empty for requiredLabels/requiredAnnotations (CRD may forbid empty arrays)", func() {

@@ -85,7 +85,7 @@ type SecurityPolicySpec struct {
 		SupplementalGroups           *SelectUIDStrategy `json:"supplementalGroups,omitempty"`
 		AllowedUnsafeSysctls         *[]string          `json:"allowedUnsafeSysctls,omitempty"`
 		ForbiddenSysctls             *[]string          `json:"forbiddenSysctls,omitempty"`
-		SeccompProfiles              struct {
+		SeccompProfiles              *struct {
 			AllowedProfiles       *[]string `json:"allowedProfiles,omitempty"`
 			AllowedLocalhostFiles *[]string `json:"allowedLocalhostFiles,omitempty"`
 		} `json:"seccompProfiles,omitempty"`
@@ -124,21 +124,21 @@ type OperationPolicySpec struct {
 	EnforcementAction string `json:"enforcementAction"`
 	Policies          struct {
 		AllowedRepos      *[]string `json:"allowedRepos,omitempty"`
-		RequiredResources struct {
+		RequiredResources *struct {
 			Limits   *[]string `json:"limits,omitempty"`
 			Requests *[]string `json:"requests,omitempty"`
 		} `json:"requiredResources,omitempty"`
 		DisallowedImageTags   *[]string     `json:"disallowedImageTags,omitempty"`
 		DisallowedTolerations *[]Toleration `json:"disallowedTolerations,omitempty"`
 		RequiredProbes        *[]string     `json:"requiredProbes,omitempty"`
-		RequiredLabels        struct {
+		RequiredLabels        *struct {
 			Labels *[]struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
 			} `json:"labels,omitempty"`
 			WatchKinds *[]string `json:"watchKinds,omitempty"`
 		} `json:"requiredLabels,omitempty"`
-		RequiredAnnotations struct {
+		RequiredAnnotations *struct {
 			Annotations *[]struct {
 				Key          string `json:"key,omitempty"`
 				AllowedRegex string `json:"allowedRegex,omitempty"`
@@ -152,7 +152,7 @@ type OperationPolicySpec struct {
 		StorageClassNames         *[]string `json:"storageClassNames,omitempty"`
 		CheckHostNetworkDNSPolicy bool      `json:"checkHostNetworkDNSPolicy,omitempty"`
 		CheckContainerDuplicates  bool      `json:"checkContainerDuplicates,omitempty"`
-		ReplicaLimits             struct {
+		ReplicaLimits             *struct {
 			MinReplicas int `json:"minReplicas,omitempty"`
 			MaxReplicas int `json:"maxReplicas,omitempty"`
 		} `json:"replicaLimits,omitempty"`
