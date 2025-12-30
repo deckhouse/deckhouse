@@ -1,8 +1,107 @@
 <script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
-<div class="filter__container">
-    <h2 class="filter__container--title">{{ T "category" | humanize }}</h2>
-
-    <div class="filter__checkboxes"></div>
-    <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button>
+<div class="filter">
+    {%- if page.lang == "ru" %}
+        <h2 class="filter--title">Фильтры</h2>
+        <div class="filter__container filter__container--search">
+            <h3 class="filter__container--title">Поиск по&nbsp;модулям</h3>
+            <div class="filter__search">
+                <div class="filter__search--container">
+                    <div class="input-wrapper">
+                        <input type="text" id="search-filter" placeholder="{{ site.data.i18n.common.search_placeholder_text_filter[page.lang] }}" class="input">
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="filter__container filter__container--editorial">
+            <h3 class="filter__container--title closing-title">Редакции</h3>
+            <div class="filter__checkboxes filter__checkboxes--editorial">
+                <input type="checkbox" id="commercialEditions" value="commercialEditions">
+                <label for="commercialEditions" style="text-transform: capitalize;">commercial editions</label>
+                <input type="checkbox" id="commercialEditionsw" value="commercialEditions">
+                <label for="commercialEditionsw" style="text-transform: capitalize;">commercial editions</label>
+            </div>
+        </div>
+        <div class="filter__container filter__container--statuses">
+            <h3 class="filter__container--title closing-title">Статусы</h3>
+            <div class="filter__checkboxes filter__checkboxes--statuses">
+                <input type="checkbox" id="experimental" value="experimental">
+                <label for="experimental" style="text-transform: capitalize;">
+                    Experimental
+                    <img src="/images/experimental.svg">
+                </label>
+                <input type="checkbox" id="preview" value="preview">
+                <label for="preview" style="text-transform: capitalize;">
+                    Preview
+                    <img src="/images/preview.svg">
+                </label>
+                <input type="checkbox" id="generalAvailability" value="generalAvailability">
+                <label for="generalAvailability" style="text-transform: capitalize;">
+                    General Availability (GA)
+                    <img src="/images/general_availability.svg">
+                </label>
+                <input type="checkbox" id="deprecated" value="deprecated">
+                <label for="deprecated" style="text-transform: capitalize;">
+                    Deprecated
+                    <img src="/images/deprecated.svg">
+                </label>
+            </div>
+        </div>
+        <div class="filter__container filter__container--tags">
+            <h3 class="filter__container--title closing-title">Теги</h3>
+            <div class="filter__checkboxes filter__checkboxes--tags"></div>
+            <!-- <button class="reset-check">Сбросить фильтры</button> -->
+        </div>
+    {%- else %}
+        <h2 class="filter--title">Filters</h2>
+        <div class="filter__container filter__container--search">
+            <h3 class="filter__container--title">Search by&nbsp;module</h3>
+                <div class="filter__search">
+                    <div class="filter__search--container">
+                        <div class="input-wrapper">
+                            <input type="text" id="search-filter" placeholder="{{ site.data.i18n.common.search_placeholder_text_filter[page.lang] }}" class="input">
+                        </div>
+                    </div>
+                </div>
+        </div>
+        <div class="filter__container filter__container--editorial">
+            <h3 class="filter__container--title closing-title">Editorial</h3>
+            <div class="filter__checkboxes filter__checkboxes--editorial">
+                <input type="checkbox" id="commercialEditions" value="commercialEditions">
+                <label for="commercialEditions" style="text-transform: capitalize;">commercial editions</label>
+                <input type="checkbox" id="commercialEditionsw" value="commercialEditions">
+                <label for="commercialEditionsw" style="text-transform: capitalize;">commercial editions</label>
+            </div>
+        </div>
+        <div class="filter__container filter__container--statuses">
+            <h3 class="filter__container--title closing-title">Statuses</h3>
+            <div class="filter__checkboxes filter__checkboxes--statuses">
+                <input type="checkbox" id="experimental" value="experimental">
+                <label for="experimental" style="text-transform: capitalize;">
+                    Experimental
+                    <img src="/images/experimental.svg">
+                </label>
+                <input type="checkbox" id="preview" value="preview">
+                <label for="preview" style="text-transform: capitalize;">
+                    Preview
+                    <img src="/images/preview.svg">
+                </label>
+                <input type="checkbox" id="generalAvailability" value="generalAvailability">
+                <label for="generalAvailability" style="text-transform: capitalize;">
+                    General Availability (GA)
+                    <img src="/images/general_availability.svg">
+                </label>
+                <input type="checkbox" id="deprecated" value="deprecated">
+                <label for="deprecated" style="text-transform: capitalize;">
+                    Deprecated
+                    <img src="/images/deprecated.svg">
+                </label>
+            </div>
+        </div>
+        <div class="filter__container filter__container--tags">
+            <h3 class="filter__container--title closing-title">Tags</h3>
+            <div class="filter__checkboxes filter__checkboxes--tags"></div>
+            <!-- <button class="reset-check reset-check__en">Reset filters</button> -->
+        </div>
+    {%- endif %}
 </div>
