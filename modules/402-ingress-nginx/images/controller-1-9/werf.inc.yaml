@@ -492,6 +492,9 @@ shell:
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
   # cve bash scripts
   #- rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
 imageSpec:
   config:
     workingDir: /

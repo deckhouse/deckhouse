@@ -399,6 +399,9 @@ shell:
   - rm -rf /chroot/usr/lib64/ruby
 # remove owasp-modsecurity-crs/util because of bash scripts cve
   #- rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
 # takes ~1GB
   - rm -rf /chroot/usr/lib64/locale
 imageSpec:
