@@ -1,9 +1,11 @@
 @use "sass:color";
 @use "components/common/_variables.scss";
+@use "components/common/_mixins";
+@use 'components/common/_breakpoints.scss';
 
 .form {
   &__request {
-    font-size: 17px;
+    font-size: 16px;
   }
 
   &__row {
@@ -47,13 +49,17 @@
       align-items: center;
       gap: .5em 1.5em;
 
+      @include breakpoints.min-w(m) {
+        gap: .5em 2em;
+      }
+
       label {
         display: inline-flex;
         gap: 10px;
         align-items: center;
         text-align: left;
         user-select: none;
-        font-size: 14.7px;
+        font-size: 14px;
         cursor: pointer;
       }
 
@@ -78,9 +84,9 @@
         }
 
         &:checked + label::before {
-          background-color: #0064ff;
+          background-color: #004df2;
           background-image: url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2210%22%20height%3D%228%22%20fill%3D%22none%22%3E%3Cpath%20fill%3D%22%23fff%22%20fill-rule%3D%22evenodd%22%20d%3D%22M9.342%201.099a.54.54%200%200%201%200%20.763l-5.04%205.04a.54.54%200%200%201-.764%200l-2.88-2.88a.54.54%200%200%201%20.764-.763L3.92%205.757l4.658-4.658a.54.54%200%200%201%20.764%200Z%22%20clip-rule%3D%22evenodd%22%2F%3E%3C%2Fsvg%3E");
-          border-color: #0064ff;
+          border-color: #004df2;
         }
 
         &:checked + label:hover::before {
@@ -99,7 +105,6 @@
   .сommunication-method {
     margin-top: 32px;
     margin-bottom: 16px;
-    letter-spacing: -.5px;
   }
 
   &__h0n3y {
@@ -139,7 +144,7 @@
       transition-duration: 0ms;
 
       &::placeholder {
-        color: color.adjust(variables.$color-main, $alpha: -0.15);
+        color: #BFC2D5;
       }
     }
 
@@ -152,15 +157,21 @@
     }
 
     &-request {
-      padding: 13px 20px;
-      border: 2px solid #cdd1e6;
-      font-size: 15.7px;
+      min-height: 44px;
+      padding: 10px 20px;
+      border: 2px solid variables.$ntrl-200;
+      font-size: 16px;
+      border-radius: 1px;
+      
+      &::placeholder {
+        color: variables.$ntrl-200;
+      }
 
       &:focus {
         border-color: #408bff;
 
         &::placeholder {
-          color: color.adjust(variables.$color-main, $alpha: -0.4);
+          color: #BFC2D5;
         }
       }
 
@@ -180,12 +191,17 @@
 
     label {
       display: inline-flex;
-      gap: 10px;
+      gap: 10.5px;
       align-items: flex-start;
       text-align: left;
       user-select: none;
-      font-size: 14.7px;
+      font-size: 14px;
+      color: #6e7084;
       cursor: pointer;
+
+      a {
+        color: variables.$color-alt;
+      }
     }
 
     input[type="checkbox"] {
@@ -193,7 +209,6 @@
       display: none;
       opacity: 0;
       z-index: -1;
-
       + label::before {
         content: "";
         height: 14px;

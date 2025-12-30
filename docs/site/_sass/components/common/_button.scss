@@ -1,6 +1,7 @@
 @use "components/common/_variables.scss";
 @use "components/common/_mixins";
 @use 'components/common/_breakpoints.scss';
+
 .button {
     cursor: pointer;
     display: inline-block;
@@ -22,8 +23,13 @@
     &-request {
         margin-top: 12px;
         width: 100%;
+        font-size: 14px;
         font-weight: 500;
         text-transform: uppercase;
+
+        @include breakpoints.min-w(m) {
+            font-size: 16px;
+        }
 
         &-access {
             margin-top: 16px;
@@ -31,8 +37,10 @@
 
         &:disabled {
             cursor: not-allowed;
-            background: #afb4d1;
-            border: 2px solid #afb4d1;
+            background-color: variables.$ntrl-300;
+            border: 2px solid variables.$ntrl-300;
+            opacity: .6;
+            pointer-events: none;
         }
         
         &:not(:disabled):hover {
