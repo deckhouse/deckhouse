@@ -16,4 +16,4 @@ spec:
           - baseline
           - restricted
   parameters:
-    allowedProcMount: Unmasked
+    allowedProcMount: Default

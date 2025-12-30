@@ -1,26 +1,25 @@
-
 kind: Suite
 apiVersion: test.gatekeeper.sh/v1alpha1
 metadata:
   name: d8-allowed-capabilities
 tests:
-  - name: security-policy
-    template: ../../templates/security/allow-rbac-wildcards.yaml
-    constraint: constraint.yaml
+- name: security-policy
+  template: ../../templates/security/allow-rbac-wildcards.yaml
+  constraint: constraint.yaml
 cases:
-  - name: Role without wildcards (allowed)
-    object: role-valid.yaml
-    assertions:
-      - violations: no
-  - name: Role with wildcard in rules (denied)
-    object: role-invalid-rules.yaml
-    assertions:
-      - violations: yes
-  - name: RoleBinding without wildcards (allowed)
-    object: rolebinding-valid.yaml
-    assertions:
-      - violations: no
-  - name: RoleBinding with wildcard in roleRef (denied)
-    object: rolebinding-invalid-roleref.yaml
-    assertions:
-      - violations: yes
+- name: Role without wildcards (allowed)
+  object: role-valid.yaml
+  assertions:
+  - violations: false
+- name: Role with wildcard in rules (denied)
+  object: role-invalid-rules.yaml
+  assertions:
+  - violations: true
+- name: RoleBinding without wildcards (allowed)
+  object: rolebinding-valid.yaml
+  assertions:
+  - violations: false
+- name: RoleBinding with wildcard in roleRef (denied)
+  object: rolebinding-invalid-roleref.yaml
+  assertions:
+  - violations: true

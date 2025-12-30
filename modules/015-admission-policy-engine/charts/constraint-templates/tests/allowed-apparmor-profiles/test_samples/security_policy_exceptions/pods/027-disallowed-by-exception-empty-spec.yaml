@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-empty-spec
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: empty-spec
+  annotations:
+    container.apparmor.security.beta.kubernetes.io/nginx: unconfined
+spec:
+  containers:
+    - name: nginx
+      image: nginx
