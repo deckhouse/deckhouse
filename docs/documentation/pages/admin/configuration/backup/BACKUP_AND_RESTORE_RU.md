@@ -26,7 +26,7 @@ lang: ru
 
    Убедитесь, что результат команды `etcdutl version` отображается без ошибок.
 
-   **При отсутствии** `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
+   При отсутствии `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
