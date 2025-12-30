@@ -5,7 +5,7 @@
 $(document).ready(function () {
   const articles = document.querySelectorAll('.button-tile');
   const moreButton = document.querySelector('.tile__pagination');
-  const filterCheckboxes = document.querySelector('.filter__checkboxes');
+  const filterCheckboxes = document.querySelector('.filter__checkboxes--tags');
   const resetButton = document.querySelector('.reset-check');
   const itemsPerPage = 12;
   let filteredArticles = [];

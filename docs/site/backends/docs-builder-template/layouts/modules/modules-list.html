@@ -42,7 +42,9 @@
     {{- partial "sidebar-filter" . }}
   </div>
   <div class="layout-sidebar__content layout-sidebar__content--tile">
-
+    <div class="selected__filters">
+      <div class="selected__filters--list"></div>
+    </div>
     <h1 class="tile__title">{{ .Title }}</h1>
 
     {{.Content}}
@@ -202,7 +204,7 @@
           </div>
         </a>
       {{- end }}
-
+      
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
