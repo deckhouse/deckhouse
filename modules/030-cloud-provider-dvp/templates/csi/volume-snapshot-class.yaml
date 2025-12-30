@@ -8,5 +8,7 @@ metadata:
   name: {{ $storageClass.name | quote }}
 driver: csi.dvp.deckhouse.io
 deletionPolicy: Delete
+parameters:
+  dvpVolumeSnapshotClass: {{ $storageClass.name | quote }}
 {{- end }}
 {{- end }}

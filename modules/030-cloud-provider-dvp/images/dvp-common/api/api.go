@@ -21,7 +21,6 @@ import (
 	"errors"
 
 	corev1 "k8s.io/api/core/v1"
-	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,11 +60,6 @@ func NewDVPCloudAPI(config *config.CloudConfig) (*DVPCloudAPI, error) {
 	}
 
 	err = corev1.AddToScheme(scheme)
-	if err != nil {
-		return nil, err
-	}
-
-	err = snapshotv1.AddToScheme(scheme)
 	if err != nil {
 		return nil, err
 	}
