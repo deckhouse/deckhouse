@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 5,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -101,6 +101,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она появляется в runc при ошибочной проверке bind-mount /dev/null, а d8 delivery-kit не вызывает runc напрямую и использует Docker API.",
       "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-66506"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.4.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Fulcio OIDC token denial of service - Функционал обработки OIDC токенов в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами проходят через промежуточные компоненты, не предоставляющие доступа к уязвимому коду extractIssuerURL, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2025-12-29T19:22:01.052319723Z"
     },
     {
       "vulnerability": {
