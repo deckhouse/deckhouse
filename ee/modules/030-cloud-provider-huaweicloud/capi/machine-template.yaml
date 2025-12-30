@@ -1,7 +1,6 @@
-
 {{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" -}}
 {{- $subnetID := $cloudProviderValues.subnetId -}}
-{{- $securityGroupID := $cloudProviderValues.securityGroupId }}
+{{- $securityGroupID := $cloudProviderValues.securityGroupId -}}
 
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: HuaweiCloudMachineTemplate
@@ -44,11 +43,11 @@ spec:
       {{- end -}}
 
       subnets:
-{{- (uniq $nets) | toYaml | nindent 8 }}
+{{ (uniq $nets) | toYaml | nindent 8 }}
 
       {{- if .nodeGroup.instanceClass.securityGroups }}
       securityGroups:
-{{- toYaml (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) | nindent 8 }}
+{{ toYaml (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) | nindent 8 }}
       {{- else }}
       securityGroups:
         - {{ $securityGroupID | quote }}
