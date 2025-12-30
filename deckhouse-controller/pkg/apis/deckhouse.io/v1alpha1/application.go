@@ -111,53 +111,131 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	PackageName           string `json:"packageName"`
+	// The name of the application package to install.
+	PackageName string `json:"packageName"`
+
+	// The name of the repository where the package is located.
+	// If not specified, the default repository is used.
+	// +optional
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
-	PackageVersion        string `json:"packageVersion"`
-	ReleaseChannel        string `json:"releaseChannel,omitempty"`
+
+	// The version of the application package to install.
+	PackageVersion string `json:"packageVersion"`
+
+	// The release channel for the application package.
+	// +optional
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Configuration settings for the application.
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
 	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
-	CurrentVersion     *ApplicationStatusVersion            `json:"currentVersion,omitempty"`
-	Repository         string                               `json:"repository,omitempty"`
-	Status             string                               `json:"status,omitempty"`
-	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// Information about the currently installed version.
+	// +optional
+	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// Conditions represent the latest available observations of the application's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []ApplicationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// InternalConditions represent internal conditions of the application.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// ResourceConditions represent conditions related to application resources.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	ResourceConditions []ApplicationResourceStatusCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
+	// The semantic version of the installed application.
+	// +optional
 	Version string `json:"version,omitempty"`
+
+	// The release channel from which the version was installed.
+	// +optional
 	Channel string `json:"channel,omitempty"`
 }
 
 type ApplicationStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// The type of application condition.
+	Type string `json:"type"`
+
+	// The status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// A programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// The last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 type ApplicationInternalStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// The type of internal application condition.
+	Type string `json:"type"`
+
+	// The status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// A programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// The last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 type ApplicationResourceStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// The type of resource condition.
+	Type string `json:"type"`
+
+	// The status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// A programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// A human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// The last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// The last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
