@@ -68,18 +68,18 @@ spec:
             description: Spec defines the behavior of an Application.
             properties:
               packageName:
-                description: The name of the application package to install.
+                description: Name of the application package to install.
                 type: string
               packageRepositoryName:
                 description: |-
-                  The name of the repository where the package is located.
+                  Name of the repository where the package is located.
                   If not specified, the default repository is used.
                 type: string
               packageVersion:
-                description: The version of the application package to install.
+                description: Version of the application package to install.
                 type: string
               releaseChannel:
-                description: The release channel for the application package.
+                description: Release channel for the application package.
                 type: string
               settings:
                 description: Configuration settings for the application.
@@ -98,28 +98,27 @@ spec:
                 items:
                   properties:
                     lastProbeTime:
-                      description: The last time the condition was probed.
+                      description: Last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
-                      description: The last time the condition transitioned from one
-                        status to another.
+                      description: Last time the condition transitioned from one status
+                        to another.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: Human readable message indicating details about
                         the transition.
                       type: string
                     reason:
-                      description: A programmatic identifier indicating the reason
-                        for the condition's last transition.
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
                       type: string
                     status:
-                      description: The status of the condition, one of True, False,
-                        Unknown.
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: The type of application condition.
+                      description: Type of application condition.
                       type: string
                   required:
                   - status
@@ -130,10 +129,10 @@ spec:
                 description: Information about the currently installed version.
                 properties:
                   channel:
-                    description: The release channel from which the version was installed.
+                    description: Release channel from which the version was installed.
                     type: string
                   version:
-                    description: The semantic version of the installed application.
+                    description: Semantic version of the installed application.
                     type: string
                 type: object
               internalConditions:
@@ -142,7 +141,7 @@ spec:
                 items:
                   properties:
                     lastProbeTime:
-                      description: The last time the condition was probed.
+                      description: Last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
@@ -151,19 +150,18 @@ spec:
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: Human readable message indicating details about
                         the transition.
                       type: string
                     reason:
-                      description: A programmatic identifier indicating the reason
-                        for the condition's last transition.
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
                       type: string
                     status:
-                      description: The status of the condition, one of True, False,
-                        Unknown.
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: The type of internal application condition.
+                      description: Type of internal application condition.
                       type: string
                   required:
                   - status
@@ -176,28 +174,27 @@ spec:
                 items:
                   properties:
                     lastProbeTime:
-                      description: The last time the condition was probed.
+                      description: Last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
-                      description: The last time the condition transitioned from one
-                        status to another.
+                      description: Last time the condition transitioned from one status
+                        to another.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: Human readable message indicating details about
                         the transition.
                       type: string
                     reason:
-                      description: A programmatic identifier indicating the reason
-                        for the condition's last transition.
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
                       type: string
                     status:
-                      description: The status of the condition, one of True, False,
-                        Unknown.
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: The type of resource condition.
+                      description: Type of resource condition.
                       type: string
                   required:
                   - status

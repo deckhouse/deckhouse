@@ -71,17 +71,17 @@ type ApplicationPackageStatus struct {
 	// +optional
 	Installed map[NamespaceName][]ApplicationPackageStatusInstalled `json:"installed,omitempty"`
 
-	// The total number of applications installed across all namespaces.
+	// Total number of applications installed across all namespaces.
 	// +optional
 	InstalledOverall int `json:"installedOverall,omitempty"`
 
-	// A list of repository names where this application package is available.
+	// List of repository names where this application package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
 }
 
 type ApplicationPackageStatusInstalled struct {
-	// The name of the installed application.
+	// Name of the installed application.
 	// +optional
 	Name string `json:"name,omitempty"`
 }

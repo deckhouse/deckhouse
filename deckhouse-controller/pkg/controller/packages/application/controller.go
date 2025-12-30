@@ -434,7 +434,7 @@ func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string
 		}
 	}
 
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationResourceStatusCondition{
+	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
 		Type:               condType,
 		Status:             corev1.ConditionTrue,
 		LastProbeTime:      now,
@@ -462,7 +462,7 @@ func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType strin
 		}
 	}
 
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationResourceStatusCondition{
+	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
 		Type:               condType,
 		Status:             corev1.ConditionFalse,
 		Reason:             reason,

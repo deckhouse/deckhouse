@@ -48,10 +48,10 @@ spec:
             description: Spec defines the behavior of a PackageRepositoryOperation.
             properties:
               packageRepositoryName:
-                description: The name of the package repository to operate on.
+                description: Name of the package repository to operate on.
                 type: string
               type:
-                description: The type of operation to perform.
+                description: Type of operation to perform.
                 type: string
               update:
                 description: Configuration for update operations.
@@ -71,7 +71,7 @@ spec:
             description: Status of a PackageRepositoryOperation.
             properties:
               completionTime:
-                description: The time when the operation completed.
+                description: Time when the operation completed.
                 format: date-time
                 type: string
               conditions:
@@ -80,28 +80,27 @@ spec:
                 items:
                   properties:
                     lastProbeTime:
-                      description: The last time the condition was probed.
+                      description: Last time the condition was probed.
                       format: date-time
                       type: string
                     lastTransitionTime:
-                      description: The last time the condition transitioned from one
-                        status to another.
+                      description: Last time the condition transitioned from one status
+                        to another.
                       format: date-time
                       type: string
                     message:
-                      description: A human readable message indicating details about
+                      description: Human readable message indicating details about
                         the transition.
                       type: string
                     reason:
-                      description: A programmatic identifier indicating the reason
-                        for the condition's last transition.
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
                       type: string
                     status:
-                      description: The status of the condition, one of True, False,
-                        Unknown.
+                      description: Status of the condition, one of True, False, Unknown.
                       type: string
                     type:
-                      description: The type of operation condition.
+                      description: Type of operation condition.
                       type: string
                   required:
                   - status
@@ -116,7 +115,7 @@ spec:
                     items:
                       properties:
                         name:
-                          description: The name of the discovered package.
+                          description: Name of the discovered package.
                           type: string
                       required:
                       - name
@@ -132,10 +131,10 @@ spec:
                           items:
                             properties:
                               error:
-                                description: The error message.
+                                description: Error message.
                                 type: string
                               name:
-                                description: The name of the error.
+                                description: Name of the error.
                                 type: string
                             required:
                             - error
@@ -143,7 +142,7 @@ spec:
                             type: object
                           type: array
                         name:
-                          description: The name of the package that failed.
+                          description: Name of the package that failed.
                           type: string
                       required:
                       - errors
@@ -155,10 +154,10 @@ spec:
                     items:
                       properties:
                         name:
-                          description: The name of the processed package.
+                          description: Name of the processed package.
                           type: string
                         type:
-                          description: The type of the package.
+                          description: Type of the package.
                           type: string
                       required:
                       - name
@@ -172,10 +171,10 @@ spec:
                     type: integer
                 type: object
               phase:
-                description: The current phase of the operation.
+                description: Current phase of the operation.
                 type: string
               startTime:
-                description: The time when the operation started.
+                description: Time when the operation started.
                 format: date-time
                 type: string
             type: object

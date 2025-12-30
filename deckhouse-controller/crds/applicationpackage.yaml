@@ -45,7 +45,7 @@ spec:
             description: Status of an ApplicationPackage.
             properties:
               availableRepositories:
-                description: A list of repository names where this application package
+                description: List of repository names where this application package
                   is available.
                 items:
                   type: string
@@ -55,7 +55,7 @@ spec:
                   items:
                     properties:
                       name:
-                        description: The name of the installed application.
+                        description: Name of the installed application.
                         type: string
                     type: object
                   type: array
@@ -64,8 +64,7 @@ spec:
                   The key is the namespace name, and the value is a list of installed applications.
                 type: object
               installedOverall:
-                description: The total number of applications installed across all
-                  namespaces.
+                description: Total number of applications installed across all namespaces.
                 type: integer
             type: object
         type: object

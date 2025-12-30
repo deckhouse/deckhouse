@@ -77,11 +77,11 @@ type PackageRepositorySpec struct {
 }
 
 type PackageRepositorySpecRegistry struct {
-	// The scheme to use for accessing the registry (e.g., https).
+	// Scheme to use for accessing the registry (e.g., https).
 	// +optional
 	Scheme string `json:"scheme,omitempty"`
 
-	// The repository path in the registry.
+	// Repository path in the registry.
 	Repo string `json:"repo"`
 
 	// Docker configuration for authentication.
@@ -94,7 +94,7 @@ type PackageRepositorySpecRegistry struct {
 }
 
 type PackageRepositoryStatus struct {
-	// The last time the repository was synchronized.
+	// Last time the repository was synchronized.
 	// +optional
 	SyncTime metav1.Time `json:"syncTime,omitempty"`
 
@@ -106,20 +106,20 @@ type PackageRepositoryStatus struct {
 	// +optional
 	PackagesCount int `json:"packagesCount,omitempty"`
 
-	// The current phase of the repository.
+	// Current phase of the repository.
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// A human-readable message about the repository status.
+	// Human-readable message about the repository status.
 	// +optional
 	Message string `json:"message,omitempty"`
 }
 
 type PackageRepositoryStatusPackage struct {
-	// The name of the package.
+	// Name of the package.
 	Name string `json:"name"`
 
-	// The type of the package.
+	// Type of the package.
 	Type string `json:"type"`
 }
 

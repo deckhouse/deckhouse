@@ -61,13 +61,13 @@ spec:
           spec:
             properties:
               packageName:
-                description: The name of the application package.
+                description: Name of the application package.
                 type: string
               packageRepositoryName:
                 description: The name of the repository containing the package.
                 type: string
               packageVersion:
-                description: The version of the application package.
+                description: Version of the application package.
                 type: string
             type: object
           status:
@@ -80,35 +80,35 @@ spec:
                   properties:
                     lastProbeTime:
                       description: |-
-                        The timestamp of when the condition was last probed.
+                        Timestamp of when the condition was last probed.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       format: date-time
                       type: string
                     lastTransitionTime:
                       description: |-
-                        The last time the condition transitioned from one status to another.
+                        Last time the condition transitioned from one status to another.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        A human-readable message indicating details about last transition.
+                        Human-readable message indicating details about last transition.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       type: string
                     reason:
                       description: |-
-                        A machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
+                        Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       type: string
                     status:
                       description: |-
-                        The status of the condition.
+                        Status of the condition.
                         Can be True, False, Unknown.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       type: string
                     type:
                       description: |-
-                        The type of the condition.
+                        Type of the condition.
                         More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
                       type: string
                   type: object
@@ -124,12 +124,12 @@ spec:
                     description: Information about changes in this version.
                     properties:
                       features:
-                        description: A list of new features in this version.
+                        description: List of new features in this version.
                         items:
                           type: string
                         type: array
                       fixes:
-                        description: A list of bug fixes in this version.
+                        description: List of bug fixes in this version.
                         items:
                           type: string
                         type: array
@@ -138,10 +138,10 @@ spec:
                     description: Localized descriptions of the package.
                     properties:
                       en:
-                        description: The English description of the package.
+                        description: English description of the package.
                         type: string
                       ru:
-                        description: The Russian description of the package.
+                        description: Russian description of the package.
                         type: string
                     type: object
                   licensing:
@@ -161,15 +161,15 @@ spec:
                     description: The system requirements for this package.
                     properties:
                       deckhouse:
-                        description: The required Deckhouse version.
+                        description: Required Deckhouse version.
                         type: string
                       kubernetes:
-                        description: The required Kubernetes version.
+                        description: Required Kubernetes version.
                         type: string
                       modules:
                         additionalProperties:
                           type: string
-                        description: The required versions of other modules.
+                        description: Required versions of other modules.
                         type: object
                     type: object
                   stage:
@@ -193,14 +193,14 @@ spec:
                             description: How many patch versions can be skipped.
                             type: integer
                           from:
-                            description: The starting version range for compatibility.
+                            description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: The maximum number of versions that can be
-                              rolled back.
+                            description: Maximum number of versions that can be rolled
+                              back.
                             type: integer
                           to:
-                            description: The ending version range for compatibility.
+                            description: Ending version range for compatibility.
                             type: string
                         type: object
                       upgrade:
@@ -216,26 +216,26 @@ spec:
                             description: How many patch versions can be skipped.
                             type: integer
                           from:
-                            description: The starting version range for compatibility.
+                            description: Starting version range for compatibility.
                             type: string
                           maxRollback:
-                            description: The maximum number of versions that can be
-                              rolled back.
+                            description: Maximum number of versions that can be rolled
+                              back.
                             type: integer
                           to:
-                            description: The ending version range for compatibility.
+                            description: Ending version range for compatibility.
                             type: string
                         type: object
                     type: object
                 type: object
               packageName:
-                description: The name of the application package.
+                description: Name of the application package.
                 type: string
               packageRepositoryName:
-                description: The name of the repository containing the package.
+                description: Name of the repository containing the package.
                 type: string
               packageVersion:
-                description: The version of the application package.
+                description: Version of the application package.
                 type: string
               usedBy:
                 description: Information about applications that are using this package
@@ -243,15 +243,15 @@ spec:
                 items:
                   properties:
                     name:
-                      description: The name of the application instance.
+                      description: Name of the application instance.
                       type: string
                     namespace:
-                      description: The namespace where the application is installed.
+                      description: Namespace where the application is installed.
                       type: string
                   type: object
                 type: array
               usedByCount:
-                description: The number of applications using this package version.
+                description: Number of applications using this package version.
                 type: integer
             type: object
         type: object

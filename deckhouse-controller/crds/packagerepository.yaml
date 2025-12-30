@@ -60,11 +60,10 @@ spec:
                     description: Docker configuration for authentication.
                     type: string
                   repo:
-                    description: The repository path in the registry.
+                    description: Repository path in the registry.
                     type: string
                   scheme:
-                    description: The scheme to use for accessing the registry (e.g.,
-                      https).
+                    description: Scheme to use for accessing the registry (e.g., https).
                     type: string
                 required:
                 - repo
@@ -76,17 +75,17 @@ spec:
             description: Status of a PackageRepository.
             properties:
               message:
-                description: A human-readable message about the repository status.
+                description: Human-readable message about the repository status.
                 type: string
               packages:
                 description: List of packages available in this repository.
                 items:
                   properties:
                     name:
-                      description: The name of the package.
+                      description: Name of the package.
                       type: string
                     type:
-                      description: The type of the package.
+                      description: Type of the package.
                       type: string
                   required:
                   - name
@@ -97,10 +96,10 @@ spec:
                 description: Total number of packages in this repository.
                 type: integer
               phase:
-                description: The current phase of the repository.
+                description: Current phase of the repository.
                 type: string
               syncTime:
-                description: The last time the repository was synchronized.
+                description: Last time the repository was synchronized.
                 format: date-time
                 type: string
             type: object

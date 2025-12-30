@@ -85,7 +85,7 @@ type ApplicationPackageVersion struct {
 }
 
 type ApplicationPackageVersionSpec struct {
-	// The name of the application package.
+	// Name of the application package.
 	// +optional
 	PackageName string `json:"packageName,omitempty"`
 
@@ -93,17 +93,17 @@ type ApplicationPackageVersionSpec struct {
 	// +optional
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// The version of the application package.
+	// Version of the application package.
 	// +optional
 	PackageVersion string `json:"packageVersion,omitempty"`
 }
 
 type ApplicationPackageVersionStatus struct {
-	// The name of the application package.
+	// Name of the application package.
 	// +optional
 	PackageName string `json:"packageName,omitempty"`
 
-	// The name of the repository containing the package.
+	// Name of the repository containing the package.
 	// +optional
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
@@ -111,10 +111,9 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	PackageMetadata *ApplicationPackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
 
-	// The version of the application package.
+	// Version of the application package.
 	// +optional
 	PackageVersion string `json:"packageVersion,omitempty"`
-
 	// Conditions represent the latest available observations of the package version's state.
 	// +optional
 	// +patchMergeKey=type
@@ -125,47 +124,47 @@ type ApplicationPackageVersionStatus struct {
 	// +optional
 	UsedBy []ApplicationPackageVersionStatusInstance `json:"usedBy,omitempty"`
 
-	// The number of applications using this package version.
+	// Number of applications using this package version.
 	// +optional
 	UsedByCount int `json:"usedByCount,omitempty"`
 }
 
 type ApplicationPackageVersionStatusInstance struct {
-	// The namespace where the application is installed.
+	// Namespace where the application is installed.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
 
-	// The name of the application instance.
+	// Name of the application instance.
 	// +optional
 	Name string `json:"name,omitempty"`
 }
 
 type ApplicationPackageVersionCondition struct {
-	// The type of the condition.
+	// Type of the condition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Type string `json:"type,omitempty"`
 
-	// A machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
+	// Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	Reason string `json:"reason,omitempty"`
 
-	// A human-readable message indicating details about last transition.
+	// Human-readable message indicating details about last transition.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// The status of the condition.
+	// Status of the condition.
 	// Can be True, False, Unknown.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	Status corev1.ConditionStatus `json:"status,omitempty"`
 
-	// The timestamp of when the condition was last probed.
+	// Timestamp of when the condition was last probed.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
 
-	// The last time the condition transitioned from one status to another.
+	// Last time the condition transitioned from one status to another.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
@@ -261,25 +260,25 @@ type ApplicationPackageVersionList struct {
 }
 
 type PackageRequirements struct {
-	// The required Deckhouse version.
+	// Required Deckhouse version.
 	// +optional
 	Deckhouse string `json:"deckhouse,omitempty"`
 
-	// The required Kubernetes version.
+	// Required Kubernetes version.
 	// +optional
 	Kubernetes string `json:"kubernetes,omitempty"`
 
-	// The required versions of other modules.
+	// Required versions of other modules.
 	// +optional
 	Modules map[string]string `json:"modules,omitempty"`
 }
 
 type PackageDescription struct {
-	// The Russian description of the package.
+	// Russian description of the package.
 	// +optional
 	Ru string `json:"ru,omitempty"`
 
-	// The English description of the package.
+	// English description of the package.
 	// +optional
 	En string `json:"en,omitempty"`
 }
@@ -297,11 +296,11 @@ type PackageEdition struct {
 }
 
 type PackageChangelog struct {
-	// A list of new features in this version.
+	// List of new features in this version.
 	// +optional
 	Features []string `json:"features,omitempty"`
 
-	// A list of bug fixes in this version.
+	// List of bug fixes in this version.
 	// +optional
 	Fixes []string `json:"fixes,omitempty"`
 }
@@ -317,11 +316,11 @@ type PackageVersionCompatibilityRules struct {
 }
 
 type PackageVersionCompatibilityRule struct {
-	// The starting version range for compatibility.
+	// Starting version range for compatibility.
 	// +optional
 	From string `json:"from,omitempty"`
 
-	// The ending version range for compatibility.
+	// Ending version range for compatibility.
 	// +optional
 	To string `json:"to,omitempty"`
 
@@ -337,7 +336,7 @@ type PackageVersionCompatibilityRule struct {
 	// +optional
 	AllowSkipMajor int `json:"allowSkipMajor,omitempty"`
 
-	// The maximum number of versions that can be rolled back.
+	// Maximum number of versions that can be rolled back.
 	// +optional
 	MaxRollback int `json:"maxRollback,omitempty"`
 }

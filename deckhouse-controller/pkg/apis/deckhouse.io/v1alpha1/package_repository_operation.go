@@ -91,10 +91,10 @@ type PackageRepositoryOperation struct {
 }
 
 type PackageRepositoryOperationSpec struct {
-	// The name of the package repository to operate on.
+	// Name of the package repository to operate on.
 	PackageRepositoryName string `json:"packageRepositoryName"`
 
-	// The type of operation to perform.
+	// Type of operation to perform.
 	Type string `json:"type"`
 
 	// Configuration for update operations.
@@ -113,15 +113,15 @@ type PackageRepositoryOperationUpdate struct {
 }
 
 type PackageRepositoryOperationStatus struct {
-	// The current phase of the operation.
+	// Current phase of the operation.
 	// +optional
 	Phase string `json:"phase,omitempty"`
 
-	// The time when the operation started.
+	// Time when the operation started.
 	// +optional
 	StartTime *metav1.Time `json:"startTime,omitempty"`
 
-	// The time when the operation completed.
+	// Time when the operation completed.
 	// +optional
 	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
 
@@ -159,12 +159,12 @@ type PackageRepositoryOperationStatusPackages struct {
 }
 
 type PackageRepositoryOperationStatusDiscoveredPackage struct {
-	// The name of the discovered package.
+	// Name of the discovered package.
 	Name string `json:"name"`
 }
 
 type PackageRepositoryOperationStatusFailedPackage struct {
-	// The name of the package that failed.
+	// Name of the package that failed.
 	Name string `json:"name"`
 
 	// List of errors encountered while processing this package.
@@ -172,42 +172,42 @@ type PackageRepositoryOperationStatusFailedPackage struct {
 }
 
 type PackageRepositoryOperationStatusFailedPackageError struct {
-	// The name of the error.
+	// Name of the error.
 	Name string `json:"name"`
 
-	// The error message.
+	// Error message.
 	Error string `json:"error"`
 }
 
 type PackageRepositoryOperationStatusPackage struct {
-	// The name of the processed package.
+	// Name of the processed package.
 	Name string `json:"name"`
 
-	// The type of the package.
+	// Type of the package.
 	// +optional
 	Type string `json:"type,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {
-	// The type of operation condition.
+	// Type of operation condition.
 	Type string `json:"type"`
 
-	// The status of the condition, one of True, False, Unknown.
+	// Status of the condition, one of True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
 
-	// A programmatic identifier indicating the reason for the condition's last transition.
+	// Programmatic identifier indicating the reason for the condition's last transition.
 	// +optional
 	Reason string `json:"reason,omitempty"`
 
-	// A human readable message indicating details about the transition.
+	// Human readable message indicating details about the transition.
 	// +optional
 	Message string `json:"message,omitempty"`
 
-	// The last time the condition was probed.
+	// Last time the condition was probed.
 	// +optional
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
 
-	// The last time the condition transitioned from one status to another.
+	// Last time the condition transitioned from one status to another.
 	// +optional
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
