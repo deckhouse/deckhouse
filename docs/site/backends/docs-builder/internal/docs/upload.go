@@ -155,6 +155,10 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 
+	if fileName == "module.yaml" || fileName == "oss.yaml" {
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+	}
+
 	return "", false
 }
 

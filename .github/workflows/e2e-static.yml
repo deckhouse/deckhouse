@@ -314,7 +314,7 @@ jobs:
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -799,7 +799,7 @@ jobs:
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1284,7 +1284,7 @@ jobs:
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1769,7 +1769,7 @@ jobs:
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2254,7 +2254,7 @@ jobs:
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2739,7 +2739,7 @@ jobs:
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3224,7 +3224,7 @@ jobs:
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3709,7 +3709,7 @@ jobs:
       KUBERNETES_VERSION: "1.29"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -4194,7 +4194,7 @@ jobs:
       KUBERNETES_VERSION: "1.30"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -4679,7 +4679,7 @@ jobs:
       KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -5164,7 +5164,7 @@ jobs:
       KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -5649,7 +5649,7 @@ jobs:
       KUBERNETES_VERSION: "1.33"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -6134,7 +6134,7 @@ jobs:
       KUBERNETES_VERSION: "1.34"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -6619,7 +6619,7 @@ jobs:
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
       WERF_ENV: "${{ needs.check_e2e_labels.outputs.edition || fromJson(inputs.test_config).edition }}"
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>

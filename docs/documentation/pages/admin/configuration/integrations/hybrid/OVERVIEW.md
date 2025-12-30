@@ -85,7 +85,7 @@ To create a hybrid cluster combining static nodes and nodes in Yandex Cloud, fol
 
 - A working cluster with the parameter `clusterType: Static`.
 - The CNI controller switched to VXLAN mode. For details, refer to the [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode) parameter.
-- Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/)).
+- Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
 
 ### Setup steps
 
@@ -255,7 +255,7 @@ Before you begin, ensure the following conditions are met:
 - **Infrastructure**:
   - A bare-metal DKP cluster is installed.
   - A tenant is configured in VCD [with allocated resources](../virtualization/vcd/connection-and-authorization.html).
-  - Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/)).
+  - Configured network connectivity between the static cluster node network and VCD (either at L2 level, or at L3 level with port access according to the [required network policies for DKP operation](../../configuration/network/policy/configuration.html)).
   - A working network is configured in VCD with DHCP enabled.
   - A user with a static password and VCD administrator privileges has been created.
 

@@ -25,7 +25,7 @@ spec:
                 virtualMachine:
                   type: object
                   description: |
-                    Virtual machine settings for the created master node.
+                    Virtual machine settings for the created node.
                   required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:

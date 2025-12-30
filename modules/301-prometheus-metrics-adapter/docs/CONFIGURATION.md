@@ -7,7 +7,9 @@ search: autoscaler, HorizontalPodAutoscaler
 
 {% include module-bundle.liquid %}
 
-The module works if the `prometheus` module is enabled. Generally, no configuration is required.
+{% include module-requirements.liquid %}
+
+Generally, no configuration is required.
 
 ## Parameters
 

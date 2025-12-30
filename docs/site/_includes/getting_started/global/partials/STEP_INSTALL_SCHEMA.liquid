@@ -24,7 +24,7 @@ The minimal preset will be used during the installation:
 {%- assign layout = site.data.getting_started.dkp_data.installTypes[layout_platform_code].layout %}
 {%- offtopic title="Used layout..." %}
 {%- capture layout_path %}getting_started/{{ layout_platform_code }}/layouts/{{ layout.code | upcase }}{% if page.lang == 'ru' %}_RU{% endif %}.md{% endcapture %}
-{%- capture layout_doc_path %}../../documentation/v1/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
+{%- capture layout_doc_path %}/modules/cloud-provider-{% if page.platform_code == 'dvp-provider' %}dvp{%- else %}{{ layout_platform_code }}{%- endif %}/layouts.html{% endcapture %}
 Layout is the way how resources are located and communicate in the cloud. There are several pre-defined layouts, which you can learn more about in [the documentation]({{ layout_doc_path }}).
 
 The `{{ layout.name }}` layout will be used during the installation.
@@ -78,7 +78,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - installed docker to run the installer (here are the instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
      - on computers with Apple Silicon processors, enable the option "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" in Docker Desktop settings to avoid possible issues running `ssh-agent` during the installation;
 {% if page.platform_code == "bm-private" %}
-   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#tips-for-configuring-the-third-party-registry) about setting them up) or to a private container image registry containing Deckhouse images;
+   - access to a proxy registry ([read more](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) about setting them up) or to a private container image registry containing Deckhouse images;
 {%- else %}
    - HTTPS access to the `registry.deckhouse.io` container image registry;
 {%- endif %}
@@ -142,7 +142,7 @@ Scheme of Deckhouse installation in a private environment:<br />
    - Python should be installed
    {% if page.platform_code == "bm-private" %}
    - access to a proxy registry or to a private container image registry containing Deckhouse images;
-   - when using private image storage, you must first [upload images](../../documentation/v1/deckhouse-faq.html#manually-uploading-deckhouse-kubernetes-platform-vulnerability-scanner-db-and-deckhouse-modules-to-private-registry)
+   - when using private image storage, you must first [upload images](/products/kubernetes-platform/documentation/v1/admin/configuration/security/scanning.html)
      of the Deckhouse Kubernetes Platform, vulnerability scanner database, and Deckhouse modules to the private storage;
    - access to the default OS package repositories (via a proxy server or an internal package repository server);
    {%- else %}

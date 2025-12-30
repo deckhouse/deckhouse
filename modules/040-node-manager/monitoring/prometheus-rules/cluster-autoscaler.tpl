@@ -36,9 +36,9 @@
         The {{`{{$labels.pod}}`}} Pod is {{`{{$labels.phase}}`}}.
 
         To check the Pod's status, run the following command:
-        
+
         ```shell
-        kubectl -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
+        d8 k -n {{`{{$labels.namespace}}`}} get pods {{`{{$labels.pod}}`}} -o json | jq .status
         ```
 
   - alert: D8ClusterAutoscalerTargetDown
@@ -82,19 +82,19 @@
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
            ```
 
 - name: d8.cluster-autoscaler.malfunctioning
@@ -120,9 +120,9 @@
         The cluster-autoscaler is expected to run continuously without interruption.
 
         Check the logs for details:
-        
+
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
 
   - alert: D8ClusterAutoscalerTooManyErrors
@@ -146,7 +146,7 @@
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
 
 {{- else }}

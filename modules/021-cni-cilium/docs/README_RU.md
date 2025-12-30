@@ -106,7 +106,7 @@ Cilium полностью заменяет собой функционал мо�
 
 ## Использование Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE.{% endalert %}
 
 Egress Gateway в Deckhouse Kubernetes Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.node`).
 

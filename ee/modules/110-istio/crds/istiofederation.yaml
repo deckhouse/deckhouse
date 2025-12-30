@@ -71,7 +71,7 @@ spec:
                       default: false
                       description: |
                         Skip validation certificate on HTTPS endpoint with remote cluster metadata.
-                      x-doc-examples: ['true']
+                      x-doc-examples: [true]
                     ca:
                       type: string
                       x-doc-d8Editions:

@@ -7,6 +7,8 @@ force_searchable: true
 
 {% include module-alerts.liquid %}
 
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 {% include module-settings.liquid %}

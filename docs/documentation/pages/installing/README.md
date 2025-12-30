@@ -3,10 +3,16 @@ title: "Installation"
 permalink: en/installing/
 description: |
   Information on installing the Deckhouse Kubernetes Platform, including infrastructure preparation, configuration, and installer run.
+extractedLinksMax: 2
+relatedLinks:
+  - title: "Supported Kubernetes and OS versions"
+    url: ../reference/supported_versions.html
+  - title: "Integration with IaaS providers"
+    url: ../admin/integrations/integrations-overview.html
 ---
 
 {% alert level="warning" %}
-This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the [Getting Started](/products/kubernetes-platform/gs/) section, where step-by-step guides are available.
+This page is under active development and may contain incomplete information. Below is an overview of the Deckhouse installation process. For more detailed instructions, we recommend visiting the {% if site.mode == 'module' %}[Getting started]({{ site.urls[page.lang] }}/products/kubernetes-platform/gs/){% else %}[Getting started](/products/kubernetes-platform/gs/){% endif %} section, where step-by-step guides are available.
 {% endalert %}
 
 The Deckhouse installer is available as a container image and is based on the [dhctl](<https://github.com{{ site.github_repo_path }}/tree/main/dhctl/>) utility, which is responsible for:
@@ -77,7 +83,7 @@ The installation configuration YAML file contains parameters for several resourc
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. [ModuleConfig](/products/kubernetes-platform/documentation/latest/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
+1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — a set of resources containing configuration parameters for Deckhouse built-in modules.
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
@@ -454,13 +460,14 @@ The configuration file provided through the `--config` parameter when running th
 
 ### Installing Deckhouse Kubernetes Platform from an external registry
 
-{% alert level="warning" %}  
-Available in the following editions: BE, SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
+{% alert level="warning" %}
+Available in the following editions: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
 {% endalert %}
 
-{% alert level="warning" %}  
-DKP supports only the Bearer token authentication scheme for container registries.  
-The following container registries are tested and officially supported:  
+{% alert level="warning" %}
+DKP supports only the Bearer token authentication scheme for container registries.
+
+The following container registries are tested and officially supported:
 {% for registry in site.data.supported_versions.registries %}
 [{{ registry[1].shortname }}]({{ registry[1].url }})
 {%- unless forloop.last %}, {% endunless %}
@@ -468,6 +475,10 @@ The following container registries are tested and officially supported:
 {% endalert %}
 
 During installation, DKP can be configured to work with an external registry (e.g., a proxy registry in an air-gapped environment).
+
+{% alert level="warning" %}
+When working with an external registry, do not use an administrator account to access it from Deckhouse Kubernetes Platform. Create a separate account for Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
+{% endalert %}
 
 Set the following parameters in the `InitConfiguration` resource:
 
@@ -508,8 +519,6 @@ MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
 MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
 echo "$MYRESULTSTRING"
 ```
-
-## Custom external registry configuration
 
 To support non-standard configurations of external registries, the `InitConfiguration` resource provides two additional parameters:
 
@@ -569,24 +578,31 @@ Setup Steps:
 
 Use the [Harbor Proxy Cache](https://github.com/goharbor/harbor) feature.
 
-* Configure the registry:
-  * Go to `Administration` → `Registries` → `New Endpoint`.
-  * `Provider`: Docker Registry.
-  * `Name`: arbitrary value of your choice.
-  * `Endpoint URL`: `https://registry.deckhouse.io`.
-  * Set `Access ID` and `Access Secret` (your Deckhouse Kubernetes Platform license key).
+1. Configure the registry access:
+   * In the side menu, navigate to "Administration" → "Registries"
+     and click "New Endpoint" to add a new endpoint for the registry.
+   * In the "Provider" dropdown list, select "Docker Registry".
+   * In the "Name" field, enter an endpoint name of your choice.
+   * In the "Endpoint URL" field, enter `https://registry.deckhouse.io`.
+   * In the "Access ID" field, enter `license-token`.
+   * In the "Access Secret" field, enter your Deckhouse Kubernetes Platform license key.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new endpoint for the registry.
 
-    ![Registry Configuration](../images/registry/harbor/harbor1.png)
+   ![Configuring registry access](../images/registry/harbor/harbor1.png)
 
-* Create a new project:
-  * Navigate to `Projects → New Project`.
-  * `Project Name` will be part of the URL. Choose any name, e.g., `d8s`.
-  * `Access Level`: `Public`.
-  * Enable `Proxy Cache` and select the registry created in the previous step.
+1. Create a new project:
+   * In the side menu, navigate to "Projects" and click "New Project" to add a project.
+   * In the "Project Name" field, enter a project name of your choice (for example, `d8s`).
+     This name will be a part of the URL.
+   * In the "Access Level" field, select "Public".
+   * Enable "Proxy Cache" and in the dropdown list, select the registry created earlier.
+   * Set any remaining parameters as necessary.
+   * Click "OK" to confirm creation of a new project.
 
-    ![Create New Project](../images/registry/harbor/harbor2.png)
+   ![Creating a new project](../images/registry/harbor/harbor2.png)
 
-    As a result, DKP images will be available at a URL like: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
+Once Harbor is configured, DKP images will be available at a URL as follows: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
 ### Manual loading of Deckhouse Kubernetes Platform images, vulnerability scanner DB, and DKP modules into a private registry
 

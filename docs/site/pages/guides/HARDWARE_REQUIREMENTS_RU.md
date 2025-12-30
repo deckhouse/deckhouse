@@ -20,7 +20,7 @@ layout: sidebar-guides
 Ответы на эти вопросы помогут определить необходимое количество узлов для развёртывания кластера. См. подробнее [в разделе «Сценарии развёртывания»](#сценарии-развертывания).
 
 {% alert level="info" %}
-Все описанное дальше применимо к установке Deckhouse Kubernetes Platform [с набором модулей Default](/products/kubernetes-platform/documentation/v1/#наборы-модулей).
+Все описанное дальше применимо к установке Deckhouse Kubernetes Platform [с набором модулей Default](/products/kubernetes-platform/documentation/v1/admin/configuration/#наборы-модулей).
 {% endalert %}
 
 ## Сценарии развёртывания

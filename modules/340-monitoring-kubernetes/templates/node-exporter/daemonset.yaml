@@ -138,8 +138,6 @@ spec:
           mountPath: /host/
         - name: textfile-kubelet-eviction-thresholds-exporter
           mountPath: /var/run/node-exporter-textfile
-        - name: dockersock
-          mountPath: /var/run/docker.sock
         - name: containerddir
           mountPath: /etc/containerd
         - name: kube
@@ -204,9 +202,6 @@ spec:
       - name: root
         hostPath:
           path: /
-      - name: dockersock
-        hostPath:
-          path: /var/run/docker.sock
       - name: containerddir
         hostPath:
           path: /etc/containerd

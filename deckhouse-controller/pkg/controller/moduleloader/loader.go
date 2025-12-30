@@ -95,9 +95,10 @@ type Loader struct {
 	downloadedModulesDir string
 	symlinksDir          string
 	clusterUUID          string
+	conversionsStore     *conversion.ConversionsStore
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
@@ -111,6 +112,7 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		version:              version,
 		dependencyContainer:  dc,
 		exts:                 exts,
+		conversionsStore:     conversionsStore,
 	}
 }
 
@@ -214,7 +216,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	var conversions []v1alpha1.ModuleSettingsConversion
 	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
-		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+		if err = l.conversionsStore.Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 
@@ -289,7 +291,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
-		if err = conversion.Store().Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
+		if err = l.conversionsStore.Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
 			return fmt.Errorf("load conversions for the 'global' module: %w", err)
 		}
 	} else if !os.IsNotExist(err) {

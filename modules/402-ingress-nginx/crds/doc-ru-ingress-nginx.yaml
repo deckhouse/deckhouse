@@ -8,7 +8,7 @@ spec:
               properties:
                 ingressClass:
                   description: |
-                    Имя Ingress-класса для обслуживания NGINX Ingress controller.
+                    Имя Ingress-класса для обслуживания Ingress NGINX Controller.
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
@@ -37,7 +37,7 @@ spec:
                       > **Внимание.** Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
                 controllerVersion:
                   description: |
-                    Версия NGINX Ingress controller.
+                    Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
                 enableIstioSidecar:
@@ -292,7 +292,7 @@ spec:
                   description: |
                     Секция с настройкой кастомизации HTTP-ошибок.
 
-                    Если секция определена, все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех NGINX Ingress controller'ов**.
+                    Если секция определена, все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех Ingress-контроллеров**.
                   properties:
                     serviceName:
                       description: |
@@ -358,7 +358,7 @@ spec:
               properties:
                 ingressClass:
                   description: |
-                    Имя Ingress-класса для обслуживания NGINX Ingress Controller.
+                    Имя Ingress-класса для обслуживания Ingress NGINX Controller.
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
@@ -413,7 +413,7 @@ spec:
                       > Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
                 controllerVersion:
                   description: |
-                    Версия NGINX Ingress Controller.
+                    Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
                 enableIstioSidecar:

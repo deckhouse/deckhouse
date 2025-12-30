@@ -40,11 +40,10 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * AnchorJS
    */
-  if (window.anchors_disabled != true) {
+  if ((typeof anchors !== 'undefined') && (typeof anchors.add !== 'undefined') && (window.anchors_disabled != true)) {
     anchors.add('h2,h3,h4,h5');
     anchors.add('.anchored');
   }
-
 });
 
 $(document).ready(function () {

@@ -21,6 +21,7 @@ spec:
       regex: ingress_class
     path: /controller/metrics
     port: https-metrics
+    honorLabels: true
     relabelings:
     - action: labeldrop
       regex: endpoint|pod|container
@@ -48,6 +49,7 @@ spec:
       name: prometheus-token
     path: /protobuf/metrics
     port: https-metrics
+    honorLabels: true
     relabelings:
     - action: labeldrop
       regex: endpoint|pod|container

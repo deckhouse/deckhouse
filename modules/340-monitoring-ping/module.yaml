@@ -1,11 +1,13 @@
 name: monitoring-ping
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
 requirements:
   modules:
     # node-exporter is required for this module to work because the exporter stores metrics as a text file on a node,
     # which then be read by a node-exporter
     monitoring-kubernetes: ">= 0.0.0"
+descriptions:
+  en: Monitors network connectivity between all cluster nodes using ICMP ping. Exports metrics and provides monitoring dashboards.
+  ru: Мониторит сетевую связность между всеми узлами кластера с помощью ICMP ping. Экспортирует метрики и предоставляет дашборды в системе мониторинга.

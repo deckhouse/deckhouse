@@ -19,4 +19,4 @@ NLB-based load balancing can be implemented in two ways:
 
 ## Application-level load balancing (ALB)
 
-For application-level traffic balancing DVP uses [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
+For application-level traffic balancing DVP uses [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).

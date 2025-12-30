@@ -21,6 +21,71 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestFirstLetters(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+		count    int
+		name     string
+	}{
+		{
+			name:     "empty",
+			input:    "",
+			expected: "",
+			count:    2,
+		},
+
+		{
+			name:     "zero count",
+			input:    "aaaa",
+			expected: "aaaa",
+			count:    0,
+		},
+
+		{
+			name:     "negative count",
+			input:    "aaaa",
+			expected: "aaaa",
+			count:    -1,
+		},
+
+		{
+			name:     "all string",
+			input:    "aaaa",
+			expected: "aaaa",
+			count:    4,
+		},
+
+		{
+			name:     "count > string len",
+			input:    "aaaa",
+			expected: "aaaa",
+			count:    10,
+		},
+
+		{
+			name:     "2 count",
+			input:    "aaaa",
+			expected: "aa",
+			count:    2,
+		},
+
+		{
+			name:     "1 count",
+			input:    "aaaa",
+			expected: "a",
+			count:    1,
+		},
+	}
+
+	for _, tst := range tests {
+		t.Run(tst.name, func(t *testing.T) {
+			res := FirstLetters(tst.input, tst.count)
+			require.Equal(t, res, tst.expected)
+		})
+	}
+}
+
 // This test will fail at the original implementation of RandomStrElement with the message such as:
 // "strings_test.go:56: RandomStrElement produces 100 consecutive repetitions out of 100 elements"
 func TestRandomStrElement(t *testing.T) {

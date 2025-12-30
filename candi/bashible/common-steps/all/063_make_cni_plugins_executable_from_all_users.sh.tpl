@@ -1,6 +1,4 @@
-#!/bin/bash
-
-# Copyright 2024 Flant JSC
+# Copyright 2025 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,13 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#
-# Copy files with information about the licenses used in modules to _data/ossinfo folder (jekyll will construct an array with this data)
+# In some cases, the umask 027 may be installed on the system,
+# which can reset the permissions for other users.
+# This can be critical for /opt/cni files and can cause problems
+# with their execution.
+# Therefore, it is necessary to manually set the appropriate permissions.
 
-mkdir -p $(dirname ${OSS_TARGET_FILE})
-
-find ${OSS_SOURCE_DIR} -name 'oss.yaml' | while read -r file; do
-  dir_name=$(basename $(dirname "$file"))
-  new_name=$(echo "$dir_name" | sed -E 's/^[0-9]+-//')
-  cat "$file" >> "${OSS_TARGET_FILE}"
-done
+if [[ -d /opt/cni ]]; then
+  chmod o+rx /opt/cni/ -R
+fi

@@ -7,6 +7,8 @@ The module is automatically enabled for all cloud clusters deployed in VMware Cl
 
 {% include module-alerts.liquid %}
 
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 {% include module-settings.liquid %}

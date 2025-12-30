@@ -1,4 +1,10 @@
 common:
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
   of:
     en: of
     ru: ""
@@ -268,6 +274,9 @@ common:
   related_reference_and_documentation_links:
     en: Links to related documentation and API
     ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
   related_links:
     en: Related links
     ru: Связанные ссылки
@@ -278,17 +287,17 @@ common:
     en: Global custom resources
     ru: Глобальные кастомные ресурсы
   module_x_parameters:
-    en: Module `XXXX` parameters
-    ru: Параметры модуля `XXXX`
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
   module_x_crds:
-    en: Module `XXXX` custom resources
-    ru: Кастомные ресурсы модуля `XXXX`
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
   module_x_documentation:
-    en: Module `XXXX` documentation
-    ru: Документация модуля `XXXX`
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
   module_x_cluster_configuration:
-    en: Module `XXXX` provider configuration
-    ru: Настройки провайдера модуля `XXXX`
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -319,6 +328,9 @@ common:
   note_ce_notguaranteed:
     en: Functionality in Community Edition is not guaranteed
     ru: Работоспособность в Community Edition не гарантируется
+  module_crd_warning_1:
+    en: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+    ru: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
   module_has_the_following_alerts:
     en: The following alerts are implemented in the module
     ru: В модуле реализованы следующие алерты
@@ -376,6 +388,27 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  requirements_title:
+    en: Requirements
+    ru: Требования
+  requirements_kubernetes_title:
+    en: To the Kubernetes version
+    ru: К версии Kubernetes
+  requirements_deckhouse_title:
+    en: To the Deckhouse version
+    ru: К версии Deckhouse
+  requirements_modules_title:
+    en: To the versions of other modules
+    ru: К версиям других модулей
+  requirements_modules_any_version:
+    en: any version
+    ru: любая версия
+  requirements_version_and_above:
+    en: and above
+    ru: и выше
+  requirements_version_above:
+    en: above
+    ru: выше
 
 comparison:
   except_parameters:
@@ -389,6 +422,9 @@ comparison:
     ru: "с ограничениями"
 
 features:
+  module_lifecycle_stage:
+    en: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
+    ru: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
   currency_sign:
     en: "&#36;"
     ru: "&#8381;"

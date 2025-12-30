@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -167,7 +168,7 @@ spec:
 		t.Run(tt.name, func(t *testing.T) {
 			g := NewWithT(t)
 
-			v := NewValidator(nil)
+			v := NewValidator(nil, conversion.NewConversionsStore())
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 			res := v.validateCR(cfg)
@@ -278,7 +279,7 @@ spec:
 			err := mm.Init(log.NewNop())
 			g.Expect(err).ShouldNot(HaveOccurred(), "should init module manager")
 
-			v := NewValidator(mm)
+			v := NewValidator(mm, conversion.NewConversionsStore())
 			cfg, err := modCfgFromYAML(tt.manifest)
 			g.Expect(err).ShouldNot(HaveOccurred(), "should parse manifest: %s", tt.manifest)
 

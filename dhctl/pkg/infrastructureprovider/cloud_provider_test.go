@@ -1618,10 +1618,37 @@ type executorTestInitParams struct {
 	pluginVersion string
 }
 
+func testFindDirWithPrefix(t *testing.T, root, prefix string) string {
+	found := ""
+	err := filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if found != "" {
+			return nil
+		}
+
+		require.NoError(t, err, p)
+
+		// Process only dirs
+		if !info.IsDir() {
+			return nil
+		}
+
+		if strings.HasPrefix(path.Base(p), prefix) {
+			found = p
+		}
+
+		return nil
+	})
+
+	require.NoError(t, err)
+
+	return found
+}
+
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
 	t.Helper()
 
 	require.False(t, govalue.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.params.Logger))
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.pluginsDir)
@@ -1630,7 +1657,10 @@ func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T,
 
 	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
 
-	tmp := filepath.Join(infraRoot, "tf_dhctl")
+	tmp := testFindDirWithPrefix(t, infraRoot, "tf_")
+	require.NotEmpty(t, tmp)
+
+	params.params.Logger.LogInfoF("Found tmp dir %s\n", tmp)
 
 	assertIsNotEmptyDir(t, tmp)
 	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)

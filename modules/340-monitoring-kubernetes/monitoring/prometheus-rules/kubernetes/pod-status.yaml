@@ -10,6 +10,8 @@
           (count by (namespace, pod) (kube_pod_container_status_ready==0) * on (namespace, pod) group_left(node) (max by (namespace, node, pod) (kube_pod_info)))
         )
       for: 10m
+      labels:
+        severity_level: "6"
       annotations:
         plk_markup_format: markdown
         plk_protocol_version: "1"

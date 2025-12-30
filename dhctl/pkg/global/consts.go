@@ -26,4 +26,6 @@ const (
 	D8SystemNamespace = "d8-system"
 
 	InfrastructureStateBackupLabelKey = "dhctl.deckhouse.io/state-backup"
+
+	ConfigsNS = "kube-system"
 )

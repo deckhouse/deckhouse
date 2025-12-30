@@ -14,7 +14,7 @@ apiVersions:
         d8 system edit provider-cluster-configuration
         ```
 
-        > Once you modify the node configuration, run [`dhctl converge`](../../deckhouse-faq.html#changing-the-configuration) for changes to take effect.
+        > Once you modify the node configuration, run `dhctl converge` for changes to take effect.
       x-doc-search: |
         ProviderClusterConfiguration
       x-examples:
@@ -296,7 +296,7 @@ apiVersions:
                       description: |
                         Name of the existing StorageClass will be used to create the virtual machine's root disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../reference/api/global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
                     image:
                       type: object
                       description: |
@@ -357,7 +357,7 @@ apiVersions:
                       description: |
                         Name of the existing StorageClass will be used to create the etcd data disk.
 
-                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](../../reference/api/global.html#parameters-modules-storageclass) setting.
+                        If the value is not specified, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) setting.
                 additionalLabels:
                   type: object
                   description: |

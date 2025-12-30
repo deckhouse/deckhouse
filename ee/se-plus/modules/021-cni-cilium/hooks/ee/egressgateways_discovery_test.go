@@ -1504,6 +1504,7 @@ metadata:
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("Node", "frontend-2").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/member"))
 			Expect(f.KubernetesGlobalResource("Node", "frontend-2").Field("metadata.labels").Map()).ToNot(HaveKey("egress-gateway.network.deckhouse.io/active-for-egg-dev"))
+			Expect(f.ValuesGet("cniCilium.internal.egressGatewaysMap.egg-dev.desiredNode").String()).To(BeEmpty())
 		})
 	})
 
@@ -1544,6 +1545,7 @@ metadata:
 		It("should not change anything", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("Node", "frontend-3").Field("metadata.labels").Map()).To(BeEmpty())
+			Expect(f.ValuesGet("cniCilium.internal.egressGatewaysMap.egg-dev.desiredNode").String()).To(BeEmpty())
 		})
 	})
 

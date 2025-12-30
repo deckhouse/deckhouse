@@ -50,6 +50,25 @@
     ],
     "external": "true",
     "path": "/modules/code/stable/"
+  }, 
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "editionsWithRestrictions": [
+      "ee"
+    ],
+    "editionsWithRestrictionsComments": {
+      "all": {
+        "en": "Limited testing. Contact us to discuss the terms",
+        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
+      }
+    },
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/stable/"
   },
   "commander": {
     "editions": [
@@ -283,6 +302,7 @@
   "operator-argo": {
     "editions": [
       "ee",
+      "se-plus",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
@@ -344,8 +364,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots",
-        "ru": "Ограничение на&nbsp;возможность создания снимков"
+        "en": "Restriction on&nbsp;the ability to&nbsp;create snapshots and volume&nbsp;wiping",
+        "ru": "Ограничение на&nbsp;возможность создания снимков и затирание&nbsp;томов"
       }
     },
     "external": "true",
