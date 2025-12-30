@@ -73,14 +73,45 @@ spec:
                 - ALL
           imagePullPolicy: IfNotPresent
           env:
+            - name: PROBE_INTERVAL
+              value: "200ms"
+            - name: PROBE_TIMEOUT
+              value: "100ms"
+            - name: SUSPICION_MULT
+              value: "2"
+            - name: INDIRECT_CHECKS
+              value: "3"
+            - name: GOSSIP_INTERVAL
+              value: "100ms"
+            - name: RETRANSMIT_MULT
+              value: "4"
+            - name: GOSSIP_TO_THE_DEAD_TIME
+              value: "2s"
+            - name: MIN_EVENT_INTERVAL_JOIN
+              value: "200ms"
+            - name: MIN_EVENT_INTERVAL_LEFT
+              value: "600ms"
+            - name: MEMBERLIST_PORT
+              value: "8500"
+            - name: NODE_GROUP
+              value: {{ $ng.name }}
             - name: LOG_LEVEL
-              value: info
+              value: debug
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          ports:
+            - name: memberlist-tcp
+              containerPort: 8500
+              hostPort: 8500
+              protocol: TCP
+            - name: memberlist-udp
+              containerPort: 8500
+              hostPort: 8500
+              protocol: UDP
           image: {{ include "helm_lib_module_image" (list $ctx "fencingAgent") }}
           livenessProbe:
             httpGet:

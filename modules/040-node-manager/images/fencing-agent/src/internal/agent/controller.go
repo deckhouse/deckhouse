@@ -17,8 +17,9 @@ package agent
 
 import (
 	"context"
-	"errors"
-	"net"
+	"fencing-controller/internal/config"
+	"fencing-controller/internal/gossip"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -41,18 +42,20 @@ var maintenanceAnnotations = [...]string{
 
 type FencingAgent struct {
 	logger     *zap.Logger
-	config     Config
+	config     agentconfig.Config
 	kubeClient kubernetes.Interface
 	watchDog   watchdog.WatchDog
+	gs         gossip.Gossip
 }
 
-func NewFencingAgent(logger *zap.Logger, config Config, kubeClient kubernetes.Interface, wd watchdog.WatchDog) *FencingAgent {
+func NewFencingAgent(logger *zap.Logger, config agentconfig.Config, kubeClient kubernetes.Interface, gossip gossip.Gossip, wd watchdog.WatchDog) *FencingAgent {
 	l := logger.With(zap.String("node", config.NodeName))
 	return &FencingAgent{
 		logger:     l,
 		config:     config,
 		kubeClient: kubeClient,
 		watchDog:   wd,
+		gs:         gossip,
 	}
 }
 
@@ -151,24 +154,30 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 	if fa.config.HealthProbeBindAddress != "" {
 		fa.startLiveness(ctx)
 	}
-
+	fa.logger.Info("Start memberlist discovery")
+	peers, err := fa.discoverNodePeers(ctx)
+	err = fa.gs.Start(peers)
+	if err != nil {
+		fa.logger.Error("Unable to start memberlist", zap.Error(err))
+	}
+	//fa.gs.PrintNodes()
 	for {
 		select {
 		case <-ticker.C:
 			// check kubernets API
 			node, err := fa.kubeClient.CoreV1().Nodes().Get(context.TODO(), fa.config.NodeName, v1.GetOptions{})
 			if err != nil {
-				var netErr net.Error
-
-				if errors.As(err, &netErr) && netErr.Timeout() {
-					// only API timeout is reasonable error
-					fa.logger.Error("API request timed out", zap.Error(err))
-					APIIsAvailable = false
-				} else {
-					// API is available but some error happened
-					fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
-					APIIsAvailable = true
-				}
+				//var netErr net.Error
+				//if errors.As(err, &netErr) && netErr.Timeout() {
+				//	// only API timeout is reasonable error
+				//	fa.logger.Error("API request timed out", zap.Error(err))
+				//	APIIsAvailable = false
+				//} else {
+				//	// API is available but some error happened
+				//	fa.logger.Error("Unable to reach the API due to an error", zap.Error(err))
+				//	APIIsAvailable = true
+				//}
+				APIIsAvailable = false
 			} else {
 				// show message just one time in an interval
 				if time.Since(lastMessageTime) > fa.config.KubernetesAPICheckInterval {
@@ -215,7 +224,26 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 					fa.logger.Error("Unable to feed watchdog", zap.Error(err))
 				}
 			}
+			num := fa.gs.NumMembers() - 1
+			if !APIIsAvailable && !MaintenanceMode {
+				// except this node
 
+
+				if (num == 0 && fa.gs.IsAlone()) || num > 0{
+					fa.logger.Debug("Feeding the watchdog from gossip check", zap.Bool("alone", fa.gs.IsAlone()))
+					err = fa.watchDog.Feed()
+					if err != nil {
+						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
+					}
+				} else {
+					fa.logger.Debug("(Fake)Not feeding the watchdog from gossip check")
+					err = fa.watchDog.Feed()
+					if err != nil {
+						fa.logger.Error("Unable to feed watchdog", zap.Error(err))
+					}
+				}
+			}
+			fa.logger.Debug("Number of members in gossip", zap.Int("num", num))
 		case <-ctx.Done():
 			fa.logger.Debug("Finishing the API check")
 			if fa.watchDog.IsArmed() {
@@ -227,4 +255,27 @@ func (fa *FencingAgent) Run(ctx context.Context) error {
 			return nil
 		}
 	}
+}
+
+func (fa *FencingAgent) discoverNodePeers(ctx context.Context) ([]string, error) {
+	nodes, err := fa.kubeClient.CoreV1().Nodes().List(ctx, v1.ListOptions{LabelSelector: fmt.Sprintf("node.deckhouse.io/group=%s", fa.config.NodeGroup)})
+	if err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
+	}
+	var peerIps []string
+	for _, node := range nodes.Items {
+		if node.Name == fa.config.NodeName {
+			fa.logger.Debug("Skipping myself")
+			continue
+		}
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				peerIps = append(peerIps, addr.Address)
+				break
+			}
+		}
+	}
+	fa.logger.Info("Discovered peers", zap.Strings("peers", peerIps))
+	return peerIps, nil
 }
