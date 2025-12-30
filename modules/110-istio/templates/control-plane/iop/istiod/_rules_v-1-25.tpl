@@ -198,12 +198,6 @@
   - ""
   resources:
   - secrets
-  verbs:
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - secrets
   resourceNames:
   - cacerts
   - d8-istio-sidecar-registry
@@ -213,6 +207,7 @@
   - create
   - update
   - delete
+  - list
   - get
   - watch
 - apiGroups:

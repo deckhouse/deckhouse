@@ -202,18 +202,13 @@
   - ""
   resources:
   - secrets
-  verbs:
-  - list
-- apiGroups:
-  - ""
-  resources:
-  - secrets
   resourceNames:
   - cacerts
   - d8-istio-sidecar-registry
   - d8-remote-clusters-public-metadata
   - deckhouse-registry
   verbs:
+  - list
   - get
   - watch
 - apiGroups:
