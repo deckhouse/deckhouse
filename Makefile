@@ -114,7 +114,7 @@ GOLANGCI_VERSION = 2.1.2
 TRIVY_VERSION= 0.63.0
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
-GH_VERSION = 2.52.0
+GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
@@ -213,7 +213,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools generate-docs 
+generate: generate-kubernetes generate-tools generate-docs
 
 .PHONY: generate-tools
 generate-tools:
@@ -321,9 +321,15 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 		fi;
 
 bin/gh: bin ## Install gh cli.
+ifeq ($(OS_NAME), Darwin)
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
+	rm bin/gh.zip
+else
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
 	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
 	rm bin/gh.tar.gz
+endif
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
