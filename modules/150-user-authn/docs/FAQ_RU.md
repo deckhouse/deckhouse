@@ -96,8 +96,8 @@ title: "Модуль user-authn: FAQ"
 2. DexAuthenticator устанавливает cookie с целым refresh token (вместо того чтобы выдать тикет, как для ID token) потому что Redis не сохраняет данные на диск.
 Если по тикету в Redis не найден ID token, пользователь сможет запросить новый ID token, предоставив refresh token из cookie.
 
-3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](../upmeter/), потому что права доступа к Upmeter не такие проработанные.
-С другой стороны, для [Kubernetes Dashboard](../dashboard/) это критичный функционал, потому что она отправляет ID token дальше для доступа к Kubernetes API.
+3. DexAuthenticator выставляет HTTP-заголовок `Authorization`, равный значению ID token из Redis. Это необязательно для сервисов по типу [Upmeter](/modules/upmeter/), потому что права доступа к Upmeter не такие проработанные.
+С другой стороны, для [Kubernetes Dashboard](/modules/dashboard/) это критичный функционал, потому что Dashboard отправляет ID token дальше для доступа к API Kubernetes.
 
 ## Как сгенерировать kubeconfig для доступа к Kubernetes API?
 

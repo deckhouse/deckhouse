@@ -196,7 +196,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-The [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in cni-cilium module for correct work.
+The [`svcSourceRangeCheck`](/modules/cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in the `cni-cilium` module for correct work.
 {% endalert %}
 
 ## How to add extra log fields to a nginx-controller?
@@ -324,6 +324,7 @@ This uses the audit mode (`DetectionOnly`) and [basic recommended configuration]
 ### Setting up ModSecurity
 
 You can configure ModSecurity in two ways:
+
 1. For the entire ingress-nginx controller
    - the necessary directives are described in the section `config.modsecurity-snippet` in CR IngressNginxController, as in the example above.
 1. For each CR Ingress separately
