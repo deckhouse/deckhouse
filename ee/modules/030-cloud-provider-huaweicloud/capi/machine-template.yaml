@@ -1,6 +1,6 @@
-{{ $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" -}}
-{{ $subnetID := $cloudProviderValues.subnetId -}}
-{{ $securityGroupID := $cloudProviderValues.securityGroupId -}}
+{{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" -}}
+{{- $subnetID := $cloudProviderValues.subnetId -}}
+{{- $securityGroupID := $cloudProviderValues.securityGroupId -}}
 
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: HuaweiCloudMachineTemplate
