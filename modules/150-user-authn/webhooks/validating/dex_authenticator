@@ -16,30 +16,19 @@
 
 source /shell_lib.sh
 
-function is_ipv4_address() {
-  local ip="$1"
+function is_ip_address() {
+  local value="$1"
 
-  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+  # Use Python's stdlib to properly parse IPv4/IPv6 instead of maintaining complex regexes in bash.
+  python3 - "$value" >/dev/null 2>&1 <<'PY'
+import ipaddress
+import sys
 
-  local IFS='.'
-  local o1 o2 o3 o4
-  read -r o1 o2 o3 o4 <<<"$ip"
-
-  for o in "$o1" "$o2" "$o3" "$o4"; do
-    [[ "$o" =~ ^[0-9]{1,3}$ ]] || return 1
-    (( o >= 0 && o <= 255 )) || return 1
-  done
-
-  return 0
-}
-
-function is_ipv6_address() {
-  local ip="$1"
-
-  # DNS names must not contain ':'; presence of ':' strongly indicates IPv6 (or host:port),
-  # both are invalid for Ingress host and therefore invalid for applicationDomain.
-  [[ "$ip" == *:* ]] || return 1
-  return 0
+try:
+    ipaddress.ip_address(sys.argv[1])
+except ValueError:
+    sys.exit(1)
+PY
 }
 
 function __config__(){
@@ -109,7 +98,7 @@ function __main__() {
   for domain_pair in "${domains_to_check[@]}"; do
     IFS=$'\t' read -r domain ingressClass fieldPath <<< "$domain_pair"
 
-    if is_ipv4_address "$domain" || is_ipv6_address "$domain"; then
+    if is_ip_address "$domain"; then
       msg="DexAuthenticator '$newAuthNamespace/$newAuthName' is invalid: '$fieldPath' must be a DNS name, not an IP address ('$domain')"
       jq -n --arg msg "$msg" '{allowed:false, message:$msg}' > "$VALIDATING_RESPONSE_PATH"
       return 0
