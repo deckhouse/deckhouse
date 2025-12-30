@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Masterminds/semver/v3"
@@ -148,63 +149,141 @@ func getKubernetesEndpointsCount(ctx context.Context, cli client.Client) (int, e
 }
 
 func parseVersion(version string) (*semver.Version, error) {
+	// Trim whitespace and newlines that might come from secret data
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return nil, fmt.Errorf("version string is empty")
+	}
 	return semver.NewVersion(version)
 }
 
+// validateKubernetesVersionDowngrade validates that Kubernetes version downgrade
+// does not exceed 1 minor version. It handles "Automatic" version by resolving
+// it to actual version from secret data.
+//
+// Rules:
+//   - Upgrade is always allowed (no restrictions)
+//   - Downgrade is allowed only if it's within 1 minor version
+//   - When oldVersion is "Automatic", uses maxUsedControlPlaneKubernetesVersion from secret
+//     (maximum version that was ever used in the cluster)
+//   - When newVersion is "Automatic", uses deckhouseDefaultKubernetesVersion from secret
+//     (default version that Deckhouse will use for Automatic)
+//   - Also checks maxUsedControlPlaneKubernetesVersion to prevent downgrade below max used version
 func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v1.Secret) (*kwhvalidating.ValidatorResult, error) {
+	// oldVersion can be either "Automatic" or semver (e.g., "1.23.4")
+	// newVersion can be either "Automatic" or semver (e.g., "1.23.5")
 	if oldVersion == newVersion {
 		return allowResult(nil)
 	}
 
-	if newVersion == "Automatic" {
-		if oldVersion != "Automatic" {
-			automaticVersionB64, exists := secret.Data["deckhouseDefaultKubernetesVersion"]
-			if !exists {
-				return allowResult(nil)
-			}
+	type versionChecker func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error)
+	var selectedChecker versionChecker
 
-			automaticVersion := string(automaticVersionB64)
-			verAutomatic, err := parseVersion(automaticVersion)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse automatic version: %w", err)
-			}
-
-			verOld, err := parseVersion(oldVersion)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse old version: %w", err)
-			}
-
-			if verOld.GreaterThan(verAutomatic) {
-				return rejectResult(fmt.Sprintf("can not set Automatic because it will downgrade kubernetes version. Automatic=%s oldKubernetesVersion=%s", automaticVersion, oldVersion))
-			}
+	// minorSubCheck validates that downgrade does not exceed 1 minor version.
+	// It allows upgrade without restrictions and only checks downgrade scenarios.
+	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+		// Only check downgrade, allow upgrade without restrictions
+		if oldVersionSemver.LessThan(newVersionSemver) || oldVersionSemver.Equal(newVersionSemver) {
+			return allowResult(nil)
 		}
+
+		// Check if downgrading more than 1 minor version
+		if oldVersionSemver.Major() > newVersionSemver.Major() {
+			return rejectResult(
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+			)
+		}
+
+		if oldVersionSemver.Minor() > newVersionSemver.Minor()+1 {
+			return rejectResult(
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+			)
+		}
+
 		return allowResult(nil)
 	}
 
-	verOld, err := parseVersion(oldVersion)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse old version: %w", err)
-	}
-
-	verNew, err := parseVersion(newVersion)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse new version: %w", err)
-	}
-
-	// Check if downgrading more than 1 minor version
-	if verOld.Major() > verNew.Major() || (verOld.Major() == verNew.Major() && verOld.Minor() > verNew.Minor()+1) {
-		return rejectResult(fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersion, newVersion))
-	}
-
-	maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
-	if exists {
-		maxUsedVersion := string(maxUsedVersionB64)
-		verMax, err := parseVersion(maxUsedVersion)
-		if err == nil {
-			if verMax.Major() > verNew.Major() || (verMax.Major() == verNew.Major() && verMax.Minor() > verNew.Minor()+1) {
-				return rejectResult(fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. maxUsedControlPlaneKubernetesVersion=%s newKubernetesVersion=%s", maxUsedVersion, newVersion))
-			}
+	// automaticOnlyGreaterCheck is used when newVersion is "Automatic".
+	// It only rejects if oldVersion is greater than Automatic version (downgrade scenario).
+	// Upgrade or same version is allowed.
+	// This is simpler than minorSubCheck because Automatic will use deckhouseDefaultKubernetesVersion
+	// which is always safe, so we only need to check if it's a downgrade.
+	var automaticOnlyGreaterCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+		if oldVersionSemver.GreaterThan(newVersionSemver) {
+			return rejectResult(
+				fmt.Sprintf(
+					"can not set Automatic because it will downgrade kubernetes version. "+
+						"Automatic=%s oldKubernetesVersion=%s", newVersionSemver, oldVersionSemver,
+				),
+			)
 		}
+
+		return allowResult(nil)
+	}
+
+	selectedChecker = minorSubCheck
+
+	// Resolve oldVersion: if it's "Automatic", get actual version from secret
+	var oldVersionSemver *semver.Version
+	if oldVersion == "Automatic" {
+		maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
+		// Corner case: If maxUsedControlPlaneKubernetesVersion is not set in secret,
+		// we cannot determine the actual version that was used, so we allow the change.
+		// This can happen during initial cluster setup or if secret is incomplete.
+		if !exists {
+			return allowResult(nil)
+		}
+
+		var err error
+		oldVersionSemver, err = parseVersion(string(maxUsedVersionB64))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse maxUsedControlPlaneKubernetesVersion: %w", err)
+		}
+	} else {
+		var err error
+		oldVersionSemver, err = parseVersion(oldVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse old version: %w", err)
+		}
+	}
+
+	// Resolve newVersion: if it's "Automatic", get actual version from secret
+	var newVersionSemver *semver.Version
+	if newVersion == "Automatic" {
+		automaticVersionB64, exists := secret.Data["deckhouseDefaultKubernetesVersion"]
+		// Corner case: If deckhouseDefaultKubernetesVersion is not set in secret,
+		// we cannot determine what Automatic will resolve to, so we allow the change.
+		// This can happen during initial cluster setup or if secret is incomplete.
+		if !exists {
+			return allowResult(nil)
+		}
+
+		var err error
+		newVersionSemver, err = parseVersion(string(automaticVersionB64))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse automatic version: %w", err)
+		}
+
+		// When newVersion is "Automatic", we use simpler checker that only checks
+		// if oldVersion > newVersion (downgrade). Upgrade or same version is allowed.
+		// We don't need to check minor version restriction because Automatic will use
+		// deckhouseDefaultKubernetesVersion which is always safe.
+		selectedChecker = automaticOnlyGreaterCheck
+	} else {
+		var err error
+		newVersionSemver, err = parseVersion(newVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse new version: %w", err)
+		}
+	}
+
+	// Run selected checker
+	result, err := selectedChecker(oldVersionSemver, newVersionSemver)
+	if err != nil {
+		return nil, err
+	}
+	if !result.Valid {
+		return result, nil
 	}
 
 	return allowResult(nil)
