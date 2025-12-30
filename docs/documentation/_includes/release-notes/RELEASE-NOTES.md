@@ -104,7 +104,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - The [update notification workflow](https://deckhouse.io/modules/deckhouse/v1.73/usage.html#deckhouse-update-notifications) has changed — a release is applied only after the notification is successfully delivered to the configured webhook. If delivery fails, the update is paused until the webhook is restored.
 
-- Reorganized in-cluster documentation. All module documentation (including connected ones) is now located under the [Modules section]((https://deckhouse.io/modules/)). Search has been updated.
+- Reorganized in-cluster documentation. All module documentation (including connected ones) is now located under the [Modules section](https://deckhouse.io/modules/). Search has been updated.
 
 - For Ingress NGINX Controller v1.10, added the option to enable the profiler (via the [`nginxProfilingEnabled`](https://deckhouse.io/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled) parameter). Enabling the profiler increases resource consumption but may be useful for debugging controller issues.
 
@@ -426,7 +426,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
   Previously, these addresses were determined automatically;
   however, in some configurations, they could not be resolved.
 
-- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.71/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
+- The DexAuthenticator resource now has a [`highAvailability`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability) parameter
   that controls high availability mode.
   In high availability mode, multiple replicas of the authenticator are launched.
   Previously, high availability mode of all authenticators was determined by a [global parameter](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/deckhouse-configure-global.html#parameters-highavailability)
@@ -439,7 +439,7 @@ is available in the [changelog](https://github.com/deckhouse/deckhouse/blob/main
 
 - Support for the [Huawei Cloud provider](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/modules/cloud-provider-huaweicloud/) has been added.
 
-- The new [`keepDeletedFilesOpenedFor`](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods-keepdeletedfilesopenedfor) parameter
+- The new [`keepDeletedFilesOpenedFor`](https://deckhouse.io/products/kubernetes-platform/documentation/v1.68/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha1-spec-kubernetespods-keepdeletedfilesopenedfor) parameter
   in the `log-shipper` module allows you to configure the period to keep the deleted log files open.
   This way, you can continue reading logs from deleted pods for some time if log storage is temporarily unavailable.
 

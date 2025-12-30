@@ -158,9 +158,9 @@ roleRef:
 
 - модуль реализует role-based-подсистему сквозной авторизации, расширяя функционал стандартного механизма RBAC;
 - настройка прав доступа происходит с помощью ресурсов;
-- управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-allowscale));
-- управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-portforwarding));
-- управление списком разрешённых пространств имён в формате labelSelector (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector)).
+- управление доступом к инструментам масштабирования (параметр `allowScale` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale));
+- управление доступом к форвардингу портов (параметр `portForwarding` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) или [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding));
+- управление списком разрешённых пространств имён в формате `labelSelector` (параметр `namespaceSelector` ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector)).
 
 В модуле, кроме использования RBAC, можно использовать удобный набор высокоуровневых ролей:
 

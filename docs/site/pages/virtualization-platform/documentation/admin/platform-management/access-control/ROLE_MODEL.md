@@ -150,10 +150,11 @@ Role-based model subsystems composition table.
 ## Current role-based model
 
 Features:
+
 - Manages user and group access control using Kubernetes RBAC.
-- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-allowscale)) Custom Resource).
-- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule]([AuthorizationRule](/modules/user-authz/cr.html#authorizationrule#authorizationrule-v1alpha1-spec-portforwarding) Custom Resource).
-- Manages the list of allowed namespaces with a labelSelector (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule#clusterauthorizationrule-v1-spec-namespaceselector) Custom Resource).
+- Manages access to scaling tools (the `allowScale` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-allowscale) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-allowscale) custom resource).
+- Manages access to port forwarding (the `portForwarding` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-portforwarding) or [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-portforwarding) custom resource).
+- Manages the list of allowed namespaces with a `labelSelector` (the `namespaceSelector` parameter of the [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule-v1-spec-namespaceselector) custom resource).
 
 In addition to the RBAC, you can use a set of high-level roles in the module:
 - `User`: Has access to information about all objects (including viewing pod logs) but cannot exec into containers, read secrets, and perform port-forwarding.
@@ -314,7 +315,7 @@ write:
 ```
 <!-- end user-authz roles placeholder -->
 
-You can get additional list of access rules for module role from cluster ([existing user defined rules](usage.html#customizing-rights-of-high-level-roles) and non-default rules from other deckhouse modules):
+You can get an additional list of access rules for a role from the cluster (existing user-defined rules and non-default rules from other DVP modules):
 
 ```bash
 D8_ROLE_NAME=Editor
