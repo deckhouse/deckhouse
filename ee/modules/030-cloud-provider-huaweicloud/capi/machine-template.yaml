@@ -35,11 +35,11 @@ spec:
       {{- $nets := list $primary -}}
 
       {{- if $ic.additionalNetworks -}}
-        {{- $nets = concat $nets $ic.additionalNetworks -}}
+      {{- $nets = concat $nets $ic.additionalNetworks -}}
       {{- end -}}
 
       {{- if $ic.subnets -}}
-        {{- $nets = concat $nets $ic.subnets -}}
+      {{- $nets = concat $nets $ic.subnets -}}
       {{- end -}}
 
       subnets:
