@@ -58,7 +58,7 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Fulcio OIDC token denial of service - Функционал обработки OIDC токенов в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами проходят через промежуточные компоненты, не предоставляющие доступа к уязвимому коду extractIssuerURL, что исключает возможность эксплуатации данной уязвимости.",
-      "timestamp": "2025-12-30T12:00:00.000000000Z"
+      "timestamp": "2025-12-29T19:22:01.052319723Z"
     },
     {
       "vulnerability": {
