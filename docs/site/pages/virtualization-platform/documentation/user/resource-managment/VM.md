@@ -1809,7 +1809,7 @@ Now the current node (groups green) does not match the new conditions. The syste
 
 ### IP addresses of virtual machines
 
-The `.spec.settings.virtualMachineCIDRs` block in the `virtualization` module configuration specifies a list of subnets to assign ip addresses to virtual machines (a shared pool of ip addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address). For example:
+The `.spec.settings.virtualMachineCIDRs` block in the `virtualization` module configuration specifies a list of subnets to assign IP addresses to virtual machines (a shared pool of IP addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address). For example:
 - In subnet `10.20.30.0/26`, the addresses `10.20.30.0` and `10.20.30.63` are reserved.
 - In subnet `10.20.30.64/26`, the addresses `10.20.30.64` and `10.20.30.127` are reserved.
 
