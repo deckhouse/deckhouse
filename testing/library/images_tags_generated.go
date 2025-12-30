@@ -276,7 +276,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"webVexArtifact": "imageHash-deckhouseTools-webVexArtifact",
 	},
 	"descheduler": map[string]interface{}{
-		"descheduler": "imageHash-descheduler-descheduler",
+		"descheduler":            "imageHash-descheduler-descheduler",
+		"deschedulerVexArtifact": "imageHash-descheduler-deschedulerVexArtifact",
 	},
 	"documentation": map[string]interface{}{
 		"docsBuilder": "imageHash-documentation-docsBuilder",
