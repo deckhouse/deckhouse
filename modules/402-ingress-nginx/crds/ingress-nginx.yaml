@@ -800,6 +800,16 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       x-doc-examples: ['CF-Connecting-IP']
                       default: 'X-Forwarded-For'
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 loadBalancerWithProxyProtocol:
                   type: object
                   x-doc-required: false
@@ -835,6 +845,16 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -913,6 +933,16 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       default: 'X-Forwarded-For'
                       x-doc-examples: ['CF-Connecting-IP']
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 hostPortWithProxyProtocol:
                   type: object
                   description: |
@@ -942,6 +972,16 @@ spec:
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 hostPortWithSSLPassthrough:
                   type: object
                   description: |

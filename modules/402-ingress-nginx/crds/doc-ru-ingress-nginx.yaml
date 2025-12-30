@@ -496,6 +496,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включении `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithProxyProtocol:
                   description: |
                     Секция настроек инлета `LoadBalancerWithProxyProtocol`.
@@ -520,6 +523,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
@@ -572,6 +578,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включенной опции `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithProxyProtocol:
                   description: |
                     Секция настроек инлета `HostPortWithProxyProtocol`.
@@ -591,6 +600,9 @@ spec:
                         Если параметр не указан, подключение по HTTPS невозможно.
 
                         > Параметр обязателен в случае, если не задан `httpPort`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `HostPortWithSSLPassthrough`.

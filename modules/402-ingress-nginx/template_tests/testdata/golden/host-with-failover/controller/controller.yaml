@@ -73,10 +73,10 @@ spec:
       annotations:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
-        network.deckhouse.io/ingress-nginx-class: solid
-        ingress.deckhouse.io/block-deleting: "true"
         app: controller
+        ingress.deckhouse.io/block-deleting: "true"
         name: solid
+        network.deckhouse.io/ingress-nginx-class: solid
     spec:
       automountServiceAccountToken: true
       containers:
@@ -394,8 +394,8 @@ spec:
         cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
       labels:
         app: controller
-        network.deckhouse.io/ingress-nginx-class: solid
         name: solid-failover
+        network.deckhouse.io/ingress-nginx-class: solid
     spec:
       automountServiceAccountToken: true
       containers:

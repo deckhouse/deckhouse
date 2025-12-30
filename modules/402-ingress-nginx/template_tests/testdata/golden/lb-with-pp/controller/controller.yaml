@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: b4004269eecc01dbcf5b68aa944d8083fab21bafd890588e279f4494b923569a
+    ingress-nginx-controller.deckhouse.io/checksum: 3d0c2a305c23e68c29c3ee63a3d5825e8ee65620fb4e4729b63b1f0d8ea58e74
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancerWithProxyProtocol
   labels:

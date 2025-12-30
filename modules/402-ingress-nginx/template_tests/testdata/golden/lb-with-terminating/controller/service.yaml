@@ -5,10 +5,10 @@ metadata:
   labels:
     app: controller
     deckhouse-service-type: provider-managed
-    network.deckhouse.io/ingress-nginx-class: ""
     heritage: deckhouse
     module: ingress-nginx
     name: wait-lb-non-default
+    network.deckhouse.io/ingress-nginx-class: ""
   name: wait-lb-non-default-load-balancer
   namespace: d8-ingress-nginx
 spec:
