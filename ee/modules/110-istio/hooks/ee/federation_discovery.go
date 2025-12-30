@@ -233,7 +233,7 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 		if privateMetadata.PublicServices != nil {
 			countServices = len(*privateMetadata.PublicServices)
 		}
-		input.Logger.Info("Federation", slog.String("name", federationInfo.Name), slog.String("connection to the cluster", myTrustDomain), slog.String("is successful, published services", strconv.Itoa(countServices)))
+		input.Logger.Info("Connection to the cluster", slog.String("federation name", federationInfo.Name), slog.String("cluster name", myTrustDomain), slog.String("connected successfully, published services", strconv.Itoa(countServices)))
 	}
 	return nil
 }
