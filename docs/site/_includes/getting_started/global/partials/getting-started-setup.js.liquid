@@ -1,5 +1,10 @@
+// ============================================================================
+// Helper functions
+// ============================================================================
+
+// Restores form field value from sessionStorage
 function updateNode(selector, storageItemName) {
-  storageValue = sessionStorage.getItem(storageItemName);
+  var storageValue = sessionStorage.getItem(storageItemName);
   if (storageValue && storageValue.length > 0) {
     if ($(selector).is(':checkbox')) {
       $(selector).attr("checked", storageValue === 'true').trigger('change');
@@ -9,7 +14,184 @@ function updateNode(selector, storageItemName) {
   }
 }
 
-function restoreData() {
+// Gets field container (supports both regular and flex layouts)
+function getFieldContainer($field) {
+  return $field.closest('div[style*="flex"]').length > 0 ? $field.closest('div[style*="flex"] > div') : $field.parent();
+}
+
+// Clears validation errors for a field
+function clearFieldErrors($field) {
+  const $container = getFieldContainer($field);
+  $field.removeClass('invalid');
+  $container.find('.invalid-message').removeClass('active');
+}
+
+// Sets validation error for a field
+function setFieldError($field, messageType) {
+  const $container = getFieldContainer($field);
+  $field.addClass('invalid');
+  $container.find('.invalid-message-' + messageType).addClass('active');
+}
+
+
+// Sets overlap error message for CIDR field
+function setOverlapError($fieldContainer) {
+  if ($fieldContainer.find('.invalid-message-overlap').length === 0) {
+    $fieldContainer.append('<span class="info invalid-message invalid-message-overlap">Подсети не должны пересекаться. Проверьте, что все подсети уникальны и не перекрываются.</span>');
+  }
+  $fieldContainer.find('.invalid-message-overlap').addClass('active');
+}
+
+// ============================================================================
+// Validation functions
+// ============================================================================
+
+$(document).ready(function () {
+  // ============================================================================
+  // CIDR validation utilities
+  // ============================================================================
+  const CIDR = {
+    // CIDR pattern for validation
+    pattern: /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/,
+    
+    // Field selectors mapping
+    fields: {
+      '#podsubnetcidr': 'dhctl-pod-subnet-cidr',
+      '#servicesubnetcidr': 'dhctl-service-subnet-cidr',
+      '#internalnetworkcidrs': 'dhctl-internal-network-cidrs',
+      '#virtualmachinecidrs': 'dhctl-virtual-machine-cidrs'
+    },
+    
+    // Converts CIDR notation to IP range (start, end)
+    toRange: function(cidr) {
+      if (!cidr.match(CIDR.pattern)) return null;
+      
+      const [ip, prefix] = cidr.split('/');
+      const prefixLength = parseInt(prefix, 10);
+      
+      if (prefixLength < 0 || prefixLength > 32) return null;
+      
+      const ipParts = ip.split('.').map(Number);
+      if (ipParts.length !== 4 || ipParts.some(function(part) {
+        return isNaN(part) || part < 0 || part > 255;
+      })) {
+        return null;
+      }
+      
+      const ipNumber = (ipParts[0] << 24) + (ipParts[1] << 16) + (ipParts[2] << 8) + ipParts[3];
+      
+      if (prefixLength === 0) {
+        return { start: 0, end: 0xffffffff };
+      }
+      if (prefixLength === 32) {
+        return { start: ipNumber >>> 0, end: ipNumber >>> 0 };
+      }
+      
+      const mask = (0xffffffff << (32 - prefixLength)) >>> 0;
+      const network = (ipNumber & mask) >>> 0;
+      const hostMask = (~mask) >>> 0;
+      const broadcast = (network | hostMask) >>> 0;
+      return { start: network, end: broadcast };
+    },
+    
+    // Checks if two CIDR ranges overlap
+    overlap: function(cidr1, cidr2) {
+      if (!cidr1 || !cidr2 || !cidr1.match(CIDR.pattern) || !cidr2.match(CIDR.pattern)) {
+        return false;
+      }
+      const range1 = CIDR.toRange(cidr1);
+      const range2 = CIDR.toRange(cidr2);
+      if (!range1 || !range2) return false;
+      return !(range1.end < range2.start || range2.end < range1.start);
+    },
+    
+    // Checks if current CIDR field overlaps with other CIDR fields
+    checkFieldOverlaps: function(currentSelector, currentValue) {
+      if (!currentValue || !currentValue.match(CIDR.pattern)) {
+        return false;
+      }
+      
+      return Object.keys(CIDR.fields).some(function(selector) {
+        if (selector === currentSelector) return false;
+        const otherValue = $(selector).val() || sessionStorage.getItem(CIDR.fields[selector]);
+        return otherValue && otherValue.match(CIDR.pattern) && CIDR.overlap(currentValue, otherValue);
+      });
+    }
+  };
+
+  // ============================================================================
+  // Network validation utilities
+  // ============================================================================
+  const Network = {
+    // IP address pattern for validation
+    ipPattern: /^(\d{1,3}\.){3}\d{1,3}$/,
+    
+    // Validates IP address format and range (0-255)
+    isValidIP: function(ip) {
+      if (!ip.match(Network.ipPattern)) return false;
+      const parts = ip.split('.');
+      return parts.every(function(part) {
+        const num = parseInt(part, 10);
+        return num >= 0 && num <= 255 && part === num.toString();
+      });
+    },
+    
+    // Validates hostname according to DNS standards (RFC 1123)
+    isValidHostname: function(hostname) {
+      if (!hostname || hostname.length === 0) return false;
+      if (hostname.length > 253) return false;
+      if (hostname.startsWith('.') || hostname.endsWith('.')) return false;
+      if (hostname.startsWith('-') || hostname.endsWith('-')) return false;
+      
+      const parts = hostname.split('.');
+      if (parts.length < 2) return false;
+      
+      return parts.every(function(part) {
+        if (part.length === 0 || part.length > 63) return false;
+        if (part.startsWith('-') || part.endsWith('-')) return false;
+        return /^[a-zA-Z0-9]([a-zA-Z0-9\-]*[a-zA-Z0-9])?$/.test(part);
+      });
+    },
+    
+    // Validates IP address or hostname
+    isValidIPOrHostname: function(value) {
+      return Network.isValidIP(value) || Network.isValidHostname(value);
+    }
+  };
+
+  // ============================================================================
+  // Field validation helpers
+  // ============================================================================
+  
+  // Validates field with pattern (RegExp) or custom validator function
+  function validateField(selector, validator, storageKey) {
+    const isValid = typeof validator === 'function' 
+      ? validator 
+      : function(value) { return value.match(validator); };
+    
+    $(selector).change(function() {
+      const $field = $(this);
+      const value = $field.val();
+      
+      if (value && value.length > 0) {
+        if (!isValid(value)) {
+          setFieldError($field, 'main');
+        } else {
+          clearFieldErrors($field);
+          sessionStorage.setItem(storageKey, value);
+        }
+      } else {
+        clearFieldErrors($field);
+      }
+    });
+  }
+
+  // ============================================================================
+  // Data restoration
+  // ============================================================================
+
+  // Restores all form field values from sessionStorage on page load
+  function restoreData() {
   {%- if page.platform_code == 'bm-private' %}
   // proxy settings
   updateNode('#proxyHttpURI', 'dhctl-proxy-http-uri');
@@ -25,16 +207,27 @@ function restoreData() {
   updateNode('#clusterdomain', 'dhctl-domain');
   // updateNode('#resourceprefix', 'dhctl-prefix');
   updateNode('#sshkey', 'dhctl-sshkey');
+  updateNode('#nfsshare', 'dhctl-nfs-share');
+  updateNode('#nfshost', 'dhctl-nfs-host');
+  updateNode('#podsubnetcidr', 'dhctl-pod-subnet-cidr');
+  updateNode('#servicesubnetcidr', 'dhctl-service-subnet-cidr');
+  updateNode('#internalnetworkcidrs', 'dhctl-internal-network-cidrs');
+  updateNode('#virtualmachinecidrs', 'dhctl-virtual-machine-cidrs');
   {% for preset in site.data.getting_started.dkp_data.presets %}
   {%- if preset[1].recommended %}
   sessionStorage.setItem('dhctl-preset', '{{ preset[0] }}');
   {%- endif %}
   {%- endfor %}
-}
+  }
 
-$(document).ready(function () {
   const publicDomainTemplatePattern = /^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
   const httpPrefixPattern = /^(http|https):\/\//i;
+
+  // ============================================================================
+  // Field validation handlers
+  // ============================================================================
+
+  // Domain field
   $('#clusterdomain').change(function () {
     if (!$(this).val().match(publicDomainTemplatePattern)) {
       $(this).addClass('invalid');
@@ -48,11 +241,130 @@ $(document).ready(function () {
       sessionStorage.setItem('dhctl-domain', $(this).val());
     }
   });
+
+  // SSH key field
   $('#sshkey').change(function () {
     sessionStorage.setItem('dhctl-sshkey', $(this).val());
   });
+
+  // NFS fields
+  validateField('#nfsshare', /^\/[a-zA-Z0-9_\-\.\/]+$/, 'dhctl-nfs-share');
+  validateField('#nfshost', Network.isValidIPOrHostname, 'dhctl-nfs-host');
+
+  // Validates single CIDR value (used in both change handler and navigation check)
+  function validateCIDRValue(selector, value, isRequired) {
+    const $field = $(selector);
+    if ($field.length === 0) return { valid: true };
+    
+    const $fieldContainer = getFieldContainer($field);
+    $fieldContainer.find('.invalid-message-overlap').remove();
+    
+    // Empty value check
+    if (!value || value.length === 0) {
+      if (isRequired) {
+        setFieldError($field, 'main');
+        return { valid: false, $field: $field };
+      }
+      clearFieldErrors($field);
+      return { valid: true };
+    }
+    
+    // Format check
+    if (!value.match(CIDR.pattern)) {
+      setFieldError($field, 'main');
+      return { valid: false, $field: $field };
+    }
+    
+    // Overlap check
+    if (CIDR.checkFieldOverlaps(selector, value)) {
+      $field.addClass('invalid');
+      setOverlapError($fieldContainer);
+      return { valid: false, $field: $field };
+    }
+    
+    clearFieldErrors($field);
+    return { valid: true };
+  }
+  
+  // Creates change handler for CIDR field
+  function validateCIDR(selector, storageKey, isRequired) {
+    let isRevalidating = false;
+    $(selector).change(function () {
+      if (isRevalidating) return;
+      
+      const value = $(this).val();
+      const result = validateCIDRValue(selector, value, isRequired);
+      
+      if (result.valid && value && value.length > 0) {
+        sessionStorage.setItem(storageKey, value);
+        
+        // Revalidate other CIDR fields to update overlap errors
+        isRevalidating = true;
+        Object.keys(CIDR.fields).forEach(function(otherSelector) {
+          if (otherSelector !== selector) {
+            const $otherField = $(otherSelector);
+            if ($otherField.length > 0 && $otherField.val()) {
+              $otherField.trigger('change');
+            }
+          }
+        });
+        isRevalidating = false;
+      }
+    });
+  }
+  
+  // Initialize CIDR field validators
+  [
+    { selector: '#podsubnetcidr', storageKey: 'dhctl-pod-subnet-cidr', required: false },
+    { selector: '#servicesubnetcidr', storageKey: 'dhctl-service-subnet-cidr', required: false },
+    { selector: '#internalnetworkcidrs', storageKey: 'dhctl-internal-network-cidrs', required: true },
+    { selector: '#virtualmachinecidrs', storageKey: 'dhctl-virtual-machine-cidrs', required: true }
+  ].forEach(function(config) {
+    validateCIDR(config.selector, config.storageKey, config.required);
+  });
+
+  // ============================================================================
+  // Navigation validation
+  // ============================================================================
+
+  // Validate required CIDR fields before navigating to next step
+  $('.button_alt').on('click', function(e) {
+    // Skip validation if DVP-specific fields are not present
+    if ($('#internalnetworkcidrs').length === 0 && $('#virtualmachinecidrs').length === 0) {
+      return;
+    }
+    
+    const cidrFields = [
+      { selector: '#podsubnetcidr', required: false },
+      { selector: '#servicesubnetcidr', required: false },
+      { selector: '#internalnetworkcidrs', required: true },
+      { selector: '#virtualmachinecidrs', required: true }
+    ];
+
+    // Find first invalid field
+    const firstInvalidField = cidrFields
+      .map(function(fieldConfig) {
+        const value = $(fieldConfig.selector).val() || sessionStorage.getItem(CIDR.fields[fieldConfig.selector]);
+        const result = validateCIDRValue(fieldConfig.selector, value, fieldConfig.required);
+        return result.valid ? null : result.$field;
+      })
+      .find(function($field) { return $field !== null; });
+
+    // Block navigation and focus on first invalid field
+    if (firstInvalidField) {
+      e.preventDefault();
+      e.stopPropagation();
+      firstInvalidField[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalidField.focus();
+      return false;
+    }
+  });
+
+  // ============================================================================
+  // Proxy and registry fields (bm-private only)
+  // ============================================================================
+
   {%- if page.platform_code == 'bm-private' %}
-  // proxy
   const proxyAddress = /^https?:\/\/([0-9a-zA-Z\.\-\_]+(:[0-9a-zA-Z\.\-\_]+)?@)?[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?$/;
   $('#proxyHttpURI').change(function () {
     if ($(this).val() !== "") {
@@ -90,18 +402,18 @@ $(document).ready(function () {
       $(this).parent().find('.invalid-message').removeClass('active');
     }
   });
-  const ipAndProxy = /^[a-z0-9\-\.\/]+$/
+  const ipAndProxy = /^[a-z0-9\-\.\/]+$/;
   $('#noProxyAddressList').change(function () {
     if ($(this).val() !== "") {
       let arr = $(this).val().split(', ');
-      let err = false
-      let errdomen = false
+      let err = false;
+      let errdomen = false;
       for (let i = 0; i < arr.length; i++) {
         if (!arr[i].match(ipAndProxy)) {
-          err = true
+          err = true;
         }
         if (arr[i].match(/example\.com/)) {
-          errdomen = true
+          errdomen = true;
         }
       }
       if (err) {
@@ -124,7 +436,8 @@ $(document).ready(function () {
       $(this).parent().find('.invalid-message').removeClass('active');
     }
   });
-  // registry
+
+  // Registry fields
   $('#registryImagesRepo').change(function () {
     const val = $(this).val().replace(httpPrefixPattern, '');
     if (!($(this).val() === val)) {
@@ -149,6 +462,10 @@ $(document).ready(function () {
   });
 
   {% endif %}
+
+  // ============================================================================
+  // Initialize
+  // ============================================================================
 
   restoreData();
 
