@@ -43,13 +43,16 @@ spec:
       {{- end -}}
 
       subnets:
-{{ (uniq $nets) | toYaml | nindent 8 }}
+{{- range (uniq $nets) }}
+        - {{ . | quote }}
+{{- end }}
 
+      securityGroups:
       {{- if .nodeGroup.instanceClass.securityGroups }}
-      securityGroups:
-{{ toYaml (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) | nindent 8 }}
+{{- range (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}
+        - {{ . | quote }}
+{{- end }}
       {{- else }}
-      securityGroups:
         - {{ $securityGroupID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.serverGroupID }}
