@@ -29,11 +29,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"k8s.io/klog/v2"
 )
 
 const (
 	ParameterDVPStorageClass = "dvpStorageClass"
+	ParameterDVPVolumeSnapshotClass = "dvpVolumeSnapshotClass"
 )
 
 type ControllerService struct {
@@ -45,6 +47,7 @@ var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 	csi.ControllerServiceCapability_RPC_CREATE_DELETE_VOLUME,
 	csi.ControllerServiceCapability_RPC_PUBLISH_UNPUBLISH_VOLUME, // attach/detach
 	csi.ControllerServiceCapability_RPC_EXPAND_VOLUME,
+	csi.ControllerServiceCapability_RPC_CREATE_DELETE_SNAPSHOT,
 }
 
 func NewController(
@@ -427,4 +430,56 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 		)
 	}
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
+}
+
+func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
+
+	volumeSnapshotClassName := request.Parameters[ParameterDVPVolumeSnapshotClass]
+	if volumeSnapshotClassName == "" {
+		return nil, fmt.Errorf("snapshot class parameter %s is required", ParameterDVPVolumeSnapshotClass)
+	}
+
+	vd, err := d.dvpCloudAPI.DiskService.GetDiskByName(ctx, request.SourceVolumeId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get virtual disk %s: %v", request.SourceVolumeId, err)
+	}
+
+	targetPersistentVolumeClaimName := vd.Status.Target.PersistentVolumeClaim
+	if targetPersistentVolumeClaimName == "" {
+		return nil, fmt.Errorf("virtual disk %s is not bound to any PersistentVolumeClaim in parent DVP cluster", vd.Name)
+	}
+
+	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, targetPersistentVolumeClaimName, volumeSnapshotClassName)
+	if err != nil {
+		return nil, err
+	}
+
+	snapshotCreationTimestamp := timestamppb.New(snapshot.CreationTimestamp.Time)
+
+	response := &csi.CreateSnapshotResponse{
+		Snapshot: &csi.Snapshot{
+			SnapshotId:     request.Name,
+			SourceVolumeId: request.SourceVolumeId,
+			ReadyToUse:     true,
+			CreationTime:   snapshotCreationTimestamp,
+		},
+	}
+
+	return response, nil
+}
+
+func (d *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+	klog.Infof("Deleting snapshot %v", request.SnapshotId)
+
+	err := d.dvpCloudAPI.DiskService.DeleteVolumeSnapshot(ctx, request.SnapshotId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to delete snapshot %s: %v", request.SnapshotId, err)
+	}
+
+	return &csi.DeleteSnapshotResponse{}, nil
+}
+
+func (d *ControllerService) ListSnapshots(_ context.Context, _ *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+	return nil, nil
 }
