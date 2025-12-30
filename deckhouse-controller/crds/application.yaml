@@ -27,7 +27,7 @@ spec:
       name: Version
       type: string
     - jsonPath: .spec.packageRepositoryName
-      name: RepositorypackageRepository
+      name: Repository
       priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
