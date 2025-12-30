@@ -35,6 +35,7 @@ import (
 
 const (
 	ParameterDVPStorageClass = "dvpStorageClass"
+	ParameterDVPVolumeSnapshotClass = "dvpVolumeSnapshotClass"
 )
 
 type ControllerService struct {
@@ -434,14 +435,22 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
 
+	volumeSnapshotClassName := request.Parameters[ParameterDVPVolumeSnapshotClass]
+	if volumeSnapshotClassName == "" {
+		return nil, fmt.Errorf("snapshot class parameter %s is required", ParameterDVPVolumeSnapshotClass)
+	}
+
 	vd, err := d.dvpCloudAPI.DiskService.GetDiskByName(ctx, request.SourceVolumeId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get virtual disk %s: %v", request.SourceVolumeId, err)
 	}
 
-	volumeSnapshotClassName := vd.Spec.PersistentVolumeClaim.StorageClass
+	targetPersistentVolumeClaimName := vd.Status.Target.PersistentVolumeClaim
+	if targetPersistentVolumeClaimName == "" {
+		return nil, fmt.Errorf("virtual disk %s is not bound to any PersistentVolumeClaim in parent DVP cluster", vd.Name)
+	}
 
-	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId, *volumeSnapshotClassName)
+	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, targetPersistentVolumeClaimName, volumeSnapshotClassName)
 	if err != nil {
 		return nil, err
 	}
