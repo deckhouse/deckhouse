@@ -69,6 +69,7 @@
 {{- $_ := set $csiControllerConfig "additionalSyncerEnvs" (include "csi_syncer_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_volume_mounts" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
 {{- if ne .Values.csiVsphere.internal.compatibilityFlag "Legacy" }}
 {{- include "helm_lib_csi_controller_manifests" (list . $csiControllerConfig) }}
@@ -135,6 +136,7 @@
   {{- $_ := set $csiNodeConfig "additionalNodeVolumes" (include "csi_node_volumes" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeVolumeMounts" (include "csi_node_volume_mounts" . | fromYamlArray) }}
   {{- $_ := set $csiNodeConfig "additionalNodeLivenessProbesCmd" (include "csi_node_registrar_liveness_exec_probes_command" . | fromYamlArray) }}
+  {{- $_ := set $csiNodeConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
   {{- if ne .Values.csiVsphere.internal.compatibilityFlag "Legacy" }}
   {{- include "helm_lib_csi_node_manifests" (list . $csiNodeConfig) }}
