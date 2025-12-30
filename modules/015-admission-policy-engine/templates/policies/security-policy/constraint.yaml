@@ -83,7 +83,7 @@
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8PrivilegedContainer
 metadata:
   name: {{$cr.metadata.name}}
@@ -102,7 +102,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowPrivilegeEscalation
 metadata:
   name: {{$cr.metadata.name}}
@@ -121,7 +121,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8HostProcesses
 metadata:
   name: {{$cr.metadata.name}}
@@ -143,7 +143,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8HostNetwork
 metadata:
   name: {{$cr.metadata.name}}
@@ -168,7 +168,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8ReadOnlyRootFilesystem
 metadata:
   name: {{$cr.metadata.name}}
@@ -187,7 +187,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AutomountServiceAccountTokenPod
 metadata:
   name: {{$cr.metadata.name}}
@@ -206,7 +206,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedClusterRoles
 metadata:
   name: {{$cr.metadata.name}}
@@ -228,7 +228,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedFlexVolumes
 metadata:
   name: {{$cr.metadata.name}}
@@ -250,7 +250,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedVolumeTypes
 metadata:
   name: {{$cr.metadata.name}}
@@ -272,7 +272,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedHostPaths
 metadata:
   name: {{$cr.metadata.name}}
@@ -294,7 +294,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedCapabilities
 metadata:
   name: {{$cr.metadata.name}}
@@ -322,7 +322,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AppArmor
 metadata:
   name: {{$cr.metadata.name}}
@@ -346,7 +346,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedProcMount
 metadata:
   name: {{$cr.metadata.name}}
@@ -370,7 +370,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedUsers
 metadata:
   name: {{$cr.metadata.name}}
@@ -406,7 +406,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8SeLinux
 metadata:
   name: {{$cr.metadata.name}}
@@ -428,7 +428,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedSysctls
 metadata:
   name: {{$cr.metadata.name}}
@@ -456,7 +456,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedSeccompProfiles
 metadata:
   name: {{$cr.metadata.name}}
@@ -484,7 +484,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8VerifyImageSignatures
 metadata:
   name: {{$cr.metadata.name}}
@@ -508,7 +508,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedServiceTypes
 metadata:
   name: {{$cr.metadata.name}}
@@ -532,7 +532,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowedIngresses
 metadata:
   name: {{$cr.metadata.name}}
@@ -555,7 +555,7 @@ spec:
   {{- $context := index . 0 }}
   {{- $cr := index . 1 }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8AllowRbacWildcards
 metadata:
   name: {{$cr.metadata.name}}
@@ -574,7 +574,7 @@ spec:
   {{- $context := . }}
   {{- if ne $context.Values.global.deckhouseVersion "dev" }}
 ---
-apiVersion: constraints.gatekeeper.sh/v1beta1
+apiVersion: constraints.gatekeeper.sh/v1
 kind: D8DenyExecHeritage
 metadata:
   name: deny-exec-heritage-pods
