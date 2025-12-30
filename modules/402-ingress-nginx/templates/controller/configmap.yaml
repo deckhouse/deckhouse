@@ -100,7 +100,7 @@ data:
 
   {{- if eq $crd.spec.inlet "LoadBalancer" }}
     {{- if $loadBalancer.behindL7Proxy }}
-  proxy-real-ip-cidr: "{{ join "," $loadBalancer.trustedCIDRs }}"
+  proxy-real-ip-cidr: "{{ join "," $loadBalancer.acceptClientIPHeadersFrom }}"
   use-forwarded-headers: "true"
       {{- if $loadBalancer.realIPHeader }}
   forwarded-for-header: {{ $loadBalancer.realIPHeader }}
@@ -110,7 +110,7 @@ data:
 
   {{- if eq $crd.spec.inlet "HostPort" }}
     {{- if $hostPort.behindL7Proxy }}
-  proxy-real-ip-cidr: "{{ join "," $hostPort.trustedCIDRs }}"
+  proxy-real-ip-cidr: "{{ join "," $hostPort.acceptClientIPHeadersFrom }}"
   use-forwarded-headers: "true"
       {{- if $hostPort.realIPHeader }}
   forwarded-for-header: {{ $hostPort.realIPHeader }}
@@ -121,7 +121,7 @@ data:
   {{- if eq $crd.spec.inlet "HostPortWithProxyProtocol" }}
   use-proxy-protocol: "true"
     {{- if $hostPortWithProxyProtocol }}
-  proxy-real-ip-cidr: "{{ join "," $hostPortWithProxyProtocol.trustedCIDRs }}"
+  proxy-real-ip-cidr: "{{ join "," $hostPortWithProxyProtocol.acceptClientIPHeadersFrom }}"
     {{- else }}
   proxy-real-ip-cidr: "0.0.0.0/0"
     {{- end }}
@@ -130,7 +130,7 @@ data:
   {{- if eq $crd.spec.inlet "LoadBalancerWithProxyProtocol" }}
   use-proxy-protocol: "true"
     {{- if  $loadBalancerWithProxyProtocol }}
-  proxy-real-ip-cidr: "{{ join "," $loadBalancerWithProxyProtocol.trustedCIDRs }}"
+  proxy-real-ip-cidr: "{{ join "," $loadBalancerWithProxyProtocol.acceptClientIPHeadersFrom }}"
     {{- else }}
   proxy-real-ip-cidr: "0.0.0.0/0"
     {{- end }}

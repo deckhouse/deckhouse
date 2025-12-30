@@ -27,7 +27,7 @@ spec:
     sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
-    trustedCIDRs:
+    acceptClientIPHeadersFrom:
     - 0.0.0.0/0
   maxReplicas: 6
   minReplicas: 2

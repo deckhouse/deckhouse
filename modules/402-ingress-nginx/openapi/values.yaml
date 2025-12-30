@@ -139,7 +139,7 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       items:
                         type: string
@@ -156,7 +156,7 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       items:
                         type: string
@@ -185,7 +185,7 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       items:
                         type: string
@@ -197,7 +197,7 @@ properties:
                       type: integer
                     httpsPort:
                       type: integer
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       items:
                         type: string

@@ -795,7 +795,7 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       x-doc-examples: ['CF-Connecting-IP']
                       default: 'X-Forwarded-For'
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       description: |
                         Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
@@ -840,7 +840,7 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       description: |
                         Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
@@ -928,7 +928,7 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       default: 'X-Forwarded-For'
                       x-doc-examples: ['CF-Connecting-IP']
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       description: |
                         Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
@@ -967,7 +967,7 @@ spec:
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       type: array
                       description: |
                         Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.

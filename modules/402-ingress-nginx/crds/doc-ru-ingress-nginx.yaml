@@ -491,7 +491,7 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включении `behindL7Proxy`.
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       description: |
                         Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithProxyProtocol:
@@ -518,7 +518,7 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       description: |
                         Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithSSLPassthrough:
@@ -573,7 +573,7 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включенной опции `behindL7Proxy`.
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       description: |
                         Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithProxyProtocol:
@@ -595,7 +595,7 @@ spec:
                         Если параметр не указан, подключение по HTTPS невозможно.
 
                         > Параметр обязателен в случае, если не задан `httpPort`.
-                    trustedCIDRs:
+                    acceptClientIPHeadersFrom:
                       description: |
                         Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithSSLPassthrough:

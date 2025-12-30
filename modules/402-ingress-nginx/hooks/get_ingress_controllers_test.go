@@ -221,7 +221,7 @@ spec:
 "hostPortWithProxyProtocol": {
   "httpPort": 80,
   "httpsPort": 443,
-  "trustedCIDRs": [
+  "acceptClientIPHeadersFrom": [
     "0.0.0.0/0"
   ]
 },
