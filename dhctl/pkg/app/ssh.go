@@ -120,6 +120,7 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		}
 		return nil
 	})
+
 	cmd.PreAction(func(c *kingpin.ParseContext) error {
 		if len(sshHostsRaw) > 0 {
 			for i, host := range sshHostsRaw {
@@ -196,6 +197,12 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
+
+	if SSHUser == "root" {
+		_ = fmt.Errorf("flag --ssh-become-pass cannot be set for --ssh-user=root")
+		os.Exit(1)
+	}
+
 }
 
 func processConnectionConfigFlags() error {
