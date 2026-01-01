@@ -1,0 +1,36 @@
+---
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: kube-summary-exporter
+  namespace: d8-monitoring
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-summary-exporter" "prometheus" "main")) | nindent 2 }}
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: kube-summary-exporter
+  namespaceSelector:
+    matchNames:
+    - d8-monitoring
+  podMetricsEndpoints:
+  - port: https-metrics
+    path: /nodes
+    scheme: https
+    interval: 30s
+    scrapeTimeout: 25s
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    tlsConfig:
+      insecureSkipVerify: true
+    honorLabels: true
+    relabelings:
+    - regex: endpoint|namespace|pod|service
+      action: labeldrop
+    metricRelabelings:
+    - sourceLabels: [name]
+      targetLabel: container
+      action: replace
+    - regex: name
+      action: labeldrop
