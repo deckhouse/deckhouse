@@ -18,6 +18,10 @@ import:
   add: /label-converter
   to: /usr/local/bin/label-converter
   before: setup
+- image: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
+  add: /webhook-operator
+  to: /
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
@@ -52,6 +56,11 @@ git:
       - '**/*'
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator/internal/controller/templates
+  to: /internal/controller/templates
   stageDependencies:
     install:
       - '**/*'
