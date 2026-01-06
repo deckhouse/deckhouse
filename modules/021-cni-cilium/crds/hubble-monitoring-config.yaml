@@ -958,6 +958,8 @@ spec:
                       type: integer
                       default: 10
                       description: Size in MB at which to rotate the Hubble export file.
+                      minimum: 1
+                      maximum: 150
       additionalPrinterColumns:
         - jsonPath: .spec.extendedMetrics.enabled
           name: Extended Metrics
