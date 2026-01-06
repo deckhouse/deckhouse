@@ -7,6 +7,10 @@ search: autoscaler, HorizontalPodAutoscaler
 
 {% include module-bundle.liquid %}
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
 {% include module-requirements.liquid %}
 
 В общем случае конфигурации не требуется.

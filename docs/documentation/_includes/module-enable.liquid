@@ -1,4 +1,4 @@
-{%- assign moduleKebabName = include.moduleKebabName | default: '<module-name>' %}
+{%- assign moduleKebabName = page['module-kebab-name'] | default: '<module-name>'%}
 
 {% if page.lang == 'ru' -%}
 {% offtopic title="Как явно включить или отключить модуль..." %}
