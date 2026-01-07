@@ -89,7 +89,7 @@
 {{/* END Conversions rendering */}}
 
 {{- if gt (len $data.properties) 0 }}
-<h2 style="text-transform: capitalize;">{{ T "parameters" }}</h2>
+<h2>{{ T "parameters" | humanize  }}</h2>
 <p><font size="-1">{{ T "version_of_schema" }}: {{ $configVersion }}</font></p>
 
 <ul class="resources">
