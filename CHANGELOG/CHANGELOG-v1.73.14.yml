@@ -1,0 +1,5 @@
+dashboard:
+  fixes:
+    - summary: Fixed CVE-2025-22868, CVE-2025-22870, CVE-2025-22872, CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17243
+
