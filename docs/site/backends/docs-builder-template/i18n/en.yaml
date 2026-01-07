@@ -8,6 +8,84 @@ search_context_only_product_docs: The search is performed throughout the product
 modules: modules
 modules2: modules
 module: module
+module_enabling_details_title: How to explicitly enable the module…
+module_enabling_details_content: |
+  You may explicitly enable or disable the module in one of the following ways:
+  - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `<ModuleName>` module and enable (or disable) the "Module enabled" toggle. Save changes.
+
+    Example:
+
+    <img src="/images/module/module-enabling-ui-en.png" alt="Module enable/disable interface">
+
+  - **Via [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+    Use the [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) command for enabling, or [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) command for disabling the module (you need [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), configured to work with the cluster).
+
+    Example of enabling the module:
+
+    ```shell
+    d8 system module enable <ModuleName>
+    ```
+
+  - **Using ModuleConfig `<ModuleName>`.**
+
+    Set `spec.enabled` to `true` or `false` in ModuleConfig `<ModuleName>` (create it if necessary);
+
+    Example of a manifest to enable module `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      enabled: true
+    ```
+module_settings: settings
+module_settings_details_title: How to configure the module...
+module_settings_details_content: |
+  You can configure the module in one of the following ways:
+
+  - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
+
+    In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `<ModuleName>` module and enable the "Advanced Settings" switch. Fill in the required fields in the "Configuration" tab or specify the module settings in YAML format on the "YAML" tab, **excluding the settings section**. Save the changes.
+
+    Example:
+
+    <img src="/images/module/settings/ui-conf-advanced-conf-en.png" alt="Module Setup Interface">
+
+    You can also edit the ModuleConfig object `<ModuleName>` on the "YAML" tab in the module settings window ("System" → "System Management" → "Deckhouse" → "Modules", open the module `<ModuleName>`) by specifying the schema version in the `spec.version` parameter and the necessary module parameters in the `spec.settings` section.
+
+  - **Via [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/)** (requires [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/) configured to work with the cluster).
+
+    Edit the existing ModuleConfig `<ModuleName>` (for more details on configuring Deckhouse, see the [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/)) by executing the following command:
+
+    ```shell
+    d8 k edit mc <ModuleName>
+    ```
+
+    Make the necessary changes in the `spec.settings` section. If necessary, specify the schema version in the `spec.version` parameter. Save the changes.
+
+    You can also create a file with manifest for ModuleConfig `<ModuleName>` using the example below. Fill in the `spec.settings` section with the required module parameters. If necessary, specify the schema version in the `spec.version` parameter.
+
+    Apply the manifest using the following command (indicate the manifest file name):
+
+    ```shell
+    d8 k apply -f <FILENAME>
+    ```
+
+    Example of a manifest for ModuleConfig `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      version: <configVersion>
+      enabled: true
+      settings: # Module parameters from the "Parameters" section below.
+    ```
 module_versions: Module versions
 module_version: Module version
 module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
