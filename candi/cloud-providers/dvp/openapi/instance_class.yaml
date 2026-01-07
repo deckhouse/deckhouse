@@ -80,6 +80,42 @@ spec:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot support.
+                    runPolicy:
+                      type: string
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOff
+                        - Manual
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      description: |
+                        Run policy for the virtual machine.
+
+                        * `AlwaysOn`: The virtual machine should always be running.
+                        * `AlwaysOff`: The virtual machine should always be stopped.
+                        * `Manual`: The virtual machine state is controlled manually.
+                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (e.g., for maintenance), but will automatically start after host reboot.
+                      x-doc-example: AlwaysOnUnlessStoppedManually
+                    liveMigrationPolicy:
+                      type: string
+                      enum:
+                        - Manual
+                        - Never
+                        - AlwaysSafe
+                        - PreferSafe
+                        - AlwaysForced
+                        - PreferForced
+                      default: PreferForced
+                      description: |
+                        Live migration policy for the virtual machine.
+
+                        * `Manual`: Migration is controlled manually.
+                        * `Never`: Migration is disabled.
+                        * `AlwaysSafe`: Always use safe migration (may fail if VM has high memory changes).
+                        * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
+                        * `AlwaysForced`: Always use forced migration with VM slowdown.
+                        * `PreferForced`: Prefer forced migration (recommended for masters due to high memory activity).
+                      x-doc-example: PreferForced
                 rootDisk:
                   type: object
                   description: |
