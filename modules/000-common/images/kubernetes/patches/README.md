@@ -30,3 +30,7 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 ### resource-quota-ignore-mechanism.patch
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
+
+### kubelet-disable-k-panic-check
+
+Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, this check is skipped. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
