@@ -8,6 +8,10 @@ title: "The cilium-hubble module: configuration"
 
 If the `cni-cilium` module is disabled, the `ciliumHubbleEnabled:` parameter will not affect the enabling of the `cilium-hubble` module.
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
 {% include module-requirements.liquid %}
 
 {% include module-conversion.liquid %}
