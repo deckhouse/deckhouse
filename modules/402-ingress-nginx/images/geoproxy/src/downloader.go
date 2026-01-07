@@ -30,6 +30,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,8 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	currentMD5 := d.editionMD5(edition)
 
 	var maxmindErr error
+	var legacyErr error
+	var downloaded bool
 	// if not leader download db from leader
 	if !d.isCurrentPodLeader() {
 		link, err := d.waitLeaderLink(ctx, cfg.Namespace, kubeRBACProxyPort)
@@ -122,7 +125,13 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 			account.Mirror.URL = link
 			account.Mirror.InsecureSkipVerify = true // skip TLS kubeRbacProxy
 			account.DownloadFromLeader = true
-			return d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account)
+			if err := d.downloadFromLeader(ctx, dstPathRoot, licenseKey, edition, account); err != nil {
+				return err
+			}
+			if err := ensureMMDBExtracted(dstPathRoot, edition); err != nil {
+				return err
+			}
+			return nil
 		}
 		if err != nil {
 			log.Warn(fmt.Sprintf("Leader endpoint is unknown, fallback to direct download for %s: %v", edition, err))
@@ -133,7 +142,10 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 	if clientInitialized && account.Mirror.URL == "" {
 		handled, err := d.tryMaxMindClient(ctx, client, edition, currentMD5, dstPathRoot)
 		if handled {
-			return err
+			if err != nil {
+				return err
+			}
+			downloaded = true
 		}
 		if err != nil {
 			maxmindErr = err
@@ -141,10 +153,25 @@ func (d *Downloader) downloadEdition(ctx context.Context, dstPathRoot, licenseKe
 		}
 	}
 
+	if downloaded {
+		return ensureMMDBExtracted(dstPathRoot, edition)
+	}
+
 	// try download by manual build URL
-	legacyErr := d.downloadLegacyEdition(ctx, dstPathRoot, licenseKey, edition, account)
-	if legacyErr != nil && maxmindErr != nil {
+	legacyErr = d.downloadLegacyEdition(ctx, dstPathRoot, licenseKey, edition, account)
+	if legacyErr == nil {
+		downloaded = true
+	}
+
+	if !downloaded && maxmindErr != nil && legacyErr != nil {
 		return errors.Join(maxmindErr, legacyErr)
+	}
+
+	if err := ensureMMDBExtracted(dstPathRoot, edition); err != nil {
+		if legacyErr != nil {
+			return errors.Join(legacyErr, err)
+		}
+		return err
 	}
 
 	return legacyErr
@@ -194,6 +221,8 @@ func (d *Downloader) downloadLegacyEdition(ctx context.Context, dstPathRoot, lic
 	if err != nil {
 		return fmt.Errorf("save downloading data: %w", err)
 	}
+
+	// extract DB for GRPC Service
 
 	log.Info(fmt.Sprintf("Successfully downloaded data from %v: %v", edition, dbPath))
 	return nil
@@ -583,4 +612,103 @@ func (d *Downloader) waitLeaderLink(ctx context.Context, namespace, port string)
 		case <-time.After(waitStep):
 		}
 	}
+}
+
+func extractMMDBFromTarGZ(dbPath, dstPathFolder string) error {
+	if err := os.MkdirAll(dstPathFolder, 0o755); err != nil {
+		return fmt.Errorf("mkdir: %w", err)
+	}
+
+	file, err := os.Open(dbPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	gzReader, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gzReader.Close()
+
+	tarReader := tar.NewReader(gzReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		}
+
+		if err != nil {
+			return fmt.Errorf("Tar next exntry failed: %v", err)
+		}
+
+		baseName := filepath.Base(header.Name)
+
+		if header.Typeflag != tar.TypeReg || !isMMDBExtension(baseName) {
+			continue
+		}
+
+		absPath := filepath.Join(dstPathFolder, baseName)
+
+		tmpFile, err := os.CreateTemp(dstPathFolder, "*.mmdb")
+		if err != nil {
+			return fmt.Errorf("Failed create temp file: %v", err)
+		}
+
+		if _, err = io.Copy(tmpFile, tarReader); err != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+			return err
+		}
+
+		if err := tmpFile.Sync(); err != nil {
+			tmpFile.Close()
+			os.Remove(tmpFile.Name())
+			return err
+		}
+
+		if err := tmpFile.Close(); err != nil {
+			os.Remove(tmpFile.Name())
+			return err
+		}
+
+		if err := os.Rename(tmpFile.Name(), absPath); err != nil {
+			os.Remove(tmpFile.Name())
+			return err
+		}
+
+		break
+	}
+
+	return nil
+}
+
+func ensureMMDBExtracted(srcRoot, edition string) error {
+	absFilePath := fmt.Sprintf("%v/%v%v", srcRoot, edition, dbExtension)
+
+	file, err := os.Open(absFilePath)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			log.Info(fmt.Sprintf("GeoIP DB: %s not exist, skip extracting ...", absFilePath))
+			return nil
+		}
+
+		return err
+	}
+	defer file.Close()
+
+	if err := extractMMDBFromTarGZ(absFilePath, PathRawMMDB); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isMMDBExtension(baseName string) bool {
+	if strings.HasSuffix(baseName, ".mmdb") {
+		return true
+	}
+
+	return false
 }

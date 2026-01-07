@@ -20,13 +20,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"geodownloader"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	"geodownloader"
+	"github.com/fsnotify/fsnotify"
 )
 
 const (
@@ -39,11 +39,13 @@ const (
 var (
 	serverPort     string
 	prometheusPort string
+	grpcPort       string
 )
 
 func main() {
 	flag.StringVar(&serverPort, "server-port", "127.0.0.1:8080", "server port")
 	flag.StringVar(&prometheusPort, "prometheus-port", "127.0.0.1:9090", "prometheus port")
+	flag.StringVar(&grpcPort, "grpc-port", "127.0.0.1:50051", "grpc server port")
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -53,6 +55,55 @@ func main() {
 	cfg := geodownloader.NewConfig()
 	downloader := geodownloader.NewDownloader(watcher, leader)
 
+	geodb, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+	if err != nil {
+		log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+		stop()
+	}
+	defer geodb.Close()
+
+	fsWatcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		stop()
+	}
+	defer fsWatcher.Close()
+
+	if err := fsWatcher.Add(geodownloader.PathRawMMDB); err != nil {
+		fsWatcher.Close()
+		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
+		stop()
+	}
+
+	// fs notify triger reinit GeoDB if raw MMDB was changed
+	go func() {
+		for {
+			select {
+			case <-fsWatcher.Events:
+				old := geodb
+				old.MU.Lock()
+				newDB, err := geodownloader.NewGeoDB(geodownloader.PathRawMMDB)
+				if err != nil {
+					old.MU.Unlock()
+					log.Error(fmt.Sprintf("failed init GeoDB service: %v", err))
+					stop()
+					return
+				}
+				geodb = newDB
+				old.MU.Unlock()
+				old.Close()
+
+			case err, ok := <-fsWatcher.Errors:
+				if !ok {
+					return
+				}
+				log.Error(fmt.Sprintf("fs watcher err: %v", err))
+
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 	// start leader election
 	go func() {
 		if err := leader.AcquireLeaderElection(ctx); err != nil {
