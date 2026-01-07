@@ -30,6 +30,7 @@
 {{- define "csi_node_args" }}
 - "--node-name=$(NODE_ID)"
 - "--endpoint=unix:///csi/csi.sock"
+- "--cluster-uuid=unix:///csi/csi.sock"
 {{- end }}
 
 {{- define "csi_node_envs" }}
