@@ -572,8 +572,9 @@ apiVersions:
             networkPolicy:
               type: string
               description: |
-                NetworkPolicy mode for the Project where the cluster is deployed.
-
+                NetworkPolicy defines how network traffic is allowed to and from workloads running in the Project.
+                * `Isolated`: Applies a restrictive (allowlist) NetworkPolicy for cluster VM pods. Only explicitly allowed ingress and egress traffic is permitted.
+                * `NotRestricted`: NetworkPolicies are not managed. No additional network restrictions are applied.
               enum:
                 - Isolated
                 - NotRestricted
