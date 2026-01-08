@@ -30,6 +30,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 var (
@@ -70,6 +71,11 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeLocal {
+		log.DebugLn("Local registry mode, skipping check")
+		return nil
+	}
+	
 	registry := pc.metaConfig.Registry.Settings.RemoteData
 	registryAddress, _ := registry.AddressAndPath()
 	if shouldSkipProxyCheck(registryAddress, noProxyAddresses) {
@@ -152,6 +158,11 @@ func (pc *Checker) CheckRegistryCredentials(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, httpClientTimeoutSec*time.Second)
 	defer cancel()
 
+	if pc.metaConfig.Registry.Settings.Mode == constant.ModeLocal {
+		log.DebugLn("Local registry mode, skipping check")
+		return nil
+	}
+	
 	return checkRegistryAuth(ctx, pc.metaConfig, registry.AuthBase64())
 }
 

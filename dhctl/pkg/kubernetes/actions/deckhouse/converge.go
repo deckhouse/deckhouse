@@ -63,6 +63,11 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 		return nil, fmt.Errorf("Unable to get cluster config yaml: %w", err)
 	}
 
+	providerSecondaryDevicesConfig, err := metaConfig.ProviderSecondaryDevicesConfig.ToYAML()
+	if err != nil {
+		return nil, fmt.Errorf("Unable to get provider secondary devices config yaml: %w", err)
+	}
+
 	// cluster configuration can be empty for deckhouse in managed clusters
 	// but commander does not support it in current time
 	// we protect converge with empty configuration to avoid errors in commander
@@ -74,6 +79,20 @@ func getTasksForRunning(ctx context.Context, kubeCl *client.KubernetesClient, co
 		{
 			Name:     `Secret "d8-cluster-configuration"`,
 			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(clusterConfig) },
+			CreateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				return err
+			},
+			UpdateFunc: func(manifest interface{}) error {
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+				return err
+			},
+		},
+		{
+			Name: `Secret "d8-provider-secondary-devices-configuration"`,
+			Manifest: func() interface{} {
+				return manifests.SecretWithProviderSecondaryDevicesConfig(providerSecondaryDevicesConfig)
+			},
 			CreateFunc: func(manifest interface{}) error {
 				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
 				return err
