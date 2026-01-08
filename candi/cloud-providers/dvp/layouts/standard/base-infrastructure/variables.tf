@@ -58,7 +58,7 @@ locals {
     {
       from = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
+          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
         }
       }]
     },
@@ -116,20 +116,15 @@ locals {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
         }
       }]
-    },
-    {
-      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
-      ports = [{ port = 9100, protocol = "TCP" }]
     }
   ]
 
   template_egress = [
-    { to = [{ ipBlock = { cidr = "82.202.254.194/32" } }] },
     { to = [{ ipBlock = { cidr = "0.0.0.0/0" } }] },
     {
       to = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
+          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
         }
       }]
     },
@@ -178,8 +173,7 @@ locals {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
         }
       }]
-    },
-    { to = [{ ipBlock = { cidr = "1.1.1.1/32" } }] }
+    }
   ]
 
   desired_policy_fingerprint = sha256(jsonencode({
