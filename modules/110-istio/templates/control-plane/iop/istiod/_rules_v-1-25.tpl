@@ -253,6 +253,10 @@
   - gateway.networking.k8s.io
   resources:
   - gatewayclasses/status
+  - gateways/status
+  - httproutes/status
+  - grpcroutes/status
   verbs:
   - update
+  - patch
 {{- end -}}
