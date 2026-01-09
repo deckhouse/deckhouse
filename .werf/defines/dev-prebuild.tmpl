@@ -5,7 +5,6 @@
 - global-hooks
 - shell_lib.sh
 - shell_lib
-- deckhouse-controller/entrypoint.sh
 - deckhouse-controller/crds/*.yaml
 - jq_lib
 - helm_lib
@@ -72,12 +71,6 @@ EOD
 cat <<"EOD" > /deckhouse/edition
 {{ $context.Env | default "unknown"}}
 EOD
-# Override deckhouse entrypoint to use tini as supervisor
-cat <<"EOD" > /deckhouse/deckhouse
-#!/bin/bash
-exec tini -- /deckhouse/deckhouse-controller/entrypoint.sh
-EOD
-chmod +x /deckhouse/deckhouse
 # Create symlink to grant entrypoint.sh write permission
 ln -fs /tmp/values.yaml /deckhouse/modules/values.yaml
 # Run deckhouse from dedicated user
