@@ -12,70 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-module "root-disk" {
-  source        = "../../../terraform-modules/root-disk/"
-  prefix        = local.prefix
-  node_group    = local.node_group
-  node_index    = local.node_index
-  namespace     = local.namespace
-  image         = local.root_disk_image
-  size          = local.root_disk_size
-  storage_class = local.root_disk_storage_class
-}
-
-module "kubernetes-data-disk" {
-  source        = "../../../terraform-modules/kubernetes-data-disk/"
-  prefix        = local.prefix
-  node_group    = local.node_group
-  node_index    = local.node_index
-  namespace     = local.namespace
-  storage_class = local.kubernetes_data_disk_storage_class
-  size          = local.kubernetes_data_disk_size
-}
-
-module "additional-disk" {
-  source = "../../../terraform-modules/additional-disk"
-
-  for_each = {
-    for i, d in local.additional_disks : tostring(i) => d
-  }
-
-  api_version   = "virtualization.deckhouse.io/v1alpha2"
-  prefix        = local.prefix
-  node_group    = local.node_group
-  node_index    = local.node_index
-  disk_index    = tonumber(each.key)
-  namespace     = local.namespace
-  storage_class = try(each.value.storage_class, null)
-  size          = each.value.size
-}
-
-locals {
-  master_additional_disks = [
-    for k in sort(keys(module.additional-disk)) : {
-      name   = module.additional-disk[k].name
-      hash   = module.additional-disk[k].hash
-      md5_id = module.additional-disk[k].md5_id
-    }
-  ]
-}
-
-module "ipv4-address" {
-  source       = "../../../terraform-modules/ipv4-address/"
-  namespace    = local.namespace
-  hostname     = local.hostname
-  ipv4_address = local.ipv4_address
-}
-
 module "master" {
   source                     = "../../../terraform-modules/master"
   prefix                     = local.prefix
   node_group                 = local.node_group
   namespace                  = local.namespace
   node_index                 = local.node_index
-  root_disk                  = module.root-disk
-  kubernetes_data_disk       = module.kubernetes-data-disk
-  ipv4_address               = module.ipv4-address
+  root_disk_name             = local.root_disk_name
+  kubernetes_data_disk_name  = local.data_disk_name
+  ip_address_name            = local.ip_address_name
   memory_size                = local.memory_size
   virtual_machine_class_name = local.virtual_machine_class_name
   bootloader                 = local.bootloader
@@ -92,4 +37,56 @@ module "master" {
   zone                       = local.zone
   cloud_config               = local.user_data
   additional_disks           = local.master_additional_disks
+}
+
+module "ipv4-address" {
+  source          = "../../../terraform-modules/ipv4-address/"
+  namespace       = local.namespace
+  ipv4_address    = local.ipv4_address
+  ip_address_name = local.ip_address_name
+  owner_ref_name  = module.master.vm_name
+  owner_ref_uid   = module.master.uid
+}
+
+module "root-disk" {
+  source                                 = "../../../terraform-modules/root-disk/"
+  root_disk_destructive_params_json      = local.root_disk_destructive_params_json
+  root_disk_destructive_params_json_hash = local.root_disk_destructive_params_json_hash
+  root_disk_name                         = local.root_disk_name
+  namespace                              = local.namespace
+  image                                  = local.root_disk_image
+  size                                   = local.root_disk_size
+  storage_class                          = local.root_disk_storage_class
+  owner_ref_name                         = module.master.vm_name
+  owner_ref_uid                          = module.master.uid
+}
+
+module "kubernetes-data-disk" {
+  source                                 = "../../../terraform-modules/kubernetes-data-disk/"
+  data_disk_destructive_params_json      = local.root_disk_destructive_params_json
+  data_disk_destructive_params_json_hash = local.root_disk_destructive_params_json_hash
+  data_disk_name                         = local.data_disk_name
+  namespace                              = local.namespace
+  storage_class                          = local.kubernetes_data_disk_storage_class
+  size                                   = local.kubernetes_data_disk_size
+  owner_ref_name                         = module.master.vm_name
+  owner_ref_uid                          = module.master.uid
+}
+
+module "additional-disk" {
+  source = "../../../terraform-modules/additional-disk"
+
+  for_each = {
+    for i, d in local.additional_disks : tostring(i) => d
+  }
+
+  api_version                       = "virtualization.deckhouse.io/v1alpha2"
+  disk_destructive_params_json      = each.value.disk_destructive_params_json
+  disk_destructive_params_json_hash = each.value.disk_destructive_params_json_hash
+  disk_name                         = each.value.disk_name
+  namespace                         = local.namespace
+  storage_class                     = try(each.value.storage_class, null)
+  size                              = each.value.size
+  owner_ref_name                    = module.master.vm_name
+  owner_ref_uid                     = module.master.uid
 }

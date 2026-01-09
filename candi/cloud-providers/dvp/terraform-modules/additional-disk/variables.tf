@@ -17,20 +17,29 @@ variable "api_version" {
   type    = string
 }
 
-variable "prefix" {
+variable "owner_ref_kind" {
+  default = "VirtualMachine"
   type = string
 }
 
-variable "node_group" {
+variable "owner_ref_name" {
   type = string
 }
 
-variable "node_index" {
+variable "owner_ref_uid" {
   type = string
 }
 
-variable "disk_index" {
-  type = number
+variable "disk_name" {
+  type = string
+}
+
+variable "disk_destructive_params_json" {
+  type = string
+}
+
+variable "disk_destructive_params_json_hash" {
+  type = string
 }
 
 variable "namespace" {
@@ -58,20 +67,8 @@ variable "timeouts" {
 
 
 locals {
-  disk_destructive_params = {
-    "additionalDisk" = {
-      "storageClass" = var.storage_class
-    }
-  }
-
-  disk_destructive_params_json      = jsonencode(local.disk_destructive_params)
-  disk_destructive_params_json_hash = substr(sha256(jsonencode(local.disk_destructive_params_json)), 0, 6)
-
-  disk_name = join("-", [var.prefix, var.node_group, "additional-disk", tostring(var.disk_index), var.node_index, local.disk_destructive_params_json_hash])
-
   disk_annotations = {
-    "last_applied_destructive_additional_disk_parameters"      = local.disk_destructive_params_json
-    "last_applied_destructive_additional_disk_parameters_hash" = local.disk_destructive_params_json_hash
+    "last_applied_destructive_additional_disk_parameters"      = var.disk_destructive_params_json
+    "last_applied_destructive_additional_disk_parameters_hash" = var.disk_destructive_params_json_hash
   }
 }
-

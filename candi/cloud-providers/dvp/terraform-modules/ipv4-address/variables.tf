@@ -17,15 +17,28 @@ variable "api_version" {
   type    = string
 }
 
+variable "owner_ref_kind" {
+  default = "VirtualMachine"
+  type = string
+}
+
+variable "owner_ref_name" {
+  type = string
+}
+
+variable "owner_ref_uid" {
+  type = string
+}
+
 variable "namespace" {
   type = string
 }
 
-variable "hostname" {
+variable "ipv4_address" {
   type = string
 }
 
-variable "ipv4_address" {
+variable "ip_address_name" {
   type = string
 }
 
@@ -42,5 +55,4 @@ locals {
 
   ipv4_address_type = var.ipv4_address == "Auto" ? "Auto" : "Static"
   ipv4_address      = var.ipv4_address == "Auto" ? "" : var.ipv4_address
-  ip_address_name   = lower(join("-", [var.hostname, replace(var.ipv4_address, ".", "-")]))
 }

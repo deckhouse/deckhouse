@@ -18,8 +18,16 @@ resource "kubernetes_manifest" "ipv4_address" {
     "apiVersion" = var.api_version
     "kind"       = "VirtualMachineIPAddress"
     "metadata" = {
-      "name"      = local.ip_address_name
+      "name"      = var.ip_address_name
       "namespace" = var.namespace
+      "ownerReferences" = [
+        {
+          "apiVersion" = var.api_version
+          "kind"       = var.owner_ref_kind
+          "name"       = var.owner_ref_name
+          "uid"        = var.owner_ref_uid
+        }
+      ]
     }
     "spec" = {
       "staticIP" = local.ipv4_address
@@ -42,7 +50,7 @@ data "kubernetes_resource" "ipv4_address" {
   api_version = var.api_version
   kind        = "VirtualMachineIPAddress"
   metadata {
-    name      = local.ip_address_name
+    name      = var.ip_address_name
     namespace = var.namespace
   }
   depends_on = [

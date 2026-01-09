@@ -17,9 +17,17 @@ resource "kubernetes_manifest" "root-disk" {
     "apiVersion" = var.api_version
     "kind"       = "VirtualDisk"
     "metadata" = {
-      "name"        = local.root_disk_name
+      "name"        = var.root_disk_name
       "namespace"   = var.namespace
       "annotations" = local.root_disk_annotations
+      "ownerReferences" = [
+        {
+          "apiVersion" = var.api_version
+          "kind"       = var.owner_ref_kind
+          "name"       = var.owner_ref_name
+          "uid"        = var.owner_ref_uid
+        }
+      ]
     }
     "spec" = {
       "dataSource" = {
