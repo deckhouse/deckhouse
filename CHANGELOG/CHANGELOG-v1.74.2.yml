@@ -1,0 +1,39 @@
+candi:
+  fixes:
+    - summary: Updated the bashible step to include Linux kernel versions that address CVE-2025-37999
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17300
+cloud-provider-dvp:
+  fixes:
+    - summary: this PR gives a lot more informational errors and messages to user
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17165
+common:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+deckhouse:
+  fixes:
+    - summary: Fix module installer cleanup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17301
+ingress-nginx:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+kube-dns:
+  fixes:
+    - summary: Reverts https://github.com/deckhouse/deckhouse/pull/17120
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17315
+log-shipper:
+  fixes:
+    - summary: Fixed incorrect apiVersion in ClusterLogDestination documentation examples.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17306
+node-manager:
+  fixes:
+    - summary: Change NodeGroup maxPods validation from hard rejection to warning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17275
+registry:
+  fixes:
+    - summary: Omitted the auth field in DockerConfig when credentials (username and password) are empty.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17333
+
