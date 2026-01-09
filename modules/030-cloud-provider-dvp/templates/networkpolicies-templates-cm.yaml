@@ -1,0 +1,121 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dvp-project-networkpolicies-templates
+  namespace: {{ .Release.Namespace }}
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+data:
+  isolated.yaml: |
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: isolated
+    spec:
+      podSelector: {}
+      policyTypes:
+      - Ingress
+      - Egress
+      egress:
+      - to:
+        - ipBlock:
+            cidr: 82.202.254.194/32
+      - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: __PROJECT_NAMESPACE__
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-virtualization
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-ingress-nginx
+          podSelector:
+            matchLabels:
+              app: controller
+      - ports:
+        - port: 53
+          protocol: UDP
+        to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: bastion
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-openvpn
+      - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-metallb
+
+      - to:
+        - ipBlock:
+            cidr: 1.1.1.1/32
+
+      ingress:
+      - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        ports:
+        - port: 22
+          protocol: TCP
+      - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+        ports:
+        - port: 80
+          protocol: TCP
+        - port: 443
+          protocol: TCP
+        - port: 30000
+          endPort: 32767
+          protocol: TCP
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: __PROJECT_NAMESPACE__
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-virtualization
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-monitoring
+          podSelector:
+            matchLabels:
+              app: prometheus
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-ingress-nginx
+          podSelector:
+            matchLabels:
+              app: controller
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-commander
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: bastion
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-openvpn
+      - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: d8-metallb
