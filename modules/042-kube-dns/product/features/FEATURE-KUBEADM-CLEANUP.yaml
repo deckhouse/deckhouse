@@ -1,0 +1,38 @@
+title-en: Automatic kubeadm CoreDNS cleanup
+title-ru: Автоматическая очистка CoreDNS от kubeadm
+description-en: |
+  Automatic removal of kubeadm-installed CoreDNS resources (Deployment, ConfigMap, RBAC) when the module is enabled.
+  Ensures clean state and prevents conflicts with Deckhouse-managed CoreDNS.
+description-ru: |
+  Автоматическое удаление ресурсов CoreDNS, установленных kubeadm (Deployment, ConfigMap, RBAC), при включении модуля.
+  Обеспечивает чистое состояние и предотвращает конфликты с CoreDNS, управляемым Deckhouse.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Модуль автоматически удаляет все ресурсы CoreDNS от kubeadm при включении
+  - Если развертываете собственный CoreDNS, НЕ используйте имена `coredns` или `system:coredns`
+  - Используйте альтернативные имена (например, `infra-dns`) для предотвращения автоматического удаления
+  - Удаляются: Deployment, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding
+  - Это гарантирует отсутствие конфликтов между kubeadm и Deckhouse DNS
+user-notes-en: |
+  **Important for users:**
+  - Module automatically removes all kubeadm CoreDNS resources when enabled
+  - If deploying your own CoreDNS, DO NOT use names `coredns` or `system:coredns`
+  - Use alternative names (e.g., `infra-dns`) to prevent automatic removal
+  - Removed: Deployment, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding
+  - This ensures no conflicts between kubeadm and Deckhouse DNS
+configuration-example: |
+  Cleanup happens automatically. To verify:
+  ```bash
+  # Check that kubeadm CoreDNS resources are removed
+  kubectl get deployment -n kube-system coredns  # Should not exist
+  kubectl get configmap -n kube-system coredns  # Should not exist
+  
+  # Check Deckhouse resources exist
+  kubectl get deployment -n kube-system d8-kube-dns
+  ```
+related-features: []
+user-stories:
+  - en: I need the module to automatically remove kubeadm-installed CoreDNS resources to prevent conflicts and ensure a clean DNS setup.
+    ru: Мне нужно, чтобы модуль автоматически удалял ресурсы CoreDNS, установленные kubeadm, для предотвращения конфликтов и обеспечения чистой DNS настройки.
+    scope: System
+
