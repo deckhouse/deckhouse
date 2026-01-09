@@ -56,7 +56,7 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 			Type:   "remap",
 			Inputs: set.New(),
 		},
-		DynamicArgsMap: map[string]interface{}{
+		DynamicArgsMap: map[string]any{
 			"source":        vrl.Combine(vrl.ParseJSONRule, vrl.Rule(strings.Join(tmpFields, ""))).String(),
 			"drop_on_abort": false,
 		},
