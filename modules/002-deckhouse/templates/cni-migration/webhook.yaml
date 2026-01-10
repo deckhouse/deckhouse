@@ -1,0 +1,34 @@
+{{- if .Values.global.internal.cniMigrationEnabled }}
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: d8-cni-migration-pod-annotator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-manager")) | nindent 2 }}
+webhooks:
+- name: annotator.cni-switch.deckhouse.io
+  admissionReviewVersions: ["v1"]
+  clientConfig:
+    service:
+      name: cni-migration-webhook
+      namespace: d8-system
+      path: /mutate-pod
+      port: 443
+    caBundle: {{ .Values.deckhouse.internal.cniMigrationCert.ca | b64enc | quote }}
+  rules:
+  - operations: ["CREATE"]
+    apiGroups: [""]
+    apiVersions: ["v1"]
+    resources: ["pods"]
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - d8-system
+      - d8-cni-cilium
+      - d8-cni-flannel
+      - d8-cni-simple-bridge
+  failurePolicy: Ignore
+  sideEffects: None
+{{- end }}
