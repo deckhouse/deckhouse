@@ -22,6 +22,22 @@ spec:
       replacement: cluster
     - targetLabel: job
       replacement: "cilium-agent"
+  {{- if .Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
+  - port: https-metrics
+    scheme: https
+    path: /extended-metrics
+    tlsConfig:
+      insecureSkipVerify: true
+    bearerTokenSecret:
+      name: "prometheus-token"
+      key: "token"
+    honorLabels: true
+    relabelings:
+      - targetLabel: tier
+        replacement: cluster
+      - targetLabel: job
+        replacement: "cilium-agent-extended-metrics"
+  {{- end }}
   selector:
     matchLabels:
       app: agent
