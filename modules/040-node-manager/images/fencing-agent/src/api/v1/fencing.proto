@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package fencing.v1;
+option go_package = "fencing-controller/pkg/api/v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+message Node {
+  string name = 1;
+  map<string, string> addresses = 2;
+  optional google.protobuf.Timestamp prevDisconnectTime = 3;
+}
+
+enum EventType {
+  UNDEFINED = 0;
+  LEFT = 1;
+  JOIN = 2;
+}
+message Event {
+  Node node = 1;
+  google.protobuf.Timestamp time = 2;
+  EventType type = 3;
+  optional string sourceName = 4;
+}
+
+message AllNodes {
+  repeated Node nodes = 1;
+}
+
+service Fencing {
+  rpc GetAll(google.protobuf.Empty) returns (AllNodes);
+  rpc StreamEvents(google.protobuf.Empty) returns (stream Event);
+}

@@ -63,7 +63,7 @@ func (d *EventHandler) NotifyJoin(node *memberlist.Node) {
 	d.logger.Info("Node joined", zap.String("node", node.Name))
 	d.onNodeJoin(false)
 	// mean that node is not alone in cluster
-	//if d.memberlist.NumMembers() > 1 {
+	//if d.memberlist.NumOtherMembers() > 1 {
 	//	d.memberlist.SetAlone(false)
 	//}
 }
@@ -80,7 +80,7 @@ func (d *EventHandler) NotifyLeave(node *memberlist.Node) {
 	d.nodesLeft[node.Name] = time.Now()
 	d.logger.Info("Node left, have to notify cilium", zap.String("node", node.Name))
 
-	//if d.memberlist.NumMembers() == 1 {
+	//if d.memberlist.NumOtherMembers() == 1 {
 	//	d.memberlist.SetAlone(true)
 	//}
 	if d.onNodeFailure != nil {

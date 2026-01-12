@@ -1,90 +1,57 @@
-/*
-Copyright 2024 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package main
 
 import (
 	"context"
-	agentconfig "fencing-controller/internal/config"
-	"fencing-controller/internal/gossip"
-	"os"
-	"os/signal"
-	"syscall"
+	"fencing-controller/internal/adapters/api/grpc"
+	"fencing-controller/internal/adapters/kubeapi"
+	"fencing-controller/internal/adapters/memberlist"
+	"fencing-controller/internal/adapters/watchdog/softdog"
+	fencing_config "fencing-controller/internal/config"
+	"fencing-controller/internal/core/service"
+	"fencing-controller/internal/infrastructures/kubernetes"
+	"fencing-controller/internal/infrastructures/logging"
 
-	"fencing-controller/internal/agent"
-	"fencing-controller/internal/common"
-	"fencing-controller/internal/watchdog/softdog"
-
-	_ "github.com/jpfuentes2/go-env/autoload"
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	logger := common.NewLogger()
-	defer func() { _ = logger.Sync() }()
-	logger.Info("Start v0.0.3")
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-	go func() {
-		s := <-sigChan
-		close(sigChan)
-		logger.Info("Got a signal", zap.String("signal", s.String()))
-		cancel()
-	}()
-
-	var config agentconfig.Config
-	err := config.Load()
-	if err != nil {
-		logger.Fatal("Unable to read env vars", zap.Error(err))
+	var cfg fencing_config.Config
+	if err := cfg.Load(); err != nil {
+		panic(err) // TODO decide: panic or logging
 	}
 
-	logger.Debug("Current config", zap.Reflect("config", config))
+	logger := logging.NewLogger() // TODO decide: configure outside?
+	defer func() { _ = logger.Sync() }()
 
-	kubeClient, err := common.GetClientset(config.KubernetesAPITimeout)
+	logger.Debug("Ver: 0.0.1")
+
+	kubeClient, err := kubernetes.GetClientset(cfg.KubernetesAPITimeout)
 	if err != nil {
 		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
 	}
-	node, err := kubeClient.CoreV1().Nodes().Get(ctx, config.NodeName, v1.GetOptions{})
+	eventBus := memberlist.NewEventsBus()
+	memberlistProvider, err := memberlist.NewProvider(cfg.MemberlistConfig, logger, eventBus)
 	if err != nil {
-		logger.Fatal("Unable to get node", zap.Error(err))
+		logger.Fatal("Unable to create a memberlist provider", zap.Error(err))
 	}
-	var internalIp string
-	for _, address := range node.Status.Addresses {
-		if address.Type == "InternalIP" {
-			internalIp = address.Address
-			break
-		}
-	}
-	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	sw, err := gossip.NewMemberList(logger, config, internalIp)
-	if err != nil {
-		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
-	}
-	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, sw, wd)
-	err = fencingAgent.Run(ctx)
-	if err != nil {
-		logger.Fatal("Unable run the fencing-agent", zap.Error(err))
-	}
+	wd := softdog.NewWatchdog(cfg.WatchdogConfig.WatchdogDevice) // TODO cfg WatchdogFeedInterval
+
+	clusterProvider := kubeapi.NewProvider(kubeClient, logger, cfg.KubernetesAPICheckInterval, cfg.NodeName, cfg.NodeGroup)
+	healthService := service.NewHealthMonitor(clusterProvider, memberlistProvider, wd, logger)
+
+	go healthService.Run(ctx, cfg.KubernetesAPICheckInterval)
+
+	go func() {
+		_ = grpc.Run(logger, cfg.SocketpPath, eventBus)
+	}()
+	// init healthcheck
+
+	// init memberlist
+
+	// init grpc server
+
+	// graceful shutdown
 }
