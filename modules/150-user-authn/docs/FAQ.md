@@ -173,7 +173,7 @@ Enabling Kerberos (SPNEGO) SSO for LDAP:
 1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
    - `enabled: true`
    - `keytabSecretName: <secret name>`
-   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`
 
 Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
 
