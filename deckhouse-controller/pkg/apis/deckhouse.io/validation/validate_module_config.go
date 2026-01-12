@@ -121,8 +121,7 @@ func moduleConfigValidationHandler(
 			}
 
 			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
-				// Try to reject by spec.settings.allowExperimentalModules policy first
-				// using definition from the storage (when module is already downloaded)
+				// Check experimental policy from moduleStorage (when module is downloaded).
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -135,8 +134,8 @@ func moduleConfigValidationHandler(
 					return rejectResult(err.Error())
 				}
 
-				// Second try to reject the module by spec.settings.allowExperimentalModules policy
-				// using definition from the API server (when module is not downloaded yet)
+				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
+				// Create: reject if module not found.
 				m := new(v1alpha1.Module)
 				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
 					if apierrors.IsNotFound(err) {
@@ -171,8 +170,7 @@ func moduleConfigValidationHandler(
 			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
 
 			if !oldEnabled && newEnabled {
-				// Try to reject by spec.settings.allowExperimentalModules policy first
-				// using definition from the storage (when module is already downloaded)
+				// Check experimental policy from moduleStorage (when module is downloaded).
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -185,14 +183,13 @@ func moduleConfigValidationHandler(
 					return rejectResult(err.Error())
 				}
 
-				// Second try to reject the module by spec.settings.allowExperimentalModules policy
-				// using definition from the API server (when module is not downloaded yet)
+				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
+				// Update: skip if not found (common code handles with warning). Use "else if" to avoid accessing empty object.
 				m := new(v1alpha1.Module)
 				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
 					if !apierrors.IsNotFound(err) {
 						return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 					}
-					// Module not found - skip experimental check, will be handled by common code below
 				} else if m.IsExperimental() && !allowExperimentalModules {
 					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
