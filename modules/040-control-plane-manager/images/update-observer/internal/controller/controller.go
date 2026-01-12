@@ -100,6 +100,8 @@ func getSecretPredicate() predicate.Predicate {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
+	var data ConfigMapData
+
 	// TODO: log reconcile started
 	clusterCfg, err := r.getClusterConfiguration(ctx)
 	if err != nil {
@@ -107,19 +109,19 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, nil
 	}
 
-	nodesStatus, err := r.collectNodesUpdateStatus(ctx, "") // TODO desiredVersion
+	nodesStatus, err := r.collectNodesUpdateStatus(ctx, data.Spec.DesiredVersion)
 	if err != nil {
 		// TODO: log error
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
-	println(nodesStatus)
+	println(nodesStatus) // TODO: remove
 
 	controlPlaneStatus, err := r.collectControlPlaneUpdateStatus(ctx, "")
 	if err != nil {
 		// TODO: log error
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
-	println(controlPlaneStatus)
+	println(controlPlaneStatus) // TODO: remove
 
 	// ----------------------------------------------------------------------
 
@@ -190,10 +192,6 @@ func (r *reconciler) getClusterConfiguration(ctx context.Context) (ClusterConfig
 	var clusterCfg ClusterConfiguration
 	if err := yaml.Unmarshal(rawCfg, &clusterCfg); err != nil {
 		return ClusterConfiguration{}, fmt.Errorf("failed to unmarshal cluster-configuration: %w", err)
-	}
-
-	if clusterCfg.KubernetesVersion == "Automatic" {
-		clusterCfg.UpdateMode = "Automatic"
 	}
 
 	return clusterCfg, nil
@@ -283,4 +281,40 @@ func (r *reconciler) collectControlPlaneUpdateStatus(ctx context.Context, desire
 	}
 
 	return res, nil
+}
+
+type ConfigMapData struct {
+	Spec   SpecData   `yaml:"spec"`
+	Status StatusData `yaml:"status"`
+}
+
+type SpecData struct {
+	DesiredVersion string `yaml:"desiredVersion"`
+	UpdateMode     string `yaml:"updateMode"`
+}
+
+type StatusData struct {
+	ControlPlane ControlPlaneStatusData `yaml:"controlPlane"`
+	Nodes        NodesStatusData        `yaml:"nodes"`
+	State        string                 `yaml:"state"`
+}
+
+type ControlPlaneStatusData struct {
+	DesiredCount  int    `yaml:"desiredCount"`
+	UpToDateCount int    `yaml:"upToDateCount"`
+	Progress      string `yaml:"progress"`
+	State         string `yaml:"state"`
+}
+
+type NodesStatusData struct {
+	DesiredCount  int    `yaml:"desiredCount"`
+	UpToDateCount int    `yaml:"upToDateCount"`
+}
+
+func (d ConfigMapData) handleClusterConfiguration(cfg ClusterConfiguration) {
+	if cfg.KubernetesVersion == "Automatic" {
+		d.Spec.UpdateMode = "Automatic"
+	} else {
+		d.Spec.UpdateMode = "Manual"
+	}
 }
