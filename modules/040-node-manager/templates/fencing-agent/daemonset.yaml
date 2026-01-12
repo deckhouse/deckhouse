@@ -73,6 +73,8 @@ spec:
                 - ALL
           imagePullPolicy: IfNotPresent
           env:
+            - name: GRPC_ADDRESS
+              value: "/var/run/fencing-agent.sock"
             - name: PROBE_INTERVAL
               value: "200ms"
             - name: PROBE_TIMEOUT
