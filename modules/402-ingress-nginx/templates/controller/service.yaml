@@ -1,22 +1,27 @@
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
   {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
-    {{ $annotations := "" }}
+    {{ $annotations := dict }}
     {{ $sourceRanges := "" }}
     {{ $loadBalancerClass := "" }}
+    {{ $loadBalancerIP := "" }}
     {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
       {{ $annotations = $crd.spec.loadBalancer.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
       {{ $loadBalancerClass = $crd.spec.loadBalancer.loadBalancerClass }}
+      {{ $loadBalancerIP = $crd.spec.loadBalancer.loadBalancerIP }}
     {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
       {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
       {{ $loadBalancerClass = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerClass }}
+      {{ $loadBalancerIP = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerIP }}
     {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
       {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
       {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
       {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
+      {{ $loadBalancerIP = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerIP }}
     {{- end }}
+    {{- $annotations = merge $annotations ((include "ingress_nginx_lb_cloud_provider_annotations" (dict "ctx" $context "loadBalancerIP" $loadBalancerIP)) | fromYaml) -}}
 ---
 apiVersion: v1
 kind: Service
@@ -33,6 +38,9 @@ metadata:
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
+    {{- if $loadBalancerIP }}
+  loadBalancerIP: {{ $loadBalancerIP | quote }}
+    {{- end }}
     {{- if $sourceRanges }}
   loadBalancerSourceRanges:
     {{- $sourceRanges | toYaml | nindent 4 }}

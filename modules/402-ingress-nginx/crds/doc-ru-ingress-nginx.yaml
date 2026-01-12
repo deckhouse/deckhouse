@@ -486,6 +486,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                    loadBalancerIP:
+                      description: |
+                        Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
                     behindL7Proxy:
                       description: |
                         Включает обработку и передачу заголовков `X-Forwarded-*`.
@@ -526,6 +529,9 @@ spec:
                     acceptClientIPHeadersFrom:
                       description: |
                         Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
+                    loadBalancerIP:
+                      description: |
+                        Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
                 loadBalancerWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
@@ -550,6 +556,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом LoadBalancer).
+                    loadBalancerIP:
+                      description: |
+                        Статический IP-адрес, назначаемый балансировщику нагрузки (пробрасывается в параметр `spec.loadBalancerIP` заказанного сервиса с типом `LoadBalancer`).
                 hostPort:
                   description: |
                     Секция настроек инлета `HostPort`.
