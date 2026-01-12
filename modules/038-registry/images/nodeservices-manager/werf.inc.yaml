@@ -1,15 +1,55 @@
 {{ $appRelPath := printf "%s/modules/038-%s/images/%s/app" $.ModulePath $.ModuleName $.ImageName }}
 {{ $appAbsPath := printf "/deckhouse/modules/038-%s/images/%s/app" $.ModuleName $.ImageName }}
 ---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+fromImage: common/src-artifact
+final: false
+git:
+  - add: {{ $appRelPath }}
+    to:  /src{{ $appAbsPath }}
+    stageDependencies:
+      install:
+        - '**/*'
+  - add: /go_lib/registry
+    to: /src/deckhouse/go_lib/registry
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - mkdir -m 1777 /src/tmp
+---
+image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/deckhouse
+    to: /deckhouse
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: "{{ $.GOPROXY }}"
+shell:
+  install:
+    - export GOPROXY=$(cat /run/secrets/GOPROXY)
+    - cd {{ $appAbsPath }}
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
+    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/staticpod
+    - chown 64535:64535 /manager
+    - chmod 0755 /manager
+---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: /tmp-tmp
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
+    add: /src/tmp
     to: /tmp
     before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-    add: "/manager"
+    add: /manager
     to: /manager
     before: setup
   - image: common/pause
@@ -18,43 +58,4 @@ import:
     before: setup
 imageSpec:
   config:
-    entrypoint: ["/staticpod"]
----
-image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
-fromImage: builder/golang-alpine
-final: false
-shell:
-  beforeInstall:
-    - mkdir -m 1777 /tmp-tmp
-  install:
-    - export GOPROXY={{ $.GOPROXY }}
-    - cd {{ $appAbsPath }}
-    - go mod download
-    - cd /deckhouse/go_lib/registry
-    - go mod download
-  setup:
-    - cd {{ $appAbsPath }}
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go test ./...
-    - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /manager ./cmd/staticpod
-    - chown 64535:64535 /manager
-    - chmod 0755 /manager
-git:
-  - add: /{{ $appRelPath }}
-    to:  {{ $appAbsPath }}
-    stageDependencies:
-      install:
-        - '**/*.mod'
-        - '**/*.sum'
-      setup:
-        - "**/*"
-  - add: /go_lib/registry
-    to: /deckhouse/go_lib/registry
-    stageDependencies:
-      install:
-        - '**/*.mod'
-        - '**/*.sum'
-      setup:
-        - "**/*"
-mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+    entrypoint: ["/manager"]
