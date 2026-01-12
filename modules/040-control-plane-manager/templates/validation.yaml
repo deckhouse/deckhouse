@@ -57,8 +57,10 @@ spec:
       object.metadata.labels.exists(k, k.startsWith("resource-quota-overrides.deckhouse.io/"))
   validations:
   - expression: |
-      request.userInfo.username.startsWith("system:serviceaccount:d8-")
-    message: "Labels with prefix 'resource-quota-overrides.deckhouse.io/' can only be set by Deckhouse controllers (d8-* service accounts)"
+      request.userInfo.username.startsWith("system:serviceaccount:d8-") ||
+      request.userInfo.username.startsWith("system:serviceaccount:kube-system:") ||
+      request.userInfo.username == "system:kube-scheduler"
+    message: "Labels with prefix 'resource-quota-overrides.deckhouse.io/' can only be set by system controllers"
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
