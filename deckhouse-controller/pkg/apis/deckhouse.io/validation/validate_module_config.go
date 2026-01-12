@@ -188,10 +188,13 @@ func moduleConfigValidationHandler(
 				// Second try to reject the module by spec.settings.allowExperimentalModules policy
 				// using definition from the API server (when module is not downloaded yet)
 				m := new(v1alpha1.Module)
-				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err == nil {
-					if m.IsExperimental() && !allowExperimentalModules {
-						return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 					}
+					// Module not found - skip experimental check, will be handled by common code below
+				} else if m.IsExperimental() && !allowExperimentalModules {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
 			}
 
