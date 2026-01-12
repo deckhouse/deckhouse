@@ -21,7 +21,7 @@ layout: sidebar-guides
 * доступ в Интернет для приложений, развёрнутых в закрытом контуре, осуществляется через прокси-сервер, который необходимо указать в конфигурации кластера;
 * container registry с образами контейнеров Deckhouse также разворачивается отдельно с доступом изнутри контура, а в кластере настраивается его использование и необходимые права доступа.
 
-Все взаимодействия с внешними ресурсами осуществляются через отдельный физический сервер или виртуальну машину (Bastion). На нём разворачиваются container registry и прокси-сервер, а также с него выполняются все операции с кластером.
+Все взаимодействия с внешними ресурсами осуществляются через отдельный физический сервер или виртуальную машину Bastion (bastion-хост). На нём разворачиваются container registry и прокси-сервер, а также с него выполняются все операции с кластером.
 
 Общая схема закрытого окружения представлена на рисунке:
 
@@ -38,12 +38,12 @@ layout: sidebar-guides
 Для выполнения работ понадобятся:
 
 - персональный компьютер, с которого будут выполняться операции;
-- отдельный физический сервер или виртуальная машина под Bastion, на котором будет развёрнут container registry и сопутствующие компоненты;
+- отдельный физический сервер или виртуальная машина Bastion (bastion-хост), на котором будет развёрнут container registry и сопутствующие компоненты;
 - два физических сервера или две виртуальных машины под узлы кластера.
 
 Требования к серверам следующие:
 
-* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём объясняется тем, что на этом сервере будут храниться все образы Deckhouse, необходимые для установки. Образы будут скачиваться с registry Фланта на этот же сервер перед загрузкой в приватный registry;
+* **Bastion** — не менее 4 ядер CPU, 8 ГБ ОЗУ, 150 ГБ на быстром диске. Такой объём объясняется тем, что на этом сервере будут храниться все образы Deckhouse, необходимые для установки. Образы будут скачиваться с публичного registry Deckhouse Kubernetes Platform на этот же сервер перед загрузкой в приватный registry;
 * **Узлы кластера** — [ресурсы под будущие узлы кластера](./hardware-requirements.html#выбор-ресурсов-для-узлов) необходимо выбрать исходя из ваших требований к будущей нагрузке в кластере. Для примера подойдут минимально рекомендуемые 4 ядра, 8 ГБ ОЗУ, 60 ГБ на быстром диске (400+ IOPS) для каждого из узлов.
 
 ## Подготовка приватного container registry
@@ -69,68 +69,40 @@ DKP поддерживает работу только с Bearer token-схем�
 Подключитесь к серверу Bastion по SSH и скачайте файл любым удобным вам способом.
 
 {% offtopic title="Как скачать файл с помощью wget..." %}
-Выполните команду:
+Выполните команду (укажите актуальную ссылку):
 
 ```console
 wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
-Пример выполнения команды:
-
-```text
-$ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
---2025-12-04 12:38:42--  https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
-Resolving github.com (github.com)... 140.82.121.4
-Connecting to github.com (github.com)|140.82.121.4|:443... connected.
-HTTP request sent, awaiting response... 302 Found
-Location: https://release-assets.githubusercontent.com/github-production-release-asset/50613991/01508bef-5c2c-40bb-bc66-f40e34ad2cae?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-12-04T13%3A28%3A53Z&rscd=attachment%3B+filename%3Dharbor-offline-installer-v2.14.1.tgz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2025-12-04T12%3A28%3A27Z&ske=2025-12-04T13%3A28%3A53Z&sks=b&skv=2018-11-09&sig=bUJ%2Bo6Bx7brkGAvaf2Pq9cXHah1aPJi9PDlc7G3WwS0%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc2NDg1NTUyMiwibmJmIjoxNzY0ODUxOTIyLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.DHH2Fz_xRutTNEnN5p3uxxG_T03dhqppICQhc0gJQq0&response-content-disposition=attachment%3B%20filename%3Dharbor-offline-installer-v2.14.1.tgz&response-content-type=application%2Foctet-stream [following]
---2025-12-04 12:38:42--  https://release-assets.githubusercontent.com/github-production-release-asset/50613991/01508bef-5c2c-40bb-bc66-f40e34ad2cae?sp=r&sv=2018-11-09&sr=b&spr=https&se=2025-12-04T13%3A28%3A53Z&rscd=attachment%3B+filename%3Dharbor-offline-installer-v2.14.1.tgz&rsct=application%2Foctet-stream&skoid=96c2d410-5711-43a1-aedd-ab1947aa7ab0&sktid=398a6654-997b-47e9-b12b-9515b896b4de&skt=2025-12-04T12%3A28%3A27Z&ske=2025-12-04T13%3A28%3A53Z&sks=b&skv=2018-11-09&sig=bUJ%2Bo6Bx7brkGAvaf2Pq9cXHah1aPJi9PDlc7G3WwS0%3D&jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmVsZWFzZS1hc3NldHMuZ2l0aHVidXNlcmNvbnRlbnQuY29tIiwia2V5Ijoia2V5MSIsImV4cCI6MTc2NDg1NTUyMiwibmJmIjoxNzY0ODUxOTIyLCJwYXRoIjoicmVsZWFzZWFzc2V0cHJvZHVjdGlvbi5ibG9iLmNvcmUud2luZG93cy5uZXQifQ.DHH2Fz_xRutTNEnN5p3uxxG_T03dhqppICQhc0gJQq0&response-content-disposition=attachment%3B%20filename%3Dharbor-offline-installer-v2.14.1.tgz&response-content-type=application%2Foctet-stream
-Resolving release-assets.githubusercontent.com (release-assets.githubusercontent.com)... 185.199.108.133, 185.199.109.133, 185.199.110.133, ...
-Connecting to release-assets.githubusercontent.com (release-assets.githubusercontent.com)|185.199.108.133|:443... connected.
-HTTP request sent, awaiting response... 200 OK
-Length: 680961237 (649M) [application/octet-stream]
-Saving to: ‘harbor-offline-installer-v2.14.1.tgz’
-
-harbor-offline-installer-v2.14.1.tgz                         100%[=============================================================================================================================================>] 649.42M  77.2MB/s    in 8.2s
-
-2025-12-04 12:38:50 (79.4 MB/s) - ‘harbor-offline-installer-v2.14.1.tgz’ saved [680961237/680961237]
-```
-
 {% endofftopic %}
 
 {% offtopic title="Как скачать файл с помощью curl..." %}
-Выполните команду:
+Выполните команду (укажите актуальную ссылку):
 
 ```console
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
-Пример выполнения команды:
-
-```text
-$ curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
-  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
-                                 Dload  Upload   Total   Spent    Left  Speed
-  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
-```
-
 {% endofftopic %}
 
-Распакуйте скачанный файл:
+Распакуйте скачанный файл (укажите имя скачанного файла):
 
 ```console
 tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```
 
-В полученном каталоге `harbor` расположены файлы, необходимые для установки.
+В полученной директории `harbor` расположены файлы, необходимые для установки.
 
-Прежде чем разворачивать хранилище, сгенерируйте сертификаты, т.к. в закрытом окружении невозможно получить сертификаты от Let's Encrypt (он не сможет достучаться до внутренних ресурсов при проверке доступности).
+Прежде чем разворачивать хранилище, сгенерируйте самоподписанный (self-signed) TLS-сертификат.
 
 {% alert level="info" %}
-Существует несколько способов генерации сертификатов. В данном руководстве описан один из них. Вы можете использовать любой другой подходящий способ.
+Из-за ограничений доступа, в закрытом окружении нельзя получить сертификаты, например от Let's Encrypt (он не сможет выполнить проверку, необходимую при выдаче сертификата).
+
+Существует несколько способов генерации сертификатов. В данном руководстве описан один из них. Вы можете использовать любой другой подходящий способ, либо разместить имеющийся сертификат.
 {% endalert %}
 
-Создайте каталог `certs` в каталоге `harbor`:
+Создайте директорию `certs` в директории `harbor`:
 
 ```bash
 cd harbor/
@@ -171,7 +143,8 @@ DNS.1=harbor.local
 EOF
 ```
 
-**Важно:** не забудьте заменить в этой команде `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес сервера Bastion. По нему будет происходить обращение к container registry изнутри закрытого контура. С этим же адресом будет связано доменное имя `harbor.local`.
+{% alert level="warning" %}Не забудьте заменить в этой команде `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес сервера Bastion. По нему будет происходить обращение к container registry изнутри закрытого контура. С этим же адресом будет связано доменное имя `harbor.local`.
+{% endalert %}
 
 ```bash
 openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.local.csr -out harbor.local.crt
@@ -206,13 +179,13 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 
 {% endofftopic %}
 
-Следующим шагом настройте Docker для работы с новым приватным container registry, доступ к которому будет осуществляться по SSL. Для этого создайте каталог:
+Следующим шагом настройте Docker для работы с новым приватным container registry, доступ к которому будет осуществляться по SSL. Для этого создайте директорию `harbor.local` в директории `/etc/docker/certs.d/`:
 
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.local
 ```
 
-> Параметр `-p` указывает утилите mkdir создать родительские каталоги, если они отсутствуют (в данном случае — каталог `certs.d`).
+> Параметр `-p` указывает утилите mkdir создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
 
 Затем скопируйте в него созданные сертификаты:
 
@@ -233,7 +206,7 @@ cp harbor.yml.tmpl harbor.yml
 Измените в нём следующие параметры:
 
 * `hostname` — задайте `harbor.local`, для которого мы генерировали сертификаты;
-* `certificate` — укажите путь к сгенерированному сертификату в каталоге `certs` (например, `/home/ubuntu/harbor/certs/harbor.local.crt`);
+* `certificate` — укажите путь к сгенерированному сертификату в директории `certs` (например, `/home/ubuntu/harbor/certs/harbor.local.crt`);
 * `private_key` — укажите путь к приватному ключу (например, `/home/ubuntu/harbor/certs/harbor.local.key`);
 * `harbor_admin_password` — задайте пароль для доступа в веб-интерфейс.
 
@@ -572,25 +545,13 @@ cache:
 
 {% endofftopic %}
 
+Установите на сервер Bastion [Docker](https://docs.docker.com/engine/install/) и плагин [Docker Compose](https://docs.docker.com/compose/install/#plugin-linux-only).
+
 Запустите скрипт установки:
 
 ```bash
 ./install.sh
 ```
-
-{% alert level="info" %}
-Обратите внимание, что перед запуском установки установите на сервер Bastion [Docker](https://docs.docker.com/engine/install/) и docker-compose. При их отсутствии скрипт установки покажет ошибку с требованием предварительно установить нужное ПО.
-{% offtopic title="Ошибка в случае их отсутствия..." %}
-
-```console
-$ ./install.sh 
-
-[Step 0]: checking if docker is installed ...
-✖ Need to install docker(20.10.10+) first and run this script again.
-```
-
-{% endofftopic %}
-{% endalert %}
 
 Начнётся установка Harbor — будут загружены все необходимые образы и запущены соответствующие контейнеры.
 
@@ -616,7 +577,7 @@ $ ./install.sh
 
 {% endofftopic %}
 
-Проверим, что Harbor успешно запущен:
+Проверьте, что Harbor успешно запущен:
 
 ```bash
 docker ps
@@ -646,7 +607,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 ```
 
 {% alert level="warning" %}
-**Обратите внимание!** В некоторых облачных провайерах, например в Yandex Cloud, исправления в `/etc/hosts` будут откачены к дефолтным значениям после перезагрузки виртуальной машины. Предупреждение об этом написано в самом начале этого файла:
+В некоторых облачных провайерах, например в Yandex Cloud, исправления в `/etc/hosts` будут откачены к дефолтным значениям после перезагрузки виртуальной машины. Предупреждение об этом написано в самом начале этого файла:
 
 ```text
 # Your system has configured 'manage_etc_hosts' as True.
@@ -657,16 +618,16 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 #     /etc/cloud/cloud.cfg or cloud-config from user-data
 ```
 
-Если у вашего провайдера такая же схема, внесите соответствующие изменения и в предложенный файл шаблона, чтобы после перезагрузки настройки не пострадали.
+Если у вашего провайдера такая же схема, внесите соответствующие изменения и в предложенный файл шаблона, чтобы после перезагрузки настройки сохранились.
 {% endalert %}
 
 На этом установка Harbor завершена! 🎉
 
 ### Настройка Harbor
 
-Теперь настройте Harbor: создайте проект и пользователя, под которым будет выполняться работа в этом проекте.
+Создайте проект и пользователя, под которым будет выполняться работа в этом проекте.
 
-Перейдём на главную страницу Harbor по адресу `harbor.local`:
+Перейдите на главную страницу Harbor по адресу `harbor.local`:
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Главная страница Harbor...">
@@ -683,7 +644,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 </div>
 
 {% alert level="info" %}
-Обратите внимание, что браузер может предупреждать о самоподписанном сертификате, считая его «небезопасным». Это нормально, таким сертификатом можно пользоваться в закрытом окружении.
+Обратите внимание, что браузер может предупреждать о самоподписанном сертификате, считая его «небезопасным». Это нормально, таким сертификатом можно пользоваться в закрытом окружении. Также, можно добавить этот сертификат в хранилище доверенных сертификатов браузера или компьютера, чтобы избавиться от предупреждений.
 {% endalert %}
 
 Создайте новый проект. Для этого нажмите на кнопку «Новый проект» и введите его название: `deckhouse`. Остальные настройки оставьте без изменений.
@@ -704,7 +665,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Главная страница Harbor...">
 </div>
 
-Добавьте созданного пользователя к созданный ранее проект. Перейдите обратно на вкладку «Проекты», выберите проект «deckhouse», перейдите на вкладку «Участники» и добавьте туда созданного пользователя, нажав на кнопку «Пользователь».
+Добавьте созданного пользователя к созданному ранее проекту. Перейдите обратно на вкладку «Проекты», выберите проект «deckhouse», перейдите на вкладку «Участники» и добавьте туда созданного пользователя, нажав на кнопку «Пользователь».
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Главная страница Harbor...">
@@ -720,10 +681,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 ## Копирование образов DKP в приватный container registry
 
-Следующим шагом будет копирование образов компонентов DKP из registry Фланта в Harbor.
+Следующим шагом необходимо скопировать образы компонентов DKP из публичного registry Deckhouse Kubernetes Platform в Harbor.
 
 {% alert level="info" %}
-Для дальнейших действий в этом разделе понадобится установленная утилита Deckhouse CLI. Установите её на сервер Bastion, следуя инструкции по установке из [официальной документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
+Для дальнейших действий в этом разделе понадобится установленная утилита Deckhouse CLI. Установите её на сервер Bastion, согласно[документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -761,20 +722,11 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 {% endofftopic %}
 {% endalert %}
 
-Выполните команду:
+Выполните команду, которая скачает все необходимые образы в архив `d8.tar`. Укажите в команде лицензионной ключ и редакцию DKP (например, `se-plus` — для Standard Edition+, `ee` — для Enterprise Edition и т.д.):
 
 ```bash
-d8 mirror pull --source="registry.deckhouse.ru/deckhouse/ee" --license="<ЛИЦЕНЗИОННЫЙ КЛЮЧ>" $(pwd)/d8.tar
+d8 mirror pull --source="registry.deckhouse.ru/deckhouse/<РЕДАКЦИЯ_DKP>" --license="<ЛИЦЕНЗИОННЫЙ КЛЮЧ>" $(pwd)/d8.tar
 ```
-
-Не забудьте заменить в команде следующие параметры:
-
-* `<ЛИЦЕНЗИОННЫЙ КЛЮЧ>` — ваш лицензионный ключ;
-* в адресе registry путь к вашей редакции DKP:
-  * `be` — для Basic Edition;
-  * `se` — для Standard Edition;
-  * `se-plus` — для Standard Edition+;
-  * `ee` — для Enterprise Edition;
 
 В зависимости от скорости интернет-соединения процесс может занять от 30 до 40 минут.
 
@@ -806,10 +758,10 @@ total 650M
 drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
 ```
 
-Теперь выполните команду, которая загрузит скачанные образы в созданный ранее приватный registry:
+Теперь выполните команду, которая загрузит скачанные образы в созданный ранее приватный registry (укажите редакцию DKP и данные пользователя, созданного в Harbor):
 
 ```bash
-d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/ee' --registry-login='deckhouse' --registry-password='Flant12345678' --tls-skip-verify
+d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
 > Ключ `--tls-skip-verify` указывает утилите, что мы доверяем сертификату и пропускаем его проверку.
@@ -881,7 +833,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
 
 ## Вход в registry для запуска установщика
 
-Теперь войдите в наш registry, чтобы Docker смог загрузить из него образ установщика [dhctl](../documentation/v1/installing/):
+Войдите в registry Harbor, чтобы Docker смог загрузить из него образ установщика [dhctl](../documentation/v1/installing/):
 
 ```bash
 docker login harbor.local
@@ -915,7 +867,7 @@ Login Succeeded
 - systemd версии `244`;
 - поддержка модуля ядра `erofs`.
 
-Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Kubernetes Platform. Подробнее — [в документации](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+Некоторые дистрибутивы (например, Astra Linux 1.7.4) не соответствуют этим требованиям, и ОС на узлах необходимо привести в соответствие требованиям перед установкой Deckhouse Kubernetes Platform. Подробнее — [в документации](../documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
 {% endalert %}
 
 Серверы для будущих узлов кластера должны соответствовать следующим требованиям:
@@ -942,7 +894,7 @@ Login Succeeded
 
 ### Настройка доступа к серверу Bastion
 
-Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к созданному приватному хранилищу, настройте на них соответствие доменного имени `harbor.local` внутреннему IP-адресу сервера Bastion в приватной сети.
+Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к созданному приватному registry, настройте на них соответствие доменного имени `harbor.local` внутреннему IP-адресу сервера Bastion в приватной сети.
 
 Для этого поочередно подключитесь к каждому серверу и добавьте соответствующую запись в файл `/etc/hosts` и файл облачного шаблона:
 
@@ -1018,7 +970,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ## Подготовка конфигурационного файла
 
 Конфигурационный файл для установки в закрытое окружение отличается от конфигурационного файла для установки [на bare-metal](../gs/bm/step2.html) несколькими особенностями. Возьмите файл `config.yml` [с четвёртого шага](../gs/bm/step4.html) руководства по установке на bare-metal и внесите следующие изменения:
-* В секции `deckhouse` блока `ClusterConfiguration` измените параметры используемого container registry с общедоступного registry Фланта на приватный:
+* В секции `deckhouse` блока `ClusterConfiguration` измените параметры используемого container registry с публичного registry Deckhouse Kubernetes Platform на приватный:
 
   ```yaml
   # Настройки proxy-сервера.
@@ -1035,58 +987,23 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 
     ```yaml
     deckhouse:
-      # Адрес Docker registry с образами Deckhouse.
-      imagesRepo: harbor.local/deckhouse/ee
-      # Строка с ключом для доступа к Docker registry.
-      registryDockerCfg: ewoJImF1dGhzIjogewoJCSJoYXJib3IubG9jYWwiOiB7CgkJCSJhdXRoIjogIlpHVmphMmh2ZFhO bE9rWnNZVzUwTVRJek5EVTJOemc9IgoJCX0KCX0KfQ==
+      # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
+      imagesRepo: harbor.local/deckhouse/<РЕДАКЦИЯ_DKP>
+      # Строка с ключом для доступа к Docker registry в формате base64.
+      # Получить их можно командой `cat .docker/config.json | base64`.
+      registryDockerCfg: <DOCKER_CFG_BASE64>
       # Протокол доступа к registry (HTTP или HTTPS).
       registryScheme: HTTPS
-      # Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
+      # Корневой сертификат, созданный ранее.
+      # Получить его можно командой: `cat harbor/certs/ca.crt`.
       registryCA: |
         -----BEGIN CERTIFICATE-----
-        MIIFszCCA5ugAwIBAgIUUVaDWXjY6M7dzqSog8Z6EKFsDvEwDQYJKoZIhvcNAQEN
-        BQAwaTELMAkGA1UEBhMCUlUxDzANBgNVBAgMBk1vc2NvdzEPMA0GA1UEBwwGTW9z
-        Y293MRAwDgYDVQQKDAdleGFtcGxlMREwDwYDVQQLDAhQZXJzb25hbDETMBEGA1UE
-        AwwKbXljYS5sb2NhbDAeFw0yNTEyMDUxNDU3MzZaFw0zNTEyMDMxNDU3MzZaMGkx
-        CzAJBgNVBAYTAlJVMQ8wDQYDVQQIDAZNb3Njb3cxDzANBgNVBAcMBk1vc2NvdzEQ
-        MA4GA1UECgwHZXhhbXBsZTERMA8GA1UECwwIUGVyc29uYWwxEzARBgNVBAMMCm15
-        Y2EubG9jYWwwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCuw1UrdApP
-        cbG6B8Hysk6uYKpJ4sZDtikzskvl3IHRSNPF5QVIW1y6dn0WR6iRApu5uUxk+8hv
-        LooF9eGYLuJZUG0cqghySw9ThTop6E+aMLxXZvj+XY8eqpZHF/gaLBLSmlnbb4yw
-        xB8ZdqtaTZhxNqJjXga2xh4zu8HihVHfaZA0F+E0hXQgTmEZ0d79Lj1ttyTX08ZX
-        Gt6XFRvrPptl/DUMx5EwuzOtFch+MzGDssXcGYo9TCHwp0fibinAvsVWFJU3r8A9
-        MofqA230nhWv/VpMEbNewcz0X+gv9r2HTssVuEdR7YHZ7gyDbg4TL2n3KeRsFuTv
-        r13fNRNkmYRQlo969ZUn3ubt2bVMv5LykW8mHWl11R2Z+wgDNvToBVpIyTntKbxj
-        QK5OQYem67XQsZl8zltfFMZGs6glxYNwzKZ6VXxc+ZCsb5L/0IkrSSkNeiWEWrh6
-        aHlEEeRvLN6NbZguRgarGcfDsJ5ZWSu/8+IKd7YjolpyGmZ1Q5vKPF4sXRqBhoyQ
-        kaS60nDjZQVICj/DkCwfAell1GWN3uxeH6rjaWygnKmBLdQB4pwG4tAY1eTyWc40
-        s4JG6r7V+eVEQ8oagSy8Uzb9zQuD3fQra3bScF4xxSfAGm4Q8aBfNAHkh1qd80QM
-        ktxqbPZFZXh786NKsuWeut2lYinICF2nyQIDAQABo1MwUTAdBgNVHQ4EFgQUMEt/
-        wprAqgo38CmKs8pcvdxOk08wHwYDVR0jBBgwFoAUMEt/wprAqgo38CmKs8pcvdxO
-        k08wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOCAgEAbMFVyjadh6s0
-        QziI3fodnXMeY37fu8TDcTD77S0jigL3E/2gxwepoYx7ofySZgJ3K5BDFLWVlhMU
-        mvqw7G61X8zObivtXZRFv8vJY/6escceFMGKIjX4mkE/58qnGkfbjk6l0ztcYX2G
-        ihrP2qh/NRzOxgqFa/xhRPhPhmFTtXI54XWn2ibu56CdAghi/6VowqhZGrfemzoY
-        G192HW0mRK25NvV8Kl4bBhX6k9lGF2cd5uYf8y6OinQUARNYAs92CrFzuJykFjFf
-        LENFEZCy/bwMVEukRmMvmRkq4GGeD3KS+7Cb4HmJ1t31y+CNCQZr3DN7O+MwrPfw
-        Auw5IhUYowbY64D1NZu1pJeygoDkTgg2TGYvLX2vGlMNSiBqhNoPzTol3+lbyx3G
-        hJh8dA38dg/Q6c9tEHBs6hXm7SxlPGKG9iq3UGwyj24RLkqrpfSSPQ2GI2NBh1m7
-        z3eez5L73lYRMqPmNp0WEvjePMv35wsj7xW7yb99VPfA2zFBA6XbnAnwUm+PwYT1
-        OcyCQmo6azyF1+HW6OCMK3/am0c71KF0eMvE+2giOmszxzXo9dJe5xqneSDM1DPl
-        8Lmb+DJ3ZfIKovhqinAPtnmuIF5c6cp9BblMS8d7HdvimZo9zPm26zeTmNpJnQMY
-        +XoiKMSfKq/7qrxHjeRuNtOYAH6ctLI=
+        ...
         -----END CERTIFICATE-----
     ```
 
-    Укажите следующие параметры:
-
-  * `imagesRepo` — адрес созданного ранее проекта с образами DKP;
-  * `registryDockerCfg` — параметры доступа к registry в формате base64;
-      > Получить их можно командой `cat .docker/config.json | base64`.
-  * `registryCA` — корневой сертификат, созданный ранее.
-      > Получить его можно командой: `cat harbor/certs/ca.crt`.
-* `releaseChannel` в секции `ModuleConfig` `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
-* В `ModuleConfig` `global` укажите использование самоподписанных сертификатов для компонентов кластера:
+* В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
+* В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
 
   ```yaml
     settings:
@@ -1103,8 +1020,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
           clusterIssuerName: selfsigned
   ```
 
-  > Также не забудьте изменить в этой секции `publicDomainTemplate`, чтобы использовать его для формирования доменов системных приложений в кластере. Например, Grafana для шаблона `%s.domain.my` будет доступна как `grafana.domain.my`.
-* В `ModuleConfig` `user-authn` измените значение `dexCAMode` на `FromIngressSecret`:
+* В ModuleConfig `user-authn` измените значение параметра [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
 
   ```yaml
     settings:
@@ -1112,7 +1028,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
       dexCAMode: FromIngressSecret
   ```
 
-* Добавьте включение и конфигурацию модуля [cert-manager](../../../modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
+* Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
 
   ```yaml
   apiVersion: deckhouse.io/v1alpha1
@@ -1126,7 +1042,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
       disableLetsencrypt: true
   ```
 
-* В секции `StaticClusterConfiguration` укажите подсеть внутренних IP-адресов узлов кластера. Например:
+* В параметре [internalNetworkCIDRs](../documentation/v1/reference/api/cr.html#staticclusterconfiguration-internalnetworkcidrs) StaticClusterConfiguration укажите подсеть внутренних IP-адресов узлов кластера. Например:
 
   ```yaml
   internalNetworkCIDRs:
@@ -1166,43 +1082,13 @@ deckhouse:
   # Адрес Docker registry с образами Deckhouse.
   imagesRepo: harbor.local/deckhouse/ee
   # Строка с ключом для доступа к Docker registry.
-  registryDockerCfg: ewoJImF1dGhzIjogewoJCSJoYXJib3IubG9jYWwiOiB7CgkJCSJhdXRoIjogIlpHVmphMmh2ZFhO bE9rWnNZVzUwTVRJek5EVTJOemc9IgoJCX0KCX0KfQ==
+  registryDockerCfg: <DOCKER_CFG_BASE64>
   # Протокол доступа к registry (HTTP или HTTPS).
   registryScheme: HTTPS
   # Корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты).
   registryCA: |
     -----BEGIN CERTIFICATE-----
-    MIIFszCCA5ugAwIBAgIUUVaDWXjY6M7dzqSog8Z6EKFsDvEwDQYJKoZIhvcNAQEN
-    BQAwaTELMAkGA1UEBhMCUlUxDzANBgNVBAgMBk1vc2NvdzEPMA0GA1UEBwwGTW9z
-    Y293MRAwDgYDVQQKDAdleGFtcGxlMREwDwYDVQQLDAhQZXJzb25hbDETMBEGA1UE
-    AwwKbXljYS5sb2NhbDAeFw0yNTEyMDUxNDU3MzZaFw0zNTEyMDMxNDU3MzZaMGkx
-    CzAJBgNVBAYTAlJVMQ8wDQYDVQQIDAZNb3Njb3cxDzANBgNVBAcMBk1vc2NvdzEQ
-    MA4GA1UECgwHZXhhbXBsZTERMA8GA1UECwwIUGVyc29uYWwxEzARBgNVBAMMCm15
-    Y2EubG9jYWwwggIiMA0GCSqGSIb3DQEBAQUAA4ICDwAwggIKAoICAQCuw1UrdApP
-    cbG6B8Hysk6uYKpJ4sZDtikzskvl3IHRSNPF5QVIW1y6dn0WR6iRApu5uUxk+8hv
-    LooF9eGYLuJZUG0cqghySw9ThTop6E+aMLxXZvj+XY8eqpZHF/gaLBLSmlnbb4yw
-    xB8ZdqtaTZhxNqJjXga2xh4zu8HihVHfaZA0F+E0hXQgTmEZ0d79Lj1ttyTX08ZX
-    Gt6XFRvrPptl/DUMx5EwuzOtFch+MzGDssXcGYo9TCHwp0fibinAvsVWFJU3r8A9
-    MofqA230nhWv/VpMEbNewcz0X+gv9r2HTssVuEdR7YHZ7gyDbg4TL2n3KeRsFuTv
-    r13fNRNkmYRQlo969ZUn3ubt2bVMv5LykW8mHWl11R2Z+wgDNvToBVpIyTntKbxj
-    QK5OQYem67XQsZl8zltfFMZGs6glxYNwzKZ6VXxc+ZCsb5L/0IkrSSkNeiWEWrh6
-    aHlEEeRvLN6NbZguRgarGcfDsJ5ZWSu/8+IKd7YjolpyGmZ1Q5vKPF4sXRqBhoyQ
-    kaS60nDjZQVICj/DkCwfAell1GWN3uxeH6rjaWygnKmBLdQB4pwG4tAY1eTyWc40
-    s4JG6r7V+eVEQ8oagSy8Uzb9zQuD3fQra3bScF4xxSfAGm4Q8aBfNAHkh1qd80QM
-    ktxqbPZFZXh786NKsuWeut2lYinICF2nyQIDAQABo1MwUTAdBgNVHQ4EFgQUMEt/
-    wprAqgo38CmKs8pcvdxOk08wHwYDVR0jBBgwFoAUMEt/wprAqgo38CmKs8pcvdxO
-    k08wDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOCAgEAbMFVyjadh6s0
-    QziI3fodnXMeY37fu8TDcTD77S0jigL3E/2gxwepoYx7ofySZgJ3K5BDFLWVlhMU
-    mvqw7G61X8zObivtXZRFv8vJY/6escceFMGKIjX4mkE/58qnGkfbjk6l0ztcYX2G
-    ihrP2qh/NRzOxgqFa/xhRPhPhmFTtXI54XWn2ibu56CdAghi/6VowqhZGrfemzoY
-    G192HW0mRK25NvV8Kl4bBhX6k9lGF2cd5uYf8y6OinQUARNYAs92CrFzuJykFjFf
-    LENFEZCy/bwMVEukRmMvmRkq4GGeD3KS+7Cb4HmJ1t31y+CNCQZr3DN7O+MwrPfw
-    Auw5IhUYowbY64D1NZu1pJeygoDkTgg2TGYvLX2vGlMNSiBqhNoPzTol3+lbyx3G
-    hJh8dA38dg/Q6c9tEHBs6hXm7SxlPGKG9iq3UGwyj24RLkqrpfSSPQ2GI2NBh1m7
-    z3eez5L73lYRMqPmNp0WEvjePMv35wsj7xW7yb99VPfA2zFBA6XbnAnwUm+PwYT1
-    OcyCQmo6azyF1+HW6OCMK3/am0c71KF0eMvE+2giOmszxzXo9dJe5xqneSDM1DPl
-    8Lmb+DJ3ZfIKovhqinAPtnmuIF5c6cp9BblMS8d7HdvimZo9zPm26zeTmNpJnQMY
-    +XoiKMSfKq/7qrxHjeRuNtOYAH6ctLI=
+    ...
     -----END CERTIFICATE-----
 ---
 # Настройки модуля deckhouse.
@@ -1296,7 +1182,6 @@ kind: StaticClusterConfiguration
 # Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
 - 10.128.0.0/24
-
 ```
 
 {% endofftopic %}
@@ -1305,18 +1190,18 @@ internalNetworkCIDRs:
 
 ## Установка DKP
 
-Сначала перенесите подготовленный конфигурационный файл на сервер Bastion (например, в каталог `~/deckhouse`). Перейдите в этот каталог и запустите установщик командой:
+Перенесите подготовленный конфигурационный файл на сервер Bastion (например, в директорию `~/deckhouse`). Перейдите в директорию и запустите установщик командой:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.local/deckhouse/ee/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.local/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
 ```
 
-{% offtopic title="Если вылезает ошибка `509: certificate signed by unknown authority`..." %}
-Несмотря на скопированные в `/etc/docker/certs.d/harbor.local/` сертификаты, Docker может выдавать предупреждение о неподтверждённой подписи сертификата (по сути, о том, что он самоподписанный). Решить это можно, скопировав `ca.crt` в каталог `/usr/local/share/ca-certificates/` и перезапустив Docker командой `sudo systemctl restart docker`. Для вашего дистрибутива решение может отличаться.
+{% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
+Несмотря на скопированные в `/etc/docker/certs.d/harbor.local/` сертификаты, Docker может выдавать предупреждение о неподтверждённой подписи сертификата (по сути, о том, что он самоподписанный). Решить это можно, скопировав `ca.crt` в директорию `/usr/local/share/ca-certificates/` и перезапустив Docker командой `sudo systemctl restart docker`. Для вашего дистрибутива решение может отличаться.
 {% endofftopic %}
 
 {% alert level="info" %}
-Обратите внимание, что если во внутренней сети нет локального DNS-сервера, и доменные имена прописаны в `/etc/hosts` сервера Bastion, то обязательно укажите параметр `--network=host`, чтобы Docker смог ими воспользоваться.
+Если во внутренней сети нет локального DNS-сервера, и доменные имена прописаны в `/etc/hosts` сервера Bastion, то обязательно укажите параметр `--network=host`, чтобы Docker смог ими воспользоваться.
 {% endalert %}
 
 После успешной загрузки и запуска контейнера вы увидите приглашение командной строки внутри контейнера:
@@ -1325,20 +1210,15 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 [deckhouse] root@guide-bastion / # 
 ```
 
-Запустите установку DKP командой:
+Запустите установку DKP командой (укажите внутренний IP-адрес master-узла):
 
 ```bash
-dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
   --ask-become-pass
 ```
 
-Не забудьте заменить:
-
-* `<username>` — на имя пользователя, от имени которого будет выполняться установка (в нашем случае — `deckhouse`, созданный ранее);
-* `<master_ip>` — на внутренний IP-адрес сервера под master-узел.
-
-Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения между серверами.
+Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
 При успешном завершении установки вы увидите следующее сообщение:
 
@@ -1354,7 +1234,6 @@ dhctl bootstrap --ssh-user=<username> --ssh-host=<master_ip> --ssh-agent-private
 └ ⛵ ~ Bootstrap: Clear cache (0.00 seconds)
 
 🎉 Deckhouse cluster was created successfully!
-
 ```
 
 ## Добавление узлов в кластер
