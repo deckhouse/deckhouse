@@ -4,7 +4,9 @@
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 3,
   "statements": [
-	@@ -10,29 +10,29 @@
+    {
+      "vulnerability": {
+        "name": "CVE-2025-47914"
       },
       "products": [
         {
