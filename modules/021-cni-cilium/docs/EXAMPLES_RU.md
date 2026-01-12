@@ -24,6 +24,7 @@ title: "Модуль cni-cilium: примеры"
 ### Обслуживание узла
 
 Для проведения работ на узле, который в данный момент является активным egress-шлюзом, выполните следующие шаги:
+
 1. Снимите метку (label) с узла, чтобы исключить его из списка кандидатов для роли egress-шлюза. Egress-label — это метка, указанная в `spec.nodeSelector` вашего EgressGateway.
 
     ```bash
@@ -51,9 +52,9 @@ title: "Модуль cni-cilium: примеры"
 
 ### Сравнение с CiliumEgressGatewayPolicy
 
-`CiliumEgressGatewayPolicy` подразумевает настройку только одного узла в качестве egress-шлюза. При выходе его из строя не предусмотрено failover-механизмов и сетевая связь будет нарушена.
+CiliumEgressGatewayPolicy подразумевает настройку только одного узла в качестве egress-шлюза. При выходе его из строя не предусмотрено failover-механизмов и сетевая связь будет нарушена.
 
-### Примеры настроек
+### Примеры настроек Egress Gateway
 
 #### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface (базовый режим)
 
@@ -117,13 +118,17 @@ spec:
 
 ## HubbleMonitoringConfig
 
-Кластерный ресурс `HubbleMonitoringConfig` позволяет настроить экспорт данных из Hubble (работающего внутри агентов Cilium).
+Кластерный ресурс HubbleMonitoringConfig предназначен для настройки экспорта данных из Hubble, работающего внутри агентов Cilium.
 
-### Примеры конфигурации
+### Примеры настроек HubbleMonitoringConfig
 
 #### Включение расширенных метрик и экспорта flow logs (с фильтрами и маской полей)
 
-{% alert level="warning" %}Ресурс `HubbleMonitoringConfig` **должен иметь имя** `hubble-monitoring-config`.{% endalert %}
+{% alert level="warning" %}
+Ресурс HubbleMonitoringConfig **должен иметь имя** `hubble-monitoring-config`.
+{% endalert %}
+
+Пример включения метрик и экспорта:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -161,8 +166,9 @@ spec:
 
 ### Сбор Hubble flow logs с помощью модуля log-shipper
 
-Вы можете собирать логи с помощью модуля Deckhouse **[log-shipper](https://deckhouse.ru/modules/log-shipper/)**.
-Для этого создайте ресурс `ClusterLoggingConfig`, который читает лог-файл с файловой системы узла:
+Для сбора flow logs используйте модуль [`log-shipper`](https://deckhouse.ru/modules/log-shipper/).
+
+Создайте ресурс ClusterLoggingConfig, который читает лог-файл с файловой системы узла:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2

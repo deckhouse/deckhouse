@@ -24,6 +24,7 @@ Configuring an egress gateway requires two custom resources:
 ### Node maintenance
 
 To perform maintenance on a node that is currently the active egress gateway, follow these steps:
+
 1. Remove the node label to exclude it from the egress gateway candidate pool. Egress-label is the label specified in `spec.nodeSelector` of your EgressGateway.
 
     ```bash
@@ -53,7 +54,7 @@ To avoid immediate failback, temporarily reduce the number of EgressGateway repl
 
 The CiliumEgressGatewayPolicy implies configuring only one node as an egress gateway. If it fails, there are no failover mechanisms and the network connection will be broken.
 
-### Configuration examples
+### Egress Gateway configuration examples
 
 #### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode (basic mode)
 
@@ -117,13 +118,17 @@ spec:
 
 ## HubbleMonitoringConfig
 
-The `HubbleMonitoringConfig` cluster-wide resource allows configuring data export from Hubble (running inside Cilium agents).
+The cluster-scoped HubbleMonitoringConfig resource is intended to configure data export from Hubble, which runs inside Cilium agents.
 
-### Configuration examples
+### HubbleMonitoringConfig configuration examples
 
-#### Enable extended metrics and flow logs export (with filters and field mask)
+#### Enabling extended metrics and flow logs export (with filters and field mask)
 
-{% alert level="warning" %}The `HubbleMonitoringConfig` resource **must be named** `hubble-monitoring-config`.{% endalert %}
+{% alert level="warning" %}
+The HubbleMonitoringConfig resource **must be named** `hubble-monitoring-config`.
+{% endalert %}
+
+Example of enabling metrics and export:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -161,8 +166,9 @@ spec:
 
 ### Collecting Hubble flow logs with the log-shipper module
 
-You can collect Hubble flow logs using Deckhouse **[log-shipper](https://deckhouse.ru/modules/log-shipper/)** module.
-Create the `ClusterLoggingConfig` resource that reads the flow log file from the node filesystem:
+To collect flow logs, use the [`log-shipper`](https://deckhouse.ru/modules/log-shipper/) module.
+
+Create a ClusterLoggingConfig resource that reads the log file from the node filesystem:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha2
