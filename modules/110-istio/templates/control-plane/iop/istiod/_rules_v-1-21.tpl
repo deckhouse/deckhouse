@@ -183,10 +183,21 @@
   resources:
   - gatewayclasses
   verbs:
+  - get
+  - list
+  - watch
   - create
   - update
   - patch
   - delete
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateways
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - ""
   resources:

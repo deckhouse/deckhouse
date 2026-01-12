@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-no-hostnetwork-multiple-containers
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+    - name: redis
+      image: redis
+      ports:
+        - containerPort: 6379
+

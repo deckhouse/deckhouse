@@ -59,7 +59,7 @@ func (l *Logger) Write(p []byte) (n int, err error) {
 
 		l.line++
 
-		l.logger.Info("OpenSSH client output", "line", l.line, "output", string(output))
+		l.logger.V(1).Info("OpenSSH client output", "line", l.line, "output", string(output))
 
 		p = p[advance:]
 	}

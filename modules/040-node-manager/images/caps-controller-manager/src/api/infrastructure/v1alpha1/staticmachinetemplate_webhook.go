@@ -54,26 +54,28 @@ var _ webhook.Validator = &StaticMachineTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateCreate() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate create", "name", r.Name)
+	staticmachinetemplatelog.V(2).Info("validate create", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate update", "name", r.Name)
-
 	oldStaticMachineTemplate := old.(*StaticMachineTemplate)
 	if !reflect.DeepEqual(r.Spec, oldStaticMachineTemplate.Spec) {
-		return nil, field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable")
+		err := field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable")
+		staticmachinetemplatelog.Error(err, "validate update rejected", "name", r.Name, "allowed", false)
+		return nil, err
 	}
+
+	staticmachinetemplatelog.V(2).Info("validate update accepted", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateDelete() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate delete", "name", r.Name)
+	staticmachinetemplatelog.V(2).Info("validate delete", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }

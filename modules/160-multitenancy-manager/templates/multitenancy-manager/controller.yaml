@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: multitenancy-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
       - containerName: multitenancy-manager
@@ -97,9 +97,7 @@ spec:
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 14 }}
-              {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-              {{- include "controller_resources" . | nindent 12 }}
-              {{- end }}
+              {{- include "controller_resources" . | nindent 14 }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget

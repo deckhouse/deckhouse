@@ -2,6 +2,7 @@
 title: "Custom Resources"
 permalink: ru/reference/api/cr.html
 lang: ru
+search: global custom resources, global configuration, global parameters, глобальные настройки, настройки платформы, глобальные параметры
 ---
 
 {{ site.data.schemas.crds.cluster_configuration | format_cluster_configuration }}

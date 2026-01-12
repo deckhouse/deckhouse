@@ -46,7 +46,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.29.14"
+  kubernetesVersion: "1.30.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -68,7 +68,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.28.10"
+  kubernetesVersion: "1.30.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -171,6 +171,9 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(dp.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: testkey
   operator: Exists
+- key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+  effect: NoSchedule
 - key: node.deckhouse.io/uninitialized
   operator: Exists
   effect: NoSchedule

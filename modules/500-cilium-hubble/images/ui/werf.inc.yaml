@@ -25,6 +25,8 @@ shell:
   - cd /src/hubble-ui
   - git apply /patches/*.patch --verbose
   - rm -r /src/hubble-ui/.git
+  # CSE
+  - find /src/hubble-ui -mindepth 1 -maxdepth 1 ! -name 'backend' -exec rm -rf {} +
   # also, there is README.md in repo ;)
   - git clone --depth 1 --branch v{{ $hubbleUIVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/hubble-ui-frontend-assets.git /src/frontend_prebuilt
   - rm -r /src/frontend_prebuilt/.git

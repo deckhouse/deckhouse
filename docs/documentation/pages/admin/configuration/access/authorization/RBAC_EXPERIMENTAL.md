@@ -30,7 +30,7 @@ By using these roles in [RoleBinding](https://kubernetes.io/docs/reference/kuber
 - Control access to modules associated with a specific [DKP subsystem](#role-model-subsystems).
 
   For example, to allow a user acting as a network administrator to configure *network* modules
-  (such as `cni-cilium`, `ingress-nginx`, `istio`, etc.),
+  (such as [`cni-cilium`](/modules/cni-cilium/), [`ingress-nginx`](/modules/ingress-nginx/), [`istio`](/modules/istio/), etc.),
   you can use the `d8:manage:networking:manager` role in a ClusterRoleBinding.
 
 - Control access to *user* module resources within a namespace.
@@ -151,7 +151,7 @@ or only those namespaces where modules of the specified subsystem are running (r
 
 If the current subsystems don't meet requirements of the role distribution used in the company,
 you can create a new [subsystem](#role-model-subsystems) that will include roles from the `deckhouse` and `kubernetes` subsystems
-and the `user-authn` module.
+and the [`user-authn`](/modules/user-authn/) module.
 
 To create a role, use the following template:
 
@@ -198,7 +198,7 @@ The `aggregationRule` section defines which roles and modules are aggregated int
   Aggregates a manage role from the `deckhouse` and `kubernetes` subsystems.
 - `rbac.deckhouse.io/kind: manage`, `module: user-authn`: Aggregates all rules from the `user-authn` module.
 
-This way, the role inherits permissions from the `deckhouse` and `kubernetes` subsystems as well as from the `user-authn` module.
+This way, the role inherits permissions from the `deckhouse` and `kubernetes` subsystems as well as from the [`user-authn`](/modules/user-authn/) module.
 
 {% alert level="info" %}
 

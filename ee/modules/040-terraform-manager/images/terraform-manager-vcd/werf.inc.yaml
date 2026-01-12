@@ -11,6 +11,8 @@ import:
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
   before: setup
 {{- end }}
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -55,6 +57,7 @@ shell:
 {{- range $version := .TF.vcd.versions }}
   - cd /src/v{{ $version }}
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X 'github.com/vmware/terraform-provider-vcd/v3/vcd.BuildVersion={{ $version }}'" -o /terraform-provider-vcd-v{{ $version }}  .
+  - strip /terraform-provider-vcd-v{{ $version }}
   - chmod -R 755 /terraform-provider-vcd-v{{ $version }}
   - chown 64535:64535 /terraform-provider-vcd-v{{ $version }}
 {{- end }}

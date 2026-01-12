@@ -15,22 +15,32 @@
 package commander
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-func ParseMetaConfig(stateCache state.Cache, params *CommanderModeParams) (*config.MetaConfig, error) {
+func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *CommanderModeParams, logger log.Logger) (*config.MetaConfig, error) {
 	clusterUUIDBytes, err := stateCache.Load("uuid")
 	if err != nil {
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
 	}
 	clusterUUID := string(clusterUUIDBytes)
+	if clusterUUID == "" {
+		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
+	}
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromData(
+		ctx,
 		configData,
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParams(logger),
+		),
 		config.ValidateOptionCommanderMode(true),
 		config.ValidateOptionStrictUnmarshal(true),
 		config.ValidateOptionValidateExtensions(true),

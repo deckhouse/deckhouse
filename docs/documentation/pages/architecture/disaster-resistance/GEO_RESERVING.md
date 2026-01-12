@@ -23,7 +23,7 @@ and that there is a stable network connection between the regions.
 A properly configured system ensures global disaster resilience for the application,
 guaranteeing uninterrupted operation even if an entire region or cloud becomes unavailable.
 
-For the process of joining multiple clusters into a multi-cluster, refer to [Inter-cluster cooperation](../../admin/configuration/network/inter-cluster-cooperation-overview.html).
+For the process of joining multiple clusters into a multi-cluster, refer to [Inter-cluster cooperation](../../admin/configuration/network/alliance/).
 
 ## Balancing incoming traffic in a multi-cluster
 

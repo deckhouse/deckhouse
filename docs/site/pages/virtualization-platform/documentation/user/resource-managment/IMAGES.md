@@ -3,14 +3,18 @@ title: "Images"
 permalink: en/virtualization-platform/documentation/user/resource-management/images.html
 ---
 
-The `VirtualImage` resource is designed to load virtual machine images and then use them to create virtual machine disks. This resource is available only in the namespace or project in which it was created.
+The [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
+
+{% alert level="warning" %}
+Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
 
 When connected to a virtual machine, the image is accessed in read-only mode.
 
 The image creation process includes the following steps:
 
 - The user creates a `VirtualImage` resource.
-- After creation, the image is automatically loaded from the specified source into the storage (DVCR).
+- After creation, the image is automatically downloaded from the source specified in the specification to DVCR or PVC storage, depending on the type.
 - Once the download is complete, the resource becomes available for disk creation.
 
 There are different types of images:
@@ -20,14 +24,16 @@ There are different types of images:
 
 Examples of resources for obtaining virtual machine images:
 
-| Distribution                                                                      | Default user.             |
-| --------------------------------------------------------------------------------- | ------------------------- |
-| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
-| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
-| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
-| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
-| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
-| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
+<a id="image-resources-table"></a>
+
+| Distribution                                                   | Default user. |
+|----------------------------------------------------------------|---------------|
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images) | `almalinux`   |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                  | `alpine`      |
+| [CentOS](https://cloud.centos.org/centos/)                     | `cloud-user`  |
+| [Debian](https://cdimage.debian.org/images/cloud/)             | `debian`      |
+| [Rocky](https://rockylinux.org/download/)                      | `rocky`       |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                     | `ubuntu`      |
 
 The following preinstalled image formats are supported:
 
@@ -53,7 +59,7 @@ Project image two storage types are supported:
 Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
 {% endalert %}
 
-A full description of the `VirtualImage` resource configuration settings can be found at [link](/products/virtualization-platform/reference/cr/virtualimage.html).
+A full description of the `VirtualImage` resource configuration settings can be found at [link](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Creating image from HTTP server
 
@@ -183,7 +189,7 @@ How to create an image and store it in PVC in the web interface:
 - Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Load data from link (HTTP)" from the list.
-- In the form that opens, enter the image name in the "mage name" field.
+- In the form that opens, enter the image name in the "Image name" field.
 - In the "Storage" field, select `PersistentVolumeClaim`.
 - In the "Storage class" field, you can select StorageClass or leave the default selection.
 - In the URL field, specify the link to the image.

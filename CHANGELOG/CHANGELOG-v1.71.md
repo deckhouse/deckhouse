@@ -142,7 +142,6 @@
  - **[user-authn]** Fixed Dex CVE vulnerabilities. [#13309](https://github.com/deckhouse/deckhouse/pull/13309)
  - **[user-authz]** Fixed user-authz hook, rolebinding empty subject namespace. [#13756](https://github.com/deckhouse/deckhouse/pull/13756)
     low
- - **[vertical-pod-autoscaler]** Disable vpa for k8s-metacollector [#15672](https://github.com/deckhouse/deckhouse/pull/15672)
 
 ## Chore
 

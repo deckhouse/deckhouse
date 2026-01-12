@@ -1,6 +1,7 @@
 ---
 title: "Configuring integrations"
 permalink: en/admin/configuration/monitoring/alerts-integrations.html
+description: "Configure alert integrations in Deckhouse Kubernetes Platform with Zabbix, Slack, Telegram, and other systems. Alert routing, notification setup, and monitoring system integration."
 ---
 
 {% raw %}
@@ -238,7 +239,7 @@ stringData:
   token: "562696849:AAExcuJ8H6z4pTlPuocbrXXXXXXXXXXXx"
 ```
 
-Deploy the `CustomAlertManager` custom resource:
+Deploy the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) custom resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -346,7 +347,7 @@ data:
   password: BASE64_ENCODED_PASSWORD_HERE
 ```
 
-Modify the values in the CustomAlertManager resource example according to the values relevant to your infrastructure and apply it:
+Modify the values in the [CustomAlertManager](/modules/prometheus/cr.html#customalertmanager) resource example according to the values relevant to your infrastructure and apply it:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

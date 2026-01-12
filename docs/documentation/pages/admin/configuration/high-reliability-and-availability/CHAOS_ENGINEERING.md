@@ -10,7 +10,7 @@ Chaos engineering mode can only be enabled for node groups with [`nodeType: Clou
 
 Enable chaos engineering mode for a node group in one of the following ways:
 
-1. Define the `spec.chaos` parameter in the configuration of the target node group with two nested parameters:
+1. Define the [`spec.chaos`](/modules/node-manager/cr.html#nodegroup-v1-spec-chaos) parameter in the configuration of the target node group with two nested parameters:
 
    ```yaml
    chaos:
@@ -40,7 +40,7 @@ Enable chaos engineering mode for a node group in one of the following ways:
        period: 24h
    ```
 
-1. If the [`console`](/modules/console) module is enabled in the cluster,
+1. If the [`console`](/modules/console/) module is enabled in the cluster,
   open the Deckhouse web UI, go to the settings of the desired node group under **Nodes** — **Node Groups**,
   and enable Chaos Monkey in the **Chaos monkey settings** section
   by specifying the time intervals in the corresponding fields.

@@ -1,9 +1,6 @@
-version: "3.9"
-
 services:
   site:
     image: $WERF_WEB_ROUTER_DOCKER_IMAGE_NAME
-#    command: "/app/server"
     command: "dlv --listen=:2345 --headless=true --api-version=2 --accept-multiclient exec ./server"
     environment:
       VROUTER_DEFAULT_GROUP: "v1"
@@ -18,27 +15,29 @@ services:
       VROUTER_I18N_TYPE: "separate-domain"
       VROUTER_LOCATION_VERSIONS: "/products/kubernetes-platform/documentation"
       VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
-    networks:
-      - deckhouse
+    volumes:
+      - ".helm/channels.yaml:/app/root/en/includes/release-channels/channels.yaml:ro"
+      - ".helm/channels.yaml:/app/root/ru/includes/release-channels/channels.yaml:ro"
+    working_dir: "/app"
     cap_add:
       - ALL
     security_opt:
       - apparmor:unconfined
     ports:
       - "2345:2345"
-    volumes:
-      - ".helm/channels.yaml:/app/releasedata/channels.yaml:ro"
-  front:
+  frontend:
     image: $WERF_WEB_FRONTEND_DOCKER_IMAGE_NAME
     volumes:
       - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
-      - "./backends/docs-builder-template/public/en:/app/en:ro"
-      - "./backends/docs-builder-template/public/ru:/app/ru:ro"
+      - ".werf/entrypoint-local.sh:/entrypoint.sh:ro"
+      - ".helm/channels.yaml:/app/channels.yaml:ro"
+      - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"
+      - "./backends/docs-builder-template/public/ru/modules:/app/modules-from-source/ru/modules:ro"
+      - "./backends/docs-builder-template/public/en/search/search.json:/app/modules-from-source/en/search-external-modules-index.json:ro"
+      - "./backends/docs-builder-template/public/ru/search/search.json:/app/modules-from-source/ru/search-external-modules-index.json:ro"
+      - "channels-conf:/app/channels-data"
     ports:
       - "80:80"
-    networks:
-      - deckhouse
 
-networks:
-  deckhouse:
-    name: deckhouse
+volumes:
+  channels-conf:

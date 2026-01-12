@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
+
 	flantkubeclient "github.com/flant/kube-client/client"
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -102,11 +105,11 @@ func (h *HookForUpdatePipeline) WithConfirm(confirm func(msg string) bool) *Hook
 }
 
 func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrastructure.RunnerInterface) (bool, error) {
-	if runner.GetChangesInPlan() != infrastructure.PlanHasDestructiveChanges {
+	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return false, nil
 	}
 
-	if !runner.GetMasterDestruction() {
+	if !runner.HasVMDestruction() {
 		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return false, nil
 	}
@@ -125,6 +128,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
 	}
 
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
+	}
+
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
 	if err != nil {
 		log.ErrorF("Get master node pipeline outputs: %v", err)
@@ -136,11 +144,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 }
 
 func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastructure.RunnerInterface) error {
-	if runner.GetChangesInPlan() != infrastructure.PlanHasDestructiveChanges {
+	if runner.GetChangesInPlan() != plan.HasDestructiveChanges {
 		return nil
 	}
 
-	if !runner.GetMasterDestruction() {
+	if !runner.HasVMDestruction() {
 		log.InfoLn("Plan has destructive changes, but not for a master instance VM. Skipping control plane hook actions.")
 		return nil
 	}

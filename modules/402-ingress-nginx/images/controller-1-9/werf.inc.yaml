@@ -5,7 +5,6 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
-cacheVersion: "2025-09-18"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -67,13 +66,18 @@ shell:
   - patch -p1 < /patches/ingress-nginx/007-geoip.patch
   - patch -p1 < /patches/ingress-nginx/008-new-metrics.patch
   - patch -p1 < /patches/ingress-nginx/009-default-backend-fix.patch
-  - patch -p1 < /patches/ingress-nginx/010-cve.patch
+  - patch -p1 < /patches/ingress-nginx/010-cve-22122025.patch
   - patch -p1 < /patches/ingress-nginx/011-nginx-build.patch
   - patch -p1 < /patches/ingress-nginx/012-validation-mode.patch
   - patch -p1 < /patches/ingress-nginx/013-verbose-maxmind-logs.patch
   - patch -p1 < /patches/ingress-nginx/014-fix-success-reload-metric.patch
   - patch -p1 < /patches/ingress-nginx/015-disable-error-logs.patch
   - patch -p1 < /patches/ingress-nginx/016-maxmind-alerts.patch
+  - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
+  - patch -p1 < /patches/ingress-nginx/018-geoip-ver-metric.patch
+  - patch -p1 < /patches/ingress-nginx/019-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/ingress-nginx/020-ingress-update-status.patch
+  - patch -p1 < /patches/ingress-nginx/021-use-proxy-real-ip-cidr.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -339,8 +343,8 @@ shell:
     done'
   - mkdir -p /chroot/lib /chroot/proc /chroot/usr /chroot/bin /chroot/dev /chroot/run /chroot/lib64 /chroot/usr/local/modsecurity /chroot/usr/local/share
   - cp /etc/passwd /etc/group /etc/hosts /chroot/etc/
-  - touch /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
-  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc/nginx/opentelemetry.toml /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+  - touch /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
+  - chown -R {{ $controllerUser }}:{{ $controllerUser }} /chroot/etc/ingress-controller/telemetry/opentelemetry.toml
   - cp -a /etc/pki /chroot/etc/pki
   - cp -a /usr/share/ca-certificates /chroot/usr/share/ca-certificates
   - cp -a /usr/bin/curl /chroot/usr/bin/curl
@@ -394,6 +398,15 @@ import:
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
   before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh
   to: /usr/bin/nginx
@@ -439,6 +452,7 @@ shell:
   - rm -rf /tmp
   - ln -sf /chroot/tmp /tmp
   - ln -sf /chroot/etc/ingress-controller /etc/ingress-controller
+  - ln -sf /etc/ingress-controller/telemetry/opentelemetry.toml /etc/nginx/opentelemetry.toml
   # a hack to let the controller update the /etc/nginx/lua/cfg.json file via a symlink on a read-only file system
   - mkdir /etc/ingress-controller/lua/ -p && touch /etc/ingress-controller/lua/cfg.json
   - ln -s /etc/ingress-controller/lua/cfg.json /chroot/etc/nginx/lua/cfg.json

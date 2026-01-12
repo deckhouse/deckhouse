@@ -1,28 +1,3 @@
-{{ if or (eq $.Env "development") (eq $.Env "local") }}
----
-# Nginx for serving documentation static files
-# Image website-docs/web (for local running and development)
-image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: builder/alpine-3.20
-shell:
-  beforeSetup:
-  - apk add --no-cache nginx
-  setup:
-  - |
-      cat <<"EOD" > /etc/nginx/nginx.conf
-      {{ .Files.Get ".werf/nginx.conf" | nindent 6 }}
-      EOD
-import:
-- image: {{ .ModuleName }}/{{ .ImageName }}/static
-  add: /app/_site
-  to: /app
-  before: setup
-imageSpec:
-  config:
-    entrypoint: [ "nginx", "-e", "/dev/stderr", "-g", "daemon off;" ]
----
-{{ end }}
----
 {{ tpl (.Files.Get "werf-s3-loader.inc.yaml") $ }}
 {{ tpl (.Files.Get "werf-documentation-static.inc.yaml") $ }}
 {{ tpl (.Files.Get "werf-modules-static.inc.yaml") $ }}

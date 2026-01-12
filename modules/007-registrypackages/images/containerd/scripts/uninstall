@@ -16,7 +16,7 @@
 set -Eeo pipefail
 
 systemctl disable containerd-deckhouse.service
-rm -f /opt/deckhouse/bin/containerd /opt/deckhouse/bin/containerd-shim-runc-v1 /opt/deckhouse/bin/containerd-shim-runc-v2 /opt/deckhouse/bin/ctr /opt/deckhouse/bin/runc
+rm -f /opt/deckhouse/bin/containerd /opt/deckhouse/bin/containerd-shim-runc-v1 /opt/deckhouse/bin/containerd-shim-runc-v2 /opt/deckhouse/bin/ctr /opt/deckhouse/bin/runc /opt/deckhouse/bin/pidumount
 
 rm -f /lib/systemd/system/containerd-deckhouse.service
 systemctl daemon-reload

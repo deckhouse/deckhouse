@@ -34,6 +34,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -327,7 +331,7 @@ spec:
                         Enables basic authorization for the Kubernetes API server.
 
                         The username and password of the user from the application created in OIDC are used as credentials for basic authorization (you can enable it only if there is just one provider of the OIDC/Crowd type).
-                        Works **only** if the [publishAPI](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
+                        Works **only** if the [publishAPI](https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi) parameter is enabled.
 
                         Authorization and group data obtained from an IdP are stored in the cache for 10 seconds.
                 ldap: &ldap
@@ -470,6 +474,48 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables Basic Authentication for access to the Kubernetes API server.
+
+                        The credentials are the Crowd user's username and password (from the application configured for this provider). 
+                        
+                        Limitations:
+                        - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
+                        - can be enabled for only one OIDC or Crowd provider in the cluster.
+
+                        Authentication data and group membership obtained from the IdP are cached for 10 seconds.
+                    kerberos:
+                      type: object
+                      description: |
+                        Optional Kerberos (SPNEGO) SSO settings for LDAP.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Enable Kerberos SPNEGO flow for this LDAP provider.
+                        expectedRealm:
+                          type: string
+                          description: Optional realm to require (case-insensitive).
+                        usernameFromPrincipal:
+                          type: string
+                          enum: ["Localpart", "SAMAccountName", "UserPrincipalName"]
+                          default: "Localpart"
+                          description: How to map Kerberos principal to LDAP username.
+                        fallbackToPassword:
+                          type: boolean
+                          default: false
+                          description: If true, render password form when SPNEGO header is missing/invalid.
+                        keytabSecretName:
+                          type: string
+                          description: Name of Secret containing key 'krb5.keytab' to mount for Dex.
+                        krb5ConfConfigMapName:
+                          type: string
+                          description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                        krb5ConfSecretName:
+                          type: string
+                          description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
               oneOf:
                 - properties:
                     inlet:
@@ -510,6 +556,12 @@ spec:
           name: Display Name
           description: 'Name that will be displayed on the providers selection screen.'
           type: string
+        - jsonPath: .spec.enabled
+          name: Enabled
+          type: boolean
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
     - name: v1
       served: true
       storage: true
@@ -530,6 +582,10 @@ spec:
               type: object
               required: ['displayName', 'type']
               properties:
+                enabled:
+                  type: boolean
+                  default: true
+                  description: When false, this provider is ignored by Dex config renderer.
                 type:
                   type: string
                   description: 'Type of authentication provider.'
@@ -560,7 +616,7 @@ spec:
                          - ['acme:Site Reliability Engineers'] for 'Name'
                          - ['acme:site-reliability-engineers'] for 'Slug'
                          - ['acme:Site Reliability Engineers', 'acme:site-reliability-engineers'] for 'Both'
-
+      
                         'name' will be used by default.
                     useLoginAsID:
                       type: boolean

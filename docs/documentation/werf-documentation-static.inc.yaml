@@ -20,25 +20,20 @@ shell:
         # Creating list of ALL the modules...
         cat _data/modules/internal.json | jq -MsS '.[0] * .[1]' - _data/modules/modules-addition.json > _data/modules/all.json
 
-        echo
-        echo '[] Preparing OSS license info...'
-        export OSS_SOURCE_DIR=/src/modules-metadata
-        export OSS_TARGET_FILE=/srv/jekyll-data/documentation/_data/ossinfo.yaml
-        bash _tools/modules_generate_ossinfo.sh
+        echo "[] Getting modules metadata from module.yaml files..."
+        export METADATA_SOURCE_DIR=/src/modules-metadata
+        export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
+        bash _tools/modules_generate_metadata.sh
 
         echo "Render global OpenAPI DKP schemas..."
         bash _tools/prepare_resources.sh
 
-        echo '[] Extracting the default Kubernetes version...'
-        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
-
         echo '[] Filling in the array of supported OS & K8S versions...'
         cd _data
-        yq eval version_map.yml -j > version_map.json && rm version_map.yml
-        jq -MsS '.[0] * .[1]' version_map.json version_map_addition.json | yq eval -P >> supported_versions.yml
+        yq eval-all -i 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s, "d8": select(fileIndex == 1).d8}' supported_versions.yml version_map.yml
 
         echo '[] Converting editions structure...'
-        yq e -j editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
+        yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json
 
 {{ if ne .ModuleName "website-docs" }}
         # Syncing file from the documentation to the main site...
@@ -86,6 +81,15 @@ shell:
         cp -Rf /app/_site/site/en /app/_site/documentation/
         rm -rf /app/_site/documentation/compare/
 {{ end }}
+import:
+- image: tools/jq
+  add: /usr/bin/jq
+  to: /usr/bin/jq
+  before: setup
+- image: tools/yq
+  add: /usr/bin/yq
+  to: /usr/bin/yq
+  before: setup
 git:
 - add: /{{ .ModulePath }}docs
   to: /srv/jekyll-data

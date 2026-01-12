@@ -1,6 +1,7 @@
 ---
 title: "Vertical pod autoscaling"
 permalink: en/admin/configuration/app-scaling/vpa.html
+description: "Configure Vertical Pod Autoscaler (VPA) in Deckhouse Kubernetes Platform. Automatic container resource management and optimization based on usage metrics for improved efficiency."
 ---
 
 ## How Vertical Scaling (VPA) works
@@ -41,7 +42,7 @@ You can enable VPA in the following ways:
 1. Via the `d8` command (run inside the `d8-system/deckhouse pod`):
 
    ```console
-   d8 platform module enable vertical-pod-autoscaler
+   d8 system module enable vertical-pod-autoscaler
    ```
 
 1. Through the [Deckhouse web interface](/modules/console/):

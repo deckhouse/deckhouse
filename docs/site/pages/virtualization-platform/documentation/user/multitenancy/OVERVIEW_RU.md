@@ -18,7 +18,7 @@ lang: ru
   * **изоляция** — каждый проект обеспечивает изолированное окружение, где разработчики могут развертывать и тестировать свои приложения без влияния на другие проекты.
 
 {% alert level="warning" %}
-[Копирование секретов](/products/kubernetes-platform/documentation/v1/modules/secret-copier) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
+[Копирование секретов](/modules/secret-copier/) во все пространства имён не может использоваться совместно с проектами режима мультитенантности.
 
 В этом режиме создаются изолированные окружения для пользователей в их проектах, а `secret-copier` автоматически раздаёт секреты во все пространства имён.
 Если в закрытом окружении пользователя окажутся чувствительные данные, это может привести к утечке данных и нарушению модели безопасности.
@@ -33,10 +33,10 @@ lang: ru
 
 ## Создание проекта
 
-1. Для создания проекта создайте кастомный ресурс [Project](/products/virtualization-platform/reference/cr/project.html) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-projecttemplatename).
-2. В параметре [.spec.parameters](/products/virtualization-platform/reference/cr/project.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/products/virtualization-platform/reference/cr/projecttemplate.html#project-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
+1. Для создания проекта создайте кастомный ресурс [Project](/modules/multitenancy-manager/cr.html#project) с указанием имени шаблона проекта в поле [.spec.projectTemplateName](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename).
+2. В параметре [.spec.parameters](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) укажите значения параметров для секции [.spec.parametersSchema.openAPIV3Schema](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) кастомного ресурса `ProjectTemplate`.
 
-   Пример создания проекта с помощью [Project](/products/virtualization-platform/reference/cr/project.html) из `default` [ProjectTemplate](/products/virtualization-platform/reference/cr/projecttemplate.html) представлен ниже:
+   Пример создания проекта с помощью [Project](/modules/multitenancy-manager/cr.html#project) из `default` [ProjectTemplate](/modules/multitenancy-manager/cr.html#projecttemplate) представлен ниже:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

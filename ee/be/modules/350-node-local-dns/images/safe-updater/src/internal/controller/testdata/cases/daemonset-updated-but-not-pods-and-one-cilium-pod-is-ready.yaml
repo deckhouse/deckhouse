@@ -1,0 +1,430 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "152"
+    meta.helm.sh/release-name: node-local-dns
+    meta.helm.sh/release-namespace: d8-system
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+  creationTimestamp: "2025-11-01T11:09:44Z"
+  generation: 157
+  labels:
+    app: node-local-dns
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: node-local-dns
+  name: node-local-dns
+  namespace: kube-system
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: node-local-dns
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: node-local-dns
+        k8s-app: node-local-dns
+    spec:
+      containers:
+      - command:
+        - /coredns-helper
+        image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:7dc0a998f8a898c8863e44b19da2bbd9ef1b7209ca9db30eff5f06bfac7c5804
+        imagePullPolicy: IfNotPresent
+  updateStrategy:
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
+    type: OnDelete
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  numberMisscheduled: 0
+  numberReady: 3
+  observedGeneration: 157
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    vpaObservedContainers: coredns, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by node-local-dns: container 0: cpu request,
+      memory request; container 1: cpu request, memory request'
+  creationTimestamp: "2025-11-18T14:57:37Z"
+  generateName: node-local-dns-
+  generation: 1
+  finalizers:
+  - test.suite/dontgetdeleted
+  labels:
+    app: node-local-dns
+    controller-revision-hash: 5fdd46b48
+    k8s-app: node-local-dns
+    pod-template-generation: "151"
+  name: node-local-dns-4rstp
+  namespace: kube-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: node-local-dns
+    uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
+  resourceVersion: "925143871"
+  uid: 2181f7d5-5d11-4788-a451-f588177a3d6a
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - dev-master-0
+  nodeName: dev-master-0
+  automountServiceAccountToken: true
+  containers:
+  - command:
+    - /coredns-helper
+    image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:7dc0a998f8a898c8863e44b19da2bbd9ef1b7209ca9db30eff5f06bfac7c5804
+    imagePullPolicy: IfNotPresent
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:37Z"
+    status: "True"
+    type: PodScheduled
+  hostIP: 192.168.199.211
+  phase: Running
+  podIP: 10.111.0.196
+  podIPs:
+  - ip: 10.111.0.196
+  qosClass: Burstable
+  startTime: "2025-11-18T14:57:37Z"
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    vpaObservedContainers: coredns, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by node-local-dns: container 0: cpu request,
+      memory request; container 1: cpu request, memory request'
+  creationTimestamp: "2025-11-18T14:57:37Z"
+  generateName: node-local-dns-
+  generation: 1
+  finalizers:
+  - test.suite/dontgetdeleted
+  labels:
+    app: node-local-dns
+    controller-revision-hash: 5fdd46b48
+    k8s-app: node-local-dns
+    pod-template-generation: "151"
+  name: node-local-dns-5rstp
+  namespace: kube-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: node-local-dns
+    uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
+  resourceVersion: "925143871"
+  uid: 2181f7d5-5d11-4788-a451-f588177a3d6a
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - dev-master-1
+  nodeName: dev-master-1
+  automountServiceAccountToken: true
+  containers:
+  - command:
+    - /coredns-helper
+    image: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:7dc0a998f8a898c8863e44b19da2bbd9ef1b7209ca9db30eff5f06bfac7c5804
+    imagePullPolicy: IfNotPresent
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:39Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:41Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-18T14:57:37Z"
+    status: "True"
+    type: PodScheduled
+  hostIP: 192.168.199.211
+  phase: Running
+  podIP: 10.111.0.196
+  podIPs:
+  - ip: 10.111.0.196
+  qosClass: Burstable
+  startTime: "2025-11-18T14:57:37Z"
+---
+apiVersion: apps/v1
+data:
+  spec:
+kind: ControllerRevision
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "152"
+    meta.helm.sh/release-name: node-local-dns
+    meta.helm.sh/release-namespace: d8-system
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+  creationTimestamp: "2025-11-12T11:53:57Z"
+  labels:
+    app: node-local-dns
+    controller-revision-hash: 5fdd46b48
+    k8s-app: node-local-dns
+  name: node-local-dns-5fdd46b48
+  namespace: kube-system
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: node-local-dns
+    uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
+  resourceVersion: "920392478"
+  uid: 533c255d-9488-4597-acf1-1b9864197636
+revision: 152
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "40"
+    meta.helm.sh/release-name: cni-cilium
+    meta.helm.sh/release-namespace: d8-system
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+  creationTimestamp: "2025-09-24T15:45:47Z"
+  generation: 41
+  labels:
+    app: agent
+    app.kubernetes.io/managed-by: Helm
+    heritage: deckhouse
+    module: cni-cilium
+  name: agent
+  namespace: d8-cni-cilium
+  resourceVersion: "925143554"
+  uid: d9666cfd-e844-4d38-abee-1e25d11858b2
+spec:
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: agent
+  template:
+    metadata:
+      annotations:
+        cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+        configmap-checksum: c267c54b2f9d889041cc0c3ac2425709cb01cdac9cf55427011305394c45db1e
+        container.apparmor.security.beta.kubernetes.io/apply-sysctl-overwrites: unconfined
+        container.apparmor.security.beta.kubernetes.io/cilium-agent: unconfined
+        container.apparmor.security.beta.kubernetes.io/clean-cilium-state: unconfined
+        container.apparmor.security.beta.kubernetes.io/install-cni-binaries: unconfined
+        container.apparmor.security.beta.kubernetes.io/mount-cgroup: unconfined
+        kubectl.kubernetes.io/restartedAt: "2025-10-21T13:47:44Z"
+        safe-agent-updater-daemonset-generation: 16fc44eeb45eaf01f17bf4b4786d8c0d52be636029f2b2940cb49a3bf1323922
+      creationTimestamp: null
+      labels:
+        app: agent
+        module: cni-cilium
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - command:
+        - /bin/sh
+        - -ec
+status:
+  currentNumberScheduled: 3
+  desiredNumberScheduled: 3
+  numberAvailable: 3
+  numberMisscheduled: 0
+  numberReady: 3
+  observedGeneration: 41
+  updatedNumberScheduled: 3
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+    configmap-checksum: c267c54b2f9d889041cc0c3ac2425709cb01cdac9cf55427011305394c45db1e
+    container.apparmor.security.beta.kubernetes.io/apply-sysctl-overwrites: unconfined
+    container.apparmor.security.beta.kubernetes.io/cilium-agent: unconfined
+    container.apparmor.security.beta.kubernetes.io/clean-cilium-state: unconfined
+    container.apparmor.security.beta.kubernetes.io/install-cni-binaries: unconfined
+    container.apparmor.security.beta.kubernetes.io/mount-cgroup: unconfined
+    kubectl.kubernetes.io/restartedAt: "2025-10-21T13:47:44Z"
+    safe-agent-updater-daemonset-generation: 16fc44eeb45eaf01f17bf4b4786d8c0d52be636029f2b2940cb49a3bf1323922
+    vpaObservedContainers: cilium-agent, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by agent: container 0: cpu request, memory
+      request; container 1: cpu request, memory request'
+  creationTimestamp: "2025-11-18T14:57:14Z"
+  generateName: agent-
+  generation: 1
+  labels:
+    app: agent
+    controller-revision-hash: 7cd779576d
+    module: cni-cilium
+    pod-template-generation: "40"
+  name: agent-xxlml
+  namespace: d8-cni-cilium
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: agent
+    uid: d9666cfd-e844-4d38-abee-1e25d11858b2
+  resourceVersion: "925143551"
+  uid: a2a1c85d-6589-4e25-be95-bff295ec83cb
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - dev-master-0
+  automountServiceAccountToken: true
+  nodeName: dev-master-0
+  containers:
+  - command:
+    - /bin/sh
+    - -ec
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-19T12:30:53Z"
+    status: "True"
+    type: Ready
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cluster-autoscaler.kubernetes.io/enable-ds-eviction: "false"
+    configmap-checksum: c267c54b2f9d889041cc0c3ac2425709cb01cdac9cf55427011305394c45db1e
+    container.apparmor.security.beta.kubernetes.io/apply-sysctl-overwrites: unconfined
+    container.apparmor.security.beta.kubernetes.io/cilium-agent: unconfined
+    container.apparmor.security.beta.kubernetes.io/clean-cilium-state: unconfined
+    container.apparmor.security.beta.kubernetes.io/install-cni-binaries: unconfined
+    container.apparmor.security.beta.kubernetes.io/mount-cgroup: unconfined
+    kubectl.kubernetes.io/restartedAt: "2025-10-21T13:47:44Z"
+    safe-agent-updater-daemonset-generation: 16fc44eeb45eaf01f17bf4b4786d8c0d52be636029f2b2940cb49a3bf1323922
+    vpaObservedContainers: cilium-agent, kube-rbac-proxy
+    vpaUpdates: 'Pod resources updated by agent: container 0: cpu request, memory
+      request; container 1: cpu request, memory request'
+  creationTimestamp: "2025-11-18T14:57:14Z"
+  generateName: agent-
+  generation: 1
+  labels:
+    app: agent
+    controller-revision-hash: 7cd779576d
+    module: cni-cilium
+    pod-template-generation: "40"
+  name: agent-xylml
+  namespace: d8-cni-cilium
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: agent
+    uid: d9666cfd-e844-4d38-abee-1e25d11858b2
+  resourceVersion: "925143551"
+  uid: a2a1c85d-6589-4e25-be95-bff295ec83cb
+spec:
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchFields:
+          - key: metadata.name
+            operator: In
+            values:
+            - dev-master-1
+  automountServiceAccountToken: true
+  nodeName: dev-master-1
+  containers:
+  - command:
+    - /bin/sh
+    - -ec
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-11-19T12:30:53Z"
+    status: "False"
+    type: Ready
+  phase: Running
+---
+apiVersion: apps/v1
+data:
+  spec:
+kind: ControllerRevision
+metadata:
+  annotations:
+    deprecated.daemonset.template.generation: "40"
+    meta.helm.sh/release-name: cni-cilium
+    meta.helm.sh/release-namespace: d8-system
+    werf.io/skip-logs: "true"
+    werf.io/track-termination-mode: NonBlocking
+  creationTimestamp: "2025-11-25T09:06:06Z"
+  labels:
+    app: agent
+    controller-revision-hash: 6dc65d9f6
+    module: cni-cilium
+  name: agent-6dc65d9f6
+  namespace: d8-cni-cilium
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: DaemonSet
+    name: agent
+    uid: d9666cfd-e844-4d38-abee-1e25d11858b2
+  resourceVersion: "932875950"
+  uid: 3a327e49-8d3b-4d6c-b041-af0525822ed9
+revision: 40

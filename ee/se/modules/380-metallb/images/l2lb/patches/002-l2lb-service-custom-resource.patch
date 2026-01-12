@@ -160,18 +160,19 @@ index 00000000..090001a9
 +	return out
 +}
 diff --git a/controller/main.go b/controller/main.go
-index fac0fe21..c76298de 100644
+index 5597f8fb..a6f785fa 100644
 --- a/controller/main.go
 +++ b/controller/main.go
-@@ -17,6 +17,7 @@ package main
- import (
- 	"flag"
- 	"fmt"
-+	"go.universe.tf/metallb/api/v1alpha1"
- 	"os"
+@@ -21,6 +21,8 @@ import (
  	"reflect"
  	"strings"
-@@ -30,16 +31,15 @@ import (
+ 
++	"go.universe.tf/metallb/api/v1alpha1"
++
+ 	"go.universe.tf/metallb/internal/allocator"
+ 	"go.universe.tf/metallb/internal/config"
+ 	"go.universe.tf/metallb/internal/k8s"
+@@ -31,16 +33,15 @@ import (
  
  	"github.com/go-kit/log"
  	"github.com/go-kit/log/level"
@@ -191,7 +192,7 @@ index fac0fe21..c76298de 100644
  }
  
  type controller struct {
-@@ -48,7 +48,7 @@ type controller struct {
+@@ -49,7 +50,7 @@ type controller struct {
  	ips    *allocator.Allocator
  }
  
@@ -201,18 +202,19 @@ index fac0fe21..c76298de 100644
  	defer level.Debug(l).Log("event", "endUpdate", "msg", "end of service update")
  
 diff --git a/controller/service.go b/controller/service.go
-index c22a4c88..5af5a1fe 100644
+index f26bad08..839d411d 100644
 --- a/controller/service.go
 +++ b/controller/service.go
-@@ -16,6 +16,7 @@ package main
- 
- import (
- 	"fmt"
-+	"go.universe.tf/metallb/api/v1alpha1"
- 	"net"
- 	"reflect"
+@@ -21,6 +21,8 @@ import (
  	"sort"
-@@ -38,7 +39,7 @@ const (
+ 	"strings"
+ 
++	"go.universe.tf/metallb/api/v1alpha1"
++
+ 	"github.com/go-kit/log"
+ 	"github.com/go-kit/log/level"
+ 	v1 "k8s.io/api/core/v1"
+@@ -46,7 +48,7 @@ const (
  
  var ErrConverge = fmt.Errorf("failed to converge")
  
@@ -221,7 +223,7 @@ index c22a4c88..5af5a1fe 100644
  	lbIPs := []net.IP{}
  	var err error
  	// Not a LoadBalancer, early exit. It might have been a balancer
-@@ -183,13 +184,13 @@ func (c *controller) convergeBalancer(l log.Logger, key string, svc *v1.Service)
+@@ -243,13 +245,13 @@ func serviceFamilyChanged(
  
  // clearServiceState clears all fields that are actively managed by
  // this controller.
@@ -237,36 +239,38 @@ index c22a4c88..5af5a1fe 100644
  	if len(svc.Spec.ClusterIPs) == 0 && svc.Spec.ClusterIP == "" {
  		// (we should never get here because the caller ensured that Spec.ClusterIP != nil)
  		return nil, fmt.Errorf("invalid ClusterIPs [%v] [%s], can't determine family", svc.Spec.ClusterIPs, svc.Spec.ClusterIP)
-@@ -242,7 +243,7 @@ func (c *controller) isServiceAllocated(key string) bool {
+@@ -302,7 +304,7 @@ func (c *controller) isServiceAllocated(key string) bool {
  	return c.ips.Pool(key) != ""
  }
  
 -func getDesiredLbIPs(svc *v1.Service) ([]net.IP, ipfamily.Family, error) {
 +func getDesiredLbIPs(svc *v1alpha1.SDNInternalL2LBService) ([]net.IP, ipfamily.Family, error) {
  	var desiredLbIPs []net.IP
- 	desiredLbIPsStr := svc.Annotations[AnnotationLoadBalancerIPs]
+ 	desiredLbIPsStr := valueForAnnotation(svc.Annotations, AnnotationLoadBalancerIPs, DeprecatedAnnotationLoadBalancerIPs)
  
+@@ -349,7 +351,7 @@ func isEqualIPs(ipsA, ipsB []net.IP) bool {
+ }
+ 
+ // SharingKey extracts the sharing key for a service.
+-func SharingKey(svc *v1.Service) string {
++func SharingKey(svc *v1alpha1.SDNInternalL2LBService) string {
+ 	if _, ok := svc.Annotations[AnnotationAllowSharedIP]; ok {
+ 		return svc.Annotations[AnnotationAllowSharedIP]
+ 	}
 diff --git a/internal/allocator/allocator.go b/internal/allocator/allocator.go
-index f930e830..384d21b7 100644
+index 5358cd48..4d989645 100644
 --- a/internal/allocator/allocator.go
 +++ b/internal/allocator/allocator.go
-@@ -5,6 +5,7 @@ package allocator // import "go.universe.tf/metallb/internal/allocator"
- import (
- 	"errors"
- 	"fmt"
-+	"go.universe.tf/metallb/api/v1alpha1"
- 	"math"
- 	"net"
- 	"sort"
-@@ -12,7 +13,6 @@ import (
+@@ -11,6 +11,8 @@ import (
+ 	"strings"
+ 	"sync"
  
++	"go.universe.tf/metallb/api/v1alpha1"
++
  	"go.universe.tf/metallb/internal/config"
  	"go.universe.tf/metallb/internal/ipfamily"
--	v1 "k8s.io/api/core/v1"
- 	"k8s.io/apimachinery/pkg/labels"
- 
- 	"github.com/mikioh/ipaddr"
-@@ -154,7 +154,7 @@ func (a *Allocator) assign(svc string, alloc *alloc) {
+ 	v1 "k8s.io/api/core/v1"
+@@ -168,7 +170,7 @@ func (a *Allocator) assign(svc string, alloc *alloc) {
  
  // Assign assigns the requested ip to svc, if the assignment is
  // permissible by sharingKey and backendKey.
@@ -275,25 +279,52 @@ index f930e830..384d21b7 100644
  	pool := poolFor(a.pools.ByName, ips)
  	if pool == nil {
  		return fmt.Errorf("%q is not allowed in config", ips)
-@@ -246,7 +246,7 @@ func (a *Allocator) Unassign(svc string) {
- }
- 
+@@ -293,7 +295,7 @@ func (a *Allocator) getFreeIPsFromPool(
+ func (a *Allocator) findBestPoolForService(
+ 	pools []*config.Pool,
+ 	svcKey string,
+-	svc *v1.Service,
++	svc *v1alpha1.SDNInternalL2LBService,
+ 	serviceIPFamily ipfamily.Family,
+ 	ports []Port,
+ 	sharingKey, backendKey string,
+@@ -355,7 +357,7 @@ func isPreferDualStack(serviceIPFamilyPolicy v1.IPFamilyPolicy, serviceIPFamily
+ // to the service.
+ func (a *Allocator) Allocate(
+ 	svcKey string,
+-	svc *v1.Service,
++	svc *v1alpha1.SDNInternalL2LBService,
+ 	serviceIPFamily ipfamily.Family,
+ 	ports []Port,
+ 	sharingKey, backendKey string,
+@@ -394,7 +396,7 @@ func (a *Allocator) Allocate(
+ func (a *Allocator) allocateFromPools(
+ 	pools []*config.Pool,
+ 	svcKey string,
+-	svc *v1.Service,
++	svc *v1alpha1.SDNInternalL2LBService,
+ 	serviceIPFamily ipfamily.Family,
+ 	ports []Port,
+ 	sharingKey, backendKey string,
+@@ -415,7 +417,7 @@ func (a *Allocator) allocateFromPools(
  // AllocateFromPool assigns an available IP from pool to service.
--func (a *Allocator) AllocateFromPool(svcKey string, svc *v1.Service, serviceIPFamily ipfamily.Family, poolName string, ports []Port, sharingKey, backendKey string) ([]net.IP, error) {
-+func (a *Allocator) AllocateFromPool(svcKey string, svc *v1alpha1.SDNInternalL2LBService, serviceIPFamily ipfamily.Family, poolName string, ports []Port, sharingKey, backendKey string) ([]net.IP, error) {
- 	if alloc := a.allocated[svcKey]; alloc != nil {
- 		// Handle the case where the svc has already been assigned an IP but from the wrong family.
- 		// This "should-not-happen" since the "serviceIPFamily" is an immutable field in services.
-@@ -303,7 +303,7 @@ func (a *Allocator) AllocateFromPool(svcKey string, svc *v1.Service, serviceIPFa
- }
- 
- // Allocate assigns any available and assignable IP to service.
--func (a *Allocator) Allocate(svcKey string, svc *v1.Service, serviceIPFamily ipfamily.Family, ports []Port, sharingKey, backendKey string) ([]net.IP, error) {
-+func (a *Allocator) Allocate(svcKey string, svc *v1alpha1.SDNInternalL2LBService, serviceIPFamily ipfamily.Family, ports []Port, sharingKey, backendKey string) ([]net.IP, error) {
- 	if alloc := a.allocated[svcKey]; alloc != nil {
- 		if err := a.Assign(svcKey, svc, alloc.ips, ports, sharingKey, backendKey); err != nil {
- 			return nil, err
-@@ -331,7 +331,7 @@ func (a *Allocator) Allocate(svcKey string, svc *v1.Service, serviceIPFamily ipf
+ func (a *Allocator) AllocateFromPool(
+ 	svcKey string,
+-	svc *v1.Service,
++	svc *v1alpha1.SDNInternalL2LBService,
+ 	serviceIPFamily ipfamily.Family,
+ 	poolName string,
+ 	ports []Port,
+@@ -467,7 +469,7 @@ func (a *Allocator) AllocateFromPool(
+ // additional ip from the missing family while retaining the ip already allocated to the svc.
+ func (a *Allocator) AllocateFromPoolForAdditionalFamily(
+ 	svcKey string,
+-	svc *v1.Service,
++	svc *v1alpha1.SDNInternalL2LBService,
+ 	existingIP net.IP,
+ 	poolName string,
+ 	ports []Port,
+@@ -501,7 +503,7 @@ func (a *Allocator) AllocateFromPoolForAdditionalFamily(
  // This method returns sorted ip pools which are allocatable for given service.
  // When ip pool is not set with priority, then just append it after sorted
  // priority ip pools.
@@ -302,7 +333,7 @@ index f930e830..384d21b7 100644
  	var pools []*config.Pool
  	if svc == nil {
  		return pools
-@@ -356,7 +356,7 @@ func (a *Allocator) pinnedPoolsForService(svc *v1.Service) []*config.Pool {
+@@ -526,7 +528,7 @@ func (a *Allocator) pinnedPoolsForService(svc *v1.Service) []*config.Pool {
  	return pools
  }
  
@@ -311,8 +342,17 @@ index f930e830..384d21b7 100644
  	if p.ServiceAllocations != nil && p.ServiceAllocations.Namespaces.Len() > 0 &&
  		!p.ServiceAllocations.Namespaces.Has(svc.Namespace) {
  		return false
+@@ -737,7 +739,7 @@ func (a *Allocator) checkSharing(svc string, ip string, ports []Port, sk *key) e
+ }
+ 
+ // ipPolicyForService determines the IPFamilyPolicy of a given svc.
+-func ipPolicyForService(svc *v1.Service) v1.IPFamilyPolicy {
++func ipPolicyForService(svc *v1alpha1.SDNInternalL2LBService) v1.IPFamilyPolicy {
+ 	serviceIPFamilyPolicy := v1.IPFamilyPolicySingleStack
+ 	if svc.Spec.IPFamilyPolicy != nil {
+ 		serviceIPFamilyPolicy = *(svc.Spec.IPFamilyPolicy)
 diff --git a/internal/allocator/k8salloc/k8salloc.go b/internal/allocator/k8salloc/k8salloc.go
-index 64712c1b..72cc9ed4 100644
+index 39bd42cf..866edfe0 100644
 --- a/internal/allocator/k8salloc/k8salloc.go
 +++ b/internal/allocator/k8salloc/k8salloc.go
 @@ -3,13 +3,14 @@
@@ -331,13 +371,7 @@ index 64712c1b..72cc9ed4 100644
  	var ret []allocator.Port
  	for _, port := range svc.Spec.Ports {
  		ret = append(ret, allocator.Port{
-@@ -21,12 +22,12 @@ func Ports(svc *v1.Service) []allocator.Port {
- }
- 
- // SharingKey extracts the sharing key for a service.
--func SharingKey(svc *v1.Service) string {
-+func SharingKey(svc *v1alpha1.SDNInternalL2LBService) string {
- 	return svc.Annotations["metallb.universe.tf/allow-shared-ip"]
+@@ -21,7 +22,7 @@ func Ports(svc *v1.Service) []allocator.Port {
  }
  
  // BackendKey extracts the backend key for a service.
@@ -347,21 +381,19 @@ index 64712c1b..72cc9ed4 100644
  		return labels.Set(svc.Spec.Selector).String()
  	}
 diff --git a/internal/ipfamily/ipfamily.go b/internal/ipfamily/ipfamily.go
-index 15489c3f..4e1c5c09 100644
+index 15489c3f..bdd99b80 100644
 --- a/internal/ipfamily/ipfamily.go
 +++ b/internal/ipfamily/ipfamily.go
-@@ -4,9 +4,8 @@ package ipfamily // import "go.universe.tf/metallb/internal/ipfamily"
- 
- import (
+@@ -6,7 +6,7 @@ import (
  	"fmt"
-+	"go.universe.tf/metallb/api/v1alpha1"
  	"net"
--
+ 
 -	v1 "k8s.io/api/core/v1"
++	"go.universe.tf/metallb/api/v1alpha1"
  )
  
  // IP family helps identifying single stack IPv4/IPv6 vs Dual-stack ["IPv4", "IPv6"] or ["IPv6", "Ipv4"].
-@@ -77,7 +76,7 @@ func ForAddress(ip net.IP) Family {
+@@ -77,7 +77,7 @@ func ForAddress(ip net.IP) Family {
  }
  
  // ForService returns the address family of a given service.
@@ -484,7 +516,7 @@ index a804ee76..51879cbc 100644
  	// rely on the application logic that will receive a delete on a service it
  	// did not handle and discard it.
 diff --git a/internal/k8s/controllers/service_controller_reload.go b/internal/k8s/controllers/service_controller_reload.go
-index 6c614ebf..48f8982d 100644
+index 460d5f14..23984da8 100644
 --- a/internal/k8s/controllers/service_controller_reload.go
 +++ b/internal/k8s/controllers/service_controller_reload.go
 @@ -20,12 +20,13 @@ import (
@@ -511,7 +543,7 @@ index 6c614ebf..48f8982d 100644
  	if err := r.List(ctx, &services); err != nil {
  		level.Error(r.Logger).Log("controller", "ServiceReconciler - reprocessAll", "message", "failed to list the services", "error", err)
  		return ctrl.Result{}, err
-@@ -84,11 +85,15 @@ func (r *ServiceReconciler) reprocessAll(ctx context.Context, req ctrl.Request)
+@@ -83,11 +84,15 @@ func (r *ServiceReconciler) reprocessAll(ctx context.Context, req ctrl.Request)
  		}
  
  		serviceName := types.NamespacedName{Namespace: service.Namespace, Name: service.Name}
@@ -529,7 +561,7 @@ index 6c614ebf..48f8982d 100644
  				level.Error(r.Logger).Log("controller", "ServiceReconciler - reprocessAll", "message", "failed to get endpoints", "service", serviceName.String(), "error", err)
  				return ctrl.Result{}, err
 diff --git a/internal/k8s/k8s.go b/internal/k8s/k8s.go
-index 110197ec..2ce6d14b 100644
+index 34fb99ea..459cece4 100644
 --- a/internal/k8s/k8s.go
 +++ b/internal/k8s/k8s.go
 @@ -14,6 +14,11 @@ import (
@@ -561,7 +593,7 @@ index 110197ec..2ce6d14b 100644
  	events           record.EventRecorder
  	mgr              manager.Manager
  	validateConfig   config.Validate
-@@ -165,6 +173,11 @@ func New(cfg *Config) (*Client, error) {
+@@ -170,6 +178,11 @@ func New(cfg *Config) (*Client, error) {
  		return nil, fmt.Errorf("creating Kubernetes client: %s", err)
  	}
  
@@ -573,7 +605,7 @@ index 110197ec..2ce6d14b 100644
  	recorder := mgr.GetEventRecorderFor(cfg.ProcessName)
  
  	reloadChan := make(chan event.GenericEvent)
-@@ -175,6 +188,7 @@ func New(cfg *Config) (*Client, error) {
+@@ -180,6 +193,7 @@ func New(cfg *Config) (*Client, error) {
  	c := &Client{
  		logger:         cfg.Logger,
  		client:         clientset,
@@ -581,7 +613,7 @@ index 110197ec..2ce6d14b 100644
  		events:         recorder,
  		mgr:            mgr,
  		validateConfig: cfg.ValidateConfig,
-@@ -430,18 +444,25 @@ func (c *Client) Run(stopCh <-chan struct{}) error {
+@@ -464,18 +478,25 @@ func (c *Client) Run(stopCh <-chan struct{}) error {
  
  // UpdateStatus writes the protected "status" field of svc back into
  // the Kubernetes cluster.
@@ -612,18 +644,19 @@ index 110197ec..2ce6d14b 100644
  }
  
 diff --git a/internal/k8s/listener.go b/internal/k8s/listener.go
-index 7b4778da..547c88bd 100644
+index 7b4778da..2cf7c19c 100644
 --- a/internal/k8s/listener.go
 +++ b/internal/k8s/listener.go
-@@ -3,6 +3,7 @@
- package k8s
- 
+@@ -5,6 +5,8 @@ package k8s
  import (
-+	"go.universe.tf/metallb/api/v1alpha1"
  	"sync"
  
++	"go.universe.tf/metallb/api/v1alpha1"
++
  	"github.com/go-kit/log"
-@@ -14,13 +15,13 @@ import (
+ 	"go.universe.tf/metallb/internal/config"
+ 	"go.universe.tf/metallb/internal/k8s/controllers"
+@@ -14,13 +16,13 @@ import (
  
  type Listener struct {
  	sync.Mutex
@@ -640,18 +673,19 @@ index 7b4778da..547c88bd 100644
  	defer l.Unlock()
  	return l.ServiceChanged(logger, serviceName, svc, epSlices)
 diff --git a/speaker/bgp_controller.go b/speaker/bgp_controller.go
-index 0357413b..99d9dc7d 100644
+index fff3d355..98505fff 100644
 --- a/speaker/bgp_controller.go
 +++ b/speaker/bgp_controller.go
-@@ -16,6 +16,7 @@ package main
- 
- import (
- 	"fmt"
-+	"go.universe.tf/metallb/api/v1alpha1"
- 	"net"
- 	"reflect"
+@@ -21,6 +21,8 @@ import (
  	"sort"
-@@ -158,7 +159,7 @@ func hasHealthyEndpoint(eps []discovery.EndpointSlice, filterNode func(*string)
+ 	"sync"
+ 
++	"go.universe.tf/metallb/api/v1alpha1"
++
+ 	"github.com/go-kit/log"
+ 	"github.com/go-kit/log/level"
+ 	"go.universe.tf/metallb/internal/bgp"
+@@ -168,7 +170,7 @@ func hasHealthyEndpoint(eps []discovery.EndpointSlice, filterNode func(*string)
  	return false
  }
  
@@ -660,7 +694,7 @@ index 0357413b..99d9dc7d 100644
  	if !poolMatchesNodeBGP(pool, c.myNode) {
  		level.Debug(l).Log("event", "skipping should announce bgp", "service", name, "reason", "pool not matching my node")
  		return "notOwner"
-@@ -307,7 +308,7 @@ func (c *bgpController) syncBFDProfiles(profiles map[string]*config.BFDProfile)
+@@ -324,7 +326,7 @@ func (c *bgpController) syncBFDProfiles(profiles map[string]*config.BFDProfile)
  	return c.sessionManager.SyncBFDProfiles(profiles)
  }
  
@@ -670,18 +704,18 @@ index 0357413b..99d9dc7d 100644
  	for _, lbIP := range lbIPs {
  		for _, adCfg := range pool.BGPAdvertisements {
 diff --git a/speaker/layer2_controller.go b/speaker/layer2_controller.go
-index 77055934..66a0186d 100644
+index e7d24b05..ed89f9bf 100644
 --- a/speaker/layer2_controller.go
 +++ b/speaker/layer2_controller.go
-@@ -17,6 +17,7 @@ package main
- import (
- 	"bytes"
- 	"crypto/sha256"
-+	"go.universe.tf/metallb/api/v1alpha1"
- 	"net"
- 	"sort"
+@@ -30,6 +30,7 @@ import (
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/utils/strings/slices"
  
-@@ -82,7 +83,7 @@ func usableNodes(eps []discovery.EndpointSlice, speakers map[string]bool) []stri
++	"go.universe.tf/metallb/api/v1alpha1"
+ 	"go.universe.tf/metallb/internal/config"
+ 	"go.universe.tf/metallb/internal/k8s/epslices"
+ 	k8snodes "go.universe.tf/metallb/internal/k8s/nodes"
+@@ -84,7 +85,7 @@ func nodesWithEndpoint(eps []discovery.EndpointSlice, speakers map[string]bool)
  	return ret
  }
  
@@ -690,7 +724,7 @@ index 77055934..66a0186d 100644
  	if !activeEndpointExists(eps) { // no active endpoints, just return
  		level.Debug(l).Log("event", "shouldannounce", "protocol", "l2", "message", "failed no active endpoints", "service", name)
  		return "notOwner"
-@@ -130,7 +131,7 @@ func (c *layer2Controller) ShouldAnnounce(l log.Logger, name string, toAnnounce
+@@ -144,7 +145,7 @@ func (c *layer2Controller) ShouldAnnounce(l log.Logger, name string, toAnnounce
  	return "notOwner"
  }
  
@@ -700,18 +734,19 @@ index 77055934..66a0186d 100644
  	updateStatus := false
  	for _, lbIP := range lbIPs {
 diff --git a/speaker/main.go b/speaker/main.go
-index ea8c1cf8..8b67055a 100644
+index 68b8b66e..ee0b0eb5 100644
 --- a/speaker/main.go
 +++ b/speaker/main.go
-@@ -17,6 +17,7 @@ package main
- import (
- 	"flag"
- 	"fmt"
+@@ -25,6 +25,8 @@ import (
+ 	"strings"
+ 	"syscall"
+ 
 +	"go.universe.tf/metallb/api/v1alpha1"
- 	"net"
- 	"os"
- 	"os/signal"
-@@ -63,9 +64,9 @@ const (
++
+ 	"github.com/go-kit/log"
+ 	"github.com/go-kit/log/level"
+ 	"github.com/prometheus/client_golang/prometheus"
+@@ -65,9 +67,9 @@ const (
  
  // Service offers methods to mutate a Kubernetes service object.
  type service interface {
@@ -724,7 +759,7 @@ index ea8c1cf8..8b67055a 100644
  }
  
  func main() {
-@@ -321,7 +322,7 @@ func newController(cfg controllerConfig) (*controller, error) {
+@@ -344,7 +346,7 @@ func newController(cfg controllerConfig) (*controller, error) {
  	return ret, nil
  }
  
@@ -733,7 +768,7 @@ index ea8c1cf8..8b67055a 100644
  	if svc == nil {
  		return c.deleteBalancer(l, name, "serviceDeleted")
  	}
-@@ -385,7 +386,7 @@ func (c *controller) SetBalancer(l log.Logger, name string, svc *v1.Service, epS
+@@ -408,7 +410,7 @@ func (c *controller) SetBalancer(l log.Logger, name string, svc *v1.Service, epS
  func (c *controller) handleService(l log.Logger,
  	name string,
  	lbIPs []net.IP,
@@ -742,7 +777,7 @@ index ea8c1cf8..8b67055a 100644
  	eps []discovery.EndpointSlice,
  	protocol config.Proto) controllers.SyncState {
  	l = log.With(l, "protocol", protocol)
-@@ -588,8 +589,8 @@ func isLabelNodeExcludeBalancersChanged(nodeName string, oldNodes map[string]*v1
+@@ -618,8 +620,8 @@ func isNodeAvailableChanged(oldNodes map[string]*v1.Node, newNode *v1.Node) bool
  // A Protocol can advertise an IP address.
  type Protocol interface {
  	SetConfig(log.Logger, *config.Config) error

@@ -23,13 +23,12 @@ import (
 	"sync"
 
 	"github.com/pkg/errors"
-	"golang.org/x/crypto/ssh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 type Tunnel struct {
-	sshClient *ssh.Client
+	sshClient *Client
 	address   string
 
 	tunMutex sync.Mutex
@@ -41,7 +40,7 @@ type Tunnel struct {
 	errorCh chan error
 }
 
-func NewTunnel(sshClient *ssh.Client, address string) *Tunnel {
+func NewTunnel(sshClient *Client, address string) *Tunnel {
 	return &Tunnel{
 		sshClient: sshClient,
 		address:   address,
@@ -81,7 +80,7 @@ func (t *Tunnel) upNewTunnel(oldId int) (int, error) {
 
 	listener, err := net.Listen("tcp", localAddress)
 	if err != nil {
-		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen remote on %s", localAddress))
+		return -1, errors.Wrap(err, fmt.Sprintf("failed to listen local on %s", localAddress))
 	}
 
 	log.DebugF("[%d] Listen remote %s successful\n", id, localAddress)
@@ -98,14 +97,14 @@ func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener n
 	for {
 		localConn, err := listener.Accept()
 		if err != nil {
-			e := fmt.Errorf("Accept(): %s", err.Error())
+			e := fmt.Errorf("[%d] Accept(): %s", id, err.Error())
 			t.errorCh <- e
 			continue
 		}
 
-		remoteConn, err := t.sshClient.Dial("tcp", remoteAddress)
+		remoteConn, err := t.sshClient.GetClient().Dial("tcp", remoteAddress)
 		if err != nil {
-			e := fmt.Errorf("Cannot dial to %s: %s", remoteAddress, err.Error())
+			e := fmt.Errorf("[%d] Cannot dial to %s: %s", id, remoteAddress, err.Error())
 			t.errorCh <- e
 			continue
 		}
@@ -180,5 +179,5 @@ func (t *Tunnel) stop(id int, full bool) {
 }
 
 func (t *Tunnel) String() string {
-	return fmt.Sprintf("%s:%s", "R", t.address)
+	return fmt.Sprintf("%s:%s", "L", t.address)
 }

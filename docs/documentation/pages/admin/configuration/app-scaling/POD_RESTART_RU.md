@@ -1,6 +1,7 @@
 ---
 title: "Перезапуск подов при изменении конфигурации"
 permalink: ru/admin/configuration/app-scaling/pod-restart.html
+description: "Настройка автоматического перезапуска подов при изменении конфигурации в Deckhouse Kubernetes Platform. Интеграция Pod reloader для обновлений ConfigMap и Secret с автоматизацией перезапуска подов."
 lang: ru
 ---
 
@@ -164,7 +165,7 @@ metadata:
 1. Через команду `d8` (в поде `d8-system/deckhouse`):
 
    ```console
-   d8 platform module enable pod-reloader
+   d8 system module enable pod-reloader
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):

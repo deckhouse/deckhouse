@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: allowed-daemonset-hostPath-volume
+  namespace: testns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          volumeMounts:
+            - name: hostpath
+              mountPath: /hostpath
+      volumes:
+        - name: hostpath
+          hostPath:
+            path: /var/lib
+

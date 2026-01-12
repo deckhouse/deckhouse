@@ -3,7 +3,7 @@ title: "Balancing with MetalLB"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/ingress/nlb/metallb.html
 ---
 
-The [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/) module implements support for
+The [`metallb`](/modules/metallb/) module implements support for
 LoadBalancer-type services in Deckhouse Virtualization Platform (DVP) clusters.
 It is suitable for both bare-metal clusters and cloud environments
 where built-in load balancers by providers are unavailable.
@@ -11,7 +11,7 @@ where built-in load balancers by providers are unavailable.
 Two operating modes are supported:
 
 - **Layer 2**: An enhanced version of the standard L2 mode in MetalLB, allowing multiple public addresses to be used for services.
-- **BGP**: Fully based on the [MetalLB](https://metallb.universe.tf/) solution and available only in DVP Enterprise Edition.
+- **BGP**: Fully based on the [MetalLB](https://metallb.io/) solution and available only in DVP Enterprise Edition.
 
 ## Layer 2 mode
 

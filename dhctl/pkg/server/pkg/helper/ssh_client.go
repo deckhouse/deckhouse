@@ -15,22 +15,24 @@
 package helper
 
 import (
+	"context"
 	"fmt"
-	"reflect"
 	"strings"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
+func CreateSSHClient(ctx context.Context, config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -60,11 +62,13 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 			sshHosts = append(sshHosts, session.Host{Host: h.Host, Name: h.Host})
 		}
 	} else {
-		mastersIPs, err := bootstrap.GetMasterHostsIPs()
+		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 		if err != nil {
 			return nil, cleanuper.AsFunc(), err
 		}
-		sshHosts = mastersIPs
+		if len(mastersIPs) > 0 {
+			sshHosts = mastersIPs
+		}
 	}
 
 	sess := session.NewSession(session.Input{
@@ -86,16 +90,13 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHHosts = sshHosts
 	app.SSHPort = util.PortToString(config.SSHConfig.SSHPort)
 	app.SSHExtraArgs = config.SSHConfig.SSHExtraArgs
+	app.SSHLegacyMode = config.SSHConfig.LegacyMode
+	app.SSHModernMode = config.SSHConfig.ModernMode
 
-	var sshClient node.SSHClient
-	if app.SSHLegacyMode {
-		sshClient = clissh.NewClient(sess, keys)
-	} else {
-		sshClient = gossh.NewClient(sess, keys)
-	}
+	sshClient := sshclient.NewClient(ctx, sess, keys)
 
 	cleanuper.Add(func() error {
-		if sshClient != nil && !reflect.ValueOf(sshClient).IsNil() {
+		if !govalue.IsNil(sshClient) {
 			sshClient.Stop()
 		}
 		return nil

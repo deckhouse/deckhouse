@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,13 +78,22 @@ func installBasePKIfiles() error {
 func renewCertificates() error {
 	log.Info("phase: renew certificates")
 	components := make(map[string]string, 7)
-	components["apiserver"] = "apiserver"
-	components["apiserver-kubelet-client"] = "apiserver-kubelet-client"
-	components["apiserver-etcd-client"] = "apiserver-etcd-client"
-	components["front-proxy-client"] = "front-proxy-client"
-	components["etcd-server"] = "etcd/server"
-	components["etcd-peer"] = "etcd/peer"
-	components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
+	
+	if config.EtcdArbiter {
+		components["etcd-server"] = "etcd/server"
+		components["etcd-peer"] = "etcd/peer"
+		components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
+		log.Info("ETCD_ARBITER mode: renewing only etcd certificates")
+	} else {
+		components["apiserver"] = "apiserver"
+		components["apiserver-kubelet-client"] = "apiserver-kubelet-client"
+		components["apiserver-etcd-client"] = "apiserver-etcd-client"
+		components["front-proxy-client"] = "front-proxy-client"
+		components["etcd-server"] = "etcd/server"
+		components["etcd-peer"] = "etcd/peer"
+		components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
+	}
+	
 	for k, v := range components {
 		if err := renewCertificate(k, v); err != nil {
 			return err
@@ -246,6 +256,14 @@ func prepareCerts(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
+
+	log.Info("run kubeadm",
+		slog.String("phase", "prepare-certs"),
+		slog.String("component", componentName),
+		slog.Any("args", args),
+		slog.Bool("temp_rootfs", isTemp),
+	)
+
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {

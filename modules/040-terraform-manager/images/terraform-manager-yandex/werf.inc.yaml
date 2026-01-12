@@ -8,6 +8,8 @@ import:
   add: /terraform-provider-yandex
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
   before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -48,7 +50,7 @@ shell:
   install:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
-  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}"
-  - mv /go/bin/terraform-provider-yandex /terraform-provider-yandex
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags '-static' -X github.com/yandex-cloud/terraform-provider-yandex/version.ProviderVersion={{ .TF.yandex.version }}" -o /terraform-provider-yandex .
+  - strip /terraform-provider-yandex
   - chmod -R 755 /terraform-provider-yandex
   - chown 64535:64535 /terraform-provider-yandex

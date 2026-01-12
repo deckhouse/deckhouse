@@ -32,6 +32,19 @@
     - .namespace
     - values_matrix_test.yaml
     - .build.yaml
+- add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
+  to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   excludePaths:
@@ -60,6 +73,19 @@
     - .build.yaml
 - add: /ee/se-plus/modules/015-admission-policy-engine/templates/ratify
   to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
+- add: /ee/se-plus/modules/015-admission-policy-engine/crds/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/crds/ratify
   excludePaths:
     - docs
     - README.md
@@ -215,19 +241,6 @@
     - .build.yaml
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
-  to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
   excludePaths:
     - docs
     - README.md
@@ -527,19 +540,6 @@
     - .build.yaml
 - add: /ee/modules/450-network-gateway
   to: /deckhouse/modules/450-network-gateway
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - hooks/**/*.go
-    - hooks/*.go
-    - hack
-    - template_tests
-    - .namespace
-    - values_matrix_test.yaml
-    - .build.yaml
-- add: /ee/modules/500-operator-trivy
-  to: /deckhouse/modules/500-operator-trivy
   excludePaths:
     - docs
     - README.md

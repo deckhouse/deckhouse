@@ -64,7 +64,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   setup:
   - cd /src
-  - go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o bin/azure-cloud-controller-manager ./cmd/cloud-controller-manager
   - chown 64535:64535 /src/bin/azure-cloud-controller-manager
   - chmod 0755 /src/bin/azure-cloud-controller-manager
   {{- end }}

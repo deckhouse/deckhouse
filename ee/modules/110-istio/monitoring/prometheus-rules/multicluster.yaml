@@ -75,3 +75,4 @@
           - The remote API endpoint is not reachable.
           - The remote ServiceAccount token is invalid or expired.
           - There is a TLS or certificate issue between the clusters.
+          - Remote and local Istio versions mismatch.

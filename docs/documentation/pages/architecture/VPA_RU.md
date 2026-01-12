@@ -2,6 +2,7 @@
 title: "Вертикальное масштабирование"
 permalink: ru/architecture/vpa.html
 lang: ru
+search: autoscaler architecture, архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов
 ---
 
 ## Ограничения VPA

@@ -18,7 +18,7 @@ spec:
       insecureSkipVerify: true
     path: "/federate"
     relabelings:
-    - regex: endpoint|namespace
+    - regex: endpoint
       action: labeldrop
     - sourceLabels: [__meta_kubernetes_pod_ready]
       regex: "true"

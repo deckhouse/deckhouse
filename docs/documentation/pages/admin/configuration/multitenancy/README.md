@@ -2,7 +2,6 @@
 title: Multitenancy
 permalink: en/admin/multitenancy.html
 description: Multitenancy
-lang: en
 ---
 
 Multitenancy is the ability to create isolated environments (projects) within a Kubernetes cluster.
@@ -29,10 +28,10 @@ Using projects helps address these limitations and offers the following benefits
   allowing developers to deploy and test their applications without affecting others.
 
 {% alert level="warning" %}
-[Secret copying](modules/secret-copier) across all namespaces is incompatible with projects in multitenancy mode.
+[Secret copying](/modules/secret-copier/) across all namespaces is incompatible with projects in multitenancy mode.
 
 This mode creates isolated environments for users within their projects,
-while `secret-copier` automatically distributes secrets to all namespaces.
+while [`secret-copier`](/modules/secret-copier/) automatically distributes secrets to all namespaces.
 If sensitive data is present in a user’s private environment,
 it could lead to a data leak and a security model breach.
 {% endalert %}
@@ -112,12 +111,12 @@ To create a custom template:
 
 ## Creating a project
 
-To create a project, use the [Project](cr.html#project) custom resource
-and specify the template name in the [`.spec.projectTemplateName`](cr.html#project-v1alpha2-spec-projecttemplatename) field.
+To create a project, use the [Project](/modules/multitenancy-manager/cr.html#project) custom resource
+and specify the template name in the [`.spec.projectTemplateName`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-projecttemplatename) field.
 
-Parameter values are set in the [`.spec.parameters`](cr.html#project-v1alpha2-spec-parameters) field,
-which corresponds to the [`.spec.parametersSchema.openAPIV3Schema`](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the ProjectTemplate resource.
+Parameter values are set in the [`.spec.parameters`](/modules/multitenancy-manager/cr.html#project-v1alpha2-spec-parameters) field,
+which corresponds to the [`.spec.parametersSchema.openAPIV3Schema`](/modules/multitenancy-manager/cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema) section of the ProjectTemplate resource.
 
 You can also automatically create a project from an existing namespace in the cluster.
 
-For details on creating projects, refer to the [Usage section](../user/multitenancy.html).
+For details on creating projects, refer to the [Usage section](../user/multitenancy/).

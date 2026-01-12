@@ -33,6 +33,8 @@ spec:
             * Ingress resource, configured to receive requests on `https://<applicationDomain>/dex-authenticator` and send it to a service side;
             * Secrets, needed to access Dex.
 
+            **Warning.** DexAuthenticator only works with HTTPS. The application Ingress must have TLS configured.
+
             **Warning.** After restarting a pod with an OAuth2-Proxy, the current Access Token and ID Token will be queried (using the refresh token) and stored in a Redis memory.
           x-doc-examples:
             - apiVersion: deckhouse.io/v1
@@ -71,7 +73,7 @@ spec:
                   description: |-
                     An address for the application (DNS domain for Ingress resource) from which the user request will be redirected for authentication in Dex.
 
-                    **Warning.** Must be specified without HTTP scheme.
+                    > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                   x-doc-examples: ['my-app.domain.com']
                   pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                 sendAuthorizationHeader:
@@ -187,6 +189,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.' 
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory)'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
                 additionalApplications:
                   type: array
                   description: |
@@ -202,7 +254,7 @@ spec:
                         description: |-
                           An application domain from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
@@ -260,7 +312,7 @@ spec:
                         description: |-
                           An application domain (for Ingress resources) from which the user request will be redirected for authentication in Dex.
 
-                          **Warning.** Must be specified without HTTP scheme.
+                          > **Warning.** Specify a DNS name that complies with RFC 1123 (subdomain) and does not include an HTTP scheme. IP addresses are not allowed.
                         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
                       ingressSecretName:
                         type: string
@@ -373,6 +425,56 @@ spec:
 
                     When this mode is enabled, multiple pod replicas will be deployed to ensure fault tolerance.
                   x-doc-default: 'false'
+                resources:
+                  type: object
+                  description: |-
+                    Container resources (CPU/memory) — requests/limits.
+
+                    If this field is set, the specified values are applied and VPA is disabled for this instance. If the field is not set, behavior remains the same: when the VPA module is enabled, resources are managed by VPA, when it is disabled, default values are used.
+
+                    Resources can be specified either directly for the `dex-authenticator` container (for backward compatibility) or in nested objects — separately for each container.
+                  properties:
+                    limits:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Upper limit of resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    requests:
+                      type: object
+                      additionalProperties:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                        x-kubernetes-int-or-string: true
+                      description: 'Guaranteed minimum resources for the `dex-authenticator` container (CPU/memory). This field is kept for backward compatibility.'
+                    redis:
+                      type: object
+                      description: |-
+                        Resources of the `redis` container (CPU/memory) — requests/limits.
+                      properties:
+                        limits:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Upper limit of resources for the `redis` container (CPU/memory).'
+                        requests:
+                          type: object
+                          additionalProperties:
+                            anyOf:
+                            - type: integer
+                            - type: string
+                            pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                            x-kubernetes-int-or-string: true
+                          description: 'Guaranteed minimum resources for the `redis` container (CPU/memory).'
       additionalPrinterColumns:
         - jsonPath: .spec.applications[*].domain
           name: Domains

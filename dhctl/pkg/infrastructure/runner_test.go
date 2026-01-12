@@ -17,13 +17,13 @@ package infrastructure
 import (
 	"context"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -40,27 +40,29 @@ func metaConfigForTesting(provider, prefix, layout string) *config.MetaConfig {
 	return &cfg
 }
 
-func newTestRunner(provider ExecutorProvider) *Runner {
-	return NewRunner(metaConfigForTesting("test-provider", "test-prefix", "test-layout"), "test-step", &cache.DummyCache{}, provider)
+func newTestRunner(executor Executor) *Runner {
+	return NewRunner(metaConfigForTesting("test-provider", "test-prefix", "test-layout"), &cache.DummyCache{}, executor)
 }
 
 func TestCheckPlanDestructiveChanges(t *testing.T) {
 	tests := []struct {
 		name    string
 		plan    string
-		changes *DestructiveChangesReport
+		changes *destructiveChangesReport
 		err     error
+		vm      string
 	}{
 		{
 			name:    "Empty Changes",
 			plan:    "./mocks/checkplan/empty.json",
-			changes:  &DestructiveChangesReport{Changes:(*PlanDestructiveChanges)(nil), hasMasterDestruction:false},
+			changes: &destructiveChangesReport{changes: (*plan.DestructiveChanges)(nil), hasVMChanges: false},
 			err:     nil,
 		},
 		{
 			name:    "Has destructive changes",
 			plan:    "./mocks/checkplan/destructively_changed.json",
-			changes: destructiveChangesReport,
+			changes: destructiveChangesReportVar,
+			vm:      "yandex_compute_instance",
 		},
 		{
 			name:    "Has destructive changes but without VM",
@@ -75,12 +77,12 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 			data, err := os.ReadFile(tc.plan)
 			require.NoError(t, err)
 
-			runner := newTestRunner(func(_ string, _ log.Logger) Executor {
-				return &fakeExecutor{showResp: fakeResponse{
-					resp: data,
-					err:  nil,
-					code: 0,
-				}}
+			runner := newTestRunner(&fakeExecutor{showResp: fakeResponse{
+				resp: data,
+				err:  nil,
+				code: 0,
+			},
+				VMResource: tc.vm,
 			})
 
 			changes, err := runner.getPlanDestructiveChanges(context.Background(), "")
@@ -96,10 +98,8 @@ func TestCheckPlanDestructiveChanges(t *testing.T) {
 }
 
 func newTestRunnerWithChanges() *Runner {
-	r := NewRunner(metaConfigForTesting("a", "b", "c"), "d", &cache.DummyCache{}, func(_ string, _ log.Logger) Executor {
-		return &fakeExecutor{data: map[string]fakeResponse{}}
-	})
-	r.changesInPlan = PlanHasChanges
+	r := NewRunner(metaConfigForTesting("a", "b", "c"), &cache.DummyCache{}, &fakeExecutor{data: map[string]fakeResponse{}})
+	r.changesInPlan = plan.HasChanges
 	return r
 }
 
@@ -130,9 +130,7 @@ func TestRunnerCreatesStateSaver(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			runner := NewRunner(metaConfigForTesting("a", "b", "c"), "d", tc.cache, func(_ string, _ log.Logger) Executor {
-				return &fakeExecutor{data: map[string]fakeResponse{}}
-			})
+			runner := NewRunner(metaConfigForTesting("a", "b", "c"), tc.cache, &fakeExecutor{data: map[string]fakeResponse{}})
 			require.NotNil(t, runner)
 			require.NotNil(t, runner.stateSaver)
 			require.Len(t, runner.stateSaver.saversDestinations, tc.destinations)
@@ -200,7 +198,19 @@ type sleepExecutor struct {
 	cancelCh chan struct{}
 }
 
-func (e *sleepExecutor) Init(ctx context.Context, pluginsDir string) error {
+func (e *sleepExecutor) IsVMChange(rc plan.ResourceChange) bool {
+	return false
+}
+
+func (e *sleepExecutor) GetStatesDir() string {
+	return ""
+}
+
+func (e *sleepExecutor) Step() Step {
+	return ""
+}
+
+func (e *sleepExecutor) Init(ctx context.Context) error {
 	return nil
 }
 
@@ -234,6 +244,12 @@ func (e *sleepExecutor) Show(ctx context.Context, planPath string) (result []byt
 	return nil, nil
 }
 
+func (e *sleepExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+	e.logger.LogWarnLn("Call GetActions on dummy executor")
+
+	return nil, nil
+}
+
 func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
 	e.logger = logger
 }
@@ -248,9 +264,7 @@ func TestConcurrentExec(t *testing.T) {
 	exec := sleepExecutor{cancelCh: make(chan struct{})}
 	defer exec.Stop()
 
-	runner := newTestRunner(func(_ string, _ log.Logger) Executor {
-		return &exec
-	})
+	runner := newTestRunner(&exec)
 
 	go func() {
 		_, _ = runner.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
@@ -258,7 +272,7 @@ func TestConcurrentExec(t *testing.T) {
 		})
 	}()
 
-	runtime.Gosched()
+	time.Sleep(500 * time.Millisecond)
 	_, err := runner.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		return exec.Plan(ctx, PlanOpts{})
 	})
@@ -266,9 +280,9 @@ func TestConcurrentExec(t *testing.T) {
 	require.Equal(t, "Infrastructure utility have been already executed.", err.Error())
 }
 
-var destructivelyChanged = &PlanDestructiveChanges{
+var destructivelyChanged = &plan.DestructiveChanges{
 	ResourcesDeleted: nil,
-	ResourcesRecreated: []ValueChange{
+	ResourcesRecreated: []plan.ValueChange{
 		{
 			CurrentValue: map[string]any{
 				"allow_stopping_for_update": true,
@@ -323,15 +337,14 @@ var destructivelyChanged = &PlanDestructiveChanges{
 	},
 }
 
+var destructiveChangesReportVar = &destructiveChangesReport{changes: destructivelyChanged, hasVMChanges: true}
 
-var destructiveChangesReport = &DestructiveChangesReport{Changes: destructivelyChanged, hasMasterDestruction: true}
-
-var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
+var destructivelyChangedWithoutVM = &plan.DestructiveChanges{
 	ResourcesDeleted: nil,
-	ResourcesRecreated: []ValueChange{
+	ResourcesRecreated: []plan.ValueChange{
 		{
 			CurrentValue: map[string]any{
-				"created_at": "2021-02-26T09:41:43Z",
+				"created_at":  "2021-02-26T09:41:43Z",
 				"description": "",
 				"external_ipv4_address": []any{
 					map[string]any{
@@ -362,42 +375,7 @@ var destructivelyChangedWithoutVM = &PlanDestructiveChanges{
 	Provider: "",
 }
 
-var destructiveChangesReportWithoutVM = &DestructiveChangesReport{
-	Changes:              destructivelyChangedWithoutVM,
-	hasMasterDestruction: false,
-}
-
-func TestNeedToUseOpentofu(t *testing.T) {
-	metaConfig := &config.MetaConfig{}
-
-	metaConfig.ProviderName = "Yandex"
-	require.True(t, NeedToUseOpentofu(metaConfig))
-
-	notTofuProviders := []string{
-		"OpenStack",
-		"AWS",
-		"GCP",
-		"vSphere",
-		"Azure",
-		"VCD",
-		"Huaweicloud",
-	}
-
-	for _, provider := range notTofuProviders {
-		conf := &config.MetaConfig{}
-		conf.ProviderName = provider
-
-		require.False(t, NeedToUseOpentofu(conf))
-	}
-}
-
-func TestGetCloudsUseOpentofu(t *testing.T) {
-	m, err := getCloudNameToUseOpentofuMap(config.InfrastructureVersions)
-	require.NoError(t, err)
-
-	require.Len(t, m, 4)
-	require.Contains(t, m, "yandex")
-	require.Contains(t, m, "dynamix")
-	require.Contains(t, m, "zvirt")
-	require.Contains(t, m, "dvp")
+var destructiveChangesReportWithoutVM = &destructiveChangesReport{
+	changes:      destructivelyChangedWithoutVM,
+	hasVMChanges: false,
 }

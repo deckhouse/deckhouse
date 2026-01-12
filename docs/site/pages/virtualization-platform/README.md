@@ -12,7 +12,6 @@ The documentation includes the following sections:
 - [Getting started](/products/virtualization-platform/gs/bm/) — step-by-step instructions for installing the standard configuration of the platform.
 - [Administration guide](/products/virtualization-platform/documentation/admin/overview.html) — information on the requirements, installation procedures, and configuration of the platform subsystems, as well as information for creating user projects and organizing access.
 - [User guide](/products/virtualization-platform/documentation/user/overview.html) — information on managing user resources for projects (virtual machines, disks, images, etc.).
-- [Reference](/products/virtualization-platform/reference/mc.html) - reference information about command line utilities and resources provided by the platform for use.
 
 If you have any questions, feel free to contact us via [our Telegram channel](https://t.me/deckhouse).
 We will do our best to help you.

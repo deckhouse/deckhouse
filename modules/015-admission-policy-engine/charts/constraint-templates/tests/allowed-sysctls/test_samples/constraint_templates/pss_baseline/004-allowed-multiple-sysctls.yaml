@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-multiple-sysctls
+  namespace: testns
+spec:
+  securityContext:
+    sysctls:
+    - name: kernel.shm_rmid_forced
+      value: "1"
+    - name: net.ipv4.tcp_syncookies
+      value: "1"
+    - name: net.ipv4.ip_local_port_range
+      value: "1024 65535"
+

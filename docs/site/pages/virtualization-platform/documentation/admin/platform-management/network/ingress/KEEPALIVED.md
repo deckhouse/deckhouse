@@ -4,7 +4,7 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/ne
 ---
 
 In Deckhouse Virtualization Platform,
-the [`keepalived`](/products/kubernetes-platform/documentation/v1/modules/keepalived/) module can be used to provide high availability and fault tolerance.
+the [`keepalived`](/modules/keepalived/) module can be used to provide high availability and fault tolerance.
 
 To configure keepalived clusters, custom resources are used.
 

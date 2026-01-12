@@ -8,6 +8,8 @@ import:
   add: /terraform-provider-openstack
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "openstack") }}/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -51,5 +53,6 @@ shell:
   - make fmt
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X github.com/terraform-provider-openstack/terraform-provider-openstack/version.ProviderVersion={{ .TF.openstack.version }}"
   - mv /go/bin/terraform-provider-openstack /terraform-provider-openstack
+  - strip /terraform-provider-openstack
   - chmod -R 755 /terraform-provider-openstack
   - chown 64535:64535 /terraform-provider-openstack

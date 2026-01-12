@@ -32,8 +32,8 @@ type NodeGroupInfrastructureController struct {
 	nodeGroupName         string
 }
 
-func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte, infrastructureContext *infrastructure.Context) (*NodeGroupInfrastructureController, error) {
-	ngMetaConfig, err := getNgMetaConfig(clusterMetaConfig, settings)
+func NewNodesController(ctx context.Context, clusterMetaConfig *config.MetaConfig, stateCache state.Cache, nodeGroupName string, settings []byte, infrastructureContext *infrastructure.Context) (*NodeGroupInfrastructureController, error) {
+	ngMetaConfig, err := getNgMetaConfig(ctx, clusterMetaConfig, settings)
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +46,9 @@ func NewNodesController(clusterMetaConfig *config.MetaConfig, stateCache state.C
 	}, nil
 }
 
-func getNgMetaConfig(clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
-	cfg, err := clusterMetaConfig.DeepCopy().Prepare()
+func getNgMetaConfig(ctx context.Context, clusterMetaConfig *config.MetaConfig, settings []byte) (*config.MetaConfig, error) {
+	// we use dummy preparator because metaConfig was prepared early
+	cfg, err := clusterMetaConfig.DeepCopy().Prepare(ctx, config.DummyPreparatorProvider())
 	if err != nil {
 		return nil, fmt.Errorf("unable to prepare copied config: %v", err)
 	}
@@ -69,26 +70,24 @@ func (r *NodeGroupInfrastructureController) DestroyNode(ctx context.Context, nam
 		return err
 	}
 
-	step := "static-node"
-	if r.nodeGroupName == "master" {
-		step = "master-node"
-	}
-
 	nodeIndex, err := config.GetIndexFromNodeName(name)
 	if err != nil {
 		log.ErrorF("can't extract index from infrastructure state secret (%v), skip %s\n", err, name)
 		return nil
 	}
 
-	nodeRunner := r.infrastructureContext.GetDestroyNodeRunner(r.metaConfig, r.stateCache, infrastructure.DestroyNodeRunnerOptions{
+	nodeRunner, err := r.infrastructureContext.GetDestroyNodeRunner(ctx, r.metaConfig, r.stateCache, infrastructure.DestroyNodeRunnerOptions{
 		AutoApproveSettings: infrastructure.AutoApproveSettings{
 			AutoApprove: autoApprove,
 		},
 		NodeName:      name,
 		NodeGroupName: r.nodeGroupName,
-		NodeGroupStep: step,
+		NodeGroupStep: infrastructure.GetStepByNodeGroupName(r.nodeGroupName),
 		NodeIndex:     nodeIndex,
 	})
+	if err != nil {
+		return err
+	}
 
 	if err := infrastructure.DestroyPipeline(ctx, nodeRunner, name); err != nil {
 		return fmt.Errorf("destroing of node %s failed: %v", name, err)

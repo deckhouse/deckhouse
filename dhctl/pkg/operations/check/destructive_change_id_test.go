@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 )
 
 func TestDestructiveChangeID(t *testing.T) {
@@ -59,8 +60,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
-							ResourcesDeleted: []infrastructure.ValueChange{
+						DestructiveChanges: &plan.DestructiveChanges{
+							ResourcesDeleted: []plan.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -85,8 +86,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
-							ResourcesRecreated: []infrastructure.ValueChange{
+						DestructiveChanges: &plan.DestructiveChanges{
+							ResourcesRecreated: []plan.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -122,7 +123,7 @@ func TestDestructiveChangeID(t *testing.T) {
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
 					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
-						OutputZonesChanged: infrastructure.ValueChange{
+						OutputZonesChanged: plan.ValueChange{
 							NextValue: map[string]any{
 								"type": "some_type",
 								"name": "some_name",
@@ -139,8 +140,8 @@ func TestDestructiveChangeID(t *testing.T) {
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
 					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
-						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
-							ResourcesDeleted: []infrastructure.ValueChange{
+						DestructiveChanges: plan.DestructiveChanges{
+							ResourcesDeleted: []plan.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -160,8 +161,8 @@ func TestDestructiveChangeID(t *testing.T) {
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
 					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
-						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
-							ResourcesRecreated: []infrastructure.ValueChange{
+						DestructiveChanges: plan.DestructiveChanges{
+							ResourcesRecreated: []plan.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -182,8 +183,8 @@ func TestDestructiveChangeID(t *testing.T) {
 						Group:  "master",
 						Name:   "kube-master-0",
 						Status: DestructiveStatus,
-						DestructiveChanges: &infrastructure.PlanDestructiveChanges{
-							ResourcesDeleted: []infrastructure.ValueChange{
+						DestructiveChanges: &plan.DestructiveChanges{
+							ResourcesDeleted: []plan.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -199,7 +200,7 @@ func TestDestructiveChangeID(t *testing.T) {
 									},
 								},
 							},
-							ResourcesRecreated: []infrastructure.ValueChange{
+							ResourcesRecreated: []plan.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",
@@ -221,14 +222,14 @@ func TestDestructiveChangeID(t *testing.T) {
 				Cluster: ClusterCheckResult{
 					Status: DestructiveStatus,
 					DestructiveChanges: &infrastructure.BaseInfrastructureDestructiveChanges{
-						OutputZonesChanged: infrastructure.ValueChange{
+						OutputZonesChanged: plan.ValueChange{
 							NextValue: map[string]any{
 								"type": "some_type",
 								"name": "some_name",
 							},
 						},
-						PlanDestructiveChanges: infrastructure.PlanDestructiveChanges{
-							ResourcesDeleted: []infrastructure.ValueChange{
+						DestructiveChanges: plan.DestructiveChanges{
+							ResourcesDeleted: []plan.ValueChange{
 								{
 									CurrentValue: map[string]any{
 										"type": "some_type",
@@ -242,7 +243,7 @@ func TestDestructiveChangeID(t *testing.T) {
 									},
 								},
 							},
-							ResourcesRecreated: []infrastructure.ValueChange{
+							ResourcesRecreated: []plan.ValueChange{
 								{
 									NextValue: map[string]any{
 										"type": "some_type",

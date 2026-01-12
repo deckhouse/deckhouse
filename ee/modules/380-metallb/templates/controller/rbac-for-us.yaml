@@ -103,11 +103,9 @@ rules:
   - apiGroups:
       - metallb.io
     resources:
-      - addresspools
+      - ipaddresspools/status
     verbs:
-      - get
-      - list
-      - watch
+      - update
   - apiGroups:
       - metallb.io
     resources:

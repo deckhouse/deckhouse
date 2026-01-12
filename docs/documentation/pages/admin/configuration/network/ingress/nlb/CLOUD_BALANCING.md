@@ -1,6 +1,7 @@
 ---
 title: "Balancing in clusters on cloud platforms"
 permalink: en/admin/configuration/network/ingress/nlb/cloud-balancing.html
+description: "Configure load balancing in cloud clusters for Deckhouse Kubernetes Platform. AWS, GCP, Azure load balancer integration and cloud-native load balancing setup."
 ---
 
 A list of supported providers:
@@ -58,4 +59,23 @@ spec:
   selector:
     app: lab-4-backend
   type: ClusterIP
+```
+
+### Example for VK Cloud
+
+The following example is relevant when the internal balancer would be used.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  nodeSelector:
+    node.deckhouse.io/group: worker
 ```

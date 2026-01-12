@@ -16,6 +16,7 @@ spec:
   - bearerTokenSecret:
       key: token
       name: prometheus-token
+    honorLabels: true
     metricRelabelings:
     - action: labeldrop
       regex: ingress_class
@@ -23,7 +24,7 @@ spec:
     port: https-metrics
     relabelings:
     - action: labeldrop
-      regex: endpoint|namespace|pod|container
+      regex: endpoint|pod|container
     - replacement: nginx-ingress-controller
       targetLabel: job
     - sourceLabels:
@@ -46,11 +47,12 @@ spec:
   - bearerTokenSecret:
       key: token
       name: prometheus-token
+    honorLabels: true
     path: /protobuf/metrics
     port: https-metrics
     relabelings:
     - action: labeldrop
-      regex: endpoint|namespace|pod|container
+      regex: endpoint|pod|container
     - replacement: nginx-ingress-controller
       targetLabel: job
     - sourceLabels:

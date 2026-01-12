@@ -82,6 +82,11 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 		BeforeEach(func() {
 			hec.ValuesSet("userAuthn.publishAPI.https.mode", "Global")
 			hec.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			hec.ValuesSetFromYaml("userAuthn.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+
 			hec.HelmRender()
 		})
 
@@ -120,6 +125,40 @@ var _ = Describe("Module :: user-authn :: helm template :: publish api", func() 
 			Expect(certificate.Field("spec.issuerRef.kind").String()).To(Equal("ClusterIssuer"))
 			Expect(certificate.Field("spec.issuerRef.name").String()).To(Equal("route53"))
 			Expect(hec.KubernetesResource("Secret", "d8-user-authn", "kubernetes-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("With LDAP provider with enableBasicAuth option", func() {
+		BeforeEach(func() {
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyCert", "dGVzdA==")
+			hec.ValuesSet("userAuthn.internal.basicAuthProxyKey", "dGVzdA==")
+			hec.ValuesSetFromYaml("userAuthn.internal.providers", `
+- id: ldapID
+  displayName: ldapDisplay
+  type: LDAP
+  ldap:
+    enableBasicAuth: true
+    host: ldap.example.com:636
+    userSearch:
+      baseDN: cn=users,dc=example,dc=com
+      username: uid
+      idAttr: uid
+      emailAttr: mail
+    groupSearch:
+      baseDN: cn=groups,dc=example,dc=com
+      userMatchers:
+      - userAttr: uid
+        groupAttr: member
+      nameAttr: name
+`)
+			hec.HelmRender()
+		})
+
+		It("Should deploy basic auth proxy deployment and ingress for LDAP", func() {
+			Expect(hec.RenderError).ToNot(HaveOccurred())
+
+			Expect(hec.KubernetesResource("Deployment", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
+			Expect(hec.KubernetesResource("Ingress", "d8-user-authn", "basic-auth-proxy").Exists()).To(BeTrue())
 		})
 	})
 

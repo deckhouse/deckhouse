@@ -38,7 +38,7 @@ on:
 jobs:
   start_release_build_workflow:
     name: Start build for release
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     steps:
 {!{ tmpl.Exec "checkout_step" . | strings.Indent 6 }!}
       - name: Find latest milestone and issue

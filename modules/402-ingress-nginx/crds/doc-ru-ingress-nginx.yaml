@@ -8,7 +8,7 @@ spec:
               properties:
                 ingressClass:
                   description: |
-                    Имя Ingress-класса для обслуживания NGINX Ingress controller.
+                    Имя Ingress-класса для обслуживания Ingress NGINX Controller.
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
@@ -37,7 +37,7 @@ spec:
                       > **Внимание.** Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
                 controllerVersion:
                   description: |
-                    Версия NGINX Ingress controller.
+                    Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
                 enableIstioSidecar:
@@ -292,7 +292,7 @@ spec:
                   description: |
                     Секция с настройкой кастомизации HTTP-ошибок.
 
-                    Если секция определена, все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех NGINX Ingress controller'ов**.
+                    Если секция определена, все параметры в ней являются обязательными, изменение любого параметра **приводит к перезапуску всех Ingress-контроллеров**.
                   properties:
                     serviceName:
                       description: |
@@ -324,7 +324,7 @@ spec:
 
                     По умолчанию используется самоподписанный сертификат.
 
-                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate).
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Для указания сертификата, который будет использоваться в Ingress-ресурсах модулей Deckhouse, используйте глобальный параметр [modules.https.customCertificate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
                   properties:
                     secretRef:
                       description: |
@@ -358,7 +358,7 @@ spec:
               properties:
                 ingressClass:
                   description: |
-                    Имя Ingress-класса для обслуживания NGINX Ingress Controller.
+                    Имя Ingress-класса для обслуживания Ingress NGINX Controller.
 
                     Позволяет создать несколько контроллеров для обслуживания одного Ingress-класса.
 
@@ -371,6 +371,7 @@ spec:
 
                     * `LoadBalancer` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`;
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Ingress-контроллер использует proxy-protocol для получения настоящего IP-адреса клиента;
+                      > **Важно.** HTTP/3 (`enableHTTP3`) нельзя включать с этим инлетом, так как QUIC несовместим с PROXY protocol.
                     * `LoadBalancerWithSSLPassthrough` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
 
                       > Функция SSL Passthrough реализована путем перехвата всего трафика на настроенном HTTPS-порту (по умолчанию: `443`) и передачи его локальному TCP-прокси. Это полностью обходит NGINX и приводит к существенному снижению производительности.
@@ -387,6 +388,8 @@ spec:
                     * `HostPortWithProxyProtocol` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
 
                       > **Важно.** Перед использованием этого инлета убедитесь, что запросы к Ingress будут направляться только от доверенных источников. Для настройки ограничений воспользуйтесь параметром `acceptRequestsFrom`.
+                      >
+                      > **Важно.** HTTP/3 (`enableHTTP3`) нельзя включать с этим инлетом, так как QUIC несовместим с PROXY protocol.
 
                     * `HostPortWithSSLPassthrough` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
 
@@ -411,9 +414,11 @@ spec:
                       > Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
                       >
                       > Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
+                      >
+                      > **Замечание.** При включении HTTP/3 (`enableHTTP3`) он применяется только к основному контроллеру; резервный контроллер всегда работает без HTTP/3.
                 controllerVersion:
                   description: |
-                    Версия NGINX Ingress Controller.
+                    Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
                 enableIstioSidecar:
@@ -491,6 +496,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включении `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithProxyProtocol:
                   description: |
                     Секция настроек инлета `LoadBalancerWithProxyProtocol`.
@@ -515,6 +523,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
@@ -567,6 +578,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включенной опции `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithProxyProtocol:
                   description: |
                     Секция настроек инлета `HostPortWithProxyProtocol`.
@@ -586,6 +600,9 @@ spec:
                         Если параметр не указан, подключение по HTTPS невозможно.
 
                         > Параметр обязателен в случае, если не задан `httpPort`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `HostPortWithSSLPassthrough`.
@@ -637,6 +654,29 @@ spec:
                   description: |
                     Опции для включения GeoIP2.
                   properties:
+                    maxmindMirror:
+                      description: |
+                        Настройки зеркала для скачивания баз GeoIP. 
+                        Если параметр не указан или имеет пустое значение, то по умолчанию будет использоваться `https://download.maxmind.com`.
+
+                        Пример корректного URL: https://mirror.local/GeoLite2-City.tar.gz.
+
+                        Если зеркало используется для хранения предзагруженных архивов, параметр `licenseKey` можно не указывать.
+                      properties:
+                        url:
+                          description: URL для скачивания баз GeoIP.
+                        ca:
+                          description: |
+                            Пользовательский корневой сертификат в формате PEM для проверки TLS-соединения с зеркалом.
+                        insecureSkipVerify:
+                          description: |
+                            Отключает проверку TLS сертификатов зеркала, например, если используется самоподписанный сертификат.
+                    maxmindAccountID:
+                      minimum: 1
+                      description: |
+                        Идентификатор учетной записи MaxMind, используемый для аутентификации загрузки базы данных GeoIP2.
+
+                        Требуется, когда указан `maxmindLicenseKey`. Если задан `maxmindAccountID`, загрузка выполняется официальной библиотекой `geoipupdate`, что позволяет пропускать неизменённые обновления и экономить лимит лицензии.
                     maxmindLicenseKey:
                       description: |
                         Лицензионный ключ для скачивания базы данных GeoIP2.
@@ -663,7 +703,11 @@ spec:
                   description: |
                     Включает HTTP/3.
 
-                    > HTTP/3 доступен только в контролере версии 1.10.
+                    > HTTP/3 доступен только в контролере версии 1.10 и 1.12.
+                    >
+                    > HTTP/3 нельзя включить, если выбран инлет `HostPortWithProxyProtocol` или `LoadBalancerWithProxyProtocol`.
+                    >
+                    > В случае инлета `HostWithFailover` HTTP/3 включается только для основного контроллера; резервный контроллер всегда работает без HTTP/3.
                 config:
                   description: |
                     Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).
@@ -761,7 +805,7 @@ spec:
 
                     По умолчанию используется самоподписанный сертификат.
 
-                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Чтобы указать сертификат для Ingress-ресурсов модулей Deckhouse, используйте глобальный параметр [`modules.https.customCertificate`](../../deckhouse-configure-global.html#parameters-modules-https-customcertificate).
+                    > **Внимание.** Параметр не влияет на сертификаты, используемые в Ingress-ресурсах модулей Deckhouse. Чтобы указать сертификат для Ingress-ресурсов модулей Deckhouse, используйте глобальный параметр [`modules.https.customCertificate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate).
                   properties:
                     secretRef:
                       description: |

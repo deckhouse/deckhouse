@@ -2,17 +2,19 @@
 {% assign supported = '<img src="/images/icons/supported_v2.svg">' %}
 
 <div markdown="0">
-<table class="supported_versions fixed-header-table table__small" style="table-layout: fixed">
+<table class="supported_versions fixed-header-table table__small" style="table-layout: fixed; min-width: 600px; width: 100%;">
   <colgroup>
-    <col width="*">
-    <col width="64px">
-    <col width="64px">
+    <col style="width: auto; min-width: 250px; max-width: 400px;">
+    <col style="width: 100px; min-width: 100px;">
+    <col style="width: 100px; min-width: 100px;">
+    <col style="width: 100px; min-width: 100px;">
+    <col style="width: 100px; min-width: 100px;">
   </colgroup>
 <thead class="versioning-table">
   <tr>
-    <th style="text-align: lest; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
+    <th style="text-align: left; white-space: nowrap;">{{site.data.i18n.common['features'][page.lang] }}</th>
     {%- for edition in site.data.virtualization-platform.comparison.editions %}
-    <th style="text-align: center; white-space: nowrap;">{{edition | upcase }}</th>
+    <th style="text-align: center; white-space: nowrap;">{{site.data.i18n[edition]}}</th>
     {%- endfor %}
   </tr>
 </thead>
@@ -20,7 +22,7 @@
 {%- for featureSection in site.data.virtualization-platform.comparison.featureSections %}
   {% if featureSection['title'][page.lang] %}
   <tr>
-    <td style="text-align: left; white-space: nowrap;" colspan="3">
+    <td style="text-align: left; white-space: nowrap;" colspan="5">
       <strong>{{ featureSection['title'][page.lang] }}</strong>
     </td>
   </tr>

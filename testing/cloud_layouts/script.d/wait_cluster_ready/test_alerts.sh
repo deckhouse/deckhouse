@@ -29,6 +29,8 @@ allow_alerts=(
 "ModuleConfigObsoleteVersion" # This alert is informational and should not block e2e tests
 "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
 "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
+"D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
+"LoadAverageHigh" # Pointless, as test servers have minimal resources
 )
 
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts

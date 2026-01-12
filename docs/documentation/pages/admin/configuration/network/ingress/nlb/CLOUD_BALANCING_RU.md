@@ -1,6 +1,7 @@
 ---
 title: "Балансировка в кластерах на облачных платформах"
 permalink: ru/admin/configuration/network/ingress/nlb/cloud-balancing.html
+description: "Настройка балансировки нагрузки в облачных кластерах для платформы Deckhouse Kubernetes Platform. Интеграция с балансировщиками AWS, GCP, Azure и настройка облачной балансировки нагрузки."
 lang: ru
 ---
 
@@ -59,4 +60,23 @@ spec:
   selector:
     app: lab-4-backend
   type: ClusterIP
+```
+
+### Пример создания внутреннего балансировщика для VK Cloud
+
+Этот пример подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  nodeSelector:
+    node.deckhouse.io/group: worker
 ```

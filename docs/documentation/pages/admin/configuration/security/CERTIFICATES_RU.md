@@ -1,7 +1,9 @@
 ---
 title: Управление сертификатами
 permalink: ru/admin/configuration/security/certificates.html
+description: "Управление TLS-сертификатами в Deckhouse Kubernetes Platform с интеграцией Let's Encrypt, HashiCorp Vault и Venafi. Автоматическое обновление, мониторинг и управление жизненным циклом сертификатов."
 lang: ru
+search: certificate management, TLS certificates, SSL certificates, certificate automation, Let's Encrypt, управление сертификатами, TLS сертификаты, SSL сертификаты, автоматизация сертификатов
 ---
 
 Deckhouse Kubernetes Platform (DKP) предоставляет встроенные средства управления TLS-сертификатами в кластере
@@ -66,7 +68,7 @@ DKP экспортирует метрики в Prometheus, что позволя
 ### Добавление ClusterIssuer с валидацией DNS-01 через вебхук
 
 Для подтверждения владения доменом через Let’s Encrypt с помощью метода `DNS-01` необходимо,
-чтобы модуль `cert-manager` мог создавать TXT-записи в зоне DNS, связанной с доменом.
+чтобы [модуль `cert-manager`](/modules/cert-manager/) мог создавать TXT-записи в зоне DNS, связанной с доменом.
 
 У модуля `cert-manager` есть встроенная поддержка популярных DNS-провайдеров,
 таких как AWS Route53, Google Cloud DNS, Cloudflare и других.

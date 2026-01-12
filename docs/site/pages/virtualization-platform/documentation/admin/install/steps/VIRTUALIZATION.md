@@ -4,23 +4,23 @@ permalink: en/virtualization-platform/documentation/admin/install/steps/virtuali
 ---
 
 {% alert level=“info” %}
-To run the commands below, you need to have the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
+To run the commands below, you need to have the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) installed and a configured kubectl context for accessing the cluster. Alternatively, you can connect to the master node via SSH and run the command as the `root` user using `sudo -i`.
 {% endalert %}
 
 After configuring the storage, you need to enable the `virtualization` module. Enabling and configuring the module can be done via the web interface or using the following command:
 
 ```shell
-d8 s module enable virtualization
+d8 system module enable virtualization
 ```
 
 Edit the module configuration using one of the [methods](#virtualization-module-configuration).
 
 Specify the following parameters:
 
-- [settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#parameters-virtualmachinecidrs): Subnets, IP addresses from which virtual machines will be assigned IPs.
-- [settings.dvcr.storage.persistentVolumeClaim.size](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-size): Size of the disk space for storing virtual machine images.
-- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname): The name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used).
-- [settings.dvcr.storage.type](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-type): Specify `PersistentVolumeClaim`.
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs): Subnets, IP addresses from which virtual machines will be assigned IPs.
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size): Size of the disk space for storing virtual machine images.
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname): The name of the StorageClass used to create the PersistentVolumeClaim (if not specified, the default StorageClass will be used).
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type): Specify `PersistentVolumeClaim`.
 
 Example of virtualization module configuration:
 
@@ -107,7 +107,29 @@ The `.spec.settings.dvcr.storage` block configures a persistent volume for stori
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`: StorageClass name (for example, `sds-replicated-thin-r1`).
 
 {% alert level="warning" %}
-The storage serving this storage class (`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter) must be accessible on the nodes where DVCR is running (system nodes, or worker nodes if there are no system nodes).
+Migrating images when changing the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` parameter value is not supported.
+
+When you change the DVCR StorageClass, all images stored in DVCR will be lost.
+{% endalert %}
+
+To change the DVCR StorageClass, perform the following steps:
+
+1. Change the value of the [`.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) parameter.
+
+1. Delete the old PVC for DVCR using the following command:
+
+   ```shell
+   d8 k -n d8-virtualization delete pvc -l app=dvcr
+   ```
+
+1. Restart DVCR by running the following command:
+
+   ```shell
+   d8 k -n d8-virtualization rollout restart deployment dvcr
+   ```
+
+{% alert level="warning" %}
+The storage that serves the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` StorageClass must be accessible from the nodes where DVCR runs (system nodes, or worker nodes if there are no system nodes).
 {% endalert %}
 
 ### Network settings

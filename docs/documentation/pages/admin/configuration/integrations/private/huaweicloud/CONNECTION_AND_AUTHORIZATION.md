@@ -1,6 +1,6 @@
 ---
 title: Connection and authorization
-permalink: en/admin/integrations/private/huaweicloud/huawei-authorization.html
+permalink: en/admin/integrations/private/huaweicloud/authorization.html
 ---
 
 ## Requirements

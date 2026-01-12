@@ -8,13 +8,13 @@ search: добавить ноду в кластер, добавить узел �
 
 ## Как добавить master-узлы в облачном кластере?
 
-Как конвертировать кластер с одним master-узлом в мультикластерный описано [в FAQ модуля control-plane-manager](../control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master).
+Порядок конвертирования кластера с одним master-узлом в мультимастерный кластер описан в [FAQ модуля `control-plane-manager`](/modules/control-plane-manager/faq.html#как-добавить-master-узлы-в-облачном-кластере).
 
 <div id='как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master'></div>
 
 ## Как уменьшить число master-узлов в облачном кластере?
 
-Как конвертировать мультимастерный кластер в кластер с одним master-узлом описано [в FAQ модуля control-plane-manager](../control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере-multi-master-в-single-master).
+Порядок конвертирования мультимастерного кластера в кластер с одним master-узлом описан в [FAQ модуля `control-plane-manager`](/modules/control-plane-manager/faq.html#как-уменьшить-число-master-узлов-в-облачном-кластере).
 
 ## Статические узлы
 
@@ -244,10 +244,14 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 Если на зачищаемом узле есть пулы хранения LINSTOR/DRBD, то предварительно перенесите ресурсы с узла и удалите узел LINSTOR/DRBD, следуя [инструкции](/modules/sds-replicated-volume/stable/faq.html#как-выгнать-ресурсы-с-узла).
 {% endalert %}
 
+### Для всех узлов кроме control-plane
+
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data 
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
    d8 k delete node <node>
    ```
 
@@ -258,6 +262,43 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    ```
 
 1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
+
+### Для узлов control-plane
+
+1. Снимите лейблы `node-role.kubernetes.io/control-plane`, `node-role.kubernetes.io/master` и `node.deckhouse.io/group` с узла:
+
+   ```shell
+   d8 k label node <node> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
+   ```
+
+1. Убедитесь, что удаляемый узел с control-plane пропал из списка членов кластера etcd:
+
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
+
+1. Удалите узел из кластера Kubernetes:
+
+   ```shell
+   d8 k drain <node> 
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
+   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<node> --force 
+   d8 k delete node <node>
+   ```
+
+1. Запустите на узле скрипт очистки:
+
+   ```shell
+   bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+1. После перезагрузки узла [запустите](#как-добавить-статический-узел-в-кластер) скрипт `bootstrap.sh`.
+
+1. Дождитесь прохождения очередей Deckhouse и убедитесь, что член кластера etcd снова появился в списке:
+  
+   ```shell
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key --endpoints https://127.0.0.1:2379/ member list -w table
+   ```
 
 ## Как понять, что что-то пошло не так?
 
@@ -430,7 +471,7 @@ spec:
 
 Подробно о всех параметрах можно прочитать в описании кастомного ресурса [NodeGroup](cr.html#nodegroup).
 
-В случае изменения параметров `InstanceClass` или `instancePrefix` в конфигурации Deckhouse не будет происходить `RollingUpdate`. Deckhouse создаст новые `MachineDeployment`, а старые удалит. Количество заказываемых одновременно `MachineDeployment` определяется параметром `cloudInstances.maxSurgePerZone`.
+При изменении параметров `InstanceClass` или `instancePrefix` будет происходить процесс, аналогичный обновлению Deployment в Kubernetes (при изменении `InstanceClass` будет создан новый MachineSet, а при изменении `instancePrefix` — новый MachineDeployment). Новые инстансы будут создаваться в соответствии со значением [параметра `cloudInstances.maxSurgePerZone`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxsurgeperzone). По мере их создания старые инстансы будут постепенно удаляться с предварительным выполнением операции drain.
 
 При обновлении, которое требует прерывания работы узла (disruption update), выполняется процесс вытеснения подов с узла. Если какой-либо под не может быть вытеснен, попытка повторяется каждые 20 секунд до достижения глобального таймаута в 5 минут. После истечения этого времени, поды, которые не удалось вытеснить, удаляются принудительно.
 
@@ -454,7 +495,7 @@ spec:
 {% alert level="info" %}
 Deckhouse по умолчанию поддерживает использование taint'а с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
-Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в массив [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
+Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в массив [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys). Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
 
 Подробности [в статье на Habr](https://habr.com/ru/company/flant/blog/432748/).
@@ -531,7 +572,7 @@ capiEmergencyBrake: true
 ## Как восстановить master-узел, если kubelet не может загрузить компоненты control plane?
 
 Подобная ситуация может возникнуть, если в кластере с одним master-узлом на нем были удалены образы компонентов control plane (например, удалена директория `/var/lib/containerd`).
-В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.io`.
+В этом случае kubelet при рестарте не сможет скачать образы компонентов `control plane`, поскольку на master-узле нет параметров авторизации в `registry.deckhouse.ru`.
 
 Далее приведена инструкция по восстановлению master-узла.
 
@@ -542,7 +583,7 @@ capiEmergencyBrake: true
 ```shell
 d8 k -n d8-system get secrets deckhouse-registry -o json |
 jq -r '.data.".dockerconfigjson"' | base64 -d |
-jq -r '.auths."registry.deckhouse.io".auth'
+jq -r '.auths."registry.deckhouse.ru".auth'
 ```
 
 Вывод команды нужно скопировать и присвоить переменной `AUTH` на поврежденном master-узле.
@@ -597,6 +638,51 @@ spec:
 {% endalert %}
 
 После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
+
+## Почему изменение CRI могло не примениться?
+
+При попытке сменить CRI изменения могут не вступить в силу. Наиболее частая причина — наличие на узлах специальных меток (лейблов) `node.deckhouse.io/containerd-v2-unsupported` и `node.deckhouse.io/containerd-config=custom`.
+
+Метка `node.deckhouse.io/containerd-v2-unsupported` выставляется, если узел не соответствует хотя бы одному из следующих требований:
+
+- Версия ядра — не ниже 5.8;
+- Версия systemd — не ниже 244;
+- Активирован cgroup v2;
+- Доступна файловая система EROFS.
+
+Метка `node.deckhouse.io/containerd-config=custom` выставляется, если на узле присутствуют файлы с расширением `.toml` в директориях `conf.d` или `conf2.d`. В этом случае следует удалить такие файлы (если это не повлечёт критичных последствий для работы контейнеров) и удалить соответствующие NGC, с помощью которых они могли быть добавлены.
+
+Если используется [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/documentation/), причиной невозможности смены CRI может быть NGC `containerd-dvcr-config.sh`. Если платформа виртуализации уже установлена и работает, этот NGC можно удалить.
+
+Если нет возможности удалить ресурс [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration), вносящий изменения в конфигурацию containerd и несовместимый с версией containerd v2, используйте универсальный шаблон:
+
+{% raw %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+spec:
+  bundles:
+  - '*'
+  content: |
+    {{- if eq .cri "ContainerdV2" }}
+  # <Скрипт для изменения конфигурации для ContainerdV2>
+    {{- else }}
+  # <Скрипт для изменения конфигурации для ContainerdV1>
+    {{- end }}
+  nodeGroups:
+  - '*'
+  weight: 31
+```
+
+{% endraw %}
+
+Кроме того, для смены CRI может понадобиться снять пользовательскую метку `node.deckhouse.io/containerd-config=custom`. Сделать это можно с помощью команды:
+
+```shell
+for node in $(d8 k get nodes -l node-role.kubernetes.io/<Название NodeGroup, где меняется CRI>=); do d8 k label $node node.deckhouse.io/containerd-config-; done
+```
 
 ## Как изменить CRI для всего кластера?
 
@@ -944,12 +1030,56 @@ spec:
 crictl pull private.registry.example/image/repo:tag
 ```
 
+##### Как настроить зеркало для доступа к публичным registries (устаревший способ)?
+
+Пример настройки зеркала к публичным registries при использовании **устаревшего** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    sed -i '/endpoint = \["https:\/\/registry-1.docker.io"\]/d' /var/lib/bashible/bundle_steps/032_configure_containerd.sh
+    mkdir -p /etc/containerd/conf.d
+    bb-sync-file /etc/containerd/conf.d/mirror-to-harbor.toml - << "EOF"
+    [plugins]
+      [plugins."io.containerd.grpc.v1.cri"]
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          [plugins."io.containerd.grpc.v1.cri".registry.mirrors]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+              endpoint = ["https://registry.private.network/v2/dockerhub-proxy/"]
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."gcr.io"]
+              endpoint = ["https://registry.private.network/v2/YOUR_GCR_PROXY_REPO/"]
+    EOF
+```
+
 #### Новый способ
 
 {% alert level="info" %}
 Используется в containerd v2.  
 
-Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](../deckhouse/configuration.html#parameters-registry)).
+Используется в containerd v1, если управление осуществляется через модуль [`registry`](/modules/registry/) (например, в режиме [`Direct`](/modules/deckhouse/configuration.html#parameters-registry)).
 {% endalert %}
 
 Конфигурация описывается в каталоге `/etc/containerd/registry.d` и задаётся через создание подкаталогов с именами, соответствующими адресу registry:
@@ -1033,7 +1163,7 @@ spec:
 
 ##### Как настроить сертификат для дополнительного registry (актуальный способ)?
 
-Пример настройки сертификата для дополнительного registry? при использовании **актуального** способа конфигурации:
+Пример настройки сертификата для дополнительного registry при использовании **актуального** способа конфигурации:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -1137,6 +1267,52 @@ ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ private.regist
 
 # Через ctr для http репозитория.
 ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/image/repo:tag
+```
+
+##### Как настроить зеркало для доступа к публичным registries (актуальный способ)?
+
+Пример настройки зеркала к публичным registries при использовании **актуального** способа конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: mirror-to-harbor.sh
+spec:
+  weight: 31
+  bundles:
+    - '*'
+  nodeGroups:
+    - "*"
+  content: |
+    # Copyright 2023 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    REGISTRY1_URL=docker.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY1_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY1_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
+    REGISTRY2_URL=gcr.io
+    mkdir -p "/etc/containerd/registry.d/${REGISTRY2_URL}"
+    bb-sync-file "/etc/containerd/registry.d/${REGISTRY2_URL}/hosts.toml" - << EOF
+    [host."https://registry.private.network/v2/dockerhub-proxy/"]
+      capabilities = ["pull", "resolve"]
+      override_path = true
+    EOF
 ```
 
 ## Как использовать NodeGroup с приоритетом?
@@ -1325,10 +1501,12 @@ metadata:
 - применяет необходимые системные параметры (включая фиксы для NVIDIA Container Toolkit);
 - разворачивает системные компоненты: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter** и, при необходимости, **MIG Manager**.
 
+Список поддерживаемых платформ NVIDIA Container Toolkit см. в [официальной документации](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+
 {% alert level="info" %}
 Для корректной работы необходимо явно указать режим в `spec.gpu.sharing` (`Exclusive`, `TimeSlicing` или `MIG`).
 
-Ручная конфигурация containerd (через `NodeGroupConfiguration`, TOML и т.п.) не требуется и не должна комбинироваться с автоматической настройкой.
+containerd на GPU-узлах настраивается автоматически. Не изменяйте его конфигурацию вручную (например, через `NodeGroupConfiguration` или конфигурацию на узле).
 {% endalert %}
 
 Чтобы добавить GPU-узел в кластер, выполните следующие действия:
@@ -1357,9 +1535,9 @@ metadata:
          effect: NoSchedule
    ```
 
-   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](../../deckhouse-configure-global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
+   > Если вы используете собственные ключи taint, убедитесь, что они разрешены в ModuleConfig `global` в массиве [`.spec.settings.modules.placement.customTolerationKeys`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys), чтобы рабочие нагрузки могли добавлять соответствующие `tolerations`.
 
-   Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](../node-manager/cr.html#nodegroup-v1-spec-gpu).
+   Полная схема полей находится в [описании кастомного ресурса `NodeGroup`](cr.html#nodegroup-v1-spec-gpu).
 
 1. Установите драйвер NVIDIA и nvidia-container-toolkit.
 
@@ -1367,6 +1545,8 @@ metadata:
    Ниже приведены примеры `NodeGroupConfiguration` для группы узлов `gpu`.
 
    **Ubuntu**
+
+   > Протестировано для Ubuntu 22.04.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -1377,33 +1557,134 @@ metadata:
      bundles:
      - ubuntu-lts
      content: |
-       # Copyright 2023 Flant JSC
-       #
-       # Licensed under the Apache License, Version 2.0 (the "License");
-       # you may not use this file except in compliance with the License.
-       # You may obtain a copy of the License at
-       #
-       #     http://www.apache.org/licenses/LICENSE-2.0
-       #
-       # Unless required by applicable law or agreed to in writing, software
-       # distributed under the License is distributed on an "AS IS" BASIS,
-       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       # See the License for the specific language governing permissions and
-       # limitations under the License.
-   
-       if [ ! -f "/etc/apt/sources.list.d/nvidia-container-toolkit.list" ]; then
-         distribution=$(. /etc/os-release;echo $ID$VERSION_ID)
-         curl -s -L https://nvidia.github.io/libnvidia-container/gpgkey | sudo apt-key add -
-         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+       #!/bin/bash
+       set -e
+ 
+       # Checking if curl is installed
+       if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
+       then
+         echo "curl or wget is not installed. Installing..."
+         sudo apt update
+         sudo apt install -y curl wget
        fi
-       bb-apt-install nvidia-container-toolkit nvidia-driver-535-server
-       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+ 
+       # Define file paths
+       CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
+       NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+ 
+       # Update repos
+       sudo apt update
+ 
+       # Install CUDA keyring
+       if [ ! -f "$CUDA_KEYRING_DEB" ]; then
+         wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/$CUDA_KEYRING_DEB
+         sudo dpkg -i $CUDA_KEYRING_DEB
+       fi
+ 
+       # Add NVIDIA container toolkit repos
+       if [ ! -f "$NVIDIA_GPG_KEY" ]; then
+       curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+         sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+       curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+         sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+         sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+       fi
+ 
+       # Check and install Linux headers
+       if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing linux headers..."
+         sudo apt install -y "linux-headers-$(uname -r)"
+       fi
+ 
+       # Installation of NVIDIA drivers
+       if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing CUDA drivers..."
+         sudo apt install -y cuda-drivers-575
+       fi
+ 
+       # Installation of NVIDIA Container Toolkit
+       if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing NVIDIA container toolkit..."
+         sudo apt install -y nvidia-container-toolkit
+       fi
+ 
      nodeGroups:
      - gpu
-     weight: 30
+     weight: 5   
+   ```
+
+   **Debian**
+
+   > Протестировано для Debian 12.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - debian
+     content: |
+       #!/bin/bash
+       set -e
+ 
+       # Checking if curl is installed
+       if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
+       then
+         echo "curl or wget is not installed. Installing..."
+         sudo apt update
+         sudo apt install -y curl wget
+       fi
+ 
+       # Define file paths
+       CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
+       NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
+ 
+       # Update repos
+       sudo apt update
+ 
+       # Install CUDA keyring
+       if [ ! -f "$CUDA_KEYRING_DEB" ]; then
+         wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
+         sudo dpkg -i $CUDA_KEYRING_DEB
+       fi
+ 
+       # Add NVIDIA container toolkit repos
+       if [ ! -f "$NVIDIA_GPG_KEY" ]; then
+       curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
+         sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+       curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
+         sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+         sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+       fi
+ 
+       # Check and install Linux headers
+       if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing linux headers..."
+         sudo apt install -y "linux-headers-$(uname -r)"
+       fi
+ 
+       # Installation of NVIDIA drivers
+       if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing CUDA drivers..."
+         sudo apt install -y cuda-drivers-575
+       fi
+ 
+       # Installation of NVIDIA Container Toolkit
+       if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
+         echo "Installing NVIDIA container toolkit..."
+         sudo apt install -y nvidia-container-toolkit
+       fi
+ 
+     nodeGroups:
+     - gpu
+     weight: 5  
    ```
 
    **CentOS**
+
+   > Протестировано для CentOS 9.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -1414,29 +1695,121 @@ metadata:
      bundles:
      - centos
      content: |
-       # Copyright 2023 Flant JSC
-       #
-       # Licensed under the Apache License, Version 2.0 (the "License");
-       # you may not use this file except in compliance with the License.
-       # You may obtain a copy of the License at
-       #
-       #     http://www.apache.org/licenses/LICENSE-2.0
-       #
-       # Unless required by applicable law or agreed to in writing, software
-       # distributed under the License is distributed on an "AS IS" BASIS,
-       # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-       # See the License for the specific language governing permissions and
-       # limitations under the License.
-
-       if [ ! -f "/etc/yum.repos.d/nvidia-container-toolkit.repo" ]; then
-         distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
-         curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+       #!/bin/bash
+       set -e
+       INSTALL_NEEDED=false
+  
+       # Checking if curl is installed
+       if ! command -v curl &> /dev/null; then
+         echo "curl is not installed. Installing..."
+         sudo dnf install -y curl
+         INSTALL_NEEDED=true
        fi
-       bb-dnf-install nvidia-container-toolkit nvidia-driver
-       nvidia-ctk config --set nvidia-container-runtime.log-level=error --in-place
+  
+       # Checking another necessary packages and dependencies are installed
+       if ! rpm -q epel-release &> /dev/null; then
+         echo "EPEL release is not installed. Installing..."
+         sudo dnf install -y epel-release
+         INSTALL_NEEDED=true
+       fi
+        
+       # Checking if dev tools are installed
+       if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
+         echo "Development tools are not completely installed. Installing..."
+         sudo dnf update -y
+         sudo dnf install -y gcc make dracut kernel-devel-$(uname -r) elfutils-libelf-devel
+         INSTALL_NEEDED=true
+       fi
+        
+       # Installation of NVIDIA drivers
+       if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
+         echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
+         sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
+         sudo rpm --import https://developer.download.nvidia.com/compute/cuda/repos/GPGKEY
+         sudo dnf clean all
+         sudo dnf install -y nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-settings nvidia-persistenced
+         INSTALL_NEEDED=true
+       fi
+  
+       # Installation of NVIDIA Container Toolkit
+       if ! rpm -q nvidia-container-toolkit &> /dev/null; then
+         echo "NVIDIA container toolkit is not installed. Installing..."
+         curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+         sudo dnf install -y nvidia-container-toolkit
+         INSTALL_NEEDED=true
+       fi
+  
+       # Bashible service creating if drivers were installed
+       if [ "$INSTALL_NEEDED" = true ]; then
+         base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+         echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+         sudo systemctl enable bashible.timer
+         base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+         echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+         sudo systemctl enable bashible.service
+         sudo systemctl reboot
+       fi
+  
      nodeGroups:
      - gpu
-     weight: 30
+     weight: 5
+   ```
+
+   **РЕД ОС**
+
+   > Протестировано для РЕД ОС 8.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: NodeGroupConfiguration
+   metadata:
+     name: install-cuda.sh
+   spec:
+     bundles:
+     - redos
+     content: |
+       #!/bin/bash
+       set -e
+       INSTALL_NEEDED=false
+ 
+       # Installation of NVIDIA drivers
+       if ! rpm -q nvidia-drivers &> /dev/null || ! rpm -q cuda &> /dev/null || ! rpm -q nvidia-persistenced &> /dev/null; then
+         echo "Update system"
+         sudo dnf update -y
+         sudo dnf install -y nvidia-drivers.x86_64 cuda.x86_64 nvidia-persistenced.x86_64
+         INSTALL_NEEDED=true
+       fi
+ 
+       # Installation of NVIDIA Container Toolkit
+       if ! rpm -q nvidia-container-toolkit &> /dev/null; then
+         echo "NVIDIA container toolkit is not installed. Installing..."
+         curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
+         sudo dnf install -y nvidia-container-toolkit
+         INSTALL_NEEDED=true
+       fi
+ 
+       # GRUB configuration and nouveau disabling
+       if ! grep -q "nouveau.modeset=0" /etc/default/grub; then
+         echo "GRUB configuration and nouveau disabling"
+         sudo -E grubby --update-kernel ALL --args="nouveau.modeset=0"
+         sudo grub2-mkconfig -o /boot/grub2/grub.cfg
+         INSTALL_NEEDED=true
+       fi
+ 
+       # Bashible service creating if drivers were installed
+       if [ "$INSTALL_NEEDED" = true ]; then
+         base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
+         echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
+         sudo systemctl enable bashible.timer
+         base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
+         echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
+         sudo systemctl enable bashible.service
+         sudo systemctl reboot
+       fi
+ 
+     nodeGroups:
+     - gpu
+     weight: 5
    ```
 
    После того как конфигурации будут применены, необходимо провести бутстрап и перезагрузить узлы, чтобы применить настройки и установить драйвера.
@@ -1541,6 +1914,12 @@ metadata:
          restartPolicy: Never
          nodeSelector:
            node.deckhouse.io/group: gpu
+           node-role/gpu: ""
+         tolerations:
+           - key: "node-role"
+             operator: "Equal"
+             value: "gpu"
+             effect: "NoSchedule"
          containers:
            - name: nvidia-cuda-test
              image: nvidia/cuda:11.6.2-base-ubuntu20.04
@@ -1597,6 +1976,11 @@ metadata:
          restartPolicy: Never
          nodeSelector:
            node.deckhouse.io/group: gpu
+         tolerations:
+           - key: "node-role"
+             operator: "Equal"
+             value: "gpu"
+             effect: "NoSchedule"
          containers:
            - name: gpu-operator-test
              image: nvidia/samples:vectoradd-cuda10.2
@@ -1632,7 +2016,7 @@ Deckhouse Kubernetes Platform автоматически устанавлива�
 - **TimeSlicing** — временное разделение одного GPU между несколькими подами (по умолчанию `partitionCount: 4`), при этом под по-прежнему запрашивает `nvidia.com/gpu`.
 - **MIG (Multi-Instance GPU)** — аппаратное разделение совместимых GPU на независимые экземпляры; при профиле `all-1g.5gb` появятся ресурсы вида `nvidia.com/mig-1g.5gb`.
 
-Примеры приведены в разделе [Управление узлами: примеры](../node-manager/examples.html#пример-gpu-nodegroup).
+Примеры приведены в разделе [Управление узлами: примеры](examples.html#пример-gpu-nodegroup).
 
 ## Как посмотреть доступные MIG-профили в кластере?
 

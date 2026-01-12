@@ -45,7 +45,7 @@ func (c *Confirmation) WithMessage(m string) *Confirmation {
 }
 
 func (c *Confirmation) Ask() bool {
-	if !terminal.IsTerminal(int(os.Stdin.Fd())) {
+	if !IsTerminal() {
 		return c.defaultAnswer
 	}
 
@@ -69,4 +69,8 @@ func (c *Confirmation) Ask() bool {
 		}
 		log.InfoF("\r")
 	}
+}
+
+func IsTerminal() bool {
+	return terminal.IsTerminal(int(os.Stdin.Fd()))
 }

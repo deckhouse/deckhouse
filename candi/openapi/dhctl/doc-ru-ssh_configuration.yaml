@@ -29,3 +29,9 @@ apiVersions:
       sudoPassword:
         description: |
           Пароль sudo пользователя.
+      legacyMode:
+        description: |
+          Использовать легаси режим SSH (clissh).
+      modernMode:
+        description: |
+          Использовать актуальный режим SSH (gossh).

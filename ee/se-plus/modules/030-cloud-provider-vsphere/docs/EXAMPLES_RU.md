@@ -52,5 +52,5 @@ spec:
   rootDiskSize: 20
   template: dev/golden_image
   mainNetwork: k8s-msk-178
-  datastore: lun-1201
+  datastore: <DS_PARENT_FOLDER>/lun-1201 # <DS_PARENT_FOLDER> — родительская папка Datastore.
 ```

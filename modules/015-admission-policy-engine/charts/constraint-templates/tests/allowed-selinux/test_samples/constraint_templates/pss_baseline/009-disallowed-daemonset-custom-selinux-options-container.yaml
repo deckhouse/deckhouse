@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: disallowed-daemonset-custom-selinux-options-container
+  namespace: testns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+        - name: nginx
+          image: nginx
+          securityContext:
+            seLinuxOptions:
+              type: container_t
+              level: s0:c1,c2
+

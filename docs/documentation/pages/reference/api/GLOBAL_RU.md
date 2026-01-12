@@ -4,6 +4,7 @@ permalink: ru/reference/api/global.html
 description: "Описание глобальных настроек Deckhouse Kubernetes Platform"
 module-kebab-name: global
 lang: ru
+search: global settings, global configuration, platform settings, default settings, global parameters, глобальные настройки, глобальная конфигурация, настройки платформы, настройки по умолчанию, глобальные параметры
 ---
 
 Глобальные настройки Deckhouse Kubernetes Platform позволяют вам настраивать параметры, которые используются по умолчанию всеми модулями и компонентами. Некоторые модули могут переопределять часть этих параметров (это можно узнать в разделе настройки соответствующего модуля в документации модуля).

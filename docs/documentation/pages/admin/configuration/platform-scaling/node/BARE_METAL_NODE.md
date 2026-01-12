@@ -1,6 +1,7 @@
 ---
 title: "Adding and managing bare-metal nodes"
 permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
+description: "Manage bare-metal nodes in Deckhouse Kubernetes Platform. Node addition, configuration, and lifecycle management."
 ---
 
 ## Adding nodes to a bare-metal cluster
@@ -47,7 +48,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - Ensure the user can execute commands using `sudo`.
 
 1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
-   - A private SSH key.
+   - A private SSH key encoded in Base64 format.
    - The OS user.
    - The SSH port.
    - (Optional) A `sudo` password, if required.
@@ -60,16 +61,14 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
      metadata:
        name: static-nodes
      spec:
-       privateSSHKey: |
-         -----BEGIN OPENSSH PRIVATE KEY-----
-         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
-         -----END OPENSSH PRIVATE KEY-----
+       privateSSHKey: LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KTUlJRXZBSUJBREFOQmdrcWhraUc5dzBCQVFFRkFBT0NBZzhBTUlJQkNnS0NBUUVB
        sshPort: 22
        sudoPassword: password
        user: ubuntu
      ```
 
-     > **Important**. The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
+     > **Important**. The `privateSSHKey` field must contain a private SSH key encoded in Base64 format.
+     > The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
 
 1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 
@@ -139,7 +138,7 @@ The static cluster settings are stored in the [StaticClusterConfiguration](/prod
 To modify the static cluster parameters, run the following command:
 
 ```shell
-d8 platform edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ## Moving a static node between NodeGroups
@@ -252,7 +251,7 @@ You can also perform this operation using a patch:
 When changing the `cri.type` for a NodeGroup created using `dhctl`, you must also update this value in `dhctl config edit provider-cluster-configuration` and in the NodeGroup object settings.
 {% endalert %}
 
-After changing the CRI for a NodeGroup, the `node-manager` module will sequentially reboot the nodes, applying the new CRI.  
+After changing the CRI for a NodeGroup, the [`node-manager`](/modules/node-manager/) module will sequentially reboot the nodes, applying the new CRI.  
 Node updates involve disruption. Depending on the `disruption` settings for the NodeGroup, the `node-manager` module will either automatically update the nodes or require manual approval.
 
 ## Changing the NodeGroup of a static node

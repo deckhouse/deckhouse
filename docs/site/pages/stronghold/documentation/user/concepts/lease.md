@@ -7,74 +7,65 @@ description: >-
   will revoke that secret.
 ---
 
-## Lease, renew, and revoke
+## Lease, renewal, and revoke
 
-With every dynamic secret and `service` type authentication token, Stronghold
-creates a _lease_: metadata containing information such as a time duration,
-renewability, and more. Stronghold promises that the data will be valid for the
-given duration, or Time To Live (TTL). Once the lease is expired, Stronghold can
-automatically revoke the data, and the consumer of the secret can no longer be
-certain that it is valid.
+For every dynamic secret and authentication service, Stronghold creates a _lease_,
+which includes metadata containing information such as duration, renewability, and more.
+Stronghold guarantees that the data will be valid for the given duration (Time to Live, TTL).
+Once the lease is expired, Stronghold can automatically revoke the data,
+and the consumer of the secret can no longer be certain that it is valid.
 
-The benefit should be clear: consumers of secrets need to check in with
-Stronghold routinely to either renew the lease (if allowed) or request a
-replacement secret. This makes the Stronghold audit logs more valuable and
-also makes key rolling a lot easier.
+Consumers of secrets have to check in with Stronghold routinely to either renew the lease (if allowed)
+or request a replacement secret.
+This improves the value of Stronghold audit logs and significantly simplifies the key replacement process.
 
-All dynamic secrets in Stronghold are required to have a lease. Even if the data is
-meant to be valid for eternity, a lease is required to force the consumer
-to check in routinely.
+All dynamic secrets in Stronghold are required to have a lease.
+Even if the data is meant to be valid "forever", a lease is required to force the consumer to check in routinely.
 
-In addition to renewals, a lease can be _revoked_. When a lease is revoked, it
-invalidates that secret immediately and prevents any further renewals.
+In addition to renewals, a lease can be _revoked_.
+When a lease is revoked, it invalidates that secret immediately and prevents any further renewals.
 
-Revocation can happen manually via the API, via the `d8 stronghold lease revoke` cli command,
-the user interface (UI) under the Access tab, or automatically by Stronghold. When a lease
-is expired, Stronghold will automatically revoke that lease. When a token is revoked,
-Stronghold will revoke all leases that were created using that token.
+The revocation can be done manually via the API, via the `d8 stronghold lease revoke` CLI command,
+via the user interface under the "Access" tab, or automatically by Stronghold.
+When a lease is expired, Stronghold automatically revokes it.
+When a token is revoked, Stronghold revokes all leases that were created using it.
 
-**Note**: The [Key/Value Backend](../secrets-engines/kv/overview.html) which stores
-arbitrary secrets does not issue leases although it will sometimes return a
-lease duration; see the documentation for more information.
+{% alert level="info" %}
+The Key/Value backend, which stores arbitrary secrets, doesn't issue leases but sometimes returns a lease duration.
+For details, refer to the [`kv` secrets engine documentation](../secrets-engines/kv/overview.html).
+{% endalert %}
 
 ## Lease IDs
 
-When reading a dynamic secret, such as via `d8 stronghold read`, Stronghold always returns a
-`lease_id`. This is the ID used with commands such as `d8 stronghold lease renew` and `d8 stronghold lease revoke` to manage the lease of the secret.
+When reading a dynamic secret (for example, using the `d8 stronghold read`command), Stronghold always returns a `lease_id`.
+This ID can be used in commands such as `d8 stronghold lease renew` and `d8 stronghold lease revoke` to manage the lease of a secret.
 
-## Lease durations and renewal
+## Lease duration and renewal
 
-Along with the lease ID, a _lease duration_ can be read. The lease duration is
-a Time To Live value: the time in seconds for which the lease is valid. A
-consumer of this secret must renew the lease within that time.
+_Lease duration_ is returned along with the lease ID as a Time To Live (TTL) value, time in seconds for which the lease is valid.
+A consumer of this secret must renew the lease within that timeframe.
 
-When renewing the lease, the user can request a specific amount of time they
-want remaining on the lease, termed the `increment`. This is not an increment
-at the end of the current TTL; it is an increment _from the current time_. For
-example, `d8 stronghold lease renew -increment=3600 my-lease-id` would request that the TTL of the lease
-be adjusted to 1 hour (3600 seconds). Having the increment be rooted at the
-current time instead of the end of the lease makes it easy for users to reduce
-the length of leases if they don't actually need credentials for the full
-possible lease period, allowing those credentials to expire sooner and
-resources to be cleaned up earlier.
+When renewing the lease, the user can request a specific amount of time they want remaining on the lease,
+which is called the `increment`.
+This increment to the lease duration won't be added at the end of the current TTL but rather at the request time.
+For example, the command `d8 stronghold lease renew -increment=3600 my-lease-id` would request
+that the TTL of the lease be adjusted to 1 hour (3600 seconds).
+Having the increment be rooted at the current time instead of the end of the lease lets users
+increase or reduce the length of leases if they don't need a secret for the full possible lease period.
 
-The requested increment is completely advisory. The backend in charge of the
-secret can choose to completely ignore it. For most secrets, the backend does
-its best to respect the increment, but often limits it to ensure renewals every
-so often.
+The requested `increment` is completely advisory.
+The backend in charge of the secret can choose to completely ignore it.
+For most secrets, the backend does its best to respect the `increment`, but often limits it to ensure renewals every so often.
 
-As a result, the return value of renewals should be carefully inspected to
-determine what the new lease is.
+The return value of renewals should be carefully inspected to determine what the new lease TTL is.
 
 ## Prefix-based revocation
 
-In addition to revoking a single secret, operators with proper access control
-can revoke multiple secrets based on their lease ID prefix.
+In addition to revoking a single secret, users with proper access control can revoke multiple secrets based on their lease ID prefix.
 
-Lease IDs are structured in a way that their prefix is always the path where
-the secret was requested from. This lets you revoke trees of secrets. For
-example, to revoke all Userpass logins, you can do `d8 stronghold lease revoke -prefix auth/userpass/`.
+The lease ID prefixes always contain the path where the secret was requested from.
+This lets you revoke groups of secrets.
+For example, to revoke all Userpass logins, it would be enough to run `d8 stronghold lease revoke -prefix auth/userpass/`.
 
-This is very useful if there is an intrusion within a specific system: all
-secrets of a specific backend or a certain configured backend can be revoked
-quickly and easily.
+This can be useful if there is an intrusion within a system.
+All secrets of a specific backend or a certain configuration can be revoked quickly.

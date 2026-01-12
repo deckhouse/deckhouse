@@ -1,7 +1,6 @@
 ---
 title: Layouts and configuration
 permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
-lang: en
 ---
 
 ## Standard

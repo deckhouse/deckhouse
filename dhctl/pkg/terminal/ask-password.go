@@ -70,7 +70,7 @@ func AskPassword(prompt string) ([]byte, error) {
 }
 
 func AskBastionPassword() (err error) {
-	if !app.AskBastionPass || app.SSHLegacyMode {
+	if !app.AskBastionPass || app.SSHLegacyMode || (len(app.SSHPrivateKeys) > 0 && !app.SSHModernMode) {
 		return nil
 	}
 

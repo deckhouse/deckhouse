@@ -1,17 +1,18 @@
 ---
 title: "Настройка локального хранилища на основе LVM"
 permalink: ru/admin/configuration/storage/sds/lvm-local.html
+description: "Настройка локального хранилища на основе LVM в Deckhouse Kubernetes Platform. Высокопроизводительное локальное хранилище для тестовых сред и EDGE-кластеров с уменьшенными сетевыми задержками."
 lang: ru
 ---
 
-Локальное хранилище снижает сетевые задержки и обеспечивает более высокую производительность по сравнению с удалёнными хранилищами, доступ к которым осуществляется по сети. Такой подход особенно эффективен в тестовых средах и EDGE-кластерах. Данная функциональность обеспечивается модулем `sds-local-volume`.
+Локальное хранилище снижает сетевые задержки и обеспечивает более высокую производительность по сравнению с удалёнными хранилищами, доступ к которым осуществляется по сети. Такой подход особенно эффективен в тестовых средах и EDGE-кластерах. Данная функциональность обеспечивается [модулем `sds-local-volume`](/modules/sds-local-volume/).
 
 ## Настройка локального хранилища
 
 Для корректной работы модуля `sds-local-volume` выполните следующие шаги:
 
 1. Настройте LVMVolumeGroup. Перед созданием StorageClass необходимо создать ресурс [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) модуля `sds-node-configurator` на узлах кластера.
-1. Включите модуль `sds-node-configurator`. Убедитесь, что модуль включен **до** включения модуля `sds-local-volume`.
+1. Включите [модуль `sds-node-configurator`](/modules/sds-node-configurator/). Убедитесь, что модуль включен **до** включения модуля `sds-local-volume`.
 1. Создайте соответствующие StorageClass'ы. Создание StorageClass для CSI-драйвера `local.csi.storage.deckhouse.io` пользователем **запрещено**.
 
 Модуль поддерживает два режима работы: LVM и LVMThin.
@@ -22,7 +23,7 @@ lang: ru
 
 ### Включение модулей
 
-Включение модуля `sds-node-configurator`:
+Включение [модуля `sds-node-configurator`](/modules/sds-node-configurator/):
 
 1. Создайте ресурс ModuleConfig для включения модуля:
 
@@ -44,7 +45,7 @@ lang: ru
    d8 k get modules sds-node-configurator -w
    ```
 
-Включение модуля `sds-local-volume`:
+Включение [модуля `sds-local-volume`](/modules/sds-local-volume/):
 
 1. Активируйте модуль `sds-local-volume`. Пример ниже запускает модуль с настройками по умолчанию, что приведет к созданию служебных подов компонента `sds-local-volume` на всех узлах кластера:
 
@@ -265,7 +266,7 @@ d8 k -n d8-sds-local-volume get pod -owide
    d8 k get sc local-storage-class
    ```
 
-Если StorageClass с именем `local-storage-class` появился, значит настройка модуля `sds-local-volume` завершена. Теперь пользователи могут создавать PVC, указывая StorageClass с именем `local-storage-class`.
+Если StorageClass с именем `local-storage-class` появился, значит настройка [модуля `sds-local-volume`](/modules/sds-local-volume/) завершена. Теперь пользователи могут создавать PVC, указывая StorageClass с именем `local-storage-class`.
 
 ### Выбор метода очистки тома после удаления PV
 
@@ -282,7 +283,7 @@ d8 k -n d8-sds-local-volume get pod -owide
 
 ### Thick-тома
 
-Для предотвращения утечек через thick-тома предусмотрен параметр `volumeCleanup`. Он позволяет выбрать метод очистки тома перед удалением PV.
+Для предотвращения утечек через thick-тома предусмотрен [параметр `volumeCleanup`](/modules/sds-node-configurator/cr.html#lvmlogicalvolume-v1alpha1-spec-volumecleanup). Он позволяет выбрать метод очистки тома перед удалением PV.
 
 Возможные значения:
 

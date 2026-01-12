@@ -23,7 +23,7 @@ echo {{ .clusterBootstrap.cloud.nodeIP }} > /var/lib/bashible/discovered-node-ip
   # For CloudEphemeral, CloudPermanent or CloudStatic node we try to discover IP from Node object
   {{- else }}
 if [ -f /etc/kubernetes/kubelet.conf ] ; then
-  if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $HOSTNAME -o json 2> /dev/null)" ; then
+  if node="$(bb-kubectl --kubeconfig=/etc/kubernetes/kubelet.conf get node $(bb-d8-node-name) -o json 2> /dev/null)" ; then
     echo "$node" | jq -r '([.status.addresses[] | select(.type == "InternalIP") | .address] + [.status.addresses[] | select(.type == "ExternalIP") | .address])[0] // ""' > /var/lib/bashible/discovered-node-ip
   else
     bb-log-error "Unable to discover node IP for node object: No access to API server"
@@ -68,9 +68,9 @@ function is_ip_in_cidr() {
 }
 
 if bb-is-ubuntu-version? 24.04 || bb-is-ubuntu-version? 22.04 || bb-is-ubuntu-version? 20.04 || bb-is-ubuntu-version? 18.04; then
-  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | .addr_info[] | .local')
+  ip_in_system=$(ip -f inet -br -j addr | jq -r '.[] | select(.ifname != "lo") | .addr_info[] | .local')
 else
-  ip_in_system=$(ip -f inet -br addr | grep -E '[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}' -o)
+  ip_in_system=$(ip -4 -o addr show up scope global | awk '$2 != "lo" {print $4}' | cut -d/ -f1)
 fi
 
 for cidr in $internal_network_cidrs; do

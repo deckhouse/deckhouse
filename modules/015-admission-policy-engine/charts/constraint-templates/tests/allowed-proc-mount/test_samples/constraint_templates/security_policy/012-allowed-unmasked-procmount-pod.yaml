@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-unmasked-procmount-pod
+  namespace: testns
+spec:
+  securityContext:
+    procMount: Unmasked
+  containers:
+    - name: nginx
+      image: nginx
+

@@ -17,16 +17,17 @@ package infrastructure
 import "path/filepath"
 
 var (
-	dhctlPath    = "/"
-	deckhouseDir = "/deckhouse"
-	candiDir     = deckhouseDir + "/candi"
-	InfrastructureVersions = candiDir + "/terraform_versions.yml"
+	dhctlPath              = "/"
+	deckhouseDir           = "/deckhouse"
+	candiDir               = deckhouseDir + "/candi"
+	infrastructureVersions = candiDir + "/terraform_versions.yml"
 )
 
 func InitGlobalVars(pwd string) {
 	dhctlPath = pwd
 	deckhouseDir = pwd + "/deckhouse"
 	candiDir = deckhouseDir + "/candi"
+	infrastructureVersions = candiDir + "/terraform_versions.yml"
 }
 
 func GetDhctlPath() string {
@@ -43,4 +44,8 @@ func GetInfrastructureModulesDir(provider string) string {
 
 func GetInfrastructureModulesForRunningDir(provider, layout, module string) string {
 	return filepath.Join(GetInfrastructureProviderDir(provider), "layouts", layout, module)
+}
+
+func GetInfrastructureVersions() string {
+	return infrastructureVersions
 }

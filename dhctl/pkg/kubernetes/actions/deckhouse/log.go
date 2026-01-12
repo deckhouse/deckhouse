@@ -260,8 +260,6 @@ func (d *LogPrinter) printLogsByLine(ctx context.Context, content []byte) {
 			return true
 		}
 
-		// let it be in debug
-		log.DebugF(line.StringWithLogLevel())
 		return true
 	})
 }
@@ -274,7 +272,7 @@ func (d *LogPrinter) GetPod(ctx context.Context) error {
 
 	message := fmt.Sprintf("Deckhouse pod found: %s (%s)", pod.Name, pod.Status.Phase)
 	if pod.Status.Phase != corev1.PodRunning {
-		return fmt.Errorf(message)
+		return fmt.Errorf("%s", message)
 	}
 
 	log.InfoLn(message)

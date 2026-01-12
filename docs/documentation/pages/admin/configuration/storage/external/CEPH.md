@@ -1,6 +1,7 @@
 ---
 title: "Distributed Ceph storage"
 permalink: en/admin/configuration/storage/external/ceph.html
+description: "Configure Ceph distributed storage integration in Deckhouse Kubernetes Platform. RBD and CephFS setup, authentication configuration, and high availability storage management."
 ---
 
 Ceph is a scalable distributed storage system that provides high availability and fault tolerance for data. Deckhouse supports integration with Ceph clusters, enabling dynamic storage management and the use of StorageClasses based on RADOS Block Device (RBD) or CephFS.
@@ -10,8 +11,8 @@ This page provides instructions on connecting Ceph to Deckhouse, configuring aut
 {% alert level="warning" %}
 When switching to this module from the`ceph-csi` module, an automatic migration is performed, but it requires preparation:
 
-1. Scale all operators (redis, clickhouse, kafka, etc.) to zero replicas; during migration, operators in the cluster must not be running. The only exception is the `prometheus` operator in Deckhouse, which will be automatically disabled during migration.
-1. Disable the `ceph-csi` module and enable the `csi-ceph` module.
+1. Scale all operators (redis, clickhouse, kafka, etc.) to zero replicas; during migration, operators in the cluster must not be running. The only exception is the [`prometheus`](/modules/prometheus/) operator in Deckhouse, which will be automatically disabled during migration.
+1. Disable the `ceph-csi` module and enable the [`csi-ceph`](/modules/csi-ceph/) module.
 1. Wait for the migration process to complete in the Deckhouse logs (indicated by "Finished migration from Ceph CSI module").
 1. Create test pod/PVC to verify CSI functionality.
 1. Restore operators to a working state.
@@ -22,7 +23,7 @@ When switching to this module from the`ceph-csi` module, an automatic migration 
 
 ## Enabling the module
 
-To connect a Ceph cluster in Deckhouse, you need to enable the `csi-ceph` module. To do this, apply the ModuleConfig resource:
+To connect a Ceph cluster in Deckhouse, you need to enable the [`csi-ceph`](/modules/csi-ceph/) module. To do this, apply the ModuleConfig resource:
 
 ```shell
 d8 k apply -f - <<EOF

@@ -79,7 +79,7 @@ properties:
         description: |
           Опциональные параметры аутентификации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authn/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authn](https://deckhouse.ru/modules/user-authn/).
         properties:
           oidcIssuerURL:
             description: |
@@ -105,7 +105,7 @@ properties:
         description: |
           Параметры авторизации клиентов Kubernetes API.
 
-          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/user-authz/).
+          По умолчанию используются данные из ConfigMap, устанавливаемого модулем [user-authz](https://deckhouse.ru/modules/user-authz/).
         properties:
           webhookURL:
             description: |
@@ -186,3 +186,9 @@ properties:
     description: |
       Количество секунд, по прошествии которых с узла в статусе `Unreachable` будут удалены поды.
       > **Важно!** При изменении этого параметра потребуется перезапуск подов.
+  enabledFeatureGates:
+    description: |
+      Список включенных в control plane feature gates.
+
+      Описание отдельных feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+      Список поддерживаемых в DKP feature gates см. [в разделе Feature Gates](../#feature-gates).

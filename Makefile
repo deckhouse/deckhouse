@@ -38,6 +38,12 @@ ifeq ($(PLATFORM_NAME), x86_64)
 	TRDL_ARCH = amd64
 	CRANE_ARCH = x86_64
 	GH_ARCH = amd64
+else ifeq ($(PLATFORM_NAME), aarch64)
+	YQ_ARCH = amd64
+	CRANE_ARCH = x86_64
+	TRDL_ARCH = amd64
+	CRANE_ARCH = x86_64
+	GH_ARCH = amd64
 else ifeq ($(PLATFORM_NAME), arm64)
 	YQ_ARCH = arm64
 	CRANE_ARCH = arm64
@@ -104,11 +110,10 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 2.1.2
-TRIVY_VERSION= 0.63.0
+TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
-GH_VERSION = 2.52.0
+GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
@@ -169,13 +174,13 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_LINT_VERSION}
 
 .PHONY: lint lint-fix
-lint: ## Run linter.
+lint: golangci-lint ## Run linter.
 	golangci-lint run
 
-lint-fix: ## Fix lint violations.
+lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
@@ -207,11 +212,11 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools
+generate: generate-kubernetes generate-tools generate-docs generate-werf
 
 .PHONY: generate-tools
 generate-tools:
-	cd tools; go generate -v; cd ..
+	cd tools && go generate -v && cd ..
 
 render-workflow: ## Generate CI workflow instructions.
 	./.github/render-workflows.sh
@@ -242,7 +247,6 @@ cve-base-images-check-default-user: bin/jq ## Check CVE in our base images.
 
 .PHONY: docs
 docs: bin/werf ## Run containers with the documentation.
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --env local --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
@@ -250,13 +254,12 @@ docs: bin/werf ## Run containers with the documentation.
 docs-dev: bin/werf ## Run containers with the documentation in the dev mode (allow uncommited files).
 	export DOC_API_URL=dev
 	export DOC_API_KEY=dev
-	docker network inspect deckhouse 2>/dev/null 1>/dev/null || docker network create deckhouse
 	cd docs/site/; ../../bin/werf compose up --docker-compose-command-options='-d' --dev --env development --repo ":local" --skip-image-spec-stage=true
 	echo "Open http://localhost to access the documentation..."
 
 .PHONY: docs-down
 docs-down: ## Stop all the documentation containers (e.g. site_site_1 - for Linux, and site-site-1 for MacOs)
-	docker rm -f site-site-1 site-front-1 site_site_1 site_front_1 documentation 2>/dev/null; docker network rm deckhouse
+	docker rm -f site-site-1 site_site_1 site-router-1  site_router_1  site-front-1 site_front_1 site-frontend-1 site_frontend_1 2>/dev/null || true ; docker network rm deckhouse 2>/dev/null || true
 
 .PHONY: tests-doc-links
 docs-linkscheck: ## Build documentation and run checker of html links.
@@ -317,9 +320,15 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 		fi;
 
 bin/gh: bin ## Install gh cli.
+ifeq ($(OS_NAME), Darwin)
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
+	rm bin/gh.zip
+else
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
 	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
 	rm bin/gh.tar.gz
+endif
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
@@ -327,9 +336,9 @@ update-k8s-patch-versions: ## Run update-patchversion script to generate new ver
 
 ##@ Lib helm
 .PHONY: update-lib-helm
-update-lib-helm: ## Update lib-helm.
+update-lib-helm: yq ## Update lib-helm.
 	##~ Options: version=MAJOR.MINOR.PATCH
-	cd helm_lib/ && yq -i -y '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
+	cd helm_lib/ && yq -i '.dependencies[0].version = "$(version)"' Chart.yaml && helm dependency update && tar -xf charts/deckhouse_lib_helm-*.tgz -C charts/ && rm charts/deckhouse_lib_helm-*.tgz && git add Chart.yaml Chart.lock charts/*
 
 .PHONY: update-base-images-versions
 update-base-images-versions:
@@ -435,7 +444,6 @@ build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 
 GO=$(shell which go)
 GIT=$(shell which git)
-GOLANGCI_LINT=$(shell which golangci-lint)
 
 .PHONY: go-check
 go-check:
@@ -454,21 +462,48 @@ all-mod: go-check
 
 ##@ Dependencies
 
+WHOAMI ?= $(shell whoami)
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
 INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
+YQ = $(LOCALBIN)/yq
 
+## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
-GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.7
+GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
+GOLANGCI_LINT_VERSION = v2.7.2
+DECKHOUSE_CLI_VERSION ?= v0.25.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
-CODE_GENERATOR_VERSION ?= v0.30.11
+CODE_GENERATOR_VERSION ?= v0.32.10
+YQ_VERSION ?= v4.47.2
+
+## Generate werf
+.PHONY: generate-werf
+generate-werf: yq ## Generate changes in werf files.
+  ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
+	@if [ -n "$(GOLANGCI_LINT_VERSION)" ]; then \
+		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
+		echo "Updated golangci-lint version to $(GOLANGCI_LINT_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
+	else \
+		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
+	fi
+
+
+## Generate tools documentation
+.PHONY: generate-docs
+generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
+	@$(DECKHOUSE_CLI) help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -478,6 +513,19 @@ generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-gene
 .PHONY: controller-gen-generate
 controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
+	@echo "Generating CRDs..."
+	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+	@echo "Copying CRDs to deckhouse-controller/crds..."
+	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 
 ## Generate clientset
 .PHONY: client-gen-generate
@@ -514,6 +562,28 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 
 ## Tool installations
 
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
+## Download deckhouse-cli locally if necessary.
+.PHONY: deckhouse-cli
+deckhouse-cli:
+	@if [ -f "$(DECKHOUSE_CLI)" ]; then \
+		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
+		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
+			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+		else \
+			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
+		fi; \
+	else \
+		echo "d8 not found, downloading..."; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
+	fi
+
 ## Download client-gen locally if necessary.
 .PHONY: client-gen
 client-gen: $(CLIENT_GEN)
@@ -537,6 +607,11 @@ $(INFORMER_GEN): $(LOCALBIN)
 controller-gen: $(CONTROLLER_GEN)
 $(CONTROLLER_GEN): $(LOCALBIN)
 	$(call go-install-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen,$(CONTROLLER_TOOLS_VERSION))
+
+.PHONY: yq
+yq: $(YQ) ## Download yq locally if necessary.
+$(YQ): $(LOCALBIN)
+	$(call go-install-tool,$(YQ),github.com/mikefarah/yq/v4,$(YQ_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

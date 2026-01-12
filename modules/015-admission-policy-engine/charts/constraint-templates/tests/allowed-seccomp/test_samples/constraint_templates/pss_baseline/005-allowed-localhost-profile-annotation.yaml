@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-localhost-profile-annotation
+  namespace: testns
+  annotations:
+    container.seccomp.security.alpha.kubernetes.io/nginx: localhost/my-profile.json
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+

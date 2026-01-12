@@ -24,26 +24,34 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	infrastructurestate "github.com/deckhouse/deckhouse/dhctl/pkg/state/infrastructure"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineConvergeExporterFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		exporter := operations.NewConvergeExporter(app.ListenAddress, app.MetricsPath, app.CheckInterval)
+		logger := log.GetDefaultLogger()
+
+		exporter := operations.NewConvergeExporter(operations.ExporterParams{
+			Address:  app.ListenAddress,
+			Path:     app.MetricsPath,
+			Interval: app.CheckInterval,
+			TmpDir:   app.TmpDirName,
+			Logger:   logger,
+			IsDebug:  app.IsDebug,
+		})
 		exporter.Start(context.Background())
 		return nil
 	})
@@ -53,27 +61,20 @@ func DefineInfrastructureConvergeExporterCommand(cmd *kingpin.CmdClause) *kingpi
 func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineKubeFlags(cmd)
 	app.DefineOutputFlag(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-		log.InfoLn("Check started ...\n")
+		logger := log.GetDefaultLogger()
+		ctx := context.Background()
+		logger.LogInfoLn("Check started ...\n")
 
-		var sshClient node.SSHClient
-		var err error
-
-		if err := terminal.AskBecomePassword(); err != nil {
-			return err
-		}
+		// Skip AskBecomePassword for terraform check as it will be requested later during SSH operations
 		if err := terminal.AskBastionPassword(); err != nil {
 			return err
 		}
 
-		if app.SSHLegacyMode {
-			sshClient, err = clissh.NewInitClientFromFlags(true)
-		} else {
-			sshClient, err = gossh.NewInitClientFromFlags(true)
-		}
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -82,14 +83,18 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return fmt.Errorf("Not enough flags were passed to perform the operation.\nUse dhctl terraform check --help to get available flags.\nSsh host is not provided. Need to pass --ssh-host, or specify SSHHost manifest in the --connection-config file")
 		}
 
-		ctx := context.Background()
-
 		kubeCl, err := kubernetes.ConnectToKubernetesAPI(ctx, ssh.NewNodeInterfaceWrapper(sshClient))
 		if err != nil {
 			return err
 		}
 
-		metaConfig, err := config.ParseConfigInCluster(ctx, kubeCl)
+		metaConfig, err := config.ParseConfigInCluster(
+			ctx,
+			kubeCl,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+		)
 		if err != nil {
 			return err
 		}
@@ -99,8 +104,20 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
+		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
+			TmpDir:           app.TmpDirName,
+			AdditionalParams: cloud.ProviderAdditionalParams{},
+			Logger:           logger,
+			IsDebug:          app.IsDebug,
+		})
+
+		provider, err := providerGetter(ctx, metaConfig)
+		if err != nil {
+			return err
+		}
+
 		statistic, needMigrationToTofu, err := check.CheckState(
-			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(infrastructureprovider.ExecutorProvider(metaConfig)), check.CheckStateOptions{},
+			ctx, kubeCl, metaConfig, infrastructure.NewContextWithProvider(providerGetter, logger), check.CheckStateOptions{}, false,
 		)
 		if err != nil {
 			return err
@@ -112,10 +129,12 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		}
 
 		fmt.Print(string(data))
-		if infrastructure.NeedToUseOpentofu(metaConfig) && needMigrationToTofu {
+
+		if provider.NeedToUseTofu() && needMigrationToTofu {
 			fmt.Printf("\nNeed migrate to tofu: %v\n", needMigrationToTofu)
 		}
-		return nil
+
+		return provider.Cleanup()
 	})
 	return cmd
 }

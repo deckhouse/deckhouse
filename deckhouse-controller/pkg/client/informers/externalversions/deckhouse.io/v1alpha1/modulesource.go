@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ModuleSources.
 type ModuleSourceInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModuleSourceLister
+	Lister() deckhouseiov1alpha1.ModuleSourceLister
 }
 
 type moduleSourceInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredModuleSourceInformer(client versioned.Interface, resyncPeriod ti
 				return client.DeckhouseV1alpha1().ModuleSources().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModuleSource{},
+		&apisdeckhouseiov1alpha1.ModuleSource{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *moduleSourceInformer) defaultInformer(client versioned.Interface, resyn
 }
 
 func (f *moduleSourceInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleSource{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ModuleSource{}, f.defaultInformer)
 }
 
-func (f *moduleSourceInformer) Lister() v1alpha1.ModuleSourceLister {
-	return v1alpha1.NewModuleSourceLister(f.Informer().GetIndexer())
+func (f *moduleSourceInformer) Lister() deckhouseiov1alpha1.ModuleSourceLister {
+	return deckhouseiov1alpha1.NewModuleSourceLister(f.Informer().GetIndexer())
 }

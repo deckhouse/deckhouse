@@ -31,7 +31,7 @@ properties:
     description: |-
       Имя StorageClass, который будет использоваться для хранения DHCP lease.
 
-      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](../../deckhouse-configure-global.html#parameters-storageclass).
+      Если значение не указано, используется StorageClass существующей PVC. Если PVC нет, будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass).
 
       Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
 

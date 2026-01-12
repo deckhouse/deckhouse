@@ -1,6 +1,7 @@
 ---
 title: "Доступ к Kubernetes API через балансировщик трафика"
 permalink: ru/admin/configuration/access/authentication/k8s-api-lb.html
+description: "Настройка аутентифицированного доступа к Kubernetes API через балансировщик трафика в Deckhouse Kubernetes Platform. Безопасный доступ kubectl через Ingress-контроллер с аутентификацией."
 lang: ru
 ---
 
@@ -8,7 +9,7 @@ lang: ru
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого установите параметр `publishAPI.enabled: true` в настройках модуля `user-authn` (ModuleConfig `user-authn`) или с помощью веб-интерфейса администратора Deckhouse.
+1. Включите публикацию Kubernetes API. Для этого установите [параметр `publishAPI.enabled: true`](/modules/user-authn/configuration.html#parameters-publishapi-enabled) в настройках модуля `user-authn` или с помощью веб-интерфейса администратора Deckhouse.
 
    Пример конфигурации модуля:
 
@@ -31,7 +32,7 @@ lang: ru
 
 1. Сгенерируйте конфигурацию `kubectl`. После авторизации в интерфейсе kubeconfig пользователь получит набор команд для настройки `kubectl`. Эти команды можно скопировать и вставить в консоль. Аутентификация будет производиться по OIDC-токену, выданному Dex. При поддержке провайдером функции продления сессии конфигурация будет включать `refresh token`, что позволит продлевать доступ без повторной аутентификации.
 
-1. Настройте несколько точек подключения к API. В конфигурации модуля `user-authn` можно задать несколько точек подключения (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
+1. Настройте несколько точек подключения к API. В [конфигурации модуля `user-authn`](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator) можно задать несколько точек подключения (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
 
    ```yaml
    settings:
@@ -43,7 +44,7 @@ lang: ru
 
 ## Как работает защита доступа к Kubernetes API
 
-В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через модуль `user-authn`. Вы можете настроить:
+В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
 
 - список доверенных IP-адресов или сетей, которым разрешён доступ;
 - список групп пользователей, которые имеют право аутентификации;
@@ -52,7 +53,7 @@ lang: ru
 Для настройки:
 
 1. Включите публикацию API, как в примере выше.
-1. Настройте ограничения доступа. В конфигурации модуля можно указать:
+1. Настройте ограничения доступа. В [конфигурации модуля](/modules/user-authn/configuration.html) можно указать:
    - список сетевых адресов, которым разрешён доступ (`allowedSourceRanges`);
    - список групп пользователей, которым разрешено подключение к Kubernetes API (`allowedUserGroups`);
    - выбор Ingress-контроллера, через который будет работать публикация (`ingressClass`).
@@ -63,3 +64,40 @@ lang: ru
 - Deckhouse сам настроит необходимые аргументы для kube-apiserver;
 - будет сгенерирован сертификат CA и добавлен в kubeconfig;
 - будет настроен вход через Dex с поддержкой OIDC.
+
+## Доступ с использованием базовой аутентификации (LDAP)
+
+Помимо OIDC можно настроить прямой доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication, по логину и паролю). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
+
+Для настройки:
+
+1. Включите публикацию API (параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi)).
+1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+
+{% alert level="warning" %}
+В кластере может быть только один провайдер с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
+
+После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```

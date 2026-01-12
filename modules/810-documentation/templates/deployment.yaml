@@ -5,6 +5,8 @@ apiVersion: apps/v1
 metadata:
   name: documentation
   namespace: d8-system
+  annotations:
+    "pod-reloader.deckhouse.io/auto": "true"
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
 spec:
   replicas: 1
@@ -111,6 +113,8 @@ spec:
         volumeMounts:
           - mountPath: /tmp
             name: tmp
+          - mountPath: /app/hugo
+            name: app-hugo
           - mountPath: "/mount/public/en/modules"
             name: modules-docs-en
           - mountPath: "/mount/public/ru/modules"
@@ -177,6 +181,8 @@ spec:
           configMap:
             name: documentation-nginx-config
         - name: tmp
+          emptyDir: {}
+        - name: app-hugo
           emptyDir: {}
         - name: modules-docs-en
           emptyDir: {}

@@ -8,6 +8,8 @@ import:
     add: /terraform-provider-decort
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "decort") }}/{{ .TF.decort.namespace }}/{{ .TF.decort.type }}/{{ .TF.decort.version }}/linux_amd64/terraform-provider-decort
     before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -47,6 +49,7 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.decort.version }} -X main.commit=00000000" -o terraform-provider-decort ./cmd/decort/
     - mv /src/terraform-provider-decort /terraform-provider-decort
+    - strip /terraform-provider-decort
     - chmod -R 755 /terraform-provider-decort
     - chown 64535:64535 /terraform-provider-decort
 

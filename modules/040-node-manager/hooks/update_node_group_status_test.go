@@ -352,7 +352,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.29.1"}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.30.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
@@ -578,7 +578,7 @@ status:
 					"conditions": [
 						{
 							"lastTransitionTime": "2023-03-03T16:49:52Z",
-							"status": "True",
+							"status": "False",
 							"type": "Ready"
 						},
 						{

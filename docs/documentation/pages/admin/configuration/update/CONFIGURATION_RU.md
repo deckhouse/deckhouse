@@ -1,6 +1,7 @@
 ---
 title: Настройка обновлений
 permalink: ru/admin/configuration/update/configuration.html
+description: "Настройка параметров обновлений Deckhouse Kubernetes Platform включая каналы релизов, режимы обновлений и политики обновлений. Автоматическое и ручное управление обновлениями."
 lang: ru
 ---
 

@@ -15,23 +15,23 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net"
-	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/iancoleman/strcase"
-	"github.com/vmware/go-vcloud-director/v3/govcd"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/global/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
@@ -55,7 +55,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  registry_config.Config `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -64,14 +64,22 @@ type MetaConfig struct {
 
 type imagesDigests map[string]map[string]interface{}
 
-type providerApiDiscoverMap map[string]func(*MetaConfig) (any, error)
+func validateAndPrepareMetaConfig(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider, m *MetaConfig) (*MetaConfig, error) {
+	preparator := preparatorProvider(m.ProviderName)
 
-var providerApiDiscoverer = providerApiDiscoverMap{
-	ProviderVCD: (*MetaConfig).discoverVCDApi,
+	if err := preparator.Validate(ctx, m); err != nil {
+		return nil, err
+	}
+
+	if err := preparator.Prepare(ctx, m); err != nil {
+		return nil, err
+	}
+
+	return m, nil
 }
 
 // Prepare extracts all necessary information from raw json messages to the root structure
-func (m *MetaConfig) Prepare() (*MetaConfig, error) {
+func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigPreparatorProvider) (*MetaConfig, error) {
 	if len(m.ClusterConfig) > 0 {
 		if err := json.Unmarshal(m.ClusterConfig["clusterType"], &m.ClusterType); err != nil {
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
@@ -88,14 +96,15 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+	}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-		m.Registry.Process(m.DeckhouseConfig)
+	// Prepare registry config
+	if err := m.prepareRegistry(); err != nil {
+		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return m, nil
+		return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
 	}
 
 	if err := json.Unmarshal(m.ProviderClusterConfig["layout"], &m.Layout); err != nil {
@@ -116,120 +125,6 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
 	}
 
-	var providerInfo interface{}
-	providerAPIInfoFunc, ok := providerApiDiscoverer[cloud.Provider]
-
-	if ok {
-		var err error
-
-		providerInfo, err = providerAPIInfoFunc(m)
-		if err != nil {
-			return nil, fmt.Errorf("unable to discover provider info: %v", err)
-		}
-	}
-
-	if cloud.Provider == ProviderYandex {
-		if err := ValidateClusterConfigurationPrefix(cloud.Prefix, cloud.Provider); err != nil {
-			return nil, err
-		}
-
-		var masterNodeGroup YandexMasterNodeGroupSpec
-		if err := json.Unmarshal(m.ProviderClusterConfig["masterNodeGroup"], &masterNodeGroup); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal master node group from provider cluster configuration: %v", err)
-		}
-
-		if masterNodeGroup.Replicas > 0 &&
-			len(masterNodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-			masterNodeGroup.Replicas > len(masterNodeGroup.InstanceClass.ExternalIPAddresses) {
-			return nil, fmt.Errorf("number of masterNodeGroup.replicas should be equal to the length of masterNodeGroup.instanceClass.externalIPAddresses")
-		}
-
-		nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
-		if ok {
-			var yandexNodeGroups []YandexNodeGroupSpec
-			if err := json.Unmarshal(nodeGroups, &yandexNodeGroups); err != nil {
-				return nil, fmt.Errorf("unable to unmarshal node groups from provider cluster configuration: %v", err)
-			}
-
-			for _, nodeGroup := range yandexNodeGroups {
-				if nodeGroup.Replicas > 0 &&
-					len(nodeGroup.InstanceClass.ExternalIPAddresses) > 0 &&
-					nodeGroup.Replicas > len(nodeGroup.InstanceClass.ExternalIPAddresses) {
-					return nil, fmt.Errorf(`number of nodeGroups["%s"].replicas should be equal to the length of nodeGroups["%s"].instanceClass.externalIPAddresses`, nodeGroup.Name, nodeGroup.Name)
-				}
-			}
-		}
-	}
-
-	if cloud.Provider == ProviderVCD {
-		// Set default version for terraform-provider-vcd to 3.10.0 if VCD API version is less than 37.2
-		// This is a temporary solution to avoid breaking changes in the VCD API
-
-		VCDProviderInfo, ok := providerInfo.(*VCDProviderInfo)
-		if !ok {
-			return nil, fmt.Errorf("failed to get VCD provider info")
-		}
-
-		version, err := semver.NewVersion(VCDProviderInfo.ApiVersion)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse VCD API version '%s': %v", VCDProviderInfo.ApiVersion, err)
-		}
-
-		log.DebugF("VCD API version '%s'\n", VCDProviderInfo.ApiVersion)
-
-		const versionConstraintStr = "<37.2"
-
-		versionConstraint, err := semver.NewConstraint(versionConstraintStr)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse version constraint '%s': %v", versionConstraint, err)
-		}
-
-		infrastructureModulesDir := infrastructure.GetInfrastructureModulesDir("vcd")
-
-		versionsFilePath := filepath.Join(infrastructureModulesDir, "versions.tf")
-
-		log.DebugF("Infrastructure version file for VCD %s\n", versionsFilePath)
-
-		err = os.Remove(versionsFilePath)
-		if err != nil {
-			if !os.IsNotExist(err) {
-				return nil, fmt.Errorf("failed to remove versions.tf: %v", err)
-			}
-
-			log.DebugF("Infrastructure version file %s not found. Continue\n", versionsFilePath)
-		} else {
-			log.DebugF("Infrastructure version file %s was found and deleted\n", versionsFilePath)
-		}
-
-		if versionConstraint.Check(version) {
-			log.DebugF("Use legacy VCD version %s (%s). Use legacy mode as true\n", version, versionConstraintStr)
-			if _, ok := m.ProviderClusterConfig["legacyMode"]; !ok {
-				legacyMode, err := json.Marshal(true)
-				if err != nil {
-					return nil, fmt.Errorf("failed to marshal legacyMode: %v", err)
-				}
-
-				m.ProviderClusterConfig["legacyMode"] = legacyMode
-			}
-
-			err = os.Symlink(filepath.Join(infrastructureModulesDir, "versions-legacy.tf"), versionsFilePath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create symlink to versions-legacy.tf: %v", err)
-			}
-
-			log.DebugLn("Symlink to legacy version file was created\n")
-		} else {
-			log.DebugF("Use latest VCD version %s (%s)e\n", version, versionConstraintStr)
-
-			err := os.Symlink(filepath.Join(infrastructureModulesDir, "versions-new.tf"), versionsFilePath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create symlink to versions-new.tf: %v", err)
-			}
-
-			log.DebugLn("Symlink to latest version file was created\n")
-		}
-	}
-
 	m.TerraNodeGroupSpecs = []TerraNodeGroupSpec{}
 	nodeGroups, ok := m.ProviderClusterConfig["nodeGroups"]
 	if ok {
@@ -238,7 +133,105 @@ func (m *MetaConfig) Prepare() (*MetaConfig, error) {
 		}
 	}
 
-	return m, nil
+	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+}
+
+func (m *MetaConfig) prepareRegistry() error {
+	var defaultCRI registry_const.CRIType
+	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
+			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+		}
+	}
+
+	criSupported := registry_const.IsCRISupported(defaultCRI)
+	initConfig := m.DeckhouseConfig.registryInitConfig()
+
+	deckhouseSettings, err := m.registryDeckhouseSettings()
+	if err != nil {
+		return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+	}
+
+	switch {
+
+	// Check configuration conflict
+	case initConfig != nil && deckhouseSettings != nil:
+		return fmt.Errorf(
+			"duplicate registry configuration detected: " +
+				"registry is configured in both 'initConfiguration.deckhouse' " +
+				"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+				"Please specify registry settings in only one location.",
+		)
+
+	case deckhouseSettings != nil:
+		// Check CRI
+		if !criSupported {
+			return fmt.Errorf(
+				"registry module cannot be started with defaultCRI '%s'. "+
+					"Please either configure registry in 'initConfiguration.deckhouse', "+
+					"or use a supported defaultCRI type with the existing configuration in "+
+					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
+				defaultCRI,
+				registry_const.SupportedCRI,
+			)
+		}
+
+		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+		return nil
+
+	case initConfig != nil:
+		if err := m.Registry.UseInitConfig(*initConfig); err != nil {
+			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+		return nil
+
+	default:
+		if err := m.Registry.UseDefault(criSupported); err != nil {
+			return fmt.Errorf("get default registry settings: %w", err)
+		}
+		return nil
+	}
+}
+
+func (m *MetaConfig) registryDeckhouseSettings() (*registry_moduleconfig.DeckhouseSettings, error) {
+	var mcDeckhouse *ModuleConfig
+
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == "deckhouse" {
+			mcDeckhouse = mc
+			break
+		}
+	}
+
+	if mcDeckhouse == nil {
+		return nil, nil
+	}
+
+	settings, ok := mcDeckhouse.Spec.Settings["registry"]
+	if !ok {
+		return nil, nil
+	}
+
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
+	}
+
+	var ret registry_moduleconfig.DeckhouseSettings
+	if err := json.Unmarshal(raw, &ret); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
+	}
+
+	return &ret, nil
+}
+
+func (m *MetaConfig) GetFullUUID() (string, error) {
+	if m.UUID == "" {
+		return "", fmt.Errorf("Unable to get full UUID for provider '%s/%s'. It is empty", m.ClusterPrefix, m.ProviderName)
+	}
+	return m.UUID, nil
 }
 
 func (m *MetaConfig) GetTerraNodeGroups() []TerraNodeGroupSpec {
@@ -369,12 +362,11 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.KubeadmTemplatesCtx()
-	if err != nil {
-		return nil, err
-	}
-
-	result["registry"] = registryData
+	// Registry
+	result["registry"] = m.Registry.
+		Manifest().
+		KubeadmContext().
+		ToMap()
 
 	images := m.Images
 
@@ -422,11 +414,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.BashibleBundleTemplateCtx()
-	if err != nil {
-		return nil, err
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -452,7 +439,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
-	configForBashibleBundleTemplate["registry"] = registryData
+
+	// Registry
+	registryContext, err := m.Registry.
+		Manifest().
+		BashibleContext(registry_config.GeneratePKI)
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible context: %s", err)
+	}
+	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
@@ -525,7 +520,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = *m.Registry.DeepCopy()
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType
@@ -713,48 +708,4 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
-}
-
-func (m *MetaConfig) discoverVCDApi() (any, error) {
-	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
-		return nil, fmt.Errorf("current cluster type is not a cloud type")
-	}
-
-	var cloud ClusterConfigCloudSpec
-	if err := json.Unmarshal(m.ClusterConfig["cloud"], &cloud); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
-	}
-
-	if cloud.Provider != ProviderVCD {
-		return nil, fmt.Errorf("current provider type is not VCD")
-	}
-
-	var providerConfiguration VCDProviderConfig
-	if err := json.Unmarshal(m.ProviderClusterConfig["provider"], &providerConfiguration); err != nil {
-		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
-	}
-
-	if err := validateVCDServerNoTrailingSlash(providerConfiguration.Server); err != nil {
-		return nil, err
-	}
-
-	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
-	}
-	insecure := providerConfiguration.Insecure
-
-	vcdClient := govcd.NewVCDClient(
-		*vcdUrl,
-		insecure,
-	)
-
-	vcdClient.Client.APIVCDMaxVersionIs("")
-
-	apiVersion, err := vcdClient.Client.MaxSupportedVersion()
-	if err != nil {
-		return nil, fmt.Errorf("unable to get VCD API version: %v", err)
-	}
-
-	return &VCDProviderInfo{ApiVersion: apiVersion}, nil
 }

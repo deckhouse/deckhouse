@@ -37,7 +37,7 @@ module ReferenceGenerator
         'lang' => @lang,
         'name' => @fileName,
         'sidebar' => @sidebar,
-        'search_bage_enabled' => true,
+        'searchBageEnabled' => true,
         'sitemap_include' => true
       }
 

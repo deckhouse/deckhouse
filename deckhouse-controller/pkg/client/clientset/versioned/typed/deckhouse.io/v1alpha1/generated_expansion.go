@@ -15,6 +15,12 @@
 
 package v1alpha1
 
+type ApplicationExpansion interface{}
+
+type ApplicationPackageExpansion interface{}
+
+type ApplicationPackageVersionExpansion interface{}
+
 type DeckhouseReleaseExpansion interface{}
 
 type ModuleExpansion interface{}
@@ -32,3 +38,9 @@ type ModuleSettingsDefinitionExpansion interface{}
 type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
+
+type ObjectKeeperExpansion interface{}
+
+type PackageRepositoryExpansion interface{}
+
+type PackageRepositoryOperationExpansion interface{}

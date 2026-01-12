@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Модуль [`metallb`](/products/kubernetes-platform/documentation/v1/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Virtualization Platform (DVP).
+Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Virtualization Platform (DVP).
 Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->
@@ -12,7 +12,7 @@ lang: ru
 Поддерживаются два режима работы:
 
 - **Layer 2** — усовершенствованный (относительно стандартного режима L2 в MetalLB) механизм балансировки, который позволяет использовать несколько публичных адресов для сервисов.
-- **BGP** — полностью основан на решении [MetalLB](https://metallb.universe.tf/) и доступен только в DVP Enterprise Edition.
+- **BGP** — полностью основан на решении [MetalLB](https://metallb.io/) и доступен только в DVP Enterprise Edition.
 
 ## Режим Layer 2
 

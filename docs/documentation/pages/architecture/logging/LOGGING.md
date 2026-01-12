@@ -8,8 +8,8 @@ This section describes the operation of logging system components in Deckhouse K
 ## Log collection and delivery mechanism
 
 The [`log-shipper` module](/modules/log-shipper/) is used for log collection and delivery in DKP.
-A separate `log-shipper` instance runs on each cluster node and is configured based on DKP resources.
-The `log-shipper` module uses [Vector](https://vector.dev/) as a logging agent.
+A separate [log-shipper](/modules/log-shipper/) instance runs on each cluster node and is configured based on DKP resources.
+The [log-shipper](/modules/log-shipper/) module uses [Vector](https://vector.dev/) as a logging agent.
 The combination of settings for log collection and delivery forms a *pipeline*.
 
 ![log-shipper architecture](../../images/log-shipper/log_shipper_architecture.svg)
@@ -25,7 +25,7 @@ The combination of settings for log collection and delivery forms a *pipeline*.
    - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination): Sets log storage parameters.
 
 1. Based on the specified parameters, DKP automatically creates a configuration file and saves it in a Secret in Kubernetes.
-1. The Secret is mounted on all `log-shipper` agent pods.
+1. The Secret is mounted on all [log-shipper](/modules/log-shipper/) agent pods.
    When the configuration changes, updates occur automatically using the `reloader` sidecar container.
 
 ## Log delivery schemes
@@ -35,7 +35,7 @@ depending on reliability requirements and resource consumption.
 
 ### Distributed
 
-`log-shipper` agents send logs directly to storage, such as Loki or Elasticsearch.
+[log-shipper](/modules/log-shipper/) agents send logs directly to storage, such as Loki or Elasticsearch.
 
 ![log-shipper distributed](../../images/log-shipper/log_shipper_distributed.svg)
 
@@ -95,7 +95,7 @@ Disadvantages:
 
 Before sending logs, DKP can filter out unnecessary records
 to reduce the number of messages sent to storage.
-For this, the `labelFilter` and `logFilter` filters of the `log-shipper` module are used.
+For this, the [`labelFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-labelfilter) and [`logFilter`](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-logfilter) filters of the [log-shipper](/modules/log-shipper/) module are used.
 
 ![log-shipper pipeline](../../images/log-shipper/log_shipper_pipeline.svg)
 
@@ -130,7 +130,7 @@ Additional labels (`extraLabels`) are added at the **Destination** stage, so fil
 
 ### Metadata
 
-When processing logs, `log-shipper` automatically enriches messages with metadata depending on their source.
+When processing logs, [log-shipper](/modules/log-shipper/) automatically enriches messages with metadata depending on their source.
 Enrichment occurs at the `Source` stage.
 
 #### Kubernetes

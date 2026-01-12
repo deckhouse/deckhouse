@@ -15,8 +15,6 @@ services:
       VROUTER_I18N_TYPE: "separate-domain"
       VROUTER_LOCATION_VERSIONS: "/products/kubernetes-platform/documentation"
       VROUTER_DOMAIN_MAP: "eyJlbiIgOiAibG9jYWxob3N0IiwgInJ1IiA6ICJydS5sb2NhbGhvc3QifQo="
-    networks:
-      - deckhouse
     volumes:
       - ".helm/channels.yaml:/app/root/en/includes/release-channels/channels.yaml:ro"
       - ".helm/channels.yaml:/app/root/ru/includes/release-channels/channels.yaml:ro"
@@ -26,6 +24,7 @@ services:
     command: ["/entrypoint.sh"]
     volumes:
       - ".werf/nginx-local.conf:/etc/nginx/nginx.conf:ro"
+      - ".werf/installer-versions-nginx-local.include:/app/installer-versions-nginx.include:ro"
       - ".werf/entrypoint-local.sh:/entrypoint.sh:ro"
       - ".helm/channels.yaml:/app/channels.yaml:ro"
       - "./backends/docs-builder-template/public/en/modules:/app/modules-from-source/en/modules:ro"
@@ -35,13 +34,6 @@ services:
       - "channels-conf:/app/channels-data"
     ports:
       - "80:80"
-    networks:
-      - deckhouse
-
-networks:
-  deckhouse:
-    name: deckhouse
-    external: true
 
 volumes:
   channels-conf:

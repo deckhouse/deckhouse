@@ -12,7 +12,7 @@ To properly restore the cluster, follow these steps on the master node:
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
@@ -24,7 +24,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    Make sure the output of `etcdutl version` is displayed without errors.
 
-   If `etcdutl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
+   If `etcdutl` is not found, download the binary from [the official etcd repository](https://github.com/etcd-io/etcd/releases), choosing a version that matches your cluster's etcd version:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -139,7 +139,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Switch the cluster back to multi-master mode.

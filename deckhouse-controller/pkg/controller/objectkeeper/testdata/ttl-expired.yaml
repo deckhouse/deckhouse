@@ -1,0 +1,8 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: ttl-expired
+spec:
+  mode: TTL
+  ttl: 1m

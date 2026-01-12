@@ -8,13 +8,19 @@ title: "Модуль cilium-hubble: настройки"
 
 Если модуль `cni-cilium` выключен, параметр `ciliumHubbleEnabled:` не повлияет на включение модуля `cilium-hubble`.
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 {% include module-settings.liquid %}
 
 ## Аутентификация
 
-По умолчанию используется модуль [user-authn](/products/kubernetes-platform/documentation/v1/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication`.
+По умолчанию используется модуль [user-authn](/modules/user-authn/). Также можно настроить аутентификацию через `externalAuthentication`.
 Если эти варианты отключены, модуль включит базовую аутентификацию со сгенерированным паролем.
 
 Чтобы просмотреть сгенерированный пароль, выполните команду:

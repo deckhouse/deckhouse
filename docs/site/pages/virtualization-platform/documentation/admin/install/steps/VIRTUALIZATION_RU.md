@@ -5,23 +5,23 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
 После настройки хранилища необходимо включить модуль `virtualization`. Включение и настройка модуля производятся с помощью веб-интерфейса администратора или с помощью следующей команды:
 
 ```shell
-d8 s module enable virtualization
+d8 system module enable virtualization
 ```
 
 Отредактируйте конфигурацию модуля [одним из способов](#конфигурация-модуля-virtualization).
 
 В конфигурации модуля укажите:
 
-- [settings.virtualMachineCIDRs](/products/virtualization-platform/reference/mc.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
-- [settings.dvcr.storage.persistentVolumeClaim.size](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
-- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
-- [settings.dvcr.storage.type](/products/virtualization-platform/reference/mc.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
+- [settings.virtualMachineCIDRs](/modules/virtualization/configuration.html#parameters-virtualmachinecidrs) — подсети, IP-адреса из которых будут назначаться виртуальным машинам;
+- [settings.dvcr.storage.persistentVolumeClaim.size](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-size) — размер дискового пространства для хранения образов виртуальных машин;
+- [settings.dvcr.storage.persistentVolumeClaim.storageClassName](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname) — имя StorageClass, используемого для создания PersistentVolumeClaim (если не указан, то будет использоваться StorageClass используемый по умолчанию);
+- [settings.dvcr.storage.type](/modules/virtualization/configuration.html#parameters-dvcr-storage-type) — укажите `PersistentVolumeClaim`.
 
 Пример базовой настройки модуля виртуализации:
 
@@ -108,7 +108,29 @@ d8 k edit mc virtualization
 - `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` — класс хранения (например, `sds-replicated-thin-r1`).
 
 {% alert level="warning" %}
-Хранилище, обслуживающее класс хранения (параметр `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`), должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
+Перенос образов при изменении значения параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` не поддерживается.
+
+При смене StorageClass DVCR все образы, хранящиеся в DVCR, будут утеряны.
+{% endalert %}
+
+Для изменения StorageClass DVCR выполните следующие действия:
+
+1. Измените значение [параметра `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`](/modules/virtualization/configuration.html#parameters-dvcr-storage-persistentvolumeclaim-storageclassname).
+
+1. Удалите старый PVC для DVCR с помощью следующей команды:
+
+   ```shell
+   d8 k -n d8-virtualization delete pvc -l app=dvcr
+   ```
+
+1. Перезапустите DVCR, выполнив следующую команду:
+
+   ```shell
+   d8 k -n d8-virtualization rollout restart deployment dvcr
+   ```
+
+{% alert level="warning" %}
+Хранилище, обслуживающее данный класс хранения `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName`, должно быть доступно на узлах, где запускается DVCR (system-узлы, либо worker-узлы, при отсутствии system-узлов).
 {% endalert %}
 
 ### Сетевые настройки

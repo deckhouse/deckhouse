@@ -115,6 +115,8 @@ Spellchecking commands:
 
 ## Architecture
 
+> ![NOTE] Architecture has been updated. This section is a work in progress. Some information may be incomplete or outdated.
+
 The Deckhouse website consists of the following parts:
 
 - **Main website**. Includes all sections except those specifically described below.
@@ -521,3 +523,152 @@ Below are some data structures used in the Jekyll projects.
     }
   }
   ```
+
+## Search
+
+This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.
+
+### Usage
+
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/path/to/search.json"
+       data-search-context="Searching in modules documentation"> 
+```
+
+### Examples
+
+#### Modules Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search modules..." 
+       class="input"
+       data-search-index-path="/modules/search-embedded-modules-index.json"
+       data-search-context="Searching in modules documentation">
+```
+
+#### Platform Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/search.json"
+       data-search-context="Searching in platform documentation and modules">
+```
+
+#### Product-Specific Documentation
+```html
+<input type="text" id="search-input" 
+       placeholder="Search..." 
+       class="input"
+       data-search-index-path="/products/kubernetes-platform/documentation/search.json"
+       data-search-context="Searching in Kubernetes Platform documentation">
+```
+
+### Behavior
+
+- The context message only appears when the search is ready and no query has been entered
+- It appears above the "What are we looking for?" message
+- If no `data-search-context` attribute is provided, the normal ready message is displayed
+- The context message is hidden when search results are shown
+
+### Internationalization
+
+Jekyll/Liquid:
+
+```html
+data-search-context="{{ site.data.i18n.search.context[page.lang] }}"
+```
+
+Hugo:
+
+```html
+data-search-context="{{ T "search_context" }}"
+```
+
+## Markup (external modules documentation)
+
+[Hugo](gohugo.io) SSG is used for rendering.
+
+The documentation content is written in Markdown with some custom shortcodes.
+
+### OpenAPI Specifications rendering
+
+TODO
+
+### Page parameters (front matter)
+
+#### Related links
+
+```yaml
+params:
+  relatedLinks:
+    - title: "Link"
+      url: link.html
+    - title: "External link"
+      url: "http://domain/external/link.html"
+    - url: /modules/monitoring-kubernetes/
+```
+
+### Shortcodes
+
+<div id="alert-details"></div>
+
+#### Alert
+
+There are following levels of alerts: `info`, `warning`, `danger`. The default level is `info`.
+
+```go
+{{< alert level="warning" >}}
+The warning message...
+{{< /alert >}}
+```
+
+#### Tabs
+
+```go
+{{< tabs name="tabs_uniq_name" >}}
+{{% tab name="Tab caption 1" %}}Tab 1 Content {{% /tab %}}
+{{% tab name="Tab caption 2" %}}Tab 2 Content {{% /tab %}}
+{{< /tabs >}}
+```
+
+#### Translate
+
+Translates content based on the current language using the translations defined in the `i18n` folder.
+
+```go
+{{< translate "version_of_module" >}}
+```
+
+<div id="shortcode-details"></div>
+
+#### Details
+
+```go
+{{% details "Summary..."%}}
+## Markdown content
+
+Markdown content...
+{{% /details %}}
+```
+
+### Partials
+
+#### Details
+
+The same as the [details shortcode](#user-content-shortcode-details), but used in templates.
+
+```
+{{ partial "details" ( dict "summary" "Summary..." "content" "Markdown content..." ) }}
+```
+
+#### Alert
+
+The same as the [alert shortcode](#user-content-alert-details), but used in templates.
+
+```
+{{ partial "alert" ( dict "level" "warning" "content" "Markdown content..." ) }}
+```

@@ -12,7 +12,7 @@ import:
   before: setup
 - image: d8-docs-artifacts
   add: /export/embedded_modules.json
-  to: /app/hugo/data/dkp/embedded_modules.json
+  to: /app/hugo-init/data/dkp/embedded_modules.json
   before: setup
 imageSpec:
   config:
@@ -20,14 +20,14 @@ imageSpec:
     entrypoint: [ "/app/server" ]
 git:
   - add: /{{ .ModulePath }}docs/site/backends/docs-builder-template
-    to: /app/hugo
+    to: /app/hugo-init
 {{ if ne .ModuleName "website-docs" }}
-{{- include "image mount points" . | nindent 2 }}
     excludePaths:
     - config/production/
     - data/dkp/embedded_modules.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
-    to: /app/hugo/config/production/hugo.yaml
+    to: /app/hugo-init/config/production/hugo.yaml
+{{- include "image mount points" . | nindent 2 }}
 {{ end }}
 
 ---
@@ -54,7 +54,25 @@ shell:
         end
       )' | jq --slurpfile excluded /rawdata/docs/modules/excluded_modules.json '
       .entries |= map(select(.module as $m | ($excluded[0] | index($m) | not)))
-      ' > /export/embedded_modules.json
+      ' > /export/embedded_modules_tmp.json
+
+    echo "[] Getting modules metadata from module.yaml files..."
+    export METADATA_SOURCE_DIR=/rawdata/embedded-modules
+    export METADATA_TARGET_FILE=/export/embedded_modules_metadata.json
+    sh /_tools/modules_generate_metadata.sh
+    MODULES_METADATA_COUNT=$(jq -r '.modules | length' /export/embedded_modules_metadata.json)
+
+    if [ "$MODULES_METADATA_COUNT" -le 10 ]; then
+      echo "Got modules metadata only for $MODULES_METADATA_COUNT DKP embedded modules, and it seems like there is a problem. Exiting."
+      exit 1
+    else
+      echo
+      echo "Got modules metadata for ${MODULES_METADATA_COUNT} DKP embedded modules."
+      echo
+    fi
+
+    # Merging modules metadata...
+    jq -s '.[0] as $main | .[1] as $meta | $main | .entries = (.entries | map(. + {metadata: ($meta.modules[.module] // {})}))' /export/embedded_modules_tmp.json /export/embedded_modules_metadata.json > /export/embedded_modules.json
 
     MODULES_COUNT=$(jq -r '.entries | length' /export/embedded_modules.json)
     if [ "$MODULES_COUNT" -le 10 ]; then
@@ -75,6 +93,10 @@ import:
   to: /usr/bin/yq
   before: setup
 git:
+- add: /docs/documentation/_tools/modules_generate_metadata.sh
+  to: /_tools/modules_generate_metadata.sh
+  stageDependencies:
+    setup: ['**/*']
 - add: /{{ .ModulePath }}
   to: /rawdata/embedded-modules
   stageDependencies:
@@ -82,6 +104,10 @@ git:
   includePaths:
   - modules/**/docs/{README,readme}*.md
   - ee/**/docs/{README,readme}*.md
+  - modules/**/module.yaml
+  - ee/**/module.yaml
+  - modules/**/oss.yaml
+  - ee/**/oss.yaml
 - add: /{{ .ModulePath }}/docs/documentation/_data/modules
   to: /rawdata/docs/modules
   stageDependencies:

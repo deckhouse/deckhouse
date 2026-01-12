@@ -81,7 +81,7 @@ In the cluster:
 DKP uses a set of custom resources developed by the [Aqua Security Trivy Operator](https://aquasecurity.github.io/trivy-operator/) project
 to represent vulnerability scan results, configuration analysis, and cluster compliance checks.
 
-Below is a description of the key CRDs created by `operator-trivy`, with examples and links to official documentation.
+Below is a description of the key CRDs created by [operator-trivy](/modules/operator-trivy/), with examples and links to official documentation.
 
 ### Resource types for scan results
 
@@ -96,7 +96,7 @@ The report includes a list of known vulnerabilities in OS packages and applicati
 grouped by severity levels (Critical, High, Medium, etc.).
 
 For each container in a multi-container workload,
-`operator-trivy` creates a separate VulnerabilityReport in the workload's namespace.
+[operator-trivy](/modules/operator-trivy/) creates a separate VulnerabilityReport in the workload's namespace.
 The association with the Kubernetes resource is defined via the `ownerReference` field.
 
 Resource names are formed based on the following pattern: `<workload-type>-<workload-name>-<container-name>`.
@@ -233,7 +233,7 @@ The report lists strings containing sensitive data (for example, tokens, keys, p
 Each finding includes a category, rule, severity level, and file path.
 
 For each container in a multi-container workload,
-`operator-trivy` creates a separate ExposedSecretReport in the workload's namespace.
+[operator-trivy](/modules/operator-trivy/) creates a separate ExposedSecretReport in the workload's namespace.
 The association with the Kubernetes resource is established via `ownerReference`.
 
 Resource names are formed based on the following pattern: `<workload-type>-<workload-name>-<container-name>`.
@@ -294,7 +294,7 @@ containing a Software Bill of Materials (SBOM) report for a container image used
 It provides a complete list of software components, including system packages and application dependencies found in the container.
 This information is useful for image composition analysis, security auditing, and vendor compliance requirements.
 
-For multi-container workloads, `operator-trivy` creates a separate SbomReport for each container.
+For multi-container workloads, [operator-trivy](/modules/operator-trivy/) creates a separate SbomReport for each container.
 Reports are generated in the same namespace as the workload and linked via `ownerReference`.
 
 Resource names are formed based on the following pattern: `<workload-type>-<workload-name>-<container-name>`.

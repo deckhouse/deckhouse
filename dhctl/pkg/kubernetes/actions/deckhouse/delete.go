@@ -27,6 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 
+	capi "github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi/v1beta1"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha1"
+	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
@@ -37,29 +40,6 @@ const (
 	deckhouseDeploymentNamespace = "d8-system"
 	deckhouseDeploymentName      = "deckhouse"
 )
-
-var d8storageConfig = []schema.GroupVersionResource{
-	{
-		Group:    "storage.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "localstorageclasses",
-	},
-	{
-		Group:    "storage.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "replicatedstorageclasses",
-	},
-	{
-		Group:    "storage.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "nfsstorageclasses",
-	},
-	{
-		Group:    "storage.deckhouse.io",
-		Version:  "v1alpha1",
-		Resource: "cephstorageclasses",
-	},
-}
 
 func DeleteDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
@@ -122,7 +102,7 @@ func DeleteD8StorageResources(ctx context.Context, kubeCl *client.KubernetesClie
 
 func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete Deckhouse Storage CRs", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		for _, cr := range d8storageConfig {
+		for _, cr := range v1alpha1.D8StoragesGVRs() {
 			storageCRs, err := ListD8StorageResources(ctx, kubeCl, cr)
 			if err != nil {
 				if errors.IsNotFound(err) {
@@ -144,7 +124,24 @@ func DeleteAllD8StorageResources(ctx context.Context, kubeCl *client.KubernetesC
 
 func DeleteStorageClasses(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Delete StorageClasses", 45, 5*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		return kubeCl.StorageV1().StorageClasses().DeleteCollection(ctx, metav1.DeleteOptions{}, metav1.ListOptions{})
+		list, err := kubeCl.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{})
+		if err != nil {
+			return err
+		}
+
+		if len(list.Items) == 0 {
+			return nil
+		}
+
+		var lastError error
+
+		for _, obj := range list.Items {
+			err = kubeCl.StorageV1().StorageClasses().Delete(ctx, obj.GetName(), metav1.DeleteOptions{})
+			if err != nil && !errors.IsNotFound(err) {
+				lastError = err
+			}
+		}
+		return lastError
 	})
 }
 
@@ -238,7 +235,7 @@ func WaitForDeckhouseDeploymentDeletion(ctx context.Context, kubeCl *client.Kube
 			errStr = fmt.Sprintf("Error during waiting, err: %v", err)
 		}
 		//goland:noinspection GoErrorStringFormat
-		return fmt.Errorf(errStr)
+		return fmt.Errorf("%s", errStr)
 	})
 }
 
@@ -359,18 +356,9 @@ func checkMachinesAPI(kubeCl *client.KubernetesClient, gv schema.GroupVersion) e
 	return nil
 }
 
-// mcm
-const (
-	MCMGroup        = "machine.sapcloud.io"
-	MCMGroupVersion = "v1alpha1"
-)
-
 func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	machineDeploymentsSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machinedeployments"}
-	machinesSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machines"}
-
 	return retry.NewLoop("Delete MCM MachineDeployments", 45, 5*time.Second).RunContext(ctx, func() error {
-		allMachines, err := kubeCl.Dynamic().Resource(machinesSchema).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		allMachines, err := kubeCl.Dynamic().Resource(sapcloud.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
 		}
@@ -386,13 +374,13 @@ func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesC
 				return err
 			}
 
-			_, err = kubeCl.Dynamic().Resource(machinesSchema).Namespace(machine.GetNamespace()).Patch(ctx, machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
+			_, err = kubeCl.Dynamic().Resource(sapcloud.MachineGVR).Namespace(machine.GetNamespace()).Patch(ctx, machine.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 			if err != nil {
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
 		}
 
-		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machinedeployments: %v", err)
 		}
@@ -400,7 +388,7 @@ func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesC
 		for _, machineDeployment := range allMachineDeployments.Items {
 			namespace := machineDeployment.GetNamespace()
 			name := machineDeployment.GetName()
-			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+			err := kubeCl.Dynamic().Resource(sapcloud.MachineDeploymentGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil {
 				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
 			}
@@ -411,9 +399,8 @@ func DeleteMCMMachineDeployments(ctx context.Context, kubeCl *client.KubernetesC
 }
 
 func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	resourceSchema := schema.GroupVersionResource{Group: MCMGroup, Version: MCMGroupVersion, Resource: "machines"}
 	return retry.NewLoop("Wait for MCM Machines deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		resources, err := kubeCl.Dynamic().Resource(resourceSchema).List(ctx, metav1.ListOptions{})
+		resources, err := kubeCl.Dynamic().Resource(sapcloud.MachineGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}
@@ -432,12 +419,7 @@ func WaitForMCMMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesCl
 }
 
 func checkMCMMachinesAPI(kubeCl *client.KubernetesClient) error {
-	gv := schema.GroupVersion{
-		Group:   MCMGroup,
-		Version: MCMGroupVersion,
-	}
-
-	return checkMachinesAPI(kubeCl, gv)
+	return checkMachinesAPI(kubeCl, sapcloud.GV)
 }
 
 func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.KubernetesClient) error {
@@ -489,28 +471,13 @@ func DeleteMachinesIfResourcesExist(ctx context.Context, kubeCl *client.Kubernet
 	return WaitForCAPIMachinesDeletion(ctx, kubeCl)
 }
 
-// CAPI
-const (
-	CAPIGroup        = "cluster.x-k8s.io"
-	CAPIGroupVersion = "v1beta1"
-)
-
-var capiMachinesSchema = schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machines"}
-
 func checkCAPIMachinesAPI(kubeCl *client.KubernetesClient) error {
-	gv := schema.GroupVersion{
-		Group:   CAPIGroup,
-		Version: CAPIGroupVersion,
-	}
-
-	return checkMachinesAPI(kubeCl, gv)
+	return checkMachinesAPI(kubeCl, capi.GV)
 }
 
 func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	machineDeploymentsSchema := schema.GroupVersionResource{Group: CAPIGroup, Version: CAPIGroupVersion, Resource: "machinedeployments"}
-
 	return retry.NewLoop("Delete CAPI MachineDeployments", 45, 5*time.Second).RunContext(ctx, func() error {
-		allMachines, err := kubeCl.Dynamic().Resource(capiMachinesSchema).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		allMachines, err := kubeCl.Dynamic().Resource(capi.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machines: %v", err)
 		}
@@ -521,7 +488,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			// we delete cluster anyway and we can force delete machine (without drain)
 			unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout")
 
-			_, err = kubeCl.Dynamic().Resource(capiMachinesSchema).Namespace(machine.GetNamespace()).Update(ctx, &m, metav1.UpdateOptions{})
+			_, err = kubeCl.Dynamic().Resource(capi.MachineGVR).Namespace(machine.GetNamespace()).Update(ctx, &m, metav1.UpdateOptions{})
 			if err != nil {
 				return fmt.Errorf("patch machine %s: %v", machine.GetName(), err)
 			}
@@ -529,7 +496,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			log.DebugF("Machine %s patched\n", machine.GetName())
 		}
 
-		allMachineDeployments, err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+		allMachineDeployments, err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("get machinedeployments: %v", err)
 		}
@@ -541,9 +508,9 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 				log.InfoLn("Machine deployment 'master' was skipped. It will be deleted later.")
 				continue
 			}
-			err := kubeCl.Dynamic().Resource(machineDeploymentsSchema).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
+			err := kubeCl.Dynamic().Resource(capi.MachineDeploymentGVR).Namespace(namespace).Delete(ctx, name, metav1.DeleteOptions{})
 			if err != nil {
-				return fmt.Errorf("delete machinedeployments %s: %v", name, err)
+				return fmt.Errorf("Delete CAPI machinedeployments %s: %v", name, err)
 			}
 			log.InfoF("%s/%s\n", namespace, name)
 		}
@@ -553,7 +520,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 
 func WaitForCAPIMachinesDeletion(ctx context.Context, kubeCl *client.KubernetesClient) error {
 	return retry.NewLoop("Wait for CAPI Machines deletion", 45, 15*time.Second).WithShowError(false).RunContext(ctx, func() error {
-		resources, err := kubeCl.Dynamic().Resource(capiMachinesSchema).List(ctx, metav1.ListOptions{})
+		resources, err := kubeCl.Dynamic().Resource(capi.MachineGVR).List(ctx, metav1.ListOptions{})
 		if err != nil {
 			return err
 		}

@@ -9,6 +9,33 @@
 | **Api Version And Kind** |
 | [helm_lib_kind_exists](#helm_lib_kind_exists) |
 | [helm_lib_get_api_version_by_kind](#helm_lib_get_api_version_by_kind) |
+| **Application Image** |
+| [helm_lib_application_image](#helm_lib_application_image) |
+| **Application Security Context** |
+| [helm_lib_application_pod_security_context_run_as_user_custom](#helm_lib_application_pod_security_context_run_as_user_custom) |
+| [helm_lib_v_pod_security_context_run_as_user_nobody](#helm_lib_v_pod_security_context_run_as_user_nobody) |
+| [helm_lib_application_pod_security_context_run_as_user_nobody_with_writable_fs](#helm_lib_application_pod_security_context_run_as_user_nobody_with_writable_fs) |
+| [helm_lib_application_pod_security_context_run_as_user_deckhouse](#helm_lib_application_pod_security_context_run_as_user_deckhouse) |
+| [helm_lib_application_pod_security_context_run_as_user_deckhouse_with_writable_fs](#helm_lib_application_pod_security_context_run_as_user_deckhouse_with_writable_fs) |
+| [helm_lib_application_container_security_context_run_as_user_deckhouse_pss_restricted](#helm_lib_application_container_security_context_run_as_user_deckhouse_pss_restricted) |
+| [helm_lib_application_container_security_context_pss_restricted_flexible](#helm_lib_application_container_security_context_pss_restricted_flexible) |
+| [helm_lib_application_pod_security_context_run_as_user_root](#helm_lib_application_pod_security_context_run_as_user_root) |
+| [helm_lib_application_pod_security_context_runtime_default](#helm_lib_application_pod_security_context_runtime_default) |
+| [helm_lib_application_container_security_context_not_allow_privilege_escalation](#helm_lib_application_container_security_context_not_allow_privilege_escalation) |
+| [helm_lib_application_container_security_context_read_only_root_filesystem_with_selinux](#helm_lib_application_container_security_context_read_only_root_filesystem_with_selinux) |
+| [helm_lib_application_container_security_context_read_only_root_filesystem](#helm_lib_application_container_security_context_read_only_root_filesystem) |
+| [helm_lib_application_container_security_context_privileged](#helm_lib_application_container_security_context_privileged) |
+| [helm_lib_application_container_security_context_escalated_sys_admin_privileged](#helm_lib_application_container_security_context_escalated_sys_admin_privileged) |
+| [helm_lib_application_container_security_context_privileged_read_only_root_filesystem](#helm_lib_application_container_security_context_privileged_read_only_root_filesystem) |
+| [helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all](#helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all) |
+| [helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add](#helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add) |
+| [helm_lib_application_container_security_context_capabilities_drop_all_and_add](#helm_lib_application_container_security_context_capabilities_drop_all_and_add) |
+| [helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom](#helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom) |
+| [helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted](#helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted) |
+| **Csi Controller** |
+| [helm_lib_csi_image_with_common_fallback](#helm_lib_csi_image_with_common_fallback) |
+| **Dns Policy** |
+| [helm_lib_dns_policy_bootstraping_state](#helm_lib_dns_policy_bootstraping_state) |
 | **Enable Ds Eviction** |
 | [helm_lib_prevent_ds_eviction_annotation](#helm_lib_prevent_ds_eviction_annotation) |
 | **Envs For Proxy** |
@@ -112,6 +139,7 @@
 | [helm_lib_container_kube_rbac_proxy_resources](#helm_lib_container_kube_rbac_proxy_resources) |
 | **Spec For High Availability** |
 | [helm_lib_pod_anti_affinity_for_ha](#helm_lib_pod_anti_affinity_for_ha) |
+| [helm_lib_pod_affinity](#helm_lib_pod_affinity) |
 | [helm_lib_deployment_on_master_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha](#helm_lib_deployment_on_master_custom_strategy_and_replicas_for_ha) |
 | [helm_lib_deployment_strategy_and_replicas_for_ha](#helm_lib_deployment_strategy_and_replicas_for_ha) |
@@ -163,6 +191,310 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Kind name portion 
 
+## Application Image
+
+### helm_lib_application_image
+
+ returns image name in format "registry/package@digest" 
+
+#### Usage
+
+`{{ include "helm_lib_application_image" (list . "<image-name>") }} `
+
+
+## Application Security Context
+
+### helm_lib_application_pod_security_context_run_as_user_custom
+
+ returns PodSecurityContext parameters for Pod with custom user and group 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_custom" (list . 1000 1000) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  User id 
+-  Group id 
+
+
+### helm_lib_v_pod_security_context_run_as_user_nobody
+
+ returns PodSecurityContext parameters for Pod with user and group "nobody" 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_nobody" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_pod_security_context_run_as_user_nobody_with_writable_fs
+
+ returns PodSecurityContext parameters for Pod with user and group "nobody" with write access to mounted volumes 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_nobody_with_writable_fs" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_pod_security_context_run_as_user_deckhouse
+
+ returns PodSecurityContext parameters for Pod with user and group "deckhouse" 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_deckhouse" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_pod_security_context_run_as_user_deckhouse_with_writable_fs
+
+ returns PodSecurityContext parameters for Pod with user and group "deckhouse" with write access to mounted volumes 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_deckhouse_with_writable_fs" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_run_as_user_deckhouse_pss_restricted
+
+ returns SecurityContext parameters for Container with user and group "deckhouse" plus minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_run_as_user_deckhouse_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_pss_restricted_flexible
+
+ SecurityContext for Deckhouse UID/GID 64535 (or root), PSS Restricted 
+ Optional keys: 
+ .ro   – bool, read-only root FS (default true) 
+ .caps – []string, capabilities.add (default empty) 
+ .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .runAsNonRoot   – bool, run as Deckhouse user when true, root when false (default true) 
+ .seccompProfile  – bool, disable seccompProfile when false (default true) 
+
+#### Usage
+
+`include "helm_lib_application_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false "runAsNonRoot" true) `
+
+
+
+### helm_lib_application_pod_security_context_run_as_user_root
+
+ returns PodSecurityContext parameters for Pod with user and group 0 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_run_as_user_root" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_pod_security_context_runtime_default
+
+ returns PodSecurityContext parameters for Pod with seccomp profile RuntimeDefault 
+
+#### Usage
+
+`{{ include "helm_lib_application_pod_security_context_runtime_default" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_not_allow_privilege_escalation
+
+ returns SecurityContext parameters for Container with allowPrivilegeEscalation false 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_not_allow_privilege_escalation" . }} `
+
+
+
+### helm_lib_application_container_security_context_read_only_root_filesystem_with_selinux
+
+ returns SecurityContext parameters for Container with read only root filesystem and options for SELinux compatibility
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_read_only_root_filesystem_with_selinux" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_read_only_root_filesystem
+
+ returns SecurityContext parameters for Container with read only root filesystem 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_read_only_root_filesystem" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_privileged
+
+ returns SecurityContext parameters for Container running privileged 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_privileged" . }} `
+
+
+
+### helm_lib_application_container_security_context_escalated_sys_admin_privileged
+
+ returns SecurityContext parameters for Container running privileged with escalation and sys_admin 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_escalated_sys_admin_privileged" . }} `
+
+
+
+### helm_lib_application_container_security_context_privileged_read_only_root_filesystem
+
+ returns SecurityContext parameters for Container running privileged with read only root filesystem 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_privileged_read_only_root_filesystem" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all
+
+ returns SecurityContext for Container with read only root filesystem and all capabilities dropped  
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add
+
+ returns SecurityContext parameters for Container with read only root filesystem, all dropped and some added capabilities 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  List of capabilities 
+
+
+### helm_lib_application_container_security_context_capabilities_drop_all_and_add
+
+ returns SecurityContext parameters for Container with all dropped and some added capabilities 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_capabilities_drop_all_and_add"  (list . (list "KILL" "SYS_PTRACE")) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  List of capabilities 
+
+
+### helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom
+
+ returns SecurityContext parameters for Container with read only root filesystem, all dropped, and custom user ID 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_capabilities_drop_all_and_run_as_user_custom" (list . 1000 1000) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  User id 
+-  Group id 
+
+
+### helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted
+
+ returns SecurityContext parameters for Container with minimal required settings to comply with the Restricted mode of the Pod Security Standards 
+
+#### Usage
+
+`{{ include "helm_lib_application_container_security_context_read_only_root_filesystem_capabilities_drop_all_pss_restricted" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
+
+## Csi Controller
+
+### helm_lib_csi_image_with_common_fallback
+
+ returns image name from storage foundation module if enabled, otherwise from common module 
+
+#### Usage
+
+`{{ include "helm_lib_csi_image_with_common_fallback" (list . "<raw-container-name>" "<semver>") }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Container raw name 
+-  Kubernetes semantic version 
+
+## Dns Policy
+
+### helm_lib_dns_policy_bootstraping_state
+
+ returns the proper dnsPolicy value depending on the cluster bootstrap phase 
+
+#### Usage
+
+`{{ include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet") }} `
+
+
 ## Enable Ds Eviction
 
 ### helm_lib_prevent_ds_eviction_annotation
@@ -180,7 +512,7 @@ list:
 ### helm_lib_envs_for_proxy
 
  Add HTTP_PROXY, HTTPS_PROXY and NO_PROXY environment variables for container 
- depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-proxy) 
+ depends on [proxy settings](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-proxy) 
 
 #### Usage
 
@@ -348,7 +680,7 @@ list:
 
 ### helm_lib_module_https_copy_custom_certificate
 
- Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-https-customcertificate) 
+ Renders secret with [custom certificate](https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-customcertificate) 
  in passed namespace with passed prefix 
 
 #### Usage
@@ -650,16 +982,17 @@ list:
 
 ### helm_lib_module_container_security_context_pss_restricted_flexible
 
- SecurityContext for Deckhouse UID/GID 64535, PSS Restricted 
+ SecurityContext for Deckhouse UID/GID 64535 (or root), PSS Restricted 
  Optional keys: 
  .ro   – bool, read-only root FS (default true) 
  .caps – []string, capabilities.add (default empty) 
  .uid  – int, runAsUser/runAsGroup (default 64535) 
+ .runAsNonRoot   – bool, run as Deckhouse user when true, root when false (default true) 
  .seccompProfile  – bool, disable seccompProfile when false (default true) 
 
 #### Usage
 
-`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false) `
+`include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" false "caps" (list "NET_ADMIN" "SYS_TIME") "uid" 1001 "seccompProfile" false "runAsNonRoot" true) `
 
 
 
@@ -900,10 +1233,11 @@ list:
 
  returns all the prometheus rules from <root dir>/ 
  current dir is optional — used for recursion but you can use it for partially generating rules 
+ file list is optional - list of files to include (filters all files if provided) 
 
 #### Usage
 
-`{{ include "helm_lib_prometheus_rules_recursion" (list . <namespace> <root dir> [current dir]) }} `
+`{{ include "helm_lib_prometheus_rules_recursion" (list . <namespace> <root dir> [current dir] [file list]) }} `
 
 #### Arguments
 
@@ -912,15 +1246,16 @@ list:
 -  Namespace for creating rules 
 -  Rules root dir 
 -  Current dir (optional) 
+-  File list for filtering (optional) 
 
 
 ### helm_lib_prometheus_rules
 
- returns all the prometheus rules from monitoring/prometheus-rules/ 
+ returns all the prometheus rules from monitoring/prometheus-rules/ optionally filtered by fileList 
 
 #### Usage
 
-`{{ include "helm_lib_prometheus_rules" (list . <namespace>) }} `
+`{{ include "helm_lib_prometheus_rules" (list . <namespace> [fileList]) }} `
 
 #### Arguments
 
@@ -1130,7 +1465,7 @@ list:
 #### Arguments
 
 list:
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 -  Ephemeral storage requests 
 
 
@@ -1144,7 +1479,7 @@ list:
 
 #### Arguments
 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_vpa_spec
@@ -1162,7 +1497,7 @@ list:
 -  Target Kind 
 -  Target Name 
 -  Target container name 
--  VPA resource configuration [example](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
+-  VPA resource configuration [example](https://deckhouse.io/modules/istio/configuration.html#parameters-controlplane-resourcesmanagement) 
 
 
 ### helm_lib_resources_management_cpu_units_to_millicores
@@ -1219,6 +1554,21 @@ list:
 #### Usage
 
 `{{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} `
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Match labels for podAntiAffinity label selector 
+
+
+### helm_lib_pod_affinity
+
+ Returns affinity spec that combines: podAntiAffinity by provided labels when HA is enabled and optional nodeAffinity that schedules pods only on specified architectures. If the list of architectures is not provided or empty, node affinity is not rendered. 
+
+#### Usage
+
+`{{- include "helm_lib_pod_affinity" (list . (dict "app" "test") (list "amd64")) }} `
 
 #### Arguments
 

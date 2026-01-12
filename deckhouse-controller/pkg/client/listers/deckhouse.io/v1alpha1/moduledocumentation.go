@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ModuleDocumentationLister helps list ModuleDocumentations.
@@ -27,39 +27,19 @@ import (
 type ModuleDocumentationLister interface {
 	// List lists all ModuleDocumentations in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ModuleDocumentation, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.ModuleDocumentation, err error)
 	// Get retrieves the ModuleDocumentation from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ModuleDocumentation, error)
+	Get(name string) (*deckhouseiov1alpha1.ModuleDocumentation, error)
 	ModuleDocumentationListerExpansion
 }
 
 // moduleDocumentationLister implements the ModuleDocumentationLister interface.
 type moduleDocumentationLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha1.ModuleDocumentation]
 }
 
 // NewModuleDocumentationLister returns a new ModuleDocumentationLister.
 func NewModuleDocumentationLister(indexer cache.Indexer) ModuleDocumentationLister {
-	return &moduleDocumentationLister{indexer: indexer}
-}
-
-// List lists all ModuleDocumentations in the indexer.
-func (s *moduleDocumentationLister) List(selector labels.Selector) (ret []*v1alpha1.ModuleDocumentation, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ModuleDocumentation))
-	})
-	return ret, err
-}
-
-// Get retrieves the ModuleDocumentation from the index for a given name.
-func (s *moduleDocumentationLister) Get(name string) (*v1alpha1.ModuleDocumentation, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("moduledocumentation"), name)
-	}
-	return obj.(*v1alpha1.ModuleDocumentation), nil
+	return &moduleDocumentationLister{listers.New[*deckhouseiov1alpha1.ModuleDocumentation](indexer, deckhouseiov1alpha1.Resource("moduledocumentation"))}
 }

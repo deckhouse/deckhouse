@@ -69,7 +69,7 @@ The controller will stop tracking and delete the associated [LVMVolumeGroup](/mo
 
 The controller adds the tag when creating the Volume Group through the [LVMVolumeGroup](/modules/sds-node-configurator/cr.html#lvmvolumegroup) resource.
 
-When migrating from the `linstor` module to `sds-node-configurator` and `sds-replicated-volume`, all `linstor-*` tags are replaced with `storage.deckhouse.io/enabled=true` to transfer management to the new logic.
+When migrating from the `linstor` module to [`sds-node-configurator`](/modules/sds-node-configurator/) and [`sds-replicated-volume`](/modules/sds-replicated-volume/), all `linstor-*` tags are replaced with `storage.deckhouse.io/enabled=true` to transfer management to the new logic.
 
 ## Using the LVMVolumeGroupSet resource to create LVMVolumeGroup
 

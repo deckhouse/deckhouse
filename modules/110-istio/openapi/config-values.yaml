@@ -82,15 +82,19 @@ properties:
               - ee
               - cse-pro
             default: []
-            x-examples: [[{"address": "172.16.0.5", "port": 15443}]]
+            x-examples: [[{"address": "172.16.0.5", "port": 15443}],[{"address": "somehost.example.com", "port": 15443}]]
             items:
               type: object
               required: ["address", "port"]
               properties:
                 address:
-                  type: string
-                  example: "172.16.0.5"
-                  pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+                  anyOf:
+                  - type: string
+                    example: "somehost.example.com"
+                    pattern: '^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$'
+                  - type: string
+                    example: "172.16.0.5"
+                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
                 port:
                   type: integer
                   minimum: 1024
@@ -365,7 +369,9 @@ properties:
                       Configuring memory limits.
   ca:
     type: object
-    description: Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+    description: |
+      Explicitly specified root certificate. It signs individual service certificates to use in mutual TLS connections.
+      To create a certificate, you can use the [example](/products/kubernetes-platform/documentation/v1/user/security/tls.html#certificate-generation-example), in which `basicConstraints = CA:FALSE` needs to be replaced with `basicConstraints = CA:TRUE`.
     default: {}
     properties:
       cert:
@@ -459,7 +465,7 @@ properties:
             type: string
             description: |
               Replicas management mode:
-              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability) parameter);
+              - `Standard` — replicas management and scaling mode according to the global fault tolerance mode (the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter);
               - `Static` — the mode, where the number of replicas is specified explicitly (the [static.replicas](#parameters-controlplane-replicasmanagement-static-replicas) parameter);
               - `HPA` — the mode, where the number of replicas is calculated automatically using [HPA](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) based on CPU usage. You can configure this mode by modifying parameters in the [hpa](#parameters-controlplane-replicasmanagement-hpa) parameter section.
             enum: ['Standard', 'Static', 'HPA']
@@ -519,7 +525,7 @@ properties:
         x-examples:
         - mode: VPA
           vpa:
-            mode: Auto
+            mode: "InPlaceOrRecreate"
             cpu:
               min: "50m"
               max: 2
@@ -536,6 +542,17 @@ properties:
             limits:
               cpu: "2"
               memory: "2Gi"
+        - mode: VPA
+          vpa:
+            mode: Auto
+            cpu:
+              min: "50m"
+              max: 2
+              limitRatio: 1.5
+            memory:
+              min: "256Mi"
+              max: "2Gi"
+              limitRatio: 1.5
         properties:
           mode:
             type: string
@@ -555,8 +572,19 @@ properties:
                 type: string
                 description: |
                   VPA operating mode.
-                enum: ['Initial', 'Auto']
-                default: 'Auto'
+
+                  - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                    Resource values are not changed automatically afterwards.
+
+                  - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                    If in-place updates are not possible, the pod will be recreated.
+
+                  - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                    > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                    > It is recommended to use `InPlaceOrRecreate` instead.
+                enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
+                default: 'InPlaceOrRecreate'
               cpu:
                 type: object
                 default: {}
@@ -648,7 +676,7 @@ properties:
                 properties:
                   cpu:
                     type: string
-                    attern: "^[0-9]+m?$"
+                    pattern: "^[0-9]+m?$"
                     description: |
                       Configuring CPU limits.
                   memory:
@@ -662,6 +690,36 @@ properties:
     type: object
     default: {}
     properties:
+      accessLog:
+        type: object
+        default: {}
+        properties:
+          type:
+            type: string
+            enum: [Text, JSON]
+            default: Text
+          textFormat:
+            type: string
+            description: Sidecar's access log format template. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default: '[%START_TIME%] "%REQ(:METHOD)% %REQ(X-ENVOY-ORIGINAL-PATH?:PATH)% %PROTOCOL%" %RESPONSE_CODE% %RESPONSE_FLAGS% %RESPONSE_CODE_DETAILS% %CONNECTION_TERMINATION_DETAILS% "%UPSTREAM_TRANSPORT_FAILURE_REASON%" %BYTES_RECEIVED% %BYTES_SENT% %DURATION% %RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)% "%REQ(X-FORWARDED-FOR)%" "%REQ(USER-AGENT)%" "%REQ(X-REQUEST-ID)%" "%REQ(:AUTHORITY)%" "%UPSTREAM_HOST%" %UPSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_LOCAL_ADDRESS% %DOWNSTREAM_REMOTE_ADDRESS% %REQUESTED_SERVER_NAME% %ROUTE_NAME%'
+          jsonLabels:
+            type: object
+            additionalProperties:
+              type: string
+            description: Structured access log format using key-value pairs. Template operators are described in [envoy documentation](https://www.envoyproxy.io/docs/envoy/latest/configuration/observability/access_log/usage#command-operators).
+            default:
+              start_time: "%START_TIME%"
+              method: "%REQ(:METHOD)%"
+              path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+              protocol: "%PROTOCOL%"
+              response_code: "%RESPONSE_CODE%"
+              response_flags: "%RESPONSE_FLAGS%"
+              bytes_received: "%BYTES_RECEIVED%"
+              bytes_sent: "%BYTES_SENT%"
+              duration: "%DURATION%"
+              user_agent: "%REQ(USER-AGENT)%"
+              authority: "%REQ(:AUTHORITY)%"
+              upstream_host: "%UPSTREAM_HOST%"
       trafficRedirectionSetupMode:
         type: string
         description: |
@@ -722,7 +780,7 @@ properties:
             x-examples:
             - mode: VPA
               vpa:
-                mode: Auto
+                mode: InPlaceOrRecreate
                 cpu:
                   min: "50m"
                   max: 2
@@ -739,6 +797,17 @@ properties:
                 limits:
                   cpu: "2"
                   memory: "2Gi"
+            - mode: VPA
+              vpa:
+                mode: Auto
+                cpu:
+                  min: "50m"
+                  max: 2
+                  limitRatio: 1.5
+                memory:
+                  min: "256Mi"
+                  max: "2Gi"
+                  limitRatio: 1.5
             properties:
               mode:
                 type: string
@@ -758,8 +827,19 @@ properties:
                     type: string
                     description: |
                       VPA operating mode.
-                    enum: ['Initial', 'Auto']
-                    default: 'Auto'
+
+                      - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                        Resource values are not changed automatically afterwards.
+
+                      - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                        If in-place updates are not possible, the pod will be recreated.
+
+                      - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                        > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                        > It is recommended to use `InPlaceOrRecreate` instead.
+                    enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
+                    default: 'InPlaceOrRecreate'
                   cpu:
                     type: object
                     default: {}
@@ -851,7 +931,7 @@ properties:
                     properties:
                       cpu:
                         type: string
-                        attern: "^[0-9]+m?$"
+                        pattern: "^[0-9]+m?$"
                         description: |
                           Configuring CPU limits.
                       memory:
@@ -944,7 +1024,7 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   auth:
     type: object
     default: {}
@@ -959,9 +1039,9 @@ properties:
       externalAuthentication:
         type: object
         description: |
-          Parameters to enable external authentication based on the NGINX Ingress [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
+          Parameters to enable external authentication based on the Ingress NGINX [external-auth](https://kubernetes.github.io/ingress-nginx/examples/auth/external-auth/) mechanism that uses the Nginx [auth_request](https://nginx.org/en/docs/http/ngx_http_auth_request_module.html) module.
 
-          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) module is enabled.
+          > External authentication is enabled automatically if the [user-authn](https://deckhouse.io/modules/user-authn/) module is enabled.
         properties:
           authURL:
             type: string
@@ -991,7 +1071,7 @@ properties:
 
           This parameter is used if the `user-authn` module is enabled or the `externalAuthentication` parameter is set.
 
-          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/user-authn/) one.
+          **Caution!** Note that you must add those groups to the appropriate field in the DexProvider config if this module is used together with the [user-authn](https://deckhouse.io/modules/user-authn/) one.
       whitelistSourceRanges:
         type: array
         items:

@@ -1,11 +1,93 @@
 allowed_values: допустимые значения
+additional_property_name: имя параметра (ключ объекта)
+pattern_property_name: регулярное выражение для имени параметра
 search_placeholder_text: Поиск...
-search_placeholder_text_modules: Поиск по документации модулей...
+search_context_dkpdocs_and_modules: Поиск выполняется по всей документации DKP и модулям.
+search_context_modules: Поиск выполняется по всем модулям, не включая документацию DKP.
+search_context_only_product_docs: Поиск выполняется по всей документации продукта, не включая модули.
 modules: модули
 modules2: модулей
 module: модуль
+module_enabling_details_title: Как явно включить или отключить модуль…
+module_enabling_details_content: |
+  Явно включить или выключить модуль можно одним из следующих способов:
+  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите (или выключите) переключатель «Модуль включен». Сохраните изменения.
+
+    Пример:
+
+    <img src="/images/module/module-enabling-ui-ru.png" alt="Интерфейс включения и выключения модуля">
+
+  - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+    Используйте команду [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) для включения модуля, или [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) для выключения модуля (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+
+    Пример включения модуля `<ModuleName>`:
+
+    ```shell
+    d8 system module enable <ModuleName>
+    ```
+
+  - **С помощью ModuleConfig `<ModuleName>`.**
+
+    Установите `spec.enabled` в `true` или `false` в ModuleConfig `<ModuleName>` (создайте его, при необходимости).
+
+    Пример манифеста для включения модуля `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      enabled: true
+    ```
+module_settings: настройки
+module_settings_details_title: Как настроить модуль...
+module_settings_details_content: |
+  Настроить модуль можно одним из следующих способов:
+  - **С помощью [веб-интерфейса Deckhouse](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
+
+    В разделе «Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`, включите переключатель «Дополнительные настройки». Заполните необходимые поля формы на вкладке «Конфигурация», или укажите настройки модуля в формате YAML на вкладке «YAML», **не включая секцию settings**. Сохраните изменения.
+
+    Пример:
+
+    <img src="/images/module/settings/ui-conf-advanced-conf-ru.png" alt="Интерфейс настройки модуля">
+
+    Вы также можете отредактировать объект ModuleConfig `<ModuleName>` на вкладке «YAML» в окне настроек модуля («Система» → «Управление системой» → «Deckhouse» → «Модули», откройте модуль `<ModuleName>`), указав версию схемы в параметре `spec.version` и необходимые параметры модуля в секции `spec.settings`.
+
+  - **С помощью [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/)** (требуется [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), настроенный на работу с кластером).
+
+    Отредактируйте существующий ModuleConfig `<ModuleName>` (подробнее о настройке Deckhouse читайте [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/)), выполнив следующую команду:
+
+    ```shell
+    d8 k edit mc <ModuleName>
+    ```
+
+    Внесите необходимые изменения в секцию `spec.settings`. При необходимости укажите версию схемы в параметре `spec.version`. Сохраните изменения.
+
+    Вы также можете создать файл манифеста ModuleConfig `<ModuleName>`, используя пример ниже. Заполните секцию `spec.settings` необходимыми параметрами модуля. При необходимости укажите версию схемы в параметре `spec.version`.
+
+    Примените манифест с помощью следующей команды (укажите имя файла манифеста):
+
+    ```shell
+    d8 k apply -f <FILENAME>
+    ```
+
+    Пример файла манифеста ModuleConfig `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      version: <configVersion>
+      enabled: true
+      settings: # Параметры модуля из раздела "Параметры" ниже.
+    ```
 module_versions: Версии модуля
 module_version: Версия модуля
+module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.
 channel_or_version: "Канал/версия"
 channel_or_version_of_module: "Канал/версия модуля"
 deckhouse: deckhouse
@@ -17,6 +99,14 @@ category: категория
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_title: Требования
+requirements_deckhouse_title: К версии Deckhouse
+requirements_kubernetes_title: К версии Kubernetes
+requirements_modules_title: К версиям других модулей
+requirements_modules_any_version: любая версия
+requirements_version_and_above: и выше
+requirements_version_above: выше
+module_lifecycle_stage: "<a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#жизненный-цикл-модуля'>Стадия жизненного цикла</a> модуля"
 conversions_title: Конверсии
 conversion_action_message: Модуль настраивается с помощью ресурса ModuleConfig, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
 conversion_global_action_message: Глобальные параметры настраиваются с помощью ModuleConfig `global`, схема которого содержит номер версии. При применении в кластере *старой* версии схемы ModuleConfig выполняются автоматические преобразования. Чтобы обновить версию схемы ModuleConfig вручную, необходимо **последовательно** для каждой версии выполнить следующие действия
@@ -36,6 +126,7 @@ pattern: шаблон
 length: длина
 min_length: минимальная длина
 max_length: максимальная длина
+moduleLinkTitleADVANCED_USAGE: Расширенная конфигурация
 moduleLinkTitleREADME: Описание
 moduleLinkTitleEXAMPLES: Примеры
 moduleLinkTitleCONFIGURATION: Настройка
@@ -57,6 +148,7 @@ module_alert_experimental_long: Экспериментальная версия.
 module_alert_preview_long: Предварительная версия. Функциональность может измениться, но основные возможности сохранятся. Совместимость с будущими версиями может потребовать ручных действий по миграции.
 module_alert_general_availability_long: Общедоступная версия. Готово к использованию в production-средах.
 module_alert_deprecated_long: Устарело. Развитие и поддержка прекращены.
+related_additional_resources: Дополнительные ресурсы
 reset_filter: Сбросить фильтр
 deprecated_parameter: Параметр устарел
 deprecated_parameter_hint: Поддержка параметра может быть исключена в следующих версиях.

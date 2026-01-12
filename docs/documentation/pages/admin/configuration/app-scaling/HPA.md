@@ -1,6 +1,7 @@
 ---
 title: "Horizontal pod autoscaling"
 permalink: en/admin/configuration/app-scaling/hpa.html
+description: "Configure Horizontal Pod Autoscaler (HPA) in Deckhouse Kubernetes Platform. Automatic pod scaling based on CPU, memory, and custom metrics for optimal resource utilization."
 ---
 
 ## How Horizontal Scaling (HPA) works
@@ -71,11 +72,20 @@ To configure HPA, follow these steps:
 
 1. Optionally, set the `stabilizationWindowSeconds` to delay scaling decisions and limit the pod growth rate:
 
+   Example for scaling up:
+
    ```yaml
    behavior:
     scaleUp:
       stabilizationWindowSeconds: 300
-    # This delays scaling up decisions and limits the speed of pod growth.
+   ```
+
+   Example for scaling down:
+
+   ```yaml
+   behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
    ```
 
 ## HPA configuration examples

@@ -205,7 +205,7 @@ title: "Модуль cert-manager: FAQ"
 
 Теперь можно использовать созданный `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse или конкретного компонента.
 
-Например, чтобы использовать `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](../../deckhouse-configure-global.html#parameters-modules-https-certmanager-clusterissuername) (`d8 k edit mc global`):
+Например, чтобы использовать `ClusterIssuer` для получения сертификатов для всех компонентов Deckhouse, укажите его имя в глобальном параметре [clusterIssuerName](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-https-certmanager-clusterissuername) (`d8 k edit mc global`):
 
   ```yaml
   spec:

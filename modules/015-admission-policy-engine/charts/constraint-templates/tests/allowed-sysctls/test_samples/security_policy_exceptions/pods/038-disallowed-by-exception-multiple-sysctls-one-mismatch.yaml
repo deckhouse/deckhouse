@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-by-exception-multiple-sysctls-one-mismatch
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-net-core-rmem-max
+spec:
+  securityContext:
+    sysctls:
+    - name: net.core.rmem_max
+      value: "16777216"
+    - name: kernel.msgmax
+      value: "65536"
+

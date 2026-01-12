@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: allow-runtime-default
+spec:
+  securityContext:
+    appArmorProfile:
+      allowedValues:
+      - runtime/default
+

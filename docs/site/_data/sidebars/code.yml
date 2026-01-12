@@ -35,6 +35,10 @@ entries:
           en: Audit events
           ru: События аудита безопасности
         url: /code/documentation/admin/audit-events.html
+      - title:
+          en: Security сredentials
+          ru: Ключи доступа
+        url: /code/documentation/admin/security-credentials.html
   - title:
       en: User guide
       ru: Руководство пользователя
@@ -76,9 +80,17 @@ entries:
           ru: API
         url: /code/documentation/user/api.html
       - title:
-          en: Pull Mirroring
-          ru: Pull зеркалирование
+          en: Pull mirroring
+          ru: Pull-зеркалирование
         url: /code/documentation/user/pull-mirroring.html
+      - title:
+          en: Approval rules
+          ru: Правила апрувов
+        url: /code/documentation/user/approval-rules.html
+      - title:
+          en: CODEOWNERS
+          ru: CODEOWNERS
+        url: /code/documentation/user/code-owners.html
       - title:
           en: External Vault integration
           ru: Интеграция с внешним Vault
@@ -95,3 +107,11 @@ entries:
           en: Webhooks
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
+      - title:
+          en: Search
+          ru: Поиск
+        url: /code/documentation/user/search.html
+      - title:
+          en: Push rules
+          ru: Правила отправки изменений
+        url: /code/documentation/user/push-rules.html

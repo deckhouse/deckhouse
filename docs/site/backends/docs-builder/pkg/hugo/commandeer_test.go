@@ -37,7 +37,7 @@ func TestHugFromConfig_ErrorHandling(t *testing.T) {
 		hugoSites: lazycache.New(lazycache.Options[int32, *hugolib.HugoSites]{
 			MaxEntries: 1,
 		}),
-		flags:      Flags{},
+		flags:      &Flags{},
 		logger:     log.NewNop(),
 		hugologger: loggers.NewDefault(),
 	}

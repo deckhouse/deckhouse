@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 )
 
 func applyStaticClusterConfigurationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -58,7 +59,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, convertStaticClusterConfigurationHandler)
 
-func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.HookInput) error {
+func convertStaticClusterConfigurationHandler(ctx context.Context, input *go_hook.HookInput) error {
 	secret := input.Snapshots.Get("static_cluster_configuration")
 
 	if len(secret) == 0 {
@@ -71,7 +72,7 @@ func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.
 		return fmt.Errorf("failed to unmarshal first 'static_cluster_configuration' snapshot: %w", err)
 	}
 
-	internalNetwork, err := internalNetworkFromStaticConfiguration(staticConfiguration)
+	internalNetwork, err := internalNetworkFromStaticConfiguration(ctx, staticConfiguration)
 	if err != nil {
 		return err
 	}
@@ -80,11 +81,17 @@ func convertStaticClusterConfigurationHandler(_ context.Context, input *go_hook.
 	return nil
 }
 
-func internalNetworkFromStaticConfiguration(data []byte) (interface{}, error) {
+func internalNetworkFromStaticConfiguration(ctx context.Context, data []byte) (interface{}, error) {
 	var err error
 	var metaConfig *config.MetaConfig
 
-	metaConfig, err = config.ParseConfigFromData(string(data))
+	metaConfig, err = config.ParseConfigFromData(
+		ctx,
+		string(data),
+		infrastructureprovider.MetaConfigPreparatorProvider(
+			infrastructureprovider.NewPreparatorProviderParamsWithoutLogger(),
+		),
+	)
 	if err != nil {
 		return nil, err
 	}

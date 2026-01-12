@@ -1,0 +1,9 @@
+<script markdown=0>
+    const hash = window.location.hash;
+    // List of anchors to redirect
+    const anchors = ['{{ include.anchors | split: "," | join: "','" }}'];
+    if (hash && anchors.includes(hash.substring(1))) {
+        console.log('Redirecting to {{ include.to }}' + hash);
+        window.location.pathname = window.location.pathname + '{{ include.to }}';
+    }
+</script>

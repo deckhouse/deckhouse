@@ -143,7 +143,7 @@ To prevent this, you can:
 
 ## Monitoring VPA in Grafana
 
-To efficiently manage resources using the Vertical Pod Autoscaler (VPA), it is recommended to use [Grafana dashboards](link-to-grafana-section). These dashboards allow you to track the current status of VPA, its configuration, and the percentage of pods on which it is active.
+To efficiently manage resources using the Vertical Pod Autoscaler (VPA), it is recommended to use [Grafana dashboards](../../web/grafana.html#working-with-dashboards). These dashboards allow you to track the current status of VPA, its configuration, and the percentage of pods on which it is active.
 
 Grafana provides several levels of detail for VPA-related information. Key dashboards include:
 

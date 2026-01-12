@@ -128,6 +128,7 @@ metadata:
   creationTimestamp: null
   finalizers:
   - modules.deckhouse.io/exist-on-fs
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: echo
     modules.deckhouse.io/update-policy: test-alpha
@@ -141,7 +142,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: echo
   version: 0.4.54

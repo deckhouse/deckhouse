@@ -26,11 +26,11 @@ type FakeDeckhouseV1alpha2 struct {
 }
 
 func (c *FakeDeckhouseV1alpha2) ModulePullOverrides() v1alpha2.ModulePullOverrideInterface {
-	return &FakeModulePullOverrides{c}
+	return newFakeModulePullOverrides(c)
 }
 
 func (c *FakeDeckhouseV1alpha2) ModuleUpdatePolicies() v1alpha2.ModuleUpdatePolicyInterface {
-	return &FakeModuleUpdatePolicies{c}
+	return newFakeModuleUpdatePolicies(c)
 }
 
 // RESTClient returns a RESTClient that is used to communicate

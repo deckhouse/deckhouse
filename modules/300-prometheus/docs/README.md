@@ -12,12 +12,9 @@ The module expands the monitoring stack with preset parameters for DKP and appli
 
 Module features:
 
-- The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/). It is possible to store historical data using downsampling.
-- The load is optimized by using caches and Deckhouse Prom++.
+- The package includes ready—made triggers and dashboards, and supports push and pull models for collecting metrics. The load is optimized by using caches and [Dekhouse Prom++](/products/prompp/).
 - It is possible to store historical data using downsampling.
 - The module covers all the basic tasks of basic monitoring of the platform and applications.
-
-The module covers all the basic tasks of basic monitoring of DKP and applications.
 
 ## Monitoring hardware resources
 
@@ -77,6 +74,8 @@ The capabilities of the DKP monitoring system can be expanded by using the [Obse
 
 The Deckhouse monitoring includes event notifications. The standard edition includes a set of basic alerts covering the health of the cluster and its components. Also, you can add custom alerts.
 
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](/products/kubernetes-platform/documentation/v1/reference/alerts.html).
+
 ### Sending alerts to external systems
 
 Deckhouse supports sending alerts using `Alertmanager`:
@@ -105,7 +104,7 @@ Deckhouse supports sending alerts using `Alertmanager`:
 | **metrics-adapter**                       | The component connecting Prometheus and Kubernetes metrics API. It enables HPA support in a Kubernetes cluster.                                                                                                                                                                                                                                       |
 | **vertical-pod-autoscaler**               | An autoscaling tool to help size Pods for the optimal CPU and memory resources required by the Pods.                                                                                                                                                                                                                                                  |
 | **Various Exporters**                     | Precooked exporters connected to Prometheus. The list includes exporters for all necessary metrics: `kube-state-metrics`, `node-exporter`, `oomkill-exporter`, `image-availability-exporter`, and many more.                                                                                                                                          |
-| **Push/pull the metric collection model** | Monitoring uses a pull model by default. Data is collected from applications at the initiative of the monitoring system. The push model is also supported: metrics can be transmitted via the Prometheus Remote Write protocol or using the [Prometheus Pushgateway](/products/kubernetes-platform/documentation/v1/modules/prometheus-pushgateway/). |
+| **Push/pull the metric collection model** | Monitoring uses a pull model by default. Data is collected from applications at the initiative of the monitoring system. The push model is also supported: metrics can be transmitted via the Prometheus Remote Write protocol or using the [Prometheus Pushgateway](/modules/prometheus-pushgateway/). |
 
 ### External components
 

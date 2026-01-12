@@ -12,25 +12,34 @@ $(document).ready(function () {
     } else if (window.location.pathname.startsWith('/en/')) {
       $(this).attr('href', window.location.href.replace('/en/', '/ru/'))
     } else {
+      let newHostname = null;
       switch (pageDomain) {
         case 'deckhouse.io':
-          $(this).attr('href', window.location.href.replace('deckhouse.io', 'deckhouse.ru'))
+          newHostname = 'deckhouse.ru';
           break;
         case 'deckhouse.ru':
-          $(this).attr('href', window.location.href.replace('deckhouse.ru', 'deckhouse.io'))
+          newHostname = 'deckhouse.io';
           break;
         case 'ru.localhost':
-          $(this).attr('href', window.location.href.replace('ru.localhost', 'localhost'))
+          newHostname = 'localhost';
           break;
         case 'localhost':
-          $(this).attr('href', window.location.href.replace('localhost', 'ru.localhost'))
+          newHostname = 'ru.localhost';
           break;
         default:
-          if (pageDomain.includes('deckhouse.ru.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.ru.', 'deckhouse.'))
-          } else if (pageDomain.includes('deckhouse.')) {
-            $(this).attr('href', window.location.href.replace('deckhouse.', 'deckhouse.ru.'))
+          if (pageDomain.includes('deckhouse-ru')) {
+            newHostname = pageDomain.replace('deckhouse-ru', 'deckhouse');
+          } else if (pageDomain.includes('deckhouse')) {
+            newHostname = pageDomain.replace('deckhouse', 'deckhouse-ru');
           }
+      }
+      if (newHostname) {
+        const currentUrl = window.location.href;
+        const newUrl = currentUrl.replace(
+          window.location.hostname,
+          newHostname
+        );
+        $(this).attr('href', newUrl);
       }
     }
   });
@@ -40,11 +49,10 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * AnchorJS
    */
-  if (window.anchors_disabled != true) {
+  if ((typeof anchors !== 'undefined') && (typeof anchors.add !== 'undefined') && (window.anchors_disabled != true)) {
     anchors.add('h2,h3,h4,h5');
     anchors.add('.anchored');
   }
-
 });
 
 $(document).ready(function () {

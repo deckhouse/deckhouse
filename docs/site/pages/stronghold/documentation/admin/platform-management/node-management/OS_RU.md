@@ -148,7 +148,7 @@ spec:
 Данный пример приведен для ОС Ubuntu.  
 Способ обновления хранилища сертификатов может отличаться в зависимости от ОС.
 
-При адаптации скрипта под другую ОС измените параметр [`bundles`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
+При адаптации скрипта под другую ОС измените параметр [`bundles`](/modules/node-manager/cr.html#nodegroupconfiguration-v1alpha1-spec-bundles).
 {% endalert %}
 
 Скрипт использует конструкции bashbooster:

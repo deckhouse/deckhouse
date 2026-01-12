@@ -51,7 +51,8 @@ func BootstrapAdditionalNode(
 	kubeCl *client.KubernetesClient,
 	cfg *config.MetaConfig,
 	index int,
-	step, nodeGroupName, cloudConfig string,
+	step infrastructure.Step,
+	nodeGroupName, cloudConfig string,
 	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 ) error {
@@ -69,7 +70,7 @@ func BootstrapAdditionalNode(
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 
 	// TODO pass cache as argument or better refact func
-	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
+	runner, err := infrastructureContext.GetBootstrapNodeRunner(ctx, cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
@@ -80,6 +81,9 @@ func BootstrapAdditionalNode(
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
+	if err != nil {
+		return err
+	}
 
 	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
 	if err != nil {
@@ -112,7 +116,7 @@ func BootstrapSequentialTerraNodes(ctx context.Context, kubeCl *client.Kubernete
 			}
 
 			for i := 0; i < ng.Replicas; i++ {
-				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, "static-node", ng.Name, cloudConfig, false, infrastructureContext)
+				err = BootstrapAdditionalNode(ctx, kubeCl, metaConfig, i, infrastructure.StaticNodeStep, ng.Name, cloudConfig, false, infrastructureContext)
 				if err != nil {
 					return err
 				}
@@ -131,7 +135,8 @@ func BootstrapAdditionalNodeForParallelRun(
 	kubeCl *client.KubernetesClient,
 	cfg *config.MetaConfig,
 	index int,
-	step, nodeGroupName, cloudConfig string,
+	step infrastructure.Step,
+	nodeGroupName, cloudConfig string,
 	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 	runnerLogger log.Logger,
@@ -139,7 +144,7 @@ func BootstrapAdditionalNodeForParallelRun(
 	nodeName := NodeName(cfg, nodeGroupName, index)
 	nodeGroupSettings := cfg.FindTerraNodeGroup(nodeGroupName)
 	// TODO pass cache as argument or better refact func
-	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
+	runner, err := infrastructureContext.GetBootstrapNodeRunner(ctx, cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
 		NodeGroupStep:   step,
 		NodeGroupName:   nodeGroupName,
@@ -150,6 +155,9 @@ func BootstrapAdditionalNodeForParallelRun(
 		},
 		RunnerLogger: runnerLogger,
 	})
+	if err != nil {
+		return err
+	}
 
 	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.OnlyState)
 	if err != nil {
@@ -173,7 +181,8 @@ func ParallelBootstrapAdditionalNodes(
 	kubeCl *client.KubernetesClient,
 	cfg *config.MetaConfig,
 	nodesIndexToCreate []int,
-	step, nodeGroupName, cloudConfig string,
+	step infrastructure.Step,
+	nodeGroupName, cloudConfig string,
 	isConverge bool,
 	infrastructureContext *infrastructure.Context,
 	ngLogger log.Logger,
@@ -332,7 +341,7 @@ func ParallelCreateNodeGroup(
 					nodesIndexToCreate = append(nodesIndexToCreate, i)
 				}
 
-				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, "static-node", group.Name, nodeCloudConfig, true, infrastructureContext, ngLogger, saveLogToBuffer)
+				_, err = ParallelBootstrapAdditionalNodes(ctx, kubeCl, metaConfig, nodesIndexToCreate, infrastructure.StaticNodeStep, group.Name, nodeCloudConfig, true, infrastructureContext, ngLogger, saveLogToBuffer)
 
 				resultsChan <- checkResult{
 					name:    group.Name,
@@ -389,9 +398,9 @@ func BootstrapAdditionalMasterNode(
 	}
 
 	// TODO pass cache as argument or better refact func
-	runner := infrastructureContext.GetBootstrapNodeRunner(cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
+	runner, err := infrastructureContext.GetBootstrapNodeRunner(ctx, cfg, cache.Global(), infrastructure.BootstrapNodeRunnerOptions{
 		NodeName:        nodeName,
-		NodeGroupStep:   "master-node",
+		NodeGroupStep:   infrastructure.MasterNodeStep,
 		NodeGroupName:   global.MasterNodeGroupName,
 		NodeIndex:       index,
 		NodeCloudConfig: cloudConfig,
@@ -400,6 +409,9 @@ func BootstrapAdditionalMasterNode(
 		},
 		RunnerLogger: log.GetDefaultLogger(),
 	})
+	if err != nil {
+		return nil, err
+	}
 
 	outputs, err := infrastructure.ApplyPipeline(ctx, runner, nodeName, infrastructure.GetMasterNodeResult)
 	if err != nil {

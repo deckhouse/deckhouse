@@ -1,9 +1,10 @@
 ---
 title: "Overview"
 permalink: en/admin/configuration/storage/sds/node-configurator/about.html
+description: "Configure automatic management of logical volumes in Deckhouse Kubernetes Platform. Automatic LVM management, block device detection, and storage configuration on cluster nodes."
 ---
 
-Deckhouse Kubernetes Platform provides automatic management of logical volumes (Logical Volume Manager, LVM) on cluster nodes using custom Kubernetes resources. This functionality is provided by the `sds-node-configurator` module and includes:
+Deckhouse Kubernetes Platform provides automatic management of logical volumes (Logical Volume Manager, LVM) on cluster nodes using custom Kubernetes resources. This functionality is provided by the [`sds-node-configurator`](/modules/sds-node-configurator/) module and includes:
 
 - Detection of block devices on each node and creation of corresponding [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice) resources.
 

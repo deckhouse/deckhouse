@@ -166,8 +166,6 @@ spec:
       threshold.extended-monitoring.deckhouse.io/disk-bytes-critical: "96"
     annotations:
       checksum/kube-rbac-proxy: {{ include "helm_lib_kube_rbac_proxy_ca_certificate" (list . "") | sha256sum }}
-  secrets:
-  - prometheus-api-client-tls
   {{- if .Values.prometheus.longtermNodeSelector }}
   nodeSelector:
     {{ .Values.prometheus.longtermNodeSelector | toYaml }}

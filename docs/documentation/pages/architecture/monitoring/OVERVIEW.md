@@ -5,7 +5,7 @@ permalink: en/architecture/monitoring/
 
 ## Composition and interaction scheme of monitoring components
 
-![Interaction diagram](../../images/prometheus/prometheus_monitoring_new.svg)
+![Interaction diagram](../../images/prometheus/prometheus_monitoring.svg)
 
 ### Components installed by DKP
 
@@ -22,7 +22,6 @@ permalink: en/architecture/monitoring/
 | **upmeter**                 | Module for assessing DKP component availability.                                                                                                                                                                                                                                                  |
 | **trickster**               | Caching proxy that reduces load on Prometheus. Will be deprecated soon.                                                                                                                                                                                                       |
 
-
 ### External components
 
 DKP can integrate with a large number of diverse solutions in the following ways:
@@ -31,7 +30,6 @@ DKP can integrate with a large number of diverse solutions in the following ways
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanagers can be connected to Prometheus and Grafana and be located both in the DKP cluster and outside it.|
 | **Long-term metrics storages** | Using the `remote write` protocol, it is possible to send metrics from DKP to a large number of storage systems, including [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
-
 
 ## Prometheus
 
@@ -66,7 +64,6 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
   * config: Mounted secret (two files: `prometheus.yaml` and `configmaps.json`). Connected to both containers.
   * rules: `emptyDir` that is filled by `prometheus-config-reloader` and read by `prometheus`. Connected to both containers, but in `prometheus` in read-only mode.
   * data: Prometheus data. Mounted only in `prometheus`.
-
 
 ### How is Prometheus configured?
 
@@ -161,9 +158,9 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ![How Service Monitors are processed](../../images/operator-prometheus/servicemonitors.png)
 
-1. Prometheus Operator reads (and also monitors addition/removal/changes) Service Monitors (which specific Service Monitors — specified in the `prometheus` resource itself, see more details in [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec)).
+1. Prometheus Operator reads (and also monitors addition/removal/changes) Service Monitors (which specific Service Monitors — specified in the `prometheus` resource itself, see more details in [official documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md)).
 1. For each Service Monitor, if it does NOT specify a specific list of namespaces (specified `any: true`), Prometheus Operator calculates (by accessing the Kubernetes API) a list of namespaces where there are Services (matching the labels specified in the Service Monitor).
-1. Based on the read `servicemonitor` resources (see [official documentation](https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#servicemonitorspec)) and based on the calculated namespaces, Prometheus Operator generates part of the config (the `scrape_configs` section) and saves the config to the corresponding Secret.
+1. Based on the read `servicemonitor` resources (see [official documentation](https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api-reference/api.md#servicemonitorspec)) and based on the calculated namespaces, Prometheus Operator generates part of the config (the `scrape_configs` section) and saves the config to the corresponding Secret.
 1. Using standard Kubernetes means, data from the secret comes to the Pod (the `prometheus.yaml` file is updated).
 1. The `prometheus-config-reloader` notices the file change and sends an HTTP request to Prometheus to reload.
 1. Prometheus re-reads the config and sees changes in scrape_configs, which it processes according to its own logic (see more details above).
@@ -183,9 +180,9 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
 
 ## Architecture of DKP component availability assessment (upmeter)
 
-Availability assessment in DKP is performed by the `upmeter` module.
+Availability assessment in DKP is performed by the [upmeter](/modules/upmeter/) module.
 
-Composition of the `upmeter` module:
+Composition of the [upmeter](/modules/upmeter/) module:
 
 - **agent**: Works on master nodes and performs availability probes, sends results to the server.
 - **upmeter**: Collects results and maintains an API server for their extraction.

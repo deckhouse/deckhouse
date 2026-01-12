@@ -45,4 +45,4 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-For a complete description of the custom resource fields, see the [documentation of the `prometheus` module](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#prometheusremotewrite).
+For a complete description of the custom resource fields, see the [documentation of the `prometheus` module](/modules/prometheus/cr.html#prometheusremotewrite).

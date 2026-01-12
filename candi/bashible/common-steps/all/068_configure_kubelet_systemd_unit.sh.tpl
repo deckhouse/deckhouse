@@ -63,10 +63,18 @@ Type=forking
 Environment="PATH=/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin"
 ExecStart=
 ExecStart=/opt/deckhouse/bin/d8-kubelet-forker /opt/deckhouse/bin/kubelet \\
-{{- if not (eq .nodeGroup.nodeType "Static") }}
+{{- if eq .runType "ClusterBootstrap" }}
+  {{- if not (eq .nodeGroup.nodeType "Static") }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule \\
-{{- else }}
+  {{- else }}
     --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule \\
+  {{- end }}
+{{- else }}
+  {{- if not (eq .nodeGroup.nodeType "Static") }}
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/csi-not-bootstrapped=:NoSchedule,node.deckhouse.io/bashible-uninitialized=:NoSchedule \\
+  {{- else }}
+    --register-with-taints=node.deckhouse.io/uninitialized=:NoSchedule,node.deckhouse.io/bashible-uninitialized=:NoSchedule \\
+  {{- end }}
 {{- end }}
     --node-labels=node.deckhouse.io/group={{ .nodeGroup.name }} \\
     --node-labels=node.deckhouse.io/type={{ .nodeGroup.nodeType }} \\

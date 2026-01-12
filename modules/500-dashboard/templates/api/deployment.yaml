@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: api
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: api

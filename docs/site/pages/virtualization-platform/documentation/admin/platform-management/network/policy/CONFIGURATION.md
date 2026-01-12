@@ -46,7 +46,7 @@ spec:
 
 ## Configuring cluster-wide network policies using CiliumClusterwideNetworkPolicy
 
-To define cluster-wide network policies in Deckhouse Virtualization Platform, you can use the CiliumClusterwideNetworkPolicy objects of the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) module.
+To define cluster-wide network policies in Deckhouse Virtualization Platform, you can use the CiliumClusterwideNetworkPolicy objects of the [`cni-cilium`](/modules/cni-cilium/) module.
 
 {% alert level="danger" %}
 Using CiliumClusterwideNetworkPolicies while the `policyAuditMode` option is not enabled in the `cni-cilium` module configuration may lead to incorrect operation of the control plane or loss of SSH access to all cluster nodes.
@@ -54,7 +54,7 @@ Using CiliumClusterwideNetworkPolicies while the `policyAuditMode` option is not
 
 To use CiliumClusterwideNetworkPolicies, follow these steps:
 
-1. Apply the primary set of CiliumClusterwideNetworkPolicy objects. To do this, in the `cni-cilium` module configuration, add the option [`policyAuditMode`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html#parameters-policyauditmode) and set it to `true`.
+1. Apply the primary set of CiliumClusterwideNetworkPolicy objects. To do this, in the `cni-cilium` module configuration, add the option [`policyAuditMode`](/modules/cni-cilium/configuration.html#parameters-policyauditmode) and set it to `true`.
 
    The `policyAuditMode` option can be removed after applying all CiliumClusterwideNetworkPolicy objects and verifying their functionality in Hubble UI.
 

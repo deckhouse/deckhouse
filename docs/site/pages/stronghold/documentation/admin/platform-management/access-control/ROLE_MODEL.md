@@ -81,16 +81,16 @@ DVP provides the following manage roles, allowing to manage all subsystems of th
 - `d8:manage:all:manager`: Includes all permissions from the `viewer` role
     and also allows managing module configurations and cluster-wide resources of these modules.
 
-Example of cluster administrator permissions granted to the `joe` user:
+Example of cluster administrator permissions granted to the `jane` user:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe@example.com # For users.deckhouse.io, the parameter is .spec.email
+  name: jane.doe@example.com # For users.deckhouse.io, the parameter is .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -100,16 +100,16 @@ roleRef:
 
 DVP can grant restricted permissions to administrators for managing resources and modules associated with specific subsystems.
 
-To assign network subsystem administrator permissions to the `joe` user, use the following configuration:
+To assign network subsystem administrator permissions to the `jane` user, use the following configuration:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe@example.com # For users.deckhouse.io, the parameter is .spec.email
+  name: jane.doe@example.com # For users.deckhouse.io, the parameter is .spec.email
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

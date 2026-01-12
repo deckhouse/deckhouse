@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-В Deckhouse Virtualization Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](/products/kubernetes-platform/documentation/v1/modules/keepalived/).
+В Deckhouse Virtualization Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](/modules/keepalived/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 
@@ -78,7 +78,7 @@ spec:
 
 ## Ручное переключение keepalived
 
-<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
+<!-- перенесено из https://deckhouse.ru/modules/keepalived/ -->
 
 1. Зайдите в нужный под:
 

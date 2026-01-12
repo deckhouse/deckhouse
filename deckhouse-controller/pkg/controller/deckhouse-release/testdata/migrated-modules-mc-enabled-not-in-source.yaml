@@ -43,6 +43,15 @@ metadata:
 spec:
   enabled: true
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: enabled-module-not-found
+status:
+  conditions:
+    - type: EnabledByModuleManager
+      status: "True"
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -1,6 +1,7 @@
 ---
 title: "Текущая модель авторизации"
 permalink: ru/admin/configuration/access/authorization/rbac-current.html
+description: "Настройка текущей модели RBAC авторизации в Deckhouse Kubernetes Platform. Настройка модуля user-authz, управление ClusterRole и конфигурация ролевого доступа."
 lang: ru
 ---
 
@@ -48,9 +49,9 @@ lang: ru
 
 Сокращения для `verbs`:
 <!-- start user-authz roles placeholder -->
-* read — `get`, `list`, `watch`;
-* read-write — `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`;
-* write — `create`, `delete`, `deletecollection`, `patch`, `update`.
+- read — `get`, `list`, `watch`;
+- read-write — `get`, `list`, `watch`, `create`, `delete`, `deletecollection`, `patch`, `update`;
+- write — `create`, `delete`, `deletecollection`, `patch`, `update`.
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `User`:
 
@@ -142,6 +143,10 @@ create,patch,update:
 delete,deletecollection:
     - apps/replicasets
     - extensions/replicasets
+read-write:
+    - deckhouse.io/authorizationrules
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
@@ -189,7 +194,7 @@ d8 k get clusterrole -A -o jsonpath="{range .items[?(@.metadata.annotations.user
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: beeline
+  name: test-rule
 spec:
   accessLevel: Admin
   subjects:

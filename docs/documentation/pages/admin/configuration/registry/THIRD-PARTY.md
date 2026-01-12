@@ -4,6 +4,10 @@ permalink: en/admin/configuration/registry/third-party.html
 ---
 
 {% alert level="warning" %}
+When using the [registry](/modules/registry/) module, change the address and parameters of the registry in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [`registry`](/modules/registry/examples.html) module documentation.
+{% endalert %}
+
+{% alert level="warning" %}
 Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Kubernetes Platform.
 {% endalert %}
 

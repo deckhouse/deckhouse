@@ -1,9 +1,10 @@
 ---
 title: "NFS storage"
 permalink: en/admin/configuration/storage/external/nfs.html
+description: "Configure NFS storage integration in Deckhouse Kubernetes Platform. CSI driver setup, StorageClass configuration, RPC-with-TLS security, and NFS server connection guide."
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports integration with Network File System (NFS), providing the ability to use network file storage as Kubernetes volumes. The `csi-nfs` module provides a CSI driver for connecting to NFS servers and creating PersistentVolumes based on them.
+Deckhouse Kubernetes Platform (DKP) supports integration with Network File System (NFS), providing the ability to use network file storage as Kubernetes volumes. The [`csi-nfs`](/modules/csi-nfs/) module provides a CSI driver for connecting to NFS servers and creating PersistentVolumes based on them.
 
 This page provides instructions for configuring NFS storage in DKP, including connecting to an NFS server, creating StorageClass, configuring RPC-with-TLS security, and verifying system functionality.
 
@@ -11,7 +12,7 @@ This page provides instructions for configuring NFS storage in DKP, including co
 
 ### Minimum Requirements
 
-The following conditions must be met for the `csi-nfs` module to work:
+The following conditions must be met for the [`csi-nfs`](/modules/csi-nfs/) module to work:
 
 - [Supported Linux distributions](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux) with appropriate kernels.
 - Configured and accessible NFS server.
@@ -21,7 +22,7 @@ The following conditions must be met for the `csi-nfs` module to work:
 
 For optimal module operation, it is recommended to:
 
-- For automatic pod restarts when TLS parameters change, enable the [pod-reloader](/modules/pod-reloader/stable/) module (enabled by default).
+- For automatic pod restarts when TLS parameters change, enable the [`pod-reloader`](/modules/pod-reloader/) module (enabled by default).
 - Use stable versions of NFS servers with support for required protocols.
 
 {% alert level="warning" %}
@@ -32,24 +33,24 @@ For NFS to work as virtual disk storage in Deckhouse Virtualization Platform, co
 
 ### General Limitations
 
-The following limitations apply when working with the `csi-nfs` module:
+The following limitations apply when working with the [`csi-nfs`](/modules/csi-nfs/) module:
 
-- Manual creation of StorageClass for CSI driver `nfs.csi.k8s.io` is prohibited — use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource.
-- PersistentVolumes are created only through [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources.
+- Manual creation of StorageClass for CSI driver `nfs.csi.k8s.io` is prohibited — use the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource.
+- PersistentVolumes are created only through [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resources.
 - Changing NFS server parameters in already created PVs is impossible.
 
 ### Volume Snapshot Limitations
 
 {% alert level="info" %}
-A connected [snapshot-controller](/modules/snapshot-controller/stable/) module is required for working with snapshots.
+A connected [`snapshot-controller`](/modules/snapshot-controller/) module is required for working with snapshots.
 {% endalert %}
 
-Creating NFS volume snapshots has significant limitations related to the NFS architecture and the way they are implemented in `csi-nfs`. Avoid using snapshots in module whenever possible.
+Creating NFS volume snapshots has significant limitations related to the NFS architecture and the way they are implemented in [`csi-nfs`](/modules/csi-nfs/). Avoid using snapshots in module whenever possible.
 
 **Snapshot Operation Principle:**
 - The CSI driver creates a snapshot at the NFS server level.
 - The `tar` utility is used for archiving, which imposes certain limitations.
-- The archive is saved in the root folder of the NFS server specified in the `spec.connection.share` parameter.
+- The archive is saved in the root folder of the NFS server specified in the [`spec.connection.share`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-connection-share) parameter.
 
 {% alert level="warning" %}
 - Before creating a snapshot, **mandatory** stop the workload (pods) using the NFS volume.
@@ -82,11 +83,11 @@ All commands must be executed on a machine with administrative rights in the Kub
 The following steps are required to configure NFS storage:
 
 - Module enabling.
-- Creating [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass).
+- Creating [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass).
 
 ### Enabling the Module
 
-To support working with NFS storage, enable the `csi-nfs` module, which allows creating StorageClass in Kubernetes using custom [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resources. After enabling the module, the following will happen on cluster nodes:
+To support working with NFS storage, enable the [`csi-nfs`](/modules/csi-nfs/) module, which allows creating StorageClass in Kubernetes using custom [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resources. After enabling the module, the following will happen on cluster nodes:
 
 - CSI driver registration.
 - Launch of `csi-nfs` service pods and creation of necessary components.
@@ -117,7 +118,7 @@ d8 k -n d8-csi-nfs get pod -owide -w
 
 ### Creating StorageClass
 
-To create a StorageClass, you must use the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource. Example of creating a resource:
+To create a StorageClass, you must use the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource. Example of creating a resource:
 
 ```shell
 d8 k apply -f - <<EOF
@@ -182,11 +183,11 @@ Changing NFS server parameters for created PersistentVolumes is impossible, as c
 
 ## Creating Volume Snapshots
 
-In `csi-nfs`, snapshots are created by archiving the volume folder. The archive is saved in the root of the NFS server folder specified in the `spec.connection.share` parameter. When creating volume snapshots, it's important to consider the [requirements and limitations](#volume-snapshot-limitations) listed above.
+In `csi-nfs`, snapshots are created by archiving the volume folder. The archive is saved in the root of the NFS server folder specified in the [`spec.connection.share`](/modules/csi-nfs/cr.html#nfsstorageclass-v1alpha1-spec-connection-share) parameter. When creating volume snapshots, it's important to consider the [requirements and limitations](#volume-snapshot-limitations) listed above.
 
 To create a snapshot, perform the following steps:
 
-1. Enable the `snapshot-controller` module:
+1. Enable the [`snapshot-controller`](/modules/snapshot-controller/) module:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -224,7 +225,7 @@ To create a snapshot, perform the following steps:
 
 ## Issues with Deleting PVs with RPC-with-TLS Support
 
-If the [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass) resource was configured with RPC-with-TLS support, a situation may arise where the PersistentVolume cannot be deleted. This happens due to secret deletion (e.g., after deleting [NFSStorageClass](/modules/csi-nfs/stable/cr.html#nfsstorageclass)) that stores mounting parameters. As a result, the controller cannot mount the NFS folder to delete the `<PV name>` folder.
+If the [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass) resource was configured with RPC-with-TLS support, a situation may arise where the PersistentVolume cannot be deleted. This happens due to secret deletion (e.g., after deleting [NFSStorageClass](/modules/csi-nfs/cr.html#nfsstorageclass)) that stores mounting parameters. As a result, the controller cannot mount the NFS folder to delete the `<PV name>` folder.
 
 ### Adding Multiple CAs to the `tlsParameters.ca` Parameter
 

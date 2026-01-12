@@ -1,0 +1,25 @@
+candi:
+  fixes:
+    - summary: Switch node hostname in discover_node_ip.sh to locked hostname
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15799
+    - summary: fixed version of containerd image in bashible step
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15795
+deckhouse:
+  fixes:
+    - summary: Fixes bug when module`s config values unchanged after enabling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15887
+deckhouse-controller:
+  fixes:
+    - summary: Add more mutexes to shell-operator framework
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15857
+dhctl:
+  fixes:
+    - summary: Change default ssh mode
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15773
+ingress-nginx:
+  fixes:
+    - summary: The https://github.com/deckhouse/deckhouse/pull/15789 is reverted.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15912
+    - summary: Enable ExecuteHookOnEvents on hook set_annotation_validation_suspended.go
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15839
+

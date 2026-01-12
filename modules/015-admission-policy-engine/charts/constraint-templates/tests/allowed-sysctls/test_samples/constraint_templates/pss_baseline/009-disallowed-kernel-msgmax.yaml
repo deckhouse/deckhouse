@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-kernel-msgmax
+  namespace: testns
+spec:
+  securityContext:
+    sysctls:
+    - name: kernel.msgmax
+      value: "65536"
+

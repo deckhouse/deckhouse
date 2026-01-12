@@ -16,8 +16,9 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: nginx-ingress-controller
@@ -44,8 +45,9 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
-    - regex: endpoint|namespace|pod|container
+    - regex: endpoint|pod|container
       action: labeldrop
     - targetLabel: job
       replacement: nginx-ingress-controller

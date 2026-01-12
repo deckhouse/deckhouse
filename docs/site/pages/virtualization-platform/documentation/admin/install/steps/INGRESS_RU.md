@@ -5,23 +5,23 @@ lang: ru
 ---
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
 ## Настройка Ingress
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/products/kubernetes-platform/documentation/v1/modules/ingress-nginx/) запустился и находится в статусе `Running`:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](/modules/ingress-nginx/) запустился и находится в статусе `Running`:
 
 ```shell
 d8 k -n d8-ingress-nginx get po -l app=kruise
 ```
 
-Создайте ресурс IngressNginxController, описывающий параметры NGINX Ingress controller:
+Создайте ресурс IngressNginxController, описывающий параметры Ingress NGINX Controller:
 
 ```yaml
 d8 k apply -f - <<EOF
-# Секция, описывающая параметры NGINX Ingress controller.
-# https://deckhouse.ru/products/virtualization-platform/reference/cr/ingressnginxcontroller.html
+# Секция, описывающая параметры Ingress NGINX Controller.
+# https://deckhouse.ru/modules/ingress-nginx/cr.html#ingressnginxcontroller
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -203,5 +203,5 @@ EOF
 Чтобы включить модуль, выполните следующую команду:
 
 ```shell
-d8 s module enable console
+d8 system module enable console
 ```

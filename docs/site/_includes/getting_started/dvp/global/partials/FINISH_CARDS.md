@@ -26,7 +26,7 @@ Essentials
 <p>Explore Grafana dashboards bundled with Deckhouse.</p>
 <p>Web service name: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" %}</p>
 <p>To access Prometheus: {% include getting_started/global/partials/dns-template-title.html.liquid name="grafana" path="/prometheus/" onlyPath="true" %}</p>
-<a href="/products/kubernetes-platform/documentation/v1/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
+<a href="/modules/prometheus/" target="_blank">Learn more</a> about the <code>monitoring</code> module.
 </div>
 </div>
 {% endif %}

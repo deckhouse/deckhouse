@@ -12,7 +12,7 @@ Network parameters are specified during the deployment of the DVP cluster:
 
 ## Internal network operation modes
 
-The operation mode is set via the `tunnelMode` parameter in the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html) module settings.
+The operation mode is set via the `tunnelMode` parameter in the [`cni-cilium`](/modules/cni-cilium/configuration.html) module settings.
 Two modes are supported:
 
 - Classic
@@ -52,7 +52,7 @@ spec:
     tunnelMode: VXLAN
 ```
 
-For more details on configuring the `cni-cilium` module, refer to the [module documentation](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html).
+For more details on configuring the `cni-cilium` module, refer to the [module documentation](/modules/cni-cilium/configuration.html).
 
 {% alert level="warning" %}
 After changing the operation mode, reboot all nodes.
@@ -82,7 +82,7 @@ Each Service object defines:
   For security reasons, DVP only listens on the node's internal IP.
   This behavior can be overridden by adding the annotation `node.deckhouse.io/nodeport-bind-internal-ip: "false"` to a node group.
 - **LoadBalancer**: Created in the cloud provider where DVP is deployed and accepts external traffic.
-  In bare-metal clusters, similar functionality is implemented using the [`metalLb`](/products/kubernetes-platform/documentation/v1/modules/metallb/configuration.html) module.
+  In bare-metal clusters, similar functionality is implemented using the [`metalLb`](/modules/metallb/configuration.html) module.
 - **ExternalName**: A DNS record for accessing the service (acting as a CNAME).
 
 ### Configuring the service network with kube-proxy
@@ -109,5 +109,5 @@ spec:
 {% alert level="warning" %}
 After adding, removing, or changing this annotation, you must manually restart all kube-proxy Pods.
 
-When the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/) module is enabled, the `kube-proxy` module is automatically disabled.
+When the [`cni-cilium`](/modules/cni-cilium/) module is enabled, the `kube-proxy` module is automatically disabled.
 {% endalert %}

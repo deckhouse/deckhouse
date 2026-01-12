@@ -1,6 +1,6 @@
 ---
 title: Схемы размещения и настройка
-permalink: ru/admin/integrations/virtualization/zvirt/zvirt-layout.html
+permalink: ru/admin/integrations/virtualization/zvirt/layout.html
 lang: ru
 ---
 
@@ -10,7 +10,7 @@ lang: ru
 
 Особенности:
 
-- Использование одного zVirt-кластера (`clusterID`);
+- Использование одного zVirt-кластера ([`clusterID`](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration-clusterid));
 - Хранилище (Storage Domain), доступное всем хостам кластера;
 - Использование шаблона виртуальной машины, созданного из cloud-образа;
 - Присвоение сетевого профиля vNIC при заказе ВМ;
@@ -43,7 +43,7 @@ masterNodeGroup:
     storageDomainID: "c4bf82a5-b803-40c3-9f6c-b9398378f424"
 ```
 
-Обязательные параметры:
+Обязательные параметры [ресурса ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration):
 
 - `clusterID` — UUID кластера в zVirt, где размещаются виртуальные машины;
 - `sshPublicKey` — публичный SSH-ключ для доступа на узлы;

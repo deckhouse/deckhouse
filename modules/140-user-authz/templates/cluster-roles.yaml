@@ -238,6 +238,19 @@
   - create
   - patch
   - update
+- apiGroups:
+  - "rbac.authorization.k8s.io"
+  resources:
+  - roles
+  - rolebindings
+  verbs:
+  {{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - "deckhouse.io"
+  resources:
+  - authorizationrules
+  verbs:
+  {{- include "user_authz_verbs" "rw" }}
 {{- end -}}
 
 {{- define "user_authz_cluster_editor_rules" }}

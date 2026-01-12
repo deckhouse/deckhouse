@@ -6,8 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -20,8 +20,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	kcache "k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -42,28 +42,20 @@ type Handler struct {
 
 	cache cache.Cache
 
-	kubeclient kubernetes.Interface
+	nsLister corev1listers.NamespaceLister
+	nsSynced kcache.InformerSynced
 
 	//        [user type] [user name]
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
 }
 
-func NewHandler(logger *log.Logger, discoveryCache cache.Cache) (*Handler, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return nil, err
-	}
-
-	clientSet, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewHandler(logger *log.Logger, discoveryCache cache.Cache, nsLister corev1listers.NamespaceLister, nsSynced kcache.InformerSynced) (*Handler, error) {
 	return &Handler{
-		logger:     logger,
-		cache:      discoveryCache,
-		kubeclient: clientSet,
+		logger:   logger,
+		cache:    discoveryCache,
+		nsLister: nsLister,
+		nsSynced: nsSynced,
 	}, nil
 }
 
@@ -372,12 +364,19 @@ func (h *Handler) affectedDirs(r *WebhookRequest) []DirectoryEntry {
 
 // checks if labels of a namespace match provided labelselector
 func (h *Handler) namespaceLabelsMatchSelector(namespaceName string, namespaceSelectors []*NamespaceSelector) (bool, error) {
-	var labelsSet labels.Set
-	namespace, err := h.kubeclient.CoreV1().Namespaces().Get(context.TODO(), namespaceName, metav1.GetOptions{})
+	if h.nsLister == nil {
+		return false, fmt.Errorf("namespace lister is not initialized")
+	}
+
+	namespace, err := h.nsLister.Get(namespaceName)
 	if err != nil {
 		return false, err
 	}
-	labelsSet = namespace.ObjectMeta.GetLabels()
+
+	labelsSet := labels.Set(namespace.GetLabels())
+	if labelsSet == nil {
+		labelsSet = labels.Set{}
+	}
 
 	for _, namespaceSelector := range namespaceSelectors {
 		if namespaceSelector.LabelSelector != nil {

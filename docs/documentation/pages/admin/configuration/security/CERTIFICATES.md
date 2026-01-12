@@ -1,6 +1,7 @@
 ---
 title: Certificate management
 permalink: en/admin/configuration/security/certificates.html
+description: "Manage TLS certificates in Deckhouse Kubernetes Platform with Let's Encrypt, HashiCorp Vault, Venafi integration. Automatic renewal, monitoring, and certificate lifecycle management."
 ---
 
 Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates in the cluster and supports:
@@ -64,7 +65,7 @@ In some cases, additional types of ClusterIssuer may be needed:
 ### Adding a ClusterIssuer with DNS-01 validation via webhook
 
 To verify domain ownership with Let's Encrypt using the `DNS-01` method,
-the `cert-manager` module must be able to create TXT records in the DNS zone associated with the domain.
+the [`cert-manager`](/modules/cert-manager/) module must be able to create TXT records in the DNS zone associated with the domain.
 
 `cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.
 A full list is available in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).

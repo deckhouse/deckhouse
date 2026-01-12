@@ -23,4 +23,5 @@ type AppConfig struct {
 	PodsCheckingInterval  time.Duration
 	PodLabel              string
 	NodeName              string
+	CordonEnabled         bool
 }

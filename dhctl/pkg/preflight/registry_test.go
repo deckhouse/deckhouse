@@ -25,12 +25,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/gossh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
 type testState struct{}
@@ -71,10 +72,10 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPSProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -97,10 +98,10 @@ func TestCheckgetProxyFromMetaConfigSuccessHTTPProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -122,10 +123,10 @@ func TestCheckgetProxyFromMetaConfigSuccessNoProxy(t *testing.T) {
 	s := require.New(t)
 
 	metaConfig := &config.MetaConfig{
-		Registry: config.RegistryData{
-			Address: "registry.deckhouse.io",
-			Scheme:  "https",
-		},
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithImagesRepo("registry.deckhouse.io/test"),
+			registry_mocks.WithSchemeHTTPS(),
+		),
 		ClusterConfig: map[string]json.RawMessage{
 			"clusterDomain":     []byte(`"cluster.local"`),
 			"podSubnetCIDR":     []byte(`"10.0.0.0/8"`),
@@ -190,7 +191,7 @@ deckhouse:
   registryScheme: HTTP
 `, strings.Join(test.noProxyAddresses, `", "`), test.registryAddress, test.registryDockerCfg)
 
-		metaConfig, err := config.ParseConfigFromData(clusterConfig)
+		metaConfig, err := config.ParseConfigFromData(context.TODO(), clusterConfig, config.DummyPreparatorProvider())
 		s.NoError(err)
 
 		installer, err := config.PrepareDeckhouseInstallConfig(metaConfig)
@@ -199,7 +200,7 @@ deckhouse:
 		bootstrapState := &testState{}
 
 		var sshCl node.SSHClient
-		if app.SSHLegacyMode {
+		if sshclient.IsLegacyMode() {
 			sshCl = &gossh.Client{}
 		} else {
 			sshCl = &clissh.Client{}
@@ -257,22 +258,16 @@ func TestCheckRegistryCredentials(t *testing.T) {
 			fields: fields{
 				installConfig: &config.DeckhouseInstaller{
 					DevBranch: "pr0001",
-					Registry: config.RegistryData{
-						Address:   "registry.deckhouse.io",
-						Path:      "/deckhouse/ce",
-						Scheme:    "https",
-						CA:        "",
-						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
-					},
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_mocks.WithSchemeHTTPS(),
+					),
 				},
 				metaConfig: &config.MetaConfig{
-					Registry: config.RegistryData{
-						Address:   "registry.deckhouse.io",
-						Path:      "/deckhouse/ce",
-						Scheme:    "https",
-						CA:        "",
-						DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=",
-					},
+					Registry: registry_mocks.ConfigBuilder(
+						registry_mocks.WithImagesRepo("registry.deckhouse.io/deckhouse/ce"),
+						registry_mocks.WithSchemeHTTPS(),
+					),
 				},
 			},
 			wantErr: assert.NoError,

@@ -8,6 +8,8 @@ import:
     add: /terraform-provider-ovirt
     to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "ovirt") }}/{{ .TF.ovirt.namespace }}/{{ .TF.ovirt.type }}/{{ .TF.ovirt.version }}/linux_amd64/terraform-provider-ovirt
     before: setup
+
+{{ include "image_spec_for_infrastructure_manager" . }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -50,5 +52,6 @@ shell:
   - cd /src
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make build LDFLAGS="-s -w -extldflags \"-static\" -X main.version={{ .TF.ovirt.version }} -X main.commit=00000000"
   - mv /src/terraform-provider-ovirt /terraform-provider-ovirt
+  - strip /terraform-provider-ovirt
   - chmod -R 755 /terraform-provider-ovirt
   - chown 64535:64535 /terraform-provider-ovirt

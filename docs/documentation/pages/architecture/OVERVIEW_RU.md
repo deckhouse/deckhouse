@@ -2,6 +2,7 @@
 title: Обзор
 permalink: ru/architecture/
 lang: ru
+search: architecture overview, архитектура Deckhouse
 ---
 
 Deckhouse отвечает за то, чтобы кластер **одинаково** работал на **любой поддерживаемой инфраструктуре**:
@@ -10,7 +11,7 @@ Deckhouse отвечает за то, чтобы кластер **одинако
 - на виртуальных машинах или железе (включая on-premises);
 - в гибридной инфраструктуре.
 
-Для этого Deckhouse автоматически настраивает и управляет как [узлами кластера](modules/node-manager/), так и его компонентами [control plane](modules/control-plane-manager/), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
+Для этого Deckhouse Kubernetes Platform автоматически настраивает и управляет как [узлами кластера](/modules/node-manager/), так и его компонентами [control plane](/modules/control-plane-manager/), постоянно поддерживая их актуальную конфигурацию (используя инструменты Terraform).
 
 Deckhouse позволяет легко выполнять такие нетривиальные операции с компонентами control plane и узлами кластера, как:
 

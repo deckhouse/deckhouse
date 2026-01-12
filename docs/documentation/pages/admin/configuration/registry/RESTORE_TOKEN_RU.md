@@ -1,6 +1,7 @@
 ---
 title: Восстановление подключения к registry при истекшем и неверном лицензионном токене
 permalink: ru/admin/configuration/registry/restore-token.html
+description: "Восстановление подключения к registry в Deckhouse Kubernetes Platform при проблемах с лицензионным токеном. Восстановление доступа к registry."
 lang: ru
 ---
 
@@ -43,7 +44,7 @@ lang: ru
 
    ```shell
    d8 k get pods -n d8-system -o wide
-   d8 k delete pod -n d8-system -o deckhouse-<id>
+   d8 k delete pod -n d8-system deckhouse-<id>
    ```
 
 1. Убедитесь, что новый под `deckhouse` запустился корректно:

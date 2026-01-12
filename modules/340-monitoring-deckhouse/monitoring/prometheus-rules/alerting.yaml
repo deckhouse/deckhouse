@@ -22,7 +22,7 @@
            d8 k -n d8-system  get deploy deckhouse -o json | jq '.spec.template.spec.containers[0].image' -r
            ```
 
-        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/products/kubernetes-platform/documentation/latest/modules/deckhouse/configuration.html#parameters-releasechannel).
+        1. Subscribe to one of the regular release channels by adjusting the [`deckhouse` module configuration](https://deckhouse.io/modules/deckhouse/configuration.html#parameters-releasechannel).
 
   - alert: DeckhouseReleaseIsWaitingManualApproval
     expr: sum by (name) (d8_release_info{manualApproval="true", releaseQueueDepth=~"(nil|0|1)"})
@@ -366,8 +366,8 @@
         ```
 
   - alert: DeckhouseHighMemoryUsage
-    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.9)
-    for: 1m
+    expr: max by (pod, node) (container_memory_working_set_bytes{namespace="d8-system", container="deckhouse"} / container_spec_memory_limit_bytes{namespace="d8-system", container="deckhouse"} > 0.85)
+    for: 30s
     labels:
       severity_level: "3"
     annotations:
@@ -408,14 +408,14 @@
         To check the module releases status, run the following command:
 
         ```bash
-        kubectl get mr -l module={{ $labels.moduleName }}
+        d8 k get mr -l module={{ $labels.moduleName }}
         ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
 
         This major release has from-to version constraints that must be met before applying the update.
         To check the update instructions (from-to versions), run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        d8 k get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
         This will show you the update paths including the from-to versions defined in the release.{{ end }}

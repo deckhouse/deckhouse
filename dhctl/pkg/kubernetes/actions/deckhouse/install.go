@@ -32,6 +32,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -182,28 +183,42 @@ func CreateDeckhouseManifests(
 ) (*ManifestsResult, error) {
 	tasks := []actions.ManifestTask{
 		{
-			Name:     `Namespace "d8-system"`,
-			Manifest: func() interface{} { return manifests.DeckhouseNamespace("d8-system") },
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Namespaces().Get(ctx, manifest.(*apiv1.Namespace).GetName(), metav1.GetOptions{})
-				if err != nil {
-					if apierrors.IsNotFound(err) {
-						_, err = kubeCl.CoreV1().Namespaces().Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
-					}
-				} else {
+			Name: `Namespace "d8-system"`,
+			Manifest: func() any {
+				return manifests.DeckhouseNamespace("d8-system")
+			},
+			CreateFunc: func(manifest any) error {
+				_, err := kubeCl.
+					CoreV1().
+					Namespaces().
+					Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
+
+				if err != nil && apierrors.IsAlreadyExists(err) {
 					log.InfoLn("Already exists. Skip!")
+					return nil
 				}
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
-				return nil
+			UpdateFunc: func(manifest any) error {
+				_, err := kubeCl.
+					CoreV1().
+					Namespaces().
+					Update(ctx, manifest.(*apiv1.Namespace), metav1.UpdateOptions{})
+				return err
 			},
 		},
 		{
 			Name:     `Admin ClusterRole "cluster-admin"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRole() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoles().Create(ctx, manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoles().Get(ctx, manifest.(*rbacv1.ClusterRole).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.RbacV1().ClusterRoles().Create(ctx, manifest.(*rbacv1.ClusterRole), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -215,7 +230,14 @@ func CreateDeckhouseManifests(
 			Name:     `ClusterRoleBinding "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseAdminClusterRoleBinding() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
+				_, err := kubeCl.RbacV1().ClusterRoleBindings().Get(ctx, manifest.(*rbacv1.ClusterRoleBinding).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.RbacV1().ClusterRoleBindings().Create(ctx, manifest.(*rbacv1.ClusterRoleBinding), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -227,7 +249,14 @@ func CreateDeckhouseManifests(
 			Name:     `ServiceAccount "deckhouse"`,
 			Manifest: func() interface{} { return manifests.DeckhouseServiceAccount() },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Create(ctx, manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().ServiceAccounts("d8-system").Get(ctx, manifest.(*apiv1.ServiceAccount).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().ServiceAccounts("d8-system").Create(ctx, manifest.(*apiv1.ServiceAccount), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -267,16 +296,76 @@ func CreateDeckhouseManifests(
 		},
 	}
 
-	if cfg.IsRegistryAccessRequired() {
+	// Registry secrets
+	deckhouseRegistrySecretData, err := cfg.Registry.
+		Manifest().
+		DeckhouseRegistrySecretData(
+			func() (registry.PKI, error) {
+				return registry.GetPKI(ctx, kubeCl)
+			},
+		)
+
+	if err != nil {
+		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
+	}
+
+	tasks = append(tasks, actions.ManifestTask{
+		Name: `Secret "deckhouse-registry"`,
+		Manifest: func() any {
+			return manifests.DeckhouseRegistrySecret(deckhouseRegistrySecretData)
+		},
+		CreateFunc: func(manifest any) error {
+			_, err = kubeCl.
+				CoreV1().
+				Secrets("d8-system").
+				Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+
+			if err != nil && apierrors.IsAlreadyExists(err) {
+				log.InfoLn("Already exists. Skip!")
+				return nil
+			}
+			return err
+		},
+		UpdateFunc: func(manifest any) error {
+			_, err := kubeCl.
+				CoreV1().
+				Secrets("d8-system").
+				Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			return err
+		},
+	})
+
+	isExist, registryBashibleConfigSecretData, err := cfg.Registry.
+		Manifest().
+		RegistryBashibleConfigSecretData()
+
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible config secret data: %w", err)
+	}
+
+	if isExist {
 		tasks = append(tasks, actions.ManifestTask{
-			Name:     `Secret "deckhouse-registry"`,
-			Manifest: func() interface{} { return manifests.DeckhouseRegistrySecret(cfg.Registry) },
-			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+			Name: `Secret "registry-bashible-config"`,
+			Manifest: func() any {
+				return manifests.RegistryBashibleConfigSecret(registryBashibleConfigSecretData)
+			},
+			CreateFunc: func(manifest any) error {
+				_, err = kubeCl.
+					CoreV1().
+					Secrets("d8-system").
+					Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+
+				if err != nil && apierrors.IsAlreadyExists(err) {
+					log.InfoLn("Already exists. Skip!")
+					return nil
+				}
 				return err
 			},
-			UpdateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
+			UpdateFunc: func(manifest any) error {
+				_, err := kubeCl.
+					CoreV1().
+					Secrets("d8-system").
+					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 				return err
 			},
 		})
@@ -287,7 +376,14 @@ func CreateDeckhouseManifests(
 			Name:     `Secret "d8-cluster-terraform-state"`,
 			Manifest: func() interface{} { return manifests.SecretWithInfrastructureState(cfg.InfrastructureState) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -305,7 +401,14 @@ func CreateDeckhouseManifests(
 			Name:     fmt.Sprintf(`Secret "d8-node-terraform-state-%s"`, nodeName),
 			Manifest: getManifest,
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("d8-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("d8-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -320,7 +423,14 @@ func CreateDeckhouseManifests(
 			Name:     `Secret "d8-cluster-configuration"`,
 			Manifest: func() interface{} { return manifests.SecretWithClusterConfig(cfg.ClusterConfig) },
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -339,7 +449,14 @@ func CreateDeckhouseManifests(
 				)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -365,7 +482,14 @@ func CreateDeckhouseManifests(
 				return manifests.SecretWithStaticClusterConfig(cfg.StaticClusterConfig)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+				_, err := kubeCl.CoreV1().Secrets("kube-system").Get(ctx, manifest.(*apiv1.Secret).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Secrets("kube-system").Create(ctx, manifest.(*apiv1.Secret), metav1.CreateOptions{})
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
+				}
 				return err
 			},
 			UpdateFunc: func(manifest interface{}) error {
@@ -413,10 +537,17 @@ func CreateDeckhouseManifests(
 				return manifests.KubeDNSService(cfg.KubeDNSAddress)
 			},
 			CreateFunc: func(manifest interface{}) error {
-				_, err := kubeCl.CoreV1().Services("kube-system").Create(ctx, manifest.(*apiv1.Service), metav1.CreateOptions{})
-				if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
-					log.InfoLn("Service for DNS already exists. Skip!")
-					return nil
+				_, err := kubeCl.CoreV1().Services("kube-system").Get(ctx, manifest.(*apiv1.Service).GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Services("kube-system").Create(ctx, manifest.(*apiv1.Service), metav1.CreateOptions{})
+						if err != nil && strings.Contains(err.Error(), "provided IP is already allocated") {
+							log.InfoLn("Service for DNS already exists. Skip!")
+							return nil
+						}
+					}
+				} else {
+					log.InfoLn("Already exists. Skip!")
 				}
 				return err
 			},
@@ -427,9 +558,11 @@ func CreateDeckhouseManifests(
 		})
 	}
 
-	err := beforeDeckhouseTask()
-	if err != nil {
-		return nil, err
+	if beforeDeckhouseTask != nil {
+		err := beforeDeckhouseTask()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	lockCmTask, err := LockDeckhouseQueueBeforeCreatingModuleConfigs(ctx, kubeCl)
@@ -517,10 +650,9 @@ func CreateDeckhouseDeployment(ctx context.Context, kubeCl *client.KubernetesCli
 
 func deckhouseDeploymentParamsFromCfg(cfg *config.DeckhouseInstaller) manifests.DeckhouseDeploymentParams {
 	return manifests.DeckhouseDeploymentParams{
-		Registry:           cfg.GetImage(true),
+		Registry:           cfg.GetInclusterImage(true),
 		LogLevel:           cfg.LogLevel,
 		Bundle:             cfg.Bundle,
-		IsSecureRegistry:   cfg.IsRegistryAccessRequired(),
 		KubeadmBootstrap:   cfg.KubeadmBootstrap,
 		MasterNodeSelector: cfg.MasterNodeSelector,
 	}
