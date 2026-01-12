@@ -1797,7 +1797,7 @@ ul .resources__prop_name.deprecated {
 
     & .form__row {
       margin-bottom: 0;
-      flex: 1;
+      min-width: 383px;
     }
 
     & a.button {
@@ -1820,7 +1820,6 @@ ul .resources__prop_name.deprecated {
     color: #dc3545;
     height: 43px;
     margin-left: 30px;
-    max-width: 320px;
   }
 
   &-request {
