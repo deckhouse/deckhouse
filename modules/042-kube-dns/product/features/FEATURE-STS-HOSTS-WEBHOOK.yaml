@@ -1,0 +1,49 @@
+title-en: StatefulSet pods /etc/hosts injection webhook
+title-ru: Webhook для инъекции в /etc/hosts подов StatefulSet
+description-en: |
+  Automatic webhook-based injection of cluster domain aliases into `/etc/hosts` file for StatefulSet pods.
+  Required for services that need to resolve pod FQDNs before becoming Ready.
+  Works by mutating StatefulSet pods to add an init container that renders `/etc/hosts` with cluster domain aliases.
+description-ru: |
+  Автоматическая инъекция алиасов домена кластера в файл `/etc/hosts` для подов StatefulSet через webhook.
+  Необходимо для сервисов, которым нужно разрешать FQDN подов до того, как они станут Ready.
+  Работает путем мутации подов StatefulSet для добавления init контейнера, который рендерит `/etc/hosts` с алиасами домена кластера.
+user-notes-ru: |
+  **Важно для пользователей:**
+  - Webhook активируется только при наличии clusterDomainAliases в конфигурации
+  - Работает только для StatefulSet подов с указанным subdomain
+  - Критично для сервисов, требующих раннего DNS разрешения
+  - Init контейнер автоматически добавляется в поды StatefulSet
+  - Webhook использует мутацию для добавления init контейнера перед запуском пода
+  - Решает проблему, когда kubelet не поддерживает clusterDomainAliases в /etc/hosts
+user-notes-en: |
+  **Important for users:**
+  - Webhook is activated only when clusterDomainAliases are configured
+  - Works only for StatefulSet pods with specified subdomain
+  - Critical for services requiring early DNS resolution
+  - Init container is automatically added to StatefulSet pods
+  - Webhook uses mutation to add init container before pod startup
+  - Solves the problem when kubelet doesn't support clusterDomainAliases in /etc/hosts
+configuration-example: |
+  Webhook works automatically when clusterDomainAliases are set:
+  ```yaml
+  apiVersion: deckhouse.io/v1alpha1
+  kind: ModuleConfig
+  metadata:
+    name: kube-dns
+  spec:
+    settings:
+      clusterDomainAliases:
+      - foo.bar
+  ```
+  Then StatefulSet pods will automatically get aliases in /etc/hosts.
+related-features:
+  - FEATURE-CLUSTER-DOMAIN-ALIASES
+user-stories:
+  - en: I need StatefulSet pods to resolve their FQDNs using cluster domain aliases before becoming Ready. The webhook automatically injects aliases into /etc/hosts, ensuring services that require early DNS resolution work correctly.
+    ru: Мне нужно, чтобы поды StatefulSet разрешали свои FQDN используя алиасы домена кластера до того, как они станут Ready. Webhook автоматически инъектирует алиасы в /etc/hosts, обеспечивая корректную работу сервисов, требующих раннего DNS разрешения.
+    scope: Payload
+  - en: I want cluster domain aliases to be automatically injected into /etc/hosts for StatefulSet pods without manual pod configuration, enabling services that need pod FQDN resolution during startup.
+    ru: Я хочу, чтобы алиасы домена кластера автоматически инъектировались в /etc/hosts для подов StatefulSet без ручной настройки подов, обеспечивая работу сервисов, которым нужно разрешение FQDN подов во время запуска.
+    scope: System
+
