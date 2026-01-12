@@ -14,3 +14,5 @@ spec:
   hostPortWithProxyProtocol:
     httpPort: 80
     httpsPort: 443
+    acceptClientIPHeadersFrom:
+    - 0.0.0.0/0

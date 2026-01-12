@@ -62,6 +62,9 @@ spec:
       labels:
         app: proxy-failover
         name: {{ $crd.name }}
+        {{- if or (eq $crd.spec.inlet "HostWithFailover") (eq $crd.spec.inlet "HostPort") }}
+        network.deckhouse.io/ingress-nginx-class: {{ $crd.spec.ingressClass }}
+        {{- end }}
     spec:
       automountServiceAccountToken: true
   {{- if $crd.spec.nodeSelector }}

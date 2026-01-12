@@ -20,27 +20,33 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
-type KubeClientGetter interface {
-	GetKubeClient(ctx context.Context) (*client.KubernetesClient, error)
-}
-
 type KubeTerraStateLoader struct {
-	kubeGetter KubeClientGetter
-	stateCache state.Cache
-	logger     log.Logger
+	kubeProvider kubernetes.KubeClientProviderWithCtx
+	stateCache   state.Cache
+	logger       log.Logger
+
+	forceFromCache bool
 }
 
-func NewCachedTerraStateLoader(kubeGetter KubeClientGetter, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
+func NewCachedTerraStateLoader(kubeProvider kubernetes.KubeClientProviderWithCtx, stateCache state.Cache, logger log.Logger) *KubeTerraStateLoader {
 	return &KubeTerraStateLoader{
-		kubeGetter: kubeGetter,
-		stateCache: stateCache,
+		kubeProvider: kubeProvider,
+		stateCache:   stateCache,
+		logger:       logger,
+
+		forceFromCache: false,
 	}
+}
+func (s *KubeTerraStateLoader) WithForceFromCache(f bool) *KubeTerraStateLoader {
+	s.forceFromCache = f
+	return s
 }
 
 func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.MetaConfig, error) {
@@ -56,14 +62,14 @@ func (s *KubeTerraStateLoader) PopulateMetaConfig(ctx context.Context) (*config.
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		if err := s.stateCache.LoadStruct("cluster-config", &metaConfig); err != nil {
 			return nil, err
 		}
 		return metaConfig, nil
 	}
 
-	kubeCl, err := s.kubeGetter.GetKubeClient(ctx)
+	kubeCl, err := s.kubeProvider.KubeClientCtx(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +125,12 @@ func (s *KubeTerraStateLoader) getNodesState(ctx context.Context) (map[string]st
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		if err := s.stateCache.LoadStruct("nodes-state", &nodesState); err != nil {
 			return nil, err
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
+		if kubeCl, err = s.kubeProvider.KubeClientCtx(ctx); err != nil {
 			return nil, err
 		}
 		nodesState, err = GetNodesStateFromCluster(ctx, kubeCl)
@@ -154,13 +160,13 @@ func (s *KubeTerraStateLoader) getClusterState(ctx context.Context) ([]byte, err
 		return nil, err
 	}
 
-	if ok && confirmation.Ask() {
+	if ok && (s.forceFromCache || confirmation.Ask()) {
 		clusterState, err = s.stateCache.Load("cluster-state")
 		if err != nil || len(clusterState) == 0 {
 			return nil, fmt.Errorf("can't load cluster state from cache")
 		}
 	} else {
-		if kubeCl, err = s.kubeGetter.GetKubeClient(ctx); err != nil {
+		if kubeCl, err = s.kubeProvider.KubeClientCtx(ctx); err != nil {
 			return nil, err
 		}
 		clusterState, err = GetClusterStateFromCluster(ctx, kubeCl)

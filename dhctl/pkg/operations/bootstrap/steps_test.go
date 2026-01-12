@@ -212,14 +212,19 @@ func TestInstallDeckhouse(t *testing.T) {
 		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], uuid)
 	}
 
+	getInstallParams := func() InstallDeckhouseParams {
+		return InstallDeckhouseParams{
+			BeforeDeckhouseTask: func() error { return nil },
+			State:               NewBootstrapState(cache.NewTestCache()),
+		}
+	}
+
 	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
 		t.Run("should install Deckhouse", func(t *testing.T) {
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
-			_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-				return nil
-			})
+			_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 			require.NoError(t, err, "Should install Deckhouse")
 
@@ -236,9 +241,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -255,9 +258,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -271,9 +272,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, clusterUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.NoError(t, err, "Should install Deckhouse")
 

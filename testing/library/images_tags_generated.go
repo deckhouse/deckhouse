@@ -274,7 +274,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"webVexArtifact": "imageHash-deckhouseTools-webVexArtifact",
 	},
 	"descheduler": map[string]interface{}{
-		"descheduler": "imageHash-descheduler-descheduler",
+		"descheduler":            "imageHash-descheduler-descheduler",
+		"deschedulerVexArtifact": "imageHash-descheduler-deschedulerVexArtifact",
 	},
 	"documentation": map[string]interface{}{
 		"docsBuilder": "imageHash-documentation-docsBuilder",
@@ -570,7 +571,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"selfSignedGenerator": "imageHash-userAuthn-selfSignedGenerator",
 	},
 	"userAuthz": map[string]interface{}{
-		"webhook": "imageHash-userAuthz-webhook",
+		"permissionBrowserApiserver": "imageHash-userAuthz-permissionBrowserApiserver",
+		"webhook":                    "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{
 		"admissionController": "imageHash-verticalPodAutoscaler-admissionController",

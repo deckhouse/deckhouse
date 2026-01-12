@@ -101,7 +101,8 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
-	TmpDir  string
+	TmpDir string
+	// todo refact to logger provider
 	Logger  log.Logger
 	IsDebug bool
 
@@ -543,9 +544,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, func() error {
-		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
-	})
+	installParams := InstallDeckhouseParams{
+		BeforeDeckhouseTask: func() error {
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
+		},
+		State: bootstrapState,
+	}
+
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}

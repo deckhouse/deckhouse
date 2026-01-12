@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
+	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
+	ModulePullOverrideFinalizer            = "modules.deckhouse.io/mpo-finalizer"
 
 	ModulePullOverrideMessageReady          = "Ready"
 	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"

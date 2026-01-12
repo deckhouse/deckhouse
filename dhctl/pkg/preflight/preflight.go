@@ -163,7 +163,6 @@ func (pc *Checker) StaticSudo(ctx context.Context) error {
 			successMessage: "ssh credential is correctly",
 			skipFlag:       app.SSHCredentialsCheckArgName,
 		},
-		pc.getCheckSSHTunnelStep(),
 		{
 			fun:            pc.CheckSudoIsAllowedForUser,
 			successMessage: "sudo is allowed for user",
