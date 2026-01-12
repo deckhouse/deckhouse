@@ -14,14 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registryservice
+package hooks
 
-type Inputs bool
-
-type Mode string
-
-const (
-	ModeDisabled       Mode = ""
-	ModeNodeServices   Mode = "node-services"
-	ModeInClusterProxy Mode = "incluster-proxy"
+import (
+	"github.com/deckhouse/deckhouse/go_lib/hooks/copy_custom_certificate"
 )
+
+var _ = copy_custom_certificate.RegisterHook("registry")

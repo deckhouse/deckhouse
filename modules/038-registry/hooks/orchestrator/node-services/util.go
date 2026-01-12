@@ -14,14 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registryservice
+package nodeservices
 
-type Inputs bool
-
-type Mode string
-
-const (
-	ModeDisabled       Mode = ""
-	ModeNodeServices   Mode = "node-services"
-	ModeInClusterProxy Mode = "incluster-proxy"
+import (
+	nodeservices "github.com/deckhouse/deckhouse/go_lib/registry/models/node-services"
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/users"
 )
+
+func mapUser(user users.User) nodeservices.User {
+	return nodeservices.User{
+		Name:         user.UserName,
+		Password:     user.Password,
+		PasswordHash: user.HashedPassword,
+	}
+}

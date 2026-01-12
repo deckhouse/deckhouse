@@ -14,14 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package registryservice
+package nodeservices
 
-type Inputs bool
-
-type Mode string
+import v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 const (
-	ModeDisabled       Mode = ""
-	ModeNodeServices   Mode = "node-services"
-	ModeInClusterProxy Mode = "incluster-proxy"
+	PodVersionAnnotation = "registry.deckhouse.io/config-version"
+	configSecretPrefix   = "registry-node-config-"
+)
+
+var (
+	MasterNodeLabelSelector = &v1.LabelSelector{
+		MatchLabels: map[string]string{
+			"node-role.kubernetes.io/control-plane": "",
+		},
+	}
 )
