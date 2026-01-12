@@ -70,11 +70,11 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $audiences = $audiences | uniq -}}
 {{- $audiences = without $audiences $defaultAud -}}
 {{- $audiences = append $audiences $defaultAud -}}
+{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
+{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 {{- /* ClusterConfiguration */ -}}
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
-{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) ($k8sPatch | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki

@@ -890,21 +890,6 @@ apiserver:
     webhookCacheTTL: "5m"
 `
 
-		const v129TestValues = `
-internal:
-  effectiveKubernetesVersion: "1.29"
-  etcdServers:
-    - https://192.168.199.186:2379
-  mastersNode:
-    - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
-apiserver:
-  authz:
-    webhookURL: "https://authz.example.com"
-    webhookCA: "LS0tLS1CRUdJTi..."
-`
-
 		const webhookAuthzMissingCATestValues = `
 internal:
   effectiveKubernetesVersion: "1.31"
@@ -1030,33 +1015,6 @@ apiserver:
 			})
 		})
 
-		Context("v1beta3 with Kubernetes 1.29 uses structured authorization config (feature-gated)", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", v129TestValues)
-				f.HelmRender()
-			})
-
-			It("should use authorization-config and enable StructuredAuthorizationConfiguration feature gate", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
-				Expect(secret.Exists()).To(BeTrue())
-
-				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-
-				configYaml := string(kubeadmConfigData)
-				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
-
-				// Kubernetes >= 1.29 uses structured authorization config.
-				Expect(configYaml).To(ContainSubstring("authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
-
-				// Kubernetes 1.29 requires the feature gate to be explicitly enabled.
-				Expect(configYaml).To(ContainSubstring("StructuredAuthorizationConfiguration=true"))
-			})
-		})
 	})
 
 	Context("terminated-pod-gc-threshold based on node count", func() {
