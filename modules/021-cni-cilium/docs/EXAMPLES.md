@@ -118,14 +118,14 @@ spec:
 
 ## HubbleMonitoringConfig
 
-The cluster-scoped HubbleMonitoringConfig resource is intended to configure data export from Hubble, which runs inside Cilium agents.
+The cluster-scoped [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource is intended to configure data export from Hubble, which runs inside Cilium agents.
 
 ### HubbleMonitoringConfig configuration examples
 
 #### Enabling extended metrics and flow logs export (with filters and field mask)
 
 {% alert level="warning" %}
-The HubbleMonitoringConfig resource **must be named** `hubble-monitoring-config`.
+The [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource **must be named** `hubble-monitoring-config`.
 {% endalert %}
 
 Example of enabling metrics and export:

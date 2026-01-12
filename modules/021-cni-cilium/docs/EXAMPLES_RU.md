@@ -118,14 +118,14 @@ spec:
 
 ## HubbleMonitoringConfig
 
-Кластерный ресурс HubbleMonitoringConfig предназначен для настройки экспорта данных из Hubble, работающего внутри агентов Cilium.
+Кластерный ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) предназначен для настройки экспорта данных из Hubble, работающего внутри агентов Cilium.
 
 ### Примеры настроек HubbleMonitoringConfig
 
 #### Включение расширенных метрик и экспорта flow logs (с фильтрами и маской полей)
 
 {% alert level="warning" %}
-Ресурс HubbleMonitoringConfig **должен иметь имя** `hubble-monitoring-config`.
+Ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) **должен иметь имя** `hubble-monitoring-config`.
 {% endalert %}
 
 Пример включения метрик и экспорта:
