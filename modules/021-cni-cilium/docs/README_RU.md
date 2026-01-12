@@ -127,5 +127,10 @@ Egress Gateway в Deckhouse Kubernetes Platform может быть исполь
 ## Экспорт данных Hubble
 
 Deckhouse позволяет настраивать экспорт данных Hubble из агентов Cilium с помощью кластерного пользовательского ресурса [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig):
-Чтобы включить эту функциональность, создайте ресурс `HubbleMonitoringConfig`.  
+Чтобы включить эту функциональность, создайте ресурс `HubbleMonitoringConfig`.
+
+{% alert level="warning" %}
+Создание или изменение ресурса **HubbleMonitoringConfig** приведёт к **перезапуску всех агентов Cilium** в кластере.
+{% endalert %}
+
 Примеры конфигурации см. в разделе [HubbleMonitoringConfig examples](examples.html#hubblemonitoringconfig).

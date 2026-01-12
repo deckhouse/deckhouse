@@ -126,4 +126,9 @@ The ability to dynamically assign additional IP addresses to nodes is implemente
 
 Deckhouse allows configuring export of Hubble data from Cilium agents using the cluster-wide custom resource [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig).
 To enable the feature, create a `HubbleMonitoringConfig` resource.
+
+{% alert level="warning" %}
+Creating or updating the **HubbleMonitoringConfig** resource will trigger a **restart of all Cilium agents** in the cluster.
+{% endalert %}
+
 For configuration examples, see [HubbleMonitoringConfig examples](examples.html#hubblemonitoringconfig).
