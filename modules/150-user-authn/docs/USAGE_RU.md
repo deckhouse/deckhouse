@@ -363,7 +363,7 @@ current-context: default
 
 #### Kerberos (SPNEGO) SSO для LDAP
 
-Dex поддерживает «бесформенную» (без логин/пароль) аутентификацию по Kerberos (SPNEGO) для LDAP‑коннектора. При включении браузер, доверяющий хосту Dex, отправляет `Authorization: Negotiate …`, Dex валидирует Kerberos‑билет по keytab, пропускает форму, маппит principal в LDAP‑имя, получает группы и завершает OIDC‑поток.
+Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP‑коннектора. При использовании этого механизма браузер, доверяющий хосту Dex, отправляет `Authorization: Negotiate …`, Dex валидирует Kerberos‑билет по keytab, пропускает форму вводу логина/пароля, сопоставляет principal с LDAP‑именем, получает группы и завершает OIDC‑поток.
 
 Минимальный пример (расширение спецификации LDAP‑провайдера):
 
@@ -393,19 +393,18 @@ spec:
         groupAttr: memberUid
     kerberos:
       enabled: true
-      keytabSecretName: dex-kerberos-keytab   # Secret в d8-user-authn с ключом 'krb5.keytab'
-      expectedRealm: EXAMPLE.COM              # опционально, проверка realm (без учёта регистра)
+      keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
-      fallbackToPassword: false               # по умолчанию false; если true — при отсутствии/ошибке Negotiate показываем форму
+      fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
 ```
 
 Примечания:
-- Secret `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
-- Один Pod Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab; `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).
+
+* Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
+* Один под Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab. `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).
 Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
-
 Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в открытом виде (plain text). Стратегии с передачей хешированных паролей не предусмотрены.
-
 Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
