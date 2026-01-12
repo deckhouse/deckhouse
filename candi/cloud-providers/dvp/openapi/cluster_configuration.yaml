@@ -152,6 +152,9 @@ apiVersions:
                   type: object
                   description: |
                     Virtual machine settings for the created master node.
+
+                    > The `runPolicy: AlwaysOnUnlessStoppedManually` policy is used for virtual machines of nodes.
+                    > This allows the virtual machine to be stopped manually (for example, for maintenance) without triggering an automatic restart.
                   required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
@@ -215,12 +218,12 @@ apiVersions:
                         - AlwaysOnUnlessStoppedManually
                       default: AlwaysOnUnlessStoppedManually
                       description: |
-                        Run policy for the virtual machine.
+                        Virtual machine run policy.
 
                         * `AlwaysOn`: The virtual machine should always be running.
                         * `AlwaysOff`: The virtual machine should always be stopped.
                         * `Manual`: The virtual machine state is controlled manually.
-                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (e.g., for maintenance), but will automatically start after host reboot.
+                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (for example, for maintenance), but it will automatically start after a host reboot.
                     liveMigrationPolicy:
                       type: string
                       enum:
@@ -236,10 +239,10 @@ apiVersions:
 
                         * `Manual`: Migration is controlled manually.
                         * `Never`: Migration is disabled.
-                        * `AlwaysSafe`: Always use safe migration (may fail if VM has high memory changes).
+                        * `AlwaysSafe`: Always use safe migration (may fail if VM has a high rate of memory changes).
                         * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
                         * `AlwaysForced`: Always use forced migration with VM slowdown.
-                        * `PreferForced`: Prefer forced migration (recommended for masters due to high memory activity).
+                        * `PreferForced`: Prefer forced migration (recommended for master nodes due to high memory activity).
                     ipAddresses:
                       type: array
                       description: |
