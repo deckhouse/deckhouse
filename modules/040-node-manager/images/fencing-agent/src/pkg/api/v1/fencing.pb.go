@@ -274,7 +274,7 @@ const file_fencing_proto_rawDesc = "" +
 	"\x04JOIN\x10\x022~\n" +
 	"\aFencing\x126\n" +
 	"\x06GetAll\x12\x16.google.protobuf.Empty\x1a\x14.fencing.v1.AllNodes\x12;\n" +
-	"\fStreamEvents\x12\x16.google.protobuf.Empty\x1a\x11.fencing.v1.Event0\x01B\x1fZ\x1dfencing-controller/pkg/api/v1b\x06proto3"
+	"\fStreamEvents\x12\x16.google.protobuf.Empty\x1a\x11.fencing.v1.Event0\x01B\x1aZ\x18fencing-agent/pkg/api/v1b\x06proto3"
 
 var (
 	file_fencing_proto_rawDescOnce sync.Once

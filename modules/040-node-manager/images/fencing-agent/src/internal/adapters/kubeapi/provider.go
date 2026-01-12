@@ -2,7 +2,7 @@ package kubeapi
 
 import (
 	"context"
-	"fencing-controller/internal/core/domain"
+	"fencing-agent/internal/core/domain"
 	"fmt"
 	"time"
 
@@ -52,7 +52,10 @@ func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 		dNode := domain.NewNode(node.Name)
 		dNode.LastSeen = time.Now()
 		for _, ip := range node.Status.Addresses {
-			dNode.Addresses[string(ip.Type)] = ip.Address
+			if ip.Type == "InternalIP" {
+				dNode.Addresses["eth0"] = ip.Address
+				break
+			}
 		}
 		dNodes = append(dNodes, dNode)
 	}

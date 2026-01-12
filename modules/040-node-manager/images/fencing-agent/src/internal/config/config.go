@@ -10,6 +10,7 @@ type Config struct {
 	WatchdogConfig   WatchdogConfig
 	MemberlistConfig MemberlistConfig
 	// TODO decide: create structures for kube-api and node
+	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
 	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
 	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`

@@ -1,8 +1,8 @@
 package memberlist
 
 import (
-	"fencing-controller/internal/core/domain"
-	"fencing-controller/internal/core/ports"
+	"fencing-agent/internal/core/domain"
+	"fencing-agent/internal/core/ports"
 	"time"
 
 	"github.com/hashicorp/memberlist"
@@ -19,10 +19,10 @@ func NewEventHandler(logger *zap.Logger, eventBus ports.EventsBus) *EventHandler
 }
 
 func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
-	// TODO logging
+	h.logger.Debug("Node joined", zap.String("node_name", node.Name), zap.String("node_addr", node.Addr.String()))
 	// TODO false joining?
 	ips := make(map[string]string)
-	ips["InternalIP"] = node.Addr.String() // TODO mb delete
+	ips["eth0"] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
 			Name:      node.Name,
@@ -35,10 +35,10 @@ func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 }
 
 func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
-	// TODO logging
+	h.logger.Debug("Node left", zap.String("node_name", node.Name), zap.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
 	ips := make(map[string]string)
-	ips["InternalIP"] = node.Addr.String()
+	ips["eth0"] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
 			Name:      node.Name,

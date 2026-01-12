@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"fencing-controller/internal/core/ports"
+	"fencing-agent/internal/core/ports"
 	"time"
 
 	"go.uber.org/zap"
@@ -40,27 +40,34 @@ func (h *HealthMonitor) Run(ctx context.Context, interval time.Duration) {
 }
 
 func (h *HealthMonitor) check(ctx context.Context) {
-	inMaintenance, _ := h.cluster.IsMaintenanceMode(ctx)
+	inMaintenance, err := h.cluster.IsMaintenanceMode(ctx)
+	if err != nil {
+		h.logger.Debug("Cannot check maintenance mode", zap.Error(err))
+		inMaintenance = false
+	}
 	if inMaintenance {
 		if h.watchdog.IsArmed() {
 			if err := h.watchdog.Stop(); err != nil {
 				h.logger.Error("Unable to disarm watchdog", zap.Error(err))
 			}
 		}
-		return // TODO logging
+		h.logger.Info("Maintenance mode is on, so not feeding the watchdog")
+		return
 	}
 	if !h.watchdog.IsArmed() {
+		h.logger.Info("Arming watchdog")
 		if err := h.watchdog.Start(); err != nil {
 			h.logger.Error("Unable to arm watchdog", zap.Error(err))
 		}
 	}
 	shouldFeed := h.shouldFeedWatchDog(ctx)
 	if shouldFeed {
+		h.logger.Debug("Feeding the watchdog")
 		if err := h.watchdog.Feed(); err != nil {
 			h.logger.Error("Unable to feed watchdog", zap.Error(err))
 		}
 	} else {
-		h.logger.Debug("Not feeding the watchdog, will reboot soon")
+		h.logger.Warn("Not feeding the watchdog, will reboot soon")
 	}
 }
 func (h *HealthMonitor) shouldFeedWatchDog(ctx context.Context) bool {

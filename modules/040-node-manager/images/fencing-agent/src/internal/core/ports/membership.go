@@ -1,6 +1,6 @@
 package ports
 
-import "fencing-controller/internal/core/domain"
+import "fencing-agent/internal/core/domain"
 
 type MembershipProvider interface {
 	GetMembers() []domain.Node

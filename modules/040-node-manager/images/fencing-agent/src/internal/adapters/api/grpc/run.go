@@ -1,28 +1,29 @@
 package grpc
 
 import (
-	"fencing-controller/internal/core/ports"
-	pb "fencing-controller/pkg/api/v1"
+	pb "fencing-agent/pkg/api/v1"
+	"fmt"
 	"net"
+	"os"
 
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
-func Run(logger *zap.Logger, socketPath string, bus ports.EventsBus) error {
+func Run(socketPath string, grpcSrv *Server) error {
+	if err := os.RemoveAll(socketPath); err != nil {
+		return fmt.Errorf("failed to remove socket: %w", err)
+	}
 	lis, err := net.Listen("unix", socketPath)
 	if err != nil {
-		return err // TODO logging
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
 	grpcServer := grpc.NewServer()
 
-	fencingServer := NewServer(bus)
-	pb.RegisterFencingServer(grpcServer, fencingServer)
+	pb.RegisterFencingServer(grpcServer, grpcSrv)
 
-	// TODO logging
 	if err = grpcServer.Serve(lis); err != nil {
-		return err // TODO logging
+		return fmt.Errorf("failed to serve: %w", err)
 	}
 	return nil
 }

@@ -1,9 +1,9 @@
 package memberlist
 
 import (
-	fencing_config "fencing-controller/internal/config"
-	"fencing-controller/internal/core/domain"
-	"fencing-controller/internal/core/ports"
+	fencing_config "fencing-agent/internal/config"
+	"fencing-agent/internal/core/domain"
+	"fencing-agent/internal/core/ports"
 
 	"github.com/hashicorp/memberlist"
 	"go.uber.org/zap"
@@ -13,14 +13,12 @@ type Provider struct {
 	logger   *zap.Logger
 	list     *memberlist.Memberlist
 	eventBus ports.EventsBus
+	nodeIp   string
 	isAlone  bool
 }
 
-func NewProvider(cfg fencing_config.MemberlistConfig, logger *zap.Logger, eventBus ports.EventsBus) (*Provider, error) {
-	config := memberlist.DefaultLANConfig()
-	// TODO config
-	eventHandler := NewEventHandler(logger, eventBus)
-	config.Events = eventHandler
+func NewProvider(cfg fencing_config.MemberlistConfig, logger *zap.Logger, eventBus ports.EventsBus, nodeIp string, nodeName string) (*Provider, error) {
+	config := createConfig(cfg, logger, eventBus, nodeIp, nodeName)
 	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, err // TODO think, logging
@@ -35,16 +33,16 @@ func NewProvider(cfg fencing_config.MemberlistConfig, logger *zap.Logger, eventB
 
 func (p *Provider) Start(peers []string) error {
 	if len(peers) == 0 {
-		// TODO logging
+		p.logger.Info("No other peers in node group, starting as a single node")
 		p.isAlone = true
 		return nil
 	}
 
-	_, err := p.list.Join(peers) // numJoined
+	numJoined, err := p.list.Join(peers) // numJoined
 	if err != nil {
 		return err
 	}
-	// TODO logging
+	p.logger.Info("Joined to memberlist cluster", zap.Int("numJoined", numJoined))
 	p.isAlone = false
 	return nil
 }
@@ -56,7 +54,7 @@ func (p *Provider) GetMembers() []domain.Node {
 		nodes = append(nodes, domain.Node{
 			Name: member.Name,
 			Addresses: map[string]string{
-				"InternalIP": member.Addr.String(), // TODO think
+				"eth0": member.Addr.String(),
 			},
 		})
 	}
@@ -69,4 +67,27 @@ func (p *Provider) NumOtherMembers() int {
 
 func (p *Provider) IsAlone() bool {
 	return p.isAlone
+}
+
+func createConfig(
+	cfg fencing_config.MemberlistConfig,
+	logger *zap.Logger,
+	eventBus ports.EventsBus,
+	nodeIp string,
+	nodeName string) *memberlist.Config {
+	config := memberlist.DefaultLANConfig()
+	config.ProbeInterval = cfg.ProbeInterval
+	config.ProbeTimeout = cfg.ProbeTimeout
+	config.SuspicionMult = cfg.SuspicionMult
+	config.IndirectChecks = cfg.IndirectChecks
+	config.GossipInterval = cfg.GossipInterval
+	config.RetransmitMult = cfg.RetransmitMult
+	config.GossipToTheDeadTime = cfg.GossipToTheDeadTime
+	config.BindPort = cfg.MemberListPort
+	config.AdvertisePort = cfg.MemberListPort
+	config.Name = nodeName
+	config.AdvertiseAddr = nodeIp
+	eventHandler := NewEventHandler(logger, eventBus)
+	config.Events = eventHandler
+	return config
 }

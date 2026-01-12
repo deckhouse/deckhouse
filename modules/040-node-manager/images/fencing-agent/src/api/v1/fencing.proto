@@ -1,14 +1,14 @@
 syntax = "proto3";
 
 package fencing.v1;
-option go_package = "fencing-controller/pkg/api/v1";
+option go_package = "fencing-agent/pkg/api/v1";
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
 
 message Node {
   string name = 1;
-  map<string, string> addresses = 2;
+  map<string, string> addresses = 2; // eht0: InternalIP
   optional google.protobuf.Timestamp prevDisconnectTime = 3;
 }
 

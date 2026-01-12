@@ -2,56 +2,50 @@ package main
 
 import (
 	"context"
-	"fencing-controller/internal/adapters/api/grpc"
-	"fencing-controller/internal/adapters/kubeapi"
-	"fencing-controller/internal/adapters/memberlist"
-	"fencing-controller/internal/adapters/watchdog/softdog"
-	fencing_config "fencing-controller/internal/config"
-	"fencing-controller/internal/core/service"
-	"fencing-controller/internal/infrastructures/kubernetes"
-	"fencing-controller/internal/infrastructures/logging"
+	"fencing-agent/internal/app"
+	fencing_config "fencing-agent/internal/config"
+	"fencing-agent/internal/infrastructures/kubernetes"
+	"fencing-agent/internal/infrastructures/logging"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"go.uber.org/zap"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	var cfg fencing_config.Config
-	if err := cfg.Load(); err != nil {
-		panic(err) // TODO decide: panic or logging
-	}
 
-	logger := logging.NewLogger() // TODO decide: configure outside?
+	logger := logging.NewLogger()
 	defer func() { _ = logger.Sync() }()
 
-	logger.Debug("Ver: 0.0.1")
-
-	kubeClient, err := kubernetes.GetClientset(cfg.KubernetesAPITimeout)
-	if err != nil {
-		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
-	}
-	eventBus := memberlist.NewEventsBus()
-	memberlistProvider, err := memberlist.NewProvider(cfg.MemberlistConfig, logger, eventBus)
-	if err != nil {
-		logger.Fatal("Unable to create a memberlist provider", zap.Error(err))
-	}
-	wd := softdog.NewWatchdog(cfg.WatchdogConfig.WatchdogDevice) // TODO cfg WatchdogFeedInterval
-
-	clusterProvider := kubeapi.NewProvider(kubeClient, logger, cfg.KubernetesAPICheckInterval, cfg.NodeName, cfg.NodeGroup)
-	healthService := service.NewHealthMonitor(clusterProvider, memberlistProvider, wd, logger)
-
-	go healthService.Run(ctx, cfg.KubernetesAPICheckInterval)
-
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
 	go func() {
-		_ = grpc.Run(logger, cfg.SocketpPath, eventBus)
+		s := <-sigChan
+		close(sigChan)
+		logger.Info("Got a signal", zap.String("signal", s.String()))
+		cancel()
 	}()
-	// init healthcheck
 
-	// init memberlist
-
-	// init grpc server
-
-	// graceful shutdown
+	var config fencing_config.Config
+	if err := config.Load(); err != nil {
+		logger.Fatal("Unable to read config", zap.Error(err))
+	}
+	kubeClient, err := kubernetes.GetClientset(config.KubernetesAPITimeout)
+	if err != nil {
+		logger.Fatal("Unable to create a kube-client", zap.Error(err))
+	}
+	application, err := app.NewApplication(logger, kubeClient, config)
+	if err != nil {
+		logger.Fatal("Unable to create an application", zap.Error(err))
+	}
+	if err = application.Run(ctx); err != nil {
+		logger.Fatal("Unable to run the application", zap.Error(err))
+	}
 }

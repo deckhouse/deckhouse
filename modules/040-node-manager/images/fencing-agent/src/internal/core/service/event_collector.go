@@ -1,7 +1,7 @@
 package service
 
 import (
-	"fencing-controller/internal/core/ports"
+	"fencing-agent/internal/core/ports"
 
 	"go.uber.org/zap"
 )

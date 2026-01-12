@@ -2,9 +2,9 @@ package grpc
 
 import (
 	"context"
-	"fencing-controller/internal/core/domain"
-	"fencing-controller/internal/core/ports"
-	pb "fencing-controller/pkg/api/v1"
+	"fencing-agent/internal/core/domain"
+	"fencing-agent/internal/core/ports"
+	pb "fencing-agent/pkg/api/v1"
 
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -12,17 +12,30 @@ import (
 
 type Server struct {
 	pb.UnimplementedFencingServer
-	eventBus ports.EventsBus
+	eventBus       ports.EventsBus
+	statusProvider ports.StatusQuery
 }
 
-func NewServer(eventBus ports.EventsBus) *Server {
+func NewServer(eventBus ports.EventsBus, statusProvider ports.StatusQuery) *Server {
 	return &Server{
-		eventBus: eventBus,
+		eventBus:       eventBus,
+		statusProvider: statusProvider,
 	}
 }
 
 func (s *Server) GetAll(ctx context.Context, _ *emptypb.Empty) (*pb.AllNodes, error) {
-	return &pb.AllNodes{}, nil
+	nodes, err := s.statusProvider.GetAllNodes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	sNodes := make([]*pb.Node, 0, len(nodes))
+	for _, node := range nodes {
+		sNodes = append(sNodes, &pb.Node{
+			Name:      node.Name,
+			Addresses: node.Addresses,
+		})
+	}
+	return &pb.AllNodes{Nodes: sNodes}, nil
 }
 
 func (s *Server) StreamEvents(_ *emptypb.Empty, stream pb.Fencing_StreamEventsServer) error {

@@ -2,7 +2,7 @@ package ports
 
 import (
 	"context"
-	"fencing-controller/internal/core/domain"
+	"fencing-agent/internal/core/domain"
 )
 
 type ClusterProvider interface {

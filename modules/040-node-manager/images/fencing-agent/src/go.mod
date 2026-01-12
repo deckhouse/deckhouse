@@ -1,4 +1,4 @@
-module fencing-controller
+module fencing-agent
 
 go 1.24.0
 

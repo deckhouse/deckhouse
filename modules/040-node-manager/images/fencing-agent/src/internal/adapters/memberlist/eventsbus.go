@@ -2,7 +2,7 @@ package memberlist
 
 import (
 	"context"
-	"fencing-controller/internal/core/domain"
+	"fencing-agent/internal/core/domain"
 	"sync"
 )
 
