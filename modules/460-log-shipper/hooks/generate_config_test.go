@@ -140,6 +140,7 @@ spec:
 		Entry("File to Loki", "file-to-loki"),
 		Entry("File to Socket", "file-to-socket"),
 		Entry("File to Socket", "file-to-socket-cef-gelf"),
+		Entry("KubernetesPods to Socket Syslog", "kubernetes-to-socket-syslog"),
 		Entry("File to Splunk", "file-to-splunk"),
 		Entry("Two sources to single destination", "many-to-one"),
 		Entry("Throttle Transform with filter", "throttle-with-filter"),
