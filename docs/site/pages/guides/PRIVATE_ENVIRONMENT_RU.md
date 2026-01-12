@@ -985,47 +985,47 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
   * список доменов и IP-адресов, которые **не будут проксироваться** через прокси-сервер (внутренние доменные имена и внутренние IP-адреса всех серверов).
 * В секции `InitConfiguration` добавьте параметры доступа к registry:
 
-    ```yaml
-    deckhouse:
-      # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
-      imagesRepo: harbor.local/deckhouse/<РЕДАКЦИЯ_DKP>
-      # Строка с ключом для доступа к Docker registry в формате base64.
-      # Получить их можно командой `cat .docker/config.json | base64`.
-      registryDockerCfg: <DOCKER_CFG_BASE64>
-      # Протокол доступа к registry (HTTP или HTTPS).
-      registryScheme: HTTPS
-      # Корневой сертификат, созданный ранее.
-      # Получить его можно командой: `cat harbor/certs/ca.crt`.
-      registryCA: |
-        -----BEGIN CERTIFICATE-----
-        ...
-        -----END CERTIFICATE-----
-    ```
+  ```yaml
+  deckhouse:
+    # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
+    imagesRepo: harbor.local/deckhouse/<РЕДАКЦИЯ_DKP>
+    # Строка с ключом для доступа к Docker registry в формате base64.
+    # Получить их можно командой `cat .docker/config.json | base64`.
+    registryDockerCfg: <DOCKER_CFG_BASE64>
+    # Протокол доступа к registry (HTTP или HTTPS).
+    registryScheme: HTTPS
+    # Корневой сертификат, созданный ранее.
+    # Получить его можно командой: `cat harbor/certs/ca.crt`.
+    registryCA: |
+      -----BEGIN CERTIFICATE-----
+      ...
+      -----END CERTIFICATE-----
+  ```
 
 * В параметре [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse` измените на `Stable` для использования стабильного [канала обновлений](../documentation/v1/reference/release-channels.html).
 * В ModuleConfig [global](../documentation/v1/reference/api/global.html) укажите использование самоподписанных сертификатов для компонентов кластера и укажите шаблон доменного имени для системных приложений в параметре `publicDomainTemplate`:
 
   ```yaml
-    settings:
-    modules:
-      # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-      # Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
-      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
-      # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
-      publicDomainTemplate: "%s.test.local"
-      # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
-      https:
-        certManager:
-          # Использовать самоподписанные сертификаты для модулей Deckhouse.
-          clusterIssuerName: selfsigned
+  settings:
+  modules:
+    # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+    # Например, Grafana для %s.example.com будет доступна на домене 'grafana.example.com'.
+    # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+    # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+    publicDomainTemplate: "%s.test.local"
+    # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+    https:
+      certManager:
+        # Использовать самоподписанные сертификаты для модулей Deckhouse.
+        clusterIssuerName: selfsigned
   ```
 
 * В ModuleConfig `user-authn` измените значение параметра [dexCAMode](/modules/user-authn/configuration.html#parameters-controlplaneconfigurator-dexcamode) на `FromIngressSecret`:
 
   ```yaml
-    settings:
-    controlPlaneConfigurator:
-      dexCAMode: FromIngressSecret
+  settings:
+  controlPlaneConfigurator:
+    dexCAMode: FromIngressSecret
   ```
 
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
@@ -1266,7 +1266,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 * Создайте NodeGroup `worker` и добавьте узел с помощью Cluster API Provider Static (CAPS):
 
   ```console
-  sudo -i d8 k create -f - << EOF
+  sudo -i d8 k create -f - <<EOF
   apiVersion: deckhouse.io/v1
   kind: NodeGroup
   metadata:
@@ -1322,32 +1322,32 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   chmod 600 /home/caps/.ssh/authorized_keys
   ```
 
-  {% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
-  В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя caps в группу wheel. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
+{% offtopic title="Если у вас CentOS, Rocky Linux, ALT Linux, РОСА Сервер, РЕД ОС или МОС ОС..." %}
+В операционных системах на базе RHEL (Red Hat Enterprise Linux) добавьте пользователя `caps` в группу `wheel`. Для этого выполните следующую команду, указав публичную часть SSH-ключа, полученную на предыдущем шаге:
 
-  ```console
-  # Укажите публичную часть SSH-ключа пользователя.
-  export KEY='<SSH-PUBLIC-KEY>'
-  useradd -m -s /bin/bash caps
-  usermod -aG wheel caps
-  echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-  mkdir /home/caps/.ssh
-  echo $KEY >> /home/caps/.ssh/authorized_keys
-  chown -R caps:caps /home/caps
-  chmod 700 /home/caps/.ssh
-  chmod 600 /home/caps/.ssh/authorized_keys
-  ```
+```console
+# Укажите публичную часть SSH-ключа пользователя.
+export KEY='<SSH-PUBLIC-KEY>'
+useradd -m -s /bin/bash caps
+usermod -aG wheel caps
+echo 'caps ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
+mkdir /home/caps/.ssh
+echo $KEY >> /home/caps/.ssh/authorized_keys
+chown -R caps:caps /home/caps
+chmod 700 /home/caps/.ssh
+chmod 600 /home/caps/.ssh/authorized_keys
+```
 
-  {% endofftopic %}
+{% endofftopic %}
 
-  {% offtopic title="Если у вас ОС из семейства Astra Linux..." %}
-  В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
+{% offtopic title="Если у вас ОС из семейства Astra Linux..." %}
+В операционных системах семейства Astra Linux, при использовании модуля мандатного контроля целостности Parsec, сконфигурируйте максимальный уровень целостности для пользователя `caps`:
 
-  ```bash
-  pdpl-user -i 63 caps
-  ```
+```bash
+pdpl-user -i 63 caps
+```
 
-  {% endofftopic %}
+{% endofftopic %}
 
 * Создайте [StaticInstance](../../../modules/node-manager/cr.html#staticinstance) для добавляемого узла. Для этого выполните на master-узле следующую команду, указав IP-адрес добавляемого узла:
 
@@ -1384,9 +1384,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 
 ### Установка ingress-контроллера
 
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`.
-
-Выполните на master-узле следующую команду:
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
 
 ```bash
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
@@ -1480,7 +1478,7 @@ sudo -i d8 k create -f $PWD/user.yml
 
 ## Настройка DNS-записей
 
-Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла:
+Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла (используйте DNS имена, в соответствии с шаблоном DNS-имен, указанным в параметре [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)). Пример для шаблона DNS-имён `%s.example.com`:
 
 ```text
 api.example.com
@@ -1503,4 +1501,4 @@ upmeter.example.com
 
 Сделать это можно как на внутреннем DNS-сервере, так и прописав на нужных компьютерах соответствие в `/etc/hosts`.
 
-Убедиться, что кластер корректно развёрнут и функционирует, можно, посетив веб-интерфейс Grafana, который отображает состояние кластера. Для входа воспользуйтесь учётными данными созданного ранее пользователя.
+Убедиться, что кластер корректно развёрнут и функционирует, можно, посетив веб-интерфейс Grafana (например, grafana.example.com для шаблона DNS-имён `%s.example.com`), который отображает состояние кластера. Для входа воспользуйтесь учётными данными созданного ранее пользователя.
