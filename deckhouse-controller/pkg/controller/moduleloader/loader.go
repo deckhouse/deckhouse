@@ -565,7 +565,7 @@ func (l *Loader) parseModulesDir(modulesDir string) ([]*moduletypes.Definition, 
 
 		definition, err := l.moduleDefinitionByDir(name, absPath)
 		if err != nil {
-			return nil, fmt.Errorf("parse module definition by dir: %w", err)
+			return nil, fmt.Errorf("parse module definition '%s' from dir '%s': %w", name, absPath, err)
 		}
 
 		definitions = append(definitions, definition)

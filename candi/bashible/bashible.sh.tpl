@@ -17,14 +17,31 @@ export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
 {{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl (printf `
-%s
+{{- tpl $bbnn . }}
 
-{{ template "bb-d8-node-name" . }}
+bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
 
-{{ template "bb-discover-node-name"   . }}
-`
-(index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
+bb-discover-node-name() {
+  local discovered_name_file="/var/lib/bashible/discovered-node-name"
+  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
+
+  if [ ! -s "$discovered_name_file" ]; then
+    if [[ -s "$kubelet_crt" ]]; then
+      openssl x509 -in "$kubelet_crt" \
+        -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
+    else
+    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
+      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+        hostnamectl set-hostname "$(hostname -s)"
+      fi
+    {{- end }}
+      hostname > "$discovered_name_file"
+    fi
+  fi
+}
 
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
@@ -106,11 +123,11 @@ function bb-event-error-create() {
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
       indent="            " # 12 spaces
       logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
-      bb-kubectl-exec apply -f - <<EOF || true
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-error-${eventName}
+            generateName: bashible-error-${eventName}-
           regarding:
             apiVersion: v1
             kind: Node
@@ -129,14 +146,14 @@ EOF
 }
 
 function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$1"
+    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo $1 | sed 's#.*/##; s/_/-/g')"
     nodeName="$(bb-d8-node-name)"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec apply -f - <<EOF || true
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-info-${eventName}-update-$(date -u +"%Y-%m-%dt%H-%M-%S-%6N")
+            generateName: bashible-info-${eventName}-update-
           regarding:
             apiVersion: v1
             kind: Node
@@ -245,6 +262,15 @@ function get_bundle() {
   fi
 }
 
+log_configuration_checksum() {
+  local kind="$1"
+  local objName="$2"
+  local payload="$3"
+  local checksum
+  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
+  echo "Got $kind/$objName configuration checksum: $checksum" >&2
+}
+
 function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
@@ -288,7 +314,9 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
+    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -335,7 +363,9 @@ function main() {
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(get_bundle nodegroupbundle "${NODE_GROUP}" | jq -rc '.data')"
+    nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
+    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"

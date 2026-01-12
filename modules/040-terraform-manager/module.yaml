@@ -5,3 +5,6 @@ subsystems:
   - infrastructure
 namespace: d8-system
 stage: General Availability
+descriptions:
+  en: Provides tools for working with Terraform state in the Kubernetes cluster. Consists of two parts that check Terraform state and apply non-destructive changes or export cluster metrics.
+  ru: Предоставляет инструменты для работы с состоянием Terraform в кластере Kubernetes. Состоит из двух частей, которые проверяют состояние Terraform и применяют недеструктивные изменения или экспортируют метрики кластера.

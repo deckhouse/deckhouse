@@ -23,6 +23,7 @@ import (
 
 	"github.com/name212/govalue"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -31,7 +32,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
@@ -80,16 +80,25 @@ func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState ma
 
 	if convergeState.NodeUserCredentials == nil {
 		s.logger.LogDebugLn("Generate node user")
-		nodeUser, nodeUserCredentials, err := GenerateNodeUser()
+		nodeUser, nodeUserCredentials, err := v1.GenerateNodeUser(v1.ConvergerNodeUser())
 		if err != nil {
 			return fmt.Errorf("failed to generate NodeUser: %w", err)
 		}
 
 		c, cancel := s.ctx.WithTimeout(10 * time.Second)
 		defer cancel()
-		err = entity.CreateNodeUser(c, s.ctx, nodeUser)
+		err = entity.CreateOrUpdateNodeUser(c, s.ctx, nodeUser, nil)
 		if err != nil {
 			return fmt.Errorf("failed to create or update NodeUser: %w", err)
+		}
+		sshCl := s.ctx.KubeClient().NodeInterfaceAsSSHClient()
+		if sshCl == nil {
+			return fmt.Errorf("Node interface is not ssh")
+		}
+
+		err = entity.NewConvergerNodeUserExistsWaiter(s.ctx).WaitPresentOnNodes(ctx, nodeUserCredentials)
+		if err != nil {
+			return fmt.Errorf("Could not ensure converger user is presented on control plane hosts: %w", err)
 		}
 
 		convergeState.NodeUserCredentials = nodeUserCredentials
@@ -137,7 +146,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 
 	sshCl := kubeCl.NodeInterfaceAsSSHClient()
 	if sshCl == nil {
-		panic("Node interface is not ssh")
+		return fmt.Errorf("Node interface is not ssh")
 	}
 
 	settings := sshCl.Session()
@@ -224,17 +233,13 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 		return fmt.Errorf("failed to start SSH client: %w", err)
 	}
 
-	s.logger.LogDebugLn("ssh client started for replacing kube client")
+	s.logger.LogDebugLn("SSH client started for replacing kube client")
 
-	// adding keys to agent is actual only in legacy mode
-	if sshclient.IsLegacyMode() {
-		err = newSSHClient.(*clissh.Client).Agent.AddKeys(newSSHClient.PrivateKeys())
-		if err != nil {
-			return fmt.Errorf("failed to add keys to ssh agent: %w", err)
-		}
-
-		s.logger.LogDebugLn("private keys added for replacing kube client")
+	if err := newSSHClient.RefreshPrivateKeys(); err != nil {
+		return fmt.Errorf("Failed to refresh ssh agent private keys: %w", err)
 	}
+
+	s.logger.LogDebugLn("Private keys refreshed for replacing kube client")
 
 	newKubeClient, err := kubernetes.ConnectToKubernetesAPI(s.ctx.Ctx(), ssh.NewNodeInterfaceWrapper(newSSHClient))
 	if err != nil {

@@ -13,7 +13,7 @@ It consists of the following components:
 
 - [dex](https://github.com/dexidp/dex) — is a federated OpenID Connect provider that acts as an identity service for static users and can be linked to one or more ID providers (e.g., SAML providers, GitHub, and Gitlab);
 - `kubeconfig-generator` (in fact, [dex-k8s-authenticator](https://github.com/mintel/dex-k8s-authenticator)) — is a helper web application that (being authorized with dex) generates kubectl commands for creating and modifying a kubeconfig;
-- `dex-authenticator` (in fact, [oauth2-proxy](https://github.com/oauth2-proxy/oauth2-proxy)) — is an application that gets NGINX Ingress (auth_request) requests and authenticates them with Dex.
+- `dex-authenticator` (in fact, [`oauth2-proxy`](https://github.com/oauth2-proxy/oauth2-proxy)) is an application that receives Ingress NGINX requests (via the `auth_request` module) and authenticates them with Dex.
 
 Management of static users is performed using the [User](cr.html#user) and [Group](cr.html#group) resources:
 
@@ -77,6 +77,7 @@ The module uses a modified version of Dex to support:
 * groups for static user accounts and Bitbucket Cloud provider (parameter [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
 * passing the `group` parameter to clients;
 * the `obsolete tokens` mechanism to avoid a race condition when an OIDC client renews a token.
+* Kerberos (SPNEGO) support for the LDAP connector. When enabled, Dex accepts `Authorization: Negotiate` tickets, validates them with a service keytab, and completes the login without rendering the password form.
 
 ## High availability mode
 

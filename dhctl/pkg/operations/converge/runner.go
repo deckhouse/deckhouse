@@ -326,7 +326,9 @@ func (r *runner) convergeMigration(ctx *context.Context, checkHasTerraformStateB
 		stats, hasTerraFormState, err := check.CheckState(ctx.Ctx(), ctx.KubeClient(), metaConfig, ctx.InfrastructureContext(metaConfig), check.CheckStateOptions{
 			CommanderMode: ctx.CommanderMode(),
 			StateCache:    ctx.StateCache(),
-		})
+		},
+			false,
+		)
 
 		if err != nil {
 			return err

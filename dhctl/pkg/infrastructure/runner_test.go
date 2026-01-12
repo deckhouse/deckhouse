@@ -17,7 +17,6 @@ package infrastructure
 import (
 	"context"
 	"os"
-	"runtime"
 	"testing"
 	"time"
 
@@ -245,6 +244,12 @@ func (e *sleepExecutor) Show(ctx context.Context, planPath string) (result []byt
 	return nil, nil
 }
 
+func (e *sleepExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+	e.logger.LogWarnLn("Call GetActions on dummy executor")
+
+	return nil, nil
+}
+
 func (e *sleepExecutor) SetExecutorLogger(logger log.Logger) {
 	e.logger = logger
 }
@@ -267,7 +272,7 @@ func TestConcurrentExec(t *testing.T) {
 		})
 	}()
 
-	runtime.Gosched()
+	time.Sleep(500 * time.Millisecond)
 	_, err := runner.execInfrastructureUtility(ctx, func(ctx context.Context) (int, error) {
 		return exec.Plan(ctx, PlanOpts{})
 	})

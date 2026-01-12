@@ -1,4 +1,6 @@
 allowed_values: allowed values
+additional_property_name: item (key) name
+pattern_property_name: regular expression for parameter name
 search_placeholder_text: Search...
 search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
 search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
@@ -6,6 +8,84 @@ search_context_only_product_docs: The search is performed throughout the product
 modules: modules
 modules2: modules
 module: module
+module_enabling_details_title: How to explicitly enable the module…
+module_enabling_details_content: |
+  You may explicitly enable or disable the module in one of the following ways:
+  - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).** In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `<ModuleName>` module and enable (or disable) the "Module enabled" toggle. Save changes.
+
+    Example:
+
+    <img src="/images/module/module-enabling-ui-en.png" alt="Module enable/disable interface">
+
+  - **Via [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/).**
+
+    Use the [d8 system module enable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-enable) command for enabling, or [d8 system module disable](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-system-module-disable) command for disabling the module (you need [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/), configured to work with the cluster).
+
+    Example of enabling the module:
+
+    ```shell
+    d8 system module enable <ModuleName>
+    ```
+
+  - **Using ModuleConfig `<ModuleName>`.**
+
+    Set `spec.enabled` to `true` or `false` in ModuleConfig `<ModuleName>` (create it if necessary);
+
+    Example of a manifest to enable module `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      enabled: true
+    ```
+module_settings: settings
+module_settings_details_title: How to configure the module...
+module_settings_details_content: |
+  You can configure the module in one of the following ways:
+
+  - **Via [Deckhouse web UI](/products/kubernetes-platform/documentation/v1/user/web/ui.html).**
+
+    In the "System" → "System Management" → "Deckhouse" → "Modules" section, open the `<ModuleName>` module and enable the "Advanced Settings" switch. Fill in the required fields in the "Configuration" tab or specify the module settings in YAML format on the "YAML" tab, **excluding the settings section**. Save the changes.
+
+    Example:
+
+    <img src="/images/module/settings/ui-conf-advanced-conf-en.png" alt="Module Setup Interface">
+
+    You can also edit the ModuleConfig object `<ModuleName>` on the "YAML" tab in the module settings window ("System" → "System Management" → "Deckhouse" → "Modules", open the module `<ModuleName>`) by specifying the schema version in the `spec.version` parameter and the necessary module parameters in the `spec.settings` section.
+
+  - **Via [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/)** (requires [Deckhouse CLI (d8)](/products/kubernetes-platform/documentation/v1/cli/d8/) configured to work with the cluster).
+
+    Edit the existing ModuleConfig `<ModuleName>` (for more details on configuring Deckhouse, see the [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/)) by executing the following command:
+
+    ```shell
+    d8 k edit mc <ModuleName>
+    ```
+
+    Make the necessary changes in the `spec.settings` section. If necessary, specify the schema version in the `spec.version` parameter. Save the changes.
+
+    You can also create a file with manifest for ModuleConfig `<ModuleName>` using the example below. Fill in the `spec.settings` section with the required module parameters. If necessary, specify the schema version in the `spec.version` parameter.
+
+    Apply the manifest using the following command (indicate the manifest file name):
+
+    ```shell
+    d8 k apply -f <FILENAME>
+    ```
+
+    Example of a manifest for ModuleConfig `<ModuleName>`:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: ModuleConfig
+    metadata:
+      name: <ModuleName>
+    spec:
+      version: <configVersion>
+      enabled: true
+      settings: # Module parameters from the "Parameters" section below.
+    ```
 module_versions: Module versions
 module_version: Module version
 module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
@@ -20,6 +100,14 @@ category: category
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
+requirements_title: Requirements
+requirements_deckhouse_title: To the Deckhouse version
+requirements_kubernetes_title: To the Kubernetes version
+requirements_modules_title: To the versions of other modules
+requirements_modules_any_version: any version
+requirements_version_and_above: and above
+requirements_version_above: above
+module_lifecycle_stage: "The module <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/versioning/#module-lifecycle'>lifecycle stage</a>"
 conversions_title: Conversions
 conversion_action_message: The module is configured using the ModuleConfig resource, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
 conversion_global_action_message: Global configuration settings are configured using the `global` ModuleConfig, the schema of which contains a version number. When you apply an *old* version of the ModuleConfig schema in a cluster, automatic transformations are performed. To manually update the ModuleConfig schema version, the following steps must be completed **sequentially** for each version
@@ -61,6 +149,7 @@ module_alert_experimental_long: Experimental version. The functionality may unde
 module_alert_preview_long: Preliminary version. The functionality may change, but the basic features will be preserved. Compatibility with future versions is ensured, but may require additional migration actions.
 module_alert_general_availability_long: Generally available version. Ready to be used in production environments.
 module_alert_deprecated_long: Deprecated version. Development and support have been terminated.
+related_additional_resources: Additional resources
 reset_filter: reset filter
 deprecated_parameter: Deprecated
 deprecated_parameter_hint: Support for the parameter might be removed in a later release.

@@ -51,10 +51,7 @@
 
         Please migrate to the next kubernetes version (at least 1.31)
 
-        Check how to update the Kubernetes version in the cluster here - https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster
-
-        Refer to the [Kubernetes upgrade guide](https://deckhouse.io/documentation/deckhouse-faq.html#how-do-i-upgrade-the-kubernetes-version-in-a-cluster) for instructions.
-
+        Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
   - alert: D8KubernetesStaleTokensDetected
     for: 10m
     expr: sum(rate(serviceaccount_stale_tokens_total[10m])) by (instance) > 0
@@ -123,19 +120,19 @@
       summary: Feature gate `{{ $labels.feature_gate }}` is {{ $labels.status }} in current Kubernetes version `{{ $labels.current_version }}` and should be removed from the configuration. Is not using in the cluster control-plane.
       description: |-
         The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it is {{ $labels.status }} in the current Kubernetes version `{{ $labels.current_version }}`.
-        
+
         {{- if eq $labels.status "unknown" }}
         This feature gate does not exist in any component (apiserver, kube-controller-manager, kube-scheduler, kubelet) and is not being applied to the cluster.
         {{- end }}
-        
+
         **Recommended actions:**
-        
+
         1. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
-        
+
         ```bash
         d8 k edit mc control-plane-manager
         ```
-        
+
         For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
 
   - alert: D8UsingFeatureGateWillBeDeprecated
@@ -155,17 +152,17 @@
       summary: Feature gate `{{ $labels.feature_gate }}` will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
       description: |-
         The feature gate `{{ $labels.feature_gate }}` is currently enabled in the control-plane-manager ModuleConfig, but it will be deprecated in Kubernetes version `{{ $labels.deprecated_version }}`.
-        
+
         Current Kubernetes version: `{{ $labels.current_version }}`
-        
+
         **Recommended actions:**
-        
+
         1. Review the usage of this feature gate in your cluster.
         2. Plan migration away from this feature gate before upgrading to version `{{ $labels.deprecated_version }}`.
         3. Remove `{{ $labels.feature_gate }}` from the `spec.settings.enabledFeatureGates` list in the control-plane-manager ModuleConfig:
-        
+
         ```bash
         d8 k edit mc control-plane-manager
         ```
-        
+
         For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).

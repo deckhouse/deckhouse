@@ -1,7 +1,7 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/web/Dockerfile
 # #####################################################################
-{{- $version := "1.6.1" }}
+{{- $version := "1.7.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -81,5 +81,6 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b web/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
-  - cp /patches/* /src/modules/web/
+  - cp /patches/*.sh /patches/*.js /src/modules/web/
+  - git apply /patches/*.patch --verbose
   - rm -r .git .github charts docs

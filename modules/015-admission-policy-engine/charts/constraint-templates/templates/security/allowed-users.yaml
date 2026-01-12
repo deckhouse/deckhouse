@@ -134,6 +134,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
                 fields := ["runAsUser", "runAsGroup", "supplementalGroups", "fsGroup"]
                 field := fields[_]
                 container := input_containers[_]

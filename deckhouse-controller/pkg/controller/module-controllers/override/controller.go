@@ -190,6 +190,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
+			// unset image digest to trigger latter downloading
+			mpo.Status.ImageDigest = ""
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
 				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
 				return ctrl.Result{}, uerr
@@ -357,7 +359,9 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 				return err
 			}
 		} else {
-			values = addonutils.Values(config.Spec.Settings)
+			settings := config.Spec.Settings.GetMap()
+
+			values = addonutils.Values(settings)
 		}
 	}
 	if err = def.Validate(values, r.log); err != nil {

@@ -27,6 +27,14 @@ cloud-demo-worker-01a5df48-84549-jwxwm   Ready    worker                 12h   v
 ```
 {%- endofftopic %}
 
+{%- if page.platform_type == "cloud" %}
+
+{% alert level="info" %}
+Чтобы увеличить количество worker-узлов, измените параметр [maxPerZone](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-maxperzone) в NodeGroup `worker` с помощью CLI (`d8 k edit ng worker`) или веб-интерфейса администратора. Чтобы добавить дополнительные узлы, воспользуйтесь [инструкцией по масштабированию кластера](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
+{% endalert %}
+
+{%- endif %}
+
 Запуск Ingress-контроллера после завершения установки Deckhouse может занять какое-то время. Прежде чем продолжить убедитесь что Ingress-контроллер запустился:
 
 ```shell

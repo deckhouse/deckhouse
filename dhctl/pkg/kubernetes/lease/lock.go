@@ -118,6 +118,23 @@ func (l *LeaseLock) Lock(ctx context.Context, force bool) error {
 	return nil
 }
 
+func (l *LeaseLock) IsLocked(ctx context.Context, checkStillLocked bool) (bool, error) {
+	lease, err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("Can't get current lease %v", err)
+	}
+
+	if !checkStillLocked {
+		return true, nil
+	}
+
+	return l.isStillLocked(lease), nil
+}
+
 func (l *LeaseLock) Unlock(ctx context.Context) {
 	l.lockLease.Lock()
 	defer l.lockLease.Unlock()

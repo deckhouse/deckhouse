@@ -4,12 +4,10 @@ package library
 
 var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
-		"constraintExporter":       "imageHash-admissionPolicyEngine-constraintExporter",
-		"gatekeeper":               "imageHash-admissionPolicyEngine-gatekeeper",
-		"gatekeeperVexArtifact":    "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
-		"ratify":                   "imageHash-admissionPolicyEngine-ratify",
-		"trivyProvider":            "imageHash-admissionPolicyEngine-trivyProvider",
-		"trivyProviderVexArtifact": "imageHash-admissionPolicyEngine-trivyProviderVexArtifact",
+		"constraintExporter":    "imageHash-admissionPolicyEngine-constraintExporter",
+		"gatekeeper":            "imageHash-admissionPolicyEngine-gatekeeper",
+		"gatekeeperVexArtifact": "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
+		"ratify":                "imageHash-admissionPolicyEngine-ratify",
 	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",
@@ -276,7 +274,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"webVexArtifact": "imageHash-deckhouseTools-webVexArtifact",
 	},
 	"descheduler": map[string]interface{}{
-		"descheduler": "imageHash-descheduler-descheduler",
+		"descheduler":            "imageHash-descheduler-descheduler",
+		"deschedulerVexArtifact": "imageHash-descheduler-deschedulerVexArtifact",
 	},
 	"documentation": map[string]interface{}{
 		"docsBuilder": "imageHash-documentation-docsBuilder",
@@ -293,6 +292,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controller112":            "imageHash-ingressNginx-controller112",
 		"controller19":             "imageHash-ingressNginx-controller19",
 		"failoverCleaner":          "imageHash-ingressNginx-failoverCleaner",
+		"geoproxy":                 "imageHash-ingressNginx-geoproxy",
 		"init":                     "imageHash-ingressNginx-init",
 		"iptablesWrapperInit":      "imageHash-ingressNginx-iptablesWrapperInit",
 		"kruise":                   "imageHash-ingressNginx-kruise",
@@ -390,6 +390,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"coredns":             "imageHash-nodeLocalDns-coredns",
 		"iptablesLoop":        "imageHash-nodeLocalDns-iptablesLoop",
 		"iptablesWrapperInit": "imageHash-nodeLocalDns-iptablesWrapperInit",
+		"safeUpdater":         "imageHash-nodeLocalDns-safeUpdater",
 	},
 	"nodeManager": map[string]interface{}{
 		"bashibleApiserver":               "imageHash-nodeManager-bashibleApiserver",
@@ -429,14 +430,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	"operatorPrometheus": map[string]interface{}{
 		"prometheusConfigReloader": "imageHash-operatorPrometheus-prometheusConfigReloader",
 		"prometheusOperator":       "imageHash-operatorPrometheus-prometheusOperator",
-	},
-	"operatorTrivy": map[string]interface{}{
-		"nodeCollector":       "imageHash-operatorTrivy-nodeCollector",
-		"operator":            "imageHash-operatorTrivy-operator",
-		"operatorVexArtifact": "imageHash-operatorTrivy-operatorVexArtifact",
-		"reportUpdater":       "imageHash-operatorTrivy-reportUpdater",
-		"trivy":               "imageHash-operatorTrivy-trivy",
-		"trivyVexArtifact":    "imageHash-operatorTrivy-trivyVexArtifact",
 	},
 	"prometheus": map[string]interface{}{
 		"alertmanager":                "imageHash-prometheus-alertmanager",
@@ -575,7 +568,8 @@ var DefaultImagesDigests = map[string]interface{}{
 		"selfSignedGenerator": "imageHash-userAuthn-selfSignedGenerator",
 	},
 	"userAuthz": map[string]interface{}{
-		"webhook": "imageHash-userAuthz-webhook",
+		"permissionBrowserApiserver": "imageHash-userAuthz-permissionBrowserApiserver",
+		"webhook":                    "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{
 		"admissionController": "imageHash-verticalPodAutoscaler-admissionController",

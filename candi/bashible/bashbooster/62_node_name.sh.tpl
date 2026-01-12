@@ -1,12 +1,12 @@
 {{- $candi := "candi/bashible/bb_node_name.sh.tpl" -}}
 {{- $deckhouse := "/deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
 {{- $bbnn := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
-{{- tpl (printf `
-%s
+{{- tpl $bbnn . }}
 
-{{ template "bb-d8-node-name" . }}
+bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
 
-{{ template "bb-d8-node-ip"   . }}
-
-`
-(index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
+bb-d8-node-ip() {
+  echo $(</var/lib/bashible/discovered-node-ip)
+}

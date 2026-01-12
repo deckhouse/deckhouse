@@ -31,6 +31,7 @@ kind: ModuleRelease
 metadata:
   creationTimestamp: null
   finalizers:
+  - modules.deckhouse.io/metrics-registered
   - modules.deckhouse.io/exist-on-fs
   labels:
     module: parca
@@ -42,7 +43,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1000"
+  resourceVersion: "1001"
 spec:
   moduleName: parca
   version: 1.26.2
@@ -62,6 +63,8 @@ metadata:
     modules.deckhouse.io/isUpdating: "false"
     modules.deckhouse.io/notified: "true"
   creationTimestamp: null
+  finalizers:
+  - modules.deckhouse.io/metrics-registered
   labels:
     module: parca
     modules.deckhouse.io/update-policy: ""
@@ -72,7 +75,7 @@ metadata:
     kind: ModuleSource
     name: foxtrot-suitable
     uid: 71d2300f-700b-452a-896a-6a3805f9cef7
-  resourceVersion: "1003"
+  resourceVersion: "1004"
 spec:
   moduleName: parca
   version: 1.26.3
@@ -90,7 +93,7 @@ kind: Module
 metadata:
   creationTimestamp: null
   name: parca
-  resourceVersion: "1005"
+  resourceVersion: "1007"
 properties: {}
 status:
   conditions:

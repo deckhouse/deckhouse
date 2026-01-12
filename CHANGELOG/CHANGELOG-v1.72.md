@@ -79,6 +79,9 @@
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
  - **[deckhouse]** Fixes bug when module`s config values unchanged after enabling. [#15887](https://github.com/deckhouse/deckhouse/pull/15887)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
+ - **[deckhouse-controller]** Fix conversions for external modules [#16891](https://github.com/deckhouse/deckhouse/pull/16891)
+ - **[deckhouse-controller]** Fixed verifying migrated modules [#16873](https://github.com/deckhouse/deckhouse/pull/16873)
+ - **[deckhouse-controller]** Fixed a crash during external module updates with conversions that caused ModuleRelease to fail validation due to a forbidden property error. [#16849](https://github.com/deckhouse/deckhouse/pull/16849)
  - **[deckhouse-controller]** fix deckhouse update accidentally minor skip [#16095](https://github.com/deckhouse/deckhouse/pull/16095)
  - **[deckhouse-controller]** Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook execution [#15724](https://github.com/deckhouse/deckhouse/pull/15724)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
@@ -98,6 +101,7 @@
  - **[ingress-nginx]** Fixed the missing opentelemetry libraries issue. [#14965](https://github.com/deckhouse/deckhouse/pull/14965)
     The pods of Ingress Nginx controllers of 1.10 and 1.12 versions will be restated.
  - **[ingress-nginx]** Re-enabled validation and updated documentation. [#14368](https://github.com/deckhouse/deckhouse/pull/14368)
+ - **[istio]** Fixed AuthorizationPolicy CRD insufficiency for Istio 1.25. [#16605](https://github.com/deckhouse/deckhouse/pull/16605)
  - **[istio]** Erroneous option in 1.25 control-plane helm template fixed. [#16412](https://github.com/deckhouse/deckhouse/pull/16412)
  - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15328](https://github.com/deckhouse/deckhouse/pull/15328)
  - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15236](https://github.com/deckhouse/deckhouse/pull/15236)

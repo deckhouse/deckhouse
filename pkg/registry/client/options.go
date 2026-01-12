@@ -16,12 +16,20 @@ package client
 
 import (
 	"crypto/tls"
+	"crypto/x509"
+	"fmt"
+	"net"
 	"net/http"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+)
+
+const (
+	defaultTimeout = 120 * time.Second
 )
 
 // Options contains configuration options for the registry client
@@ -32,6 +40,16 @@ type Options struct {
 	Insecure bool
 	// TLSSkipVerify skips TLS certificate verification
 	TLSSkipVerify bool
+	// Scheme sets the URL scheme (http or https)
+	// TODO: remove Scheme field in favor of Insecure field
+	Scheme string
+	// UserAgent sets the User-Agent header for requests
+	UserAgent string
+	// CA sets a custom CA certificate for TLS verification
+	CA string
+	// Timeout sets the timeout for registry operations
+	Timeout time.Duration
+
 	// Logger for client operations
 	Logger *log.Logger
 }
@@ -46,13 +64,20 @@ func ensureLogger(logger *log.Logger) *log.Logger {
 }
 
 // buildRemoteOptions constructs remote options including auth and transport configuration
-func buildRemoteOptions(auth authn.Authenticator, opts *Options) []remote.Option {
-	remoteOptions := []remote.Option{
-		remote.WithAuth(auth),
+func buildRemoteOptions(opts *Options) []remote.Option {
+	remoteOptions := []remote.Option{}
+
+	if opts.Auth != nil {
+		remoteOptions = append(remoteOptions, remote.WithAuth(opts.Auth))
 	}
 
-	if needsCustomTransport(opts) {
-		transport := configureTransport(opts)
+	if opts.UserAgent != "" {
+		remoteOptions = append(remoteOptions, remote.WithUserAgent(opts.UserAgent))
+	}
+
+	// Build transport configuration - combine CA and TLS settings into a single transport
+	if opts.CA != "" || needsCustomTransport(opts) {
+		transport := buildTransport(opts)
 		remoteOptions = append(remoteOptions, remote.WithTransport(transport))
 	}
 
@@ -64,16 +89,78 @@ func needsCustomTransport(opts *Options) bool {
 	return opts.Insecure || opts.TLSSkipVerify
 }
 
+// buildTransport creates a single transport that combines CA and TLS settings
+func buildTransport(opts *Options) http.RoundTripper {
+	if opts.CA != "" {
+		// Start with CA transport as base
+		transport := GetHTTPTransport(opts.CA).(*http.Transport).Clone()
+
+		// Apply TLS skip verify if needed
+		if opts.TLSSkipVerify {
+			if transport.TLSClientConfig == nil {
+				transport.TLSClientConfig = &tls.Config{}
+			}
+
+			transport.TLSClientConfig.InsecureSkipVerify = true
+		}
+
+		return transport
+	}
+
+	// No CA, use custom transport for TLS settings
+	if needsCustomTransport(opts) {
+		return configureTransport(opts)
+	}
+
+	// Default case - should not reach here due to caller check
+	return http.DefaultTransport
+}
+
 // configureTransport creates and configures an HTTP transport with TLS settings
 func configureTransport(opts *Options) *http.Transport {
-	transport := remote.DefaultTransport.(*http.Transport).Clone()
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{},
+	}
 
 	if opts.TLSSkipVerify {
-		if transport.TLSClientConfig == nil {
-			transport.TLSClientConfig = &tls.Config{}
-		}
 		transport.TLSClientConfig.InsecureSkipVerify = true
 	}
 
 	return transport
+}
+
+func GetHTTPTransport(ca string) http.RoundTripper {
+	if ca == "" {
+		return http.DefaultTransport
+	}
+
+	caPool, err := x509.SystemCertPool()
+	if err != nil {
+		panic(fmt.Errorf("cannot get system cert pool: %v", err))
+	}
+
+	caPool.AppendCertsFromPEM([]byte(ca))
+
+	return &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   defaultTimeout,
+			KeepAlive: defaultTimeout,
+		}).DialContext,
+		MaxIdleConns:          100,
+		IdleConnTimeout:       90 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		TLSClientConfig:       &tls.Config{RootCAs: caPool},
+		TLSNextProto:          make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	}
 }

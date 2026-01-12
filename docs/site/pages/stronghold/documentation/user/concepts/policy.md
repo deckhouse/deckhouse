@@ -4,6 +4,7 @@ permalink: en/stronghold/documentation/user/concepts/policy.html
 lang: en
 ---
 
+{% raw %}
 Policies provide a declarative way to grant or forbid access to certain paths and operations in Stronghold. This section discusses policy workflows and syntaxes.
 
 Policies are deny by default, so an empty policy grants no permission in the system.
@@ -121,9 +122,11 @@ The policy rules that Stronghold applies are determined by the most-specific mat
 
 This means if you define a policy for `secret/foo*`, the policy would also match `secret/foobar`.
 
+{% endraw %}
 {% alert level="info" %}
 The glob character referred to in this documentation is the asterisk (`*`). It is not a regular expression and is only supported as the last character of the path!
 {% endalert %}
+{% raw %}
 
 When providing list capability, it is important to note that since listing always operates on a prefix, policies must operate on a prefix because Stronghold will sanitize request paths to be prefixes.
 
@@ -152,9 +155,11 @@ In addition to the standard set, there are some capabilities that do not map to 
 
 - `deny`: Disallows access. This always takes precedence regardless of any other defined capabilities, including sudo.
 
+{% endraw %}
 {% alert level="info" %}
 Capabilities usually map to the HTTP verb, and not the underlying action taken. This can be a common source of confusion. Generating database credentials creates database credentials, but the HTTP request is a GET which corresponds to a `read` capability. Thus, to grant access to generate database credentials, the policy would grant read access on the appropriate path.
 {% endalert %}
+{% raw %}
 
 ## Templated policies
 
@@ -203,9 +208,11 @@ path "secret/metadata/groups/{{identity.groups.ids.fb036ebc-2f62-4124-9503-42aa7
 }
 ```
 
+{% endraw %}
 {% alert level="info" %}
 When developing templated policies, use IDs wherever possible. Each ID is unique to the user, whereas names can change over time and can be reused. This ensures that if a given user or group name is changed, the policy will be mapped to the intended entity or group.
 {% endalert %}
+{% raw %}
 
 If you want to use the metadata associated with an authentication plugin in your templates, you will need to get its mount accessor and access it via the aliases key.
 
@@ -238,11 +245,13 @@ In addition to the standard set of capabilities, Stronghold offers finer-grained
 
 ### Parameter constraints
 
+{% endraw %}
 {% alert level="info" %}
 
 - The use of globs (`*`) may result in surprising or unexpected behavior.
 - The `allowed_parameters`, `denied_parameters`, and `required_parameters` fields are not supported for policies used with the KV/v2 secrets engine.
 {% endalert %}
+{% raw %}
 
 Policies can take into account HTTP request parameters to further constrain requests, using the following options:
 
@@ -366,9 +375,11 @@ path "secret/foo" {
 }
 ```
 
+{% endraw %}
 {% alert level="info" %}
 The only value that can be used with the `*` parameter is `[]`.
 {% endalert %}
+{% raw %}
 
 #### Default values
 
@@ -619,9 +630,11 @@ Stronghold can automatically associate a set of policies to a token based on an 
 
 ## Root protected API endpoints
 
+{% endraw %}
 {% alert level="info" %}
 Stronghold treats the HTTP POST and PUT verbs as equivalent, so for each mention of POST in the table above, PUT may also be used. Stronghold uses the non-standard LIST HTTP verb, but also allows list requests to be made using the GET verb along with `?list=true` as a query parameter, so for each mention of LIST in the table above, GET with `?list=true` may also be used.
 {% endalert %}
+{% raw %}
 
 The following paths requires a root token or `sudo` capability in the policy:
 
@@ -672,3 +685,4 @@ Normally the only policies that may be specified are those which are present in 
 There is no way to modify the policies associated with a token once the token has been issued. The token must be revoked and a new one acquired to receive a new set of policies.
 
 However, the contents of policies are parsed in real-time whenever the token is used. As a result, if a policy is modified, the modified rules will be in force the next time a token, with that policy attached, is used to make a call to Stronghold.
+{% endraw %}

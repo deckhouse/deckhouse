@@ -1,5 +1,8 @@
 name: secret-copier
 namespace: default
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - security
+descriptions:
+  en: Automatically copies Secrets to all namespaces in the cluster. Simplifies distribution of shared secrets.
+  ru: Автоматически копирует секреты во все пространства имён кластера. Упрощает распространение общих секретов.

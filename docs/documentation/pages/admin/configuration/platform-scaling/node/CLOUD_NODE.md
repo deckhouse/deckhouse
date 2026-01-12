@@ -668,7 +668,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    EOF
    ```
 
-1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
+1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

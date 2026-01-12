@@ -497,6 +497,50 @@ func TestClientKeepalive(t *testing.T) {
 	})
 }
 
+func TestClientWithDebug(t *testing.T) {
+	testName := "TestClientKeepalive"
+
+	if os.Getenv("SKIP_GOSSH_TEST") == "true" {
+		t.Skipf("Skipping %s test", testName)
+	}
+	// genetaring ssh keys
+	path, publicKey, err := ssh_testing.GenerateKeys("")
+	if err != nil {
+		return
+	}
+
+	// starting openssh container with password auth
+	container := ssh_testing.NewSSHContainer(publicKey, "", "VeryStrongPasswordWhatCannotBeGuessed", "user", 20042, true)
+	err = container.Start()
+	if err != nil {
+		// cannot start test w/o container
+		return
+	}
+
+	t.Cleanup(func() {
+		container.Stop()
+		os.Remove(path)
+	})
+	os.Setenv("SSH_AUTH_SOCK", "")
+
+	// enable debug
+	app.IsDebug = true
+
+	t.Run("start with debug test", func(t *testing.T) {
+		settings := session.NewSession(session.Input{
+			AvailableHosts: []session.Host{{Host: "localhost", Name: "localhost"}},
+			User:           "user",
+			Port:           "20042"})
+		keys := []session.AgentPrivateKey{{Key: path}}
+		sshClient := NewClient(context.Background(), settings, keys)
+		err := sshClient.Start()
+		require.NoError(t, err)
+		cmd := sshClient.Command("echo", "test")
+		err = cmd.Run(context.Background())
+		require.NoError(t, err)
+	})
+}
+
 func TestDialContext(t *testing.T) {
 	t.Run("client start with small context test", func(t *testing.T) {
 		settings := session.NewSession(session.Input{

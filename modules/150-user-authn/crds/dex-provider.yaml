@@ -474,6 +474,48 @@ spec:
                                 x-doc-examples: ['member']
                                 description: |
                                   The name of the attribute that stores the group member names.
+                    enableBasicAuth:
+                      type: boolean
+                      description: |
+                        Enables Basic Authentication for access to the Kubernetes API server.
+
+                        The credentials are the Crowd user's username and password (from the application configured for this provider). 
+                        
+                        Limitations:
+                        - works only when [`publishAPI`](configuration.html#parameters-publishapi) is enabled;
+                        - can be enabled for only one OIDC or Crowd provider in the cluster.
+
+                        Authentication data and group membership obtained from the IdP are cached for 10 seconds.
+                    kerberos:
+                      type: object
+                      description: |
+                        Optional Kerberos (SPNEGO) SSO settings for LDAP.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Enable Kerberos SPNEGO flow for this LDAP provider.
+                        expectedRealm:
+                          type: string
+                          description: Optional realm to require (case-insensitive).
+                        usernameFromPrincipal:
+                          type: string
+                          enum: ["Localpart", "SAMAccountName", "UserPrincipalName"]
+                          default: "Localpart"
+                          description: How to map Kerberos principal to LDAP username.
+                        fallbackToPassword:
+                          type: boolean
+                          default: false
+                          description: If true, render password form when SPNEGO header is missing/invalid.
+                        keytabSecretName:
+                          type: string
+                          description: Name of Secret containing key 'krb5.keytab' to mount for Dex.
+                        krb5ConfConfigMapName:
+                          type: string
+                          description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                        krb5ConfSecretName:
+                          type: string
+                          description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
               oneOf:
                 - properties:
                     inlet:

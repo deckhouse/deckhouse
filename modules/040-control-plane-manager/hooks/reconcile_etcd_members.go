@@ -29,6 +29,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -50,6 +51,17 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
 					"node-role.kubernetes.io/control-plane": "",
+				},
+			},
+			FilterFunc: reconcicleEtcdFilterNode,
+		},
+		{
+			Name:       "etcd_arbiter_node",
+			ApiVersion: "v1",
+			Kind:       "Node",
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"node.deckhouse.io/etcd-arbiter": "",
 				},
 			},
 			FilterFunc: reconcicleEtcdFilterNode,
@@ -96,18 +108,22 @@ type recicleEtcdNode struct {
 }
 
 func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	snaps := input.Snapshots.Get("master_nodes")
+	snapsM := input.Snapshots.Get("master_nodes")
+	snapsEO := input.Snapshots.Get("etcd_arbiter_node")
+	snaps := make([]pkg.Snapshot, 0, len(snapsM)+len(snapsEO))
+	snaps = append(snaps, snapsM...)
+	snaps = append(snaps, snapsEO...)
 
 	if len(snaps) == 0 {
-		input.Logger.Debug("No master Nodes found in snapshot, skipping iteration")
+		input.Logger.Debug("No ETCD Nodes found in snapshot, skipping iteration")
 		return nil
 	}
 
 	etcdServersEndpoints := make([]string, 0, len(snaps))
-	discoveredMasterMap := make(map[string]string, len(snaps))
+	discoveredEtcdNodesMap := make(map[string]string, len(snaps))
 	for node, err := range sdkobjectpatch.SnapshotIter[recicleEtcdNode](snaps) {
 		if err != nil {
-			return fmt.Errorf("failed to iterate over 'master_nodes' snapshots: %v", err)
+			return fmt.Errorf("failed to iterate over ETCD Nodes snapshots: %v", err)
 		}
 
 		if node.Name == "" {
@@ -117,7 +133,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 			return fmt.Errorf("ip should not be empty")
 		}
 
-		discoveredMasterMap[node.Name] = node.IP
+		discoveredEtcdNodesMap[node.Name] = node.IP
 		etcdServersEndpoints = append(etcdServersEndpoints, fmt.Sprintf("https://%s:2379", node.IP))
 	}
 
@@ -140,7 +156,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 
 	removeListIDs := make([]uint64, 0)
 	for _, mem := range etcdMembersResp.Members {
-		if _, ok := discoveredMasterMap[mem.Name]; !ok {
+		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
 			removeListIDs = append(removeListIDs, mem.ID)
 			input.Logger.Warn("added etcd member to remove list", slog.Uint64("memberID", mem.ID), slog.String("memberName", mem.Name))
 		}

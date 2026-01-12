@@ -21,9 +21,11 @@ class ModuleSearch {
     this.lunrIndex = null;
     this.fuseIndex = null;
     this.searchDictionary = [];
+    this.availableModules = new Set(); // Store unique module names
     this.lastQuery = '';
     this.pendingQuery = ''; // For storing user input while index is loading
     this.currentResults = {
+      modules: [],
       isResourceNameMatch: [],
       nameMatch: [],
       isResourceOther: [],
@@ -40,6 +42,11 @@ class ModuleSearch {
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
     this.searchTimeout = null; // For debouncing search input
+    this.indexedDBAvailable = false; // Flag to track IndexedDB availability
+    this.dbName = 'ModuleSearchDB';
+    this.dbVersion = 1;
+    this.storeName = 'searchIndexes';
+    this.cacheExpirationMs = 3600000; // 1 hour in milliseconds
 
     // Configuration options
     this.options = {
@@ -53,7 +60,13 @@ class ModuleSearch {
     // Initialize i18n
     this.initI18n();
 
-    this.init();
+    // Initialize IndexedDB
+    this.initIndexedDB().then(() => {
+      this.init();
+    }).catch(() => {
+      // If IndexedDB fails, continue with fallback method
+      this.init();
+    });
   }
 
   initI18n() {
@@ -65,22 +78,26 @@ class ModuleSearch {
       en: {
         api: 'API',
         documentation: 'Documentation',
+        modules: 'Modules',
         showMore: 'Show more',
         loading: 'Loading search index... (you can formulate query, while index is loading)',
         ready: 'What are we looking for?',
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
-        showMorePattern: 'Show {count} more'
+        showMorePattern: 'Show {count} more',
+        modulesMore: '... and +{count} more'
       },
       ru: {
         api: 'API',
         documentation: 'Документация',
+        modules: 'Модули',
         showMore: 'Показать еще',
         loading: 'Загрузка поискового индекса... (можно формулировать запрос, пока идет загрузка индекса)',
         ready: 'Что ищем?',
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
-        showMorePattern: 'Показать еще {count}'
+        showMorePattern: 'Показать еще {count}',
+        modulesMore: '... и ещё {count}'
       }
     };
 
@@ -114,26 +131,201 @@ class ModuleSearch {
     }
   }
 
-  // Parse search index paths with boost levels
+  // Initialize IndexedDB
+  async initIndexedDB() {
+    if (!('indexedDB' in window)) {
+      console.log('IndexedDB not available, using fallback method');
+      this.indexedDBAvailable = false;
+      return;
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(this.dbName, this.dbVersion);
+
+        request.onerror = () => {
+          console.warn('IndexedDB initialization failed, using fallback method');
+          this.indexedDBAvailable = false;
+          reject(new Error('IndexedDB initialization failed'));
+        };
+
+        request.onsuccess = () => {
+          this.db = request.result;
+          this.indexedDBAvailable = true;
+          console.log('IndexedDB initialized successfully');
+          resolve();
+        };
+
+        request.onupgradeneeded = (event) => {
+          const db = event.target.result;
+          if (!db.objectStoreNames.contains(this.storeName)) {
+            db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
+          }
+        };
+      });
+    } catch (error) {
+      console.warn('IndexedDB initialization error, using fallback method:', error);
+      this.indexedDBAvailable = false;
+      throw error;
+    }
+  }
+
+  // Generate cache key from a single search index path using a hash function
+  generateCacheKey(indexPath) {
+    // Use a hash function (djb2-like) to create a unique key from the path
+    // This ensures different index paths get different cache entries without collisions
+    let hash = 5381; // djb2 initial value
+    const str = indexPath;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash) + str.charCodeAt(i);
+      hash = hash | 0; // Convert to 32-bit integer
+    }
+    // Use absolute value and convert to hex for a clean, collision-resistant key
+    const hashHex = Math.abs(hash).toString(16);
+    return `searchIndex_${hashHex}`;
+  }
+
+  // Get cached search data for a single index file from IndexedDB
+  async getCachedSearchData(cacheKey, cacheExpirationMs = null) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return null;
+    }
+
+    // Use provided cache expiration or fall back to default (1 hour)
+    const expirationMs = cacheExpirationMs !== null ? cacheExpirationMs : this.cacheExpirationMs;
+
+    try {
+      return new Promise(async (resolve, reject) => {
+        const transaction = this.db.transaction([this.storeName], 'readonly');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.get(cacheKey);
+
+        request.onsuccess = async () => {
+          const result = request.result;
+          if (!result) {
+            resolve(null);
+            return;
+          }
+
+          // Check if cache is expired using the provided expiration time
+          const now = Date.now();
+          const cacheAge = now - result.timestamp;
+          const cacheExpirationMinutes = Math.round(expirationMs / 60000);
+
+          if (cacheAge > expirationMs) {
+            console.log(`Cached search index expired for ${cacheKey} (age: ${Math.round(cacheAge / 60000)} minutes of ${cacheExpirationMinutes} minutes), will reload from network`);
+            // Delete expired cache and wait for deletion to complete
+            await this.deleteCachedSearchData(cacheKey);
+            resolve(null);
+            return;
+          }
+
+          console.log(`Using cached search index for ${cacheKey} (age: ${Math.round(cacheAge / 60000)} minutes of ${cacheExpirationMinutes} minutes)`);
+          resolve(result.data);
+        };
+
+        request.onerror = () => {
+          console.warn('Error reading from IndexedDB cache');
+          resolve(null); // Fall back to network on error
+        };
+      });
+    } catch (error) {
+      console.warn('Error accessing IndexedDB cache:', error);
+      return null;
+    }
+  }
+
+  // Store search data for a single index file in IndexedDB
+  async storeCachedSearchData(cacheKey, searchData) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return;
+    }
+
+    try {
+      return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        const cacheEntry = {
+          cacheKey: cacheKey,
+          data: searchData,
+          timestamp: Date.now()
+        };
+        const request = store.put(cacheEntry);
+
+        request.onsuccess = () => {
+          console.log(`Search index cached successfully for ${cacheKey}`);
+          resolve();
+        };
+
+        request.onerror = () => {
+          console.warn('Error storing search index in cache');
+          resolve(); // Don't fail the whole operation if caching fails
+        };
+      });
+    } catch (error) {
+      console.warn('Error storing in IndexedDB cache:', error);
+      // Don't throw - caching failure shouldn't break the app
+    }
+  }
+
+  // Delete cached search data
+  async deleteCachedSearchData(cacheKey) {
+    if (!this.indexedDBAvailable || !this.db) {
+      return;
+    }
+
+    try {
+      return new Promise((resolve) => {
+        const transaction = this.db.transaction([this.storeName], 'readwrite');
+        const store = transaction.objectStore(this.storeName);
+        const request = store.delete(cacheKey);
+
+        request.onsuccess = () => {
+          resolve();
+        };
+
+        request.onerror = () => {
+          resolve(); // Don't fail if deletion fails
+        };
+      });
+    } catch (error) {
+      console.warn('Error deleting from IndexedDB cache:', error);
+    }
+  }
+
+  // Parse search index paths with boost levels and optional cache time
+  // Format: "path:boost:cacheTime" or "path:boost" or "path"
+  // cacheTime is in minutes, defaults to 60 (1 hour) if not specified
   parseSearchIndexPaths(searchIndexPath) {
     const paths = searchIndexPath.split(',').map(path => path.trim());
 
     return paths.map(path => {
-      // Check if path contains boost level (format: "path:boost")
-      const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
+      // Check if path contains boost level and cache time (format: "path:boost:cacheTime")
+      const fullMatch = path.match(/^(.+):(\d+(?:\.\d+)?):(\d+)$/);
+      if (fullMatch) {
+        return {
+          path: fullMatch[1].trim(),
+          boost: parseFloat(fullMatch[2]),
+          cacheTimeMinutes: parseInt(fullMatch[3], 10)
+        };
+      }
 
+      // Check if path contains boost level only (format: "path:boost")
+      const boostMatch = path.match(/^(.+):(\d+(?:\.\d+)?)$/);
       if (boostMatch) {
         return {
           path: boostMatch[1].trim(),
-          boost: parseFloat(boostMatch[2])
-        };
-      } else {
-        // Default boost level of 1.0 if not specified
-        return {
-          path: path,
-          boost: 1.0
+          boost: parseFloat(boostMatch[2]),
+          cacheTimeMinutes: 60 // Default 1 hour
         };
       }
+
+      // No boost or cache time specified - use defaults
+      return {
+        path: path,
+        boost: 1.0,
+        cacheTimeMinutes: 60 // Default 1 hour
+      };
     });
   }
 
@@ -350,71 +542,83 @@ class ModuleSearch {
       // Parse search index paths with boost levels
       const indexConfigs = this.parseSearchIndexPaths(this.options.searchIndexPath);
 
-      if (indexConfigs.length === 1) {
-        // Single index file
-        const config = indexConfigs[0];
-        const response = await fetch(config.path);
-        if (!response.ok) {
-          throw new Error(`Failed to load search index: ${response.status}`);
-        }
-        this.searchData = await response.json();
-        this.searchData.boostLevel = config.boost;
-      } else {
-        // Multiple index files - load and merge them
-        console.log(`Loading ${indexConfigs.length} search index files:`, indexConfigs.map(c => `${c.path} (boost: ${c.boost})`));
+      // Load each index file separately (from cache or network)
+      const loadedIndexes = await Promise.all(
+        indexConfigs.map(async (config) => {
+          // Generate cache key for this specific index file
+          const cacheKey = this.generateCacheKey(config.path);
 
-        const responses = await Promise.all(
-          indexConfigs.map(async (config) => {
-            try {
-              const response = await fetch(config.path);
-              if (!response.ok) {
-                console.warn(`Failed to load search index: ${config.path} (${response.status})`);
-                return { documents: [], parameters: [], boost: config.boost };
-              }
-              const data = await response.json();
-              data.boost = config.boost;
-              return data;
-            } catch (error) {
-              console.warn(`Error loading search index: ${config.path}`, error);
-              return { documents: [], parameters: [], boost: config.boost };
+          // Convert cache time from minutes to milliseconds
+          const cacheExpirationMs = config.cacheTimeMinutes * 60 * 1000;
+
+          // Try to load from cache first
+          let indexData = await this.getCachedSearchData(cacheKey, cacheExpirationMs);
+
+          if (indexData) {
+            // Use cached data, but ensure boost is set
+            indexData.boost = config.boost;
+            return { data: indexData, config: config, fromCache: true };
+          }
+
+          // Cache miss or expired - load from network
+          try {
+            const response = await fetch(config.path);
+            if (!response.ok) {
+              console.warn(`Failed to load search index: ${config.path} (${response.status})`);
+              return { data: { documents: [], parameters: [], boost: config.boost }, config: config, fromCache: false };
             }
-          })
-        );
+            const data = await response.json();
+            data.boost = config.boost;
 
-        // Merge all search indexes with boost information
-        this.searchData = {
-          documents: [],
-          parameters: [],
-          indexBoosts: {} // Store boost levels for each index
-        };
+            // Cache the loaded data for this specific index file
+            await this.storeCachedSearchData(cacheKey, data);
 
-        responses.forEach((indexData, index) => {
-          if (indexData && indexData.documents) {
-            // Add boost information to each document
-            const boostedDocuments = indexData.documents.map(doc => ({
-              ...doc,
-              _indexBoost: indexData.boost,
-              _indexSource: indexConfigs[index].path
-            }));
-            this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
-            console.log(`Added ${indexData.documents.length} documents from ${indexConfigs[index].path}`);
+            return { data: data, config: config, fromCache: false };
+          } catch (error) {
+            console.warn(`Error loading search index: ${config.path}`, error);
+            return { data: { documents: [], parameters: [], boost: config.boost }, config: config, fromCache: false };
           }
-          if (indexData && indexData.parameters) {
-            // Add boost information to each parameter
-            const boostedParameters = indexData.parameters.map(param => ({
-              ...param,
-              _indexBoost: indexData.boost,
-              _indexSource: indexConfigs[index].path
-            }));
-            this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
-            console.log(`Added ${indexData.parameters.length} parameters from ${indexConfigs[index].path}`);
-          }
-          // Store boost level for this index
-          this.searchData.indexBoosts[indexConfigs[index].path] = indexData.boost;
-        });
+        })
+      );
 
-        console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
-      }
+      // Merge all search indexes with boost information
+      this.searchData = {
+        documents: [],
+        parameters: [],
+        indexBoosts: {} // Store boost levels for each index
+      };
+
+      loadedIndexes.forEach(({ data, config, fromCache }) => {
+        const indexData = data;
+        const indexPath = config.path;
+
+        if (indexData && indexData.documents) {
+          // Add boost information to each document
+          const boostedDocuments = indexData.documents.map(doc => ({
+            ...doc,
+            _indexBoost: indexData.boost,
+            _indexSource: indexPath
+          }));
+          this.searchData.documents = this.searchData.documents.concat(boostedDocuments);
+          const source = fromCache ? 'cache' : 'network';
+          console.log(`Added ${indexData.documents.length} documents from ${indexPath} (${source})`);
+        }
+        if (indexData && indexData.parameters) {
+          // Add boost information to each parameter
+          const boostedParameters = indexData.parameters.map(param => ({
+            ...param,
+            _indexBoost: indexData.boost,
+            _indexSource: indexPath
+          }));
+          this.searchData.parameters = this.searchData.parameters.concat(boostedParameters);
+          const source = fromCache ? 'cache' : 'network';
+          console.log(`Added ${indexData.parameters.length} parameters from ${indexPath} (${source})`);
+        }
+        // Store boost level for this index
+        this.searchData.indexBoosts[indexPath] = indexData.boost;
+      });
+
+      console.log(`Merged search data: ${this.searchData.documents.length} documents, ${this.searchData.parameters.length} parameters`);
 
       // Refresh language detection before building index
       this.refreshLanguageDetection();
@@ -422,6 +626,7 @@ class ModuleSearch {
       this.buildLunrIndex();
       this.buildSearchDictionary();
       this.buildFuseIndex();
+      this.extractAvailableModules();
       this.isDataLoaded = true;
 
       // Only hide loading UI if not loading in background
@@ -652,6 +857,31 @@ class ModuleSearch {
     console.log('Built Fuse.js index for fuzzy search');
   }
 
+  extractAvailableModules() {
+    // Extract all unique module names from documents and parameters
+    this.availableModules.clear();
+
+    // Extract from documents
+    if (this.searchData.documents) {
+      this.searchData.documents.forEach(doc => {
+        if (doc.module && doc.module.trim()) {
+          this.availableModules.add(doc.module.trim());
+        }
+      });
+    }
+
+    // Extract from parameters
+    if (this.searchData.parameters) {
+      this.searchData.parameters.forEach(param => {
+        if (param.module && param.module.trim()) {
+          this.availableModules.add(param.module.trim());
+        }
+      });
+    }
+
+    console.log(`Extracted ${this.availableModules.size} unique modules`);
+  }
+
   getFuzzySuggestions(query) {
     if (!this.fuseIndex || !query.trim()) {
       return [];
@@ -751,6 +981,40 @@ class ModuleSearch {
     // Remove any existing fuzzy search messages and suggestions
     const existingMessages = this.searchResults.querySelectorAll('.fuzzy-search-message, .fuzzy-suggestions');
     existingMessages.forEach(message => message.remove());
+  }
+
+  getModulePageResults(query) {
+    const results = [];
+    const queryLower = query.toLowerCase().trim();
+
+    // Check if query matches any module name
+    this.availableModules.forEach(moduleName => {
+      const moduleLower = moduleName.toLowerCase();
+
+      // Check for exact match or if module name contains the query
+      if (moduleLower === queryLower || moduleLower.includes(queryLower)) {
+        // Create a synthetic result for the module page
+        // Use a special ID format to identify module page results
+        // Special case for "global" module
+        const moduleUrl = moduleName === 'global'
+          ? '/products/kubernetes-platform/documentation/v1/reference/api/global.html'
+          : `/modules/${moduleName}/`;
+
+        const modulePageResult = {
+          ref: `module_page_${moduleName}`,
+          score: moduleLower === queryLower ? 1000 : 500, // Higher score for exact matches
+          _isModulePage: true,
+          _moduleName: moduleName,
+          _moduleUrl: moduleUrl
+        };
+        results.push(modulePageResult);
+      }
+    });
+
+    // Sort by score (exact matches first)
+    results.sort((a, b) => b.score - a.score);
+
+    return results;
   }
 
   // Check if query looks like a URL and sanitize it for search
@@ -892,7 +1156,7 @@ class ModuleSearch {
       }
 
       // Apply additional boosting for parameters, module name matches, and index boost levels
-      const boostedResults = results.map(result => {
+      let boostedResults = results.map(result => {
         const docId = result.ref;
         let doc;
 
@@ -993,6 +1257,13 @@ class ModuleSearch {
       // Sort by boosted score
       boostedResults.sort((a, b) => b.score - a.score);
 
+      // Check if query matches any module name and add module page results
+      const modulePageResults = this.getModulePageResults(sanitizedQuery);
+      if (modulePageResults.length > 0) {
+        // Add module page results with high priority (insert at the beginning)
+        boostedResults = modulePageResults.concat(boostedResults);
+      }
+
       // Store current results and display them
       this.currentResults = this.groupResults(boostedResults);
       this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
@@ -1005,6 +1276,7 @@ class ModuleSearch {
   }
 
   groupResults(results) {
+    const modulesResults = [];
     const isResourceNameMatchResults = [];
     const nameMatchResults = [];
     const isResourceOtherResults = [];
@@ -1013,6 +1285,14 @@ class ModuleSearch {
 
     results.forEach(result => {
       const docId = result.ref;
+
+      // Handle module page results
+      if (result._isModulePage) {
+        // Module pages go to modules group
+        modulesResults.push(result);
+        return;
+      }
+
       let doc;
 
       // Determine which array the result comes from
@@ -1055,6 +1335,7 @@ class ModuleSearch {
     });
 
     return {
+      modules: modulesResults,
       isResourceNameMatch: isResourceNameMatchResults,
       nameMatch: nameMatchResults,
       isResourceOther: isResourceOtherResults,
@@ -1071,6 +1352,11 @@ class ModuleSearch {
     }
 
     let resultsHtml = '';
+
+    // Display Modules as a row at the top
+    if (this.currentResults.modules.length > 0) {
+      resultsHtml += this.renderModulesRow(this.currentResults.modules, this.currentHighlightQuery || this.lastQuery);
+    }
 
     // Display API results in priority order
     if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
@@ -1098,6 +1384,37 @@ class ModuleSearch {
     this.searchResults.innerHTML = resultsHtml;
   }
 
+  renderModulesRow(results, query) {
+    const moduleBadges = results.map(result => {
+      if (result._isModulePage) {
+        const moduleName = result._moduleName;
+        const moduleUrl = result._moduleUrl;
+        return `<a href="${moduleUrl}" class="result-module">${moduleName}</a>`;
+      }
+      return '';
+    }).filter(badge => badge !== '');
+
+    if (moduleBadges.length === 0) {
+      return '';
+    }
+
+    // Limit to 14 modules, add count badge if more
+    const maxModules = 14;
+    const displayBadges = moduleBadges.slice(0, maxModules);
+    const hasMore = moduleBadges.length > maxModules;
+    const remainingCount = hasMore ? moduleBadges.length - maxModules : 0;
+
+    let html = `<div class="modules-row">
+      <span class="modules-label">${this.t('modules')}:</span> `;
+    html += displayBadges.join('');
+    if (hasMore) {
+      html += `<span class="modules-more">${this.t('modulesMore', { count: remainingCount })}</span>`;
+    }
+    html += '</div>';
+
+    return html;
+  }
+
   renderResultGroup(results, query, groupType) {
     const displayedCount = this.displayedCounts[groupType];
     const topResults = results.slice(0, displayedCount);
@@ -1106,6 +1423,7 @@ class ModuleSearch {
 
     // Render visible results
     topResults.forEach(result => {
+
       const docId = result.ref;
       let doc;
 
@@ -1120,24 +1438,20 @@ class ModuleSearch {
 
       if (!doc) return;
 
-      let title, summary, module, description;
+      let title, module, description;
 
       if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
         // For configuration results (parameters) and isResource parameters
         title = this.highlightText(doc.name || '', query);
-        // summary = this.highlightText(doc.resName || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
-        // description = this.highlightText(doc.content || '', query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       } else {
         // For other documentation
         title = this.highlightText(doc.title || '', query);
-        // summary = this.highlightText(doc.summary || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        // description = summary || this.getRelevantContentSnippet(doc.content || '', query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       }
 

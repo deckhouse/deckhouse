@@ -10,3 +10,6 @@ spec:
       - group: "deckhouse.io"
         version: "v1alpha1"
         kind: "SecurityPolicyException"
+      - group: ""
+        version: "v1"
+        kind: "Pod"

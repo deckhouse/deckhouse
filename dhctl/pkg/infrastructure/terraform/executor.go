@@ -17,8 +17,11 @@ package terraform
 import (
 	"context"
 	"fmt"
+	"io"
 	"os/exec"
 	"syscall"
+
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
@@ -32,7 +35,27 @@ type ExecutorParams struct {
 	WorkingDir     string
 	PluginsDir     string
 	Step           infrastructure.Step
-	VmChangeTester plan.VMChangeTester
+	VMChangeTester plan.VMChangeTester
+}
+
+func (p *ExecutorParams) validate() error {
+	if err := p.RunExecutorParams.validateRunParams(); err != nil {
+		return err
+	}
+
+	if p.PluginsDir == "" {
+		return fmt.Errorf("PluginsDir is required for terraform executor")
+	}
+
+	if p.WorkingDir == "" {
+		return fmt.Errorf("WorkingDir is required for terraform executor")
+	}
+
+	if p.Step == "" {
+		return fmt.Errorf("Step is required for terraform executor")
+	}
+
+	return nil
 }
 
 type Executor struct {
@@ -42,15 +65,27 @@ type Executor struct {
 	cmd    *exec.Cmd
 }
 
-func NewExecutor(params ExecutorParams, logger log.Logger) *Executor {
+func NewExecutor(params ExecutorParams, logger log.Logger) (*Executor, error) {
+	if err := params.validate(); err != nil {
+		return nil, err
+	}
+
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &Executor{
 		params: params,
 		logger: logger,
-	}
+	}, nil
 }
 
 func (e *Executor) IsVMChange(rc plan.ResourceChange) bool {
-	return e.params.VmChangeTester(rc)
+	if e.params.VMChangeTester == nil {
+		return false
+	}
+
+	return e.params.VMChangeTester(rc)
 }
 
 func (e *Executor) Step() infrastructure.Step {
@@ -129,6 +164,10 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 
 	e.cmd = terraformCmd(ctx, e.params.RunExecutorParams, args...)
 
+	if opts.NoOutput {
+		e.cmd.Stdout = io.Discard
+		e.cmd.Stderr = io.Discard
+	}
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
@@ -181,4 +220,15 @@ func (e *Executor) Stop() {
 	//    from shell and from us.
 	//    See also pkg/system/ssh/cmd/ssh.go
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
+}
+
+func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+	args := []string{
+		"show",
+		"-json",
+		planPath,
+	}
+
+	cmd := terraformCmd(ctx, e.params.RunExecutorParams, args...)
+	return infrastructure.GetActions(ctx, cmd)
 }

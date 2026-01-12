@@ -54,7 +54,7 @@ To enable Dex authentication for your application, follow these steps:
    - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
       - `SERVICE_NAME` — is the name of the authenticator's Service. Usually, it is `<NAME>-dex-authenticator` (`<NAME>` is the `metadata.name` of the DexAuthenticator).
       - `NS` — the value of the `metadata.namespace` parameter of the DexAuthenticator.
-      - `C_DOMAIN` — the cluster domain (the [clusterDomain](../../installing/configuration.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
+      - `C_DOMAIN` — the cluster domain (the [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the `ClusterConfiguration` resource).
 
    > **Note:** If the DexAuthenticator name (`<NAME>`) is too long, the Service name may be truncated. To find the correct service name, use the following command (specify namespace name and DexAuthenticator name):
    >
@@ -71,6 +71,10 @@ To enable Dex authentication for your application, follow these steps:
      nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
      nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
    ```
+
+    {% alert level="warning" %}
+    The application Ingress must have TLS configured. DexAuthenticator does not support HTTP-only Ingress resources.
+    {% endalert %}
 
 ### Setting up CIDR-based restrictions
 
@@ -92,13 +96,21 @@ DexAuthenticator does not have a built-in system for allowing the user authentic
 
 ![Authentication flow with DexAuthenticator](images/dex_login.svg)
 
+{% alert level="warning" %}
+DexAuthenticator only works with HTTPS. It does not support Ingress resources configured for HTTP only.
+
+Authentication cookies are set with the `Secure` attribute, which means they are only sent over encrypted HTTPS connections.
+
+Make sure your application Ingress has TLS configured before integrating with DexAuthenticator.
+{% endalert %}
+
 1. Dex redirects the user to the provider's login page in most cases and wait for the user to be redirected back to the `/callback` URL. However, some providers like LDAP or Atlassian Crowd do not support this flow. The user should write credentials to the Dex login form instead, and Dex will make a request to the provider's API to validate them.
 
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../upmeter/), because permissions to Upmeter entities are not highly grained.
-On the other hand, for the [Kubernetes Dashboard](../dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
+3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](/modules/upmeter/), because permissions to Upmeter entities are not highly grained.
+On the other hand, for the [Kubernetes Dashboard](/modules/dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
@@ -122,9 +134,24 @@ Configure the [publishAPI](configuration.html#parameters-publishapi) parameter:
 The name `kubeconfig` is reserved for accessing the web interface that allows generating `kubeconfig`. The URL for access depends on the value of the parameter [publicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) (for example, for `publicDomainTemplate: %s.kube.my` it will be `kubeconfig.kube.my`, and for `publicDomainTemplate: %s-kube.company.my` it will be `kubeconfig-kube.company.my`).  
 {% endraw %}
 
+## How to enable Kerberos (SPNEGO) SSO for LDAP?
+
+If clients run in a corporate SSO environment (browser trusts the Dex host), Dex can accept Kerberos tickets via `Authorization: Negotiate` and log in without the password form.
+
+Steps:
+
+1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+2. In the cluster, create a Secret in `d8-user-authn` with the `krb5.keytab` data key.
+3. In the LDAP `DexProvider` enable `spec.ldap.kerberos`:
+   - `enabled: true`
+   - `keytabSecretName: <secret name>`
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+
+Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
+
 ### Configuring kube-apiserver
 
-With the functional of the [control-plane-manager](../../modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
+With the functional of the [control-plane-manager](/modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -149,6 +176,17 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 2. Kubeconfig generator stores id token and refresh token to the kubeconfig file.
 
 3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration.
+
+## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
+
+1. Enable the [`publishAPI`](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+1. Create a [DexProvider](cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) field.
+1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
+1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
+
+> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+
+For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
 
 ## How secure is Dex from brute-forcing my credentials?
 

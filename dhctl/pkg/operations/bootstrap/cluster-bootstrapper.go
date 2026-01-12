@@ -101,7 +101,8 @@ type Params struct {
 	UseTfCache              *bool
 	AutoApprove             *bool
 
-	TmpDir  string
+	TmpDir string
+	// todo refact to logger provider
 	Logger  log.Logger
 	IsDebug bool
 
@@ -225,6 +226,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	// first, parse and check cluster config
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
+	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
+		DVPValidateKubeApi: !app.PreflightSkipDVPKubeconfigCheck,
+	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
 		app.ConfigPaths,
@@ -445,7 +449,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 			deckhouseInstallConfig.NodesInfrastructureState[masterNodeName] = masterOutputs.InfrastructureState
 
 			masterAddressesForSSH[masterNodeName] = masterOutputs.MasterIPForSSH
-			SaveMasterHostsToCache(masterAddressesForSSH)
+			state.SaveMasterHostsToCache(stateCache, masterAddressesForSSH)
 			return nil
 		})
 		if err != nil {
@@ -468,7 +472,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 				SaveBastionHostToCache(sshClient.Session().BastionHost)
 			}
 
-			SaveMasterHostsToCache(map[string]string{
+			state.SaveMasterHostsToCache(stateCache, map[string]string{
 				"first-master": sshClient.Session().Host(),
 			})
 		}
@@ -533,9 +537,14 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	b.PhasedExecutionContext.CompleteSubPhase(phases.InstallDeckhouseSubPhaseConnect)
 
-	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, func() error {
-		return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
-	})
+	installParams := InstallDeckhouseParams{
+		BeforeDeckhouseTask: func() error {
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
+		},
+		State: bootstrapState,
+	}
+
+	installDeckhouseResult, err := InstallDeckhouse(ctx, kubeCl, deckhouseInstallConfig, installParams)
 	if err != nil {
 		return err
 	}
@@ -616,7 +625,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	if !b.DisableBootstrapClearCache {
 		_ = log.Process("bootstrap", "Clear cache", func() error {
 			cache.Global().CleanWithExceptions(
-				MasterHostsCacheKey,
+				state.MasterHostsCacheKey,
 				ManifestCreatedInClusterCacheKey,
 				BastionHostCacheKey,
 				PostBootstrapResultCacheKey,
@@ -691,7 +700,7 @@ func generateClusterUUID(stateCache state.Cache) (string, error) {
 }
 
 func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, masterAddressesForSSH map[string]string, infrastructureContext *infrastructure.Context) error {
-	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext); err != nil {
+	if err := BootstrapAdditionalMasterNodes(ctx, kubeCl, metaConfig, masterAddressesForSSH, infrastructureContext, cache.Global()); err != nil {
 		return err
 	}
 

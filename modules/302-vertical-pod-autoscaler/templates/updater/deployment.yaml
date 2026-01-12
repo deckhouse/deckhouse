@@ -15,7 +15,7 @@ spec:
     kind: Deployment
     name: vpa-updater
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "updater"

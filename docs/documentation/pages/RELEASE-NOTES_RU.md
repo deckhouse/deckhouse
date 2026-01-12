@@ -1,5 +1,5 @@
 ---
-title: Обзор изменений в Deckhouse Kubernetes Platform
+title: История изменений Deckhouse Kubernetes Platform
 permalink: ru/release-notes.html
 canonical: ru/reference/release-notes/
 lang: ru

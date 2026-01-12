@@ -213,39 +213,31 @@
     "editions": [
       "ee"
     ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
     "tags": [
       "database"
     ],
     "external": "true",
-    "path": "/modules/managed-postgres/stable/"
+    "path": "/modules/managed-postgres/"
   },
   "managed-memcached": {
     "editions": [
       "ee"
     ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
     "tags": [
       "database"
     ],
     "external": "true",
-    "path": "/modules/managed-memcached/stable/"
+    "path": "/modules/managed-memcached/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-valkey/"
   },
   "neuvector": {
     "editions": [
@@ -306,7 +298,8 @@
   },
   "operator-argo": {
     "editions": [
-      "ee"
+      "ee",
+      "se-plus"
     ],
     "editionsWithRestrictions": [
       "cse-pro"
@@ -322,6 +315,18 @@
     ],
     "external": "true",
     "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/",
+    "tags": [
+      "security"
+    ]
   },
   "pod-reloader": {
     "tags": [

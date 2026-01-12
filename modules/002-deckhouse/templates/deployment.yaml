@@ -184,6 +184,8 @@ spec:
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
+              value: "false"
             - name: USE_NELM
               value: "true"
             - name: LOG_TYPE
@@ -360,6 +362,10 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- else }}
       dnsPolicy: Default
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "registry.d8-system.svc"
 {{- end}}
       serviceAccountName: deckhouse
       automountServiceAccountToken: true
