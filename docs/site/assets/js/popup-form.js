@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", function() {
       this.preferredContact = this.wrapper.querySelector('input[name="preferred_contact"]');
       this.telegramInput = this.wrapper.querySelector('input[name="telegram_id"]');
       this.telegramCheckbox = this.wrapper.querySelector('input[value="telegram"]');
-      this.checkboxes = this.wrapper.querySelectorAll('input[type="checkbox"]');
+      this.checkboxes = this.wrapper.querySelectorAll('.checkboxes > input[type="checkbox"]');
       this.updateContactValue();
       this.initializeCheckbox();
       this.toggleTelegramInput();
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 
     submitForm(e) {
-      e.preventDefault();   
+      e.preventDefault();
 
       const FormData = this.serializeData();
 
@@ -304,5 +304,44 @@ document.addEventListener("DOMContentLoaded", function() {
 
   wrapper.forEach(item => {
     new PopupForm(item);
+  })
+})
+
+document.addEventListener("DOMContentLoaded", function() {
+  const forms = document.querySelectorAll('form.form.form__request');
+
+  forms.forEach(form => {
+    const submit = form.querySelector('button.button-request');
+    const inputsRequired = form.querySelectorAll('input[type="text"][required="required"], input[type="email"][required="required"], input[type="tel"][required="required"]');
+    const checkboxRequired = form.querySelectorAll('input[type="checkbox"][required="required"]');
+
+    function hasFilledInput() {
+      let isFilled = true;
+
+      inputsRequired.forEach(input => {
+        if(!input.value.trim()) {
+          isFilled = false;
+        }
+      });
+
+      checkboxRequired.forEach(checkbox => {
+        if(!checkbox.checked) {
+          isFilled = false;
+        };
+      })
+
+      submit.disabled = !isFilled;
+    }
+    
+    form.addEventListener('input', hasFilledInput);
+    form.addEventListener('change', hasFilledInput);
+
+    form.addEventListener('submit', e => {
+      if(submit.disabled) {
+        e.preventDefault;
+      }
+    })
+
+    hasFilledInput();
   })
 })

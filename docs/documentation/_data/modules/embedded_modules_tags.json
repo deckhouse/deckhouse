@@ -171,9 +171,6 @@
   "operator-prometheus": [
     "observability"
   ],
-  "operator-trivy": [
-    "security"
-  ],
   "pod-reloader": [
     "core"
   ],

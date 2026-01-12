@@ -53,5 +53,6 @@ shell:
     - cd /src
     - export GOPROXY=$(cat /run/secrets/GOPROXY)
     - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\"" -o /terraform-provider-azurerm .
+    - strip /terraform-provider-azurerm
     - chmod -R 755 /terraform-provider-azurerm
     - chown 64535:64535 /terraform-provider-azurerm

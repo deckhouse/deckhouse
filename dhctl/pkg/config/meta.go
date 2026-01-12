@@ -26,7 +26,11 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_moduleconfig "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -51,7 +55,7 @@ type MetaConfig struct {
 
 	VersionMap                map[string]interface{} `json:"-"`
 	Images                    imagesDigests          `json:"-"`
-	Registry                  RegistryData           `json:"-"`
+	Registry                  registry_config.Config `json:"-"`
 	UUID                      string                 `json:"clusterUUID,omitempty"`
 	InstallerVersion          string                 `json:"-"`
 	ResourcesYAML             string                 `json:"-"`
@@ -92,13 +96,11 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 		if err := json.Unmarshal(m.InitClusterConfig["deckhouse"], &m.DeckhouseConfig); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal deckhouse configuration: %v", err)
 		}
+	}
 
-		imagesRepo := strings.TrimSpace(m.DeckhouseConfig.ImagesRepo)
-		m.DeckhouseConfig.ImagesRepo = strings.TrimRight(imagesRepo, "/")
-		err := m.Registry.Process(m.DeckhouseConfig)
-		if err != nil {
-			return nil, err
-		}
+	// Prepare registry config
+	if err := m.prepareRegistry(); err != nil {
+		return nil, fmt.Errorf("unable to initialize registry config: %w", err)
 	}
 
 	if m.ClusterType != CloudClusterType || len(m.ProviderClusterConfig) == 0 {
@@ -132,6 +134,97 @@ func (m *MetaConfig) Prepare(ctx context.Context, preparatorProvider MetaConfigP
 	}
 
 	return validateAndPrepareMetaConfig(ctx, preparatorProvider, m)
+}
+
+func (m *MetaConfig) prepareRegistry() error {
+	var defaultCRI registry_const.CRIType
+	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
+		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
+			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+		}
+	}
+
+	criSupported := registry_const.IsCRISupported(defaultCRI)
+	initConfig := m.DeckhouseConfig.registryInitConfig()
+
+	deckhouseSettings, err := m.registryDeckhouseSettings()
+	if err != nil {
+		return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+	}
+
+	switch {
+
+	// Check configuration conflict
+	case initConfig != nil && deckhouseSettings != nil:
+		return fmt.Errorf(
+			"duplicate registry configuration detected: " +
+				"registry is configured in both 'initConfiguration.deckhouse' " +
+				"and 'moduleConfig/deckhouse.spec.settings.registry'. " +
+				"Please specify registry settings in only one location.",
+		)
+
+	case deckhouseSettings != nil:
+		// Check CRI
+		if !criSupported {
+			return fmt.Errorf(
+				"registry module cannot be started with defaultCRI '%s'. "+
+					"Please either configure registry in 'initConfiguration.deckhouse', "+
+					"or use a supported defaultCRI type with the existing configuration in "+
+					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
+				defaultCRI,
+				registry_const.SupportedCRI,
+			)
+		}
+
+		if err := m.Registry.UseDeckhouseSettings(*deckhouseSettings); err != nil {
+			return fmt.Errorf("get registry settings from 'moduleConfig/deckhouse': %w", err)
+		}
+		return nil
+
+	case initConfig != nil:
+		if err := m.Registry.UseInitConfig(*initConfig); err != nil {
+			return fmt.Errorf("get registry settings from 'initConfiguration': %w", err)
+		}
+		return nil
+
+	default:
+		if err := m.Registry.UseDefault(criSupported); err != nil {
+			return fmt.Errorf("get default registry settings: %w", err)
+		}
+		return nil
+	}
+}
+
+func (m *MetaConfig) registryDeckhouseSettings() (*registry_moduleconfig.DeckhouseSettings, error) {
+	var mcDeckhouse *ModuleConfig
+
+	for _, mc := range m.ModuleConfigs {
+		if mc.GetName() == "deckhouse" {
+			mcDeckhouse = mc
+			break
+		}
+	}
+
+	if mcDeckhouse == nil {
+		return nil, nil
+	}
+
+	settings, ok := mcDeckhouse.Spec.Settings["registry"]
+	if !ok {
+		return nil, nil
+	}
+
+	raw, err := json.Marshal(settings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal deckhouse settings: %w", err)
+	}
+
+	var ret registry_moduleconfig.DeckhouseSettings
+	if err := json.Unmarshal(raw, &ret); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse settings: %w", err)
+	}
+
+	return &ret, nil
 }
 
 func (m *MetaConfig) GetFullUUID() (string, error) {
@@ -269,12 +362,11 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 		result["nodeIP"] = nodeIP
 	}
 
-	registryData, err := m.Registry.KubeadmTemplatesCtx()
-	if err != nil {
-		return nil, err
-	}
-
-	result["registry"] = registryData
+	// Registry
+	result["registry"] = m.Registry.
+		Manifest().
+		KubeadmContext().
+		ToMap()
 
 	images := m.Images
 
@@ -322,11 +414,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 		nodeGroup["static"] = m.ExtractMasterNodeGroupStaticSettings()
 	}
 
-	registryData, err := m.Registry.BashibleBundleTemplateCtx()
-	if err != nil {
-		return nil, err
-	}
-
 	configForBashibleBundleTemplate := make(map[string]interface{})
 	for key, value := range m.VersionMap {
 		configForBashibleBundleTemplate[key] = value
@@ -352,7 +439,15 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(nodeIP string) (map[string]
 			configForBashibleBundleTemplate["proxy"] = proxyData
 		}
 	}
-	configForBashibleBundleTemplate["registry"] = registryData
+
+	// Registry
+	registryContext, err := m.Registry.
+		Manifest().
+		BashibleContext(registry_config.GeneratePKI)
+	if err != nil {
+		return nil, fmt.Errorf("create registry bashible context: %s", err)
+	}
+	configForBashibleBundleTemplate["registry"] = registryContext.ToMap()
 
 	images := m.Images
 	configForBashibleBundleTemplate["images"] = images.ConvertToMap()
@@ -425,7 +520,7 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 		out.StaticClusterConfig = config
 	}
 
-	out.Registry = m.Registry
+	out.Registry = *m.Registry.DeepCopy()
 
 	if m.ClusterType != "" {
 		out.ClusterType = m.ClusterType

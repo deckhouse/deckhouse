@@ -25,7 +25,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    Make sure the output of `etcdutl version` is displayed without errors.
 
-   If `etcdutl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
+   If `etcdutl` is not found, download the binary from [the official etcd repository](https://github.com/etcd-io/etcd/releases), choosing a version that matches your cluster's etcd version:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"

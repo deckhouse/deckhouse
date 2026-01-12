@@ -202,5 +202,5 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-Для более детальной настройки прав обратитесь к [официальной документации](https://vmware.github.io/govmomi/).
+Для более детальной настройки прав обратитесь к [официальной документации](https://pkg.go.dev/github.com/vmware/govmomi).
 {% endalert %}

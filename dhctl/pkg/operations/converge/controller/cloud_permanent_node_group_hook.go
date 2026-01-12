@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
@@ -46,6 +47,11 @@ func (h *HookForDestroyPipeline) BeforeAction(ctx context.Context, runner infras
 	err = infra_utils.TryToDrainNode(ctx, h.getter.KubeClient(), h.nodeToDestroy, infra_utils.GetDrainConfirmation(h.commanderMode), infra_utils.DrainOptions{Force: false})
 	if err != nil {
 		return false, err
+	}
+
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.getter.KubeClient(), h.nodeToDestroy)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToDestroy, err)
 	}
 	return false, nil
 }

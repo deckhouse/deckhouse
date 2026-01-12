@@ -139,6 +139,16 @@ func TestLoadHandlerGetLocalPath(t *testing.T) {
 			"/app/hugo/content/modules/moduleName/stable/configuration.md",
 			true,
 		},
+		{
+			"module.yaml",
+			"/app/hugo/data/modules/moduleName/stable/module.yaml",
+			true,
+		},
+		{
+			"oss.yaml",
+			"/app/hugo/data/modules/moduleName/stable/oss.yaml",
+			true,
+		},
 	}
 
 	for _, tt := range tests {

@@ -215,6 +215,10 @@ create,patch,update:
 delete,deletecollection:
     - apps/replicasets
     - extensions/replicasets
+read-write:
+    - deckhouse.io/authorizationrules
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):

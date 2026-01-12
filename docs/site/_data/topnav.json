@@ -134,6 +134,14 @@
             "rel": "",
             "items": [
               {
+                "id": 9139,
+                "parent_id": 4114,
+                "title": "Сообщество",
+                "url": "/community/",
+                "target": "",
+                "rel": ""
+              },
+              {
                 "id": 2054,
                 "parent_id": 4114,
                 "title": "Истории успеха",
@@ -162,6 +170,40 @@
                 "parent_id": 4114,
                 "title": "Вебинары",
                 "url": "/webinars/",
+                "target": "",
+                "rel": ""
+              }
+            ]
+          },
+          {
+            "id": 9136,
+            "parent_id": 0,
+            "title": "О нас",
+            "url": "",
+            "target": "",
+            "rel": "",
+            "items": [
+              {
+                "id": 9137,
+                "parent_id": 9136,
+                "title": "Контакты",
+                "url": "/contacts/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "id": 9138,
+                "parent_id": 9136,
+                "title": "О&nbsp;Deckhouse",
+                "url": "/about-company/",
+                "target": "",
+                "rel": ""
+              },
+              {
+                "id": 9142,
+                "parent_id": 9136,
+                "title": "Вакансии",
+                "url": "https://job.flant.ru/vacancies/",
                 "target": "",
                 "rel": ""
               }

@@ -124,13 +124,22 @@ func (f *SSHFile) Download(ctx context.Context, remotePath, dstPath string) erro
 
 	if fType != "DIR" {
 		// regular file logic
+		lType, err := CheckLocalPath(dstPath)
+		if err != nil {
+			if !strings.ContainsAny(err.Error(), "No such file or directory") {
+				return err
+			}
+		}
+		if lType == "DIR" {
+			dstPath = filepath.Join(dstPath, filepath.Base(remotePath))
+		}
 		localFile, err := os.Create(dstPath)
 		if err != nil {
 			return fmt.Errorf("failed to open local file: %w", err)
 		}
 		defer localFile.Close()
 		if err := CopyFromRemote(ctx, localFile, remotePath, f.sshClient); err != nil {
-			return fmt.Errorf("failed to copy file to remote host: %w", err)
+			return fmt.Errorf("failed to copy file from remote host: %w", err)
 		}
 	} else {
 		// recursive copy logic
@@ -167,7 +176,7 @@ func (f *SSHFile) DownloadBytes(ctx context.Context, remotePath string) ([]byte,
 	defer func() {
 		err := os.Remove(dstPath)
 		if err != nil {
-			log.InfoF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
+			log.DebugF("Error: cannot remove tmp file '%s': %v\n", dstPath, err)
 		}
 	}()
 

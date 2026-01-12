@@ -139,6 +139,10 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      items:
+                        type: string
                 loadBalancerWithProxyProtocol:
                   type: object
                   default: {}
@@ -152,6 +156,10 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      items:
+                        type: string
                 loadBalancerWithSSLPassthrough:
                   type: object
                   default: {}
@@ -177,6 +185,10 @@ properties:
                       type: boolean
                     realIPHeader:
                       type: string
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      items:
+                        type: string
                 hostPortWithProxyProtocol:
                   type: object
                   default: {}
@@ -185,6 +197,10 @@ properties:
                       type: integer
                     httpsPort:
                       type: integer
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      items:
+                        type: string
                 hostPortWithSSLPassthrough:
                   type: object
                   default: {}

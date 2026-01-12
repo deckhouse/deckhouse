@@ -1,3 +1,4 @@
+{{ $ratifyVersion := "v1.3.1" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -19,15 +20,26 @@ git:
   stageDependencies:
     install:
     - '**/*'
+- add: /{{ $.ModulePath }}modules/015-{{ $.ModuleName }}/crds
+  to: /module_crds
+  stageDependencies:
+    install:
+    - '**/*'
+  includePaths:
+  - ratify/*.yaml    
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v1.3.1 $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
+  - git clone --depth 1 --branch {{ $ratifyVersion }} --single-branch $(cat /run/secrets/SOURCE_REPO)/ratify-project/ratify.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf .git
+  # check if module crds/ratify are the same as ratify crds
+  - | 
+    echo "Checking if module crds/ratify are the same as ratify crds"
+    diff -qr "/src/config/crd/bases" "/module_crds/ratify"   
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}

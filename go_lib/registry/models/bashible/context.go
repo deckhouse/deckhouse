@@ -20,6 +20,8 @@ import (
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 var (
@@ -29,6 +31,7 @@ var (
 )
 
 type Context struct {
+	Init                 init_secret.Config      `json:"init,omitempty" yaml:"init,omitempty"`
 	RegistryModuleEnable bool                    `json:"registryModuleEnable" yaml:"registryModuleEnable"`
 	Mode                 string                  `json:"mode" yaml:"mode"`
 	Version              string                  `json:"version" yaml:"version"`
@@ -105,31 +108,31 @@ func (m ContextMirrorHost) UniqueKey() string {
 	return m.Host + "|" + m.Scheme
 }
 
-func (c Context) ToMap() (map[string]interface{}, error) {
-	proxies := make([]interface{}, 0, len(c.ProxyEndpoints))
+func (c Context) ToMap() map[string]any {
+	proxies := make([]any, 0, len(c.ProxyEndpoints))
 	for _, ep := range c.ProxyEndpoints {
 		proxies = append(proxies, ep)
 	}
 
-	hosts := make(map[string]interface{}, len(c.Hosts))
+	hosts := make(map[string]any, len(c.Hosts))
 	for hostName, host := range c.Hosts {
-		mirrors := make([]interface{}, 0, len(host.Mirrors))
+		mirrors := make([]any, 0, len(host.Mirrors))
 		for _, mirror := range host.Mirrors {
-			auth := map[string]interface{}{
+			auth := map[string]any{
 				"username": mirror.Auth.Username,
 				"password": mirror.Auth.Password,
 				"auth":     mirror.Auth.Auth,
 			}
 
-			rewrites := make([]interface{}, 0, len(mirror.Rewrites))
+			rewrites := make([]any, 0, len(mirror.Rewrites))
 			for _, rw := range mirror.Rewrites {
-				rewrites = append(rewrites, map[string]interface{}{
+				rewrites = append(rewrites, map[string]any{
 					"from": rw.From,
 					"to":   rw.To,
 				})
 			}
 
-			mirrors = append(mirrors, map[string]interface{}{
+			mirrors = append(mirrors, map[string]any{
 				"host":     mirror.Host,
 				"scheme":   mirror.Scheme,
 				"ca":       mirror.CA,
@@ -137,12 +140,12 @@ func (c Context) ToMap() (map[string]interface{}, error) {
 				"rewrites": rewrites,
 			})
 		}
-		hosts[hostName] = map[string]interface{}{
+		hosts[hostName] = map[string]any{
 			"mirrors": mirrors,
 		}
 	}
 
-	ret := map[string]interface{}{
+	ret := map[string]any{
 		"registryModuleEnable": c.RegistryModuleEnable,
 		"mode":                 c.Mode,
 		"version":              c.Version,
@@ -150,5 +153,10 @@ func (c Context) ToMap() (map[string]interface{}, error) {
 		"proxyEndpoints":       proxies,
 		"hosts":                hosts,
 	}
-	return ret, nil
+
+	init := c.Init.ToMap()
+	if len(init) > 0 {
+		ret["init"] = init
+	}
+	return ret
 }

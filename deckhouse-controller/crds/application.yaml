@@ -1,0 +1,211 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: applications.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: Application
+    listKind: ApplicationList
+    plural: applications
+    shortNames:
+    - app
+    singular: application
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.packageName
+      name: Package
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .spec.packageVersion
+      name: Version
+      type: string
+    - jsonPath: .spec.packageRepositoryName
+      name: Repository
+      priority: 1
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Installed')].status
+      name: Installed
+      type: string
+    - jsonPath: .status.resourceConditions[?(@.type=='Processed')].status
+      name: Processed
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+      name: Message
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Application represents a namespace-scoped application instance.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the behavior of an Application.
+            properties:
+              packageName:
+                description: Name of the application package to install.
+                type: string
+              packageRepositoryName:
+                description: |-
+                  Name of the repository where the package is located.
+                  If not specified, the default repository is used.
+                type: string
+              packageVersion:
+                description: Version of the application package to install.
+                type: string
+              releaseChannel:
+                description: Release channel for the application package.
+                type: string
+              settings:
+                description: Configuration settings for the application.
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+            required:
+            - packageName
+            - packageVersion
+            type: object
+          status:
+            description: Status of an Application.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the application's state.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of application condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentVersion:
+                description: Information about the currently installed version.
+                properties:
+                  channel:
+                    description: Release channel from which the version was installed.
+                    type: string
+                  version:
+                    description: Semantic version of the installed application.
+                    type: string
+                type: object
+              internalConditions:
+                description: InternalConditions represent internal conditions of the
+                  application.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: The last time the condition transitioned from one
+                        status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of internal application condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              resourceConditions:
+                description: ResourceConditions represent conditions related to application
+                  resources.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of resource condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

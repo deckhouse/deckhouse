@@ -10,7 +10,7 @@ metadata:
   name: deckhouse-scan-10
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -29,7 +29,7 @@ metadata:
   name: deckhouse-scan-11
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -48,7 +48,7 @@ metadata:
   name: deckhouse-scan-12
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -65,7 +65,7 @@ metadata:
   name: deckhouse-scan-3
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -82,7 +82,7 @@ metadata:
   name: deckhouse-scan-4
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -99,7 +99,7 @@ metadata:
   name: deckhouse-scan-5
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -116,7 +116,7 @@ metadata:
   name: deckhouse-scan-6
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -135,7 +135,7 @@ metadata:
   name: deckhouse-scan-7
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -154,7 +154,7 @@ metadata:
   name: deckhouse-scan-8
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -173,7 +173,7 @@ metadata:
   name: deckhouse-scan-9
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true

@@ -11,6 +11,7 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: test
+    network.deckhouse.io/ingress-nginx-class: nginx
   name: test-load-balancer
   namespace: d8-ingress-nginx
 spec:

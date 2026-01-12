@@ -273,7 +273,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	logger.Debug("handling discover state")
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -364,7 +364,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 	}
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -541,7 +541,7 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	// List all operations for the same repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)
 	err := r.client.List(ctx, operations, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepository,
+		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepositoryName,
 	})
 	if err != nil {
 		return fmt.Errorf("list operations: %w", err)

@@ -58,6 +58,7 @@ spec:
       labels:
         app: proxy-failover
         name: solid
+        network.deckhouse.io/ingress-nginx-class: solid
     spec:
       automountServiceAccountToken: true
       containers:

@@ -4,6 +4,8 @@ subsystems:
   - observability
 namespace: d8-monitoring
 requirements:
+  kubernetes: ">= 1.22.0"
+  deckhouse: ">= 1.22.0"
   modules:
     prometheus: ">= 0.0.0"
     control-plane-manager: ">= 0.0.0"

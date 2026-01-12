@@ -6,4 +6,10 @@ title: "Модуль keepalived: настройки"
 
 {% include module-bundle.liquid %}
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
 Настройка keepalived-кластеров выполняется с помощью [custom resource](cr.html).

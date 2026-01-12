@@ -75,6 +75,35 @@
     color: #2B313B;
   }
 
+  &__stage {
+    border-radius: 16px;
+    padding: 2px 5px;
+    margin: 0;
+    font-weight: variables.$font-weight-bold;
+    font-size: variables.$font-size-tiny;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    opacity: 70%;
+  }
+
+  &__stage-experimental {
+    background: variables.$color-warning;
+    color: variables.$color-inverse;
+    border: 1px solid variables.$color-muted;
+  }
+
+  &__stage-preview {
+    background: variables.$color-alt;
+    color: variables.$color-inverse;
+    border: 1px solid variables.$color-muted;
+  }
+
+  &__stage-deprecated {
+    background: variables.$color-danger;
+    color: variables.$color-inverse;
+    border: 1px solid variables.$color-main;
+  }
+
   &__tags {
     display: flex;
     flex-wrap: wrap;

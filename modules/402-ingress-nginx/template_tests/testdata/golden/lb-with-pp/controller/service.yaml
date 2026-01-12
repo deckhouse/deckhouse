@@ -11,6 +11,7 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: test-lbwpp
+    network.deckhouse.io/ingress-nginx-class: nginx
   name: test-lbwpp-load-balancer
   namespace: d8-ingress-nginx
 spec:

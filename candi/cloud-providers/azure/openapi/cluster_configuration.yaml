@@ -195,9 +195,9 @@ apiVersions:
                 description: |
                   The VM image to use for an instance.
 
-                  More information about virtual machine images can be found in the [official documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                  More information about virtual machine images can be found in the [official Azure documentation](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
-                  Getting the urn with [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (column #4):
+                  Getting the `urn` via [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (column #4):
                   ```shell
                   az vm image list --location westeurope --publisher Canonical --all --sku 20_04-lts -o table
                   az vm image list --location westeurope --publisher OpenLogic --all --sku 7.5 -o table
@@ -205,7 +205,7 @@ apiVersions:
 
                   By default, the image specified in `AzureCloudDiscoveryData` is used (the master of the cluster is based on this image).
 
-                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version used).
+                  The list of OS and their versions supported by Deckhouse can be found in the [documentation](/products/kubernetes-platform/documentation/v1/supported_versions.html) (take into account the Deckhouse version you use).
                 type: string
               enableExternalIP: &instanceClassEnableExternalIP
                 description: |

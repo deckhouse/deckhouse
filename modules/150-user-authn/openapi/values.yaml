@@ -348,6 +348,15 @@ properties:
             ldap:
               type: object
               additionalProperties: true
+              properties:
+                enableBasicAuth:
+                  type: boolean
+                basicAuthUnsupported:
+                  type: boolean
+                scopes:
+                  type: array
+                  items:
+                    type: string
             bitbucketCloud:
               type: object
               additionalProperties: true

@@ -49,6 +49,7 @@ shell:
   - go mod download
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w -extldflags \"-static\" -X main.version={{ .TF.kubernetes.version }} -X main.commit=00000000" -o terraform-provider-kubernetes ./
   - mv /src/terraform-provider-kubernetes /terraform-provider-kubernetes
+  - strip /terraform-provider-kubernetes
   - chmod -R 755 /terraform-provider-kubernetes
   - chown 64535:64535 /terraform-provider-kubernetes
 ---

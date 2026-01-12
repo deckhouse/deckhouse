@@ -1,0 +1,173 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Представляет версию пакета приложения.
+          properties:
+            spec:
+              properties:
+                packageName:
+                  description: |
+                    Название пакета приложения.
+                packageRepositoryName:
+                  description: |
+                    Название репозитория, содержащего пакет.
+                packageVersion:
+                  description: |
+                    Версия пакета приложения.
+            status:
+              description: |
+                Статус ресурса.
+              properties:
+                conditions:
+                  description: |
+                    Условия представляют последние доступные наблюдения за состоянием версии пакета.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Временная метка последнего времени проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали последнего перехода.
+                      reason:
+                        description: |
+                          Машино-читаемый текст в UpperCamelCase, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия.
+                          Может быть True, False, Unknown.
+                      type:
+                        description: |
+                          Тип условия.
+                packageMetadata:
+                  description: |
+                    Метаданные о пакете, такие как описание, требования и т.д.
+                  properties:
+                    category:
+                      description: |
+                        Категория, к которой принадлежит этот пакет.
+                    changelog:
+                      description: |
+                        Информация об изменениях в этой версии.
+                      properties:
+                        features:
+                          description: |
+                            Список новых функций в этой версии.
+                        fixes:
+                          description: |
+                            Список исправлений ошибок в этой версии.
+                    description:
+                      description: |
+                        Локализованные описания пакета.
+                      properties:
+                        en:
+                          description: |
+                            Английское описание пакета.
+                        ru:
+                          description: |
+                            Русское описание пакета.
+                    licensing:
+                      description: |
+                        Информация о лицензировании для разных редакций.
+                      properties:
+                        editions:
+                          description: |
+                            Информация о лицензировании для разных редакций пакета.
+                          additionalProperties:
+                            properties:
+                              available:
+                                description: |
+                                  Доступна ли эта редакция для использования.
+                    requirements:
+                      description: |
+                        Системные требования для этого пакета.
+                      properties:
+                        deckhouse:
+                          description: |
+                            Требуемая версия Deckhouse.
+                        kubernetes:
+                          description: |
+                            Требуемая версия Kubernetes.
+                        modules:
+                          description: |
+                            Требуемые версии других модулей.
+                    stage:
+                      description: |
+                        Стадия разработки пакета (например, alpha, beta, stable).
+                    versionCompatibilityRules:
+                      description: |
+                        Правила совместимости версий для обновлений и откатов.
+                      properties:
+                        downgrade:
+                          description: |
+                            Правила совместимости для отката с этой версии.
+                          properties:
+                            allowSkipMajor:
+                              description: |
+                                Сколько основных версий можно пропустить.
+                            allowSkipMinor:
+                              description: |
+                                Сколько второстепенных версий можно пропустить.
+                            allowSkipPatches:
+                              description: |
+                                Сколько патч-версий можно пропустить.
+                            from:
+                              description: |
+                                Начальный диапазон версий для совместимости.
+                            maxRollback:
+                              description: |
+                                Максимальное количество версий, которые можно откатить.
+                            to:
+                              description: |
+                                Конечный диапазон версий для совместимости.
+                        upgrade:
+                          description: |
+                            Правила совместимости для обновления до этой версии.
+                          properties:
+                            allowSkipMajor:
+                              description: |
+                                Сколько основных версий можно пропустить.
+                            allowSkipMinor:
+                              description: |
+                                Сколько второстепенных версий можно пропустить.
+                            allowSkipPatches:
+                              description: |
+                                Сколько патч-версий можно пропустить.
+                            from:
+                              description: |
+                                Начальный диапазон версий для совместимости.
+                            maxRollback:
+                              description: |
+                                Максимальное количество версий, которые можно откатить.
+                            to:
+                              description: |
+                                Конечный диапазон версий для совместимости.
+                packageName:
+                  description: |
+                    Название пакета приложения.
+                packageRepositoryName:
+                  description: |
+                    Название репозитория, содержащего пакет.
+                packageVersion:
+                  description: |
+                    Версия пакета приложения.
+                usedBy:
+                  description: |
+                    Информация о приложениях, которые используют эту версию пакета.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Название экземпляра приложения.
+                      namespace:
+                        description: |
+                          Пространство имён, где установлено приложение.
+                usedByCount:
+                  description: |
+                    Количество приложений, использующих эту версию пакета.

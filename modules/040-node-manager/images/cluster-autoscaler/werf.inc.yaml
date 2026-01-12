@@ -1,4 +1,4 @@
-{{- $maxVersion := "1.32" -}}
+{{- $maxVersion := "1.34" -}}
 
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}

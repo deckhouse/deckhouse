@@ -42,6 +42,29 @@
   stageDependencies:
     install:
         - '**/*.go'
+- add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
+  to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
+  excludePaths:
+    - images
+    - templates
+    - charts
+    - crds
+    - docs
+    - monitoring
+    - openapi
+    - oss.yaml
+    - cloud-instance-manager
+    - values_matrix_test.yaml
+    - values.yaml
+    - .helmignore
+    - candi
+    - Chart.yaml
+    - .namespace
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*.go'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   excludePaths:

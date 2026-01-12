@@ -8,6 +8,7 @@ metadata:
     heritage: deckhouse
     module: ingress-nginx
     name: test-without-hpa
+    network.deckhouse.io/ingress-nginx-class: nginx
   name: test-without-hpa-load-balancer
   namespace: d8-ingress-nginx
 spec:

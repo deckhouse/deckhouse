@@ -312,6 +312,9 @@ common:
   additional_property_name:
     en: item (key) name
     ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

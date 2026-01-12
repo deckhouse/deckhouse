@@ -50,7 +50,7 @@ func IsRoot(dir string) bool {
 	return withoutDiskLetter == ":\\\\"
 }
 
-func RandomTmpDirWith10Runes(rootDir, idSalt string, firstIdRunes int) (string, error) {
+func RandomTmpDirWithNRunes(rootDir, idSalt string, firstIdRunes int) (string, error) {
 	if rootDir == "" {
 		rootDir = os.TempDir()
 	}

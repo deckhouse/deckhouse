@@ -16,12 +16,14 @@ package startup
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sync"
 
 	bindingctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	hookcontroller "github.com/flant/shell-operator/pkg/hook/controller"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	taskhooksync "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hooksync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
@@ -76,6 +78,17 @@ func (t *task) String() string {
 
 func (t *task) Execute(ctx context.Context) error {
 	t.logger.Debug("startup package", slog.String("name", t.packageName))
+
+	t.status.HandleError(t.packageName, &status.Error{
+		Err: errors.New("startup package"),
+		Conditions: []status.Condition{
+			{
+				Name:   status.ConditionReadyInRuntime,
+				Status: metav1.ConditionFalse,
+				Reason: "Startup",
+			},
+		},
+	})
 
 	// Step 1: Enable kubernetes/schedule hooks - registers watchers and cron schedules
 	infos, err := t.manager.InitializeHooks(ctx, t.packageName)

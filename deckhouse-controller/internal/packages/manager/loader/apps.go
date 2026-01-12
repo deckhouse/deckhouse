@@ -148,6 +148,8 @@ func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, nam
 		ValuesSchema: values,
 
 		Hooks: hooks,
+
+		SettingsCheck: hooksLoader.settingsCheck,
 	}
 
 	app, err := apps.NewApplication(name, path, conf)

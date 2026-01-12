@@ -50,28 +50,8 @@ font-family: 'Noto Sans', sans-serif;
 
   img, svg {
     display: block;
-    height: 32px;
+    height: 30px;
     width: auto;
-
-    @include breakpoints.min-w(s) {
-      height: 40px;
-    }
-
-    @include breakpoints.min-w(l) {
-      height: 24px;
-    }
-
-    @include breakpoints.min-w(xl) {
-      height: 36px;
-    }
-
-    @include breakpoints.min-w(xxl) {
-      height: 43px;
-    }
-
-    @include breakpoints.min-w(xxxl) {
-      height: 52px;
-    }
   }
 }
 
@@ -79,11 +59,11 @@ font-family: 'Noto Sans', sans-serif;
   &.nav {
     @include breakpoints.min-w(xl) {
       display: flex;
-      gap: .75rem .95rem;
+      gap: .75rem;
     }
 
-    @include breakpoints.min-w(xxl) {
-      gap: .75rem 1.17rem;
+    @include breakpoints.min-w(l) {
+      gap: .75rem 1rem;
     }
   }
 
@@ -119,7 +99,7 @@ font-family: 'Noto Sans', sans-serif;
 
 
     > a {
-      font-size: .875em;
+      font-size: .87em;
       position: relative;
 
       @include breakpoints.min-w(xl) {
@@ -197,14 +177,14 @@ font-family: 'Noto Sans', sans-serif;
       }
 
       span {
-        font-weight: 500;
+        font-weight: 400;
       }
 
       p {
         margin: 0;
         grid-column: 2/-1;
         font-size: .875rem;
-        color: mixins.$ntrl-600;
+        color: mixins.$ntrl-300;
       }
     }
   }
@@ -498,7 +478,7 @@ font-family: 'Noto Sans', sans-serif;
 
   .container {
     display: flex;
-    gap: 1.25rem 2.1rem;
+    gap: 1.25rem 2rem;
     flex-direction: column;
     flex-direction: row;
   }
@@ -512,7 +492,7 @@ font-family: 'Noto Sans', sans-serif;
     font-size: 16px;
 
     @include breakpoints.min-w(xxl) {
-      font-size: 1.1rem;
+      font-size: 1.125rem;
     }
 
     svg {
@@ -531,12 +511,16 @@ font-family: 'Noto Sans', sans-serif;
     &.nav {
       gap: 1.15rem 1.5rem;
 
-      @include breakpoints.min-w(xl) {
-        gap: .75rem 1.3rem;
+      @include breakpoints.min-w(l) {
+        gap: .75rem 1rem;
       }
 
-      @include breakpoints.min-w(xxl) {
-        gap: .75rem 1.43rem;
+      @include breakpoints.min-w(xl) {
+        gap: .75rem;
+      }
+
+      @include breakpoints.min-w(xxxl) {
+        gap: .75rem 1.25rem
       }
     }
 

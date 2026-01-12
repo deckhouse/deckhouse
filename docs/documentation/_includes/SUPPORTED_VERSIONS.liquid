@@ -71,7 +71,7 @@
     {%- for k8sItem in k8sVersions %}
     {%- assign k8sStatus = k8sItem[1].status | default: 'preview' %}
     {%- assign iconStatus = k8sStatus| append: '.svg' | prepend: '/images/icons/' %}
-    <tr {%- if k8sItem[0] == site.data.version_kubernetes.default %} class="highlight-default"{% endif %}>
+    <tr {%- if k8sItem[1].default %} class="highlight-default"{% endif %}>
       <td style="text-align: center">
         <div class="icon">
           <img src="{{ iconStatus }}" alt="" />

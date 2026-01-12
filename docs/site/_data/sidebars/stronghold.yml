@@ -385,10 +385,38 @@ entries:
             en: Automatic backup API guide
             ru: Руководство по API автоматического резервного копирования
           url: /stronghold/documentation/user/auto-snapshot.html
+        - title:
+            en: Stronghold agent
+            ru: Stronghold агент
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /stronghold/documentation/agent/overview.html
+            - title:
+                en: Use cases
+                ru: Сценарии использования
+              url: /stronghold/documentation/agent/use-cases.html
+            - title:
+                en: Key features
+                ru: Основные возможности
+              url: /stronghold/documentation/agent/key-features.html
+            - title:
+                en: Main settings
+                ru: Основные настройки
+              url: /stronghold/documentation/agent/settings.html
+            - title:
+                en: Launch and control
+                ru: Запуск и управление
+              url: /stronghold/documentation/agent/launch-and-control.html
     - title:
         en: Reference
         ru: Справка
       folders:
+        - title:
+            en: API
+            ru: API
+          url: /stronghold/documentation/api/openapi.html
         - title:
             en: Console utilities
             ru: Консольные утилиты

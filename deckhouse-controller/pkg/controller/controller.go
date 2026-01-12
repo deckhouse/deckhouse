@@ -330,6 +330,22 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
+	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create package operator: %w", err)
+	}
+
+	// package should not run before converge done
+	operator.ConvergeState.SetOnConvergeStart(func() {
+		logger.Debug("start converge")
+		packageOperator.Scheduler().Pause()
+	})
+
+	operator.ConvergeState.SetOnConvergeFinish(func() {
+		logger.Debug("finish converge")
+		packageOperator.Scheduler().Resume()
+	})
+
 	// Package system controllers (feature flag)
 	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
 		logger.Info("Package system controllers are enabled")
@@ -349,22 +365,6 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
-		if err != nil {
-			return nil, fmt.Errorf("create package operator: %w", err)
-		}
-
-		// package should not run before converge done
-		operator.ConvergeState.SetOnConvergeStart(func() {
-			logger.Debug("start converge")
-			packageOperator.Scheduler().Pause()
-		})
-
-		operator.ConvergeState.SetOnConvergeFinish(func() {
-			logger.Debug("finish converge")
-			packageOperator.Scheduler().Resume()
-		})
-
 		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
@@ -375,6 +375,7 @@ func NewDeckhouseController(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
+		packageOperator.Manager(),
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,

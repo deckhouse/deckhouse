@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 2e762afccf2bf7d43998cbcdb0302d579e6fe5d4bfa054597f006bf275adf12a
+    ingress-nginx-controller.deckhouse.io/checksum: eb71783d858d7d0b74b075c5a3536674824f5e1f719265fa9b8df3d4abdfa14f
     ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
@@ -80,6 +80,7 @@ spec:
         - --watch-ingress-without-class=true
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-nginx
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=nginx
         env:
         - name: POD_NAME
           valueFrom:

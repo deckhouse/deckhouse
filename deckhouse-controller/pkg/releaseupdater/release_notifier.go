@@ -48,6 +48,7 @@ func NewReleaseNotifier(settings *Settings) *ReleaseNotifier {
 
 type WebhookData struct {
 	Subject       string            `json:"subject"`
+	ModuleName    string            `json:"moduleName,omitempty"`
 	Version       string            `json:"version"`
 	Requirements  map[string]string `json:"requirements,omitempty"`
 	ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -111,7 +112,14 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		ChangelogLink: release.GetChangelogLink(),
 		ApplyTime:     applyTime.Format(time.RFC3339),
 		Subject:       u.settings.Subject,
-		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
+		// set deckhouse release message by default
+		Message: fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
+	}
+
+	// using module-specific message if subject is module
+	if u.settings.Subject == SubjectModule {
+		data.ModuleName = release.GetModuleName()
+		data.Message = fmt.Sprintf("New %s Release %s is available. Release will be applied at: %s", release.GetModuleName(), release.GetVersion().String(), applyTime.Format(time.RFC850))
 	}
 
 	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)

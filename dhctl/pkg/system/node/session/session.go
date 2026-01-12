@@ -85,6 +85,14 @@ type Host struct {
 	Name string
 }
 
+func (h *Host) String() string {
+	name := h.Name
+	if name != "" {
+		name = fmt.Sprintf("%s: ", name)
+	}
+	return fmt.Sprintf("%s%s", name, h.Host)
+}
+
 type SortByName []Host
 
 func (h SortByName) Len() int { return len(h) }

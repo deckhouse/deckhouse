@@ -32,7 +32,7 @@
   }
 
   .breadcrumbs__container {
-    min-width: calc(1000px - 260px - 40px);
+    min-width: calc(1000px - 150px - 260px - 40px);
   }
 
   .searchV3 {
@@ -458,7 +458,7 @@
 }
 
 .layout-sidebar__content {
-    min-width: calc(1000px - 260px - 40px);
+    min-width: calc(1000px - 150px - 260px - 40px);
     flex: 1;
 
     @media screen and (max-width: 1000px) {
@@ -1758,6 +1758,15 @@ ul .resources__prop_name.deprecated {
       width: 100%;
       height: 100%;
       fill: #3C4043;
+    }
+
+    &-download {
+      margin-left: auto;
+      
+      & svg {
+        fill: none;
+        stroke: #3C4043;
+      }
     }
   }
 

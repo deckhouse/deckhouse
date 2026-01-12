@@ -1,0 +1,27 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Представляет информацию о доступном пакете приложения.
+          properties:
+            status:
+              description: |
+                Статус ресурса.
+              properties:
+                availableRepositories:
+                  description: |
+                    Список названий репозиториев, где доступен этот пакет приложения.
+                installed:
+                  description: |
+                    Информация о приложениях, установленных в каждом пространстве имён.
+                    Ключ — название пространства имён, значение — список установленных приложений.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Название установленного приложения.
+                installedOverall:
+                  description: |
+                    Общее количество приложений, установленных во всех пространствах имён.

@@ -39,7 +39,7 @@ const (
 	allowDeleteAnnotationKey = "deckhouse.io/allow-delete"
 )
 
-func providerConfigurationHandler(schemaStore *config.SchemaStore) http.Handler {
+func providerConfigurationHandler(_ *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		if ar.Operation == model.OperationDelete {
 			if _, ok := obj.GetAnnotations()[allowDeleteAnnotationKey]; ok {
@@ -71,7 +71,8 @@ func providerConfigurationHandler(schemaStore *config.SchemaStore) http.Handler 
 			)
 		}
 
-		return validateClusterConfiguration(schemaStore, clusterConfigurationRaw)
+		result, err := validateClusterConfiguration(context.Background(), clusterConfigurationRaw)
+		return result, err
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{

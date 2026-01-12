@@ -1,0 +1,88 @@
+candi:
+  fixes:
+    - summary: remove excessive netcat calls from d8-shutdown-inhibitor
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17153
+    - summary: >-
+        Add pause and kubernetes-api-proxy registry packages to bashible `bb-package-fetch` to
+        prevent node failures during containerd major upgrades.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17047
+common:
+  features:
+    - summary: Enrich debug-container image with nsenter and /bin/sh symlink.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17094
+    - summary: Resource quota ignore mechanism for pvc and pods
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17068
+control-plane-manager:
+  fixes:
+    - summary: Fixed vulnerabilities
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17251
+deckhouse:
+  fixes:
+    - summary: Fix module docs rendering.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17245
+    - summary: Fix module enabling.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17057
+deckhouse-controller:
+  fixes:
+    - summary: fix copy-custom-certificate hook
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17229
+dhctl:
+  features:
+    - summary: Skipped application edition validation for standalone builds.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17154
+docs:
+  fixes:
+    - summary: Added link to NVIDIA Container Toolkit docs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16875
+    - summary: Fixed typo.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16704
+    - summary: Fixed the logic of generating the revision table.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16681
+extended-monitoring:
+  fixes:
+    - summary: Add namespace-scoped overrides
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17213
+ingress-nginx:
+  fixes:
+    - summary: Improved stability of geoproxy service startup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17140
+kube-dns:
+  fixes:
+    - summary: >-
+        Refactored hook remove_old_coredns_deploy_and_svc — delegated deletion of original kube-dns
+        service to helm.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17120
+multitenancy-manager:
+  fixes:
+    - summary: Add validation to restrict Project name length to 53 characters.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16926
+      impact: >-
+        Prevents creation of Projects with too-long names that would lead to invalid generated
+        Kubernetes resource names.
+node-manager:
+  fixes:
+    - summary: remove excessive netcat calls from d8-shutdown-inhibitor
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17153
+    - summary: It fixes issues in the DaemonSet manifest for fencing module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17087
+tools:
+  fixes:
+    - summary: >-
+        Add check values not null in prometheusRule or
+        ClusterObservabilityPropagatedMetricsRulesGroup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17258
+      impact: deckhouse queue
+    - summary: >-
+        Add check values not null in prometheusRule or
+        ClusterObservabilityPropagatedMetricsRulesGroup
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17191
+      impact: deckhouse queue blocked
+user-authn:
+  fixes:
+    - summary: Quote service names to prevent digit-only names from breaking yaml parser
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17020
+user-authz:
+  fixes:
+    - summary: Allow project-scoped roles to access Cluster-wide objects
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16896
+

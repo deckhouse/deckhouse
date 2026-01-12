@@ -147,6 +147,10 @@ create,patch,update:
 delete,deletecollection:
     - apps/replicasets
     - extensions/replicasets
+read-write:
+    - deckhouse.io/authorizationrules
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
@@ -196,7 +200,7 @@ Use [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) to set ac
 apiVersion: deckhouse.io/v1alpha1
 kind: AuthorizationRule
 metadata:
-  name: beeline
+  name: test-rule
 spec:
   accessLevel: Admin
   subjects:

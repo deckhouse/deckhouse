@@ -54,3 +54,7 @@ git:
 imageSpec:
   config:
     entrypoint: ["/descheduler"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
+
+

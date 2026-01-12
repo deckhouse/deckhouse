@@ -416,7 +416,7 @@ func TestSSHFileDownload(t *testing.T) {
 				srcPath: "/tmp/testdata/first",
 				dstPath: "/path/what/not/exists.txt",
 				wantErr: true,
-				err:     "failed to open local file",
+				err:     "no such file or directory",
 			},
 			{
 				title:   "Directory to root",

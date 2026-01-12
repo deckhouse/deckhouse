@@ -280,8 +280,8 @@ tools/openssl-3.6.0: "sha256:896458be79e46e65908591d42695a913901ab62ec6a283be84e
 tools/openssl: "sha256:896458be79e46e65908591d42695a913901ab62ec6a283be84e34532638c9835" # from: builder/scratch
 tools/procps: "sha256:ed974c745caa6cb87df1b37955f83316b6a5d3e20c8c027c3dcae8bfb2b260a2" # from: builder/scratch
 tools/procps-v4.0.5: "sha256:ed974c745caa6cb87df1b37955f83316b6a5d3e20c8c027c3dcae8bfb2b260a2" # from: builder/scratch
-tools/pwru: "sha256:be838867c353696021a22d529932c886b2aef358134a1d5712b49dc1662915fe" # from: builder/scratch
-tools/pwru-v1.0.10: "sha256:be838867c353696021a22d529932c886b2aef358134a1d5712b49dc1662915fe" # from: builder/scratch
+tools/pwru: "sha256:a8c8c022d4a48896086b8d783dd8cbec353a35933c7acf428b5109a2da0aa81d" # from: builder/scratch
+tools/pwru-v1.0.10: "sha256:a8c8c022d4a48896086b8d783dd8cbec353a35933c7acf428b5109a2da0aa81d" # from: builder/scratch
 tools/rpcbind-rpcbind-1_2_8: "sha256:46819a27144bb3f049b2e34dcec3beb90184ad366c78a8af5fa692b5039bf403" # from: builder/scratch
 tools/rpcbind: "sha256:46819a27144bb3f049b2e34dcec3beb90184ad366c78a8af5fa692b5039bf403" # from: builder/scratch
 tools/sed: "sha256:034af4bc8824a78eb576221a81393e0d2163eb641e120d0b65f1c4b84ecbdb6c" # from: builder/scratch

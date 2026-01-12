@@ -1,0 +1,9 @@
+{{- $summary := or (.Get "summary") "Details" }}
+<div class="details">
+  <p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ $summary | .Page.RenderString }}</a></p>
+  <div class="details__content">
+      <div class="expand">
+        {{ .Inner | .Page.RenderString (dict "display" "block") -}}
+      </div>
+  </div>
+</div>

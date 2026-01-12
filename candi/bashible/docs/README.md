@@ -20,11 +20,7 @@ Bashible consists of small bash scripts, that are called `steps`.
 
 * To make steps cleaner and shorter, bashible framework utilizes an SCM (software configuration management), which is written in the clean bash - [Bash Booster](./candi/bashible/bashbooster).
 
-* The decision to include a step in the bundle is based on a bashible bundle name and a cloud provider name.
-  * bashible bundle - bundle which is based on the operating system:
-    * ubuntu-lts
-    * centos
-    * debian
+* The decision to include a step in the bundle is based on a cloud provider name.
   * cloud-provider - supported cloud providers:
     * aws
     * azure
@@ -32,6 +28,7 @@ Bashible consists of small bash scripts, that are called `steps`.
     * openstack
     * vsphere
     * yandex
+    * dvp
 
 * `runType` - step execution type, which is used during Go templates compilation:
   * ClusterBootstrap - bootstrap first master node
@@ -57,48 +54,4 @@ Bundle compilation is possible with using `dhctl` tool.
 
 ```bash
 dhctl config render bashible-bundle --config=/config.yaml
-```
-
-Example for `config.yaml`:
-
-```yaml
-apiVersion: deckhouse.io/v1
-kind: BashibleTemplateData
-bundle: ubuntu-lts
-provider: OpenStack
-runType: ClusterBootstrap
-registry:
-  host: registry.deckhouse.io
-  auth: "test:test"
-clusterBootstrap:
-  clusterDNSAddress: 10.222.0.10
-  clusterDomain: cluster.local
-  nodeIP: 192.168.199.23
-kubernetesVersion: "1.30"
-cri: "Containerd"
-nodeGroup:
-  cloudInstances:
-    classReference:
-      kind: OpenStackInstanceClass
-      name: master
-  instanceClass:
-    flavorName: m1.large
-    imageName: ubuntu-18-04-cloud-amd64
-    mainNetwork: shared
-    rootDiskSizeInGb: 20
-  maxPerZone: 3
-  minPerZone: 1
-  name: master
-  nodeType: CloudEphemeral
-  zones:
-  - nova
-k8s:
-  '1.23':
-    patch: 10
-    bashible:
-      ubuntu:
-        '18.04':
-          containerd:
-            desiredVersion: "containerd.io=1.4.6-1"
-            allowedPattern: "containerd.io=1.[4]"
 ```

@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.24.3",
+  "version": "v0.25.0",
   "aliases": null,
   "flags": {
     "help": {
@@ -40080,6 +40080,79 @@
           ]
         },
         {
+          "name": "get",
+          "description": "Get configuration files",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "cluster-configuration",
+              "description": "Get cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "provider-cluster-configuration",
+              "description": "Get provider-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "static-cluster-configuration",
+              "description": "Get static-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
           "name": "logs",
           "description": "Inspect deckhouse-controller logs.",
           "aliases": null,
@@ -40134,6 +40207,42 @@
             }
           },
           "subcommands": [
+            {
+              "name": "apply-now \u003cmodule-name\u003e \u003cversion\u003e",
+              "description": "Apply a module release immediately, bypassing update windows.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "approve \u003cmodule-name\u003e \u003cversion\u003e",
+              "description": "Approve a pending module release for Manual update policy.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
             {
               "name": "disable",
               "description": "Disable module.",
@@ -40331,6 +40440,39 @@
             "hash-length": {
               "description": "Bit-length variant of the algorithm to use. Only 256 (default) and 512 bit lengths are supported.",
               "shorthand": "l",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "sig-migrate",
+          "description": "Migrate Kubernetes resources by adding and removing migration annotations",
+          "aliases": null,
+          "flags": {
+            "as": {
+              "description": "Specify a Kubernetes service account for the kubectl operations (impersonation).",
+              "shorthand": "",
+              "global": false
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use.",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file to use for CLI requests. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "",
+              "global": false
+            },
+            "log-level": {
+              "description": "Set the log level (INFO, DEBUG, TRACE). Defaults to DEBUG.",
+              "shorthand": "",
+              "global": false
+            },
+            "retry": {
+              "description": "Retry annotation for previously failed objects.",
+              "shorthand": "",
               "global": false
             }
           },

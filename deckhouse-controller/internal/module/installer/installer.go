@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"regexp"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/erofs"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/symlink"
@@ -63,28 +65,32 @@ func (i *Installer) SetClusterUUID(id string) {
 	i.registry.SetClusterUUID(id)
 }
 
-// GetDownloaded gets all downloaded modules from downloaded dir
-func (i *Installer) GetDownloaded() (map[string]struct{}, error) {
-	entries, err := os.ReadDir(i.downloaded)
+// GetInstalled gets all installed modules from <downloaded>/modules dir
+func (i *Installer) GetInstalled() (map[string]struct{}, error) {
+	entries, err := os.ReadDir(filepath.Join(i.downloaded, "modules"))
 	if err != nil {
-		return nil, fmt.Errorf("read downloaded dir: %w", err)
+		return nil, fmt.Errorf("read installed dir: %w", err)
 	}
 
-	downloaded := make(map[string]struct{})
+	// Pattern to match optional weight prefix: 920-modulename -> modulename
+	weightPattern := regexp.MustCompile(`^(?:[0-9]+-)?(.+)$`)
+
+	installed := make(map[string]struct{})
 	for _, entry := range entries {
-		if !entry.IsDir() {
+		if !entry.IsDir() && entry.Type()&os.ModeSymlink == 0 {
 			continue
 		}
 
-		// skip enabled dirs
-		if entry.Name() == "modules" || entry.Name() == "apps" {
-			continue
+		name := entry.Name()
+		// Remove weight prefix if present
+		if matches := weightPattern.FindStringSubmatch(name); len(matches) > 1 {
+			name = matches[1]
 		}
 
-		downloaded[entry.Name()] = struct{}{}
+		installed[name] = struct{}{}
 	}
 
-	return downloaded, nil
+	return installed, nil
 }
 
 func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
@@ -109,10 +115,29 @@ func (i *Installer) Install(ctx context.Context, module, version, tempModulePath
 }
 
 func (i *Installer) Uninstall(ctx context.Context, module string) error {
+	i.deleteWeightedModuleSymlinks(module)
+
 	return i.installer.Uninstall(ctx, module)
 }
 
 // Restore ensures the module image is present, verified, and mounted.
 func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, module, version string) error {
+	i.deleteWeightedModuleSymlinks(module)
+
 	return i.installer.Restore(ctx, ms, module, version)
+}
+
+// deleteModuleSymlink walks over the modules dir and deletes module symlinks by regexp
+// TODO(ipaqsa): delete after 1.74
+func (i *Installer) deleteWeightedModuleSymlinks(moduleName string) {
+	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
+	_ = filepath.WalkDir(filepath.Join(i.downloaded, "modules"), func(path string, d os.DirEntry, _ error) error {
+		if !moduleRegexp.MatchString(d.Name()) {
+			return nil
+		}
+
+		os.RemoveAll(path)
+
+		return filepath.SkipDir
+	})
 }

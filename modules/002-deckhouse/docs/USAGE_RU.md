@@ -8,15 +8,15 @@ title: "Модуль deckhouse: примеры конфигурации"
 
 Управлять обновлением DKP можно следующими способами:
 
-- С помощью параметра [settings.update](configuration.html#parameters-update) ModuleConfig `deckhouse`;
-- С помощью секции параметров [disruptions](../node-manager/cr.html#nodegroup-v1-spec-disruptions) NodeGroup.
+- с помощью [параметра `settings.update`](configuration.html#parameters-update) ресурса ModuleConfig `deckhouse`;
+- с помощью [секции параметров `disruptions`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.
 
 ### Конфигурация окон обновлений
 
 Управлять временными окнами, когда Deckhouse будет устанавливать обновления автоматически, можно следующими способами:
 
-- в параметре [update.windows](configuration.html#parameters-update-windows) ModuleConfig `deckhouse`, для общего управления обновлениями;
-- в параметрах [disruptions.automatic.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [disruptions.rollingUpdate.windows](../node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) NodeGroup, для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов.
+- для общего управления обновлениями — в [параметре `update.windows`](configuration.html#parameters-update-windows) ресурса ModuleConfig `deckhouse`;
+- для управления обновлениями, которые могут привести к кратковременному простою в работе системных компонентов — в параметрах [`disruptions.automatic.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-automatic-windows) и [`disruptions.rollingUpdate.windows`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-rollingupdate-windows) ресурса NodeGroup.
 
 Пример настройки двух ежедневных окон обновлений: с 8:00 до 10:00 и c 20:00 до 22:00 (UTC):
 
@@ -74,7 +74,7 @@ spec:
 
 - Если для какой-либо группы узлов отключено автоматическое применение обновлений, которые могут привести к кратковременному простою в работе системных компонентов.
 
-  Это значит, что у NodeGroup, соответствующего группе узлов, установлен параметр [spec.disruptions.approvalMode](../node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) в `Manual`.
+  Это значит, что у NodeGroup, соответствующего группе узлов, [параметр `spec.disruptions.approvalMode`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions-approvalmode) установлен в `Manual`.
 
   Для обновления **каждого** узла в такой группе на узел нужно установить аннотацию `update.node.deckhouse.io/disruption-approved=`.
   Пример:

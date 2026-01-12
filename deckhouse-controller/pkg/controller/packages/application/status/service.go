@@ -116,7 +116,7 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 		app.Status.CurrentVersion = new(v1alpha1.ApplicationStatusVersion)
 	}
 
-	app.Status.CurrentVersion.Current = packageStatus.Version
+	app.Status.CurrentVersion.Version = packageStatus.Version
 
 	if err := s.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		logger.Warn("failed to patch application status", log.Err(err))
@@ -127,17 +127,17 @@ func (s *Service) handleEvent(ctx context.Context, ev string) {
 // and then computes the public Installed and Ready conditions
 func (s *Service) applyInternalConditions(app *v1alpha1.Application, conds []status.Condition) {
 	// Build a map of previous conditions to preserve LastTransitionTime
-	prev := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	prev := make(map[string]v1alpha1.ApplicationStatusInternalCondition)
 	for _, cond := range app.Status.InternalConditions {
 		prev[cond.Type] = cond
 	}
 
 	now := metav1.Now()
-	applied := make([]v1alpha1.ApplicationInternalStatusCondition, 0, len(conds))
+	applied := make([]v1alpha1.ApplicationStatusInternalCondition, 0, len(conds))
 
 	// Convert operator conditions to Application internal conditions
 	for _, c := range conds {
-		cond := v1alpha1.ApplicationInternalStatusCondition{
+		cond := v1alpha1.ApplicationStatusInternalCondition{
 			Type:               string(c.Name),
 			Status:             corev1.ConditionStatus(c.Status),
 			Reason:             string(c.Reason),
@@ -164,7 +164,7 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 	now := metav1.Now()
 
 	// Build a map of internal conditions for easier access
-	internalConds := make(map[string]v1alpha1.ApplicationInternalStatusCondition)
+	internalConds := make(map[string]v1alpha1.ApplicationStatusInternalCondition)
 	for _, cond := range app.Status.InternalConditions {
 		internalConds[cond.Type] = cond
 	}
@@ -174,8 +174,8 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 
 	// Check if version changed (indicates update scenario)
 	versionChanged := app.Status.CurrentVersion != nil &&
-		app.Status.CurrentVersion.Current != "" &&
-		app.Spec.Version != app.Status.CurrentVersion.Current
+		app.Status.CurrentVersion.Version != "" &&
+		app.Spec.PackageVersion != app.Status.CurrentVersion.Version
 
 	// Find any failed condition
 	failedCond := s.findFailedCondition(internalConds)
@@ -230,7 +230,7 @@ func (s *Service) computeConditions(app *v1alpha1.Application) {
 }
 
 // findFailedCondition returns the first condition that is not true, prioritizing critical conditions
-func (s *Service) findFailedCondition(internalConds map[string]v1alpha1.ApplicationInternalStatusCondition) *v1alpha1.ApplicationInternalStatusCondition {
+func (s *Service) findFailedCondition(internalConds map[string]v1alpha1.ApplicationStatusInternalCondition) *v1alpha1.ApplicationStatusInternalCondition {
 	// Check critical conditions first in order of execution
 	criticalConditions := []status.ConditionName{
 		status.ConditionDownloaded,

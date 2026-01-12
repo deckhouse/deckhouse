@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
 
 {% raw %}
 
@@ -80,8 +80,8 @@ spec:
 Create a new application in the GitLab project.
 
 To do this, you need to:
-* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)` and set scopes `read_user`, `openid`;
-* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback url)`; also, don't forget to set scopes `read_user`, `openid`;
+* **self-hosted**: go to `Admin area` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)` and set scopes `read_user`, `openid`;
+* **cloud gitlab.com**: under the main project account, go to `User Settings` -> `Application` -> `New application` and specify the `https://dex.<modules.publicDomainTemplate>/callback` address as the `Redirect URI (Callback URL)`; also, don't forget to set scopes `read_user`, `openid`;
 * (for GitLab version starting with 16) enable the `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` checkbox when creating an application.
 
 Paste the generated `Application ID` and `Secret` into the [DexProvider](cr.html#dexprovider) custom resource.
@@ -180,7 +180,7 @@ spec:
       - groups
 ```
 
-If email verification is not enabled in KeyCloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
+If email verification is not enabled in Keycloak, to properly use it as an identity provider, adjust the [`Client Scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) settings in one of the following ways:
 
 * Delete the `Email verified` mapping ("Client Scopes" → "Email" → "Mappers").
   This is required for proper processing of the [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) field when it's set to `true` and for correct permission assignment to users with unverified emails.
@@ -299,8 +299,10 @@ spec:
 
     bindDN: cn=Administrator,cn=users,dc=example,dc=com
     bindPW: admin0!
-
+    
     usernamePrompt: Email Address
+
+    enableBasicAuth: true
 
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
@@ -319,11 +321,87 @@ spec:
       nameAttr: cn
 ```
 
+#### Configuring Basic Authentication
+
+To enable Basic Authentication for the Kubernetes API using LDAP credentials:
+
+1. Ensure that the [`publishAPI`](configuration.html#parameters-publishapi) parameter is enabled in the `user-authn` module configuration.
+1. Set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) in your LDAP DexProvider resource.
+
+> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+
+After configuration, users can access the Kubernetes API via `kubectl`, using their LDAP username and password.
+
+Example `kubeconfig` for the user:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Path to CA certificate or insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+#### Kerberos (SPNEGO) SSO for LDAP
+
+Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. When enabled, a browser that trusts the Dex host will send `Authorization: Negotiate …` and Dex will validate the Kerberos ticket using a service keytab, skip the login form, map the Kerberos principal to an LDAP username, query groups, and complete the OIDC flow.
+
+Minimal example extending the LDAP provider spec:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'
+      expectedRealm: EXAMPLE.COM              # optional, case-insensitive match
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # default false; if true, render form when header missing/invalid
+```
+
+Notes:
+- The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
+- A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).
 To configure authentication, create a read-only user (service account) in LDAP.
 
-Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.
-1. You can omit these settings of anonymous read access is configured for LDAP.
-2. Enter the password into the `bindPW` in the plain text format. Strategies involving the passing of hashed passwords are not supported.
+Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain-text format (unencrypted). Strategies involving the passing of hashed passwords are not supported.
+
+You can omit these settings if anonymous read access is configured for LDAP.
 
 ## Configuring the OAuth2 client in Dex for connecting an application
 
@@ -473,7 +551,7 @@ Field description:
 
 ### Two-factor authentication (2FA)
 
-2FA increases security by requiring a code from a TOTP authenticator application (for example, Google Authenticator) during login.
+2FA increases security by requiring a code from a `TOTP` authenticator application (for example, Google Authenticator) during login.
 
 {% raw %}
 
@@ -502,6 +580,6 @@ Field description:
 After enabling 2FA, each user must register in the authenticator application during their first login.
 {% endalert %}
 
-## How to set permissions for a user or group
+### Assigning permissions to a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+For permission configuration, parameters of the custom resource [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) are used.

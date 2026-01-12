@@ -25,6 +25,7 @@ data:
   proxy-connect-timeout: "2"
   proxy-next-upstream: error timeout invalid_header http_502 http_503 http_504
   proxy-read-timeout: "3600"
+  proxy-real-ip-cidr: 0.0.0.0/0
   proxy-send-timeout: "3600"
   proxy-set-headers: d8-ingress-nginx/test-lbwpp-custom-headers
   server-name-hash-bucket-size: "256"

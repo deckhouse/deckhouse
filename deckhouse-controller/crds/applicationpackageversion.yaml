@@ -1,0 +1,261 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: applicationpackageversions.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: ApplicationPackageVersion
+    listKind: ApplicationPackageVersionList
+    plural: applicationpackageversions
+    shortNames:
+    - apv
+    singular: applicationpackageversion
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.packageName
+      name: Package
+      type: string
+    - jsonPath: .spec.packageRepository
+      name: Repository
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].lastTransitionTime
+      name: TransitionTime
+      type: date
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].status
+      name: MetadataLoaded
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='MetadataLoaded')].message
+      name: Message
+      type: string
+    - jsonPath: .status.usedByCount
+      name: UsedBy
+      type: integer
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ApplicationPackageVersion represents a version of an application
+          package.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              packageName:
+                description: Name of the application package.
+                type: string
+              packageRepositoryName:
+                description: The name of the repository containing the package.
+                type: string
+              packageVersion:
+                description: Version of the application package.
+                type: string
+            type: object
+          status:
+            description: Status of an ApplicationPackageVersion.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the package version's state.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: |-
+                        Timestamp of when the condition was last probed.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        Human-readable message indicating details about last transition.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      type: string
+                    reason:
+                      description: |-
+                        Machine-readable, UpperCamelCase text indicating the reason for the condition's last transition.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      type: string
+                    status:
+                      description: |-
+                        Status of the condition.
+                        Can be True, False, Unknown.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      type: string
+                    type:
+                      description: |-
+                        Type of the condition.
+                        More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle#pod-conditions
+                      type: string
+                  type: object
+                type: array
+              packageMetadata:
+                description: Metadata about the package such as description, requirements,
+                  etc.
+                properties:
+                  category:
+                    description: The category this package belongs to.
+                    type: string
+                  changelog:
+                    description: Information about changes in this version.
+                    properties:
+                      features:
+                        description: List of new features in this version.
+                        items:
+                          type: string
+                        type: array
+                      fixes:
+                        description: List of bug fixes in this version.
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  description:
+                    description: Localized descriptions of the package.
+                    properties:
+                      en:
+                        description: English description of the package.
+                        type: string
+                      ru:
+                        description: Russian description of the package.
+                        type: string
+                    type: object
+                  licensing:
+                    description: Licensing information for different editions.
+                    properties:
+                      editions:
+                        additionalProperties:
+                          properties:
+                            available:
+                              description: Whether this edition is available for use.
+                              type: boolean
+                          type: object
+                        description: Licensing information for different package editions.
+                        type: object
+                    type: object
+                  requirements:
+                    description: The system requirements for this package.
+                    properties:
+                      deckhouse:
+                        description: Required Deckhouse version.
+                        type: string
+                      kubernetes:
+                        description: Required Kubernetes version.
+                        type: string
+                      modules:
+                        additionalProperties:
+                          type: string
+                        description: Required versions of other modules.
+                        type: object
+                    type: object
+                  stage:
+                    description: The development stage of the package (e.g., alpha,
+                      beta, stable).
+                    type: string
+                  versionCompatibilityRules:
+                    description: Version compatibility rules for upgrades and downgrades.
+                    properties:
+                      downgrade:
+                        description: Compatibility rules for downgrading from this
+                          version.
+                        properties:
+                          allowSkipMajor:
+                            description: How many major versions can be skipped.
+                            type: integer
+                          allowSkipMinor:
+                            description: How many minor versions can be skipped.
+                            type: integer
+                          allowSkipPatches:
+                            description: How many patch versions can be skipped.
+                            type: integer
+                          from:
+                            description: Starting version range for compatibility.
+                            type: string
+                          maxRollback:
+                            description: Maximum number of versions that can be rolled
+                              back.
+                            type: integer
+                          to:
+                            description: Ending version range for compatibility.
+                            type: string
+                        type: object
+                      upgrade:
+                        description: Compatibility rules for upgrading to this version.
+                        properties:
+                          allowSkipMajor:
+                            description: How many major versions can be skipped.
+                            type: integer
+                          allowSkipMinor:
+                            description: How many minor versions can be skipped.
+                            type: integer
+                          allowSkipPatches:
+                            description: How many patch versions can be skipped.
+                            type: integer
+                          from:
+                            description: Starting version range for compatibility.
+                            type: string
+                          maxRollback:
+                            description: Maximum number of versions that can be rolled
+                              back.
+                            type: integer
+                          to:
+                            description: Ending version range for compatibility.
+                            type: string
+                        type: object
+                    type: object
+                type: object
+              packageName:
+                description: Name of the application package.
+                type: string
+              packageRepositoryName:
+                description: Name of the repository containing the package.
+                type: string
+              packageVersion:
+                description: Version of the application package.
+                type: string
+              usedBy:
+                description: Information about applications that are using this package
+                  version.
+                items:
+                  properties:
+                    name:
+                      description: Name of the application instance.
+                      type: string
+                    namespace:
+                      description: Namespace where the application is installed.
+                      type: string
+                  type: object
+                type: array
+              usedByCount:
+                description: Number of applications using this package version.
+                type: integer
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

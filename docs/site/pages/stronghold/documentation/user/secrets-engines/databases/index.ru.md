@@ -153,6 +153,7 @@ username           v-strongholduser-e2978cd0-ugp7iqI2hdlff5hfjylJ-1602537260
 |-------------------------------------------------------|-----------------------------|-------------------|------------------|----------------------------------|--------------------|
 | [MySQL/MariaDB](mysql.html)  | Yes                         | Yes               | Yes              | Yes                              | password           |
 | [PostgreSQL](postgresql.html)      | Yes                         | Yes               | Yes              | Yes                              | password           |
+| [Clickhouse](clickhouse.html)      | Yes                         | Yes               | Yes              | Yes                              | password           |
 
 ## Типы учетных данных
 

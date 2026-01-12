@@ -16,7 +16,7 @@ metadata:
     uid: ""
   resourceVersion: "6"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true

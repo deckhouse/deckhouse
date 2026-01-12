@@ -77,6 +77,7 @@ The module uses a modified version of Dex to support:
 * groups for static user accounts and Bitbucket Cloud provider (parameter [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
 * passing the `group` parameter to clients;
 * the `obsolete tokens` mechanism to avoid a race condition when an OIDC client renews a token.
+* Kerberos (SPNEGO) support for the LDAP connector. When enabled, Dex accepts `Authorization: Negotiate` tickets, validates them with a service keytab, and completes the login without rendering the password form.
 
 ## High availability mode
 

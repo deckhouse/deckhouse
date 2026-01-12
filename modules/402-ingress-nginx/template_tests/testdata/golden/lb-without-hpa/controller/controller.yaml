@@ -80,6 +80,7 @@ spec:
         - --watch-ingress-without-class=true
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-nginx
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=nginx
         env:
         - name: POD_NAME
           valueFrom:

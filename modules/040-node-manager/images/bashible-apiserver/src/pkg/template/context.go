@@ -57,6 +57,7 @@ const (
 type Context interface {
 	Get(contextKey string) (map[string]interface{}, error)
 	GetBootstrapContext(ng string) (map[string]interface{}, error)
+	GetConfigurationChecksum(ng string) (string, bool)
 }
 
 type UpdateHandler interface {
@@ -97,6 +98,16 @@ type BashibleContext struct {
 	moduleSourcesConfigurationChanged chan struct{}
 
 	updateLocked bool
+
+	configurationChecksums map[string]string
+}
+
+type ContextNotFoundError struct {
+	Key string
+}
+
+func (e *ContextNotFoundError) Error() string {
+	return fmt.Sprintf("context %q not found", e.Key)
 }
 
 type queueAction struct {
@@ -122,6 +133,7 @@ func NewContext(ctx context.Context, stepsStorage *StepsStorage, kubeClient clie
 		nodeUsersConfigurationChanged:     make(chan struct{}, 1),
 		moduleSourcesQueue:                make(chan queueAction, 100),
 		moduleSourcesConfigurationChanged: make(chan struct{}, 1),
+		configurationChecksums:            make(map[string]string),
 	}
 
 	c.runFilesParser()
@@ -341,7 +353,7 @@ func (c *BashibleContext) update(src string) {
 	defer c.rw.Unlock()
 
 	if c.updateLocked {
-		klog.Infof("Context update is locked", src)
+		klog.Infof("Context update is locked (source=%s)", src)
 		return
 	}
 
@@ -357,7 +369,7 @@ func (c *BashibleContext) update(src string) {
 	// easiest way to make appropriate map[string]interface{} struct
 	rawData, err := yaml.Marshal(data.Map())
 	if err != nil {
-		klog.Errorf("Failed to marshal data", err)
+		klog.Errorf("Failed to marshal data: %v", err)
 		return
 	}
 
@@ -377,11 +389,16 @@ func (c *BashibleContext) update(src string) {
 
 	_ = os.Remove("/tmp/context.error")
 
+	c.configurationChecksums = make(map[string]string, len(ngmap))
+	for ng, sum := range ngmap {
+		c.configurationChecksums[ng] = string(sum)
+	}
+
 	var res map[string]interface{}
 
 	err = yaml.Unmarshal(rawData, &res)
 	if err != nil {
-		klog.Errorf("Failed to unmarshal data", err)
+		klog.Errorf("Failed to unmarshal data: %v", err)
 		return
 	}
 
@@ -401,12 +418,7 @@ func (c *BashibleContext) Get(contextKey string) (map[string]interface{}, error)
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -429,12 +441,7 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 
 	raw, ok := c.data[contextKey]
 	if !ok {
-		// log exists keys for debug purposes
-		keys := make([]string, 0, len(c.data))
-		for k := range c.data {
-			keys = append(keys, k)
-		}
-		return nil, fmt.Errorf("context not found for secretKey \"%s\". Have keys: %v", contextKey, keys)
+		return nil, contextNotFoundError(contextKey)
 	}
 
 	converted, ok := raw.(map[string]interface{})
@@ -448,6 +455,21 @@ func (c *BashibleContext) GetBootstrapContext(contextKey string) (map[string]int
 	}
 
 	return copied, nil
+}
+
+func contextNotFoundError(contextKey string) error {
+	return &ContextNotFoundError{Key: contextKey}
+}
+
+func (c *BashibleContext) GetConfigurationChecksum(ng string) (string, bool) {
+	c.rw.RLock()
+	defer c.rw.RUnlock()
+
+	sum, ok := c.configurationChecksums[ng]
+	if !ok || sum == "" {
+		return "", false
+	}
+	return sum, true
 }
 
 // secretMapFilter returns filtering function for single secret
@@ -466,7 +488,7 @@ type secretEventHandler struct {
 	bashibleContext *BashibleContext
 }
 
-func (x *secretEventHandler) OnAdd(obj interface{}) {
+func (x *secretEventHandler) OnAdd(obj interface{}, _ bool) {
 	secret := obj.(*corev1.Secret)
 
 	if x.lockApplied(secret) {

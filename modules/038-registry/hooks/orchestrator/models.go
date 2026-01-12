@@ -23,7 +23,9 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
@@ -47,9 +49,63 @@ type Params struct {
 	CheckMode registry_const.CheckModeType
 }
 
+func (p Params) toState() ParamsState {
+	var ca []byte
+	if p.CA != nil {
+		ca = registry_pki.EncodeCertificate(p.CA)
+	}
+	return ParamsState{
+		Generation: p.Generation,
+		Mode:       p.Mode,
+		ImagesRepo: p.ImagesRepo,
+		UserName:   p.UserName,
+		Password:   p.Password,
+		TTL:        p.TTL,
+		Scheme:     p.Scheme,
+		CheckMode:  p.CheckMode,
+		CA:         string(ca),
+	}
+}
+
+type ParamsState struct {
+	Generation int64                   `json:"generation,omitempty"`
+	Mode       registry_const.ModeType `json:"mode,omitempty"`
+	ImagesRepo string                  `json:"images_repo,omitempty"`
+	UserName   string                  `json:"user_name,omitempty"`
+	Password   string                  `json:"password,omitempty"`
+	TTL        string                  `json:"ttl,omitempty"`
+	Scheme     string                  `json:"scheme,omitempty"`
+	CA         string                  `json:"ca,omitempty"`
+
+	CheckMode registry_const.CheckModeType `json:"check_mode,omitempty"`
+}
+
+func (p ParamsState) toParams() (Params, error) {
+	var ca *x509.Certificate
+	if p.CA != "" {
+		var err error
+		ca, err = registry_pki.DecodeCertificate([]byte(p.CA))
+		if err != nil {
+			return Params{}, fmt.Errorf("failed to decode CA certificate: %w", err)
+		}
+	}
+	return Params{
+		Generation: p.Generation,
+		Mode:       p.Mode,
+		ImagesRepo: p.ImagesRepo,
+		UserName:   p.UserName,
+		Password:   p.Password,
+		TTL:        p.TTL,
+		Scheme:     p.Scheme,
+		CheckMode:  p.CheckMode,
+		CA:         ca,
+	}, nil
+}
+
 type Inputs struct {
 	Params         Params
 	RegistrySecret deckhouse_registry.Config
+	InitSecret     init_secret.Config
 
 	PKI              pki.Inputs
 	Secrets          secrets.Inputs
@@ -64,6 +120,12 @@ type Inputs struct {
 type Values struct {
 	Hash  string `json:"hash,omitempty"`
 	State State  `json:"state,omitempty"`
+}
+
+type InitSecretSnap struct {
+	IsExist bool
+	Applied bool
+	Config  []byte
 }
 
 func (p Params) Validate() error {

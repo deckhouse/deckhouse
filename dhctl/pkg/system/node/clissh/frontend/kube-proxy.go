@@ -329,7 +329,7 @@ func (k *KubeProxy) runKubeProxy(
 		m := portRe.FindStringSubmatch(line)
 		if len(m) == 2 && m[1] != "" {
 			port = m[1]
-			log.InfoF("Got proxy port = %s on host %s\n", port, k.Session.Host())
+			log.DebugF("Got proxy port = %s on host %s\n", port, k.Session.Host())
 			portReady <- struct{}{}
 		}
 	})

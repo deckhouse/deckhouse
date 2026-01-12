@@ -490,7 +490,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts](/modules/cloud-provider-aws/dvp/layouts.html).
+            [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).
           enum: [Standard]
 
         region:

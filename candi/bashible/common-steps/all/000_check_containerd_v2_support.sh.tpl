@@ -28,7 +28,45 @@ can_load_erofs() {
 
 # CVE-2025-37999 impacts Linux kernels 6.12.0–6.12.28 and 6.14.0–6.14.6
 is_kernel_erofs_cve_vulnerable() {
-  local kv=$(uname -r | cut -d- -f1)
+  local full_kv=$(uname -r)
+
+  # Exception for generic Ubuntu kernels: CVE fixed starting 6.14.0-28.28
+  if [[ "$full_kv" == *-generic ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 28 )) && return 1
+  fi
+
+  # Exception for AWS kernels: CVE fixed starting 6.14.0-1011.11
+  if [[ "$full_kv" == *-aws ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 1011 )) && return 1
+  fi
+
+  # Exception for Azure kernels: CVE fixed starting 6.14.0-1010.10
+  if [[ "$full_kv" == *-azure ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 1010 )) && return 1
+  fi
+
+  # Exception for GCP kernels: CVE fixed starting 6.14.0-1014.15
+  if [[ "$full_kv" == *-gcp ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 1014 )) && return 1
+  fi
+
+  # Exception for Oracle kernels: CVE fixed starting 6.14.0-1011.11
+  if [[ "$full_kv" == *-oracle ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 1011 )) && return 1
+  fi
+
+  # Exception for OEM kernels: CVE fixed starting 6.14.0-1010.10
+  if [[ "$full_kv" == *-oem ]] && [[ "$full_kv" =~ ^6\.14\.0-([0-9]+) ]]; then
+    local build="${BASH_REMATCH[1]}"
+    (( build >= 1010 )) && return 1
+  fi
+
+  local kv=$(echo "$full_kv" | cut -d- -f1)
   if version_ge "$kv" "6.12.0" && ! version_ge "$kv" "6.12.29"; then
     return 0
   fi

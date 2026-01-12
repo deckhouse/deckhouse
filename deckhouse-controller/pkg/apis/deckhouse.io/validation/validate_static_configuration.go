@@ -37,7 +37,7 @@ const (
 	staticClusterConfigurationSecretDataKey = "static-cluster-configuration.yaml"
 )
 
-func staticConfigurationHandler(schemaStore *config.SchemaStore) http.Handler {
+func staticConfigurationHandler(_ *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		log.Info("Start validating static cluster configuration")
 		defer log.Info("Finish validating static cluster configuration")
@@ -63,7 +63,8 @@ func staticConfigurationHandler(schemaStore *config.SchemaStore) http.Handler {
 			return allowResult(nil)
 		}
 
-		return validateClusterConfiguration(schemaStore, clusterConfigurationRaw)
+		result, err := validateClusterConfiguration(context.Background(), clusterConfigurationRaw)
+		return result, err
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{

@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
   let lang = document.documentElement.lang;
 
   if (lang.length === 0) {
-    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("deckhouse-ru") || window.location.href.includes("ru.localhost")) {
       lang = "ru"
     } else {
       lang = "en"
@@ -122,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function() {
   let lang = document.documentElement.lang;
 
   if (lang.length === 0) {
-    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("deckhouse-ru") || window.location.href.includes("ru.localhost")) {
       lang = "ru"
     } else {
       lang = "en"
@@ -168,7 +168,7 @@ document.addEventListener("DOMContentLoaded", function() {
         if(index < arr.length - 1) {
           newHTML += `\n`;
         }
-        
+
         lineIndex++;
       });
 

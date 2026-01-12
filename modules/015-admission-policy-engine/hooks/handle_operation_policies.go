@@ -18,9 +18,9 @@ package hooks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
-	"github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -52,7 +52,6 @@ func handleOP(_ context.Context, input *go_hook.HookInput) error {
 	if err != nil {
 		return err
 	}
-
 	input.Values.Set("admissionPolicyEngine.internal.operationPolicies", json.RawMessage(data))
 
 	return nil

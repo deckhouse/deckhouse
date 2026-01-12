@@ -20,11 +20,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
-const PostBootstrapResultCacheKey = "post-bootstrap-result"
-const PreflightBootstrapCloudResultCacheKey = "preflight-bootstrap-cloud-result"
-const PreflightBootstrapPostCloudResultCacheKey = "preflight-bootstrap-post-cloud-result"
-const PreflightBootstrapGlobalResultCacheKey = "preflight-bootstrap-global-result"
-const PreflightBootstrapStaticResultCacheKey = "preflight-bootstrap-static-result"
+const (
+	PostBootstrapResultCacheKey               = "post-bootstrap-result"
+	ManifestCreatedInClusterCacheKey          = "tf-state-and-manifests-in-cluster"
+	PreflightBootstrapCloudResultCacheKey     = "preflight-bootstrap-cloud-result"
+	PreflightBootstrapPostCloudResultCacheKey = "preflight-bootstrap-post-cloud-result"
+	PreflightBootstrapGlobalResultCacheKey    = "preflight-bootstrap-global-result"
+	PreflightBootstrapStaticResultCacheKey    = "preflight-bootstrap-static-result"
+)
 
 type State struct {
 	cache state.Cache
@@ -38,6 +41,14 @@ func NewBootstrapState(stateCache state.Cache) *State {
 
 func (s *State) SavePostBootstrapScriptResult(result string) error {
 	return s.cache.Save(PostBootstrapResultCacheKey, []byte(result))
+}
+
+func (s *State) SaveManifestsCreated() error {
+	return s.cache.Save(ManifestCreatedInClusterCacheKey, []byte("yes"))
+}
+
+func (s *State) IsManifestsCreated() (bool, error) {
+	return s.cache.InCache(ManifestCreatedInClusterCacheKey)
 }
 
 func (s *State) PostBootstrapScriptResult() ([]byte, error) {
