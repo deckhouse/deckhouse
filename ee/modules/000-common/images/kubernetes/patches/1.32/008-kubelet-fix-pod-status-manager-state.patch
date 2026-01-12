@@ -1,22 +1,3 @@
-From: Backport for InPlacePodVerticalScaling fix
-Subject: Extract pod allocation manager from status manager - backport for k8s 1.32
-
-This patch backports the fix from kubernetes/kubernetes commit 84ec78ede717c4f0e3d07a4adf07228303ea1513
-to fix issues with InPlacePodVerticalScaling feature in Kubernetes 1.32.
-
-The main change is to add RemoveOrphanedPods() method to the state interface
-and use it in RemoveOrphanedStatuses() instead of calling Delete() for each
-orphaned pod individually. This fixes a performance issue and ensures proper
-cleanup of orphaned pod state.
-
-Changes:
-- Add RemoveOrphanedPods() to state.Writer interface
-- Implement RemoveOrphanedPods() in stateCheckpoint, noopStateCheckpoint, and stateMemory
-- Update status manager to call RemoveOrphanedPods() instead of individual Delete() calls
-- Update fake status manager to call RemoveOrphanedPods()
-
----
-
 diff --git a/pkg/kubelet/status/fake_status_manager.go b/pkg/kubelet/status/fake_status_manager.go
 index 6d2031419df..7f05b74de7b 100644
 --- a/pkg/kubelet/status/fake_status_manager.go
