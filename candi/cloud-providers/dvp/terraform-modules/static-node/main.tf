@@ -51,7 +51,6 @@ locals {
       "bootloader"               = var.bootloader
       "enableParavirtualization" = true
       "osType"                   = "Generic"
-      "runPolicy"                = "AlwaysOn"
       "virtualMachineClassName"  = var.virtual_machine_class_name
 
       "disruptions" = {
@@ -69,10 +68,10 @@ locals {
 
       "blockDeviceRefs" = concat(
         [
-        {
-          "kind" = "VirtualDisk"
-          "name" = var.root_disk.name
-        }
+          {
+            "kind" = "VirtualDisk"
+            "name" = var.root_disk.name
+          }
         ],
         local.additional_block_refs
       )
@@ -85,6 +84,8 @@ locals {
         }
       }
     },
+    var.live_migration_policy != null ? { "liveMigrationPolicy" = var.live_migration_policy } : null,
+    var.run_policy != null ? { "runPolicy" = var.run_policy } : null,
     var.ipv4_address != null && var.ipv4_address.name != "" ? { "virtualMachineIPAddressName" = var.ipv4_address.name } : null,
     var.priority_class_name != null ? { "priorityClassName" = var.priority_class_name } : null,
     var.tolerations != null ? { "tolerations" = var.tolerations } : null,
