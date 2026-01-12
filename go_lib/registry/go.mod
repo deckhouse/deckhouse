@@ -13,15 +13,9 @@ require (
 )
 
 require (
-	github.com/docker/cli v28.2.2+incompatible // indirect
-	github.com/docker/docker-credential-helpers v0.9.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
-	github.com/sirupsen/logrus v1.9.3 // indirect
-	golang.org/x/sys v0.33.0 // indirect
 )
 
 require (
@@ -29,7 +23,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/google/certificate-transparency-go v1.1.7 // indirect
-	github.com/google/go-containerregistry v0.20.6
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
