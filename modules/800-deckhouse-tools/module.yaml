@@ -1,7 +1,5 @@
 name: deckhouse-tools
 namespace: d8-system
-descriptions:
-  en: Deckhouse tools module
 stage: General Availability
 descriptions:
   en: Creates a web UI with links to download Deckhouse CLI tool for various operating systems.
