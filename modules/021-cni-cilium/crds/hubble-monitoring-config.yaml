@@ -128,16 +128,19 @@ spec:
                           description: Filters by flow UUIDs.
                           items:
                             type: string
+                            format: uuid
                         source_ip:
                           type: array
                           description: Source IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         source_ip_xlated:
                           type: array
                           description: Post-translation (SNAT) source IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         source_pod:
                           type: array
                           description: Source Pod name prefixes.
@@ -148,6 +151,7 @@ spec:
                           description: Source fully qualified domain names (FQDN).
                           items:
                             type: string
+                            maxLength: 255
                         source_label:
                           type: array
                           description: Source label selectors.
@@ -180,6 +184,7 @@ spec:
                           description: Destination IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         destination_pod:
                           type: array
                           description: Destination Pod names.
@@ -190,6 +195,7 @@ spec:
                           description: Destination fully qualified domain names (FQDN).
                           items:
                             type: string
+                            maxLength: 255
                         destination_label:
                           type: array
                           description: Destination label selectors.
@@ -357,6 +363,7 @@ spec:
                           description: HTTP status code prefixes.
                           items:
                             type: string
+                            pattern: '^(?:[1-5]\+|[1-5][0-9]{2})$'
                         protocol:
                           type: array
                           description: L4 or L7 protocol.
@@ -367,11 +374,13 @@ spec:
                           description: L4 source port.
                           items:
                             type: string
+                            pattern: '^(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3})$'
                         destination_port:
                           type: array
                           description: L4 destination port.
                           items:
                             type: string
+                            pattern: '^(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3})$'
                         dns_query:
                           type: array
                           description: DNS query regex patterns.
@@ -396,6 +405,16 @@ spec:
                           description: HTTP methods.
                           items:
                             type: string
+                            enum:
+                              - GET
+                              - HEAD
+                              - POST
+                              - PUT
+                              - DELETE
+                              - CONNECT
+                              - OPTIONS
+                              - TRACE
+                              - PATCH
                         http_path:
                           type: array
                           description: Regex list to match HTTP path.
@@ -472,16 +491,19 @@ spec:
                           description: Filters by flow UUIDs.
                           items:
                             type: string
+                            format: uuid
                         source_ip:
                           type: array
                           description: Source IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         source_ip_xlated:
                           type: array
                           description: Post-translation (SNAT) source IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         source_pod:
                           type: array
                           description: Source Pod name prefixes.
@@ -492,6 +514,7 @@ spec:
                           description: Source fully qualified domain names (FQDN).
                           items:
                             type: string
+                            maxLength: 255
                         source_label:
                           type: array
                           description: Source label selectors.
@@ -524,6 +547,7 @@ spec:
                           description: Destination IP or CIDR.
                           items:
                             type: string
+                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
                         destination_pod:
                           type: array
                           description: Destination Pod names.
@@ -534,6 +558,7 @@ spec:
                           description: Destination fully qualified domain names (FQDN).
                           items:
                             type: string
+                            maxLength: 255
                         destination_label:
                           type: array
                           description: Destination label selectors.
@@ -701,6 +726,7 @@ spec:
                           description: HTTP status code prefixes.
                           items:
                             type: string
+                            pattern: '^(?:[1-5]\+|[1-5][0-9]{2})$'
                         protocol:
                           type: array
                           description: L4 or L7 protocol.
@@ -711,11 +737,13 @@ spec:
                           description: L4 source port.
                           items:
                             type: string
+                            pattern: '^(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3})$'
                         destination_port:
                           type: array
                           description: L4 destination port.
                           items:
                             type: string
+                            pattern: '^(?:6553[0-5]|655[0-2]\d|65[0-4]\d{2}|6[0-4]\d{3}|[1-5]\d{4}|[1-9]\d{0,3})$'
                         dns_query:
                           type: array
                           description: DNS query regex patterns.
@@ -740,6 +768,16 @@ spec:
                           description: HTTP methods.
                           items:
                             type: string
+                            enum:
+                              - GET
+                              - HEAD
+                              - POST
+                              - PUT
+                              - DELETE
+                              - CONNECT
+                              - OPTIONS
+                              - TRACE
+                              - PATCH
                         http_path:
                           type: array
                           description: Regex list to match HTTP path.
@@ -956,6 +994,7 @@ spec:
                           - destination_service.namespace
                     fileMaxSizeMB:
                       type: integer
+                      format: int32
                       default: 10
                       description: Size in MB at which to rotate the Hubble export file.
                       minimum: 1
