@@ -591,30 +591,22 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 // updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
-func (r *reconciler) updateModulePropertiesFromDefinition(ctx context.Context, module *v1alpha1.Module, definition *moduletypes.Definition) error {
-	if definition == nil {
+func (r *reconciler) updateModulePropertiesFromDefinition(ctx context.Context, module *v1alpha1.Module, def *moduletypes.Definition) error {
+	if def == nil {
 		return nil
 	}
 
 	return ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-		applyModuleDefinitionToProperties(&module.Properties, definition)
+		props := &module.Properties
+		props.Stage = def.Stage
+		props.Weight = def.Weight
+		props.Critical = def.Critical
+		props.Namespace = def.Namespace
+		props.Subsystems = def.Subsystems
+		props.ExclusiveGroup = def.ExclusiveGroup
+		props.Requirements = def.Requirements
+		props.DisableOptions = def.DisableOptions
+		props.Accessibility = def.Accessibility.ToV1Alpha1()
 		return nil
 	})
-}
-
-// applyModuleDefinitionToProperties maps fields from module definition to module properties.
-func applyModuleDefinitionToProperties(props *v1alpha1.ModuleProperties, def *moduletypes.Definition) {
-	if props == nil || def == nil {
-		return
-	}
-
-	props.Stage = def.Stage
-	props.Weight = def.Weight
-	props.Critical = def.Critical
-	props.Namespace = def.Namespace
-	props.Subsystems = def.Subsystems
-	props.ExclusiveGroup = def.ExclusiveGroup
-	props.Requirements = def.Requirements
-	props.DisableOptions = def.DisableOptions
-	props.Accessibility = def.Accessibility.ToV1Alpha1()
 }
