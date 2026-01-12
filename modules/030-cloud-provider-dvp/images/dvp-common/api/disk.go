@@ -294,19 +294,19 @@ func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) erro
 	})
 }
 
-func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, source string) (*v1alpha2.VirtualDiskSnapshot, error) {
+func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, source string, requiredConsistency bool) (*v1alpha2.VirtualDiskSnapshot, error) {
 	volumeSnapshot := &v1alpha2.VirtualDiskSnapshot{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha2.VirtualDiskSnapshotKind,
 			APIVersion: v1alpha2.Version,
 		},
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: fmt.Sprintf("%s-", name),
-			Namespace:    c.namespace,
+			Name:      name,
+			Namespace: c.namespace,
 		},
 		Spec: v1alpha2.VirtualDiskSnapshotSpec{
-			VirtualDiskName: source,
-			RequiredConsistency: true,
+			VirtualDiskName:     source,
+			RequiredConsistency: requiredConsistency,
 		},
 	}
 
@@ -324,7 +324,6 @@ func (c *DiskService) DeleteVolumeSnapshot(ctx context.Context, id string) error
 		Namespace: c.namespace,
 		Name:      id,
 	}, volumeSnapshot)
-
 	if err != nil {
 		return err
 	}

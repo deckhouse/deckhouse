@@ -20,15 +20,17 @@ package service
 import (
 	"context"
 	"errors"
-
-	dvpapi "dvp-common/api"
+	"fmt"
+	"strconv"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	cloudprovider "k8s.io/cloud-provider"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+
+	dvpapi "dvp-common/api"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 
@@ -36,8 +38,8 @@ import (
 )
 
 const (
-	ParameterDVPStorageClass = "dvpStorageClass"
-	ParameterDVPVolumeSnapshotClass = "dvpVolumeSnapshotClass"
+	ParameterDVPStorageClass                           = "dvpStorageClass"
+	ParameterDVPVirtualDiskSnapshotRequiredConsistency = "dvpVirtualDiskSnapshotRequiredConsistency"
 )
 
 type ControllerService struct {
@@ -469,15 +471,21 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 	return &csi.ControllerGetCapabilitiesResponse{Capabilities: caps}, nil
 }
 
-func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
+func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
 
-	volumeSnapshotClassName := request.Parameters[ParameterDVPVolumeSnapshotClass]
-	if volumeSnapshotClassName == "" {
-		return nil, fmt.Errorf("snapshot class parameter %s is required", ParameterDVPVolumeSnapshotClass)
+	requiredConsistency, ok := request.Parameters[ParameterDVPVirtualDiskSnapshotRequiredConsistency]
+	if !ok {
+		requiredConsistency = "true"
 	}
 
-	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId)
+	requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
+			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
+	}
+
+	snapshot, err := c.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
 		return nil, err
 	}
@@ -496,10 +504,10 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 	return response, nil
 }
 
-func (d *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
+func (c *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	klog.Infof("Deleting snapshot %v", request.SnapshotId)
 
-	err := d.dvpCloudAPI.DiskService.DeleteVolumeSnapshot(ctx, request.SnapshotId)
+	err := c.dvpCloudAPI.DiskService.DeleteVolumeSnapshot(ctx, request.SnapshotId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete snapshot %s: %v", request.SnapshotId, err)
 	}
@@ -507,6 +515,6 @@ func (d *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.Del
 	return &csi.DeleteSnapshotResponse{}, nil
 }
 
-func (d *ControllerService) ListSnapshots(_ context.Context, _ *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
+func (c *ControllerService) ListSnapshots(_ context.Context, _ *csi.ListSnapshotsRequest) (*csi.ListSnapshotsResponse, error) {
 	return nil, nil
 }
