@@ -397,12 +397,13 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		metricModuleGroup := metrics.D8ModuleUpdatingGroup + "_" + strcase.ToSnake(moduleName) + "_" + strcase.ToSnake(source.GetName())
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricModuleGroup)
 
-		logger.Debug("download module meta from release channel")
+		logger.Debug("check module digest from release channel")
 
-		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
+		// First, get only digest using cr.Get (optimized)
+		newDigest, err := md.FetchModuleReleaseDigestFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
 			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
-				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
+				r.logger.Warn("failed to get module digest", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				errorsExist = true
 
@@ -421,10 +422,28 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// check if release exists
-		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
+		checksumChanged := availableModule.Checksum != newDigest
+		
+		exists, err = r.releaseExists(ctx, source.Name, moduleName, newDigest)
 		if err != nil {
 			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		if exists && !checksumChanged {
+			availableModule.Checksum = newDigest
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		logger.Debug("download full module metadata from release channel")
+		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
+		if err != nil {
+			logger.Error("failed to download full module metadata", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			errorsExist = true

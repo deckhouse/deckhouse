@@ -85,17 +85,17 @@ type ModuleDownloadResult struct {
 func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum string) (string, *moduletypes.Definition, error) {
 	moduleStorePath := path.Join(md.downloadedModulesDir, moduleName, DefaultDevVersion)
 
-	img, err := md.fetchImage(moduleName, imageTag)
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName), md.registryOptions...)
+	if err != nil {
+		return "", nil, fmt.Errorf("fetch module error: %v", err)
+	}
+
+	desc, err := regCli.Get(context.TODO(), imageTag)
 	if err != nil {
 		return "", nil, err
 	}
 
-	digest, err := img.Digest()
-	if err != nil {
-		return "", nil, err
-	}
-
-	if digest.String() == checksum {
+	if desc.Digest.String() == checksum {
 		// module is up-to-date
 		return "", nil, nil
 	}
@@ -104,7 +104,7 @@ func (md *ModuleDownloader) DownloadDevImageTag(moduleName, imageTag, checksum s
 		return "", nil, err
 	}
 
-	return digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
+	return desc.Digest.String(), md.fetchModuleDefinitionFromFS(moduleName, moduleStorePath), nil
 }
 
 func (md *ModuleDownloader) DownloadByModuleVersion(ctx context.Context, moduleName, moduleVersion string) (*DownloadStatistic, error) {
@@ -350,6 +350,32 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadataFromReleaseChannel(ctx con
 	return releaseImageInfo, nil
 }
 
+func (md *ModuleDownloader) FetchModuleReleaseDigestFromReleaseChannel(ctx context.Context, moduleName, releaseChannel string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "fetchModuleReleaseDigestFromReleaseChannel")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("module", moduleName))
+	span.SetAttributes(attribute.String("releaseChannel", releaseChannel))
+
+	md.logger.Debug("fetching module release digest",
+		slog.String("path", path.Join(md.ms.Spec.Registry.Repo, moduleName, "release")),
+		slog.String("release_channel", releaseChannel),
+	)
+
+	regCli, err := md.dc.GetRegistryClient(path.Join(md.ms.Spec.Registry.Repo, moduleName, "release"), md.registryOptions...)
+	if err != nil {
+		return "", fmt.Errorf("fetch release image error: %w", err)
+	}
+
+	// Use cr.Get instead of cr.Image to get only descriptor
+	desc, err := regCli.Get(ctx, strcase.ToKebab(releaseChannel))
+	if err != nil {
+		return "", fmt.Errorf("get image info: %w", err)
+	}
+
+	return desc.Digest.String(), nil
+}
+
 // fetchModuleReleaseMetadataByVersion get Image, Digest and release metadata by version
 // return error if version.json not found in metadata
 // Image fetch path example: registry.deckhouse.io/deckhouse/ce/modules/$moduleName/release:$moduleVersion
@@ -488,9 +514,10 @@ func (md *ModuleDownloader) fetchModuleReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
+		versionJSON := rr.versionReader.Bytes()
+		err = json.NewDecoder(bytes.NewReader(versionJSON)).Decode(&meta)
 		if err != nil {
-			return meta, fmt.Errorf("json decode: %w", err)
+			return meta, fmt.Errorf("json decode failed for version.json (content: %s): %w", string(versionJSON), err)
 		}
 	}
 

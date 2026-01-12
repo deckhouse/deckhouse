@@ -81,7 +81,6 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		}
 	}
 
-
 	layers, err := image.Layers()
 	if err != nil {
 		return 0, "", nil, err

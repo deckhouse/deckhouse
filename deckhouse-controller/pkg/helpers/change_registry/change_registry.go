@@ -342,13 +342,13 @@ func updateImageRepoForContainers(containers []v1.Container, newRepository strin
 }
 
 func checkImageExists(imageRef name.Reference, opts []remote.Option) error {
-	img, err := remote.Image(imageRef, opts...)
+	desc, err := remote.Get(imageRef, opts...)
 	if err != nil {
 		return err
 	}
 
-	if _, err := img.Digest(); err != nil {
-		return err
+	if desc.Digest.String() == "" {
+		return fmt.Errorf("empty digest")
 	}
 	return nil
 }
