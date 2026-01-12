@@ -51,7 +51,6 @@ secrets:
 shell:
   install:
   - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
-  - rm -rf /src/envoy/.git
 ---
 image: {{ .ModuleName }}/envoy-artifact
 fromImage: builder/debian
@@ -76,4 +75,5 @@ shell:
   - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bazel bazel-7.7.1
   setup:
   - cd /src/envoy
+  - python3 tools/github/write_current_source_version.py
   - bazel build -c opt envoy
