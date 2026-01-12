@@ -134,13 +134,19 @@ spec:
                           description: Source IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         source_ip_xlated:
                           type: array
                           description: Post-translation (SNAT) source IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         source_pod:
                           type: array
                           description: Source Pod name prefixes.
@@ -184,7 +190,10 @@ spec:
                           description: Destination IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         destination_pod:
                           type: array
                           description: Destination Pod names.
@@ -497,13 +506,19 @@ spec:
                           description: Source IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         source_ip_xlated:
                           type: array
                           description: Post-translation (SNAT) source IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         source_pod:
                           type: array
                           description: Source Pod name prefixes.
@@ -547,7 +562,10 @@ spec:
                           description: Destination IP or CIDR.
                           items:
                             type: string
-                            pattern: '^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(?:\/(?:[0-9]|[12]\d|3[0-2]))?$'
+                            oneOf:
+                              - format: ipv4
+                              - format: ipv6
+                              - format: cidr
                         destination_pod:
                           type: array
                           description: Destination Pod names.
