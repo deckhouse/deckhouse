@@ -88,68 +88,40 @@ properties:
                     x-examples: ["---ROOT PEM---"]
           settings:
             type: object
-            default:
-              extendedMetrics:
-                enabled: false
-                collectors: [ ]
-              flowLogs:
-                enabled: false
-                allowFilter: { }
-                denyFilter: { }
-                fieldMaskList: [ ]
-                fileMaxSizeMB: 10
             properties:
               extendedMetrics:
                 type: object
-                default:
-                  enabled: false
-                  collectors: [ ]
                 properties:
                   enabled:
                     type: boolean
                     default: false
                   collectors:
                     type: array
-                    default: [ ]
                     items:
                       type: object
-                      default:
-                        name: ""
-                        contextOptions: ""
                       properties:
                         name:
                           type: string
-                          default: ""
                         contextOptions:
                           type: string
-                          default: ""
               flowLogs:
                 type: object
-                default:
-                  enabled: false
-                  allowFilter: { }
-                  denyFilter: { }
-                  fieldMaskList: [ ]
-                  fileMaxSizeMB: 10
                 properties:
                   enabled:
                     type: boolean
                     default: false
                   allowFilter:
                     type: object
-                    default: { }
                     items:
                       type: string
                     additionalProperties: true
                   denyFilter:
                     type: object
-                    default: { }
                     items:
                       type: string
                     additionalProperties: true
                   fieldMaskList:
                     type: array
-                    default: [ ]
                     items:
                       type: string
                   fileMaxSizeMB:
