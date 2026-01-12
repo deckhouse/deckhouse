@@ -114,3 +114,64 @@ spec:
         app: backend
         io.kubernetes.pod.namespace: my-ns
 ```
+
+## HubbleMonitoringConfig
+
+The `HubbleMonitoringConfig` cluster-wide resource allows configuring data export from Hubble (running inside Cilium agents).
+
+### Configuration examples
+
+#### Enable extended metrics and flow logs export (with filters and field mask)
+
+{% alert level="warning" %}The `HubbleMonitoringConfig` resource **must be named** `hubble-monitoring-config`.{% endalert %}
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: HubbleMonitoringConfig
+metadata:
+  name: hubble-monitoring-config
+spec:
+  extendedMetrics:
+    enabled: true
+    collectors:
+      - name: drop
+        # Add additional labels context for the selected collector.
+        contextOptions: "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+      - name: flow
+  flowLogs:
+    enabled: true
+    # Allow only the specified events to be written to the log file /var/log/cilium/hubble/flow.log.
+    allowFilter:
+      verdict:
+        - DROPPED
+        - ERROR
+    # Exclude events matching the denyFilter from the log file.
+    denyFilter:
+      source_pod:
+        - kube-system/
+      destination_pod:
+        - kube-system/
+    # Persist only the specified fields in each record.
+    fieldMaskList:
+      - time
+      - verdict
+    # Maximum log file size (in MB) before rotation.
+    fileMaxSizeMB: 30
+```
+
+### Collecting Hubble flow logs with the log-shipper module
+
+You can collect Hubble flow logs using Deckhouse **[log-shipper](https://deckhouse.ru/modules/log-shipper/)** module.
+Create the `ClusterLoggingConfig` resource that reads the flow log file from the node filesystem:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: cilium-hubble-flow-logs
+spec:
+  type: File
+  file:
+    include:
+      - /var/log/cilium/hubble/flow.log
+```

@@ -5,11 +5,8 @@ spec:
       storage: false
       schema:
         openAPIV3Schema:
-          type: object
-          required: [ 'spec' ]
           properties:
             spec:
-              type: object
               properties:
                 extendedMetrics:
                   description: |
