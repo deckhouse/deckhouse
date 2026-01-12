@@ -127,11 +127,11 @@ To configure Kerberos (SPNEGO) SSO, LDAP must have an account with read-only pri
 Enabling Kerberos (SPNEGO) SSO for LDAP:
 
 1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
-1. In the cluster, create a Secret in `d8-user-authn` with the `krb5.keytab` data key.
-1. In the LDAP `DexProvider` enable `spec.ldap.kerberos`:
+1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
+1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
    - `enabled: true`
    - `keytabSecretName: <secret name>`
-   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`
 
 Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
 
@@ -163,10 +163,10 @@ spec:
         groupAttr: memberUid
     kerberos:
       enabled: true
-      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'
-      expectedRealm: EXAMPLE.COM              # optional, case-insensitive match
+      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Optional, case-insensitive match.
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
-      fallbackToPassword: false               # default false; if true, render form when header missing/invalid
+      fallbackToPassword: false               # The default is false; if true, a login/password form is rendered when the `Authorization: Negotiate` header is missing or invalid.
 ```
 
 Notes:

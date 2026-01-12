@@ -117,10 +117,10 @@ Dex поддерживает аутентификацию без отображ�
 Включение SSO по Kerberos (SPNEGO) для LDAP:
 
 1. В инфраструктуре клиента должен быть задан SPN `HTTP/<fqdn-dex>` для сервисного аккаунта и сгенерирован keytab.
-1. В кластере создайте секрет в `d8-user-authn` с ключом `krb5.keytab`.
-1. В `DexProvider` (тип LDAP) включите блок `spec.ldap.kerberos` и настройте в нём параметры:
-   - `enabled: true`
-   - `keytabSecretName: <имя секрета>`
+1. В кластере создайте секрет в неймспейсе `d8-user-authn` с ключом `krb5.keytab`.
+1. В ресурсе DexProvider (тип LDAP) включите блок `spec.ldap.kerberos` и настройте в нём параметры:
+   - `enabled: true`;
+   - `keytabSecretName: <имя секрета>`;
    - опционально: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
 
 Dex автоматически смонтирует keytab и начнёт принимать SPNEGO. `krb5.conf` на сервере не обязателен — билеты проверяются по keytab.
@@ -153,10 +153,10 @@ spec:
         groupAttr: memberUid
     kerberos:
       enabled: true
-      keytabSecretName: dex-kerberos-keytab   # секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'
-      expectedRealm: EXAMPLE.COM              # опционально, проверка realm (без учёта регистра)
+      keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
       usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
-      fallbackToPassword: false               # по умолчанию false; если true — при отсутствии/ошибке Negotiate показываем форму
+      fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
 ```
 
 Примечания:

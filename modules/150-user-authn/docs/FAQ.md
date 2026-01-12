@@ -169,8 +169,8 @@ If clients run in a corporate SSO environment (browser trusts the Dex host), Dex
 Enabling Kerberos (SPNEGO) SSO for LDAP:
 
 1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
-1. In the cluster, create a Secret in `d8-user-authn` with the `krb5.keytab` data key.
-1. In the LDAP `DexProvider` enable `spec.ldap.kerberos`:
+1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
+1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
    - `enabled: true`
    - `keytabSecretName: <secret name>`
    - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
