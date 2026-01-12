@@ -105,8 +105,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource\n'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из <a href='./api/cr.html#modulesource\n'>внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "tags": [
@@ -127,8 +127,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource\n'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из <a href='./api/cr.html#modulesource\n'>внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -158,8 +158,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource\n'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из <a href='./api/cr.html#modulesource\n'>внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "tags": [
@@ -248,8 +248,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource\n'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из <a href='./api/cr.html#modulesource\n'>внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "tags": [
@@ -306,8 +306,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource\n'>external source</a>",
-        "ru": "Не вхоДит в состав редакции. Может быть использован как модуль, подключаемый из <a href='./api/cr.html#modulesource\n'>внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не вхоДит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "tags": [
