@@ -21,6 +21,7 @@ import (
 	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
+	"strconv"
 
 	dvpapi "dvp-common/api"
 
@@ -28,14 +29,14 @@ import (
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	cloudprovider "k8s.io/cloud-provider"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 )
 
 const (
-	ParameterDVPStorageClass = "dvpStorageClass"
-	ParameterDVPVolumeSnapshotClass = "dvpVolumeSnapshotClass"
+	ParameterDVPStorageClass                           = "dvpStorageClass"
+	ParameterDVPVirtualDiskSnapshotRequiredConsistency = "dvpVirtualDiskSnapshotRequiredConsistency"
 )
 
 type ControllerService struct {
@@ -247,7 +248,6 @@ func (c *ControllerService) getDiskAttachState(
 	diskName string,
 	vmHostname string,
 ) (exists bool, attached bool, err error) {
-
 	vmbda, err := c.dvpCloudAPI.ComputeService.GetVMBDA(ctx, diskName, vmHostname)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
@@ -273,7 +273,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	ctx context.Context,
 	req *csi.ControllerUnpublishVolumeRequest,
 ) (*csi.ControllerUnpublishVolumeResponse, error) {
-
 	if len(req.VolumeId) == 0 {
 		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
 	}
@@ -435,12 +434,18 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
 
-	volumeSnapshotClassName := request.Parameters[ParameterDVPVolumeSnapshotClass]
-	if volumeSnapshotClassName == "" {
-		return nil, fmt.Errorf("snapshot class parameter %s is required", ParameterDVPVolumeSnapshotClass)
+	requiredConsistency, ok := request.Parameters[ParameterDVPVirtualDiskSnapshotRequiredConsistency]
+	if !ok {
+		requiredConsistency = "true"
 	}
 
-	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId)
+	requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
+			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
+	}
+
+	snapshot, err := d.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
 		return nil, err
 	}
