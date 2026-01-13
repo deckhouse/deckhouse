@@ -3,8 +3,6 @@ apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
-  labels:
-    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1571326380
   ownerReferences:
   - apiVersion: deckhouse.io/v1alpha1
