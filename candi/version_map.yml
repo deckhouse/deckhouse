@@ -143,7 +143,7 @@ k8s:
       aws: v1.54.0
       azure: v1.33.7
       gcp: v1.15.4
-      vsphere: v3.6.
+      vsphere: v3.6.0
       openstack: v1.34.1
       provisioner: v5.2.0
       attacher: v4.8.1
