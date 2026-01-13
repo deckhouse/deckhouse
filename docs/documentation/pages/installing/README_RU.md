@@ -59,15 +59,9 @@ YAML-файл конфигурации установки содержит па�
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — начальные параметры [конфигурации Deckhouse](../#конфигурация-deckhouse), необходимые для корректного запуска Deckhouse после установки.
 
-   Основные настройки, задаваемые в этом ресурсе:
+   > В InitConfiguration, в частности, могут указываться параметры конфигурации registry. Начиная с версии DKP 1.75 конфигурация registry с помощью InitConfiguration считается Legacy-способом. Для конфигурации registry при установке кластера используйте ресурс ModuleConfig [deckhouse](/modules/deckhouse/configuration.html#parameters-registry).
 
-   * [Параметры размещения компонентов](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-placement-customtolerationkeys);
-   * Используемый [StorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass);
-   * Параметры доступа к [container registry](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg);
-   * Шаблон [DNS-имен](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate);
-   * Другие важные параметры, без которых Deckhouse не сможет корректно функционировать.
-
-1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия control plane, сетевые настройки, параметры CRI и т. д.
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д.
     > Этот ресурс требуется использовать только в случае, если Deckhouse устанавливается с предварительным развертыванием кластера Kubernetes. Если Deckhouse устанавливается в уже существующий кластер, этот ресурс не нужен.
 
 1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — параметры для кластеров Kubernetes, развертываемых на серверах bare-metal или виртуальных машинах в неподдерживаемых облаках.
@@ -93,7 +87,14 @@ YAML-файл конфигурации установки содержит па�
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) — набор ресурсов, содержащих параметры конфигурации встроенных модулей Deckhouse.
+1. Набор ресурсов [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig), содержащих параметры конфигурации встроенных модулей Deckhouse. Некоторые ресурсы ModuleConfig являются обязательными, необходимость использования других зависит от окружения, параметров создаваемого кластера и иных факторов.
+
+   Ресурсы ModuleConfig, которые должны/могут быть в файле конфигурации:
+
+   * [deckhouse](/modules/deckhouse/configuration.html). Здесь указываются настройки для доступа к registry, желаемый канал обновлений, набор модулей (bundle), которые будут включены по умолчанию, и другие параметры.
+   * [global](/products/kubernetes-platform/documentation/v1/reference/api/global.html). Глобальные настройки DKP для указания параметров, которые используются по умолчанию всеми модулями и компонентами (шаблон DNS-имен, StorageClass, настройки расположения компонентов модулей и т.д.).
+   * [user-authn](/modules/user-authn/configuration.html). Отвечает за единую систему аутентификации.
+   * [cni-cilium](/modules/cni-cilium/configuration.html) (*используется при установке DKP на bare metal; в закрытом окружении; на РЕД виртуализации; на SpaceVM*). Отвечает за работу сети в кластере.
 
    Если кластер изначально создается с узлами, выделенными для определенных типов нагрузки (например, системные узлы или узлы для мониторинга), рекомендуется в конфигурации модулей, использующих тома постоянного хранилища явно задавать параметр `nodeSelector`.
 
@@ -108,6 +109,24 @@ YAML-файл конфигурации установки содержит па�
 1. [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), [User](/modules/user-authn/cr.html#user) — настройка прав и пользователей.
 
 {% offtopic title="Пример файла конфигурации установки..." %}
+
+<div class="tabs">
+  <a id='tab_variant_new_config'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant active"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_new_config');">
+     Конфигурация registry в MC deckhouse
+  </a>
+  <a id='tab_variant_legacy_config'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant','tabs__content_variant','block_variant_legacy_config');">
+     Legacy-способ
+  </a>
+</div>
+
+<div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
+В этом примере registry конфигурируется через ресурс ModuleConfig deckhouse.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -143,13 +162,6 @@ provider:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: cni-flannel
-spec:
-  enabled: true
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
   name: deckhouse
 spec:
   enabled: true
@@ -157,6 +169,14 @@ spec:
     releaseChannel: Stable
     bundle: Default
     logLevel: Info
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: test-registry.io/some/path
+        scheme: HTTPS
+        username: <username>
+        password: <password>
+        ca: <CA>
   version: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -164,11 +184,27 @@ kind: ModuleConfig
 metadata:
   name: global
 spec:
-  enabled: true
   settings:
     modules:
       publicDomainTemplate: "%s.k8s.example.com"
-  version: 1
+  version: 2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: DoNotNeed
+    publishAPI:
+      enabled: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -198,7 +234,6 @@ metadata:
   name: main
 spec:
   ingressClass: "nginx"
-  controllerVersion: "1.1"
   inlet: "LoadBalancer"
   nodeSelector:
     node.deckhouse.io/group: worker
@@ -242,14 +277,164 @@ metadata:
 spec:
   email: admin@deckhouse.io
   password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
+```
+
+</div>
+
+<div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
+
+В этом примере registry конфигурируется через InitConfiguration.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Azure
+  prefix: cloud-demo
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+kubernetesVersion: "Automatic"
+clusterDomain: cluster.local
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.ru/deckhouse/ee
+  registryDockerCfg: eyJhdXRocyI6IHsgInJlZ2zzzmRlY2tob3Vxxcxxxc5ydSI6IsssfX0K
+---
+apiVersion: deckhouse.io/v1
+kind: AzureClusterConfiguration
+layout: Standard
+sshPublicKey: <SSH_PUBLIC_KEY>
+vNetCIDR: 10.241.0.0/16
+subnetCIDR: 10.241.0.0/24
+masterNodeGroup:
+  replicas: 3
+  instanceClass:
+    machineSize: Standard_D4ds_v4
+    urn: Canonical:UbuntuServer:18.04-LTS:18.04.202010140
+    enableExternalIP: true
+provider:
+  subscriptionId: <SUBSCRIPTION_ID>
+  clientId: <CLIENT_ID>
+  clientSecret: <CLIENT_SECRET>
+  tenantId: <TENANT_ID>
+  location: westeurope
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: deckhouse-admin
+  name: deckhouse
 spec:
   enabled: true
+  settings:
+    releaseChannel: Stable
+    bundle: Default
+    logLevel: Info
+  version: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.example.com"
+  version: 2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: user-authn
+spec:
+  version: 2
+  enabled: true
+  settings:
+    controlPlaneConfigurator:
+      dexCAMode: DoNotNeed
+    publishAPI:
+      enabled: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: node-manager
+spec:
+  version: 1
+  enabled: true
+  settings:
+    earlyOomEnabled: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: prometheus
+spec:
+  version: 2
+  enabled: true
+  # Укажите, в случае использования выделенных узлов для мониторинга.
+  # settings:
+  #   nodeSelector:
+  #     node.deckhouse.io/group: monitoring
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: "nginx"
+  inlet: "LoadBalancer"
+  nodeSelector:
+    node.deckhouse.io/group: worker
+---
+apiVersion: deckhouse.io/v1
+kind: AzureInstanceClass
+metadata:
+  name: worker
+spec:
+  machineSize: Standard_F4
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: AzureInstanceClass
+      name: worker
+    maxPerZone: 3
+    minPerZone: 1
+    zones: ["1"]
+  nodeType: CloudEphemeral
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  accessLevel: SuperAdmin
+  portForwarding: true
+---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@deckhouse.io
+  password: '$2a$10$isZrV6uzS6F7eGfaNB1EteLTWky7qxJZfbogRs1egWEPuT1XaOGg2'
 ```
+
+</div>
 
 {% endofftopic %}
 
@@ -497,6 +682,35 @@ DKP поддерживает работу только с Bearer token-схем�
 {% alert level="warning" %}
 При работе со сторонним registry не используйте учетную запись администратора для доступа к нему со стороны Deckhouse Kubernetes Platform. Создайте для Deckhouse Kubernetes Platform отдельную учетную запись с правами только на чтение и только в пределах нужного репозитория в registry. Ознакомьтесь с [примером создания](#особенности-настройки-nexus) такой учетной записи.
 {% endalert %}
+
+Настроить работу со сторонним registry при установке кластера можно с помощью ресурса InitConfiguration (Legacy-способ) или с помощью ресурса ModuleConfig deckhouse.
+
+#### Настройка с помощью ModuleConfig deckhouse
+
+Параметры для доступа к стороннему registry укажите в секции [`settings.registry`](/modules/deckhouse/configuration.html#parameters-registry) ресурса ModuleConfig deckhouse.
+
+Пример:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    registry:
+      mode: Direct
+      direct:
+        imagesRepo: test-registry.io/some/path
+        scheme: HTTPS
+        username: <username>
+        password: <password>
+        ca: <CA>
+```
+
+#### Настройка с помощью ресурса InitConfiguration (Legacy-способ)
 
 Установите следующие параметры в ресурсе InitConfiguration:
 
