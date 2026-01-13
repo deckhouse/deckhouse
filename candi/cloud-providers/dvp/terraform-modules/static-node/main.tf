@@ -40,9 +40,6 @@ locals {
     }
   ])
 
-  additional_disks_hashes = [
-    for d in var.additional_disks : d.hash
-  ]
 
   spec = merge(
     {
