@@ -69,9 +69,17 @@ spec:
             - name: geo-data
               mountPath: /data
               readOnly: false
+            - name: mmdb
+              mountPath: /tmp/mmdb
+              readOnly: false
           args:
             - "--server-port=127.0.0.1:8080"
             - "--prometheus-port=127.0.0.1:9090"
+            - "--grpc-port=:50051"
+            - "-v=5"
+          ports:
+            - containerPort: 50051
+              name: grpc
           env:
             - name: POD_NAME
               valueFrom:
@@ -169,8 +177,10 @@ spec:
       terminationGracePeriodSeconds: 30
 
 {{- $effectiveStorageClass := .Values.ingressNginx.internal.effectiveStorageClass }}
-{{- if not $effectiveStorageClass }}
       volumes:
+        - name: mmdb
+          emptyDir: {}
+{{- if not $effectiveStorageClass }}
         - name: geo-data
           emptyDir: {}
 {{- else }}

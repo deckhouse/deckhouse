@@ -15,6 +15,9 @@ spec:
     - name: https
       port: 4250
       targetPort: https
+    - name: grpc
+      port: 50051
+      targetPort: grpc
   selector:
     app: geoproxy
 ---
