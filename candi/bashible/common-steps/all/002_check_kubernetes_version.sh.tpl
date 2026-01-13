@@ -15,7 +15,6 @@
 {{- if eq .runType "Normal" }}
 {{ $kubernetesVersion := .kubernetesVersion | toString }}
 
-bb-log-info "check FIRST_BASHIBLE_RUN == no"
 if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   currentVersion=$(kubelet --version |egrep -o "1.[0-9]+")
   desiredVersion={{ $kubernetesVersion }}
