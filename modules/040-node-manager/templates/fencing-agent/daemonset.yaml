@@ -74,7 +74,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: GRPC_ADDRESS
-              value: "/dev/fencing-agent.sock"
+              value: "/tmp/fencing-agent-$(NODE_NAME).sock"
             - name: PROBE_INTERVAL
               value: "200ms"
             - name: PROBE_TIMEOUT
@@ -132,7 +132,7 @@ spec:
             - name: watchdog
               mountPath: /dev/watchdog
             - name: socket
-              mountPath: /dev/fencing-agent.sock
+              mountPath: /tmp
       terminationGracePeriodSeconds: 10
       volumes:
         - name: watchdog
@@ -141,6 +141,6 @@ spec:
             type: CharDevice
         - name: socket
           hostPath:
-            path: /dev/fencing-agent.sock
+            path: /tmp
   {{- end }}
 {{- end }}
