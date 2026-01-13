@@ -56,6 +56,19 @@ rules:
   resources: ["bulksubjectaccessreviews"]
   verbs: ["create"]
 ---
+# ClusterRole for clients who can list/get accessible namespaces
+# This enables UI/service accounts to discover which namespaces the user has access to
+# without requiring cluster-wide namespace list permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:accessible-namespaces-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["accessiblenamespaces"]
+  verbs: ["get", "list"]
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:

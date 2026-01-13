@@ -665,4 +665,3 @@ func (m *mockMultitenancyAuthorizer) Authorize(ctx context.Context, attrs author
 
 // Ensure mock implements authorizer.Authorizer
 var _ authorizer.Authorizer = &mockMultitenancyAuthorizer{}
-

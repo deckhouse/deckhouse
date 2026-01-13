@@ -19,6 +19,9 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
+// Ensure mockUserInfo implements user.Info for IsNamespaceAllowed tests
+var _ user.Info = &mockUserInfo{}
+
 func TestHasAnyFilters(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -182,19 +185,21 @@ type mockAttrs struct {
 	isResource  bool
 }
 
-func (m *mockAttrs) GetUser() user.Info                                  { return m.userInfo }
-func (m *mockAttrs) GetVerb() string                                     { return m.verb }
-func (m *mockAttrs) IsReadOnly() bool                                    { return m.verb == "get" || m.verb == "list" || m.verb == "watch" }
-func (m *mockAttrs) GetNamespace() string                                { return m.namespace }
-func (m *mockAttrs) GetResource() string                                 { return m.resource }
-func (m *mockAttrs) GetSubresource() string                              { return m.subresource }
-func (m *mockAttrs) GetName() string                                     { return m.name }
-func (m *mockAttrs) GetAPIGroup() string                                 { return m.apiGroup }
-func (m *mockAttrs) GetAPIVersion() string                               { return m.apiVersion }
-func (m *mockAttrs) IsResourceRequest() bool                             { return m.isResource }
-func (m *mockAttrs) GetPath() string                                     { return m.path }
-func (m *mockAttrs) GetFieldSelector() (fields.Requirements, error)      { return nil, nil }
-func (m *mockAttrs) GetLabelSelector() (labels.Requirements, error)      { return nil, nil }
+func (m *mockAttrs) GetUser() user.Info { return m.userInfo }
+func (m *mockAttrs) GetVerb() string    { return m.verb }
+func (m *mockAttrs) IsReadOnly() bool {
+	return m.verb == "get" || m.verb == "list" || m.verb == "watch"
+}
+func (m *mockAttrs) GetNamespace() string                           { return m.namespace }
+func (m *mockAttrs) GetResource() string                            { return m.resource }
+func (m *mockAttrs) GetSubresource() string                         { return m.subresource }
+func (m *mockAttrs) GetName() string                                { return m.name }
+func (m *mockAttrs) GetAPIGroup() string                            { return m.apiGroup }
+func (m *mockAttrs) GetAPIVersion() string                          { return m.apiVersion }
+func (m *mockAttrs) IsResourceRequest() bool                        { return m.isResource }
+func (m *mockAttrs) GetPath() string                                { return m.path }
+func (m *mockAttrs) GetFieldSelector() (fields.Requirements, error) { return nil, nil }
+func (m *mockAttrs) GetLabelSelector() (labels.Requirements, error) { return nil, nil }
 
 // mockUserInfo implements user.Info for testing
 type mockUserInfo struct {
@@ -434,4 +439,132 @@ func TestEngine_NonResourceRequest(t *testing.T) {
 	decision, _, err := e.Authorize(context.Background(), attrs)
 	require.NoError(t, err)
 	assert.Equal(t, authorizer.DecisionNoOpinion, decision, "non-resource requests should not be restricted")
+}
+
+func TestEngine_IsNamespaceAllowed(t *testing.T) {
+	e := &Engine{
+		directory: map[string]map[string]DirectoryEntry{
+			"User": {
+				"restricted-user": {
+					LimitNamespaces: []*regexp.Regexp{
+						regexp.MustCompile("^allowed-ns$"),
+						regexp.MustCompile("^app-.*$"),
+					},
+					AllowAccessToSystemNamespaces: false,
+					NamespaceFiltersAbsent:        false,
+				},
+				"system-user": {
+					AllowAccessToSystemNamespaces: true,
+					NamespaceFiltersAbsent:        true,
+				},
+				"unrestricted-user": {
+					AllowAccessToSystemNamespaces: true,
+					LimitNamespaces: []*regexp.Regexp{
+						regexp.MustCompile("^.*$"),
+					},
+					NamespaceFiltersAbsent: false,
+				},
+			},
+			"Group": {
+				"developers": {
+					LimitNamespaces: []*regexp.Regexp{
+						regexp.MustCompile("^dev-.*$"),
+					},
+					NamespaceFiltersAbsent: false,
+				},
+			},
+			"ServiceAccount": {},
+		},
+	}
+
+	tests := []struct {
+		name      string
+		userInfo  *mockUserInfo
+		namespace string
+		expected  bool
+	}{
+		{
+			name:      "restricted user - allowed namespace exact match",
+			userInfo:  &mockUserInfo{name: "restricted-user"},
+			namespace: "allowed-ns",
+			expected:  true,
+		},
+		{
+			name:      "restricted user - allowed namespace pattern match",
+			userInfo:  &mockUserInfo{name: "restricted-user"},
+			namespace: "app-frontend",
+			expected:  true,
+		},
+		{
+			name:      "restricted user - denied namespace",
+			userInfo:  &mockUserInfo{name: "restricted-user"},
+			namespace: "other-ns",
+			expected:  false,
+		},
+		{
+			name:      "restricted user - system namespace denied",
+			userInfo:  &mockUserInfo{name: "restricted-user"},
+			namespace: "kube-system",
+			expected:  false,
+		},
+		{
+			name:      "system user - system namespace allowed",
+			userInfo:  &mockUserInfo{name: "system-user"},
+			namespace: "kube-system",
+			expected:  true,
+		},
+		{
+			name:      "system user - any namespace allowed",
+			userInfo:  &mockUserInfo{name: "system-user"},
+			namespace: "random-ns",
+			expected:  true,
+		},
+		{
+			name:      "unrestricted user - all namespaces allowed",
+			userInfo:  &mockUserInfo{name: "unrestricted-user"},
+			namespace: "any-namespace",
+			expected:  true,
+		},
+		{
+			name:      "unrestricted user - system namespace allowed",
+			userInfo:  &mockUserInfo{name: "unrestricted-user"},
+			namespace: "kube-system",
+			expected:  true,
+		},
+		{
+			name:      "unknown user - no restrictions",
+			userInfo:  &mockUserInfo{name: "unknown-user"},
+			namespace: "any-ns",
+			expected:  true,
+		},
+		{
+			name:      "group member - allowed namespace",
+			userInfo:  &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace: "dev-frontend",
+			expected:  true,
+		},
+		{
+			name:      "group member - denied namespace",
+			userInfo:  &mockUserInfo{name: "alice", groups: []string{"developers"}},
+			namespace: "prod-backend",
+			expected:  false,
+		},
+		{
+			name:      "nil user - no restrictions",
+			userInfo:  nil,
+			namespace: "any-ns",
+			expected:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var userInfo user.Info
+			if tt.userInfo != nil {
+				userInfo = tt.userInfo
+			}
+			result := e.IsNamespaceAllowed(userInfo, tt.namespace)
+			assert.Equal(t, tt.expected, result, "unexpected result for %s", tt.name)
+		})
+	}
 }
