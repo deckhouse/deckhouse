@@ -269,8 +269,44 @@ func (c *DiskService) CreateVolumeSnapshot(ctx context.Context, name string, sou
 
 	err := c.client.Create(ctx, volumeSnapshot)
 	if err != nil {
+		return nil, fmt.Errorf("failed to create volume snapshot: %w", err)
+	}
+
+	err = c.WaitVolumeSnapshotReady(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to wait volume snapshot ready: %w", err)
+	}
+
+	newVolumeSnapshot, err := c.GetVolumeSnapshot(ctx, name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get just created volume snapshot: %w", err)
+	}
+
+	return newVolumeSnapshot, nil
+}
+
+func (c *DiskService) WaitVolumeSnapshotReady(ctx context.Context, name string) error {
+	return c.Wait(ctx, name, &v1alpha2.VirtualDiskSnapshot{}, func(obj client.Object) (bool, error) {
+		volumeSnapshot, ok := obj.(*v1alpha2.VirtualDiskSnapshot)
+		if !ok {
+			return false, fmt.Errorf("expected a VirtualDiskSnapshot but got a %T", obj)
+		}
+
+		return volumeSnapshot.Status.Phase == v1alpha2.VirtualDiskSnapshotPhaseReady, nil
+	})
+}
+
+func (c *DiskService) GetVolumeSnapshot(ctx context.Context, name string) (*v1alpha2.VirtualDiskSnapshot, error) {
+	volumeSnapshot := &v1alpha2.VirtualDiskSnapshot{}
+
+	err := c.client.Get(ctx, types.NamespacedName{
+		Namespace: c.namespace,
+		Name:      name,
+	}, volumeSnapshot)
+	if err != nil {
 		return nil, err
 	}
+
 	return volumeSnapshot, nil
 }
 
