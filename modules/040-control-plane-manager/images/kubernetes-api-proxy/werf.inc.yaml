@@ -60,6 +60,18 @@ import:
   add: /src
   to: /src
   before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -73,4 +85,4 @@ shell:
   - chmod +x /usr/local/bin/bazel
   setup:
   - cd /src/envoy
-  - bazel build -c opt //source/exe:envoy-static
+  - bazel build -c opt //source/exe:envoy-static --linkopt=-Wl,--rpath=/usr/lib64
