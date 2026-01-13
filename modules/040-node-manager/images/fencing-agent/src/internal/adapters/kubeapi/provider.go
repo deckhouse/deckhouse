@@ -40,6 +40,7 @@ func NewProvider(client kubernetes.Interface,
 
 func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", p.nodeGroup)
+	p.logger.Debug("Get nodes", zap.String("labelSelector", labelSelector))
 	nodes, err := p.client.CoreV1().Nodes().List(ctx, v1.ListOptions{
 		LabelSelector: labelSelector,
 	})
@@ -47,6 +48,7 @@ func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 		// TODO logging
 		return nil, err
 	}
+	p.logger.Debug("Get nodes", zap.Int("count", len(nodes.Items)))
 	dNodes := make([]domain.Node, 0, len(nodes.Items))
 	for _, node := range nodes.Items {
 		dNode := domain.NewNode(node.Name)
