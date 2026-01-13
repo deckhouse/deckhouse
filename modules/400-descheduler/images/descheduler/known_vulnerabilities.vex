@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-8a9dfe37d09b0d07a4b05b9b988170ebfdcf9c880fec4727cc44fe12ecaaa70b",
+  "@id": "https://openvex.dev/docs/public/vex-95caeb00c03a501857d0b423a0bc2296ad7048120f6cf4f12510866919a323d5",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
   "version": 3,
   "statements": [
@@ -10,13 +10,13 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.38.0"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
-      "timestamp": "2025-12-22T13:43:52.201794Z"
+      "timestamp": "2026-01-12T11:51:20.451089Z"
     },
     {
       "vulnerability": {
@@ -24,15 +24,15 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.38.0"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.36.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Эта неэксплуатируемая уязвимость относится. Deckhouse не использует SSH agent функциональность в своих компонентах. Уязвимый код присутствует в зависимостях, но не вызывается ни в одном пути выполнения.",
-      "timestamp": "2025-12-22T13:54:24.983231Z"
+      "timestamp": "2026-01-12T11:54:06.501135Z"
     }
   ],
-  "timestamp": "2025-12-22T13:43:52Z",
-  "last_updated": "2025-12-22T13:54:34Z"
+  "timestamp": "2026-01-12T11:51:20Z",
+  "last_updated": "2026-01-12T11:54:06Z"
 }
