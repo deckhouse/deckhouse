@@ -416,6 +416,10 @@ apiVersions:
                 type: string
                 description: |
                   Root disk type.
+              externalIPAddress:
+                description: |
+                  External IP address.
+                type: string
               instanceClass:
                 description: |
                   Partial contents of the fields of the [OpenStackInstanceClass](https://deckhouse.io/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
