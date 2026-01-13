@@ -142,6 +142,5 @@ spec:
         - name: socket
           hostPath:
             path: /dev/fencing-agent.sock
-            type: Socket
   {{- end }}
 {{- end }}
