@@ -42,8 +42,7 @@ Code provides a set of push rules to enforce specific policies on commits and Gi
   Only GPG-signed commits are allowed. This rule also rejects changes via the Web UI if GPG signing is not configured for the UI.  
 
 - ***Require DCO (Developer Certificate of Origin)***  
-
-  Commits must include a `Signed-off-by` line to indicate agreement with the DCO. With this rule enabled, the **Revert** option for merge requests in the Web UI is unavailable, since the auto-generated commit message does not contain a sign-off.  
+  Commits must contain a DCO `Signed-off-by` line, including merge commits and squash commits. With this rule enabled, the **revert** option for merge requests in the Web UI will be unavailable, since the auto-generated commit message does not include a DCO sign-off.
 
 - ***Verify committer name***  
 
