@@ -48,6 +48,7 @@ description: "Мониторинг компонентов и сервисов De
 ### Категории оповещений
 
 #### Оповещения о доступности
+
 - **D8DeckhousePodIsNotReady** - Под Deckhouse не в состоянии Ready более 10 минут
 - **D8DeckhousePodIsNotRunning** - Под Deckhouse не в состоянии Running более 2 минут
 - **D8DeckhouseIsHung** - Процесс Deckhouse кажется зависшим (остановились live ticks)
@@ -55,6 +56,7 @@ description: "Мониторинг компонентов и сервисов De
 - **D8DeckhouseCustomTargetDown** - Prometheus не может скрапить пользовательские метрики хуков
 
 #### Оповещения о неисправностях
+
 - **D8DeckhousePodIsRestartingTooOften** - Более 3 перезапусков за последний час
 - **D8DeckhouseHasNoAccessToRegistry** - Невозможно подключиться к реестру контейнеров более 1 часа
 - **D8DeckhouseQueueIsHung** - Обработка очереди задач зависла
@@ -62,12 +64,14 @@ description: "Мониторинг компонентов и сервисов De
 - **D8DeckhouseCouldNotDeleteModule/DiscoverModules** - Проблемы управления модулями
 
 #### Оповещения об управлении релизами
+
 - **D8DeckhouseIsNotOnReleaseChannel** - Не подписан ни на один регулярный канал релизов
 - **DeckhouseReleaseIsWaitingManualApproval** - Новый релиз ожидает ручного подтверждения
 - **DeckhouseReleaseIsBlocked** - Релиз заблокирован из-за невыполненных требований
 - **DeckhouseReleaseIsOutdated** - Установленная версия устарела
 
 #### Оповещения CNI и ОС
+
 - **D8CNIEnabledMoreThanOne** - Включено более одного CNI одновременно
 - **D8CNIMisconfigured** - ModuleConfig CNI не соответствует фактической конфигурации кластера
 - **D8NodeHasDeprecatedOSVersion** - Узлы с устаревшими версиями ОС (Ubuntu 18.04, Debian 10, CentOS 7)
