@@ -154,6 +154,7 @@ func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
 	return peersIps, nil
 }
 
+// TODO unused context
 func (a *Applicaion) startHealthzServer(ctx context.Context) {
 	a.logger.Info("Stating healthz server", zap.String("bindAddress", a.config.HealthProbeBindAddress))
 
