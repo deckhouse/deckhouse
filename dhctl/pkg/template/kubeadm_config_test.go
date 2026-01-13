@@ -184,7 +184,7 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 
-				// For Kubernetes >= 1.29, authorization-config is used instead of authorization-mode
+				// When webhookURL is configured, we always use structured authorization config (authorization-config).
 				if !strings.Contains(result, "authorization-config") {
 					t.Error("Expected authorization-config not found")
 				}
@@ -905,7 +905,7 @@ func testEdgeCases(t *testing.T) {
 			}
 
 			expectedStrings := []string{
-				"authorization-config", // For Kubernetes >= 1.29, authorization-config is used instead of Node,Webhook,RBAC
+				"authorization-config", // structured authorization config (instead of Node,Webhook,RBAC flags)
 				"authentication-token-webhook-config-file",
 				"audit-webhook-config-file",
 				"authentication-config",

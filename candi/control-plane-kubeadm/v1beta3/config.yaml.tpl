@@ -135,12 +135,7 @@ apiServer:
     bind-address: "0.0.0.0"
   {{- end }}
   {{- if .apiserver.webhookURL }}
-    {{- if semverCompare ">=1.29" .clusterConfiguration.kubernetesVersion }}
     authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
-    {{- else }}
-    authorization-mode: Node,Webhook,RBAC
-    authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
-    {{- end }}
   {{- end -}}
   {{ if .apiserver.authnWebhookURL }}
     authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
