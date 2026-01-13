@@ -72,6 +72,14 @@ import:
   add: /lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
   before: install
+- image: libs/ncurses-v6_5_20250920
+  add: /usr/lib
+  to: /usr/lib64
+  before: setup
+  includePaths:
+  - libtinfo.a
+  - libtinfo.so
+  - libtinfo.so.6
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
