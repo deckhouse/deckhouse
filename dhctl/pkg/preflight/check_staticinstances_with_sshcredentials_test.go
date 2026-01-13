@@ -1,3 +1,17 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package preflight
 
 import (
@@ -8,7 +22,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
 )
 
-func Test_parseSSHCredentials(t *testing.T) {
+func TestParseSSHCredentials(t *testing.T) {
 	t.Run("ok: private key, default port", func(t *testing.T) {
 		key := "KEY"
 		keyB64 := base64.StdEncoding.EncodeToString([]byte(key))
@@ -103,7 +117,7 @@ func Test_parseSSHCredentials(t *testing.T) {
 	})
 }
 
-func Test_parseResources(t *testing.T) {
+func TestParseResources(t *testing.T) {
 	t.Run("ok: parses creds + instances, ignores unknown/empty", func(t *testing.T) {
 		keyB64 := base64.StdEncoding.EncodeToString([]byte("key"))
 
