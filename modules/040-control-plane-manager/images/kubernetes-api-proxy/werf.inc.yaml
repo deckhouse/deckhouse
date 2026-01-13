@@ -43,7 +43,7 @@ git:
         - '**/*'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-envoy-artifact
-fromImage: cni-cillium/base-cilium-dev
+fromImage: cni-cilium/base-cilium-dev
 final: false
 secrets:
 - id: SOURCE_REPO
