@@ -1,8 +1,6 @@
 spec:
   versions:
     - name: v1alpha1
-      served: true
-      storage: false
       schema:
         openAPIV3Schema:
           properties:
