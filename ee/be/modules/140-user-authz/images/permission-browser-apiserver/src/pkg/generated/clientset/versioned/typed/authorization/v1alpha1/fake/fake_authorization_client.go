@@ -29,6 +29,10 @@ type FakeAuthorizationV1alpha1 struct {
 	*testing.Fake
 }
 
+func (c *FakeAuthorizationV1alpha1) AccessibleNamespaces() v1alpha1.AccessibleNamespaceInterface {
+	return newFakeAccessibleNamespaces(c)
+}
+
 func (c *FakeAuthorizationV1alpha1) BulkSubjectAccessReviews() v1alpha1.BulkSubjectAccessReviewInterface {
 	return newFakeBulkSubjectAccessReviews(c)
 }

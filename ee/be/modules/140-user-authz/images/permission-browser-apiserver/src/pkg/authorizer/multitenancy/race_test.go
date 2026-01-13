@@ -270,4 +270,3 @@ type mockRBACAuthorizer struct {
 func (m *mockRBACAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attributes) (authorizer.Decision, string, error) {
 	return m.decision, "mock", nil
 }
-
