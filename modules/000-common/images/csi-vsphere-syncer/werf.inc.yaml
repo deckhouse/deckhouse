@@ -1,7 +1,8 @@
 {{- range $key, $value := .CandiVersionMap.k8s }}
   {{- $version := toString $key }}
+  {{- $image_version := toString $key | replace "." "-"}}
   {{- if $value.csi.vsphere }}
-    {{- $src_version := toString $value.csi.vsphere }}
+    {{- $src_version := "v3.3.1" }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
     {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
@@ -10,10 +11,10 @@
       {{- end }}
     {{- end }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/vsphere-syncer
   to: /bin/vsphere-syncer
   before: setup
@@ -21,7 +22,7 @@ imageSpec:
   config:
     entrypoint: ["/bin/vsphere-syncer"]
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 fromImage: common/src-artifact
 final: false
     {{- if $patch }}
@@ -37,19 +38,20 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git /src
+  - git clone --depth 1 --branch v0.2.0 $(cat /run/secrets/SOURCE_REPO)/gofsutil.git /src/gofsutil
   - cd /src
-  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git  .
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - rm -rf vendor
-  - rm -rf .git
+  - sed -i -e 's# ../gofsutil# /src/gofsutil#g' go.mod
+  - rm -rf .git vendor
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $version | replace "." "-" }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 fromImage: builder/golang-alpine
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $version | replace "." "-" }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
   add: /src
   to: /src
   before: install
@@ -60,10 +62,13 @@ secrets:
   value: {{ $.GOPROXY }}
 shell:
   install:
-  - export GO_VERSION=${GOLANG_VERSION}
+  - cd /src/gofsutil
+  - go mod init deckhouse/3p/gofsutil
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $version }}" -o vsphere-syncer ./cmd/syncer
+  setup:
+  - cd /src
+  - GOOS=linux GOARCH=amd64 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $src_version }}" -o vsphere-syncer ./cmd/syncer
   {{- end }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
