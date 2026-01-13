@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-bb-log-info "check runType == normal"
 {{- if eq .runType "Normal" }}
 {{ $kubernetesVersion := .kubernetesVersion | toString }}
 
@@ -28,20 +27,6 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   if [[ "${desiredVersion}" = "1.30" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]
     then
       bb-deckhouse-get-disruptive-update-approval
-  fi
-
-  bb-log-info "$(kubectl version)"
-  bb-log-info "$(kubelet --version)"
-
-  bb-log-info "check desiredVersion == 1.32"
-  bb-log-info "desiredVersion: ${desiredVersion}"
-  bb-log-info "currentVersion: ${currentVersion}"
-  # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
-  if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]; then
-    systemctl stop kubelet
-    rm -f /var/lib/kubelet/pod_status_manager_state
-    bb-log-info "Removed /var/lib/kubelet/pod_status_manager_state"
-    systemctl start kubelet
   fi
 fi
 
