@@ -28,9 +28,10 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
       bb-deckhouse-get-disruptive-update-approval
   fi
 
-  if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]
-    then
-      bb-deckhouse-get-disruptive-update-approval
+  # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
+  if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]; then
+    rm -f /var/lib/kubelet/pod_status_manager_state
   fi
+fi
 
 {{- end }}
