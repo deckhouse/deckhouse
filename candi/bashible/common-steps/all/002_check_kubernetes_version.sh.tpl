@@ -27,6 +27,10 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
     then
       bb-deckhouse-get-disruptive-update-approval
   fi
-fi
+
+  if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]
+    then
+      bb-deckhouse-get-disruptive-update-approval
+  fi
 
 {{- end }}
