@@ -42,35 +42,22 @@ git:
       install:
         - '**/*'
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-envoy-src-artifact
-fromImage: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-envoy-artifact
+fromImage: cni-cillium/base-cilium-dev
 final: false
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
+  - rm -rf /relocate
+  - /binary_replace.sh -i /usr/bin/cilium-envoy -o /relocate
 ---
 image: {{ .ModuleName }}/envoy-artifact
-fromImage: builder/debian
+fromImage: common/distroless
 final: true
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-src-artifact
-  add: /src
-  to: /src
+- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-artifact
+  add: /relocate
+  to: /
   before: install
-secrets:
-- id: GOPROXY
-  value: {{ .GOPROXY }}
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  beforeInstall:
-  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends autoconf automake build-essential cmake curl git gnupg libtool python3 python3-pip unzip virtualenv zip zlib1g-dev libncurses-dev apt-transport-https ca-certificates
-  install:
-  - curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.20.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
-  - chmod +x /usr/local/bin/bazel
-  setup:
-  - cd /src/envoy
-  - bazel build -c opt //source/exe:envoy-static
