@@ -19,16 +19,19 @@ MOTD_FILE="/etc/motd"
 MARKER="D8_CLEANUP_STATIC_NODE"
 CLEANUP_FAILED=0
 
-DIRS_TO_REMOVE=(
+FILES_TO_REMOVE=(
   /var/cache/registrypackages
   /etc/kubernetes
   /var/lib/kubelet
   /var/lib/containerd
-  /etc/cni /var/lib/cni
+  /etc/cni
+  /var/lib/cni
   /opt/cni
   /var/lib/etcd
-  /opt/containerd /etc/containerd
-  /opt/deckhouse /var/lib/deckhouse
+  /opt/containerd
+  /etc/containerd
+  /opt/deckhouse
+  /var/lib/deckhouse
   /var/lib/bashible
   /var/log/kube-audit
   /var/log/pods
@@ -139,7 +142,6 @@ remove_dir() {
 }
 
 # --- Main ---
-
 log_info "Starting static node cleanup"
 
 if [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
@@ -157,7 +159,6 @@ log_info "Setting MOTD cleanup message"
 set_motd_message
 
 # Stop services
-
 log_info "Stopping services"
 for service in "${SERVICES_TO_REMOVE[@]}"; do
   stop_services "$service"
@@ -173,28 +174,21 @@ for dir in /var/lib/kubelet /var/lib/containerd; do
   mount | grep "$dir" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
 done
 
-# Remove containerd files
-
+# Remove immutable bit
 if [ -d /var/lib/containerd/io.containerd.snapshotter.v1.erofs ]; then
   chattr -R -i /var/lib/containerd/io.containerd.snapshotter.v1.erofs 2>/dev/null || true
 fi
 
 # Remove systemd files
-
 log_info "Removing systemd unit files and reloading systemd"
 rm -rf "${SYSTEMD_FILES[@]}"
 systemctl daemon-reload
 systemctl -s SIGHUP kill systemd-logind
 
-# Remove directories
-
-for d in "${DIRS_TO_REMOVE[@]}"; do
+# Remove files
+for d in "${FILES_TO_REMOVE[@]}"; do
   log_info "Removing $d"
-  if [[ "$d" == "/var/lib/kubelet" || "$d" == "/var/lib/containerd" || "$d" == "/opt/containerd" ]]; then
-    remove_dir "$d" || CLEANUP_FAILED=1
-  else
-    rm -rf "$d"
-  fi
+  remove_dir "$d" || CLEANUP_FAILED=1
 done
 
 # Remove Users
