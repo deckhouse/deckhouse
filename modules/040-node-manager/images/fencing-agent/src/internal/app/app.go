@@ -144,7 +144,7 @@ func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to discover peers: %w", err)
 	}
-	peersIps := make([]string, 0, len(nodes)-1)
+	peersIps := make([]string, 0, len(nodes))
 	for _, node := range nodes {
 		if node.Name == a.config.NodeName {
 			continue
