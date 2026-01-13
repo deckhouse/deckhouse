@@ -73,7 +73,7 @@ metadata:
     kind: ModuleSource
     name: test
     uid: 94494a1a-868c-441f-a7a1-3c5e8ccf0957
-  resourceVersion: "1005"
+  resourceVersion: "1011"
 spec:
   moduleName: parca
   version: 1.27.0
