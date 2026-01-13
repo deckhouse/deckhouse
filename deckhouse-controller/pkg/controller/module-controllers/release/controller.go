@@ -1027,7 +1027,7 @@ func (r *reconciler) getUpdatePolicy(ctx context.Context, name string) (*v1alpha
 }
 
 func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleRelease) (*v1alpha2.ModuleUpdatePolicy, *ctrl.Result, error) {
-	policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
+	policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get update policy", slog.String("release", release.GetName()), log.Err(err))
 
