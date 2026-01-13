@@ -1,22 +1,25 @@
-{{- $context := . }}
-{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
-  {{- if or (eq $crd.spec.inlet "LoadBalancer") (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
-    {{ $annotations := "" }}
-    {{ $sourceRanges := "" }}
-    {{ $loadBalancerClass := "" }}
-    {{- if and (eq $crd.spec.inlet "LoadBalancer") $crd.spec.loadBalancer }}
-      {{ $annotations = $crd.spec.loadBalancer.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancer.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancer.loadBalancerClass }}
-    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithProxyProtocol") $crd.spec.loadBalancerWithProxyProtocol }}
-      {{ $annotations = $crd.spec.loadBalancerWithProxyProtocol.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancerWithProxyProtocol.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancerWithProxyProtocol.loadBalancerClass }}
-    {{- else if and (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough") $crd.spec.loadBalancerWithSSLPassthrough }}
-      {{ $annotations = $crd.spec.loadBalancerWithSSLPassthrough.annotations }}
-      {{ $sourceRanges = $crd.spec.loadBalancerWithSSLPassthrough.sourceRanges  }}
-      {{ $loadBalancerClass = $crd.spec.loadBalancerWithSSLPassthrough.loadBalancerClass }}
-    {{- end }}
+{{- $context := . -}}
+
+{{- $lbKeyByInlet := dict
+  "LoadBalancer"                  "loadBalancer"
+  "LoadBalancerWithProxyProtocol" "loadBalancerWithProxyProtocol"
+  "LoadBalancerWithSSLPassthrough" "loadBalancerWithSSLPassthrough"
+-}}
+
+{{- range $crd := $context.Values.ingressNginx.internal.ingressControllers -}}
+  {{- $inlet := $crd.spec.inlet | default "" | toString -}}
+  {{- $lbKey := get $lbKeyByInlet $inlet -}}
+  {{- if $lbKey -}}
+
+    {{- $lb := (index $crd.spec $lbKey) | default dict -}}
+    {{- $annotations := $lb.annotations | default dict -}}
+    {{- $sourceRanges := $lb.sourceRanges | default list -}}
+    {{- $loadBalancerClass := $lb.loadBalancerClass | default "" -}}
+
+    {{- $customPorts := dict -}}
+    {{- if $lb.httpPort }}{{- $_ := set $customPorts "http" $lb.httpPort -}}{{- end -}}
+    {{- if $lb.httpsPort }}{{- $_ := set $customPorts "https" $lb.httpsPort -}}{{- end -}}
+    {{- $hasCustomPorts := or $lb.httpPort $lb.httpsPort -}}
 ---
 apiVersion: v1
 kind: Service
@@ -39,11 +42,11 @@ spec:
     {{- end }}
   ports:
   - name: http
-    port: 80
+    port: {{ get $customPorts "http" | default "80" }}
     targetPort: 80
     protocol: TCP
   - name: https
-    port: 443
+    port: {{ get $customPorts "https" | default "443" }}
     targetPort: 443
     protocol: TCP
     {{- if $loadBalancerClass }}
