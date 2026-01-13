@@ -60,6 +60,18 @@ import:
   add: /src
   to: /src
   before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libm.so.6
+  to: /usr/lib64/libm.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/libc.so.6
+  to: /usr/lib64/libc.so.6
+  before: install
+- image: libs/glibc-v2.41
+  add: /lib64/ld-linux-x86-64.so.2
+  to: /usr/lib64/ld-linux-x86-64.so.2
+  before: install
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
@@ -67,7 +79,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   beforeInstall:
-  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends  autoconf curl libtool patch git gnupg apt-transport-https python3-pip virtualenv
+  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends  autoconf curl libtool patch git gnupg libncurses5 apt-transport-https python3-pip virtualenv
   install:
   - curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor >bazel-archive-keyring.gpg
   - mv bazel-archive-keyring.gpg /usr/share/keyrings
