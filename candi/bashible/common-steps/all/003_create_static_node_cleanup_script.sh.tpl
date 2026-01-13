@@ -200,15 +200,15 @@ grep "created by deckhouse" /etc/passwd | cut -d: -f1 | xargs -r -n1 userdel 2>/
 # Handle d8-dhctl-converger cleanup
 if getent passwd d8-dhctl-converger >/dev/null; then
   log_info "Scheduling d8-dhctl-converger cleanup on reboot"
-  cat <<'EOF_CRON' > /root/cleanup.sh
+  cat <<'EOF_CRON' > /root/d8-user-cleanup.sh
 #!/bin/bash
 userdel d8-dhctl-converger
 [ -f /root/old_crontab ] && crontab /root/old_crontab && rm -f /root/old_crontab
 rm -f "$0"
 EOF_CRON
-  chmod +x /root/cleanup.sh
+  chmod +x /root/d8-user-cleanup.sh
   crontab -l 2>/dev/null > /root/old_crontab
-  (cat /root/old_crontab; echo "@reboot /root/cleanup.sh") | crontab -
+  (cat /root/old_crontab; echo "@reboot /root/d8-user-cleanup.sh") | crontab -
 fi
 
 if [ "$CLEANUP_FAILED" -ne 0 ]; then
