@@ -175,6 +175,43 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		table.Entry("LoadBalancer inlet with hide-headers and envoy header added", "lb-with-hide-headers-and-envoy-header-added.yaml"),
 		table.Entry("LoadBalancer inlet with hide-headers and envoy header added and istio", "lb-with-hide-headers-and-envoy-header-added-and-with-istio.yaml"),
 	)
+
+	It("renders LoadBalancer Service with custom external ports", func() {
+		hec.ValuesSetFromYaml("ingressNginx.internal.ingressControllers", `
+- name: custom-ports
+  spec:
+    ingressClass: nginx
+    inlet: LoadBalancer
+    loadBalancer:
+      httpsPort: 8443
+`)
+		hec.ValuesSetFromYaml("ingressNginx.internal.nginxAuthTLS", `
+- controllerName: custom-ports
+  ingressClass: nginx
+  data:
+    cert: teststring
+    key: teststring
+`)
+
+		hec.HelmRender()
+		Expect(hec.RenderError).ShouldNot(HaveOccurred())
+
+		service := hec.KubernetesResource("Service", "d8-ingress-nginx", "custom-ports-load-balancer")
+		Expect(service.Exists()).To(BeTrue())
+
+		ports := service.Field("spec.ports").Array()
+		Expect(ports).To(HaveLen(2))
+
+		Expect(ports[0].Get("name").String()).To(Equal("http"))
+		Expect(ports[0].Get("port").Int()).To(Equal(int64(80)))
+		Expect(ports[0].Get("targetPort").Int()).To(Equal(int64(80)))
+		Expect(ports[0].Get("protocol").String()).To(Equal("TCP"))
+
+		Expect(ports[1].Get("name").String()).To(Equal("https"))
+		Expect(ports[1].Get("port").Int()).To(Equal(int64(8443)))
+		Expect(ports[1].Get("targetPort").Int()).To(Equal(int64(443)))
+		Expect(ports[1].Get("protocol").String()).To(Equal("TCP"))
+	})
 })
 
 // ingressNginxController holds simplified structure to extract controller spec

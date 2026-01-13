@@ -786,6 +786,36 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    httpPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you expose the Ingress controller on non-standard external ports, users may be redirected to the wrong port and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [80]
+                    httpsPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [443]
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -845,6 +875,36 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    httpPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you expose the Ingress controller on non-standard external ports, users may be redirected to the wrong port and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [80]
+                    httpsPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [443]
                     acceptClientIPHeadersFrom:
                       type: array
                       description: |
@@ -890,6 +950,36 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    httpPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you expose the Ingress controller on non-standard external ports, users may be redirected to the wrong port and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [80]
+                    httpsPort:
+                      type: integer
+                      minimum: 1
+                      maximum: 65535
+                      description: |
+                        External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
+
+                        If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
+                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+
+                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        >
+                        > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
+                      x-doc-examples: [443]
                 hostPort:
                   type: object
                   description: |
