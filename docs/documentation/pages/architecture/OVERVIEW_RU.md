@@ -5,6 +5,9 @@ lang: ru
 search: architecture overview, архитектура Deckhouse
 ---
 
+<iframe id="structurizrDiagram" src="diagrams/index.html?iframe=structurizrDiagram#L1_context" width="100%" marginwidth="0" marginheight="0" frameborder="0" scrolling="no" allowfullscreen="true"></iframe>
+<script type="text/javascript" src="diagrams/js/structurizr-embed.js"></script>
+
 Deckhouse отвечает за то, чтобы кластер **одинаково** работал на **любой поддерживаемой инфраструктуре**:
 
 - в облаках (смотри информацию по соответствующему cloud provider'у);

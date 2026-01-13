@@ -3,6 +3,9 @@ title: Kubernetes Cluster
 permalink: en/architecture/
 ---
 
+<iframe id="structurizrDiagram" src="diagrams/index.html?iframe=structurizrDiagram#L1_context" width="100%" marginwidth="0" marginheight="0" frameborder="0" scrolling="no" allowfullscreen="true"></iframe>
+<script type="text/javascript" src="diagrams/js/structurizr-embed.js"></script>
+
 Deckhouse makes it possible to run the Kubernetes cluster on **any supported infrastructure** and in the **same manner**:
 
 - on clouds (for more info, see the section for the specific cloud provider);
