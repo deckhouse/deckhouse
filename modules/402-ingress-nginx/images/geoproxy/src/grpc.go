@@ -45,16 +45,18 @@ import (
 type (
 	GRPCServer struct {
 		extProcPb.UnimplementedExternalProcessorServer
-		geoDB *GeoDB
+		geoDB    *GeoDB
+		noopMode bool
 	}
 	healthServer struct {
 		healthPb.UnimplementedHealthServer
 	}
 )
 
-func NewGRPCServer(geoDb *GeoDB) *GRPCServer {
+func NewGRPCServer(geoDb *GeoDB, noopMode bool) *GRPCServer {
 	return &GRPCServer{
-		geoDB: geoDb,
+		geoDB:    geoDb,
+		noopMode: noopMode,
 	}
 }
 
@@ -108,6 +110,10 @@ func (g *GRPCServer) Process(processServer extProcPb.ExternalProcessor_ProcessSe
 						Response: &extProcPb.CommonResponse{},
 					},
 				},
+			}
+
+			if g.noopMode {
+				break // Empty Response for measure ExtProc delay
 			}
 
 			rh := req.GetRequestHeaders()

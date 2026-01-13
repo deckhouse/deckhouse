@@ -41,6 +41,7 @@ var (
 	serverPort     string
 	prometheusPort string
 	grpcPort       string
+	noop           bool
 )
 
 func main() {
@@ -49,6 +50,7 @@ func main() {
 	flag.StringVar(&serverPort, "server-port", "127.0.0.1:8080", "server port")
 	flag.StringVar(&prometheusPort, "prometheus-port", "127.0.0.1:9090", "prometheus port")
 	flag.StringVar(&grpcPort, "grpc-port", ":50051", "grpc server port")
+	flag.BoolVar(&noop, "noop", false, "No-op mode: handle ext_proc streams but do not add/modify headers (useful for measuring ext_proc overhead)")
 	flag.Parse()
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -73,7 +75,7 @@ func main() {
 	}
 	defer fsWatcher.Close()
 
-	grpcServer := geodownloader.NewGRPCServer(geodb)
+	grpcServer := geodownloader.NewGRPCServer(geodb, noop)
 
 	if err := fsWatcher.Add(geodownloader.PathRawMMDB); err != nil {
 		log.Error(fmt.Sprintf("Failed init fs notify: %v", err))
