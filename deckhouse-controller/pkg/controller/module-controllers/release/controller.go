@@ -771,9 +771,10 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		err    error
 	)
 
-	// if release has associated update policy
+	// if the release has associated update policy and it's not empty - just get it
+	// otherwise, try to get it from the module
 	policyName, found := release.GetObjectMeta().GetLabels()[v1alpha1.ModuleReleaseLabelUpdatePolicy]
-	if found {
+	if found && policyName != "" {
 		policy, err = r.getUpdatePolicy(ctx, policyName)
 		if err != nil {
 			r.metricStorage.CounterAdd(metrics.ModuleUpdatePolicyNotFound, 1.0, map[string]string{
