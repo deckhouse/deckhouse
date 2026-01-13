@@ -36,10 +36,10 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   bb-log-info "check desiredVersion == 1.32"
   # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
   if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]; then
-    systemct stop kubelet
+    systemctl stop kubelet
     rm -f /var/lib/kubelet/pod_status_manager_state
     bb-log-info "Removed /var/lib/kubelet/pod_status_manager_state"
-    systemct start kubelet
+    systemctl start kubelet
   fi
 fi
 
