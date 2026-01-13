@@ -58,6 +58,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			logger.Error(err, "unable to cleanup egress gateway instance", "name", egressGatewayInstance.Name)
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
 
 	desiredVirtualIPsToAnnounce := make(map[string][]string)
