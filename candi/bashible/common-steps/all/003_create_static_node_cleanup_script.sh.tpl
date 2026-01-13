@@ -217,6 +217,7 @@ if [ "$CLEANUP_FAILED" -ne 0 ]; then
 fi
 
 log_info "Cleanup completed successfully, restoring MOTD and rebooting"
+rm -rf /root/d8_cleanup_static_node.sh
 restore_motd_message
 shutdown -r -t 5
 EOF
