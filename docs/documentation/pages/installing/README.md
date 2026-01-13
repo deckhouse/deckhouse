@@ -675,7 +675,7 @@ During installation, DKP can be configured to work with an external registry (e.
 When working with an external registry, do not use an administrator account to access it from Deckhouse Kubernetes Platform. Create a separate account for Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
 {% endalert %}
 
-You can configure work with a third-party registry when installing a cluster using the InitConfiguration resource (Legacy method) or using the ModuleConfig deckhouse resource.
+You can configure work with a third-party registry when installing a cluster using the InitConfiguration resource (legacy method) or using the ModuleConfig deckhouse resource.
 
 #### Configuration using ModuleConfig deckhouse
 
@@ -702,7 +702,7 @@ spec:
         ca: <CA>
 ```
 
-#### Configuration using the InitConfiguration resource (Legacy method)
+#### Configuration using the InitConfiguration resource (legacy method)
 
 Set the following parameters in the `InitConfiguration` resource:
 
