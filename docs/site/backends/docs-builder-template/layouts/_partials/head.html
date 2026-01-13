@@ -14,7 +14,7 @@
 <meta property="og:url" content="{{ strings.TrimSuffix "readme.html" .Permalink  }}">
 <meta property="og:title" content="{{ .Title }} | {{ .Site.Title }}">
 <meta property="og:description" content="{{ $description }}">
-<meta property="og:image" content="/images/og/kubernetes-platform.png">
+<meta property="og:image" content="{{ site.BaseURL }}images/og/kubernetes-platform.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:type" content="image/png">
@@ -24,5 +24,5 @@
 <meta name="twitter:url" content="{{ strings.TrimSuffix "readme.html" .Permalink }}">
 <meta name="twitter:title" content="{{ .Title }} | {{ .Site.Title }}">
 <meta name="twitter:description" content="{{ $description }}">
-<meta name="twitter:image" content="{{ site.BaseURL }}favicon-32x32.png" />
+<meta name="twitter:image" content="{{ site.BaseURL }}images/favicon/logo-180.png" />
 <meta name="twitter:image:alt" content="{{ site.Title }}">
