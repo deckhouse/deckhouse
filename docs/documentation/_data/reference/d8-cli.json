@@ -1,5 +1,3 @@
-{"level":"warn","logger":"d8.system-command.plugins-command","msg":"use homedir instead of default d8 plugins path in '/opt/deckhouse/lib/deckhouse-cli'","error":"mkdir /opt/deckhouse/lib: permission denied","new_path":"/opt/deckhouse/lib/deckhouse-cli","time":"2026-01-13T12:28:16+03:00"}
-{"level":"warn","logger":"d8.package-command.plugins-command","msg":"use homedir instead of default d8 plugins path in '/opt/deckhouse/lib/deckhouse-cli'","error":"mkdir /opt/deckhouse/lib: permission denied","new_path":"/opt/deckhouse/lib/deckhouse-cli","time":"2026-01-13T12:28:16+03:00"}
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
