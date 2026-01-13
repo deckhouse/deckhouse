@@ -53,7 +53,7 @@ shell:
   - git clone $(cat /run/secrets/SOURCE_REPO)/envoyproxy/envoy.git /src/envoy
 ---
 image: {{ .ModuleName }}/envoy-artifact
-fromImage: builder/debian
+fromImage: cni-cilium/base-cilium-dev
 final: true
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-envoy-src-artifact
@@ -72,25 +72,12 @@ import:
   add: /lib64/ld-linux-x86-64.so.2
   to: /usr/lib64/ld-linux-x86-64.so.2
   before: install
-- image: libs/ncurses-v6_5_20250920
-  add: /usr/lib
-  to: /usr/lib64
-  before: setup
-  includePaths:
-  - libtinfo.a
-  - libtinfo.so
-  - libtinfo.so.6
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
-  beforeInstall:
-  - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends autoconf automake build-essential cmake curl git gnupg libtool python3 python3-pip unzip virtualenv zip zlib1g-dev
-  install:
-  - curl -L https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -o /usr/local/bin/bazel
-  - chmod +x /usr/local/bin/bazel
   setup:
   - cd /src/envoy
   - bazel build -c opt //source/exe:envoy-static --linkopt=-Wl,--rpath=/usr/lib64
