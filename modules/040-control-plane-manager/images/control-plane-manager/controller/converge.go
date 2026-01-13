@@ -126,6 +126,27 @@ func convergeComponents() error {
 	return nil
 }
 
+func rejoinEtcdMemberIfNeeded(etcd *Etcd) error {
+	_, err := os.Stat("/var/lib/etcd/member")
+	if err == nil {
+		memberExists, err := etcd.checkMemberExists(config.NodeName)
+		if err != nil {
+			return fmt.Errorf("failed to check if etcd member %s exists: %w", config.NodeName, err)
+		}
+
+		if !memberExists {
+			log.Infof("etcd member folder exists but %s is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", config.NodeName)
+			if err := cleanupEtcdFolder(); err != nil {
+				return fmt.Errorf("failed to cleanup etcd folder: %w", err)
+			}
+			if err := EtcdJoinConverge(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
@@ -139,22 +160,8 @@ func convergeComponent(componentName string) error {
 			return fmt.Errorf("failed to create etcd client: %w", err)
 		}
 		defer etcd.client.Close()
-		_, err = os.Stat("/var/lib/etcd/member")
-		if err == nil {
-			memberExists, err := etcd.checkMemberExists(config.NodeName)
-			if err != nil {
-				return fmt.Errorf("failed to check if etcd member %s exists: %w", config.NodeName, err)
-			}
-
-			if !memberExists {
-				log.Infof("etcd member folder exists but %s is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", config.NodeName)
-				if err := cleanupEtcdFolder(); err != nil {
-					return fmt.Errorf("failed to cleanup etcd folder: %w", err)
-				}
-				if err := EtcdJoinConverge(); err != nil {
-					return err
-				}
-			}
+		if err := rejoinEtcdMemberIfNeeded(etcd); err != nil {
+			return err
 		}
 	}
 	if err := prepareConverge(componentName, true); err != nil {
