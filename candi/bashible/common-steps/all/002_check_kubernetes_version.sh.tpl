@@ -34,6 +34,8 @@ if [ "$FIRST_BASHIBLE_RUN" == "no" ]; then
   bb-log-info "$(kubelet --version)"
 
   bb-log-info "check desiredVersion == 1.32"
+  bb-log-info "desiredVersion: ${desiredVersion}"
+  bb-log-info "currentVersion: ${currentVersion}"
   # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
   if [[ "${desiredVersion}" = "1.32" && -n "$currentVersion" && "$currentVersion" = "1.31" ]]; then
     systemctl stop kubelet
