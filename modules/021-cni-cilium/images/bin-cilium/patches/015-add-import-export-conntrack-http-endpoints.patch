@@ -1,23 +1,30 @@
-commit 92e0403068ba176cd855a496828c81e3cd96143f
+commit b186ca4890a99a5fe23bac39a0360c5df6cae233
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
-Date:   Mon Dec 22 18:37:47 2025 +0300
+Date:   Thu Nov 20 14:54:44 2025 +0300
 
     add tcp ct map filling with cilium-cmd util
     
     Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 
 diff --git a/cilium-dbg/cmd/bpf_ct_list.go b/cilium-dbg/cmd/bpf_ct_list.go
-index 1a8e53ab21..19686a6f73 100644
+index 05c07c8639..19686a6f73 100644
 --- a/cilium-dbg/cmd/bpf_ct_list.go
 +++ b/cilium-dbg/cmd/bpf_ct_list.go
-@@ -37,10 +37,17 @@ var (
+@@ -6,6 +6,7 @@ package cmd
+ import (
+ 	"errors"
+ 	"fmt"
++	"io"
+ 	"os"
+ 	"strconv"
  
+@@ -33,7 +34,21 @@ var (
+ 				cmd.PrintErrf("Invalid argument: %s", err.Error())
+ 				return
+ 			}
++
  			common.RequireRootPrivilege("cilium bpf ct list")
- 
--			err = importCtMapsDump()
--			if err != nil {
--				cmd.PrintErrf("importCtMapsDump failed: %s", err.Error())
--				return
++
 +			// err = importCtMapsDump()
 +			// if err != nil {
 +			// 	cmd.PrintErrf("importCtMapsDump failed: %s", err.Error())
@@ -29,25 +36,212 @@ index 1a8e53ab21..19686a6f73 100644
 +					cmd.PrintErrf("FillCtMaps failed: %s", err.Error())
 +					return
 +				}
- 			}
++			}
  			dumpCt(getMaps(t, id), t)
  		},
+ 	}
+@@ -43,6 +58,23 @@ var (
+ 	timeDiffClockSourceHz   int64
+ )
+ 
++func importCtMapsDump() error {
++	input, err := io.ReadAll(os.Stdin)
++	if err != nil {
++		return fmt.Errorf("failed to read stdin: %w", err)
++	}
++
++	if len(input) == 0 {
++		return nil
++	}
++
++	if err = ctmap.InsertAll(input); err != nil {
++		return fmt.Errorf("failed to insert ct dump: %w", err)
++	}
++
++	return nil
++}
++
+ func init() {
+ 	bpfCtListCmd.Flags().BoolVarP(&timeDiff, "time-diff", "d", false, "print time difference for entries")
+ 	bpfCtListCmd.Flags().StringVar(&timeDiffClockSourceMode, "time-diff-clocksource-mode", "", "manually set clock source mode (instead of contacting the server)")
 diff --git a/pkg/maps/ctmap/lookup.go b/pkg/maps/ctmap/lookup.go
-index 518be9477c..86de5b205f 100644
+index 02a05c5cd6..86de5b205f 100644
 --- a/pkg/maps/ctmap/lookup.go
 +++ b/pkg/maps/ctmap/lookup.go
-@@ -9,6 +9,7 @@ import (
+@@ -4,11 +4,17 @@
+ package ctmap
+ 
+ import (
++	"encoding/json"
+ 	"fmt"
  	"net/netip"
  
- 	lbmap "github.com/cilium/cilium/pkg/maps/lbmap"
++	lbmap "github.com/cilium/cilium/pkg/maps/lbmap"
 +	"github.com/cilium/cilium/pkg/maps/timestamp"
- 
++
  	"github.com/cilium/cilium/pkg/bpf"
- 	lb "github.com/cilium/cilium/pkg/loadbalancer"
-@@ -350,6 +351,63 @@ func Insert(key *CtKey4Global, entry *CtEntry) error {
++	lb "github.com/cilium/cilium/pkg/loadbalancer"
+ 	"github.com/cilium/cilium/pkg/tuple"
++	"github.com/cilium/cilium/pkg/types"
+ 	"github.com/cilium/cilium/pkg/u8proto"
+ )
+ 
+@@ -193,6 +199,215 @@ func Update(epname string, srcAddr, dstAddr string, proto u8proto.U8proto, ingre
  	return m.Update(key, entry)
  }
  
++type jsonTupleKey struct {
++	DestAddr   []uint8 `json:"DestAddr"`
++	SourceAddr []uint8 `json:"SourceAddr"`
++	DestPort   uint16  `json:"DestPort"`
++	SourcePort uint16  `json:"SourcePort"`
++	NextHeader uint8   `json:"NextHeader"`
++	Flags      uint8   `json:"Flags"`
++}
++
++type jsonCtEntry struct {
++	Reserved0        uint64 `json:"Reserved0"`
++	BackendID        uint64 `json:"BackendID"`
++	Packets          uint64 `json:"Packets"`
++	Bytes            uint64 `json:"Bytes"`
++	Lifetime         uint32 `json:"Lifetime"`
++	Flags            uint16 `json:"Flags"`
++	RevNAT           uint16 `json:"RevNAT"`
++	IfIndex          uint16 `json:"IfIndex"`
++	TxFlagsSeen      uint8  `json:"TxFlagsSeen"`
++	RxFlagsSeen      uint8  `json:"RxFlagsSeen"`
++	SourceSecurityID uint32 `json:"SourceSecurityID"`
++	LastTxReport     uint32 `json:"LastTxReport"`
++	LastRxReport     uint32 `json:"LastRxReport"`
++}
++
++type jsonCtRecord struct {
++	Key   jsonTupleKey `json:"Key"`
++	Value jsonCtEntry  `json:"Value"`
++}
++
++func (j jsonTupleKey) toCtKey4Global() *CtKey4Global {
++	return &CtKey4Global{
++		TupleKey4Global: tuple.TupleKey4Global{
++			TupleKey4: tuple.TupleKey4{
++				DestAddr:   types.IPv4{j.DestAddr[0], j.DestAddr[1], j.DestAddr[2], j.DestAddr[3]},
++				SourceAddr: types.IPv4{j.SourceAddr[0], j.SourceAddr[1], j.SourceAddr[2], j.SourceAddr[3]},
++				DestPort:   j.DestPort,
++				SourcePort: j.SourcePort,
++				NextHeader: u8proto.U8proto(j.NextHeader),
++				Flags:      j.Flags,
++			},
++		},
++	}
++}
++
++func (j jsonCtEntry) toCtEntry() CtEntry {
++	return CtEntry(j)
++}
++
++func getOrOpenServiceMap() (*bpf.Map, error) {
++	if m := bpf.GetMap(lbmap.Service4MapV2Name); m != nil {
++		return m, nil
++	}
++
++	return bpf.OpenMap(bpf.MapPath(lbmap.Service4MapV2Name), &lbmap.Service4Key{}, &lbmap.Service4Value{})
++}
++
++func lookupService(key *lbmap.Service4Key) (*lbmap.Service4Value, error) {
++	m, err := getOrOpenServiceMap()
++	if err != nil || m == nil {
++		return nil, err
++	}
++
++	v, err := m.Lookup(key)
++	if err != nil || v == nil {
++		return nil, err
++	}
++	return v.(*lbmap.Service4Value), nil
++}
++
++func getActualRevNat(key *CtKey4Global) (uint16, error) {
++	svcKey := lbmap.NewService4Key(key.DestAddr.IP(), key.SourcePort, key.NextHeader, lb.ScopeExternal, 0)
++	svcVal, err := lookupService(svcKey)
++	if err == nil {
++		fmt.Printf("DEBUG SERVICE CT REVNAT %d\n", svcVal.RevNat)
++		return svcVal.RevNat, nil
++	}
++
++	fmt.Printf("DEBUG SERVICE LB LOOKUP WAS FAILED, TRY INTERNAL SCOPE\n")
++	svcKey.Scope = lb.ScopeInternal
++	svcVal, err = lookupService(svcKey)
++	if err != nil {
++		return 0, fmt.Errorf("failed to lookup ct service: %w", err)
++	}
++
++	return svcVal.RevNat, nil
++}
++
++func InsertAll(rawData []byte) error {
++	var records []jsonCtRecord
++	if err := json.Unmarshal(rawData, &records); err != nil {
++		return fmt.Errorf("failed to unmarshal ct dump: %w", err)
++	}
++
++	revnatMap := map[uint16]uint16{}
++	for _, rec := range records {
++		key := rec.Key.toCtKey4Global()
++		val := rec.Value.toCtEntry()
++
++		if key.Flags&TUPLE_F_SERVICE != 0 {
++			// get correct revnat index for this node
++			revNat, err := getActualRevNat(key)
++			if err != nil {
++				fmt.Printf("DEBUG FAILED MAP CT SERVICE TO REVNAT %s\n", err)
++				continue
++			}
++			revnatMap[val.RevNAT] = revNat
++			val.RevNAT = revNat
++
++			if err := Insert(key, &val); err != nil {
++				return fmt.Errorf("failed to insert ct entry to map: %w", err)
++			}
++		}
++	}
++
++	for _, rec := range records {
++		key := rec.Key.toCtKey4Global()
++		val := rec.Value.toCtEntry()
++
++		if key.Flags&TUPLE_F_SERVICE != 0 {
++			continue
++		}
++
++		if key.Flags == 0 && val.RevNAT != 0 {
++			revNatTarget, ok := revnatMap[val.RevNAT]
++			if !ok {
++				// cannot translate RevNAT; either skip or strip
++				fmt.Printf("DEBUG cannot translate RevNAT, set it to zero %d\n", val.RevNAT)
++				val.RevNAT = 0
++			} else {
++				fmt.Printf("DEBUG SUCCESS translate RevNAT %d\n", revNatTarget)
++				val.RevNAT = revNatTarget
++			}
++		}
++
++		if err := Insert(key, &val); err != nil {
++			return fmt.Errorf("failed to insert ct entry to map: %w", err)
++		}
++	}
++
++	return nil
++}
++
++func Insert(key *CtKey4Global, entry *CtEntry) error {
++	m, err := getOrOpenMap("global", true, key.NextHeader)
++	if err != nil || m == nil {
++		return err
++	}
++
++	return m.Update(key, entry)
++}
++
 +func mustIPv4(a, b, c, d byte) types.IPv4 {
 +	return types.IPv4{a, b, c, d}
 +}
@@ -109,7 +303,7 @@ index 518be9477c..86de5b205f 100644
  	return bpf.GetMap(getMapName(epname, ipv4, proto))
  }
 
-commit 0ce00fea458d98be271074817b83485f8eea41ce
+commit 8a03a4746454fdb8417e95baa7f1614f69247f14
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Tue Jan 13 12:43:18 2026 +0300
 
