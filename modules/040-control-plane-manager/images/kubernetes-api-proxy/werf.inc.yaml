@@ -75,5 +75,4 @@ shell:
   - apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y bazel bazel-7.7.1
   setup:
   - cd /src/envoy
-  - python3 tools/github/write_current_source_version.py
   - bazel build -c opt envoy
