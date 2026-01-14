@@ -210,8 +210,10 @@ func (nsc *NodeServicesConfig) process(log go_hook.Logger, name string, nodeIP s
 	switch {
 	case params.Local != nil:
 		nsc.processLocalMode(*params.Local, nodeIP, nodesIP)
+		// TODO: Clean up Proxy mode vars
 	case params.Proxy != nil:
 		nsc.processProxyMode(*params.Proxy)
+		// TODO: Clean up Local mode vars
 	default:
 		return errors.New("params must be set for Local or Proxy mode")
 	}
@@ -336,5 +338,5 @@ type Node struct {
 	IP               string
 	Ready            bool
 	Pods             NodePods
-	ConfigSecretHash string
+	ConfigSecretHash string // TODO: Need to remove, not in use
 }
