@@ -594,6 +594,7 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 // updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
+// Only syncs properties that come from module.yaml definition.
 func (r *reconciler) updateModulePropertiesFromDefinition(
 	ctx context.Context,
 	module *v1alpha1.Module,
