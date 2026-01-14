@@ -84,30 +84,30 @@
   LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
   LAYOUT_AZURE_TENANT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_TENANT_ID }}
 {!{- else if eq $provider "yandex-cloud" }!}
-  TEMPLATE_ID: "6bae307a-1a85-4239-9eff-f32bd99bc796"
+  TEMPLATE_ID: "78012fa3-293e-4784-9621-4c91da472043"
   LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
   LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
   LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
 {!{- else if eq $provider "openstack" }!}
-  TEMPLATE_ID: "3b944ac4-a192-453b-83e7-0be3d9721549"
+  TEMPLATE_ID: "f1f3e857-0bb2-4346-a877-c7bea36918e7"
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "static" }!}
-  TEMPLATE_ID: "ce4a7bff-e7f3-419f-a472-e5b383a9779f"
+  TEMPLATE_ID: "3a6f2490-870e-4765-aaee-9b9aa8c057c2"
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "vsphere" }!}
-  TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+  TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
   LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
   LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- else if eq $provider "vcd" }!}
-  TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+  TEMPLATE_ID: "d4bc64b4-38ef-4418-a401-6383adcc4093"
   LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
   LAYOUT_STATIC_BASTION_IP: 80.249.129.56
   LAYOUT_VCD_SERVER: ${{ steps.secrets.outputs.LAYOUT_VCD_SERVER }}
   LAYOUT_VCD_ORG: ${{ steps.secrets.outputs.LAYOUT_VCD_ORG }}
 {!{- else if eq $provider "dvp" }!}
-  TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+  TEMPLATE_ID: "dfb25a4f-5395-4d06-80ef-e6d575756cb5"
   LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
