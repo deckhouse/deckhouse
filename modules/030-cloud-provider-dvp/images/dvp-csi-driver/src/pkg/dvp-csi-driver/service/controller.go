@@ -32,6 +32,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 const (
@@ -441,23 +442,27 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 
 	requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
+		return nil, status.Errorf(codes.Internal, "failed to parse %s parameter value %s to bool: %v",
 			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
 	}
 
 	virtualDiskSnapshot, err := d.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
-		return nil, err
+		if k8serrors.IsAlreadyExists(err) {
+			klog.Infof("Snapshot %s of disk %s already exists", request.Name, request.SourceVolumeId)
+		} else {
+			return nil, status.Errorf(codes.Internal, "failed to create snapshot %s of disk %s: %v", request.Name, request.SourceVolumeId, err)
+		}
 	}
 
 	newVirtualDiskSnapshot, err := d.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, virtualDiskSnapshot.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get just created snapshot %s: %v", virtualDiskSnapshot.Name, err)
+		return nil, status.Errorf(codes.Internal, "failed to get just created snapshot %s: %v", virtualDiskSnapshot.Name, err)
 	}
 
 	volumeSnapshot, err := d.dvpCloudAPI.DiskService.GetVolumeSnapshot(ctx, newVirtualDiskSnapshot.Status.VolumeSnapshotName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get volume snapshot %s for virtual disk snapshot %s: %v",
+		return nil, status.Errorf(codes.Internal, "failed to get volume snapshot %s for virtual disk snapshot %s: %v",
 			newVirtualDiskSnapshot.Status.VolumeSnapshotName, virtualDiskSnapshot.Name, err)
 	}
 
@@ -481,7 +486,7 @@ func (d *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.Del
 
 	err := d.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.SnapshotId)
 	if err != nil {
-		return nil, fmt.Errorf("failed to delete snapshot %s: %v", request.SnapshotId, err)
+		return nil, status.Errorf(codes.Internal, "failed to delete snapshot %s: %v", request.SnapshotId, err)
 	}
 
 	return &csi.DeleteSnapshotResponse{}, nil
