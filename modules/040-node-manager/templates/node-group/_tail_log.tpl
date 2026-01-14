@@ -12,7 +12,7 @@ except ImportError:
 
 LOG_FILE = sys.argv[1]
 HOST = "0.0.0.0"
-PORT = 8080
+PORT = 8000
 
 class ThreadedHTTPServer(ThreadingMixIn, HTTPServer): pass
 
