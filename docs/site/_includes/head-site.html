@@ -1,12 +1,12 @@
 {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <!-- favicon -->
-<link rel="apple-touch-icon" href="/images/favicon/logo-180.png">
-<link rel="icon" type="image/svg+xml" href="/images/favicon/logo.svg">
-<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="/images/favicon/logo-on-white.svg">
+<link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}/images/favicon/logo-180.png">
+<link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}/images/favicon/logo.svg">
+<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}/images/favicon/logo-on-white.svg">
 
-<link rel="shortcut icon" href="/images/favicon/favicon.ico">
+<link rel="shortcut icon" href="{{ site.urls[page.lang] }}/images/favicon/favicon.ico">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#004DF2">
+<link rel="mask-icon" href="{{ site.urls[page.lang] }}/safari-pinned-tab.svg" color="#004DF2">
 <meta name="msapplication-TileColor" content="#004DF2">
 <meta name="theme-color" content="#ffffff">
 
