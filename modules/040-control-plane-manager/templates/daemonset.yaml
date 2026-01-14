@@ -355,7 +355,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        {{- include "helm_lib_envs_for_proxy" $ | nindent 10 }}
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
