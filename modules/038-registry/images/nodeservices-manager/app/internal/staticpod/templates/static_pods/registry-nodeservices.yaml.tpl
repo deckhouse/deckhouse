@@ -80,6 +80,7 @@ spec:
         name: distribution-config
       - mountPath: /pki
         name: pki
+  {{- if .HasAuth }}
   - name: auth
     image: {{ .Images.Auth }}
     imagePullPolicy: IfNotPresent
@@ -114,6 +115,7 @@ spec:
         name: auth-config
       - mountPath: /pki
         name: pki
+  {{- end }}
   {{- if .HasMirrorer }}
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
@@ -134,14 +136,16 @@ spec:
       path: /etc/kubernetes/registry/pki
       type: Directory
   # Configuration
-  - name: auth-config
-    hostPath:
-      path: /etc/kubernetes/registry/auth
-      type: DirectoryOrCreate
   - name: distribution-config
     hostPath:
       path: /etc/kubernetes/registry/distribution
       type: DirectoryOrCreate
+  {{- if .HasAuth }}
+  - name: auth-config
+    hostPath:
+      path: /etc/kubernetes/registry/auth
+      type: DirectoryOrCreate
+  {{- end }}
   {{- if .HasMirrorer }}
   - name: mirrorer-config
     hostPath:

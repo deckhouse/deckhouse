@@ -63,17 +63,31 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	sum.Write([]byte(hash))
 
 	// Process the templates with the given data and create the static pod and configuration files
-	if changes.Auth, hash, err = processTemplate(
-		config.toAuthConfig(),
-		authConfigPath,
-	); err != nil {
-		err = fmt.Errorf("error processing Auth template: %w", err)
-		return changes, err
-	}
-	sum.Write([]byte(hash))
 
+	// Auth config
+	auth := config.toAuthConfig()
+	hasAuth := auth != nil
+
+	if hasAuth {
+		if changes.Auth, hash, err = processTemplate(
+			auth,
+			authConfigPath,
+		); err != nil {
+			err = fmt.Errorf("error processing Auth template: %w", err)
+			return changes, err
+		}
+		sum.Write([]byte(hash))
+	} else {
+		// Delete the auth config file
+		if changes.Auth, err = deleteFile(authConfigPath); err != nil {
+			err = fmt.Errorf("error deleting Auth config file: %w", err)
+			return changes, err
+		}
+	}
+
+	// Distribution config
 	if changes.Distribution, hash, err = processTemplate(
-		config.toDistributionConfig(manager.settings.HostIP),
+		config.toDistributionConfig(manager.settings.HostIP, hasAuth),
 		distributionConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
@@ -84,6 +98,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	mirrorer := config.toMirrorerConfig(manager.settings.HostIP)
 	hasMirrorer := mirrorer != nil && len(mirrorer.Upstreams) > 0
 
+	// Mirrorer config
 	if hasMirrorer {
 		if changes.Mirrorer, hash, err = processTemplate(
 			mirrorer,
@@ -101,6 +116,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		}
 	}
 
+	// Static pod manifest
 	hashBytes := sum.Sum([]byte{})
 	hash = hex.EncodeToString(hashBytes)
 
@@ -111,7 +127,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	if changes.Pod, _, err = processTemplate(
-		config.toStaticPodConfig(images, hash, hasMirrorer),
+		config.toStaticPodConfig(images, hash, hasMirrorer, hasAuth),
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)

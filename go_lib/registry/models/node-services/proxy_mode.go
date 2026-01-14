@@ -47,7 +47,7 @@ func (upstream UpstreamRegistry) Validate() error {
 		validation.Field(&upstream.Scheme, validation.Required),
 		validation.Field(&upstream.Host, validation.Required),
 		validation.Field(&upstream.Path, validation.Required),
-		validation.Field(&upstream.User, validation.Required),
-		validation.Field(&upstream.Password, validation.Required),
+		validation.Field(&upstream.User, validation.When(upstream.Password != "", validation.Required)),
+		validation.Field(&upstream.Password, validation.When(upstream.User != "", validation.Required)),
 	)
 }

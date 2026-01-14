@@ -31,15 +31,21 @@ func (model authConfigModel) Render() ([]byte, error) {
 	return renderTemplate("templates/auth/config.yaml.tpl", model)
 }
 
-func (value NodeServicesConfigModel) toAuthConfig() authConfigModel {
+func (value NodeServicesConfigModel) toAuthConfig() *authConfigModel {
+	config := value.Config
+
+	// no auth proxy
+	if config.ProxyMode != nil &&
+		config.ProxyMode.Upstream.User == "" {
+		return nil
+	}
+
 	mapUser := func(user nodeservices.User) authConfigUserModel {
 		return authConfigUserModel{
 			Name:         user.Name,
 			PasswordHash: user.PasswordHash,
 		}
 	}
-
-	config := value.Config
 
 	model := authConfigModel{
 		RO: mapUser(config.UserRO),
@@ -55,7 +61,7 @@ func (value NodeServicesConfigModel) toAuthConfig() authConfigModel {
 		model.MirrorPusher = &pusher
 	}
 
-	return model
+	return &model
 }
 
 type authConfigUserModel struct {
@@ -67,6 +73,7 @@ type distributionConfigModel struct {
 	ListenAddress string
 	HTTPSecret    string
 	Ingress       bool
+	HasAuth       bool
 	Upstream      *distributionConfigUpstreamModel
 }
 
@@ -84,12 +91,13 @@ func (model distributionConfigModel) Render() ([]byte, error) {
 	return renderTemplate("templates/distribution/config.yaml.tpl", model)
 }
 
-func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string) distributionConfigModel {
+func (value NodeServicesConfigModel) toDistributionConfig(listenAddress string, hasAuth bool) distributionConfigModel {
 	config := value.Config
 
 	model := distributionConfigModel{
 		ListenAddress: listenAddress,
 		HTTPSecret:    config.HTTPSecret,
+		HasAuth:       hasAuth,
 	}
 
 	if config.LocalMode != nil {
@@ -158,6 +166,7 @@ type staticPodConfigModel struct {
 	Version     string
 	Images      staticPodImagesModel
 	HasMirrorer bool
+	HasAuth     bool
 	Proxy       *staticPodProxyModel
 }
 
@@ -177,7 +186,7 @@ func (model staticPodConfigModel) Render() ([]byte, error) {
 	return renderTemplate("templates/static_pods/registry-nodeservices.yaml.tpl", model)
 }
 
-func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, hash string, hasMirrorer bool) staticPodConfigModel {
+func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, hash string, hasMirrorer bool, hasAuth bool) staticPodConfigModel {
 	config := value.Config
 
 	model := staticPodConfigModel{
@@ -185,6 +194,7 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 		Version:     value.Version,
 		Images:      images,
 		HasMirrorer: hasMirrorer,
+		HasAuth:     hasAuth,
 	}
 
 	proxy := config.ProxyConfig

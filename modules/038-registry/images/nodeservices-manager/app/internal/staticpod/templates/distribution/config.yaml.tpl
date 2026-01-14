@@ -33,8 +33,10 @@ http:
 {{- with .Upstream }}
 proxy:
   remoteurl: "{{ .Scheme }}://{{ .Host }}"
+  {{- if .User }}
   username: {{ quote .User }}
   password: {{ quote .Password }}
+  {{- end }}
   remotepathonly: {{ quote .Path }}
   localpathalias: "/system/deckhouse"
   {{- if .CA }}
@@ -44,6 +46,7 @@ proxy:
   ttl: {{ quote . }}
   {{- end }}
 {{- end }}
+{{- if .HasAuth }}
 auth:
   token:
     realm: "https://{{ .ListenAddress }}:5051/auth"
@@ -54,3 +57,4 @@ auth:
     proxy:
       url: https://127.0.0.1:5051/auth
       ca: /pki/ca.crt
+{{- end }}
