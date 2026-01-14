@@ -30,6 +30,8 @@ const (
 	PackageRepositoryPhaseTerminating = "Terminating"
 
 	PackageRepositoryFinalizerPackageVersionExists = "packages.deckhouse.io/package-version-exists"
+
+	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
 )
 
 var (

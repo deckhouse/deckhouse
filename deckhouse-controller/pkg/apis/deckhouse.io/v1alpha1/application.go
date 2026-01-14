@@ -65,6 +65,8 @@ const (
 	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
 
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
+
+	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 )
 
 var (
