@@ -19,6 +19,7 @@ type DVPCloudProviderDiscoveryData struct {
 	Kind             string            `json:"kind,omitempty"`
 	Layout           string            `json:"layout,omitempty"`
 	Zones            []string          `json:"zones,omitempty"`
+	ClusterUUID      string            `json:"clusterUUID,omitempty"`
 	StorageClassList []DVPStorageClass `json:"storageClasses,omitempty"`
 }
 
