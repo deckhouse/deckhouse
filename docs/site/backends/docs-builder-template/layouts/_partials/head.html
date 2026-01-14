@@ -3,9 +3,12 @@
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
 {{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
 {{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid)/(.*)$" "$1/$3" $canonicalURL 1 }}
+{{- if ne site.Params.mode "module" -}}
+  {{- $canonicalURL = printf "%s%s" site.BaseURL (strings.TrimLeft "/" $canonicalURL) -}}
+{{- end -}}
 
 <title>{{ .Title }} | {{ .Site.Title }}</title>
-<link rel="canonical" href='{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}{{ strings.TrimLeft "/" $canonicalURL }}' />
+<link rel="canonical" href="{{ $canonicalURL }}" />
 <meta name="description" content="{{  $description }}">
 <meta name="title" content="{{ .Title }} | {{ .Site.Title }}">
 
