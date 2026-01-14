@@ -26,12 +26,12 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-var _ = Describe("User Authn hooks :: handle UserAction creation ::", func() {
+var _ = Describe("User Authn hooks :: handle UserOperation creation ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
 
-	f.RegisterCRD("deckhouse.io", "v1", "UserAction", false)
+	f.RegisterCRD("deckhouse.io", "v1", "UserOperation", false)
 	f.RegisterCRD("dex.coreos.com", "v1", "Password", true)
-	f.RegisterCRD("dex.coreos.com", "v1", "OfflineSession", true)
+	f.RegisterCRD("dex.coreos.com", "v1", "OfflineSessions", true)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	const (
@@ -73,13 +73,13 @@ previousHashes:
 userID: admin
 username: admin
 `
-		userActionLock = `
+		userOperationLock = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   lock:
@@ -87,37 +87,37 @@ spec:
   type: Lock
   user: admin
 `
-		userActionInvalidLock = `
+		userOperationInvalidLock = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   type: Lock
   user: admin
 `
-		userActionUnlock = `
+		userOperationUnlock = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   type: Unlock
   user: admin
 `
-		userActionResetPassword = `
+		userOperationResetPassword = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   type: ResetPassword
@@ -125,25 +125,25 @@ spec:
     newPasswordHash: '$newHash'
   user: admin
 `
-		userActionInvalidResetPassword = `
+		userOperationInvalidResetPassword = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   type: ResetPassword
   user: admin
 `
-		userActionReset2FA = `
+		userOperationReset2FA = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: user-action-01
+  name: user-operation-01
 spec:
   initiatorType: Admin
   type: Reset2FA
@@ -152,7 +152,7 @@ spec:
 		offlineSessions = `
 ---
 apiVersion: dex.coreos.com/v1
-kind: OfflineSession
+kind: OfflineSessions
 metadata:
   creationTimestamp: "%s"
   name: offsess-1
@@ -165,7 +165,7 @@ totp: abcdexx
 totpConfirmed: true
 ---
 apiVersion: dex.coreos.com/v1
-kind: OfflineSession
+kind: OfflineSessions
 metadata:
   creationTimestamp: "%s"
   name: offsess-2
@@ -177,13 +177,13 @@ connectorData: DdasiFSk/asd2
 totp: abcdexx
 totpConfirmed: true
 `
-		oldUserActions = `
+		oldUserOperations = `
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: old-user-action-1
+  name: old-user-operation-1
 spec:
   initiatorType: Admin
   lock:
@@ -195,10 +195,10 @@ status:
   phase: Succeeded
 ---
 apiVersion: deckhouse.io/v1
-kind: UserAction
+kind: UserOperation
 metadata:
   creationTimestamp: "%s"
-  name: old-user-action-2
+  name: old-user-operation-2
 spec:
   initiatorType: Admin
   lock:
@@ -211,10 +211,10 @@ status:
 `
 	)
 
-	Context("Cluster with existing User and Password :: Processing new UserAction with success cases", func() {
+	Context("Cluster with existing User and Password :: Processing new UserOperation with success cases", func() {
 		It("Lock local user", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userActionLock, nowStr),
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationLock, nowStr),
 			))
 			f.RunHook()
 
@@ -224,14 +224,14 @@ status:
 			Expect(pw.Field("lockedUntil").Time()).To(BeTemporally("~", time.Now().Add(1*time.Hour), 5*time.Second))
 			Expect(pw.Field("metadata.annotations").Map()).To(HaveKey("deckhouse.io/locked-by-administrator"))
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Unlock local user", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(passwordLocked, nowStr) + fmt.Sprintf(userActionUnlock, nowStr),
+				fmt.Sprintf(passwordLocked, nowStr) + fmt.Sprintf(userOperationUnlock, nowStr),
 			))
 			f.RunHook()
 
@@ -240,14 +240,14 @@ status:
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
 			Expect(pw.Field("lockedUntil").Time().IsZero()).To(BeTrue())
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Reset user's password", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userActionResetPassword, nowStr),
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationResetPassword, nowStr),
 			))
 			f.RunHook()
 
@@ -258,14 +258,14 @@ status:
 			Expect(pw.Field("hash").String()).To(Equal("JG5ld0hhc2g="))
 			Expect(pw.Field("requireResetHashOnNextSuccLogin").Bool()).To(BeTrue())
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Reset user's 2FA", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(offlineSessions, nowStr, nowStr) + fmt.Sprintf(userActionReset2FA, nowStr),
+				fmt.Sprintf(offlineSessions, nowStr, nowStr) + fmt.Sprintf(userOperationReset2FA, nowStr),
 			))
 			f.RunHook()
 
@@ -276,99 +276,101 @@ status:
 				Expect(offsess.Exists()).To(BeFalse())
 			}
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Succeeded"))
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
-		It("Clean up old userActions", func() {
+		It("Clean up old userOperations", func() {
 			dayAgoStr := time.Now().Add(-25 * time.Hour).UTC().Format(time.RFC3339)
 
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(oldUserActions, dayAgoStr, dayAgoStr),
+				fmt.Sprintf(oldUserOperations, dayAgoStr, dayAgoStr),
 			))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
 
-			for _, uaName := range []string{"old-user-action-1", "old-user-action-2"} {
-				ua := f.KubernetesGlobalResource("UserAction", uaName)
-				Expect(ua.Exists()).To(BeFalse())
+			for _, uoName := range []string{"old-user-operation-1", "old-user-operation-2"} {
+				uo := f.KubernetesGlobalResource("UserOperation", uoName)
+				Expect(uo.Exists()).To(BeFalse())
 			}
 		})
 	})
 
-	Context("Cluster with existing User and Password :: Processing new UserAction with fail cases", func() {
-		It("Lock local user with insuffisent userAction's fields", func() {
+	Context("Cluster with existing User and Password :: Processing new UserOperation with fail cases", func() {
+		It("Lock local user with insuffisent userOperation's fields", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userActionInvalidLock, nowStr),
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationInvalidLock, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Lock local user w/o password entity", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(userActionLock, nowStr),
+				fmt.Sprintf(userOperationLock, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Unlock local user w/o password entity", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(userActionUnlock, nowStr),
+				fmt.Sprintf(userOperationUnlock, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
-		It("Reset user's password with insuffisent userAction's fields", func() {
+		It("Reset user's password with insuffisent userOperation's fields", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userActionInvalidResetPassword, nowStr),
+				fmt.Sprintf(password, nowStr) + fmt.Sprintf(userOperationInvalidResetPassword, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Reset user's password w/o password entity", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(userActionResetPassword, nowStr),
+				fmt.Sprintf(userOperationResetPassword, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
 		It("Reset user's 2FA w/o offlinesessions entity", func() {
 			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(userActionReset2FA, nowStr),
+				fmt.Sprintf(userOperationReset2FA, nowStr),
 			))
 			f.RunHook()
 
-			ua := f.KubernetesGlobalResource("UserAction", "user-action-01")
-			Expect(ua.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(ua.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(ua.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
+			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 	})
 })
+
+
