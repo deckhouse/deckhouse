@@ -34,7 +34,7 @@
 
            ```json
            {
-             "description": "Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.",
+             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
              "tcpEndpoint": "192.168.199.158"
            }
            ```
