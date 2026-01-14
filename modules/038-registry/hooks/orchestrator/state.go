@@ -1166,6 +1166,7 @@ func (state *State) processCheckerNodes(
 	user users.User,
 	ca *x509.Certificate,
 ) (bool, error) {
+	checkMode := registry_const.CheckModeDefault
 	checkerRegistry := checker.RegistryParams{
 		Scheme:   "HTTPS",
 		Username: user.UserName,
@@ -1179,6 +1180,7 @@ func (state *State) processCheckerNodes(
 	version, err := registry_pki.ComputeHash(
 		checkerRegistry,
 		state.TargetMode,
+		checkMode,
 	)
 	if err != nil {
 		return false, fmt.Errorf("cannot compute checker params hash: %w", err)
@@ -1187,6 +1189,7 @@ func (state *State) processCheckerNodes(
 	state.CheckerParams = checker.Params{
 		Registries: make(map[string]checker.RegistryParams),
 		Version:    version,
+		CheckMode:  checkMode,
 	}
 
 	for node, result := range nodeServicesResult {
