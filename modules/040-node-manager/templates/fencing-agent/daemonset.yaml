@@ -58,20 +58,6 @@ spec:
         node.deckhouse.io/group: {{ $ng.name }}
       automountServiceAccountToken: true
       serviceAccountName: fencing-agent
-      initContainers:
-        - command:
-            - sh
-            - -c
-            - rm -f /tmp/fencing-agent.sock || true
-          image: alpine:3.19
-          imagePullPolicy: IfNotPresent
-          name: cleanup-socket
-          resources: { }
-          terminationMessagePath: /dev/termination-log
-          terminationMessagePolicy: File
-          volumeMounts:
-            - mountPath: /tmp
-              name: socket
       containers:
         - name: fencing-agent
           securityContext:

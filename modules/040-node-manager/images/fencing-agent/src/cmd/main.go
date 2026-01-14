@@ -20,6 +20,7 @@ func main() {
 	logger := logging.NewLogger()
 	defer func() { _ = logger.Sync() }()
 
+	var config fencing_config.Config
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
 		syscall.SIGHUP,
@@ -31,9 +32,8 @@ func main() {
 		close(sigChan)
 		logger.Info("Got a signal", zap.String("signal", s.String()))
 		cancel()
+		_ = os.Remove(config.GRPCAddress)
 	}()
-
-	var config fencing_config.Config
 	if err := config.Load(); err != nil {
 		logger.Fatal("Unable to read config", zap.Error(err))
 	}

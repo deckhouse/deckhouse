@@ -100,7 +100,7 @@ func (a *Applicaion) Run(ctx context.Context) error {
 		for err != nil {
 			a.logger.Warn("failed to start memberlist", zap.Error(err))
 			err = a.membershipProvider.Start(peers)
-			time.Sleep(5 * time.Second)
+			time.Sleep(5 * time.Second) // TODO sleep?
 		}
 	}()
 
