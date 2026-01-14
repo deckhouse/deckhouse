@@ -190,6 +190,12 @@ func (c *Cloud) onEndpointSliceEvent(
 		return
 	}
 
+	if svc.DeletionTimestamp != nil {
+		klog.V(3).InfoS("onEndpointSliceEvent: service is deleting, skip ensureLB",
+			"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name)
+		return
+	}
+
 	klog.V(3).InfoS("onEndpointSliceEvent: triggering ensureLB",
 		"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name)
 
