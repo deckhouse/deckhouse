@@ -39,10 +39,9 @@ if bb-flag? kubelet-need-restart; then
   if [ -f /var/lib/kubelet/pod_status_manager_state ]; then
     {{ $kubernetesVersion := .kubernetesVersion | toString }}
     desiredVersion="{{ $kubernetesVersion }}"
-    bb-log-info "desiredVersion: $desiredVersion"
     if [[ "${desiredVersion}" = "1.32" ]]; then
+      bb-log-info "Removing /var/lib/kubelet/pod_status_manager_state for Kubernetes 1.32 upgrade"
       rm -f /var/lib/kubelet/pod_status_manager_state
-      bb-log-info "pod_status_manager_state removed"
     fi
   fi
   
