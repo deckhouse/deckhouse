@@ -146,12 +146,12 @@ spec:
   flowLogs:
     enabled: true
     # Записывать в лог-файл /var/log/cilium/hubble/flow.log только указанные события.
-    allowFilter:
+    allowFilterList:
       verdict:
         - DROPPED
         - ERROR
-    # Исключить из лог-файла события, соответствующие denyFilter.
-    denyFilter:
+    # Исключить из лог-файла события, соответствующие denyFilterList.
+    denyFilterList:
       source_pod:
         - kube-system/
       destination_pod:

@@ -43,11 +43,11 @@ type ExtendedMetricCollector struct {
 }
 
 type FlowLogsSpec struct {
-	Enabled       bool               `json:"enabled,omitempty"`
-	AllowFilter   *FlowLogFilter     `json:"allowFilter,omitempty"`
-	DenyFilter    *FlowLogFilter     `json:"denyFilter,omitempty"`
-	FieldMaskList []FlowLogFieldMask `json:"fieldMaskList,omitempty"`
-	FileMaxSizeMB int32              `json:"fileMaxSizeMB,omitempty"`
+	Enabled         bool               `json:"enabled,omitempty"`
+	AllowFilterList []*FlowLogFilter   `json:"allowFilterList,omitempty"`
+	DenyFilterList  []*FlowLogFilter   `json:"denyFilterList,omitempty"`
+	FieldMaskList   []FlowLogFieldMask `json:"fieldMaskList,omitempty"`
+	FileMaxSizeMB   int32              `json:"fileMaxSizeMB,omitempty"`
 }
 
 type FlowLogFilter struct {

@@ -167,11 +167,19 @@ data:
   hubble-export-file-path: /var/log/cilium/hubble/flow.log
   hubble-export-file-max-backups: "0"
   hubble-export-file-max-size-mb: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fileMaxSizeMB | quote }}
-      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilter }}
-  hubble-export-allowlist: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilter | toJson | quote }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilterList }}
+        {{- $parts := list -}}
+        {{- range $obj := .Values.cniCilium.internal.hubble.settings.flowLogs.allowFilterList }}
+          {{- $parts = append $parts ($obj | toJson) -}}
+        {{- end }}
+  hubble-export-allowlist: {{ join " " $parts | quote }}
       {{- end }}
-      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilter }}
-  hubble-export-denylist: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilter | toJson | quote }}
+      {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilterList }}
+        {{- $parts := list -}}
+        {{- range $obj := .Values.cniCilium.internal.hubble.settings.flowLogs.denyFilterList }}
+          {{- $parts = append $parts ($obj | toJson) -}}
+        {{- end }}
+  hubble-export-denylist: {{ join " " $parts | quote }}
       {{- end }}
       {{- if .Values.cniCilium.internal.hubble.settings.flowLogs.fieldMaskList }}
   hubble-export-fieldmask: {{ .Values.cniCilium.internal.hubble.settings.flowLogs.fieldMaskList | join " " | quote }}

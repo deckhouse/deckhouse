@@ -35,14 +35,14 @@ spec:
       - name: flow
   flowLogs:
     enabled: true
-    allowFilter:
-      verdict:
+    allowFilterList:
+      - verdict:
         - DROPPED
         - ERROR
-    denyFilter:
-      source_pod:
+    denyFilterList:
+      - source_pod:
         - kube-system/
-      destination_pod:
+      - destination_pod:
         - kube-system/
     fieldMaskList:
       - time
@@ -81,8 +81,8 @@ metadata:
 spec:
   flowLogs:
     enabled: true
-    allowFilter:
-      traffic_direction:
+    allowFilterList:
+      - traffic_direction:
         - EGRESS
     fieldMaskList:
       - time
@@ -132,16 +132,22 @@ cniCilium:
 
 			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.enabled").Bool()).To(BeTrue())
 
-			verdicts := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilter.verdict").Array()
+			allowFilterList := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilterList").Array()
+			Expect(allowFilterList).To(HaveLen(1))
+
+			verdicts := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilterList.0.verdict").Array()
 			Expect(verdicts).To(HaveLen(2))
 			Expect(verdicts[0].String()).To(Equal("DROPPED"))
 			Expect(verdicts[1].String()).To(Equal("ERROR"))
 
-			sourcePods := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilter.source_pod").Array()
+			denyFilterList := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilterList").Array()
+			Expect(denyFilterList).To(HaveLen(2))
+
+			sourcePods := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilterList.0.source_pod").Array()
 			Expect(sourcePods).To(HaveLen(1))
 			Expect(sourcePods[0].String()).To(Equal("kube-system/"))
 
-			destinationPods := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilter.destination_pod").Array()
+			destinationPods := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilterList.1.destination_pod").Array()
 			Expect(destinationPods).To(HaveLen(1))
 			Expect(destinationPods[0].String()).To(Equal("kube-system/"))
 
@@ -218,7 +224,10 @@ cniCilium:
 
 			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.enabled").Bool()).To(BeTrue())
 
-			trafficDirection := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilter.traffic_direction").Array()
+			allowFilterList := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilterList").Array()
+			Expect(allowFilterList).To(HaveLen(1))
+
+			trafficDirection := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilterList.0.traffic_direction").Array()
 			Expect(trafficDirection).To(HaveLen(1))
 			Expect(trafficDirection[0].String()).To(Equal("EGRESS"))
 
@@ -253,8 +262,10 @@ cniCilium:
 			fl := f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs")
 			Expect(fl.Exists()).To(BeTrue())
 			Expect(fl.IsObject()).To(BeTrue())
-			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilter").Map()).To(BeEmpty())
-			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilter").Map()).To(BeEmpty())
+
+			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.allowFilterList").Array()).To(HaveLen(0))
+			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.denyFilterList").Array()).To(HaveLen(0))
+
 			Expect(f.ValuesGet("cniCilium.internal.hubble.settings.flowLogs.fileMaxSizeMB").Int()).To(Equal(int64(10)))
 		})
 	})

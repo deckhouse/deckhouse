@@ -110,16 +110,16 @@ properties:
                   enabled:
                     type: boolean
                     default: false
-                  allowFilter:
-                    type: object
+                  allowFilterList:
+                    type: array
                     items:
-                      type: string
-                    additionalProperties: true
-                  denyFilter:
-                    type: object
+                      type: object
+                      additionalProperties: true
+                  denyFilterList:
+                    type: array
                     items:
-                      type: string
-                    additionalProperties: true
+                      type: object
+                      additionalProperties: true
                   fieldMaskList:
                     type: array
                     items:

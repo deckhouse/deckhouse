@@ -57,6 +57,8 @@ func filterHubbleMonitoringConfig(obj *unstructured.Unstructured) (go_hook.Filte
 
 func handleHubbleMonitoringConfig(_ context.Context, input *go_hook.HookInput) error {
 	snaps := input.Snapshots.Get(hubbleMonitoringConfigSnapshotName)
+
+	// If the HubbleMonitoringConfig CR has been deleted, reset the settings.
 	if len(snaps) == 0 {
 		input.Values.Set("cniCilium.internal.hubble.settings", internal.HubbleMonitoringConfigSpec{
 			ExtendedMetrics: internal.ExtendedMetricsSpec{
@@ -64,11 +66,11 @@ func handleHubbleMonitoringConfig(_ context.Context, input *go_hook.HookInput) e
 				Collectors: make([]internal.ExtendedMetricCollector, 0),
 			},
 			FlowLogs: internal.FlowLogsSpec{
-				Enabled:       false,
-				AllowFilter:   &internal.FlowLogFilter{},
-				DenyFilter:    &internal.FlowLogFilter{},
-				FieldMaskList: []internal.FlowLogFieldMask{},
-				FileMaxSizeMB: 10,
+				Enabled:         false,
+				AllowFilterList: []*internal.FlowLogFilter{},
+				DenyFilterList:  []*internal.FlowLogFilter{},
+				FieldMaskList:   []internal.FlowLogFieldMask{},
+				FileMaxSizeMB:   10,
 			},
 		})
 		return nil

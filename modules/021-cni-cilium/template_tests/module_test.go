@@ -77,8 +77,8 @@ internal:
         collectors: []
       flowLogs:
         enabled: false
-        allowFilter: {}
-        denyFilter: {}
+        allowFilterList: []
+        denyFilterList: []
         fieldMaskList: []
         fileMaxSizeMB: 10
   egressGatewaysMap:
@@ -123,10 +123,12 @@ extendedMetrics:
     - name: flow
 flowLogs:
   enabled: true
-  allowFilter:
-    verdict: ["DROPPED","ERROR"]
-  denyFilter:
-    source_pod: ["kube-system/"]
+  allowFilterList:
+    - verdict: ["DROPPED","ERROR"]
+    - source_pod: ["kube-system/kube-dns"]
+  denyFilterList:
+    - source_pod: ["kube-system/"]
+    - source_service: ["kube-system/kube-dns"]
   fieldMaskList: ["time","verdict"]
   fileMaxSizeMB: 30
 `
@@ -309,8 +311,8 @@ var _ = Describe("Module :: cniCilium :: helm template ::", func() {
 
 			Expect(cm.Field("data.hubble-export-file-path").String()).To(Equal("/var/log/cilium/hubble/flow.log"))
 			Expect(cm.Field("data.hubble-export-file-max-size-mb").String()).To(Equal("30"))
-			Expect(cm.Field("data.hubble-export-allowlist").String()).To(MatchJSON(`{"verdict":["DROPPED","ERROR"]}`))
-			Expect(cm.Field("data.hubble-export-denylist").String()).To(MatchJSON(`{"source_pod":["kube-system/"]}`))
+			Expect(cm.Field("data.hubble-export-allowlist").String()).To(Equal(`{"verdict":["DROPPED","ERROR"]} {"source_pod":["kube-system/kube-dns"]}`))
+			Expect(cm.Field("data.hubble-export-denylist").String()).To(Equal(`{"source_pod":["kube-system/"]} {"source_service":["kube-system/kube-dns"]}`))
 			Expect(cm.Field("data.hubble-export-fieldmask").String()).To(Equal("time verdict"))
 		})
 	})
