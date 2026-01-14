@@ -87,7 +87,6 @@ func createConfig(
 	config.AdvertisePort = cfg.MemberListPort
 	config.Name = nodeName
 	config.AdvertiseAddr = nodeIp
-	config.BindAddr = nodeIp
 	eventHandler := NewEventHandler(logger, eventBus)
 	config.Events = eventHandler
 	return config
