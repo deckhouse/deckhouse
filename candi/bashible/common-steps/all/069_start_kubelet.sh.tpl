@@ -35,7 +35,13 @@ if bb-flag? kubelet-need-restart; then
   bb-log-warning "'kubelet-need-restart' flag was set, restarting kubelet."
   if [ -f /var/lib/kubelet/cpu_manager_state ]; then rm /var/lib/kubelet/cpu_manager_state; fi
   if [ -f /var/lib/kubelet/memory_manager_state ]; then rm /var/lib/kubelet/memory_manager_state; fi
-  if [ -f /var/lib/kubelet/pod_status_manager_state ]; then rm /var/lib/kubelet/pod_status_manager_state; fi
+  if [ -f /var/lib/kubelet/pod_status_manager_state ]; then
+    currentVersion=$(kubelet --version |egrep -o "1.[0-9]+")
+    if [[ "$currentVersion" = "1.32" ]]; then
+      rm /var/lib/kubelet/pod_status_manager_state
+    fi
+  fi
+  
   systemctl restart "kubelet.service"
   {{ if ne .runType "ClusterBootstrap" }}
   if [[ "${FIRST_BASHIBLE_RUN}" != "yes" ]] && ! bb-flag? reboot; then
