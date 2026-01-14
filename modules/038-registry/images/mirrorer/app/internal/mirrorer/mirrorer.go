@@ -78,10 +78,10 @@ func New(logger *slog.Logger, cfg config.Config) (Mirrorer, error) {
 		}),
 	}
 
-	for _, remoteRegistry := range cfg.RemoteAddresses {
-		remoteRegistry, err := name.NewRegistry(remoteRegistry)
+	for _, remoteAddress := range cfg.RemoteAddresses {
+		remoteRegistry, err := name.NewRegistry(remoteAddress)
 		if err != nil {
-			return nil, fmt.Errorf("parse remote registry address \"%v\" error: %w", remoteRegistry, err)
+			return nil, fmt.Errorf("parse remote registry address \"%v\" error: %w", remoteAddress, err)
 		}
 
 		ret.syncers = append(ret.syncers, &syncer.Syncer{
