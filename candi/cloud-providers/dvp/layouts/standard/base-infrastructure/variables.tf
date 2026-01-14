@@ -21,3 +21,6 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
+variable "clusterUUID" {
+  type = string
+}

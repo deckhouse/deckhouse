@@ -23,6 +23,8 @@ apiVersions:
             minLength: 1
           minItems: 1
           uniqueItems: true
+        clusterUUID:
+          type: string
         storageClasses:
           type: array
           description: |
