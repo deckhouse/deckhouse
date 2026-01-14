@@ -1,6 +1,6 @@
 module github.com/deckhouse/deckhouse
 
-go 1.24.6
+go 1.24.11
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.18.0
+	github.com/flant/addon-operator v1.18.1
 	github.com/flant/kube-client v1.5.1
-	github.com/flant/shell-operator v1.12.3
+	github.com/flant/shell-operator v1.13.0
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -182,7 +182,7 @@ require (
 	github.com/flopp/go-findfont v0.1.0 // indirect
 	github.com/fluxcd/flagger v1.36.1 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
