@@ -182,7 +182,6 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 	for _, cm := range cms.Items {
 		cm := cm.DeepCopy()
 
-		// удаляем шум apiserver'а
 		cm.ResourceVersion = ""
 		cm.UID = ""
 		cm.ManagedFields = nil
