@@ -511,7 +511,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/update-observer"
+  directory: "/modules/040-control-plane-manager/images/update-observer/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

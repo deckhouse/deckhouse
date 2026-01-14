@@ -181,6 +181,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		ControlPlane: cpStatus,
 		Nodes:        nodesStatus,
 	}
+	// TODO: state -> phase
 
 	switch {
 	case clusterCfg.UpdateMode == "Automatic" &&
@@ -212,8 +213,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if cm.ResourceVersion == "" {
 		r.client.Create(ctx, cm)
+	} else {
+		r.client.Update(ctx, cm)
 	}
-	r.client.Update(ctx, cm)
 
 	if status.State != "UpToDate" {
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
