@@ -1,0 +1,97 @@
+{{- $istioProxyBranch := "release-1.19.2-patch" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+fromImage: common/alt-p11
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /src/proxy/bin/envoy
+  to: /usr/local/bin/envoy
+  before: setup
+shell:
+  beforeInstall:
+  {{- include "alt packages proxy" . | nindent 2 }}
+  - apt-get update
+  - apt-get install -y ca-certificates
+  - update-ca-trust
+  - apt-get clean
+  - rm -rf /var/log/*log /var/lib/apt/lists/* /var/log/apt/* /var/lib/dpkg/*-old /var/cache/debconf/*-old
+  install:
+  - chmod 0555 /usr/local/bin/envoy
+imageSpec:
+  config:
+    user: "64535:64535"
+    entrypoint: ["/usr/local/bin/envoy"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch {{ $istioProxyBranch }} $(cat /run/secrets/SOURCE_REPO)/istio/proxy.git /src/proxy
+  - cd /src/proxy
+  - rm -rf .git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-build-image-artifact
+fromImage: builder/golang-bookworm
+final: false
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  {{- include "debian packages proxy" . | nindent 2 }}
+  - export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+  - ln -snf /usr/share/zoneinfo/${TZ} /etc/localtime && echo ${TZ} > /etc/timezone
+  - |
+    apt-get update && apt-get install -y \
+      clang-14 lld-14 \
+      git \
+      cmake ninja-build \
+      libtool automake autoconf make \
+      curl gnupg lsb-release \
+      python3 python3-pip python3-venv \
+      libssl-dev libz-dev libunwind-14-dev \
+      unzip binutils
+  - apt-get autoclean && apt-get clean
+  install:
+  - ln -s -f /usr/lib/llvm-14/bin/clang /usr/bin/clang
+  - ln -s -f /usr/lib/llvm-14/bin/clang++ /usr/bin/clang++
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - go version
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ .ModuleName }}/{{ .ImageName }}-build-image-artifact
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src/proxy
+  to: /src/proxy
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+  - export GOROOT=/usr/local/go GOPATH=/go
+  - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
+  - export GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export CC=clang CXX=clang++
+  - cd /src/proxy
+  - export USE_BAZEL_VERSION="$(cat .bazelversion)"
+  - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
+  - bazel build --stamp --config=release --config=libc++ //:envoy
+  - mkdir -p /src/proxy/bin
+  - cp -f bazel-bin/envoy /src/proxy/bin/envoy
+  - strip /src/proxy/bin/envoy || true
+  - chmod 0555 /src/proxy/bin/envoy
+  - rm -rf /src/proxy/.git
