@@ -92,9 +92,7 @@ func (c *Cloud) Initialize(
 		UpdateFunc: func(_, newObj any) {
 			c.onEndpointSliceEvent(newObj, serviceInformer.Lister(), nodeInformer.Lister())
 		},
-		DeleteFunc: func(obj any) {
-			c.onEndpointSliceEvent(obj, serviceInformer.Lister(), nodeInformer.Lister())
-		},
+		DeleteFunc: func(obj any) {},
 	})
 
 	go serviceInformer.Informer().Run(stop)
