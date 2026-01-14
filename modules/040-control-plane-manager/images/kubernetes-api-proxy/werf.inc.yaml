@@ -46,7 +46,6 @@ image: {{ .ModuleName }}/{{ .ImageName }}-envoy
 fromImage: common/distroless
 final: true
 import:
-import:
   - image: cni-cilium/agent-binaries-artifact
     add: /lib64
     before: install
