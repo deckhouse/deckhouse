@@ -95,9 +95,14 @@ func (a *Applicaion) Run(ctx context.Context) error {
 
 	peers, err := a.discoverPeersIps(ctx)
 
-	if err = a.membershipProvider.Start(peers); err != nil {
-		return fmt.Errorf("failed to start memberlist: %w", err)
-	}
+	go func() {
+		err = a.membershipProvider.Start(peers)
+		for err != nil {
+			a.logger.Warn("failed to start memberlist", zap.Error(err))
+			err = a.membershipProvider.Start(peers)
+			time.Sleep(5 * time.Second)
+		}
+	}()
 
 	go func() {
 		a.logger.Debug("Starting Health Monitor")
