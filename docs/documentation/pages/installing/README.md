@@ -53,7 +53,7 @@ The installation configuration YAML file contains parameters for several resourc
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) — initial parameters for [Deckhouse configuration](../#deckhouse-configuration), necessary for the proper startup of Deckhouse after installation.
 
-   > In particular, registry configuration parameters can be specified in InitConfiguration. Starting with DKP 1.75, registry configuration using InitConfiguration is considered a legacy method. To configure the registry when installing a cluster, use the [deckhouse](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig resource.
+   > In particular, registry configuration parameters can be specified in InitConfiguration. Starting with DKP 1.75, registry configuration using InitConfiguration is considered a legacy method. To configure the registry when installing a cluster, use the [`deckhouse`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig resource.
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc.
     > This resource is needed only when Deckhouse is being installed with a pre-deployed Kubernetes cluster. If Deckhouse is being installed in an already existing cluster, this resource is not required.
@@ -78,14 +78,14 @@ The installation configuration YAML file contains parameters for several resourc
    * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration) — Yandex Cloud;
    * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration) — zVirt.
 
-1. A set of resources [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) containing configuration parameters for built-in Deckhouse modules. Some ModuleConfig resources are mandatory, while the need to use others depends on the environment, the parameters of the cluster being created, and other factors.
+1. A set of [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resources containing configuration parameters for built-in Deckhouse modules. Some ModuleConfig resources are mandatory, while the need to use others depends on the environment, the parameters of the cluster being created, and other factors.
 
    ModuleConfig resources that must/can be in the configuration file:
 
-   * [deckhouse](/modules/deckhouse/configuration.html). This specifies settings for accessing the registry, the desired update channel, the set of modules (bundle) that will be included by default, and other parameters.
-   * [global](/products/kubernetes-platform/documentation/v1/reference/api/global.html). Global DKP settings for specifying parameters that are used by default by all modules and components (DNS name template, StorageClass, module component location settings, etc.).
-   * [user-authn](/modules/user-authn/configuration.html). Responsible for the unified authentication system.
-   * [cni-cilium](/modules/cni-cilium/configuration.html) (*used when installing DKP on bare metal or in a closed environment). Responsible for network operation in the cluster.
+   * [`deckhouse`](/modules/deckhouse/configuration.html): Settings for accessing the registry, the desired update channel, the bundle of modules that will be included by default, and other parameters.
+   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): Global DKP settings for specifying parameters that are used by default by all modules and components (DNS name template, StorageClass, module component location settings, etc.).
+   * [`user-authn`](/modules/user-authn/configuration.html): Responsible for the unified authentication system.
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html) (*used when installing DKP on bare metal or in an air-gapped environment): Responsible for network operation in the cluster.
 
    If the cluster is initially created with nodes dedicated to specific types of workloads (e.g., system nodes or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in the configuration of modules that use persistent storage volumes.
 
@@ -117,7 +117,7 @@ The installation configuration YAML file contains parameters for several resourc
 </div>
 
 <div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
-In this example, the registry is configured through the ModuleConfig deckhouse resource.
+In this example, the registry is configured through the ModuleConfig `deckhouse` resource.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -675,11 +675,11 @@ During installation, DKP can be configured to work with an external registry (e.
 When working with an external registry, do not use an administrator account to access it from Deckhouse Kubernetes Platform. Create a separate account for Deckhouse Kubernetes Platform with read-only permissions and only within the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
 {% endalert %}
 
-You can configure work with a third-party registry when installing a cluster using the InitConfiguration resource (legacy method) or using the ModuleConfig deckhouse resource.
+You can configure work with a third-party registry when installing a cluster using the InitConfiguration resource (legacy method) or the ModuleConfig `deckhouse` resource.
 
 #### Configuration using ModuleConfig deckhouse
 
-Specify the parameters for accessing a third-party registry in the [`settings.registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the ModuleConfig deckhouse resource.
+Specify the parameters for accessing a third-party registry in the [`settings.registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the ModuleConfig `deckhouse` resource.
 
 Example:
 
