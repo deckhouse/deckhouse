@@ -127,10 +127,8 @@ func (d *DiskService) CreateDiskFromDataSource(
 			Name:      diskName,
 			Namespace: d.namespace,
 			Labels: map[string]string{
-				"deckhouse.io/managed-by":       "deckhouse",
-				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
-				"dvp.deckhouse.io/hostname":     vmHostname,
-				diskNameLabel:                   diskName,
+				"deckhouse.io/managed-by": "deckhouse",
+				diskNameLabel:             diskName,
 			},
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
@@ -140,6 +138,14 @@ func (d *DiskService) CreateDiskFromDataSource(
 				Size:         &diskSize,
 			},
 		},
+	}
+
+	if clusterUUID != "" {
+		vmd.Labels["dvp.deckhouse.io/cluster-uuid"] = clusterUUID
+	}
+
+	if vmHostname != "" {
+		vmd.Labels["dvp.deckhouse.io/hostname"] = vmHostname
 	}
 
 	err := d.client.Create(ctx, &vmd)
