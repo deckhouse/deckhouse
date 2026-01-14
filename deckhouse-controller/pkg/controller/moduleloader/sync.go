@@ -298,8 +298,14 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 
 	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
+		err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo)
+		if err == nil {
+			// MPO exists - module is managed, don't delete
 			continue
+		}
+
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get module pull override '%s': %w", module, err)
 		}
 
 		l.logger.Debug("uninstall orphan module", slog.String("module", module))
