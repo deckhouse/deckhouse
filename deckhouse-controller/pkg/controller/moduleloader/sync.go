@@ -305,7 +305,8 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		}
 
 		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get module pull override '%s': %w", module, err)
+			l.logger.Warn("get module pull override", slog.String("name", module), log.Err(err))
+			continue
 		}
 
 		l.logger.Debug("uninstall orphan module", slog.String("module", module))
