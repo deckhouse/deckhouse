@@ -217,6 +217,12 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
+    - containerName: update-observer
+      minAllowed:
+        {{- include "update_observer_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 80Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -330,7 +336,7 @@ spec:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}
 {{- end }}
-      - name: controller
+      - name: update-observer
         image: {{ include "helm_lib_module_image" (list $ "updateObserver") }}
         command:
         - /update-observer
