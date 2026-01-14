@@ -348,11 +348,11 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
+1. Run the command you got (`curl -N http://192.168.199.158:8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 
