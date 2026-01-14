@@ -42,22 +42,15 @@ git:
       install:
         - '**/*'
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-envoy-artifact
-fromImage: cni-cilium/agent-binaries-artifact
-final: false
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
-shell:
-  install:
-  - rm -rf /relocate
-  - /binary_replace.sh -i /usr/bin/cilium-envoy -o /relocate
----
 image: {{ .ModuleName }}/{{ .ImageName }}-envoy
 fromImage: common/distroless
 final: true
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-envoy-artifact
-  add: /relocate
-  to: /
-  before: install
+import:
+  - image: cni-cilium/agent-binaries-artifact
+    add: /lib64
+    before: install
+  - image: cni-cilium/agent-binaries-artifact
+    add: /usr/bin/cilium-envoy
+    to: /usr/bin/envoy
+    before: install
