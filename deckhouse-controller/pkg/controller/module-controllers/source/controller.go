@@ -423,13 +423,16 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		}
 
 		// update module with its metadata after meta is fetched
-		if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition); err != nil {
-			logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
-			availableModule.Error = err.Error()
-			availableModule.Version = "unknown"
-			errorsExist = true
-			availableModules = append(availableModules, availableModule)
-			continue
+		// but only if module is available to not overwrite the properties that are already set locally
+		if module.Status.Phase == v1alpha1.ModulePhaseAvailable {
+			if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition, meta.ModuleVersion); err != nil {
+				logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
 		}
 
 		// check if release exists
@@ -591,7 +594,12 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 }
 
 // updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
-func (r *reconciler) updateModulePropertiesFromDefinition(ctx context.Context, module *v1alpha1.Module, def *moduletypes.Definition) error {
+func (r *reconciler) updateModulePropertiesFromDefinition(
+	ctx context.Context,
+	module *v1alpha1.Module,
+	def *moduletypes.Definition,
+	moduleVersion string,
+) error {
 	if def == nil {
 		return nil
 	}
@@ -607,6 +615,7 @@ func (r *reconciler) updateModulePropertiesFromDefinition(ctx context.Context, m
 		props.Requirements = def.Requirements
 		props.DisableOptions = def.DisableOptions
 		props.Accessibility = def.Accessibility.ToV1Alpha1()
+		props.Version = moduleVersion
 		return nil
 	})
 }
