@@ -7,38 +7,36 @@ description: "CSI vSphere Driver for provisioning disks in static clusters based
 
 The `csi-vsphere` module provides Container Storage Interface (CSI) support for VMware vSphere environments, enabling dynamic provisioning and management of persistent storage volumes in Kubernetes clusters running on vSphere infrastructure.
 
-This module is specifically designed for **static Kubernetes clusters** (non-cloud) deployed on VMware vSphere and works independently from the cloud-provider-vsphere module. It integrates with vSphere datastores to provide persistent storage capabilities through the vSphere CSI driver.
-
-## How it works
+This module is specifically designed for **static Kubernetes clusters** (non-cloud) deployed on VMware vSphere and works independently from the [cloud-provider-vsphere](../cloud-provider-vsphere/) module. It integrates with vSphere datastores to provide persistent storage capabilities through the vSphere CSI driver.
 
 The module deploys the VMware vSphere CSI driver components that:
 
-- **Automatically discover vSphere datastores** - Reads discovery data from the `d8-cloud-provider-discovery-data` secret to identify available datastores and their topology
-- **Create StorageClasses** - Automatically generates StorageClass resources for each discovered datastore, filtered by the exclude list if configured
-- **Provision persistent volumes** - Dynamically creates persistent volumes on vSphere datastores when PersistentVolumeClaims are created
-- **Support volume operations** - Handles volume creation, deletion, attachment, detachment, and online resizing (in modern mode)
-- **Implement topology awareness** - Uses zone and region labels for proper volume placement according to vSphere cluster topology
+- **Automatically discover vSphere datastores** — Reads discovery data from the `d8-cloud-provider-discovery-data` secret to identify available datastores and their topology
+- **Create StorageClasses** — Automatically generates StorageClass resources for each discovered datastore, filtered by the exclude list if configured
+- **Provision persistent volumes** — Dynamically creates persistent volumes on vSphere datastores when PersistentVolumeClaims are created
+- **Support volume operations** — Handles volume creation, deletion, attachment, detachment, and online resizing (in modern mode)
+- **Implement topology awareness** — Uses zone and region labels for proper volume placement according to vSphere cluster topology
 
 ### Architecture
 
 The CSI driver consists of two main components:
 
 1. **CSI Controller** (runs on master nodes):
-   - **vsphere-csi-controller** - Main controller managing volume lifecycle operations
-   - **csi-provisioner** - Watches for PVCs and triggers volume creation
-   - **csi-attacher** - Handles volume attachment to nodes
-   - **csi-resizer** - Manages online volume expansion
-   - **vsphere-syncer** - Synchronizes metadata between Kubernetes and vSphere every 30 minutes
-   - **liveness-probe** - Monitors controller health
+   - **vsphere-csi-controller** — Main controller managing volume lifecycle operations
+   - **csi-provisioner** — Watches for PVCs and triggers volume creation
+   - **csi-attacher** — Handles volume attachment to nodes
+   - **csi-resizer** — Manages online volume expansion
+   - **vsphere-syncer** — Synchronizes metadata between Kubernetes and vSphere every 30 minutes
+   - **liveness-probe** — Monitors controller health
 
-2. **CSI Node** (DaemonSet on all nodes):
-   - **vsphere-csi-node** - Node-level CSI driver handling volume mounting/unmounting
-   - **node-driver-registrar** - Registers the CSI driver with kubelet
-   - **liveness-probe** - Monitors node driver health
+1. **CSI Node** (DaemonSet on all nodes):
+   - **vsphere-csi-node** — Node-level CSI driver handling volume mounting/unmounting
+   - **node-driver-registrar** — Registers the CSI driver with kubelet
+   - **liveness-probe** — Monitors node driver health
 
 ### Compatibility modes
 
-The module supports two operational modes via the `compatibilityFlag` parameter:
+The module supports two operational modes via the [compatibilityFlag](configuration.html#parameters-storageclass-compatibilityflag) parameter:
 
 - **Modern mode** (default, `compatibilityFlag` not set or empty):
   - Uses the current vSphere CSI driver (`csi.vsphere.vmware.com`)
@@ -62,11 +60,11 @@ The module supports two operational modes via the `compatibilityFlag` parameter:
 The module automatically:
 
 1. **Discovers datastores** from the cloud provider discovery data
-2. **Generates StorageClass names** by sanitizing datastore names to meet Kubernetes DNS naming requirements
-3. **Filters excluded storage** based on `storageClass.exclude` configuration (supports regex patterns)
-4. **Creates StorageClasses** with appropriate parameters:
+1. **Generates StorageClass names** by sanitizing datastore names to meet Kubernetes DNS naming requirements
+1. **Filters excluded storage** based on [storageClass.exclude](configuration.html#parameters-storageclass-exclude) configuration (supports regex patterns)
+1. **Creates StorageClasses** with appropriate parameters:
    - `allowVolumeExpansion: true` (modern mode only)
-   - `volumeBindingMode: WaitForFirstConsumer` - Ensures volumes are created in the same zone as the pod
+   - `volumeBindingMode: WaitForFirstConsumer` — Ensures volumes are created in the same zone as the pod
    - Topology constraints matching vSphere regions and zones
 
 ### Volume lifecycle
@@ -74,35 +72,15 @@ The module automatically:
 When a pod requests storage:
 
 1. A PVC is created referencing a StorageClass managed by this module
-2. The CSI provisioner creates a volume on the specified vSphere datastore
-3. The CSI attacher attaches the volume to the appropriate node
-4. The CSI node driver mounts the volume into the pod
-5. The vsphere-syncer periodically synchronizes metadata to ensure consistency
+1. The CSI provisioner creates a volume on the specified vSphere datastore
+1. The CSI attacher attaches the volume to the appropriate node
+1. The CSI node driver mounts the volume into the pod
+1. The vsphere-syncer periodically synchronizes metadata to ensure consistency
 
-## Configuration
-
-The module requires the following parameters in its config:
-
-- `host` - vCenter server domain
-- `username` - vCenter login credentials
-- `password` - vCenter password
-- `vmFolderPath` - Path to the VM folder
-- `regionTagCategory` - Tag category for identifying regions (vSphere Datacenters)
-- `zoneTagCategory` - Tag category for identifying zones (vSphere Clusters)
-- `region` - The vSphere Datacenter tag
-- `zones` - Array of vSphere Cluster tags
-
-Optional parameters:
-
-- `insecure` - Set to `true` for self-signed certificates
-- `disableTimesync` - Disable time synchronization from ESXi
-- `storageClass.exclude` - List of StorageClass name patterns to exclude from creation
-- `storageClass.compatibilityFlag` - Driver compatibility mode (`Legacy` or `Migration`)
 
 ## Limitations
 
 - This module is designed exclusively for static (non-cloud) Kubernetes clusters on vSphere
-- Legacy mode does not support online volume resizing
+- [Legacy mode](#compatibility-modes) does not support online volume resizing
 - Volume expansion requires the modern CSI driver
-- StorageClasses are automatically managed - manual modifications may be overwritten
-- The module requires the `d8-cloud-provider-discovery-data` secret to function properly
+- StorageClasses are automatically managed — manual modifications may be overwritten
