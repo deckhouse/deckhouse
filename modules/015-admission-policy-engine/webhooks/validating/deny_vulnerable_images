@@ -16,14 +16,14 @@
 
 source /shell_lib.sh
 
-function __config__(){
+function __config__() {
   cat <<EOF
 configVersion: v1
 kubernetes:
-  - name: operator_trivy_module_config
+  - name: operator_trivy_module
     apiVersion: deckhouse.io/v1alpha1
-    kind: ModuleConfig
-    queue: operator_trivy_module_config
+    kind: Module
+    queue: operator_trivy_module
     group: main
     executeHookOnEvent: []
     executeHookOnSynchronization: false
@@ -33,7 +33,7 @@ kubernetes:
       - operator-trivy
     jqFilter: |
       {
-        "enabled": .spec.enabled,
+        "enabled": .status.conditions[] | select(.type == "EnabledByModuleManager") | .status,
       }
 kubernetesValidating:
 - name: ape-moduleconfig.deckhouse.io
@@ -51,16 +51,16 @@ function __main__() {
   mcName=$(context::jq -r '.review.request.object.metadata.name')
   if [[ "$mcName" == "admission-policy-engine" ]]; then
     denyVulnerableImagesEnabled="$(context::jq -r '.review.request.object.spec.settings.denyVulnerableImages.enabled')"
-    operatorTrivyEnabled="$(context::jq -r '.snapshots.operator_trivy_module_config[].filterResult.enabled')"
-    if [[ "$denyVulnerableImagesEnabled" == "true" ]] && [[ "$operatorTrivyEnabled" != "true" ]]; then
-      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
-{"allowed":false, "message":"moduleconfigs.deckhouse.io \"$mcName\", .spec.settings.denyVulnerableImages can't be enabled when operator-trivy module is disabled" }
+    operatorTrivyEnabled="$(context::jq -r '.snapshots.operator_trivy_module[].filterResult.enabled')"
+    if [[ "$denyVulnerableImagesEnabled" == "true" ]] && [[ "$operatorTrivyEnabled" != "True" ]]; then
+      cat <<EOF >"$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"module \"admission-policy-engine\", .spec.settings.denyVulnerableImages can't be enabled when operator-trivy module is disabled" }
 EOF
       return 0
     fi
   fi
 
-  cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+  cat <<EOF >"$VALIDATING_RESPONSE_PATH"
 {"allowed":true}
 EOF
 
