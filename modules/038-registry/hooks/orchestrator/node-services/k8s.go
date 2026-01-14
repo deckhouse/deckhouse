@@ -188,16 +188,16 @@ func InputsFromSnapshot(input *go_hook.HookInput, name string) (Inputs, error) {
 		return ret, fmt.Errorf("get Pods snapshot error: %w", err)
 	}
 
-	for nodeName, pod := range pods {
+	for podName, pod := range pods {
 		node, ok := ret.Nodes[pod.Node]
 		if !ok {
-			return ret, fmt.Errorf("cannot find Node \"%s\" for Pod \"%s\"", pod.Node, nodeName)
+			return ret, fmt.Errorf("cannot find Node \"%s\" for Pod \"%s\"", pod.Node, podName)
 		}
 
 		if node.Pods == nil {
 			node.Pods = make(NodePods)
 		}
-		node.Pods[nodeName] = pod.Pod
+		node.Pods[podName] = pod.Pod
 
 		ret.Nodes[pod.Node] = node
 	}
