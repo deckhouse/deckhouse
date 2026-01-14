@@ -485,12 +485,23 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
 	}
 
-	snapshot, err := c.dvpCloudAPI.DiskService.CreateVolumeSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
+	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
 		return nil, err
 	}
 
-	snapshotCreationTimestamp := timestamppb.New(snapshot.CreationTimestamp.Time)
+	newVirtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, virtualDiskSnapshot.Name)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get just created snapshot %s: %v", virtualDiskSnapshot.Name, err)
+	}
+
+	volumeSnapshot, err := c.dvpCloudAPI.DiskService.GetVolumeSnapshot(ctx, newVirtualDiskSnapshot.Status.VolumeSnapshotName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get volume snapshot %s for virtual disk snapshot %s: %v",
+			newVirtualDiskSnapshot.Status.VolumeSnapshotName, virtualDiskSnapshot.Name, err)
+	}
+
+	snapshotCreationTimestamp := timestamppb.New(volumeSnapshot.Status.CreationTime.Time)
 
 	response := &csi.CreateSnapshotResponse{
 		Snapshot: &csi.Snapshot{
@@ -498,6 +509,7 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 			SourceVolumeId: request.SourceVolumeId,
 			ReadyToUse:     true,
 			CreationTime:   snapshotCreationTimestamp,
+			SizeBytes:      volumeSnapshot.Status.RestoreSize.Value(),
 		},
 	}
 
@@ -507,7 +519,7 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 func (c *ControllerService) DeleteSnapshot(ctx context.Context, request *csi.DeleteSnapshotRequest) (*csi.DeleteSnapshotResponse, error) {
 	klog.Infof("Deleting snapshot %v", request.SnapshotId)
 
-	err := c.dvpCloudAPI.DiskService.DeleteVolumeSnapshot(ctx, request.SnapshotId)
+	err := c.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.SnapshotId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to delete snapshot %s: %v", request.SnapshotId, err)
 	}
