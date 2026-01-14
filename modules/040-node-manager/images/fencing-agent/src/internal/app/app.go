@@ -149,7 +149,7 @@ func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
 		if node.Name == a.config.NodeName {
 			continue
 		}
-		peersIps = append(peersIps, node.Addresses["InternalIP"])
+		peersIps = append(peersIps, node.Addresses["eth0"])
 	}
 	a.logger.Debug("Discovered peers", zap.Strings("peers", peersIps))
 	return peersIps, nil
@@ -179,6 +179,7 @@ func getCurrentNodeIP(kubeClient kubernetes.Interface, nodeName string, timeout 
 
 	for _, addr := range node.Status.Addresses {
 		if addr.Type == "InternalIP" {
+
 			return addr.Address, nil
 		}
 	}
