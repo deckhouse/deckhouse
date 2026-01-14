@@ -3,8 +3,6 @@ title: "The csi-vsphere module"
 description: "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere."
 ---
 
-## Description
-
 The `csi-vsphere` module provides Container Storage Interface (CSI) support for VMware vSphere environments, enabling dynamic provisioning and management of persistent storage volumes in Kubernetes clusters running on vSphere infrastructure.
 
 This module is specifically designed for **static Kubernetes clusters** (non-cloud) deployed on VMware vSphere and works independently from the [cloud-provider-vsphere](../cloud-provider-vsphere/) module. It integrates with vSphere datastores to provide persistent storage capabilities through the vSphere CSI driver.
@@ -17,7 +15,7 @@ The module deploys the VMware vSphere CSI driver components that:
 - **Support volume operations** — Handles volume creation, deletion, attachment, detachment, and online resizing (in modern mode)
 - **Implement topology awareness** — Uses zone and region labels for proper volume placement according to vSphere cluster topology
 
-### Architecture
+## Architecture
 
 The CSI driver consists of two main components:
 
@@ -34,7 +32,7 @@ The CSI driver consists of two main components:
    - **node-driver-registrar** — Registers the CSI driver with kubelet
    - **liveness-probe** — Monitors node driver health
 
-### Compatibility modes
+## Compatibility modes
 
 The module supports two operational modes via the [compatibilityFlag](configuration.html#parameters-storageclass-compatibilityflag) parameter:
 
@@ -55,7 +53,7 @@ The module supports two operational modes via the [compatibilityFlag](configurat
   - Facilitates migration from Legacy to Modern mode
   - Allows gradual transition of workloads
 
-### Storage discovery and provisioning
+## Storage discovery and provisioning
 
 The module automatically:
 
@@ -67,7 +65,7 @@ The module automatically:
    - `volumeBindingMode: WaitForFirstConsumer` — Ensures volumes are created in the same zone as the pod
    - Topology constraints matching vSphere regions and zones
 
-### Volume lifecycle
+## Volume lifecycle
 
 When a pod requests storage:
 

@@ -3,8 +3,6 @@ title: "The registry-packages-proxy module"
 description: "Internal registry packages proxy for optimizing access to registry packages."
 ---
 
-## Description
-
 The `registry-packages-proxy` module provides an in-cluster HTTP proxy service for accessing packages from container registries. It acts as an intermediary between cluster components and external or internal registries, offering caching capabilities to optimize bandwidth usage and improve package retrieval performance.
 
 This module is a critical infrastructure component that runs on master nodes and is used during cluster bootstrap and runtime operations to fetch packages from container registries.
@@ -18,7 +16,7 @@ The module deploys a highly-available proxy service that:
 - Watches `ModuleSource` custom resources to obtain registry credentials for different repositories
 - Uses kube-rbac-proxy to secure access to the proxy and metrics endpoints
 
-### Architecture
+## Architecture
 
 The proxy service consists of two containers:
 
@@ -35,7 +33,7 @@ The proxy service consists of two containers:
    - Secures `/package` endpoint requiring appropriate permissions
    - Allows unauthenticated access to `/healthz`
 
-### Package retrieval flow
+## Package retrieval flow
 
 When a component requests a package:
 
@@ -48,7 +46,7 @@ When a component requests a package:
    - The package is streamed to the client while simultaneously being cached for future requests
 1. Responses include appropriate HTTP headers for caching (`Cache-Control`, `ETag`, `Content-Length`)
 
-### High availability
+## High availability
 
 The module ensures high availability through:
 
