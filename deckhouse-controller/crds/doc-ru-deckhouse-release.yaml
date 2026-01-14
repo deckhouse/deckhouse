@@ -52,7 +52,7 @@ spec:
 
                     Подробнее о статусах релизов DKP можно почитать в [документации модуля `deckhouse`](/modules/deckhouse/#обновление-релизов-deckhouse).
                 message:
-                  description: Детальное сообщение об ошибки или статусе релиза.
+                  description: Детальное сообщение об ошибке или статусе релиза.
                 transitionTime:
                   description: Время изменения статуса релиза.
                 approved:
