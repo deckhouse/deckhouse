@@ -330,6 +330,10 @@ func (c *DiskService) WaitVirtualDiskSnapshotReady(ctx context.Context, name str
 			return false, fmt.Errorf("expected a VirtualDiskSnapshot but got a %T", obj)
 		}
 
+		if virtualDiskSnapshot.Status.Phase == v1alpha2.VirtualDiskSnapshotPhaseFailed {
+			return false, fmt.Errorf("virtual disk snapshot %s is in failed state", name)
+		}
+
 		return virtualDiskSnapshot.Status.Phase == v1alpha2.VirtualDiskSnapshotPhaseReady, nil
 	})
 }
