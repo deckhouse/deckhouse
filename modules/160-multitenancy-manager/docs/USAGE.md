@@ -116,6 +116,192 @@ Note that changing the template may cause a resource conflict. If the template c
 
 {% raw %}
 
+## Special labels for resource management
+
+When creating resources in a `ProjectTemplate`, you can use special labels to control how the multitenancy-manager handles them:
+
+### Skipping the heritage label
+
+By default, all resources created from a `ProjectTemplate` receive the `heritage: multitenancy-manager` label. If you need to exclude a resource from receiving this label (for example, to maintain compatibility with other systems that use the `heritage` label), add the `projects.deckhouse.io/skip-heritage-label` label to the resource.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/skip-heritage-label: "true"
+    app: my-app
+data:
+  key: value
+```
+
+In this case, the resource will still receive the `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` labels, but will not receive the `heritage: multitenancy-manager` label.
+
+### Excluding resources from management
+
+If you need to exclude a resource from multitenancy-manager control (for example, if the resource should be managed manually or by another controller), add the `projects.deckhouse.io/unmanaged` label to the resource.
+
+Example:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-secret
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+type: Opaque
+data:
+  token: <base64-encoded-value>
+```
+
+Resources with the `projects.deckhouse.io/unmanaged` label:
+- Will be created **only once** during the first installation of the project;
+- Will **not be updated** on subsequent template changes or upgrades;
+- Will not be tracked in the project status;
+- Will receive the `helm.sh/resource-policy: keep` annotation to prevent deletion when the release is uninstalled;
+- Will receive `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` labels, but **will not receive** the `heritage: multitenancy-manager` label.
+
+{% alert level="warning" %}
+Once a resource is marked as unmanaged, it will be created during the first installation but will not be updated when the `ProjectTemplate` changes. After creation, the resource becomes fully independent and must be managed manually. Make sure you understand the implications before using this label.
+{% endalert %}
+
+## Implementing validation for resources with custom heritage value
+
+The multitenancy-manager module uses `ValidatingAdmissionPolicy` to protect resources with the `heritage: multitenancy-manager` label from manual modifications. You can implement similar validation for resources with a different `heritage` label value.
+
+### How validation works in multitenancy-manager
+
+The validation is implemented in the `templates/validation.yaml` file and uses the following components:
+
+1. **ValidatingAdmissionPolicy** — defines validation rules:
+   - Operations: `UPDATE` and `DELETE`
+   - Check: only operations from the controller's service account are allowed
+   - Applies to all resources and API groups
+
+2. **ValidatingAdmissionPolicyBinding** — binds the policy to resources:
+   - Uses `namespaceSelector` and `objectSelector` to select resources by the `heritage: multitenancy-manager` label
+
+### Creating your own validation
+
+To implement validation for resources with a different `heritage` value (e.g., `heritage: my-custom-manager`):
+
+1. Create a file with `ValidatingAdmissionPolicy` and `ValidatingAdmissionPolicyBinding`:
+
+   ```yaml
+   ---
+   apiVersion: admissionregistration.k8s.io/v1beta1
+   kind: ValidatingAdmissionPolicy
+   metadata:
+     name: my-custom-manager-validation
+   spec:
+     failurePolicy: Fail
+     matchConstraints:
+       resourceRules:
+         - apiGroups:   ["*"]
+           apiVersions: ["*"]
+           operations:  ["UPDATE", "DELETE"]
+           resources:   ["*"]
+           scope: "*"
+     validations:
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"'
+         reason: Forbidden
+         messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
+           : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
+   ---
+   apiVersion: admissionregistration.k8s.io/v1beta1
+   kind: ValidatingAdmissionPolicyBinding
+   metadata:
+     name: my-custom-manager-validation
+   spec:
+     policyName: my-custom-manager-validation
+     validationActions: [Deny, Audit]
+     matchResources:
+       namespaceSelector:
+         matchLabels:
+           heritage: my-custom-manager
+       objectSelector:
+         matchLabels:
+           heritage: my-custom-manager
+   ```
+
+2. Configure validation parameters:
+
+   - **`policyName`** — unique policy name (must match in both Policy and Binding)
+   - **`request.userInfo.username`** — service account name allowed to modify resources (replace with your service account)
+   - **`heritage: my-custom-manager`** — `heritage` label value for your resources (replace with your value)
+   - **`failurePolicy: Fail`** — policy on validation error:
+     - `Fail` — reject the request on validation error
+     - `Ignore` — ignore validation errors
+   - **`validationActions`** — validation actions:
+     - `Deny` — reject unauthorized operations
+     - `Audit` — log operations for audit
+
+3. Apply the policy:
+
+   ```shell
+   kubectl apply -f my-validation-policy.yaml
+   ```
+
+4. Ensure your resources have the corresponding `heritage` label:
+
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: my-resource
+     labels:
+       heritage: my-custom-manager
+   ```
+
+### Important notes
+
+- **Cluster requirements**: `ValidatingAdmissionPolicy` is available starting from Kubernetes 1.28. For older versions, use `ValidatingWebhookConfiguration`.
+- **Service Account**: Ensure the specified service account exists and has the necessary permissions to manage resources.
+- **Performance**: Validation runs for each resource modification request, which may affect performance with a large number of operations.
+- **Testing**: Test the validation on a test cluster before applying it in production.
+
+### Example for ValidatingWebhookConfiguration (Kubernetes < 1.28)
+
+If your cluster doesn't support `ValidatingAdmissionPolicy`, use `ValidatingWebhookConfiguration`:
+
+```yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: my-custom-manager-validation
+webhooks:
+  - name: my-custom-manager.validation.example.com
+    clientConfig:
+      service:
+        name: my-validation-webhook
+        namespace: my-namespace
+        path: "/validate"
+    rules:
+      - apiGroups:   ["*"]
+        apiVersions: ["*"]
+        operations:  ["UPDATE", "DELETE"]
+        resources:   ["*"]
+    namespaceSelector:
+      matchLabels:
+        heritage: my-custom-manager
+    objectSelector:
+      matchLabels:
+        heritage: my-custom-manager
+    admissionReviewVersions: ["v1", "v1beta1"]
+    sideEffects: None
+    failurePolicy: Fail
+```
+
+In this case, you'll also need to implement a webhook server that checks `request.userInfo.username`.
+
 ## Creating your own project template
 
 Default templates cover basic project use cases and serve as a good example of template capabilities.
