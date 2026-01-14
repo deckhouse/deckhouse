@@ -31,10 +31,11 @@ func NewProvider(client kubernetes.Interface,
 	nodeName string,
 	nodeGroup string) *Provider {
 	return &Provider{
-		client:   client,
-		logger:   logger,
-		timeout:  timeout,
-		nodeName: nodeName,
+		client:    client,
+		logger:    logger,
+		timeout:   timeout,
+		nodeName:  nodeName,
+		nodeGroup: nodeGroup,
 	}
 }
 
