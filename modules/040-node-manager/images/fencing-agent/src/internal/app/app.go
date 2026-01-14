@@ -151,6 +151,7 @@ func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
 		}
 		peersIps = append(peersIps, node.Addresses["InternalIP"])
 	}
+	a.logger.Debug("Discovered peers", zap.Strings("peers", peersIps))
 	return peersIps, nil
 }
 
