@@ -151,6 +151,7 @@ if [[ $ACTIONLINT_RUN == "yes" ]] ; then
   fi
 fi
 
+
 # Note: This script mimics behavior of diff utility to exit with 1
 # if workflows files are changed.
 # It seems a good idea in terms of automatic checking if
