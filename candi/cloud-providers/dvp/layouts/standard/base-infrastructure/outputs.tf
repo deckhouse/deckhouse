@@ -17,6 +17,5 @@ output "cloud_discovery_data" {
     "apiVersion" = "deckhouse.io/v1"
     "kind"       = "DVPCloudDiscoveryData"
     "zones"      = ["default"]
-    "clusterUUID" = var.clusterUUID
   }
 }
