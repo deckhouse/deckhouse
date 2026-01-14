@@ -27,7 +27,6 @@ http:
     enabled: true
     clientcert:
       ca: /pki/ingress-client-ca.crt
-      cn: kube-rbac-proxy-ca-key-pair
 {{- end }}
 
 {{- with .Upstream }}
