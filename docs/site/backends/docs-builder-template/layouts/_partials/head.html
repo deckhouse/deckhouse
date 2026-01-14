@@ -2,10 +2,10 @@
 {{- if .Description }}{{ $description = .Description }}{{ else }}{{ $description = .Summary }}{{ end }}
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
 {{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
-{{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/[a-zA-Z0-9-]+/(.*)$" "$1/stable/$2" $canonicalURL 1 }}
+{{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid)/(.*)$" "$1/$3" $canonicalURL 1 }}
 
 <title>{{ .Title }} | {{ .Site.Title }}</title>
-<link rel="canonical" href='{{ site.BaseURL }}{{ strings.TrimLeft "/" $canonicalURL }}' />
+<link rel="canonical" href='{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}{{ strings.TrimLeft "/" $canonicalURL }}' />
 <meta name="description" content="{{  $description }}">
 <meta name="title" content="{{ .Title }} | {{ .Site.Title }}">
 
@@ -14,7 +14,7 @@
 <meta property="og:url" content="{{ strings.TrimSuffix "readme.html" .Permalink  }}">
 <meta property="og:title" content="{{ .Title }} | {{ .Site.Title }}">
 <meta property="og:description" content="{{ $description }}">
-<meta property="og:image" content="{{ site.BaseURL }}images/og/kubernetes-platform.png">
+<meta property="og:image" content="{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}images/og/kubernetes-platform.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="628">
 <meta property="og:image:type" content="image/png">
@@ -24,5 +24,5 @@
 <meta name="twitter:url" content="{{ strings.TrimSuffix "readme.html" .Permalink }}">
 <meta name="twitter:title" content="{{ .Title }} | {{ .Site.Title }}">
 <meta name="twitter:description" content="{{ $description }}">
-<meta name="twitter:image" content="{{ site.BaseURL }}images/favicon/logo-180.png" />
+<meta name="twitter:image" content="{{ if eq site.Params.mode "module" }}/{{ else }}{{ site.BaseURL }}{{ end }}images/favicon/logo-180.png" />
 <meta name="twitter:image:alt" content="{{ site.Title }}">
