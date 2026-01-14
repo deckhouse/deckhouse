@@ -38,3 +38,10 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 ### resource-quota-ignore-mechanism.patch
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
+
+### kubelet-graceful-shutdown-cleanup-memory-manager-state
+
+This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
+
+The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
+See issue: https://github.com/kubernetes/kubernetes/issues/131253
