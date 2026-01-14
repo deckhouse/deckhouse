@@ -419,6 +419,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			Memory: v1alpha2.MemorySpec{
 				Size: dvpMachine.Spec.Memory,
 			},
+			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{},
 		},
 	})
 	if err != nil {
