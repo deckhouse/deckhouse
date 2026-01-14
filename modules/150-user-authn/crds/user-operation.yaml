@@ -1,7 +1,7 @@
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  name: useractions.deckhouse.io
+  name: useroperations.deckhouse.io
   labels:
     heritage: deckhouse
     module: user-authn
@@ -9,9 +9,9 @@ spec:
   group: deckhouse.io
   scope: Cluster
   names:
-    plural: useractions
-    singular: useraction
-    kind: UserAction
+    plural: useroperations
+    singular: useroperation
+    kind: UserOperation
   preserveUnknownFields: false
   versions:
     - name: v1alpha1
@@ -22,7 +22,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes an action to be applied to a user (password reset, 2FA reset, lock/unlock).
+            Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
           required:
             - spec
           properties:
@@ -39,7 +39,7 @@ spec:
                 type:
                   type: string
                   description: |
-                    Type of the user action. Possible values:
+                    Type of the user operation. Possible values:
                     
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
@@ -48,8 +48,8 @@ spec:
                 initiatorType:
                   type: string
                   description: |
-                    Indicates who initiated the action. Possible values:
-
+                    Indicates who initiated the operation. Possible values:
+ 
                     * `admin`: By an administrator.
                     * `system`: Automatically by the system.
                     * `self`: By the user.
@@ -73,19 +73,19 @@ spec:
                 phase:
                   type: string
                   description: |
-                    Current phase of the action. Possible values:
-
-                    * `Succeeded`: Action completed successfully.
-                    * `Failed`: Action failed.
+                    Current phase of the operation. Possible values:
+ 
+                    * `Succeeded`: Operation completed successfully.
+                    * `Failed`: Operation failed.
                   enum:
                     - "Succeeded"
                     - "Failed"
                 message:
                   type: string
-                  description: "Optional message about the result or failure of the action."
+                  description: "Optional message about the result or failure of the operation."
                 completedAt:
                   type: string
-                  description: "Time when the action was completed."
+                  description: "Time when the operation was completed."
       subresources: &subresources
         status: {}
       additionalPrinterColumns: &additionalPrinterColumns
@@ -108,7 +108,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Describes an action to be applied to a user (password reset, 2FA reset, lock/unlock).
+            Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
           required:
             - spec
           properties:
@@ -125,7 +125,7 @@ spec:
                 type:
                   type: string
                   description: |
-                    Type of the user action. Possible values:
+                    Type of the user operation. Possible values:
                     
                     * `ResetPassword`: Password reset.
                     * `Reset2FA`: Two-factor authentication reset.
@@ -134,8 +134,8 @@ spec:
                 initiatorType:
                   type: string
                   description: |
-                    Indicates who initiated the action. Possible values:
-
+                    Indicates who initiated the operation. Possible values:
+ 
                     * `admin`: By an administrator.
                     * `system`: Automatically by the system.
                     * `self`: By the user.
@@ -159,18 +159,20 @@ spec:
                 phase:
                   type: string
                   description: |
-                    Current phase of the action. Possible values:
-
-                    * `Succeeded`: Action was completed successfully.
-                    * `Failed`: Action failed.
+                    Current phase of the operation. Possible values:
+ 
+                    * `Succeeded`: Operation was completed successfully.
+                    * `Failed`: Operation failed.
                   enum:
                     - "Succeeded"
                     - "Failed"
                 message:
                   type: string
-                  description: "Optional message about the result or failure of the action."
+                  description: "Optional message about the result or failure of the operation."
                 completedAt:
                   type: string
-                  description: "Time when the action was completed."
+                  description: "Time when the operation was completed."
       subresources: *subresources
       additionalPrinterColumns: *additionalPrinterColumns
+
+
