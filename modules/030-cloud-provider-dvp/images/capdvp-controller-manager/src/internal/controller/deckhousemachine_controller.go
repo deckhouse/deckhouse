@@ -53,8 +53,9 @@ const ProviderIDPrefix = "dvp://"
 // DeckhouseMachineReconciler reconciles a DeckhouseMachine object
 type DeckhouseMachineReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	DVP    *dvpapi.DVPCloudAPI
+	Scheme      *runtime.Scheme
+	DVP         *dvpapi.DVPCloudAPI
+	ClusterUUID string
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhousemachines,verbs=get;list;watch;create;update;patch;delete
@@ -197,7 +198,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 
 	logger.Info("Reconciling DeckhouseMachine")
 
-	vm, err := r.getOrCreateVM(ctx, cluster, machine, dvpMachine)
+	vm, err := r.getOrCreateVM(ctx, machine, dvpMachine)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see DeckhouseMachine status for details")
 		conditions.MarkFalse(
@@ -346,7 +347,6 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 
 func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	ctx context.Context,
-	cluster *clusterv1b1.Cluster,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (
@@ -356,7 +356,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
-			vm, err = r.createVM(ctx, cluster, machine, dvpMachine)
+			vm, err = r.createVM(ctx, machine, dvpMachine)
 			return vm, err
 		}
 		return nil, fmt.Errorf("cannot get VirtualMachine: %w", err)
@@ -367,7 +367,6 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 
 func (r *DeckhouseMachineReconciler) createVM(
 	ctx context.Context,
-	cluster *clusterv1b1.Cluster,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (*v1alpha2.VirtualMachine, error) {
@@ -377,7 +376,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
-		string(cluster.UID),
+		r.ClusterUUID,
 		dvpMachine.Name,
 		dvpMachine.Name+"-boot",
 		dvpMachine.Spec.RootDiskSize,
@@ -410,7 +409,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(cluster.UID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(r.ClusterUUID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
@@ -419,7 +418,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	for i, d := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
-		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, string(cluster.UID), dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
+		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, r.ClusterUUID, dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
 		}
@@ -451,7 +450,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			Name: dvpMachine.Name,
 			Labels: map[string]string{
 				"deckhouse.io/managed-by":       "deckhouse",
-				"dvp.deckhouse.io/cluster-uuid": string(cluster.UID),
+				"dvp.deckhouse.io/cluster-uuid": r.ClusterUUID,
 				"dvp.deckhouse.io/hostname":     dvpMachine.Name,
 			},
 		},
