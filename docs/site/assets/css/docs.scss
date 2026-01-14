@@ -1326,7 +1326,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
         position: relative;
         overflow: auto;
 
-        &.table-wrapper__sides {
+        &.table-wrapper__versions {
             overflow: visible;
         }
     }
@@ -1366,14 +1366,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
         &.table-wrapper__shadow {
             th {
                 padding: 1em;
-            }
-        }
-    }
-
-    .table-wrapper__small {
-        table {
-            th, td {
-                padding: 1em 1.2em;
             }
         }
     }

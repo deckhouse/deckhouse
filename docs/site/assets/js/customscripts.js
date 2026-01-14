@@ -208,8 +208,13 @@ $(document).ready(function () {
   };
 
   tables.each((_, table) => {
-    $(table).addClass('table-wrapper__shadow fixed-header-table');
-    $(table).wrap("<div class='table-wrapper table-wrapper__sides'><div></div></div>");
+    if ($(table).hasClass('supported_versions')) {
+      $(table).addClass('fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
+    } else {
+      $(table).addClass('table-wrapper__shadow fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
+    }
   });
 });
 

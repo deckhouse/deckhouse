@@ -10,7 +10,7 @@ $(document).ready(function(){
         })
     }
 
-    const versionsTable = document.querySelectorAll('.table-wrapper__sides').length > 0;
+    const versionsTable = document.querySelectorAll('.table-wrapper__versions').length > 0;
     if(versionsTable) {
       const rightSidebar = document.querySelector('.layout-sidebar__sidebar_right');
       rightSidebar.style.minWidth = '0';
