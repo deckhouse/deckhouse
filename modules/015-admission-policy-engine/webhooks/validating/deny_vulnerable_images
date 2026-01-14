@@ -20,7 +20,7 @@ function __config__() {
   cat <<EOF
 configVersion: v1
 kubernetes:
-  - name: operator_trivy_module_config
+  - name: operator_trivy_module
     apiVersion: deckhouse.io/v1alpha1
     kind: Module
     queue: operator_trivy_module
