@@ -455,15 +455,10 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 		}
 	}
 
-	newVirtualDiskSnapshot, err := d.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, virtualDiskSnapshot.Name)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get just created snapshot %s: %v", virtualDiskSnapshot.Name, err)
-	}
-
-	volumeSnapshot, err := d.dvpCloudAPI.DiskService.GetVolumeSnapshot(ctx, newVirtualDiskSnapshot.Status.VolumeSnapshotName)
+	volumeSnapshot, err := d.dvpCloudAPI.DiskService.GetVolumeSnapshot(ctx, virtualDiskSnapshot.Status.VolumeSnapshotName)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to get volume snapshot %s for virtual disk snapshot %s: %v",
-			newVirtualDiskSnapshot.Status.VolumeSnapshotName, virtualDiskSnapshot.Name, err)
+			virtualDiskSnapshot.Status.VolumeSnapshotName, virtualDiskSnapshot.Name, err)
 	}
 
 	snapshotCreationTimestamp := timestamppb.New(volumeSnapshot.Status.CreationTime.Time)
