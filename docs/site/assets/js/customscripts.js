@@ -208,7 +208,10 @@ $(document).ready(function () {
   };
 
   tables.each((_, table) => {
-    if ($(table).hasClass('supported_versions')) {
+    if ($(table).hasClass('table__small')) {
+      $(table).addClass('fixed-header-table');
+      $(table).wrap("<div class='table-wrapper table-wrapper__small table-wrapper__versions'><div></div></div>");
+    } else if ($(table).hasClass('supported_versions')) {
       $(table).addClass('fixed-header-table');
       $(table).wrap("<div class='table-wrapper table-wrapper__versions'><div></div></div>");
     } else {
