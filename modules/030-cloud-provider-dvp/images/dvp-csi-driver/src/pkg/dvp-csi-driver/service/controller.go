@@ -20,6 +20,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -481,8 +482,10 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 
 	requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to parse %s parameter value %s to bool: %v",
+		msg := fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
 			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
+		klog.Error(msg)
+		return nil, status.Error(codes.Internal, msg.Error())
 	}
 
 	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
@@ -490,7 +493,20 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 		if k8serrors.IsAlreadyExists(err) {
 			klog.Infof("Snapshot %s of disk %s already exists", request.Name, request.SourceVolumeId)
 		} else {
-			return nil, status.Errorf(codes.Internal, "failed to create snapshot %s of disk %s: %v", request.Name, request.SourceVolumeId, err)
+			msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
+				request.Name, request.SourceVolumeId, err)
+
+			klog.Error(msg)
+
+			err = c.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.Name)
+			if err != nil {
+				msg = fmt.Errorf("failed to cleanup virtual disk snapshot %s after creation failure: %v",
+					request.Name, err)
+				klog.Error(msg)
+				return nil, status.Error(codes.Internal, msg.Error())
+			}
+
+			return nil, status.Error(codes.Internal, msg.Error())
 		}
 	}
 
@@ -501,8 +517,10 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 
 	volumeSnapshot, err := c.dvpCloudAPI.DiskService.GetVolumeSnapshot(ctx, newVirtualDiskSnapshot.Status.VolumeSnapshotName)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to get volume snapshot %s for virtual disk snapshot %s: %v",
+		msg := fmt.Errorf("failed to get volume snapshot %s for virtual disk snapshot %s: %v",
 			virtualDiskSnapshot.Status.VolumeSnapshotName, virtualDiskSnapshot.Name, err)
+		klog.Error(msg)
+		return nil, status.Error(codes.Internal, msg.Error())
 	}
 
 	snapshotCreationTimestamp := timestamppb.New(volumeSnapshot.Status.CreationTime.Time)

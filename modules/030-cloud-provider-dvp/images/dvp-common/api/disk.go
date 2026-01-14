@@ -20,11 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
@@ -295,7 +295,7 @@ func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) erro
 	})
 }
 
-func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string, source string, requiredConsistency bool) (*v1alpha2.VirtualDiskSnapshot, error) {
+func (d *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string, source string, requiredConsistency bool) (*v1alpha2.VirtualDiskSnapshot, error) {
 	virtualDiskSnapshot := &v1alpha2.VirtualDiskSnapshot{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       v1alpha2.VirtualDiskSnapshotKind,
@@ -303,7 +303,7 @@ func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
-			Namespace: c.namespace,
+			Namespace: d.namespace,
 		},
 		Spec: v1alpha2.VirtualDiskSnapshotSpec{
 			VirtualDiskName:     source,
@@ -311,17 +311,17 @@ func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 		},
 	}
 
-	err := c.client.Create(ctx, virtualDiskSnapshot)
+	err := d.client.Create(ctx, virtualDiskSnapshot)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
 	}
 
-	err = c.WaitVirtualDiskSnapshotReady(ctx, name)
+	err = d.WaitVirtualDiskSnapshotReady(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to wait virtual disk snapshot ready: %w", err)
 	}
 
-	newVirtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, name)
+	newVirtualDiskSnapshot, err := d.GetVirtualDiskSnapshot(ctx, name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get just created virtual disk snapshot: %w", err)
 	}
@@ -329,11 +329,11 @@ func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 	return newVirtualDiskSnapshot, nil
 }
 
-func (c *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (*v1alpha2.VirtualDiskSnapshot, error) {
+func (d *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (*v1alpha2.VirtualDiskSnapshot, error) {
 	virtualDiskSnapshot := &v1alpha2.VirtualDiskSnapshot{}
 
-	err := c.client.Get(ctx, types.NamespacedName{
-		Namespace: c.namespace,
+	err := d.client.Get(ctx, types.NamespacedName{
+		Namespace: d.namespace,
 		Name:      name,
 	}, virtualDiskSnapshot)
 	if err != nil {
@@ -343,18 +343,22 @@ func (c *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (
 	return virtualDiskSnapshot, nil
 }
 
-func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) error {
-	virtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, id)
+func (d *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) error {
+	virtualDiskSnapshot, err := d.GetVirtualDiskSnapshot(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to get virtual disk snapshot: %w", err)
+		if k8serrors.IsNotFound(err) {
+			return nil
+		} else {
+			return fmt.Errorf("failed to get virtual disk snapshot: %w", err)
+		}
 	}
 
-	err = c.client.Delete(ctx, virtualDiskSnapshot)
+	err = d.client.Delete(ctx, virtualDiskSnapshot)
 	if err != nil {
 		return fmt.Errorf("failed to delete virtual disk snapshot: %w", err)
 	}
 
-	err = c.WaitVirtualDiskSnapshotDeletion(ctx, id)
+	err = d.WaitVirtualDiskSnapshotDeletion(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to wait virtual disk snapshot deletion: %w", err)
 	}
@@ -362,8 +366,8 @@ func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) 
 	return nil
 }
 
-func (c *DiskService) WaitVirtualDiskSnapshotReady(ctx context.Context, name string) error {
-	return c.Wait(ctx, name, &v1alpha2.VirtualDiskSnapshot{}, func(obj client.Object) (bool, error) {
+func (d *DiskService) WaitVirtualDiskSnapshotReady(ctx context.Context, name string) error {
+	return d.Wait(ctx, name, &v1alpha2.VirtualDiskSnapshot{}, func(obj client.Object) (bool, error) {
 		virtualDiskSnapshot, ok := obj.(*v1alpha2.VirtualDiskSnapshot)
 		if !ok {
 			return false, fmt.Errorf("expected a VirtualDiskSnapshot but got a %T", obj)
@@ -373,17 +377,17 @@ func (c *DiskService) WaitVirtualDiskSnapshotReady(ctx context.Context, name str
 	})
 }
 
-func (c *DiskService) WaitVirtualDiskSnapshotDeletion(ctx context.Context, name string) error {
-	return c.Wait(ctx, name, &v1alpha2.VirtualDiskSnapshot{}, func(obj client.Object) (bool, error) {
+func (d *DiskService) WaitVirtualDiskSnapshotDeletion(ctx context.Context, name string) error {
+	return d.Wait(ctx, name, &v1alpha2.VirtualDiskSnapshot{}, func(obj client.Object) (bool, error) {
 		return obj == nil, nil
 	})
 }
 
-func (c *DiskService) GetVolumeSnapshot(ctx context.Context, name string) (*snapshotv1.VolumeSnapshot, error) {
+func (d *DiskService) GetVolumeSnapshot(ctx context.Context, name string) (*snapshotv1.VolumeSnapshot, error) {
 	volumeSnapshot := &snapshotv1.VolumeSnapshot{}
 
-	err := c.client.Get(ctx, types.NamespacedName{
-		Namespace: c.namespace,
+	err := d.client.Get(ctx, types.NamespacedName{
+		Namespace: d.namespace,
 		Name:      name,
 	}, volumeSnapshot)
 	if err != nil {
