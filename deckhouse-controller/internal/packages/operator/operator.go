@@ -219,7 +219,7 @@ func (o *Operator) Stop() {
 
 	// Stop generating new events
 	o.scheduleManager.Stop()
-	o.kubeEventsManager.PauseHandleEvents()
+	o.kubeEventsManager.Stop()
 
 	// Stop accepting and processing new tasks
 	o.eventHandler.Stop()
