@@ -291,18 +291,14 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 
 	l.logger.Debug("found installed modules", slog.Any("installed", installed))
 
-	// remove modules with release
+	// exclude modules with release
 	for _, release := range releases.Items {
 		delete(installed, release.GetModuleName())
 	}
 
 	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); apierrors.IsNotFound(err) {
-			continue
-		}
-
-		if mpo.Status.Message == v1alpha1.ModulePullOverrideMessageReady {
+		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
 			continue
 		}
 
