@@ -1,46 +1,26 @@
-/*
-Copyright 2024 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-	http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package main
 
 import (
 	"context"
-	agentconfig "fencing-controller/internal/config"
-	"fencing-controller/internal/gossip"
+	"fencing-agent/internal/app"
+	fencing_config "fencing-agent/internal/config"
+	"fencing-agent/internal/infrastructures/kubernetes"
+	"fencing-agent/internal/infrastructures/logging"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"fencing-controller/internal/agent"
-	"fencing-controller/internal/common"
-	"fencing-controller/internal/watchdog/softdog"
-
-	_ "github.com/jpfuentes2/go-env/autoload"
 	"go.uber.org/zap"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := common.NewLogger()
+	logger := logging.NewLogger()
 	defer func() { _ = logger.Sync() }()
-	logger.Info("Start v0.0.3")
+
+	var config fencing_config.Config
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
 		syscall.SIGHUP,
@@ -52,39 +32,20 @@ func main() {
 		close(sigChan)
 		logger.Info("Got a signal", zap.String("signal", s.String()))
 		cancel()
+		_ = os.Remove(config.GRPCAddress)
 	}()
-
-	var config agentconfig.Config
-	err := config.Load()
-	if err != nil {
-		logger.Fatal("Unable to read env vars", zap.Error(err))
+	if err := config.Load(); err != nil {
+		logger.Fatal("Unable to read config", zap.Error(err))
 	}
-
-	logger.Debug("Current config", zap.Reflect("config", config))
-
-	kubeClient, err := common.GetClientset(config.KubernetesAPITimeout)
+	kubeClient, err := kubernetes.GetClientset(config.KubernetesAPITimeout)
 	if err != nil {
-		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
+		logger.Fatal("Unable to create a kube-client", zap.Error(err))
 	}
-	node, err := kubeClient.CoreV1().Nodes().Get(ctx, config.NodeName, v1.GetOptions{})
+	application, err := app.NewApplication(logger, kubeClient, config)
 	if err != nil {
-		logger.Fatal("Unable to get node", zap.Error(err))
+		logger.Fatal("Unable to create an application", zap.Error(err))
 	}
-	var internalIp string
-	for _, address := range node.Status.Addresses {
-		if address.Type == "InternalIP" {
-			internalIp = address.Address
-			break
-		}
-	}
-	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	sw, err := gossip.NewMemberList(logger, config, internalIp)
-	if err != nil {
-		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
-	}
-	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, sw, wd)
-	err = fencingAgent.Run(ctx)
-	if err != nil {
-		logger.Fatal("Unable run the fencing-agent", zap.Error(err))
+	if err = application.Run(ctx); err != nil {
+		logger.Fatal("Unable to run the application", zap.Error(err))
 	}
 }
