@@ -1,0 +1,21 @@
+---
+data:
+  spec: |
+    desiredVersion: v1.31.5
+    updateMode: Manual
+  status: |
+    controlPlane:
+      currentVersion: v1.31.5
+      desiredCount: 2
+      progress: 100%
+      state: UpToDate
+      upToDateCount: 2
+    nodes:
+      desiredCount: 3
+      upToDateCount: 3
+    state: UpToDate
+metadata:
+  labels:
+    heritage: deckhouse
+  name: d8-cluster-kubernetes
+  namespace: kube-system

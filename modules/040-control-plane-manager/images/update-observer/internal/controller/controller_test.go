@@ -54,19 +54,14 @@ type ControllerTestSuite struct {
 	time             metav1.Time
 }
 
-func (suite *ControllerTestSuite) TestCreateReconcile() {
-	suite.Run("Check that config map will be created", func() {
-		suite.setupController(suite.fetchTestFileData("missing-configmap.yaml"))
-
-		_, err := suite.controller.Reconcile(
-			suite.ctx,
-			reconcile.Request{},
-		)
-
-		require.NoError(suite.T(), err)
-	})
-	suite.Run("iteration2", func() {
-		suite.setupController(suite.fetchTestFileData("iteration2.yaml"))
+func (suite *ControllerTestSuite) TestConfigMapIsValid() {
+	suite.Run("When cluster is up to date", func() {
+		suite.setupController(suite.fetchTestFileData("up-to-date.yaml"), &fakeVersionGetter{
+			versions: map[string]string{
+				"10.0.0.1": "v1.31.5",
+				"10.0.0.2": "v1.31.5",
+			},
+		})
 
 		_, err := suite.controller.Reconcile(
 			suite.ctx,
@@ -104,7 +99,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	}
 }
 
-func (suite *ControllerTestSuite) setupController(yamlDoc string) {
+func (suite *ControllerTestSuite) setupController(yamlDoc string, fakeVersionGetter *fakeVersionGetter) {
 	ctx := context.Background()
 
 	manifests := helmreleaseutil.SplitManifests(yamlDoc)
@@ -120,7 +115,8 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 		Build()
 
 	rec := &reconciler{
-		client: k8sClient,
+		client:                 k8sClient,
+		apiServerVersionGetter: fakeVersionGetter,
 	}
 
 	suite.controller = rec
@@ -155,6 +151,11 @@ func (suite *ControllerTestSuite) assembleInitObject(strObj string) client.Objec
 		err = yaml.Unmarshal([]byte(strObj), node)
 		require.NoError(suite.T(), err)
 		res = node
+	case "Pod":
+		pod := new(corev1.Pod)
+		err = yaml.Unmarshal([]byte(strObj), pod)
+		require.NoError(suite.T(), err)
+		res = pod
 	default:
 		suite.T().Fatalf("unsupported kind: %s", metaType.Kind)
 	}

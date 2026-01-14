@@ -63,3 +63,18 @@ func (vg *inClusterVersionGetter) Get(ctx context.Context, host string) (string,
 
 	return v.GitVersion, nil
 }
+
+type fakeVersionGetter struct {
+	versions map[string]string
+	errors   map[string]error
+}
+
+func (f *fakeVersionGetter) Get(
+	_ context.Context,
+	host string,
+) (string, error) {
+	if err, ok := f.errors[host]; ok {
+		return "", err
+	}
+	return f.versions[host], nil
+}
