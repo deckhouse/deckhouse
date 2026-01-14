@@ -222,7 +222,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"controlPlaneManager133VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager133VexArtifact",
 		"controlPlaneManager134":              "imageHash-controlPlaneManager-controlPlaneManager134",
 		"controlPlaneManager134VexArtifact":   "imageHash-controlPlaneManager-controlPlaneManager134VexArtifact",
-		"envoyArtifact":                       "imageHash-controlPlaneManager-envoyArtifact",
 		"etcd":                                "imageHash-controlPlaneManager-etcd",
 		"etcdBackup":                          "imageHash-controlPlaneManager-etcdBackup",
 		"kubeApiserver130":                    "imageHash-controlPlaneManager-kubeApiserver130",
@@ -257,6 +256,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler134":                    "imageHash-controlPlaneManager-kubeScheduler134",
 		"kubeScheduler134VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler134VexArtifact",
 		"kubernetesApiProxy":                  "imageHash-controlPlaneManager-kubernetesApiProxy",
+		"kubernetesApiProxyEnvoy":             "imageHash-controlPlaneManager-kubernetesApiProxyEnvoy",
 	},
 	"dashboard": map[string]interface{}{
 		"api":            "imageHash-dashboard-api",
