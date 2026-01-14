@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -37,56 +36,108 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterDeleteHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(handleStatusUpdaterForModuleDisable))
 
-func handleStatusUpdaterForModuleDisable(input *go_hook.HookInput, dc dependency.Container) error {
+var ingressNginxControllerGVR = schema.GroupVersionResource{
+	Group:    "deckhouse.io",
+	Version:  "v1",
+	Resource: "ingressnginxcontrollers",
+}
+
+func ingressNginxModuleEnabled(input *go_hook.HookInput) bool {
 	enabledModules := set.NewFromValues(input.Values, "global.enabledModules")
-	if !enabledModules.Has("ingress-nginx") {
-		k8sClient, err := dc.GetK8sClient()
-		if err != nil {
-			return fmt.Errorf("failed to initialize Kubernetes client: %w", err)
-		}
+	return enabledModules.Has("ingress-nginx")
+}
 
-		controllersList, err := k8sClient.Dynamic().Resource(schema.GroupVersionResource{
-			Group:    "deckhouse.io",
-			Version:  "v1",
-			Resource: "ingressnginxcontrollers",
-		}).List(context.TODO(), metav1.ListOptions{})
-		if err != nil {
-			return fmt.Errorf("error to read list of IngressNginxControllers: %w", err)
-		}
-
-		for _, unstructuredController := range controllersList.Items {
-			controllerName, found, err := unstructured.NestedString(unstructuredController.Object, "metadata", "name")
-			if err != nil || !found {
-				return fmt.Errorf("failed to get metadata.name for controller: %v", err)
-			}
-
-			statusPatch := map[string]any{
-				"status": map[string]any{
-					"version": "unknown",
-					"conditions": []map[string]any{
-						{
-							"type":           "Ready",
-							"status":         "False",
-							"lastUpdateTime": time.Now().Format(time.RFC3339),
-							"reason":         "ModuleDisabled",
-							"message":        "Ingress-nginx module is disabled",
-						},
-					},
-				},
-			}
-
-			input.PatchCollector.PatchWithMerge(
-				statusPatch,
-				"deckhouse.io/v1",
-				"IngressNginxController",
-				"",
-				controllerName,
-				object_patch.WithSubresource("/status"),
-			)
-
-			keyValueForVersion := fmt.Sprintf("ingressNginx.internal.appliedControllerVersion.%s", controllerName)
-			input.Values.Remove(keyValueForVersion)
-		}
+func listIngressNginxControllers(ctx context.Context, dc dependency.Container) (*unstructured.UnstructuredList, error) {
+	k8sClient, err := dc.GetK8sClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize Kubernetes client: %w", err)
 	}
+
+	controllersList, err := k8sClient.Dynamic().Resource(ingressNginxControllerGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error to read list of IngressNginxControllers: %w", err)
+	}
+
+	return controllersList, nil
+}
+
+func getControllerName(unstructuredController *unstructured.Unstructured) (string, error) {
+	controllerName, found, err := unstructured.NestedString(unstructuredController.Object, "metadata", "name")
+	if err != nil || !found {
+		return "", fmt.Errorf("failed to get metadata.name for controller: %v", err)
+	}
+	return controllerName, nil
+}
+
+func getControllerStatus(unstructuredController *unstructured.Unstructured, controllerName string) (IngressNginxControllerFilterResult, error) {
+	// Reuse filter to keep the same parsing logic.
+	// We intentionally don't use snapshots here: at module disable hook we list objects directly.
+	result, err := filterIngressNginxController(unstructuredController)
+	if err != nil {
+		return IngressNginxControllerFilterResult{}, fmt.Errorf("failed to unmarshal IngressNginxController %q: %w", controllerName, err)
+	}
+	return result.(IngressNginxControllerFilterResult), nil
+}
+
+func moduleDisabledPatchNeeded(controllerStatus IngressNginxControllerFilterResult) bool {
+	currentReadyCondition := findReadyCondition(controllerStatus.Conditions)
+	return controllerStatus.Version != unknownVersion ||
+		readyConditionNeedsUpdate(currentReadyCondition, conditionStatusFalse, conditionReasonModuleDisabled, conditionMessageModuleDisabled)
+}
+
+func buildModuleDisabledPatchStatus(now string) map[string]any {
+	return map[string]any{
+		"version": unknownVersion,
+		"conditions": []map[string]any{
+			{
+				"type":           conditionTypeReady,
+				"status":         conditionStatusFalse,
+				"lastUpdateTime": now,
+				"reason":         conditionReasonModuleDisabled,
+				"message":        conditionMessageModuleDisabled,
+			},
+		},
+	}
+}
+
+func clearAppliedControllerVersion(input *go_hook.HookInput, controllerName string) {
+	keyValueForVersion := fmt.Sprintf(valuesAppliedControllerVersionFmt, controllerName)
+	if input.Values.Exists(keyValueForVersion) {
+		input.Values.Remove(keyValueForVersion)
+	}
+}
+
+func handleStatusUpdaterForModuleDisable(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	if ingressNginxModuleEnabled(input) {
+		return nil
+	}
+
+	controllersList, err := listIngressNginxControllers(ctx, dc)
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().Format(time.RFC3339)
+
+	for i := range controllersList.Items {
+		unstructuredController := &controllersList.Items[i]
+
+		controllerName, err := getControllerName(unstructuredController)
+		if err != nil {
+			return err
+		}
+
+		controllerStatus, err := getControllerStatus(unstructuredController, controllerName)
+		if err != nil {
+			return err
+		}
+
+		if moduleDisabledPatchNeeded(controllerStatus) {
+			patchIngressNginxControllerStatus(input, controllerName, buildModuleDisabledPatchStatus(now))
+		}
+
+		clearAppliedControllerVersion(input, controllerName)
+	}
+
 	return nil
 }
