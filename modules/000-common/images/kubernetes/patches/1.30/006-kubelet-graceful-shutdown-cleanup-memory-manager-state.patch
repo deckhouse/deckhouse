@@ -1,17 +1,17 @@
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 6bbe5e5eb0e..44bd8c70d43 100644
+index 8469cecdc0e..cf3968d19ab 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -23,6 +23,7 @@ package nodeshutdown
+@@ -22,6 +22,7 @@ package nodeshutdown
+ 
  import (
- 	"context"
  	"fmt"
 +	"os"
  	"path/filepath"
  	"sort"
  	"sync"
-@@ -337,6 +338,11 @@ func (m *managerImpl) start() (chan struct{}, error) {
- 					m.conditionChecker.PauseMonitor()
+@@ -277,6 +278,11 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
 +				// Clean up memory manager state before shutdown
@@ -22,7 +22,7 @@ index 6bbe5e5eb0e..44bd8c70d43 100644
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
  				m.nodeShuttingDownMutex.Unlock()
-@@ -485,6 +491,23 @@ func (m *managerImpl) periodRequested() time.Duration {
+@@ -425,6 +431,23 @@ func (m *managerImpl) periodRequested() time.Duration {
  	return time.Duration(sum) * time.Second
  }
  
