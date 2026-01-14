@@ -21,11 +21,11 @@ import (
 	"fmt"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	snapshotv1 "github.com/kubernetes-csi/external-snapshotter/client/v8/apis/volumesnapshot/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
@@ -303,7 +303,11 @@ func (c *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (
 func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) error {
 	virtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, id)
 	if err != nil {
-		return fmt.Errorf("failed to get virtual disk snapshot: %w", err)
+		if k8serrors.IsNotFound(err) {
+			return nil
+		} else {
+			return fmt.Errorf("failed to get virtual disk snapshot: %w", err)
+		}
 	}
 
 	err = c.client.Delete(ctx, virtualDiskSnapshot)
