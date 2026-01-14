@@ -53,7 +53,7 @@ shell:
   - rm -rf /relocate
   - /binary_replace.sh -i /usr/bin/cilium-envoy -o /relocate
 ---
-image: {{ .ModuleName }}/envoy-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-envoy
 fromImage: common/distroless
 final: true
 import:
