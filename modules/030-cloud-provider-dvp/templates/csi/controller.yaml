@@ -18,6 +18,11 @@
     secretKeyRef:
       name: dvp-credentials
       key: namespace
+- name: CLUSTER_UUID
+  valueFrom:
+    secretKeyRef:
+      name: dvp-credentials
+      key: clusterUUID
 {{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
@@ -48,11 +53,6 @@
     secretKeyRef:
       name: dvp-credentials
       key: namespace
-- name: CLUSTER_UUID
-  valueFrom:
-   secretKeyRef:
-     name: dvp-credentials
-     key: clusterUUID
 {{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
