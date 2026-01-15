@@ -259,26 +259,26 @@ func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			return nil, fmt.Errorf("failed to check existing virtual disk snapshot: %w", err)
-		}
-	} else {
-		virtualDiskSnapshot = &v1alpha2.VirtualDiskSnapshot{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha2.VirtualDiskSnapshotKind,
-				APIVersion: v1alpha2.Version,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: c.namespace,
-			},
-			Spec: v1alpha2.VirtualDiskSnapshotSpec{
-				VirtualDiskName:     source,
-				RequiredConsistency: requiredConsistency,
-			},
-		}
+		} else {
+			virtualDiskSnapshot = &v1alpha2.VirtualDiskSnapshot{
+				TypeMeta: metav1.TypeMeta{
+					Kind:       v1alpha2.VirtualDiskSnapshotKind,
+					APIVersion: v1alpha2.Version,
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      name,
+					Namespace: c.namespace,
+				},
+				Spec: v1alpha2.VirtualDiskSnapshotSpec{
+					VirtualDiskName:     source,
+					RequiredConsistency: requiredConsistency,
+				},
+			}
 
-		err = c.client.Create(ctx, virtualDiskSnapshot)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
+			err = c.client.Create(ctx, virtualDiskSnapshot)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
+			}
 		}
 	}
 
@@ -309,8 +309,8 @@ func (c *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (
 	return virtualDiskSnapshot, nil
 }
 
-func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) error {
-	virtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, id)
+func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, name string) error {
+	virtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil
@@ -324,7 +324,7 @@ func (c *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) 
 		return fmt.Errorf("failed to delete virtual disk snapshot: %w", err)
 	}
 
-	err = c.WaitVirtualDiskSnapshotDeletion(ctx, id)
+	err = c.WaitVirtualDiskSnapshotDeletion(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to wait virtual disk snapshot deletion: %w", err)
 	}
