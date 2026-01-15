@@ -111,7 +111,7 @@ shell:
   - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
 
   # Build in C++20 mode (required by newer Envoy deps) and disable WASM/V8 to speed up the initial build.
-  - bazel build --nostamp --define wasm=disabled --config=release --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 //:envoy
+  - bazel build --disk_cache=/tmp/bazel-cache --nostamp --define wasm=disabled --config=release --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 //:envoy
   - mkdir -p /src/proxy/bin
   - cp -f bazel-bin/envoy /src/proxy/bin/envoy
   - strip /src/proxy/bin/envoy || true
