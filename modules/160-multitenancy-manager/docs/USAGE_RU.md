@@ -199,7 +199,6 @@ data:
 - Будут созданы **только один раз** при создании проекта;
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
 - Не будут отслеживаться в статусе проекта;
-- Получат аннотацию `helm.sh/resource-policy: keep` для предотвращения удаления при удалении helm release;
 - Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** label `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}

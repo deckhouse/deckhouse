@@ -201,7 +201,6 @@ Resources with the label `projects.deckhouse.io/unmanaged`:
 - Will be created **only once** when the project is created;
 - **Will not be updated** with subsequent template changes or updates;
 - Will not be monitored in the project's status;
-- Will receive the annotation `helm.sh/resource-policy: keep` to prevent deletion when the Helm release is deleted;
 - Will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template` but **will not receive** the label `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}
