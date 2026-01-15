@@ -43,7 +43,7 @@ k8s:
       azure: v1.30.15
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
+      aws: v1.54.0
       azure: v1.30.12
       gcp: v1.15.4
       vsphere: v3.0.3
@@ -67,7 +67,7 @@ k8s:
       azure: v1.31.12
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
+      aws: v1.54.0
       azure: v1.31.12
       gcp: v1.15.4
       vsphere: v3.0.3
@@ -92,7 +92,7 @@ k8s:
       azure: v1.32.11
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.40.0
+      aws: v1.54.0
       azure: v1.32.10
       gcp: v1.15.4
       vsphere: v3.0.3
@@ -116,7 +116,7 @@ k8s:
       azure: v1.33.6
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
+      aws: v1.54.0
       azure: v1.33.7
       gcp: v1.15.4
       vsphere: v3.0.3
@@ -140,7 +140,7 @@ k8s:
       azure: v1.34.3
       gcp: ccm/v34.0.0
     csi:
-      aws: v1.53.0
+      aws: v1.54.0
       azure: v1.33.7
       gcp: v1.15.4
       vsphere: v3.0.3
