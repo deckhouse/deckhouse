@@ -92,7 +92,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 	lastCompletedPhase, skipped := pec.progressTracker.FindLastCompletedPhase(completedPhase, nextPhase)
 	opts := ProgressOpts{}
 	if skipped {
-		opts.Action = PhaseActionSkip
+		opts.Action = ProgressActionSkip
 	}
 
 	err := pec.progressTracker.Progress(lastCompletedPhase, "", opts)
