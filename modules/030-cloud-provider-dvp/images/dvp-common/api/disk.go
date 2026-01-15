@@ -253,38 +253,24 @@ func (c *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) erro
 }
 
 func (c *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string, source string, requiredConsistency bool) (*v1alpha2.VirtualDiskSnapshot, error) {
-	var virtualDiskSnapshot *v1alpha2.VirtualDiskSnapshot
-
-	virtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, name)
-	if err != nil {
-		if !k8serrors.IsNotFound(err) {
-			return nil, fmt.Errorf("failed to check existing virtual disk snapshot: %w", err)
-		} else {
-			virtualDiskSnapshot = &v1alpha2.VirtualDiskSnapshot{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       v1alpha2.VirtualDiskSnapshotKind,
-					APIVersion: v1alpha2.Version,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: c.namespace,
-				},
-				Spec: v1alpha2.VirtualDiskSnapshotSpec{
-					VirtualDiskName:     source,
-					RequiredConsistency: requiredConsistency,
-				},
-			}
-
-			err = c.client.Create(ctx, virtualDiskSnapshot)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
-			}
-		}
+	virtualDiskSnapshot := &v1alpha2.VirtualDiskSnapshot{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       v1alpha2.VirtualDiskSnapshotKind,
+			APIVersion: v1alpha2.Version,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: c.namespace,
+		},
+		Spec: v1alpha2.VirtualDiskSnapshotSpec{
+			VirtualDiskName:     source,
+			RequiredConsistency: requiredConsistency,
+		},
 	}
 
-	err = c.WaitVirtualDiskSnapshotReady(ctx, name)
+	err := c.client.Create(ctx, virtualDiskSnapshot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to wait virtual disk snapshot ready: %w", err)
+		return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
 	}
 
 	newVirtualDiskSnapshot, err := c.GetVirtualDiskSnapshot(ctx, name)
