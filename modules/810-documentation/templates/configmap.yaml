@@ -153,16 +153,11 @@ data:
             try_files /modules/$1/index.html =404;
         }
 
-        location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>.*)$ {
+        location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/((alpha|beta|early-access|stable|rock-solid|latest)/)?(?<doc_path>.*)$ {
             set $embedded_module_path "embedded-modules/$lang/modules/$module";
             set $embedded_module_url "/embedded-modules/$lang/modules/$module/$doc_path";
-            set $external_module_path "modules/$lang/$module";
-            set $external_module_url "/external-modules/$lang/$module/$doc_path";
-
-            # Redirect to stable version for module from source TODO
-            #location ~* ^/(?<lang>ru|en)/modules/(?<module>[^/]+)/(?<doc_path>(?!v[0-9]+\.[0-9]+|alpha|beta|early-access|stable|rock-solid|latest).*)$ {
-            #rewrite ^ /$lang/modules/$module/stable/$doc_path redirect;
-            #}
+            set $external_module_path "modules/$lang/$module/stable";
+            set $external_module_url "/external-modules/$lang/$module/stable/$doc_path";
 
             if (-d $document_root/$external_module_path) {
                # Use internal redirect to serve modules from source
