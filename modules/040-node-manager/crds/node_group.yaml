@@ -1536,10 +1536,73 @@ spec:
                       properties:
                         partedConfig:
                           type: string
-                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
                           description: |
                             MIG configuration name.
                           x-doc-default: all-1g.5gb
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
+                      customConfigs:
+                        type: array
+                        description: |
+                          Per-GPU MIG layouts for the custom configuration (used only with `partedConfig: custom`).
+                          Array (map by `index`); each item targets a GPU by its 0-based index and enumerates slices to create:
+                            - `index` — GPU index on the node (starting from 0);
+                            - `slices` — list of slices:
+                              - `profile` — MIG profile name;
+                              - `count` — number of slices for that profile (integer, min 1, default 1).
+                          minItems: 1
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          x-kubernetes-list-type: map
+                          x-kubernetes-list-map-keys:
+                            - index
+                          items:
+                            type: object
+                            required:
+                              - index
+                              - slices
+                            properties:
+                              index:
+                                type: integer
+                                minimum: 0
+                                description: GPU index in the node (0-based).
+                              slices:
+                                type: array
+                                description: List of MIG slices to create on the indexed GPU.
+                                items:
+                                  type: object
+                                  required:
+                                    - profile
+                                    - count
+                                  properties:
+                                    profile:
+                                      type: string
+                                      pattern: "^[0-9]+g\\.[0-9]+gb(\\.me)?$"
+                                      description: MIG profile name.
+                                      x-doc-examples:
+                                        - 3g.40gb
+                                        - 1g.10gb
+                                        - 1g.10gb.me
+                                    count:
+                                      type: integer
+                                      minimum: 1
+                                      maximum: 7
+                                      description: Number of slices with the selected profile (1–7 per GPU).
+                                      x-doc-default: 1
                     timeSlicing:
                       description: |
                         `TimeSlicing` sharing strategy parameters.
