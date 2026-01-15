@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -48,11 +47,7 @@ func handleOP(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("failed to unmarshal operation-policies snapshot: %w", err)
 	}
 
-	data, err := json.Marshal(ops)
-	if err != nil {
-		return err
-	}
-	input.Values.Set("admissionPolicyEngine.internal.operationPolicies", json.RawMessage(data))
+	input.Values.Set("admissionPolicyEngine.internal.operationPolicies", ops)
 
 	return nil
 }
