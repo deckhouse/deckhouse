@@ -453,15 +453,6 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 				request.Name, request.SourceVolumeId, err)
 
 			klog.Error(msg)
-
-			err = d.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.Name)
-			if err != nil {
-				msg = fmt.Errorf("failed to cleanup virtual disk snapshot %s after creation failure: %v",
-					request.Name, err)
-				klog.Error(msg)
-				return nil, status.Error(codes.Internal, msg.Error())
-			}
-
 			return nil, status.Error(codes.Internal, msg.Error())
 	}
 
