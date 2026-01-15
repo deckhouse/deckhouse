@@ -16,7 +16,7 @@
 {{- $_ := set $tpl_context "zoneName" $zone_name }}
 {{- $_ := set $tpl_context "templateName" $template_name }}
 {{- $_ := set $tpl_context "instanceClassChecksum" $instance_class_checksum }}
-{{ tpl ($context.Files.Get (printf "capi/%s/machine-template.yaml" $context.Values.nodeManager.internal.cloudProvider.type)) $tpl_context }}
+{{- tpl ($context.Files.Get (printf "capi/%s/machine-template.yaml" $context.Values.nodeManager.internal.cloudProvider.type)) $tpl_context }}
 
 {{- end }}
 
