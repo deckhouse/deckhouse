@@ -50,9 +50,9 @@ function prepare_template () {
 
     echo "Preparing module.yaml of module $MODULE_NAME..."
     template_module_path=$(echo "$CRDS_PATH/$MODULE_NAME/alpha")
-    module_module_path=$(echo "$module_path/module.yaml")
+    module_yml_path=$(echo "$module_path/module.yaml")
     test -e $template_module_path || mkdir -p $template_module_path
-    cp -r $module_module_path $template_module_path
+    cp -r $module_yml_path $template_module_path
 }
 
 function prepare_channels() {
