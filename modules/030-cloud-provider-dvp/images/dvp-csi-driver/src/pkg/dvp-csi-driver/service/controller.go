@@ -489,20 +489,20 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 
 	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
-			msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
-				request.Name, request.SourceVolumeId, err)
+		msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
+			request.Name, request.SourceVolumeId, err)
 
+		klog.Error(msg)
+
+		err = c.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.Name)
+		if err != nil {
+			msg = fmt.Errorf("failed to cleanup virtual disk snapshot %s after creation failure: %v",
+				request.Name, err)
 			klog.Error(msg)
-
-			err = c.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.Name)
-			if err != nil {
-				msg = fmt.Errorf("failed to cleanup virtual disk snapshot %s after creation failure: %v",
-					request.Name, err)
-				klog.Error(msg)
-				return nil, status.Error(codes.Internal, msg.Error())
-			}
-
 			return nil, status.Error(codes.Internal, msg.Error())
+		}
+
+		return nil, status.Error(codes.Internal, msg.Error())
 	}
 
 	newVirtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, virtualDiskSnapshot.Name)
