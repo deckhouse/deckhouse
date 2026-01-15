@@ -167,7 +167,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 	}
 
-	input.MetricsCollector.Set("d8_control_plane_manager_unstarted_etcd_members_count", hasUnstartedMember, nil)
+	input.MetricsCollector.Set("d8_control_plane_manager_has_unstarted_etcd_member", hasUnstartedMember, nil)
 
 	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs))
 
