@@ -20,8 +20,8 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"update-observer/internal/constant"
-	"update-observer/internal/controller"
+	"update-observer/constant"
+	"update-observer/controller"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"

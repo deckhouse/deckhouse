@@ -20,8 +20,8 @@ import (
 	"context"
 	"os/signal"
 	"syscall"
-	"update-observer/internal/constant"
-	"update-observer/internal/manager"
+	"update-observer/constant"
+	"update-observer/manager"
 
 	"k8s.io/klog/v2"
 )

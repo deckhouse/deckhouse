@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
-	"update-observer/internal/constant"
+	"update-observer/constant"
 
 	"github.com/go-logr/logr"
 	"golang.org/x/mod/semver"
