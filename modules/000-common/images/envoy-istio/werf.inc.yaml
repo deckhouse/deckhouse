@@ -111,34 +111,12 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export CC=clang CXX=clang++
 
-  # Stamping in istio/proxy uses `bazel/bazel_get_workspace_status` which calls git.
-  # Since we remove `.git` in src-artifact, provide revision explicitly.
-  - export BUILD_SCM_REVISION={{ $istioProxySha }}
-  - export BUILD_SCM_STATUS=Clean
-
-  # Preseed Bazel external deps and cache to make the build reproducible.
-  - mkdir -p /tmp/bazel-cache
-  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
-  - rm -rf /tmp/bazel-cache/.git
-
-  - mkdir -p /tmp/bazel-deps
-  - git lfs install
-  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
-  - rm -rf /tmp/bazel-deps/.git
-
   - cd /src/proxy
   - export USE_BAZEL_VERSION="$(cat .bazelversion)"
   - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
 
-  - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
-  - mkdir -p ${BAZEL_OUTPUT_BASE}/external
-  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
-  - rm -rf /tmp/bazel-deps
-
-  - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release --config=libc++ //:envoy
+  - bazel build --nostamp --config=release --config=libc++ //:envoy
   - mkdir -p /src/proxy/bin
   - cp -f bazel-bin/envoy /src/proxy/bin/envoy
   - strip /src/proxy/bin/envoy || true
   - chmod 0555 /src/proxy/bin/envoy
-  - rm -rf /tmp/bazel-cache
-  - rm -rf /src/proxy/.git
