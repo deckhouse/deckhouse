@@ -5,10 +5,6 @@
 - name: RUST_BACKTRACE
   value: full
   {{- end }}
-- name: VECTOR_SELF_NODE_NAME
-  valueFrom:
-    fieldRef:
-      fieldPath: spec.nodeName
 - name: VECTOR_SELF_POD_NAME
   valueFrom:
     fieldRef:
@@ -17,6 +13,14 @@
   valueFrom:
     fieldRef:
       fieldPath: metadata.namespace
+- name: VECTOR_HOST_IP
+  valueFrom:
+    fieldRef:
+      fieldPath: status.hostIP
+- name: VECTOR_HOSTNAME
+  valueFrom:
+    fieldRef:
+      fieldPath: spec.nodeName
 {{- end }}
 
 {{- define "vectorMounts" }}
