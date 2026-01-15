@@ -9,8 +9,6 @@
       summary: Alerting dead man's switch.
       description: This is a dead man's switch meant to ensure that the entire Alerting pipeline is functional.
 
-  - record: fd_utilization
-    expr: process_open_fds / process_max_fds
   - alert: FdExhaustionClose
     expr: max(predict_linear(fd_utilization{pod!=""}[1h], 3600 * 4)) BY (job, namespace, pod) > 1
     for: 10m
