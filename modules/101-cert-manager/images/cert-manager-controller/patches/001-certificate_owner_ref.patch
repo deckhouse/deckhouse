@@ -1,17 +1,17 @@
 diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
-index 38feef444..bf2a2f74f 100644
+index 38feef444..b2e876944 100644
 --- a/deploy/crds/crd-certificates.yaml
 +++ b/deploy/crds/crd-certificates.yaml
-@@ -109,6 +109,9 @@ spec:
-                         enum:
-                           - DER
-                           - CombinedPEM
+@@ -654,6 +654,9 @@ spec:
+                       - ocsp signing
+                       - microsoft sgc
+                       - netscape sgc
 +                certificateOwnerRef:
 +                  description: CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted. If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
 +                  type: boolean
-                 commonName:
-                   description: |-
-                     Requested common name X509 certificate subject attribute.
+             status:
+               description: |-
+                 Status of the Certificate.
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
 index 9e6804a88..516d8388e 100644
 --- a/internal/apis/certmanager/types_certificate.go
@@ -63,7 +63,7 @@ index d64f9cd5e..1e9379d05 100644
 +	}
  	return
  }
-
+ 
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
 index 89979e7ac..f10578840 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
@@ -361,7 +361,7 @@ index 111cff988..597020381 100644
 +
  					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
  					assert.Equal(t, expOpts, gotOpts)
-
+ 
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
 index 6991f5c16..37f61a8b3 100644
 --- a/test/unit/gen/certificate.go
@@ -377,4 +377,3 @@ index 6991f5c16..37f61a8b3 100644
 +		crt.Spec.CertificateOwnerRef = &ownerRef
  	}
  }
- 
