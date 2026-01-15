@@ -1103,7 +1103,7 @@ func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 	return true
 }
 
-func (s stubModulesManager) PushRunModuleTask(moduleName string, doStartup bool) error {
+func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
 	return nil
 }
 
