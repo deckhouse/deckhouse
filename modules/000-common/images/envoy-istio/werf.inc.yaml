@@ -1,4 +1,8 @@
+{{- $istioVersion := "1.19.2" }}
 {{- $istioProxyBranch := "release-1.19.2-patch" }}
+{{- $istioProxySha := "0b96d51c37b546abe2f42ea7c2a7b93a9e0b4ebb" }}
+{{- $istioProxyCacheRev := printf "v%s-%s-v1" $istioVersion $istioProxySha }}
+{{- $istioProxyDepsRev := printf "v%s-%s-v1" $istioVersion $istioProxySha }}
 {{- $bazelVersion := "6.3.2" }}
 {{- $source := "https://github.com" }}
 {{- $sourceraw := "https://raw.githubusercontent.com" }}
@@ -58,7 +62,7 @@ shell:
     apt-get update && apt-get install -y \
       ca-certificates \
       clang-14 lld-14 \
-      git \
+      git git-lfs \
       cmake ninja-build \
       libtool automake autoconf make \
       curl gnupg lsb-release \
@@ -98,18 +102,43 @@ mount:
 secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
 shell:
   install:
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - export CC=clang CXX=clang++
+
+  # Stamping in istio/proxy uses `bazel/bazel_get_workspace_status` which calls git.
+  # Since we remove `.git` in src-artifact, provide revision explicitly.
+  - export BUILD_SCM_REVISION={{ $istioProxySha }}
+  - export BUILD_SCM_STATUS=Clean
+
+  # Preseed Bazel external deps and cache to make the build reproducible.
+  - mkdir -p /tmp/bazel-cache
+  - git clone --depth 1 --branch {{ $istioProxyCacheRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-cache.git /tmp/bazel-cache
+  - rm -rf /tmp/bazel-cache/.git
+
+  - mkdir -p /tmp/bazel-deps
+  - git lfs install
+  - git clone --depth 1 --branch {{ $istioProxyDepsRev }} $(cat /run/secrets/SOURCE_REPO)/istio/envoy-build-deps.git /tmp/bazel-deps
+  - rm -rf /tmp/bazel-deps/.git
+
   - cd /src/proxy
   - export USE_BAZEL_VERSION="$(cat .bazelversion)"
   - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
-  - bazel build --stamp --config=release --config=libc++ //:envoy
+
+  - export BAZEL_OUTPUT_BASE=$(bazel info output_base)
+  - mkdir -p ${BAZEL_OUTPUT_BASE}/external
+  - tar -zxf /tmp/bazel-deps/external.tar.gz -C ${BAZEL_OUTPUT_BASE}/external
+  - rm -rf /tmp/bazel-deps
+
+  - bazel build --disk_cache=/tmp/bazel-cache --nofetch --stamp --config=release --config=libc++ //:envoy
   - mkdir -p /src/proxy/bin
   - cp -f bazel-bin/envoy /src/proxy/bin/envoy
   - strip /src/proxy/bin/envoy || true
   - chmod 0555 /src/proxy/bin/envoy
+  - rm -rf /tmp/bazel-cache
   - rm -rf /src/proxy/.git
