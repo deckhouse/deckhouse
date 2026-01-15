@@ -96,3 +96,51 @@ func (p *Provider) IsMaintenanceMode(ctx context.Context) (bool, error) {
 	}
 	return false, nil
 }
+
+func (p *Provider) SetNodeLabel(ctx context.Context, key, value string) error {
+	ctx, cancel := context.WithTimeout(ctx, p.timeout)
+	defer cancel()
+
+	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get node %s: %w", p.nodeName, err)
+	}
+
+	if node.Labels == nil {
+		node.Labels = make(map[string]string)
+	}
+	node.Labels[key] = value
+
+	_, err = p.client.CoreV1().Nodes().Update(ctx, node, v1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update node %s labels: %w", p.nodeName, err)
+	}
+
+	p.logger.Info("Node label set",
+		zap.String("node", p.nodeName),
+		zap.String("label", key),
+		zap.String("value", value))
+	return nil
+}
+
+func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
+	ctx, cancel := context.WithTimeout(ctx, p.timeout)
+	defer cancel()
+
+	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to get node %s: %w", p.nodeName, err)
+	}
+
+	delete(node.Labels, key)
+
+	_, err = p.client.CoreV1().Nodes().Update(ctx, node, v1.UpdateOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to update node %s labels: %w", p.nodeName, err)
+	}
+
+	p.logger.Info("Node label removed",
+		zap.String("node", p.nodeName),
+		zap.String("label", key))
+	return nil
+}
