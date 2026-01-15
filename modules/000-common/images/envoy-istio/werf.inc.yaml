@@ -15,7 +15,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/proxy/bin/envoy
   to: /usr/local/bin/envoy
-  before: setup
+  before: install
 shell:
   beforeInstall:
   {{- include "alt packages proxy" . | nindent 2 }}
