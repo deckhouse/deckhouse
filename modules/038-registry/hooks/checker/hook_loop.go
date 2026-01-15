@@ -78,9 +78,12 @@ var _ = sdk.RegisterFunc(
 				},
 			},
 			{
-				Name:                         deckhouseDeploymentSnapName,
-				ExecuteHookOnEvents:          go_hook.Bool(false),
-				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				Name: deckhouseDeploymentSnapName,
+				// The checker queue must follow the actual Deckhouse image tag.
+				// Without events/sync, the snapshot can become stale after Deployment updates,
+				// causing the checker to validate outdated tags.
+				ExecuteHookOnEvents:          go_hook.Bool(true),
+				ExecuteHookOnSynchronization: go_hook.Bool(true),
 				ApiVersion:                   "apps/v1",
 				Kind:                         "Deployment",
 				NamespaceSelector: &types.NamespaceSelector{

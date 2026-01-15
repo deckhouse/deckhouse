@@ -19,8 +19,9 @@ package checker
 import (
 	"testing"
 
-	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/stretchr/testify/require"
+
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func TestRegistryParams_Validate(t *testing.T) {
