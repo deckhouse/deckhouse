@@ -58,19 +58,19 @@ shell:
   - |
     apt-get update && apt-get install -y \
       ca-certificates \
-      clang-14 lld-14 \
+      clang-16 lld-16 \
       git git-lfs \
       cmake ninja-build \
       libtool automake autoconf make \
       curl gnupg lsb-release \
       python3 python3-pip python3-venv \
-      libc++-14-dev libc++abi-14-dev \
-      libssl-dev libz-dev libunwind-14-dev \
+      libc++-16-dev libc++abi-16-dev \
+      libssl-dev libz-dev libunwind-16-dev \
       unzip binutils
   - apt-get autoclean && apt-get clean
   install:
-  - ln -s -f /usr/lib/llvm-14/bin/clang /usr/bin/clang
-  - ln -s -f /usr/lib/llvm-14/bin/clang++ /usr/bin/clang++
+  - ln -s -f /usr/lib/llvm-16/bin/clang /usr/bin/clang
+  - ln -s -f /usr/lib/llvm-16/bin/clang++ /usr/bin/clang++
   - export GOROOT=/usr/local/go GOPATH=/go
   - export PATH=${PATH}:${GOROOT}/bin:${GOPATH}/bin
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
@@ -110,6 +110,7 @@ shell:
   - export USE_BAZEL_VERSION="$(cat .bazelversion)"
   - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
 
+  # Build in C++20 mode (required by newer Envoy deps) and disable WASM/V8 to speed up the initial build.
   - bazel build --nostamp --define wasm=disabled --config=release --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 //:envoy
   - mkdir -p /src/proxy/bin
   - cp -f bazel-bin/envoy /src/proxy/bin/envoy
