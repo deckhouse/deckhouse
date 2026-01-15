@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -43,8 +42,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 	dvpapi "dvp-common/api"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
 
 const ProviderIDPrefix = "dvp://"
@@ -398,6 +400,18 @@ func (r *DeckhouseMachineReconciler) createVM(
 		}
 	}
 
+	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
+		{Kind: v1alpha2.DiskDevice, Name: dvpMachine.Name + "-boot"},
+	}
+
+	for i := range dvpMachine.Spec.AdditionalDisks {
+		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
+		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
+			Kind: v1alpha2.DiskDevice,
+			Name: addDiskName,
+		})
+	}
+
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
@@ -419,7 +433,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 			Memory: v1alpha2.MemorySpec{
 				Size: dvpMachine.Spec.Memory,
 			},
-			BlockDeviceRefs: []v1alpha2.BlockDeviceSpecRef{},
+			BlockDeviceRefs: blockDeviceRefs,
 		},
 	})
 	if err != nil {
@@ -444,7 +458,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 		},
 	}
 
-	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
+	if _, err = r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
 		dvpMachine.Name+"-boot",
 		dvpMachine.Spec.RootDiskSize,
@@ -464,18 +478,13 @@ func (r *DeckhouseMachineReconciler) createVM(
 				UID:        vm.UID,
 			},
 		},
-	)
-	if err != nil {
+	); err != nil {
 		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
-	}
-
-	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
-		{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
 	}
 
 	for i, d := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
-		addDisk, err := r.DVP.DiskService.CreateDisk(
+		if _, err = r.DVP.DiskService.CreateDisk(
 			ctx,
 			addDiskName,
 			d.Size.Value(),
@@ -485,19 +494,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 				Kind:       "VirtualMachine",
 				Name:       vm.Name,
 				UID:        vm.UID,
-			}})
-		if err != nil {
+			}}); err != nil {
 			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
 		}
-		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
-			Kind: v1alpha2.DiskDevice,
-			Name: addDisk.Name,
-		})
-	}
-
-	vm.Spec.BlockDeviceRefs = blockDeviceRefs
-	if err := r.DVP.ComputeService.UpdateVM(ctx, vm); err != nil {
-		return nil, fmt.Errorf("Cannot update VM: %w", err)
 	}
 
 	return vm, nil
