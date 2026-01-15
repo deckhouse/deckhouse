@@ -42,6 +42,9 @@ const (
 	ResourceLabelProject  = "projects.deckhouse.io/project"
 	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
 
+	ResourceLabelSkipHeritage = "projects.deckhouse.io/skip-heritage-label"
+	ResourceLabelUnmanaged    = "projects.deckhouse.io/unmanaged"
+
 	ResourceLabelHeritage        = "heritage"
 	ResourceHeritageMultitenancy = "multitenancy-manager"
 	ResourceHeritageDeckhouse    = "deckhouse"

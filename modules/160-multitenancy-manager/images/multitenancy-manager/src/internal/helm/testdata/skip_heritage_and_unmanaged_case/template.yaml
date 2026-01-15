@@ -1,0 +1,56 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ProjectTemplate
+metadata:
+  name: skip-heritage-test
+  labels:
+    heritage: deckhouse
+spec:
+  parametersSchema:
+    openAPIV3Schema:
+      type: object
+      properties: {}
+  resourcesTemplate: |
+    ---
+    apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: {{ .projectName }}
+
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: with-heritage
+      namespace: {{ .projectName }}
+      labels:
+        app: test
+
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: skip-heritage
+      namespace: {{ .projectName }}
+      labels:
+        app: test
+        projects.deckhouse.io/skip-heritage-label: "true"
+
+    ---
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: unmanaged
+      namespace: {{ .projectName }}
+      labels:
+        app: test
+        projects.deckhouse.io/unmanaged: "true"
+
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: normal-resource
+      namespace: {{ .projectName }}
+      labels:
+        app: test
