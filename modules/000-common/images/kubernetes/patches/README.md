@@ -37,3 +37,11 @@ This patch ensures that the Memory Manager state file is removed during a gracef
 
 The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
+
+### namespace-list-acl-filtering.patch
+
+Allows users without cluster-wide `list/get namespaces` to receive an ACL-filtered response for `GET /api/v1/namespaces` and `GET /api/v1/namespaces/{name}`.
+The kube-apiserver authorization filter bypasses the initial 403 for these requests and delegates filtering to the Namespace storage.
+The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
+
+If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
