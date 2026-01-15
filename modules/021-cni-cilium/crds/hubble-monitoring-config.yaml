@@ -906,7 +906,7 @@ spec:
                             type: array
                             description: |
                               Node label selectors.
-                              
+
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                             x-doc-examples: [ "source:foo=bar" ]
                             items:

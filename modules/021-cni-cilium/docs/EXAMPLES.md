@@ -147,14 +147,12 @@ spec:
     enabled: true
     # Allow only the specified events to be written to the log file /var/log/cilium/hubble/flow.log.
     allowFilterList:
-      verdict:
-        - DROPPED
-        - ERROR
+      - verdict: ["DROPPED", "ERROR"]
     # Exclude events matching the denyFilterList from the log file.
     denyFilterList:
-      source_pod:
+      - source_pod:
         - kube-system/
-      destination_pod:
+      - destination_pod:
         - kube-system/
     # Persist only the specified fields in each record.
     fieldMaskList:
