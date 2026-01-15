@@ -8,6 +8,23 @@ properties:
     x-required-for-helm:
       - ingressControllers
     properties:
+      appliedControllerVersion:
+        type: object
+        default: {}
+        additionalProperties:
+          type: string
+      controllerState:
+        type: object
+        default: {}
+        additionalProperties:
+          type: object
+          properties:
+            generation:
+              type: integer
+              format: int64
+            observedGeneration:
+              type: integer
+              format: int64
       admissionCertificate:
         type: object
         default: {}
