@@ -27,6 +27,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 
@@ -474,34 +475,59 @@ func (c *ControllerService) ControllerGetCapabilities(context.Context, *csi.Cont
 func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.CreateSnapshotRequest) (*csi.CreateSnapshotResponse, error) {
 	klog.Infof("Creating snapshot %v of disk %v", request.Name, request.SourceVolumeId)
 
-	requiredConsistency, ok := request.Parameters[ParameterDVPVirtualDiskSnapshotRequiredConsistency]
-	if !ok {
-		requiredConsistency = "true"
-	}
+	klog.Infof("Check that snapshot %v of disk %v exists", request.Name, request.SourceVolumeId)
 
-	requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
+	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, request.Name)
 	if err != nil {
-		msg := fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
-			ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
-		klog.Error(msg)
-		return nil, status.Error(codes.Internal, msg.Error())
-	}
+		if k8serrors.IsNotFound(err) {
+			klog.Infof("snapshot %v of disk %v is not found, creating", request.Name, request.SourceVolumeId)
 
-	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
-	if err != nil {
-		msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
-			request.Name, request.SourceVolumeId, err)
+			requiredConsistency, ok := request.Parameters[ParameterDVPVirtualDiskSnapshotRequiredConsistency]
+			if !ok {
+				requiredConsistency = "true"
+			}
 
-		klog.Error(msg)
+			requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
+			if err != nil {
+				msg := fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
+					ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
+				klog.Error(msg)
+				return nil, status.Error(codes.Internal, msg.Error())
+			}
 
-		err = c.dvpCloudAPI.DiskService.DeleteVirtualDiskSnapshot(ctx, request.Name)
-		if err != nil {
-			msg = fmt.Errorf("failed to cleanup virtual disk snapshot %s after creation failure: %v",
-				request.Name, err)
+			virtualDiskSnapshot, err = c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
+			if err != nil {
+				msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
+					request.Name, request.SourceVolumeId, err)
+
+				klog.Error(msg)
+				return nil, status.Error(codes.Internal, msg.Error())
+			}
+
+			snapshotCreationTimestamp := timestamppb.New(virtualDiskSnapshot.CreationTimestamp.Time)
+
+			// we have to return response even if snapshot is not ready yet
+			// to let snapshotter delete it if it get Failed phase later
+			return &csi.CreateSnapshotResponse{
+				Snapshot: &csi.Snapshot{
+					SnapshotId:     request.Name,
+					SourceVolumeId: request.SourceVolumeId,
+					ReadyToUse:     false,
+					CreationTime:   snapshotCreationTimestamp,
+				},
+			}, nil
+		} else {
+			msg := fmt.Errorf("failed to get virtual disk snapshot: %v", err)
 			klog.Error(msg)
 			return nil, status.Error(codes.Internal, msg.Error())
 		}
+	}
 
+	err = c.dvpCloudAPI.DiskService.WaitVirtualDiskSnapshotReady(ctx, request.Name)
+	if err != nil {
+		msg := fmt.Errorf("error while waiting for virtual disk snapshot %s to be ready: %v",
+			request.Name, err)
+		klog.Error(msg)
 		return nil, status.Error(codes.Internal, msg.Error())
 	}
 

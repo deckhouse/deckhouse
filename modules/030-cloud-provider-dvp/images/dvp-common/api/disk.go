@@ -340,7 +340,7 @@ func (d *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 
 	err = d.WaitVirtualDiskSnapshotReady(ctx, name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to wait virtual disk snapshot ready: %w", err)
+		return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
 	}
 
 	newVirtualDiskSnapshot, err := d.GetVirtualDiskSnapshot(ctx, name)
