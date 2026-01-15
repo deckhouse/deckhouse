@@ -6,7 +6,7 @@
         1. Cloud provider resource limits.
         2. No access to the cloud provider API.
         3. Misconfiguration of the cloud provider or instance class.
-        4. Problems with bootstrapping the Machines.
+        4. Problems with bootstrapping the Machine.
 
         Recommended actions:
 
