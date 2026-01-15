@@ -365,8 +365,8 @@ func (d *DiskService) GetVirtualDiskSnapshot(ctx context.Context, name string) (
 	return virtualDiskSnapshot, nil
 }
 
-func (d *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) error {
-	virtualDiskSnapshot, err := d.GetVirtualDiskSnapshot(ctx, id)
+func (d *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, name string) error {
+	virtualDiskSnapshot, err := d.GetVirtualDiskSnapshot(ctx, name)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil
@@ -380,7 +380,7 @@ func (d *DiskService) DeleteVirtualDiskSnapshot(ctx context.Context, id string) 
 		return fmt.Errorf("failed to delete virtual disk snapshot: %w", err)
 	}
 
-	err = d.WaitVirtualDiskSnapshotDeletion(ctx, id)
+	err = d.WaitVirtualDiskSnapshotDeletion(ctx, name)
 	if err != nil {
 		return fmt.Errorf("failed to wait virtual disk snapshot deletion: %w", err)
 	}
