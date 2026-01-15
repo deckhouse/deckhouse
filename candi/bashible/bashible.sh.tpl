@@ -94,6 +94,7 @@ bb-label-node-bashible-first-run-finished() {
 
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-kube-apiserver-healthy
 export -f bb-label-node-bashible-first-run-finished
 
 bb-indent-text() {
