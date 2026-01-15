@@ -115,15 +115,47 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 {% raw %}
 
-## Специальные label для управления ресурсами
+## Создание собственного шаблона для проекта
+
+Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей шаблонов.
+
+Для создания своего шаблона:
+1. Возьмите за основу один из шаблонов по умолчанию, например, `default`.
+2. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
+
+   ```shell
+   d8 k get projecttemplates default -o yaml > my-project-template.yaml
+   ```
+
+3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
+
+   > Необходимо изменить не только шаблон, но и схему входных параметров под него.
+   >
+   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
+4. Измените имя шаблона в поле `.metadata.name`.
+5. Примените полученный шаблон командой:
+
+   ```shell
+   d8 k apply -f my-project-template.yaml
+   ```
+
+6. Проверьте доступность нового шаблона с помощью команды:
+
+   ```shell
+   d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
+   ```
+
+{% endraw %}
+
+## Использование label для управления ресурсами
 
 При создании ресурсов в `ProjectTemplate` можно использовать специальные label для управления тем, как `multitenancy-manager` обрабатывает эти ресурсы:
 
 ### Пропуск создания label `heritage: multitenancy-manager`
 
-По умолчанию все ресурсы, созданные из `ProjectTemplate`, получает label `heritage: multitenancy-manager`.   
-Данный label запрещают изменение ресурсов пользователями или любым другим контроллером, кроме `multitenancy-manager`.
-Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу метку `projects.deckhouse.io/skip-heritage-label`. 
+По умолчанию все ресурсы, созданные из `ProjectTemplate`, получает label `heritage: multitenancy-manager`.  
+Данный label запрещают изменение ресурсов пользователями или любым другим контроллером, кроме `multitenancy-manager`.  
+Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу метку `projects.deckhouse.io/skip-heritage-label`.
 
 Пример:
 
@@ -164,7 +196,7 @@ data:
 ```
 
 Ресурсы с меткой `projects.deckhouse.io/unmanaged`:
-- Будут созданы **только один раз** при первой установке проекта;
+- Будут созданы **только один раз** при создании проекта;
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
 - Не будут отслеживаться в статусе проекта;
 - Получат аннотацию `helm.sh/resource-policy: keep` для предотвращения удаления при удалении helm release;
@@ -172,39 +204,39 @@ data:
 
 {% alert level="warning" %}
 После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении `ProjectTemplate`.  
-После создания ресурс становится полностью независимым и должен управляться вручную.   
+После создания ресурс становится полностью независимым и должен управляться вручную.
 Убедитесь, что вы понимаете последствия перед использованием данного label.
 {% endalert %}
 
-## Реализация валидации изменений объектов с помощью пользовательского значения label heritage
+## Реализация валидации изменений объектов с помощью пользовательского label
 
 Модуль multitenancy-manager использует `ValidatingAdmissionPolicy` для защиты ресурсов с меткой `heritage: multitenancy-manager` от ручных изменений.  
-Вы можете реализовать аналогичную валидацию для ресурсов с другим значением метки `heritage`.
+Вы можете реализовать аналогичную валидацию для ресурсов с любым label.
 
 ### Как работает валидация в multitenancy-manager
 
-Валидация реализована в файле `templates/validation.yaml` и использует следующие компоненты:
+Происходит валидация объектов с label `heritage: multitenancy-manager`.  
+Для этого используются следующие компоненты:
 
-1. **ValidatingAdmissionPolicy** — определяет правила валидации:
+1. `ValidatingAdmissionPolicy` — определяет правила валидации:
    - Операции: `UPDATE` и `DELETE`
    - Проверка: разрешены только операции от имени service account контроллера
    - Применяется ко всем ресурсам и API группам
 
-2. **ValidatingAdmissionPolicyBinding** — связывает политику с ресурсами:
+2. `ValidatingAdmissionPolicyBinding`— определяет на какие объекты распространяется валидация:
    - Использует `namespaceSelector` и `objectSelector` для выбора ресурсов по метке `heritage: multitenancy-manager`
 
 ### Создание собственной валидации
 
-Для реализации валидации для ресурсов с другим значением `heritage` (например, `heritage: my-custom-manager`):
+Для реализации валидации для ресурсов с другим label (например, `heritage: my-custom-label`):
 
 1. Создайте файл с `ValidatingAdmissionPolicy` и `ValidatingAdmissionPolicyBinding`:
 
    ```yaml
-   ---
-   apiVersion: admissionregistration.k8s.io/v1beta1
+   apiVersion: admissionregistration.k8s.io/v1
    kind: ValidatingAdmissionPolicy
    metadata:
-     name: my-custom-manager-validation
+     name: my-custom-label-validation
    spec:
      failurePolicy: Fail
      matchConstraints:
@@ -215,38 +247,38 @@ data:
            resources:   ["*"]
            scope: "*"
      validations:
-       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"'
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Replace with your service account
          reason: Forbidden
          messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
            : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
    ---
-   apiVersion: admissionregistration.k8s.io/v1beta1
+   apiVersion: admissionregistration.k8s.io/v1
    kind: ValidatingAdmissionPolicyBinding
    metadata:
-     name: my-custom-manager-validation
+     name: my-custom-label-validation
    spec:
-     policyName: my-custom-manager-validation
+     policyName: my-custom-label-validation
      validationActions: [Deny, Audit]
      matchResources:
        namespaceSelector:
          matchLabels:
-           heritage: my-custom-manager
+           heritage: my-custom-label
        objectSelector:
          matchLabels:
-           heritage: my-custom-manager
+           heritage: my-custom-label
    ```
 
 2. Настройте параметры валидации:
 
    - **`policyName`** — уникальное имя политики (должно совпадать в Policy и Binding)
    - **`request.userInfo.username`** — имя service account, которому разрешено изменять ресурсы (замените на ваш service account)
-   - **`heritage: my-custom-manager`** — значение метки `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`
+   - **`heritage: my-custom-label`** — значение метки `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`
    - **`failurePolicy: Fail`** — политика при ошибке валидации:
      - `Fail` — отклонять запрос при ошибке проверки
      - `Ignore` — игнорировать ошибки валидации
    - **`validationActions`** — действия валидации:
      - `Deny` — отклонять неразрешенные операции
-     - `Audit` — логировать операции для аудита
+     - `Audit` — записывать операции в аудит лог
 
 3. Примените политику:
 
@@ -262,38 +294,5 @@ data:
    metadata:
      name: my-resource
      labels:
-       heritage: my-custom-manager
+       heritage: my-custom-label
    ```
-
-
-## Создание собственного шаблона для проекта
-
-Шаблоны проектов по умолчанию включают базовые сценарии использования и служат примером возможностей шаблонов.
-
-Для создания своего шаблона:
-1. Возьмите за основу один из шаблонов по умолчанию, например, `default`.
-2. Скопируйте его в отдельный файл, например, `my-project-template.yaml` при помощи команды:
-
-   ```shell
-   d8 k get projecttemplates default -o yaml > my-project-template.yaml
-   ```
-
-3. Отредактируйте файл `my-project-template.yaml`, внесите в него необходимые изменения.
-
-   > Необходимо изменить не только шаблон, но и схему входных параметров под него.
-   >
-   > Шаблоны для проектов поддерживают все [функции шаблонизации Helm](https://helm.sh/docs/chart_template_guide/function_list/).
-4. Измените имя шаблона в поле `.metadata.name`.
-5. Примените полученный шаблон командой:
-
-   ```shell
-   d8 k apply -f my-project-template.yaml
-   ```
-
-6. Проверьте доступность нового шаблона с помощью команды:
-
-   ```shell
-   d8 k get projecttemplates <ИМЯ_НОВОГО_ШАБЛОНА>
-   ```
-
-{% endraw %}
