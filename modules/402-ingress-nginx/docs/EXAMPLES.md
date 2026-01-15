@@ -152,7 +152,9 @@ metallb:
      version: 2
    ```
 
-1. Deploy the _MetalLoadBalancerClass_ resource:
+1. Create a MetalLoadBalancerClass resource:
+
+   > We recommend placing Metallb balancers on frontend nodes. For more information about node types and deployment scenarios, see the section [Picking resources for a bare metal cluster](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios).
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -164,11 +166,16 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # label on load-balancing nodes
+       node.deckhouse.io/group: frontend
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
      type: L2
    ```
 
-1. Deploy the _IngressNginxController_ resource:
+1. Create a IngressNginxController resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -185,11 +192,12 @@ metallb:
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
      # Label selector and tolerations. Ingress-controller pods must be scheduled on same nodes as MetalLB speaker pods.
      nodeSelector:
-        node-role.kubernetes.io/loadbalancer: ""
+       node.deckhouse.io/group: frontend
      tolerations:
-     - effect: NoSchedule
-       key: node-role/loadbalancer
-       operator: Exists
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
       ```
 
 1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:

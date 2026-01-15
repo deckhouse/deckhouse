@@ -154,6 +154,8 @@ metallb:
 
 1. Создайте ресурс _MetalLoadBalancerClass_:
 
+   > Мы рекомендуем размещать Metallb балансировщики на frontend-узлах. Подробнее о типах узлов и сценариях развертывания — в разделе [«Подбор ресурсов для кластера на bare metal»](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания).
+
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
@@ -164,7 +166,12 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+       node.deckhouse.io/group: frontend
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
      type: L2
    ```
 
@@ -185,11 +192,12 @@ metallb:
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
      # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же узлах, что и поды MetalLB speaker.
      nodeSelector:
-        node-role.kubernetes.io/loadbalancer: ""
+       node.deckhouse.io/group: frontend
      tolerations:
-     - effect: NoSchedule
-       key: node-role/loadbalancer
-       operator: Exists
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
    ```
 
 1. Платформа создаст сервис с типом `LoadBalancer`, которому будет присвоено заданное количество адресов:
