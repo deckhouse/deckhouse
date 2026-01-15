@@ -47,6 +47,12 @@ function prepare_template () {
     module_openapi_path=$(echo "$module_path/openapi")
     test -e $template_openapi_path || mkdir -p $template_openapi_path
     cp -r $module_openapi_path/*.yaml $template_openapi_path
+
+    echo "Preparing module.yaml of module $MODULE_NAME..."
+    template_module_path=$(echo "$CRDS_PATH/$MODULE_NAME/alpha")
+    module_module_path=$(echo "$module_path/module.yaml")
+    test -e $template_module_path || mkdir -p $template_module_path
+    cp -r $module_module_path $template_module_path
 }
 
 function prepare_channels() {
