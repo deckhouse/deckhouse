@@ -106,8 +106,7 @@ spec:
 }
 
 func EtcdJoinConverge() error {
-	var etcdSubphase string = "etcd" // default subphase
-
+	var args []string
 	v, err := semver.NewVersion(config.KubernetesVersion)
 	if err != nil {
 		return fmt.Errorf("version not being parsable: %s", err.Error())
@@ -117,10 +116,10 @@ func EtcdJoinConverge() error {
 		return fmt.Errorf("constraint not being parsable: %s", err.Error())
 	}
 	if c.Check(v) { // >= 1.33
-		etcdSubphase = "etcd-join"
+		args = []string{"-v=5", "join", "phase", "etcd-join", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	} else {
+		args = []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
 	}
-
-	args := []string{"-v=5", "join", "phase", "control-plane-join", etcdSubphase, "--config", deckhousePath + "/kubeadm/config.yaml"}
 
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),

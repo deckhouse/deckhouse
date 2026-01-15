@@ -16,14 +16,6 @@ localAPIEndpoint:
 
 > Consider finding a way to do it without patching the `kubeadm` or make a PR to the upstream.
 
-### kubeadm-etcd-join.patch
-
-Unhides the `etcd-join` sub-phase under `kubeadm join phase control-plane-join` for Kubernetes >= 1.33 and makes it version-aware. This allows for control-plane scaling when the `ControlPlaneKubeletLocalMode` feature gate is enabled (default in 1.33+), which otherwise breaks the standard etcd joining workflow.
-
-> Upstream PRs:
-> - https://github.com/kubernetes/kubernetes/pull/135481
-> - https://github.com/kubernetes/kubernetes/pull/135482
-
 ### pdb-daemonset.patch
 
 Supports DaemonSets in disruption controller by adding /scale subresource to daemonsets API. It allows to control the eviction rate of DaemonSet pods.
