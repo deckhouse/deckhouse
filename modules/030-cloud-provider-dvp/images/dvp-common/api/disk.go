@@ -313,7 +313,29 @@ func (d *DiskService) CreateVirtualDiskSnapshot(ctx context.Context, name string
 
 	err := d.client.Create(ctx, virtualDiskSnapshot)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
+		if !k8serrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to check existing virtual disk snapshot: %w", err)
+		}
+	} else {
+		virtualDiskSnapshot = &v1alpha2.VirtualDiskSnapshot{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       v1alpha2.VirtualDiskSnapshotKind,
+				APIVersion: v1alpha2.Version,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: d.namespace,
+			},
+			Spec: v1alpha2.VirtualDiskSnapshotSpec{
+				VirtualDiskName:     source,
+				RequiredConsistency: requiredConsistency,
+			},
+		}
+
+		err = d.client.Create(ctx, virtualDiskSnapshot)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create virtual disk snapshot: %w", err)
+		}
 	}
 
 	err = d.WaitVirtualDiskSnapshotReady(ctx, name)

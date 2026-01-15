@@ -27,7 +27,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 
@@ -490,9 +489,6 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 
 	virtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.CreateVirtualDiskSnapshot(ctx, request.Name, request.SourceVolumeId, requiredConsistencyBool)
 	if err != nil {
-		if k8serrors.IsAlreadyExists(err) {
-			klog.Infof("Snapshot %s of disk %s already exists", request.Name, request.SourceVolumeId)
-		} else {
 			msg := fmt.Errorf("failed to create virtual disk snapshot %s of disk %s: %v",
 				request.Name, request.SourceVolumeId, err)
 
@@ -507,7 +503,6 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 			}
 
 			return nil, status.Error(codes.Internal, msg.Error())
-		}
 	}
 
 	newVirtualDiskSnapshot, err := c.dvpCloudAPI.DiskService.GetVirtualDiskSnapshot(ctx, virtualDiskSnapshot.Name)
