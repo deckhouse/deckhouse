@@ -114,11 +114,6 @@ spec:
               secretKeyRef:
                 name: dvp-credentials
                 key: namespace
-          - name: CLUSTER_UUID
-            valueFrom:
-              secretKeyRef:
-                name: dvp-credentials
-                key: clusterUUID
           {{- include "helm_lib_envs_for_proxy" . | nindent 10 }}
           livenessProbe:
             httpGet:
