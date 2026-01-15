@@ -321,6 +321,14 @@ spec:
         memory: 50
 ```
 
+If any of these resource types is not specified, all its thresholds default to 100% to avoid nodes going from underutilized to overutilized
+For example, If the memory threshold is not specified in thresholds, it defaults to 100.
+
+```yaml
+thresholds:
+  cpu: 50
+```
+
 {% alert level="info" %}
 In GKE (Google Kubernetes Engine), it is not possible to configure `MostAllocated` by default, but you can use the `optimize-utilization` strategy instead.
 {% endalert %}
