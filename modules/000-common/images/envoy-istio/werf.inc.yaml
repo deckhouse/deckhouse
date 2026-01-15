@@ -1,8 +1,6 @@
 {{- $istioVersion := "1.28.1" }}
 {{- $istioProxyBranch := "release-1.28.1-patch" }}
 {{- $istioProxySha := "94128943ceb0ab63e46e56e4987e2780cf0bb6f5" }}
-{{- $istioProxyCacheRev := printf "v%s-%s-v1" $istioVersion $istioProxySha }}
-{{- $istioProxyDepsRev := printf "v%s-%s-v1" $istioVersion $istioProxySha }}
 {{- $bazelVersion := "7.6.2" }}
 {{- $source := "https://github.com" }}
 {{- $sourceraw := "https://raw.githubusercontent.com" }}
@@ -112,7 +110,7 @@ shell:
   - export USE_BAZEL_VERSION="$(cat .bazelversion)"
   - export BAZEL_VERSION="${USE_BAZEL_VERSION}"
 
-  - bazel build --nostamp --verbose_failures --config=release //:envoy
+  - bazel build --nostamp --define wasm=disabled --config=release --cxxopt=-std=c++20 --host_cxxopt=-std=c++20 //:envoy
   - mkdir -p /src/proxy/bin
   - cp -f bazel-bin/envoy /src/proxy/bin/envoy
   - strip /src/proxy/bin/envoy || true
