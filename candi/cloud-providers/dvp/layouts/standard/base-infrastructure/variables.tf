@@ -23,15 +23,12 @@ variable "clusterPrefix" {
 
 locals {
   project_namespace   = try(var.providerClusterConfiguration.provider.namespace, "")
-  network_policy_mode = try(var.providerClusterConfiguration.provider.networkPolicy, "")
+  network_policy_mode = try(var.providerClusterConfiguration.provider.networkPolicy, "Isolated")
 
-  # ВАЖНО: как ты просишь — только это условие включает управление политиками
   should_check_project = local.project_namespace != "" && local.network_policy_mode == "Isolated"
 
   cluster_prefix = var.clusterPrefix
 
-  # Политики создаём только если should_check_project = true.
-  # (Если clusterPrefix обязателен для имени политики — оставим это требование тоже)
   should_manage_np = local.should_check_project && local.cluster_prefix != ""
 }
 
