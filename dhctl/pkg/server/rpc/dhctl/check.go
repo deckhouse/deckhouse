@@ -46,8 +46,9 @@ import (
 )
 
 type checkParams struct {
-	request    *pb.CheckStart
-	logOptions logger.Options
+	request      *pb.CheckStart
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -62,6 +63,12 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
+	pt := progressTracker[*pb.CheckResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Progress{Progress: convertProgress(progress)}}
+		},
+	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
@@ -107,8 +114,9 @@ connectionProcessor:
 				}
 				go func() {
 					result := s.checkSafe(ctx, checkParams{
-						request:    message.Start,
-						logOptions: logOptions,
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
 					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
@@ -230,6 +238,8 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                s.params.TmpDir,
+		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:        p.sendProgress,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{

@@ -22,18 +22,23 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/check"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
-type DetacherOptions struct {
+type Params struct {
 	DeleteDetachResources DetachResources
 	CreateDetachResources DetachResources
 	OnCheckResult         func(*check.CheckResult) error
+	OnPhaseFunc           phases.DefaultOnPhaseFunc
+	OnProgressFunc        phases.OnProgressFunc
 }
 
 type Detacher struct {
-	DetacherOptions
+	*Params
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	AgentModuleName string
 	SSHClient       node.SSHClient
@@ -45,11 +50,14 @@ type DetachResources struct {
 	Values   map[string]any
 }
 
-func NewDetacher(checker *check.Checker, sshClient node.SSHClient, opts DetacherOptions) *Detacher {
+func NewDetacher(checker *check.Checker, sshClient node.SSHClient, params *Params) *Detacher {
 	return &Detacher{
-		DetacherOptions: opts,
-		SSHClient:       sshClient,
-		Checker:         checker,
+		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationCommanderDetach, params.OnPhaseFunc, params.OnProgressFunc,
+		),
+		SSHClient: sshClient,
+		Checker:   checker,
 	}
 }
 
@@ -57,6 +65,15 @@ func (op *Detacher) Detach(ctx context.Context) error {
 	providerCleanup := func() error {
 		return nil
 	}
+
+	stateCache := cache.Global()
+
+	if err := op.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	defer op.PhasedExecutionContext.Finalize(stateCache)
+
+	_, _ = op.PhasedExecutionContext.StartPhase(phases.CommanderDetachCheckPhase, false, stateCache)
 
 	err := log.Process("commander/detach", "Check cluster", func() error {
 		checkRes, cleanup, err := op.Checker.Check(ctx)
@@ -84,7 +101,9 @@ func (op *Detacher) Detach(ctx context.Context) error {
 		return err
 	}
 
-	err = log.Process("commander/detach", "Create resources", func() error {
+	_, _ = op.PhasedExecutionContext.SwitchPhase(phases.CommanderDetachDetachPhase, false, stateCache, nil)
+
+	err = log.Process("commander/detach", "Update resources", func() error {
 		detachResources, err := template.ParseResourcesContent(
 			op.CreateDetachResources.Template,
 			op.CreateDetachResources.Values,

@@ -23,6 +23,7 @@ import (
 	"github.com/name212/govalue"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -32,16 +33,19 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
 type Params struct {
-	SSHClient     node.SSHClient
-	StateCache    dhctlstate.Cache
-	CommanderMode bool
-	CommanderUUID uuid.UUID
+	SSHClient      node.SSHClient
+	StateCache     dhctlstate.Cache
+	OnPhaseFunc    phases.DefaultOnPhaseFunc
+	OnProgressFunc phases.OnProgressFunc
+	CommanderMode  bool
+	CommanderUUID  uuid.UUID
 	*commander.CommanderModeParams
 
 	InfrastructureContext *infrastructure.Context
@@ -57,6 +61,7 @@ type Cleaner func() error
 
 type Checker struct {
 	*Params
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	logger log.Logger
 }
@@ -65,6 +70,10 @@ func NewChecker(params *Params) *Checker {
 	logger := params.Logger
 	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
+	}
+
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
 	}
 
 	if !params.CommanderMode {
@@ -78,6 +87,9 @@ func NewChecker(params *Params) *Checker {
 
 	return &Checker{
 		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationCheck, params.OnPhaseFunc, params.OnProgressFunc,
+		),
 		logger: logger,
 	}
 }
@@ -96,6 +108,11 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
+
+	if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+		return nil, cleaner, err
+	}
+	defer c.PhasedExecutionContext.Finalize(c.StateCache)
 
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
@@ -134,6 +151,8 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	hasTerraformState := false
 
 	if metaConfig.ClusterType == config.CloudClusterType {
+		_, _ = c.PhasedExecutionContext.StartPhase(phases.CheckInfra, false, c.StateCache)
+
 		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
 		if err != nil {
 			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
@@ -151,6 +170,8 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		res.StatusDetails.Statistics = *resInfra.Statistics
 		res.StatusDetails.OpentofuMigrationStatus = resInfra.MigrationOpentofuStatus
 	}
+
+	_, _ = c.PhasedExecutionContext.SwitchPhase(phases.CheckConfiguration, false, c.StateCache, nil)
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
