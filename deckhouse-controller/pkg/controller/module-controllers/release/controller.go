@@ -271,6 +271,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	r.resetConfigurationErrorMetric(release)
+	r.metricsUpdater.PurgeReleaseMetric(release.GetName())
 
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
