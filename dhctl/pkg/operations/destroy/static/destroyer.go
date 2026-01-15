@@ -47,11 +47,12 @@ type LoopsParams struct {
 }
 
 type DestroyerParams struct {
-	SSHClientProvider    sshclient.SSHProvider
-	KubeProvider         kube.ClientProviderWithCleanup
-	State                *State
-	LoggerProvider       log.LoggerProvider
-	PhasedActionProvider phases.DefaultActionProvider
+	SSHClientProvider      sshclient.SSHProvider
+	KubeProvider           kube.ClientProviderWithCleanup
+	State                  *State
+	LoggerProvider         log.LoggerProvider
+	PhasedActionProvider   phases.DefaultActionProvider
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
 
 	TmpDir string
 
@@ -135,6 +136,16 @@ func (d *Destroyer) CleanupBeforeDestroy(context.Context) error {
 func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error {
 	if govalue.IsNil(d.params.SSHClientProvider) {
 		return errors.New("Internal error. SSH provider did not pass")
+	}
+
+	if d.params.PhasedExecutionContext != nil {
+		if shouldStop, err := d.params.PhasedExecutionContext.StartPhase(
+			phases.AllNodesPhase, true, d.params.State.cache,
+		); err != nil {
+			return err
+		} else if shouldStop {
+			return nil
+		}
 	}
 
 	if !autoApprove {
