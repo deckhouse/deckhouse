@@ -582,7 +582,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -688,7 +688,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1077,7 +1077,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1183,7 +1183,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1572,7 +1572,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1678,7 +1678,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2067,7 +2067,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2173,7 +2173,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2562,7 +2562,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2668,7 +2668,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3057,7 +3057,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3163,7 +3163,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3552,7 +3552,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3658,7 +3658,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -4047,7 +4047,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -4153,7 +4153,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -4542,7 +4542,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -4648,7 +4648,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -5037,7 +5037,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -5143,7 +5143,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -5532,7 +5532,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -5638,7 +5638,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -6027,7 +6027,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -6133,7 +6133,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
