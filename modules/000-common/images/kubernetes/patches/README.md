@@ -43,3 +43,11 @@ See issue: https://github.com/kubernetes/kubernetes/issues/131253
 ### kubelet-disable-k-panic-check
 
 Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
+
+### namespace-list-acl-filtering.patch
+
+Allows users without cluster-wide `list/get namespaces` to receive an ACL-filtered response for `GET /api/v1/namespaces` and `GET /api/v1/namespaces/{name}`.
+The kube-apiserver authorization filter bypasses the initial 403 for these requests and delegates filtering to the Namespace storage.
+The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
+
+If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
