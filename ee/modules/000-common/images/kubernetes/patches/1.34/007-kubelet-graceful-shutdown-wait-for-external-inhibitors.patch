@@ -120,10 +120,10 @@ index c998a2663d9..0d55f15dbeb 100644
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
--			// Clean up memory manager state before shutdown
--			if isShuttingDown {
--				m.cleanupMemoryManagerState()
--			}
+-			    // Clean up memory manager state before shutdown
+-			    if isShuttingDown {
+-				    m.cleanupMemoryManagerState()
+-			    }
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
 +					postponeStatus, err := m.conditionChecker.PostponeStatus()

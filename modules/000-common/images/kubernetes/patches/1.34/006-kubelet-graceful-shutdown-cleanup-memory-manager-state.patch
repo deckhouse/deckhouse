@@ -14,10 +14,10 @@ index 5b1f2f5aa05..c998a2663d9 100644
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
-+			// Clean up memory manager state before shutdown
-+			if isShuttingDown {
-+				m.cleanupMemoryManagerState()
-+			}
++			    // Clean up memory manager state before shutdown
++			    if isShuttingDown {
++				    m.cleanupMemoryManagerState()
++			    }
 +
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
