@@ -19,5 +19,25 @@ resource "kubernetes_manifest" "isolated_cluster_prefix_network_policy" {
     force_conflicts = true
   }
 
-  manifest = each.value
+  manifest = {
+    apiVersion = "networking.k8s.io/v1"
+    kind       = "NetworkPolicy"
+
+    metadata = {
+      name      = each.value.name
+      namespace = each.value.namespace
+    }
+
+    spec = {
+      podSelector = {
+        matchLabels = {
+          "dvp.deckhouse.io/cluster-prefix" = local.cluster_prefix
+        }
+      }
+
+      policyTypes = ["Ingress", "Egress"]
+      ingress     = local.template_ingress
+      egress      = local.template_egress
+    }
+  }
 }

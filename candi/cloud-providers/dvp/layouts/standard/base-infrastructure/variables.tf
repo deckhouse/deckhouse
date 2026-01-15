@@ -16,18 +16,21 @@ variable "providerClusterConfiguration" {
   type = any
 }
 
-variable "clusterPrefix" {
-  type    = string
-  default = ""
+variable "clusterConfiguration" {
+  type = any
 }
 
 locals {
-  project_namespace   = try(var.providerClusterConfiguration.provider.namespace, "")
-  network_policy_mode = try(var.providerClusterConfiguration.provider.networkPolicy, "Isolated")
+  project_namespace = try(var.providerClusterConfiguration.provider.namespace, "")
+
+  network_policy_raw = try(var.providerClusterConfiguration.provider.networkPolicy, "Isolated")
+  network_policy_mode = (
+    local.network_policy_raw == null || trimspace(tostring(local.network_policy_raw)) == ""
+  ) ? "Isolated" : tostring(local.network_policy_raw)
 
   should_check_project = local.project_namespace != "" && local.network_policy_mode == "Isolated"
 
-  cluster_prefix = var.clusterPrefix
+  cluster_prefix = try(var.clusterConfiguration.cloud.prefix, "")
 
   should_manage_np = local.should_check_project && local.cluster_prefix != ""
 }
@@ -35,33 +38,133 @@ locals {
 locals {
   template_ingress = [
     {
+      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
+      ports = [{ port = 22, protocol = "TCP" }]
+    },
+    {
+      from = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
+      ports = [
+        { port = 80, protocol = "TCP" },
+        { port = 443, protocol = "TCP" },
+        { port = 30000, endPort = 32767, protocol = "TCP" }
+      ]
+    },
+    {
       from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-monitoring" }
+        }
+        podSelector = {
+          matchLabels = { app = "prometheus" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-ingress-nginx" }
+        }
+        podSelector = {
+          matchLabels = { app = "controller" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-commander" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "bastion" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-openvpn" }
+        }
+      }]
+    },
+    {
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
+        }
+      }]
+    }
+  ]
+
+  template_egress = [
+    { to = [{ ipBlock = { cidr = "0.0.0.0/0" } }] },
+    {
+      to = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
+        }
+      }]
+    },
+    {
+      to = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
+        }
+      }]
+    },
+    {
+      to = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-ingress-nginx" }
+        }
+        podSelector = {
+          matchLabels = { app = "controller" }
+        }
+      }]
+    },
+    {
+      ports = [{ port = 53, protocol = "UDP" }]
+      to = [{
         namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "kube-system" }
         }
       }]
     },
     {
-      from = [{
+      to = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-system" }
+          matchLabels = { "kubernetes.io/metadata.name" = "bastion" }
         }
       }]
     },
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
-        }
-      }]
-    },
-  ]
-
-  template_egress = [
     {
       to = [{
-        ipBlock = {
-          cidr = "0.0.0.0/0"
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-openvpn" }
+        }
+      }]
+    },
+    {
+      to = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
         }
       }]
     }
@@ -70,22 +173,9 @@ locals {
 
 locals {
   targets = local.should_manage_np ? {
-    "isolated-${local.cluster_prefix}" = {
-      apiVersion = "networking.k8s.io/v1"
-      kind       = "NetworkPolicy"
-      metadata = {
-        name      = "isolated-${local.cluster_prefix}"
-        namespace = local.project_namespace
-        labels = {
-          "d8.tf/managed" = "isolated_cluster_prefix"
-        }
-      }
-      spec = {
-        podSelector = {}
-        policyTypes = ["Ingress", "Egress"]
-        ingress     = local.template_ingress
-        egress      = local.template_egress
-      }
+    isolated_cluster_prefix = {
+      namespace = local.project_namespace
+      name      = "isolated-${local.cluster_prefix}"
     }
   } : {}
 }
