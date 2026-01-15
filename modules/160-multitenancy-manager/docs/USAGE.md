@@ -180,6 +180,7 @@ In this case, the resource will receive the labels `projects.deckhouse.io/projec
 ### Excluding resources from management by multitenancy-manager
 
 If you need to exclude a resource from management by `multitenancy-manager` (for example, if the resource should be managed manually or by another controller), add the label `projects.deckhouse.io/unmanaged` to the resource.
+
 Example:
 
 ```yaml
@@ -206,7 +207,6 @@ Resources with the label `projects.deckhouse.io/unmanaged`:
 {% alert level="warning" %}
 Once a resource is marked as `unmanaged`, it will be created on initial installation but not updated when the `ProjectTemplate` is changed.  
 After creation, the resource becomes fully independent and must be managed manually.
-Ensure you understand the consequences before using this label.
 {% endalert %}
 
 ## Implementing validation of object changes with a custom label
