@@ -15,9 +15,6 @@ git:
     stageDependencies:
       install:
         - '**/*'
-shell:
-  install:
-    - mkdir -m 1777 /src/tmp
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 fromImage: builder/golang-alpine
@@ -44,10 +41,6 @@ shell:
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless
 import:
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
-    add: /src/tmp
-    to: /tmp
-    before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
     add: /manager
     to: /manager
