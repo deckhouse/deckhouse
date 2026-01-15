@@ -19,6 +19,7 @@ package checker
 import (
 	"testing"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/stretchr/testify/require"
 )
 
@@ -99,4 +100,56 @@ func TestRegistryParams_Validate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestComputeImagesFingerprint_Relax_ChangesWhenDeckhouseImageChanges(t *testing.T) {
+	t.Parallel()
+
+	info := clusterImagesInfo{
+		Repo: "registry.d8-system.svc:5001/system/deckhouse",
+		DeckhouseImages: deckhouseImagesModel{
+			InitContainers: map[string]string{},
+			Containers: map[string]string{
+				"deckhouse": "registry.d8-system.svc:5001/system/deckhouse:v1.73.12",
+			},
+		},
+		ModulesImagesDigests: map[string]string{},
+	}
+
+	fp1, err := computeImagesFingerprint(info, registry_const.CheckModeRelax)
+	require.NoError(t, err)
+
+	info.DeckhouseImages.Containers["deckhouse"] = "registry.d8-system.svc:5001/system/deckhouse:v1.73.0"
+	fp2, err := computeImagesFingerprint(info, registry_const.CheckModeRelax)
+	require.NoError(t, err)
+
+	require.NotEqual(t, fp1, fp2)
+}
+
+func TestComputeImagesFingerprint_Default_ChangesWhenModuleDigestsChange(t *testing.T) {
+	t.Parallel()
+
+	info := clusterImagesInfo{
+		Repo: "registry.d8-system.svc:5001/system/deckhouse",
+		DeckhouseImages: deckhouseImagesModel{
+			InitContainers: map[string]string{},
+			Containers: map[string]string{
+				"deckhouse": "registry.d8-system.svc:5001/system/deckhouse@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			},
+		},
+		ModulesImagesDigests: map[string]string{
+			"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb": "module/test/image",
+		},
+	}
+
+	fp1, err := computeImagesFingerprint(info, registry_const.CheckModeDefault)
+	require.NoError(t, err)
+
+	info.ModulesImagesDigests = map[string]string{
+		"sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc": "module/test/image",
+	}
+	fp2, err := computeImagesFingerprint(info, registry_const.CheckModeDefault)
+	require.NoError(t, err)
+
+	require.NotEqual(t, fp1, fp2)
 }
