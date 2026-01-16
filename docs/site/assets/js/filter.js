@@ -137,12 +137,14 @@ document.addEventListener('DOMContentLoaded', () => {
       })
     }
 
-    resetButton.addEventListener('click', () => {
-      checkedCheckboxes.forEach(checkbox => {
-        checkbox.checked = false;
+    if(resetButton) {
+      resetButton.addEventListener('click', () => {
+        checkedCheckboxes.forEach(checkbox => {
+          checkbox.checked = false;
+        })
+        filterArticles();
       })
-      filterArticles();
-    })
+    }
 
     const checkboxesEditorialChecked = document.querySelectorAll('.filter__container--editorial input[type="checkbox"]:checked');
     const selectedEditorial = Array.from(checkboxesEditorialChecked).map(checkbox => checkbox.value);
@@ -168,15 +170,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if(selectedStatuses.length > 0) {
-        let articleFound = false;
         for(const status of selectedStatuses) {
-          if(article.querySelector('.icon')) {
-            articleFound = true;
-            break;
+          const statusElement = article.querySelector(`.button-tile__stage-` + status);
+          if(!statusElement) {
+            return false;
           }
-        }
-        if(!articleFound) {
-          return false;
         }
       }
 
@@ -203,6 +201,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterSearch = document.getElementById('search-filter');
   filterSearch.addEventListener('input', filterArticles);
 
+  document.querySelectorAll('.filter__container').forEach(container => {
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const title = container.querySelector('.filter__container--title');
+    checkboxes.forEach(checkbox => {
+      checkbox.addEventListener('change', function() {
+        const check = Array.from(checkboxes).some(checkbox => checkbox.checked);
+        title.classList.toggle('filter-selected', check);
+      })
+    })
+  })
+
   const checkboxes = document.querySelectorAll('.filter__container input[type="checkbox"]');
   checkboxes.forEach(checkbox => {
     checkbox.addEventListener('change', filterArticles);
@@ -210,10 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initializeArticleFilter(Array.from(articles));
 
-  const experimentalIcon = document.querySelector('.filter__container label[for="experimental"] > img');
-  const previewIcon = document.querySelector('.filter__container label[for="preview"] > img');
-  const generalAvailabilityIcon = document.querySelector('.filter__container label[for="generalAvailability"] > img');
-  const deprecatedIcon = document.querySelector('.filter__container label[for="deprecated"] > img');
+  const experimentalIcon = document.querySelectorAll('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img');
+  const previewIcon = document.querySelectorAll('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img');
+  const generalAvailabilityIcon = document.querySelectorAll('.filter__container label[for="generalAvailability"] > img, .button-tile__stage-generalAvailability > img');
+  const deprecatedIcon = document.querySelectorAll('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img');
 
   tippy(experimentalIcon, {
     allowHTML: true,

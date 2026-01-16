@@ -126,6 +126,9 @@
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
+        <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
+          <img src="/images/{{- $moduleStage }}" alt="{{- $moduleStage }}">
+        </span>
         <h2 class="button-tile__title">{{ .module }}</h2>
         {{- $moduleStage := "" }}
         {{- $moduleDescription := default "" .description }}
@@ -141,11 +144,6 @@
         {{- end }}
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-          <span>
-            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-              {{- $moduleStage }}
-            </span>
-          </span>
         {{- end }}
           <p class="button-tile__descr">
             {{ $moduleDescription }}
