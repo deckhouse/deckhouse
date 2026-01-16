@@ -751,7 +751,7 @@ Dec 11 15:08:30.766 INFO  ╚ Pull Modules succeeded in 27m55.883250757s
 
 {% endofftopic %}
 
-Проверьте, что образы скачались:
+Проверьте, что архив создан:
 
 ```console
 $ ls -lh
