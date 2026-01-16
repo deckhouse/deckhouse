@@ -788,7 +788,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 {% endofftopic %}
 
-Проверить, что все образы загружены в registry, можно, открыв проект `deckhouse` в веб-интерфейсе Harbor:
+Проверить, что образы загружены, можно в веб-интерфейсе Harbor: откройте проект `deckhouse` в веб-интерфейсе Harbor.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_state_with_images.png" alt="Главная страница Harbor...">
