@@ -759,7 +759,7 @@ total 650M
 drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
 ```
 
-Теперь выполните команду, которая загрузит скачанные образы в созданный ранее приватный registry (укажите редакцию DKP и данные пользователя, созданного в Harbor):
+Загрузите скачанные образы в приватный registry (укажите редакцию DKP и учётные данные пользователя, созданного в Harbor):
 
 ```bash
 d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
