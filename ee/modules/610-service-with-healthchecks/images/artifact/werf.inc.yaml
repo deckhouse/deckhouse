@@ -43,7 +43,8 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION}
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
-  - go build -mod=vendor -ldflags="-s -w" -o /agent .
+  - | 
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /agent .`) | indent 6 }}
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
