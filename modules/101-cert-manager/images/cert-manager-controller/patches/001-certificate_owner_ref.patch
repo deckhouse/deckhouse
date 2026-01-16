@@ -1,23 +1,24 @@
-diff --git a/deploy/crds/crd-certificates.yaml b/deploy/crds/crd-certificates.yaml
-index 38feef444..bf2a2f74f 100644
---- a/deploy/crds/crd-certificates.yaml
-+++ b/deploy/crds/crd-certificates.yaml
-@@ -109,6 +109,9 @@ spec:
-                         enum:
-                           - DER
-                           - CombinedPEM
-+                certificateOwnerRef:
-+                  description: CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored. When this flag is enabled, the secret will be automatically removed when the certificate resource is deleted. If unset (`nil`) `--enable-certificate-owner-ref` CLI parameter value is used. Default value is `nil`.
-+                  type: boolean
-                 commonName:
-                   description: |-
-                     Requested common name X509 certificate subject attribute.
+diff --git a/deploy/crds/cert-manager.io_certificates.yaml b/deploy/crds/cert-manager.io_certificates.yaml
+index 340b020df..33c5fc96f 100644
+--- a/deploy/crds/cert-manager.io_certificates.yaml
++++ b/deploy/crds/cert-manager.io_certificates.yaml
+@@ -693,6 +693,10 @@ spec:
+                   type: string
+                 type: array
+                 x-kubernetes-list-type: atomic
++              certificateOwnerRef:
++                type: boolean
++                x-doc-default: nil
++                description: CertificateOwnerRef is whether to set the certificate resource as an owner of a secret where a TLS certificate is stored. When this option is toggled, the secret will be automatically removed when the certificate resource is deleted. A global owner reference policy will be used by default (controlled by the --enable-certificate-owner-ref flag).
+             required:
+             - issuerRef
+             - secretName
 diff --git a/internal/apis/certmanager/types_certificate.go b/internal/apis/certmanager/types_certificate.go
-index 9e6804a88..516d8388e 100644
+index 028a267fc..96939ccd0 100644
 --- a/internal/apis/certmanager/types_certificate.go
 +++ b/internal/apis/certmanager/types_certificate.go
-@@ -261,6 +261,11 @@ type CertificateSpec struct {
- 	// the controller and webhook components.
+@@ -259,6 +259,11 @@ type CertificateSpec struct {
+ 	// to be written to this Certificate's target Secret.
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat
  
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
@@ -29,23 +30,15 @@ index 9e6804a88..516d8388e 100644
  	// More Info: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.10
  	//
 diff --git a/internal/apis/certmanager/v1/zz_generated.conversion.go b/internal/apis/certmanager/v1/zz_generated.conversion.go
-index 8970450a2..797154bd9 100644
+index 8e7938ea3..c40eb9148 100644
 --- a/internal/apis/certmanager/v1/zz_generated.conversion.go
 +++ b/internal/apis/certmanager/v1/zz_generated.conversion.go
-@@ -889,6 +889,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *v1.Certif
+@@ -890,6 +890,7 @@ func autoConvert_v1_CertificateSpec_To_certmanager_CertificateSpec(in *certmanag
  	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
  	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
  	out.AdditionalOutputFormats = *(*[]certmanager.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
 +	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
  	out.NameConstraints = (*certmanager.NameConstraints)(unsafe.Pointer(in.NameConstraints))
- 	return nil
- }
-@@ -930,6 +931,7 @@ func autoConvert_certmanager_CertificateSpec_To_v1_CertificateSpec(in *certmanag
- 	out.EncodeUsagesInRequest = (*bool)(unsafe.Pointer(in.EncodeUsagesInRequest))
- 	out.RevisionHistoryLimit = (*int32)(unsafe.Pointer(in.RevisionHistoryLimit))
- 	out.AdditionalOutputFormats = *(*[]v1.CertificateAdditionalOutputFormat)(unsafe.Pointer(&in.AdditionalOutputFormats))
-+	out.CertificateOwnerRef = (*bool)(unsafe.Pointer(in.CertificateOwnerRef))
- 	out.NameConstraints = (*v1.NameConstraints)(unsafe.Pointer(in.NameConstraints))
  	return nil
  }
 diff --git a/internal/apis/certmanager/zz_generated.deepcopy.go b/internal/apis/certmanager/zz_generated.deepcopy.go
@@ -63,13 +56,13 @@ index d64f9cd5e..1e9379d05 100644
 +	}
  	return
  }
-
+ 
 diff --git a/pkg/apis/certmanager/v1/types_certificate.go b/pkg/apis/certmanager/v1/types_certificate.go
-index 89979e7ac..f10578840 100644
+index bc5475a32..51f7df870 100644
 --- a/pkg/apis/certmanager/v1/types_certificate.go
 +++ b/pkg/apis/certmanager/v1/types_certificate.go
-@@ -286,6 +286,12 @@ type CertificateSpec struct {
- 	// +optional
+@@ -315,6 +315,12 @@ type CertificateSpec struct {
+ 	// +listType=atomic
  	AdditionalOutputFormats []CertificateAdditionalOutputFormat `json:"additionalOutputFormats,omitempty"`
  
 +	// CertificateOwnerRef is whether to set the certificate resource as an owner of secret where the tls certificate is stored.
@@ -98,10 +91,10 @@ index e889ecf1a..3b29f924f 100644
  }
  
 diff --git a/pkg/controller/certificates/issuing/internal/secret.go b/pkg/controller/certificates/issuing/internal/secret.go
-index 856e48c9b..1d6194067 100644
+index 341eef730..432c37852 100644
 --- a/pkg/controller/certificates/issuing/internal/secret.go
 +++ b/pkg/controller/certificates/issuing/internal/secret.go
-@@ -107,10 +107,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
+@@ -106,10 +106,16 @@ func (s *SecretsManager) UpdateData(ctx context.Context, crt *cmapi.Certificate,
  		WithAnnotations(secret.Annotations).WithLabels(secret.Labels).
  		WithData(secret.Data).WithType(secret.Type)
  
@@ -120,7 +113,7 @@ index 856e48c9b..1d6194067 100644
  		applyCnf = applyCnf.WithOwnerReferences(&applymetav1.OwnerReferenceApplyConfiguration{
  			APIVersion: &ref.APIVersion, Kind: &ref.Kind,
 diff --git a/pkg/controller/certificates/issuing/internal/secret_test.go b/pkg/controller/certificates/issuing/internal/secret_test.go
-index 111cff988..597020381 100644
+index 041bd7b04..fb3559e23 100644
 --- a/pkg/controller/certificates/issuing/internal/secret_test.go
 +++ b/pkg/controller/certificates/issuing/internal/secret_test.go
 @@ -66,6 +66,30 @@ func Test_SecretsManager(t *testing.T) {
@@ -361,12 +354,12 @@ index 111cff988..597020381 100644
 +
  					expOpts := metav1.ApplyOptions{FieldManager: "cert-manager-test", Force: true}
  					assert.Equal(t, expOpts, gotOpts)
-
+ 
 diff --git a/test/unit/gen/certificate.go b/test/unit/gen/certificate.go
-index 6991f5c16..37f61a8b3 100644
+index c5f021eb8..98205af7f 100644
 --- a/test/unit/gen/certificate.go
 +++ b/test/unit/gen/certificate.go
-@@ -292,8 +292,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
+@@ -295,8 +295,9 @@ func SetCertificateAdditionalOutputFormats(additionalOutputFormats ...v1.Certifi
  	}
  }
  
@@ -377,4 +370,3 @@ index 6991f5c16..37f61a8b3 100644
 +		crt.Spec.CertificateOwnerRef = &ownerRef
  	}
  }
- 
