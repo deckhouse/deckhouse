@@ -1,9 +1,9 @@
 diff --git a/pkg/registry/core/namespace/storage/accessible_fetcher.go b/pkg/registry/core/namespace/storage/accessible_fetcher.go
 new file mode 100644
-index 00000000000..ca18c1d9566
+index 00000000000..a12ef6456fe
 --- /dev/null
 +++ b/pkg/registry/core/namespace/storage/accessible_fetcher.go
-@@ -0,0 +1,206 @@
+@@ -0,0 +1,188 @@
 +/*
 +Copyright 2025 The Kubernetes Authors.
 +
@@ -110,6 +110,23 @@ index 00000000000..ca18c1d9566
 +	}, nil
 +}
 +
++func (f *LoopbackAccessibleNamespaceFetcher) httpClientFor(username string, groups []string, extra map[string][]string) *http.Client {
++	// IMPORTANT:
++	// User extra keys may contain characters that are invalid in HTTP header field-names (e.g. '/').
++	// Kubernetes solves this by escaping extra keys in impersonation headers.
++	// Use client-go's impersonating round-tripper to match upstream behavior.
++	impRT := transport.NewImpersonatingRoundTripper(transport.ImpersonationConfig{
++		UserName: username,
++		Groups:   groups,
++		Extra:    extra,
++	}, f.roundTripper)
++
++	return &http.Client{
++		Transport: impRT,
++		Timeout:   f.timeout,
++	}
++}
++
 +// FetchAccessibleNamespaces fetches the list of accessible namespace names for the user
 +// by calling the accessiblenamespaces API with impersonation headers.
 +func (f *LoopbackAccessibleNamespaceFetcher) FetchAccessibleNamespaces(ctx context.Context, username string, groups []string, extra map[string][]string) ([]string, error) {
@@ -120,25 +137,9 @@ index 00000000000..ca18c1d9566
 +		return nil, fmt.Errorf("failed to create request: %w", err)
 +	}
 +
-+	// Set impersonation headers - the loopback client is authenticated,
-+	// so kube-apiserver will honor these headers for impersonation.
-+	req.Header.Set("Impersonate-User", username)
-+	for _, group := range groups {
-+		req.Header.Add("Impersonate-Group", group)
-+	}
-+	for key, values := range extra {
-+		for _, value := range values {
-+			req.Header.Add("Impersonate-Extra-"+key, value)
-+		}
-+	}
-+
 +	klog.V(4).Infof("Fetching accessible namespaces for user %s via loopback at %s", username, url)
 +
-+	client := &http.Client{
-+		Transport: f.roundTripper,
-+		Timeout:   f.timeout,
-+	}
-+
++	client := f.httpClientFor(username, groups, extra)
 +	resp, err := client.Do(req)
 +	if err != nil {
 +		return nil, fmt.Errorf("failed to fetch accessible namespaces: %w", err)
@@ -160,8 +161,6 @@ index 00000000000..ca18c1d9566
 +		names[i] = item.Metadata.Name
 +	}
 +
-+	klog.V(4).Infof("User %s has access to %d namespaces", username, len(names))
-+
 +	return names, nil
 +}
 +
@@ -175,24 +174,7 @@ index 00000000000..ca18c1d9566
 +		return false, fmt.Errorf("failed to create request: %w", err)
 +	}
 +
-+	// Set impersonation headers
-+	req.Header.Set("Impersonate-User", username)
-+	for _, group := range groups {
-+		req.Header.Add("Impersonate-Group", group)
-+	}
-+	for key, values := range extra {
-+		for _, value := range values {
-+			req.Header.Add("Impersonate-Extra-"+key, value)
-+		}
-+	}
-+
-+	klog.V(4).Infof("Checking if namespace %s is accessible for user %s via loopback", namespace, username)
-+
-+	client := &http.Client{
-+		Transport: f.roundTripper,
-+		Timeout:   f.timeout,
-+	}
-+
++	client := f.httpClientFor(username, groups, extra)
 +	resp, err := client.Do(req)
 +	if err != nil {
 +		return false, fmt.Errorf("failed to check namespace accessibility: %w", err)
