@@ -473,6 +473,54 @@
         max-width: 100%;
       }
 
+      .tippy-box {
+          border: none !important;
+          box-shadow: none !important;
+          text-transform: none;
+      }
+
+      .tippy-content {
+          padding: 0;
+      }
+
+      .tippy-arrow {
+          bottom: 2px;
+          z-index: 99999;
+          background-color: #fff;
+
+          &::before {
+              color: #fff;
+          }
+      }
+      
+      .statuses-tooltip {
+          width: 100%;
+          max-width: 310px;
+          height: 100%;
+          padding: 8px 8px 16px;
+          color: #2B313B;
+          font-style: normal;
+          background-color: #fff;
+          box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1);
+
+          &__title {
+              margin: 8;
+              margin-bottom: 2px;
+              font-size: 14px;
+              font-weight: 600;
+              line-height: 24px;
+              letter-spacing: 0.3px;
+              text-transform: capitalize;
+          }
+
+          &__descr {
+              margin: 0;
+              font-size: 12px;
+              font-weight: 400;
+              line-height: 18px;
+          }
+      }
+
       .selected__filters {
         margin-bottom: 28px;
 
