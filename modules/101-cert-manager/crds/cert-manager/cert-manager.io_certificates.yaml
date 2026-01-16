@@ -1,18 +1,15 @@
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: certificates.cert-manager.io
-  annotations: {}
-  labels:
-    heritage: 'deckhouse'
-    app: 'cert-manager'
-    module: 'cert-manager'
-    app.kubernetes.io/name: 'cert-manager'
-    app.kubernetes.io/instance: 'cert-manager'
-    app.kubernetes.io/version: 'v1.17.4'
 spec:
   group: cert-manager.io
   names:
+    categories:
+      - cert-manager
     kind: Certificate
     listKind: CertificateList
     plural: certificates
@@ -20,15 +17,10 @@ spec:
       - cert
       - certs
     singular: certificate
-    categories:
-      - cert-manager
   scope: Namespaced
   versions:
-    - name: v1
-      subresources:
-        status: {}
-      additionalPrinterColumns:
-        - jsonPath: .status.conditions[?(@.type=="Ready")].status
+    - additionalPrinterColumns:
+        - jsonPath: .status.conditions[?(@.type == "Ready")].status
           name: Ready
           type: string
         - jsonPath: .spec.secretName
@@ -38,14 +30,15 @@ spec:
           name: Issuer
           priority: 1
           type: string
-        - jsonPath: .status.conditions[?(@.type=="Ready")].message
+        - jsonPath: .status.conditions[?(@.type == "Ready")].message
           name: Status
           priority: 1
           type: string
-        - jsonPath: .metadata.creationTimestamp
-          description: CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+        - description: CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.
+          jsonPath: .metadata.creationTimestamp
           name: Age
           type: date
+      name: v1
       schema:
         openAPIV3Schema:
           description: |-
@@ -53,7 +46,6 @@ spec:
             X.509 certificate is stored in the Kubernetes Secret resource named in `spec.secretName`.
 
             The stored certificate will be renewed before it expires (as configured by `spec.renewBefore`).
-          type: object
           properties:
             apiVersion:
               description: |-
@@ -76,37 +68,30 @@ spec:
               description: |-
                 Specification of the desired state of the Certificate resource.
                 https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-              type: object
-              required:
-                - issuerRef
-                - secretName
               properties:
                 additionalOutputFormats:
                   description: |-
                     Defines extra output formats of the private key and signed certificate chain
                     to be written to this Certificate's target Secret.
-
-                    This is a Beta Feature enabled by default. It can be disabled with the
-                    `--feature-gates=AdditionalCertificateOutputFormats=false` option set on both
-                    the controller and webhook components.
-                  type: array
                   items:
                     description: |-
                       CertificateAdditionalOutputFormat defines an additional output format of a
                       Certificate resource. These contain supplementary data formats of the signed
                       certificate chain and paired private key.
-                    type: object
-                    required:
-                      - type
                     properties:
                       type:
                         description: |-
                           Type is the name of the format type that should be written to the
                           Certificate's target Secret.
-                        type: string
                         enum:
                           - DER
                           - CombinedPEM
+                        type: string
+                    required:
+                      - type
+                    type: object
+                  type: array
+                  x-kubernetes-list-type: atomic
                 commonName:
                   description: |-
                     Requested common name X509 certificate subject attribute.
@@ -119,9 +104,10 @@ spec:
                   type: string
                 dnsNames:
                   description: Requested DNS subject alternative names.
-                  type: array
                   items:
                     type: string
+                  type: array
+                  x-kubernetes-list-type: atomic
                 duration:
                   description: |-
                     Requested 'duration' (i.e. lifetime) of the Certificate. Note that the
@@ -134,9 +120,10 @@ spec:
                   type: string
                 emailAddresses:
                   description: Requested email subject alternative names.
-                  type: array
                   items:
                     type: string
+                  type: array
+                  x-kubernetes-list-type: atomic
                 encodeUsagesInRequest:
                   description: |-
                     Whether the KeyUsage and ExtKeyUsage extensions should be set in the encoded CSR.
@@ -146,9 +133,10 @@ spec:
                   type: boolean
                 ipAddresses:
                   description: Requested IP address subject alternative names.
-                  type: array
                   items:
                     type: string
+                  type: array
+                  x-kubernetes-list-type: atomic
                 isCA:
                   description: |-
                     Requested basic constraints isCA value.
@@ -167,30 +155,30 @@ spec:
                     from any namespace.
 
                     The `name` field of the reference must always be specified.
-                  type: object
-                  required:
-                    - name
                   properties:
                     group:
-                      description: Group of the resource being referred to.
+                      description: |-
+                        Group of the issuer being referred to.
+                        Defaults to 'cert-manager.io'.
                       type: string
                     kind:
-                      description: Kind of the resource being referred to.
+                      description: |-
+                        Kind of the issuer being referred to.
+                        Defaults to 'Issuer'.
                       type: string
                     name:
-                      description: Name of the resource being referred to.
+                      description: Name of the issuer being referred to.
                       type: string
+                  required:
+                    - name
+                  type: object
                 keystores:
                   description: Additional keystore output formats to be stored in the Certificate's Secret.
-                  type: object
                   properties:
                     jks:
                       description: |-
                         JKS configures options for storing a JKS keystore in the
                         `spec.secretName` Secret resource.
-                      type: object
-                      required:
-                        - create
                       properties:
                         alias:
                           description: |-
@@ -221,9 +209,6 @@ spec:
                             containing the password used to encrypt the JKS keystore.
                             Mutually exclusive with password.
                             One of password or passwordSecretRef must provide a password with a non-zero length.
-                          type: object
-                          required:
-                            - name
                           properties:
                             key:
                               description: |-
@@ -236,13 +221,16 @@ spec:
                                 Name of the resource being referred to.
                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               type: string
+                          required:
+                            - name
+                          type: object
+                      required:
+                        - create
+                      type: object
                     pkcs12:
                       description: |-
                         PKCS12 configures options for storing a PKCS12 keystore in the
                         `spec.secretName` Secret resource.
-                      type: object
-                      required:
-                        - create
                       properties:
                         create:
                           description: |-
@@ -268,9 +256,6 @@ spec:
                             containing the password used to encrypt the PKCS#12 keystore.
                             Mutually exclusive with password.
                             One of password or passwordSecretRef must provide a password with a non-zero length.
-                          type: object
-                          required:
-                            - name
                           properties:
                             key:
                               description: |-
@@ -283,6 +268,9 @@ spec:
                                 Name of the resource being referred to.
                                 More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
                               type: string
+                          required:
+                            - name
+                          type: object
                         profile:
                           description: |-
                             Profile specifies the key and certificate encryption algorithms and the HMAC algorithm
@@ -292,13 +280,17 @@ spec:
                             `LegacyRC2`: Deprecated. Not supported by default in OpenSSL 3 or Java 20.
                             `LegacyDES`: Less secure algorithm. Use this option for maximal compatibility.
                             `Modern2023`: Secure algorithm. Use this option in case you have to always use secure algorithms
-                            (eg. because of company policy). Please note that the security of the algorithm is not that important
+                            (e.g., because of company policy). Please note that the security of the algorithm is not that important
                             in reality, because the unencrypted certificate and private key are also stored in the Secret.
-                          type: string
                           enum:
                             - LegacyRC2
                             - LegacyDES
                             - Modern2023
+                          type: string
+                      required:
+                        - create
+                      type: object
+                  type: object
                 literalSubject:
                   description: |-
                     Requested X.509 certificate subject, represented using the LDAP "String
@@ -320,7 +312,6 @@ spec:
                     This is an Alpha Feature and is only enabled with the
                     `--feature-gates=NameConstraints=true` option set on both
                     the controller and webhook components.
-                  type: object
                   properties:
                     critical:
                       description: if true then the name constraints are marked critical.
@@ -330,65 +321,72 @@ spec:
                         Excluded contains the constraints which must be disallowed. Any name matching a
                         restriction in the excluded field is invalid regardless
                         of information appearing in the permitted
-                      type: object
                       properties:
                         dnsDomains:
                           description: DNSDomains is a list of DNS domains that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         emailAddresses:
                           description: EmailAddresses is a list of Email Addresses that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         ipRanges:
                           description: |-
                             IPRanges is a list of IP Ranges that are permitted or excluded.
                             This should be a valid CIDR notation.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         uriDomains:
                           description: URIDomains is a list of URI domains that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      type: object
                     permitted:
                       description: Permitted contains the constraints in which the names must be located.
-                      type: object
                       properties:
                         dnsDomains:
                           description: DNSDomains is a list of DNS domains that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         emailAddresses:
                           description: EmailAddresses is a list of Email Addresses that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         ipRanges:
                           description: |-
                             IPRanges is a list of IP Ranges that are permitted or excluded.
                             This should be a valid CIDR notation.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
                         uriDomains:
                           description: URIDomains is a list of URI domains that are permitted or excluded.
-                          type: array
                           items:
                             type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      type: object
+                  type: object
                 otherNames:
                   description: |-
                     `otherNames` is an escape hatch for SAN that allows any type. We currently restrict the support to string like otherNames, cf RFC 5280 p 37
                     Any UTF8 String valued otherName can be passed with by setting the keys oid: x.x.x.x and UTF8Value: somevalue for `otherName`.
                     Most commonly this would be UPN set with oid: 1.3.6.1.4.1.311.20.2.3
                     You should ensure that any OID passed is valid for the UTF8String type as we do not explicitly validate this.
-                  type: array
                   items:
-                    type: object
                     properties:
                       oid:
                         description: |-
@@ -401,11 +399,13 @@ spec:
                           utf8Value is the string value of the otherName SAN.
                           The utf8Value accepts any valid UTF8 string to set as value for the otherName SAN.
                         type: string
+                    type: object
+                  type: array
+                  x-kubernetes-list-type: atomic
                 privateKey:
                   description: |-
                     Private key options. These include the key algorithm and size, the used
                     encoding and the rotation policy.
-                  type: object
                   properties:
                     algorithm:
                       description: |-
@@ -417,11 +417,11 @@ spec:
                         key size of 2048 will be used for `RSA` key algorithm and
                         key size of 256 will be used for `ECDSA` key algorithm.
                         key size is ignored when using the `Ed25519` key algorithm.
-                      type: string
                       enum:
                         - RSA
                         - ECDSA
                         - Ed25519
+                      type: string
                     encoding:
                       description: |-
                         The private key cryptography standards (PKCS) encoding for this
@@ -430,10 +430,10 @@ spec:
                         If provided, allowed values are `PKCS1` and `PKCS8` standing for PKCS#1
                         and PKCS#8, respectively.
                         Defaults to `PKCS1` if not specified.
-                      type: string
                       enum:
                         - PKCS1
                         - PKCS8
+                      type: string
                     rotationPolicy:
                       description: |-
                         RotationPolicy controls how private keys should be regenerated when a
@@ -445,11 +445,15 @@ spec:
                         to await user intervention.
                         If set to `Always`, a private key matching the specified requirements
                         will be generated whenever a re-issuance occurs.
-                        Default is `Never` for backward compatibility.
-                      type: string
+                        Default is `Always`.
+                        The default was changed from `Never` to `Always` in cert-manager >=v1.18.0.
+                        The new default can be disabled by setting the
+                        `--feature-gates=DefaultPrivateKeyRotationPolicyAlways=false` option on
+                        the controller component.
                       enum:
                         - Never
                         - Always
+                      type: string
                     size:
                       description: |-
                         Size is the key bit size of the corresponding private key for this certificate.
@@ -461,6 +465,7 @@ spec:
                         If `algorithm` is set to `Ed25519`, Size is ignored.
                         No other values are allowed.
                       type: integer
+                  type: object
                 renewBefore:
                   description: |-
                     How long before the currently issued certificate's expiry cert-manager should
@@ -494,8 +499,8 @@ spec:
                     `renewBefore` derived from the `renewBeforePercentage` and `duration` fields is 5
                     minutes.
                     Cannot be set if the `renewBefore` field is set.
-                  type: integer
                   format: int32
+                  type: integer
                 revisionHistoryLimit:
                   description: |-
                     The maximum number of CertificateRequest revisions that are maintained in
@@ -505,10 +510,9 @@ spec:
                     revisions exceeds this number.
 
                     If set, revisionHistoryLimit must be a value of `1` or greater.
-                    If unset (`nil`), revisions will not be garbage collected.
-                    Default value is `nil`.
-                  type: integer
+                    Default value is `1`.
                   format: int32
+                  type: integer
                 secretName:
                   description: |-
                     Name of the Secret resource that will be automatically created and
@@ -523,18 +527,33 @@ spec:
                     SecretTemplate when added or removed. SecretTemplate annotations are added
                     in conjunction with, and cannot overwrite, the base set of annotations
                     cert-manager sets on the Certificate's Secret.
-                  type: object
                   properties:
                     annotations:
+                      additionalProperties:
+                        type: string
                       description: Annotations is a key value map to be copied to the target Kubernetes Secret.
                       type: object
+                    labels:
                       additionalProperties:
                         type: string
-                    labels:
                       description: Labels is a key value map to be copied to the target Kubernetes Secret.
                       type: object
-                      additionalProperties:
-                        type: string
+                  type: object
+                signatureAlgorithm:
+                  description: |-
+                    Signature algorithm to use.
+                    Allowed values for RSA keys: SHA256WithRSA, SHA384WithRSA, SHA512WithRSA.
+                    Allowed values for ECDSA keys: ECDSAWithSHA256, ECDSAWithSHA384, ECDSAWithSHA512.
+                    Allowed values for Ed25519 keys: PureEd25519.
+                  enum:
+                    - SHA256WithRSA
+                    - SHA384WithRSA
+                    - SHA512WithRSA
+                    - ECDSAWithSHA256
+                    - ECDSAWithSHA384
+                    - ECDSAWithSHA512
+                    - PureEd25519
+                  type: string
                 subject:
                   description: |-
                     Requested set of X509 certificate subject attributes.
@@ -542,51 +561,59 @@ spec:
 
                     The common name attribute is specified separately in the `commonName` field.
                     Cannot be set if the `literalSubject` field is set.
-                  type: object
                   properties:
                     countries:
                       description: Countries to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     localities:
                       description: Cities to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     organizationalUnits:
                       description: Organizational Units to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     organizations:
                       description: Organizations to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     postalCodes:
                       description: Postal codes to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     provinces:
                       description: State/Provinces to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
                     serialNumber:
                       description: Serial number to be used on the Certificate.
                       type: string
                     streetAddresses:
                       description: Street addresses to be used on the Certificate.
-                      type: array
                       items:
                         type: string
+                      type: array
+                      x-kubernetes-list-type: atomic
+                  type: object
                 uris:
                   description: Requested URI subject alternative names.
-                  type: array
                   items:
                     type: string
+                  type: array
+                  x-kubernetes-list-type: atomic
                 usages:
                   description: |-
                     Requested key usages and extended key usages.
@@ -595,7 +622,6 @@ spec:
                     will additionally be encoded in the `request` field which contains the CSR blob.
 
                     If unset, defaults to `digital signature` and `key encipherment`.
-                  type: array
                   items:
                     description: |-
                       KeyUsage specifies valid usage contexts for keys.
@@ -627,7 +653,6 @@ spec:
                       "ocsp signing",
                       "microsoft sgc",
                       "netscape sgc"
-                    type: string
                     enum:
                       - signing
                       - digital signature
@@ -652,36 +677,37 @@ spec:
                       - ocsp signing
                       - microsoft sgc
                       - netscape sgc
+                    type: string
+                  type: array
+                  x-kubernetes-list-type: atomic
                 certificateOwnerRef:
                   type: boolean
                   x-doc-default: nil
                   description: CertificateOwnerRef is whether to set the certificate resource as an owner of a secret where a TLS certificate is stored. When this option is toggled, the secret will be automatically removed when the certificate resource is deleted. A global owner reference policy will be used by default (controlled by the --enable-certificate-owner-ref flag).
+              required:
+                - issuerRef
+                - secretName
+              type: object
             status:
               description: |-
                 Status of the Certificate.
                 This is set and managed automatically.
                 Read-only.
                 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#spec-and-status
-              type: object
               properties:
                 conditions:
                   description: |-
                     List of status conditions to indicate the status of certificates.
                     Known condition types are `Ready` and `Issuing`.
-                  type: array
                   items:
                     description: CertificateCondition contains condition information for a Certificate.
-                    type: object
-                    required:
-                      - status
-                      - type
                     properties:
                       lastTransitionTime:
                         description: |-
                           LastTransitionTime is the timestamp corresponding to the last status
                           change of this condition.
-                        type: string
                         format: date-time
+                        type: string
                       message:
                         description: |-
                           Message is a human readable description of the details of the last
@@ -694,8 +720,8 @@ spec:
                           For instance, if .metadata.generation is currently 12, but the
                           .status.condition[x].observedGeneration is 9, the condition is out of date
                           with respect to the current state of the Certificate.
-                        type: integer
                         format: int64
+                        type: integer
                       reason:
                         description: |-
                           Reason is a brief machine readable explanation for the condition's last
@@ -703,14 +729,19 @@ spec:
                         type: string
                       status:
                         description: Status of the condition, one of (`True`, `False`, `Unknown`).
-                        type: string
                         enum:
                           - "True"
                           - "False"
                           - Unknown
+                        type: string
                       type:
                         description: Type of the condition, known values are (`Ready`, `Issuing`).
                         type: string
+                    required:
+                      - status
+                      - type
+                    type: object
+                  type: array
                   x-kubernetes-list-map-keys:
                     - type
                   x-kubernetes-list-type: map
@@ -729,8 +760,8 @@ spec:
                     issuance has failed, the delay till the next issuance will be
                     calculated using formula time.Hour * 2 ^ (failedIssuanceAttempts -
                     1). If the latest issuance has succeeded this field will be unset.
-                  type: string
                   format: date-time
+                  type: string
                 nextPrivateKeySecretName:
                   description: |-
                     The name of the Secret resource containing the private key to be used
@@ -744,21 +775,21 @@ spec:
                   description: |-
                     The expiration time of the certificate stored in the secret named
                     by this resource in `spec.secretName`.
-                  type: string
                   format: date-time
+                  type: string
                 notBefore:
                   description: |-
                     The time after which the certificate stored in the secret named
                     by this resource in `spec.secretName` is valid.
-                  type: string
                   format: date-time
+                  type: string
                 renewalTime:
                   description: |-
                     RenewalTime is the time at which the certificate will be next
                     renewed.
                     If not set, no upcoming renewal is scheduled.
-                  type: string
                   format: date-time
+                  type: string
                 revision:
                   description: |-
                     The current 'revision' of the certificate as issued.
@@ -776,5 +807,9 @@ spec:
                     checking if the revision value in the annotation is greater than this
                     field.
                   type: integer
+              type: object
+          type: object
       served: true
       storage: true
+      subresources:
+        status: {}

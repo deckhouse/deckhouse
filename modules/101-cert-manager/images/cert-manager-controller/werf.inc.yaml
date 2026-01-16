@@ -1,4 +1,4 @@
-{{- $version := "1.17.4" }}
+{{- $version := "1.19.2" }}
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
@@ -56,7 +56,7 @@ shell:
   install:
   - | 
     echo "Checking if module crds are the same as cert-manager crds"
-    DOWNLOAD=false CRD_PATH=/src/deploy/crds /module_crds/pull_crds.sh
+    DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds /module_crds/update.sh
 
     dir1="/src/deploy/crds"
     dir2="/module_crds/cert-manager"
