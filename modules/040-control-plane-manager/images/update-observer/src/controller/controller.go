@@ -213,11 +213,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		err := r.client.Create(ctx, cm)
 		if err != nil {
 			r.log.Error(err, "failed to create configmap")
+			return reconcile.Result{}, nil
 		}
 	} else {
 		err := r.client.Update(ctx, cm)
 		if err != nil {
 			r.log.Error(err, "failed to update configmap")
+			return reconcile.Result{}, nil
 		}
 	}
 
