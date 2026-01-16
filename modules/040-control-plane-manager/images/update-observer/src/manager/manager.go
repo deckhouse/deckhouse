@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
 	controllerruntime "sigs.k8s.io/controller-runtime"
@@ -52,7 +53,7 @@ func init() {
 }
 
 type Manager struct {
-	manager.Manager
+	runtimeManager manager.Manager
 }
 
 func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
@@ -77,6 +78,9 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		Cache: cache.Options{
 			ReaderFailOnMissingInformer: false,
 			DefaultTransform:            cache.TransformStripManagedFields(),
+			DefaultNamespaces: map[string]cache.Config{
+				"kube-system": {},
+			},
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
@@ -114,4 +118,20 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 	return &Manager{
 		runtimeManager,
 	}, nil
+}
+
+func (c *Manager) Start(ctx context.Context) error {
+	go func() {
+		if err := c.runtimeManager.Start(ctx); err != nil {
+			klog.Fatalf("failed to start runtime manager: %v", err)
+		}
+	}()
+	klog.Info("runtime manager started")
+
+	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
+		return fmt.Errorf("wait for cache sync")
+	}
+	klog.Info("cache synced")
+
+	return nil
 }

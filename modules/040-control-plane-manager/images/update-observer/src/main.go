@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"os/signal"
 	"syscall"
 	"update-observer/constant"
@@ -27,7 +28,7 @@ import (
 )
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	manager, err := manager.NewManager(ctx, false) // TODO pprof flag
 	if err != nil {
@@ -38,7 +39,12 @@ func main() {
 		klog.Fatalf("Failed to start the manager: %v", err)
 	}
 
-	<-ctx.Done()
-	stop()
-	klog.Infof("Bye from %s", constant.ControllerName)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	for range sigs {
+		cancel()
+		klog.Infof("Bye from %s", constant.ControllerName)
+		break
+	}
 }
