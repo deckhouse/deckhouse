@@ -210,9 +210,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	cm.Data["status"] = string(statusBytes)
 
 	if cm.ResourceVersion == "" {
-		r.client.Create(ctx, cm)
+		err = r.client.Create(ctx, cm)
+		r.log.Error(err, "failed to create configmap")
 	} else {
-		r.client.Update(ctx, cm)
+		err = r.client.Update(ctx, cm)
+		r.log.Error(err, "failed to update configmap")
 	}
 
 	if status.Phase != "UpToDate" {
