@@ -307,7 +307,7 @@ nodeGroup:
     containerLogMaxSize: 50Mi
     resourceReservation:
       mode: "Off"
-  kubernetesVersion: "1.30"
+  kubernetesVersion: "1.31"
   manualRolloutID: ""
   name: master
   nodeTemplate:
