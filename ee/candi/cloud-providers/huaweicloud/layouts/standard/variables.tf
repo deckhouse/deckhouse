@@ -27,6 +27,11 @@ variable "clusterUUID" {
   type = string
 }
 
+variable "registryDataDeviceEnable" {
+  type    = bool
+  default = false
+}
+
 locals {
   prefix                = var.clusterConfiguration.cloud.prefix
   standard              = lookup(var.providerClusterConfiguration, "standard", {})

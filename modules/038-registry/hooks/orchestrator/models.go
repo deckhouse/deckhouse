@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/bashible"
 	inclusterproxy "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/incluster-proxy"
+	nodeservices "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/node-services"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/pki"
 	registryservice "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-service"
 	registryswither "github.com/deckhouse/deckhouse/modules/038-registry/hooks/orchestrator/registry-switcher"
@@ -103,13 +104,15 @@ func (p ParamsState) toParams() (Params, error) {
 }
 
 type Inputs struct {
-	Params         Params
-	RegistrySecret deckhouse_registry.Config
-	InitSecret     init_secret.Config
+	Params          Params
+	RegistrySecret  deckhouse_registry.Config
+	InitSecret      init_secret.Config
+	IngressClientCA *x509.Certificate // optional
 
 	PKI              pki.Inputs
 	Secrets          secrets.Inputs
 	Users            users.Inputs
+	NodeServices     nodeservices.Inputs
 	InClusterProxy   inclusterproxy.Inputs
 	RegistryService  registryservice.Inputs
 	Bashible         bashible.Inputs
@@ -135,13 +138,15 @@ func (p Params) Validate() error {
 	}
 
 	switch p.Mode {
-	case registry_const.ModeDirect, registry_const.ModeUnmanaged:
+	case registry_const.ModeDirect, registry_const.ModeProxy, registry_const.ModeUnmanaged:
 		return validation.ValidateStruct(&p,
 			validation.Field(&p.ImagesRepo, validation.Required),
 			validation.Field(&p.Scheme, validation.In("HTTP", "HTTPS")),
 			validation.Field(&p.UserName, validation.When(p.Password != "", validation.Required)),
 			validation.Field(&p.Password, validation.When(p.UserName != "", validation.Required)),
 		)
+	case registry_const.ModeLocal:
+		return nil
 	}
 	return fmt.Errorf("Unknown registry mode: %q", p.Mode)
 }
