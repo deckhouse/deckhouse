@@ -28,11 +28,11 @@ type ExternalCheck interface {
 }
 
 type cniCiliumCheck struct {
-	podsByNodes map[string][]*corev1.Pod
-	dsRevision  string
+	podsByNodes            map[string][]*corev1.Pod
+	controllerRevisionHash string
 }
 
-func NewCniCiliumCheck(ctx context.Context, pods *corev1.PodList, currentDsRevision string) (*cniCiliumCheck, error) {
+func NewCniCiliumCheck(ctx context.Context, pods *corev1.PodList, controllerRevisionHash string) (*cniCiliumCheck, error) {
 	podsByNodeNames := make(map[string][]*corev1.Pod, len(pods.Items))
 	for _, pod := range pods.Items {
 		podsByNodeName, found := podsByNodeNames[pod.Spec.NodeName]
@@ -44,8 +44,8 @@ func NewCniCiliumCheck(ctx context.Context, pods *corev1.PodList, currentDsRevis
 	}
 
 	return &cniCiliumCheck{
-		podsByNodes: podsByNodeNames,
-		dsRevision:  currentDsRevision,
+		podsByNodes:            podsByNodeNames,
+		controllerRevisionHash: controllerRevisionHash,
 	}, nil
 }
 
@@ -73,8 +73,9 @@ func (c *cniCiliumCheck) GetCheckResult(pod *corev1.Pod) checkResult {
 		return Denied
 	}
 
-	if ciliumPod.GetLabels()[constant.PodTemplateGenerationLabel] != c.dsRevision {
-		klog.Warningf("updating %s: the %s cilium pod on the %s node has wrong template generation", pod.Name, ciliumPod.Name, pod.Spec.NodeName)
+	podControllerRevisionHash := ciliumPod.GetLabels()[constant.ControllerRevisionHashLabel]
+	if podControllerRevisionHash != c.controllerRevisionHash {
+		klog.Warningf("updating %s: the %s cilium pod on the %s node has wrong template generation: expected %s, current %s", pod.Name, ciliumPod.Name, pod.Spec.NodeName, c.controllerRevisionHash, podControllerRevisionHash)
 		return Denied
 	}
 
