@@ -60,3 +60,10 @@ Key changes:
 ### 009-kerberos-ldap-spnego.patch
 
 Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
+
+### 010-fix-cves.patch
+
+This patch fixes:
+
+- CVE-2025-47914
+- CVE-2025-58181
