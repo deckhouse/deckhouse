@@ -60,14 +60,29 @@ func TestErr(t *testing.T) {
 	attr = log.Err(nilCustomErr)
 	assert.Equal(t, "error", attr.Key)
 	assert.Equal(t, "nil", attr.Value.String())
+
+	// Test with custom error value type
+	valueErr := valueError{message: "value error message"}
+	attr = log.Err(valueErr)
+	assert.Equal(t, "error", attr.Key)
+	assert.Equal(t, "value error message", attr.Value.String())
 }
 
-// customError is a simple custom error type for testing
+// customError is a simple custom error type for testing (pointer receiver)
 type customError struct {
 	message string
 }
 
 func (e *customError) Error() string {
+	return e.message
+}
+
+// valueError is a custom error type with value receiver
+type valueError struct {
+	message string
+}
+
+func (e valueError) Error() string {
 	return e.message
 }
 
