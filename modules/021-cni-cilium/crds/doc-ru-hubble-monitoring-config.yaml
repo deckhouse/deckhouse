@@ -21,7 +21,7 @@ spec:
                     collectors:
                       description: |
                         Список расширенных метрик Hubble для экспорта.
-                        
+
                         Каждый коллектор представляет собой определённый тип метрики.
 
                         Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
@@ -32,8 +32,11 @@ spec:
                           contextOptions:
                             description: |
                               Необязательные параметры контекста для метрик Hubble.
-                              
-                              Параметры контекста позволяют настраивать поведение сбора метрик.
+
+                              Определяет, по каким параметрам будут детализироваться метрики, которые формирует коллектор.
+                              Если не указать `contextOptions`, коллектор вернёт набор метрик по умолчанию, агрегированный в целом, без разбивки по отдельным параметрам.
+                              Например, для коллектора `drop` пустой `contextOptions` вернёт общую статистику дропов без различения конкретного источника и назначения.
+                              Если задать `contextOptions`, значения метрик будут группироваться по выбранным измерениям, например по Pod-ам источника и назначения, namespace и лейблам.
 
                               > **Внимание.** Большое количество меток в метриках может привести к снижению производительности Prometheus.
 
@@ -41,7 +44,7 @@ spec:
                 flowLogs:
                   description: |
                     Конфигурация для экспорта журналов событий с агентов Cilium.
-                    
+
                     Журналы событий предоставляют детальную информацию о сетевых событиях Cilium.
 
                     > **Внимание.** Изменение этого параметра приведет к перезапуску агентов Cilium.
@@ -51,12 +54,12 @@ spec:
                     enabled:
                       description: |
                         Включает ведение журналов событий для агентов Cilium.
-                        
+
                         Файл журнала расположен на файловой системе узла по пути `/var/log/cilium/hubble/flow.log`.
                     allowFilterList:
                       description: >
                         Определяет фильтры, которые управляют тем, какие события экспортируются в лог.
-                        
+
                         Экспортируются только события, которые соответствуют хотя бы одному из указанных объектов фильтра.
                         Если фильтры не заданы, разрешены все события.
 
@@ -74,7 +77,7 @@ spec:
                           source_ip_xlated:
                             description: IP-адрес или CIDR источника после трансляции (SNAT).
                           source_pod:
-                            description: Префиксы имён подов источника.
+                            description: Префиксы имён подов источника в формате NamespacedName (`namespace/pod`).
                           source_fqdn:
                             description: Полные доменные имена (FQDN) источника.
                           source_label:
@@ -83,7 +86,7 @@ spec:
 
                               Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           source_service:
-                            description: Имена сервисов источника.
+                            description: Имена сервисов источника в формате NamespacedName (`namespace/service`).
                           source_workload:
                             description: Нагрузки источника.
                             items:
@@ -97,7 +100,7 @@ spec:
                           destination_ip:
                             description: IP-адрес или CIDR назначения.
                           destination_pod:
-                            description: Имена подов назначения.
+                            description: Имена подов назначения в формате NamespacedName (`namespace/pod`).
                           destination_fqdn:
                             description: Полные доменные имена (FQDN) назначения.
                           destination_label:
@@ -106,7 +109,7 @@ spec:
 
                               Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           destination_service:
-                            description: Имена сервисов назначения.
+                            description: Имена сервисов назначения в формате NamespacedName (`namespace/service`).
                           destination_workload:
                             description: Нагрузки назначения.
                             items:
@@ -205,7 +208,7 @@ spec:
                     denyFilterList:
                       description: >
                         Определяет фильтры, которые управляют тем, какие события явно исключаются из логирования.
-                        
+
                         Любое событие, которое соответствует хотя бы одному из указанных объектов фильтра,
                         будет запрещено к экспорту. Если фильтры не заданы, ничего не исключается.
 
@@ -223,7 +226,7 @@ spec:
                           source_ip_xlated:
                             description: IP-адрес или CIDR источника после трансляции (SNAT).
                           source_pod:
-                            description: Префиксы имён подов источника.
+                            description: Префиксы имён подов источника в формате NamespacedName (`namespace/pod`).
                           source_fqdn:
                             description: Полные доменные имена (FQDN) источника.
                           source_label:
@@ -232,7 +235,7 @@ spec:
 
                               Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           source_service:
-                            description: Имена сервисов источника.
+                            description: Имена сервисов источника в формате NamespacedName (`namespace/service`).
                           source_workload:
                             description: Нагрузки источника.
                             items:
@@ -246,7 +249,7 @@ spec:
                           destination_ip:
                             description: IP-адрес или CIDR назначения.
                           destination_pod:
-                            description: Имена подов назначения.
+                            description: Имена подов назначения в формате NamespacedName (`namespace/pod`).
                           destination_fqdn:
                             description: Полные доменные имена (FQDN) назначения.
                           destination_label:
@@ -255,7 +258,7 @@ spec:
 
                               Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           destination_service:
-                            description: Имена сервисов назначения.
+                            description: Имена сервисов назначения в формате NamespacedName (`namespace/service`).
                           destination_workload:
                             description: Нагрузки назначения.
                             items:

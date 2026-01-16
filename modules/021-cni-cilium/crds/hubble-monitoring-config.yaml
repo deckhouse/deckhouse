@@ -31,7 +31,7 @@ spec:
                   type: object
                   description: |
                     Configuration for exporting extended metrics from Cilium agents.
-                    
+
                     Extended metrics provide deeper insight into cluster network behavior.
 
                     > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
@@ -52,7 +52,7 @@ spec:
                       type: array
                       description: |
                         List of Hubble extended metrics to export.
-                        
+
                         Each collector represents a specific metric type.
 
                         For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
@@ -80,8 +80,11 @@ spec:
                             type: string
                             description: |
                               Optional context options for Hubble metrics.
-                              
-                              Context options allow customizing metric collection behavior.
+
+                              Defines which parameters are used to break down the metrics produced by a collector.
+                              If you do not specify `contextOptions`, the collector returns the default set of metrics aggregated overall, without breakdown by individual parameters.
+                              For example, for the `drop` collector, an empty `contextOptions` returns overall drop statistics without distinguishing the exact source and destination.
+                              When you set `contextOptions`, metric values are grouped by the selected dimensions, for example by source and destination Pods, namespaces, and labels.
 
                               > **Warning.** A large number of labels on metrics can lead to Prometheus performance degradation.
 
@@ -90,7 +93,7 @@ spec:
                   type: object
                   description: |
                     Configuration for exporting event logs from Cilium agents.
-                    
+
                     Event logs provide detailed visibility into Cilium's network events.
 
                     > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
@@ -123,7 +126,7 @@ spec:
                       type: array
                       description: >
                         Defines filters that control which events are exported for logging.
-                        
+
                         Only events that match at least one of the specified filter objects
                         will be exported. If no filters are specified, all events are allowed.
 
@@ -161,7 +164,7 @@ spec:
                                 - format: cidr
                           source_pod:
                             type: array
-                            description: Source Pod name prefixes.
+                            description: Source Pod name prefixes in the form NamespacedName (`namespace/pod`).
                             items:
                               type: string
                             x-doc-examples:
@@ -180,12 +183,14 @@ spec:
                               Source label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: [ "source:foo=bar" ]
+                            x-doc-examples:
+                              - "k8s:role=frontend"
+                              - "reserved:kube-apiserver"
                             items:
                               type: string
                           source_service:
                             type: array
-                            description: Source service names.
+                            description: Source service name prefixes in the form NamespacedName (`namespace/service`).
                             items:
                               type: string
                             x-doc-examples:
@@ -220,7 +225,7 @@ spec:
                                 - format: cidr
                           destination_pod:
                             type: array
-                            description: Destination Pod names.
+                            description: Destination Pod name prefixes in the form NamespacedName (`namespace/pod`).
                             items:
                               type: string
                             x-doc-examples:
@@ -239,12 +244,14 @@ spec:
                               Destination label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: ["source:foo=bar"]
+                            x-doc-examples:
+                              - "k8s:role=frontend"
+                              - "reserved:kube-apiserver"
                             items:
                               type: string
                           destination_service:
                             type: array
-                            description: Destination service names.
+                            description: Destination service name prefixes in the form NamespacedName (`namespace/service`).
                             items:
                               type: string
                             x-doc-examples:
@@ -508,7 +515,9 @@ spec:
                               Node label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: [ "source:foo=bar" ]
+                            x-doc-examples:
+                              - "node-role.kubernetes.io/control-plane="
+                              - "topology.kubernetes.io/ru-central1-a"
                             items:
                               type: string
                           ip_version:
@@ -529,7 +538,7 @@ spec:
                       type: array
                       description: >
                         Defines filters that control which events are explicitly excluded from logging.
-                        
+
                         Any event that matches at least one of the specified filter objects
                         will be denied from being exported. If no filters are specified, no events are denied.
                         This allows you to refine the set of events that are logged by excluding certain types.
@@ -568,7 +577,7 @@ spec:
                                 - format: cidr
                           source_pod:
                             type: array
-                            description: Source Pod name prefixes.
+                            description: Source Pod name prefixes in the form NamespacedName (`namespace/pod`).
                             items:
                               type: string
                             x-doc-examples:
@@ -587,12 +596,14 @@ spec:
                               Source label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: [ "source:foo=bar" ]
+                            x-doc-examples:
+                              - "k8s:role=frontend"
+                              - "reserved:kube-apiserver"
                             items:
                               type: string
                           source_service:
                             type: array
-                            description: Source service names.
+                            description: Source service name prefixes in the form NamespacedName (`namespace/service`).
                             items:
                               type: string
                             x-doc-examples:
@@ -627,7 +638,7 @@ spec:
                                 - format: cidr
                           destination_pod:
                             type: array
-                            description: Destination Pod names.
+                            description: Destination Pod name prefixes in the form NamespacedName (`namespace/pod`).
                             items:
                               type: string
                             x-doc-examples:
@@ -646,12 +657,14 @@ spec:
                               Destination label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: [ "source:foo=bar" ]
+                            x-doc-examples:
+                              - "k8s:role=frontend"
+                              - "reserved:kube-apiserver"
                             items:
                               type: string
                           destination_service:
                             type: array
-                            description: Destination service names.
+                            description: Destination service name prefixes in the form NamespacedName (`namespace/service`).
                             items:
                               type: string
                             x-doc-examples:
@@ -915,7 +928,9 @@ spec:
                               Node label selectors.
 
                               For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
-                            x-doc-examples: [ "source:foo=bar" ]
+                            x-doc-examples:
+                              - "node-role.kubernetes.io/control-plane="
+                              - "topology.kubernetes.io/ru-central1-a"
                             items:
                               type: string
                           ip_version:
