@@ -20,7 +20,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/service-with-healthchecks-build-artifact
 final: false
-fromImage: builder/golang-alpine
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 mount:
 {{ include "mount points for golang builds" . }}
 import:
@@ -47,7 +47,8 @@ shell:
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
-  - go build -mod=vendor -ldflags="-s -w" -o /controller .
+  - | 
+    {{- include "image-build.build" (set $ "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /controller .`) | indent 6 }}
   - chown 64535:64535 /controller
   - chmod +x /controller
   - rm -rf /src/vendor
