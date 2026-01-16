@@ -674,6 +674,7 @@ import:
   add: /usr/sbin/setcap
   to: /tools/setcap
   before: install
+#/bin/sh is required for modsecurity lib to work
 - image: tools/bash
   add: /usr
   to: /chroot
