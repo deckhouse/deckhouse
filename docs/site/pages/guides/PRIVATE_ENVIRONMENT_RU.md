@@ -802,7 +802,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 Можно использовать любой прокси-сервер, соответствующий вашим требованиям. В качестве примера воспользуемся [Squid](https://www.squid-cache.org/).
 
-Разверните Squid на сервере Bastion в контейнере, выполнив команду:
+Разверните Squid на сервере Bastion в контейнере:
 
 ```bash
 docker run -d --name squid -p 3128:3128 ubuntu/squid
