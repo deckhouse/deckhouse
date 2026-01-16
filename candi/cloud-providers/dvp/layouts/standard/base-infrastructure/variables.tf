@@ -52,13 +52,6 @@ locals {
     {
       from = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
         }
       }]
@@ -115,13 +108,6 @@ locals {
 
   template_egress = [
     { to = [{ ipBlock = { cidr = "0.0.0.0/0" } }] },
-    {
-      to = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "team-d8-cloud-providers" }
-        }
-      }]
-    },
     {
       to = [{
         namespaceSelector = {
