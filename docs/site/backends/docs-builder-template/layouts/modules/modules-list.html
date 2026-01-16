@@ -40,7 +40,9 @@
     {{- partial "sidebar-filter" . }}
   </div>
   <div class="layout-sidebar__content layout-sidebar__content--tile">
-
+    <div class="selected__filters">
+      <div class="selected__filters--list"></div>
+    </div>
     <h1 class="tile__title">{{ .Title }}</h1>
 
     {{.Content}}
@@ -122,27 +124,26 @@
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
-        <h2 class="button-tile__title">{{ .module }}</h2>
-        {{- $moduleStage := "" }}
-        {{- $moduleDescription := default "" .description }}
+          {{- $moduleStage := "" }}
+          {{- $moduleDescription := default "" .description }}
 
-        {{- if .metadata }}
-          {{- $moduleStage = .metadata.stage }}
+          {{- if .metadata }}
+            {{- $moduleStage = .metadata.stage }}
 
-          {{/* Try to get description from module metadata (module.yaml) */}}
-          {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
-          {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
-            {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
+            {{/* Try to get description from module metadata (module.yaml) */}}
+            {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
+            {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
+              {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
+            {{- end }}
           {{- end }}
-        {{- end }}
 
-        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-          <span>
+          {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
             <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-              {{- $moduleStage }}
+              <img src="/images/{{lower $moduleStage }}.svg" alt="{{- $moduleStage }}">
             </span>
-          </span>
-        {{- end }}
+          {{- end }}
+        <h2 class="button-tile__title">{{ .module }}</h2>
+
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>
@@ -200,7 +201,7 @@
           </div>
         </a>
       {{- end }}
-
+      
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>

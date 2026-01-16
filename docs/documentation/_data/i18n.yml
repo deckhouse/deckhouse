@@ -187,6 +187,9 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
+  search_placeholder_text_filter:
+    en: Enter a&nbsp;name
+    ru: Введите название
   search_context_dkpdocs_and_modules:
     en: The search is performed throughout DKP documentation and modules.
     ru: Поиск выполняется по всей документации DKP и модулям.
