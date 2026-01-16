@@ -482,8 +482,10 @@ func (c *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 		if k8serrors.IsNotFound(err) {
 			klog.Infof("snapshot %v of disk %v is not found, creating", request.Name, request.SourceVolumeId)
 
-			requiredConsistency := "false"
-			requiredConsistency = request.Parameters[ParameterDVPRequiredConsistency]
+			requiredConsistency, ok := request.Parameters[ParameterDVPRequiredConsistency]
+			if !ok {
+				requiredConsistency = "false"
+			}
 
 			requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
 			if err != nil {
