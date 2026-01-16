@@ -43,5 +43,5 @@ type SpecData struct {
 type Status struct {
 	ControlPlane ControlPlaneStatus `json:"controlPlane" yaml:"controlPlane"`
 	Nodes        NodesStatus        `json:"nodes" yaml:"nodes"`
-	State        string             `json:"state" yaml:"state"`
+	Phase        string             `json:"phase" yaml:"phase"`
 }

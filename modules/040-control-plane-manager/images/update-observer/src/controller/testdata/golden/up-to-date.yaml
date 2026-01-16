@@ -13,7 +13,7 @@ data:
     nodes:
       desiredCount: 3
       upToDateCount: 3
-    state: UpToDate
+    phase: UpToDate
 metadata:
   labels:
     heritage: deckhouse

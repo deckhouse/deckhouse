@@ -85,6 +85,13 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 				},
 			},
 		},
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{
+					&corev1.Node{},
+				},
+			},
+		},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)

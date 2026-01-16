@@ -181,24 +181,22 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		ControlPlane: cpStatus,
 		Nodes:        nodesStatus,
 	}
-	// TODO: state -> phase
 
 	switch {
 	case clusterCfg.UpdateMode == "Automatic" &&
 		cpStatus.CurrentVersion != "" &&
 		semver.Compare(cpStatus.CurrentVersion, clusterCfg.DesiredVersion) == 1:
-
-		status.State = "VersionDrift"
+		status.Phase = "VersionDrift"
 		status.ControlPlane.State = "VersionDrift"
 	case cpStatus.UpToDateCount < cpStatus.DesiredCount:
-		status.State = "ControlPlaneUpdating"
+		status.Phase = "ControlPlaneUpdating"
 		status.ControlPlane.State = "Updating"
 	case nodesStatus.UpToDateCount < nodesStatus.DesiredCount:
-		status.State = "NodesUpdating"
+		status.Phase = "NodesUpdating"
 		status.ControlPlane.State = "UpToDate"
 		status.ControlPlane.Progress = "100%"
 	default:
-		status.State = "UpToDate"
+		status.Phase = "UpToDate"
 		status.ControlPlane.State = "UpToDate"
 		status.ControlPlane.Progress = "100%"
 	}
@@ -217,7 +215,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		r.client.Update(ctx, cm)
 	}
 
-	if status.State != "UpToDate" {
+	if status.Phase != "UpToDate" {
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
