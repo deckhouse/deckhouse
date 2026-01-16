@@ -4,7 +4,9 @@ title: "The metallb module: примеры"
 
 Metallb можно использовать в статических кластерах (bare metal), когда нет возможности воспользоваться балансировщиком от облачного провайдера. Metallb может работать в режимах L2 LoadBalancer или BGP LoadBalancer.
 
-## Пример использования metallb в режиме L2 LoadBalancer
+## Примеры использования metallb в режиме L2 LoadBalancer
+
+### Присвоение сервису заданного количества IP-адресов из пула
 
 {% raw %}
 
@@ -28,6 +30,8 @@ d8 k create deploy nginx --image=nginx
 
 Создайте ресурс MetalLoadBalancerClass:
 
+> Мы рекомендуем размещать Metallb балансировщики на frontend-узлах. Подробнее о типах узлов и сценариях развертывания — в разделе [«Подбор ресурсов для кластера на bare metal»](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания).
+
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
 kind: MetalLoadBalancerClass
@@ -38,7 +42,12 @@ spec:
     - 192.168.2.100-192.168.2.150
   isDefault: false
   nodeSelector:
-    node-role.kubernetes.io/loadbalancer: "" # селектор узлов-балансировщиков
+    node.deckhouse.io/group: frontend
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    value: frontend
+    operator: Equal
   type: L2
 ```
 
@@ -79,6 +88,84 @@ $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.101:8000
 200
 $ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 200
+```
+
+{% endraw %}
+
+### Присвоение сервису определенных IP-адресов из пула
+
+{% raw %}
+
+Включите модуль:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  enabled: true
+  version: 2
+```
+
+Создайте ресурс _MetalLoadBalancerClass_:
+
+> Мы рекомендуем размещать Metallb балансировщики на frontend-узлах. Подробнее о типах узлов и сценариях развертывания — в разделе [«Подбор ресурсов для кластера на bare metal»](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания).
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: ingress
+spec:
+  addressPool:
+    - 192.168.2.100-192.168.2.150
+  isDefault: false
+  nodeSelector:
+    node.deckhouse.io/group: frontend
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    value: frontend
+    operator: Equal
+  type: L2
+```
+
+Создайте ресурс _IngressNginxController_:
+
+> Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. При этом также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    loadBalancerClass: ingress
+    annotations:
+      # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
+      network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+      # Список адресов из пула, объявленного в MetalLoadBalancerClass, которые будут выделены сервису.
+      network.deckhouse.io/load-balancer-ips: "192.168.2.102, 192.168.2.103, 192.168.2.104"
+  # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же узлах, что и поды MetalLB speaker.
+  nodeSelector:
+    node.deckhouse.io/group: frontend
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    value: frontend
+    operator: Equal
+```
+
+Платформа создаст сервис с типом `LoadBalancer`, которому будут присвоены указанные адреса:
+
+```shell
+d8 k get svc
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
+nginx-load-balancer    LoadBalancer   10.222.130.11   192.168.2.102,192.168.2.103,192.168.2.104   80:30689/TCP,443:30668/TCP   11s
 ```
 
 {% endraw %}
