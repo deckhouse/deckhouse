@@ -1,0 +1,55 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            PackageRepository является источником пакетов для Deckhouse.
+          properties:
+            spec:
+              description: |
+                Определяет поведение ресурса.
+              properties:
+                registry:
+                  description: |
+                    Конфигурация для реестра пакетов.
+                  properties:
+                    ca:
+                      description: |
+                        Данные центра сертификации для проверки TLS.
+                    dockerCfg:
+                      description: |
+                        Конфигурация Docker для аутентификации.
+                    repo:
+                      description: |
+                        Путь к репозиторию в реестре.
+                    scheme:
+                      description: |
+                        Схема для доступа к реестру (например, https).
+            status:
+              description: |
+                Статус ресурса.
+              properties:
+                message:
+                  description: |
+                    Человеко-читаемое сообщение о статусе репозитория.
+                packages:
+                  description: |
+                    Список пакетов, доступных в этом репозитории.
+                  items:
+                    properties:
+                      name:
+                        description: |
+                          Название пакета.
+                      type:
+                        description: |
+                          Тип пакета.
+                packagesCount:
+                  description: |
+                    Общее количество пакетов в этом репозитории.
+                phase:
+                  description: |
+                    Текущая фаза репозитория.
+                syncTime:
+                  description: |
+                    Последнее время синхронизации репозитория.

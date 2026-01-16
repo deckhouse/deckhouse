@@ -148,6 +148,7 @@ func (o *Operator) Remove(namespace, instance string) {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
 			o.queueService.Remove(fmt.Sprintf("%s/%s", name, q))
+			o.queueService.Remove(fmt.Sprintf("%s/%s/sync", name, q))
 		}
 	}))
 

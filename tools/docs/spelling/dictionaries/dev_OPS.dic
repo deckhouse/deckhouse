@@ -1,4 +1,4 @@
-2533
+2539
 1GB
 2GB
 5XX
@@ -402,7 +402,6 @@ DisruptionFunc
 distros
 Django
 dkms
-dkp
 DKP
 DN
 DNAT
@@ -464,7 +463,6 @@ elasticsearch
 Elasticsearch
 ELB
 EmailConfig
-emailVerified
 emptyDir
 enableMultiTenancy
 endofftopic
@@ -561,7 +559,6 @@ Gitaly
 giterminism
 GitHub
 gitignore
-gitlab
 GitLab
 GitOps
 GKE
@@ -681,7 +678,6 @@ inodes
 inotify
 inplace
 insecureNoSSL
-insecureSkipEmailVerified
 instanceclass
 instanceClass
 InstanceClass
@@ -752,10 +748,12 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+Kerberos
 KESL
 Keycloak
 keyField
 KeypairFullAccess
+keytab
 KeyValue
 Kiali
 KiB
@@ -1011,10 +1009,10 @@ oauth
 OAuth
 objectmeta
 OCI
+offline
 OFFLINE
 offtopic
 OICD
-oidc
 OIDC
 ok
 OK
@@ -1030,7 +1028,6 @@ openapi
 openAPI
 OpenAPI
 openAPIV
-openid
 OpenID
 OpenKruise
 OpenLDAP
@@ -1080,6 +1077,7 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordless
 pathPrefix
 PCI
 pcs
@@ -1328,6 +1326,7 @@ spellchecker
 Spellchecking
 SPIFFE
 Splunk
+SPNEGO
 SQL
 SQLite
 sqs
@@ -1453,7 +1452,6 @@ TODO
 TolerationSeconds
 toolchain
 Tooltip
-totp
 Tproger
 trdl
 trivy
@@ -1676,7 +1674,6 @@ ZvirtInstanceClass
 аттрибутов
 Аудиофайлы
 аутентификатора
-аутентификаторе
 аутентификаторов
 аутентификаторы
 аутентификациии
@@ -1686,7 +1683,6 @@ ZvirtInstanceClass
 аутентифицировались
 аутентифицированному
 аутентифицированных
-аутентифицированный
 аутентифицировать
 аутентифицироваться
 аутентифицирует
@@ -1741,6 +1737,7 @@ ZvirtInstanceClass
 валидация
 валидирования
 валидировать
+валидирует
 валидируется
 валидируются
 вебхук
@@ -1994,7 +1991,6 @@ ZvirtInstanceClass
 майнеров
 майнинг
 маппинг
-маппинга
 маршрутизировать
 маршрутизируемой
 масштабироваться
@@ -2058,6 +2054,9 @@ ZvirtInstanceClass
 незашифрованном
 неизменяем
 неинтерактивном
+неймспейс
+неймспейсах
+неймспейсе
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2109,6 +2108,7 @@ ZvirtInstanceClass
 отмасштабирует
 отмонтировать
 отрисовки
+офлайн
 п
 пайплайна
 пайплайнами
@@ -2477,6 +2477,9 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
+хешированные
+хешированный
+хешированных
 хост
 хоста
 хостам

@@ -65,6 +65,8 @@ const (
 	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
 
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
+
+	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 )
 
 var (
@@ -85,7 +87,15 @@ var _ runtime.Object = (*Application)(nil)
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,shortName=app
+// +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.version
+// +kubebuilder:printcolumn:name=Registry,type=string,JSONPath=.spec.packageRepository,priority=1
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
+// +kubebuilder:printcolumn:name="Processed",type="string",JSONPath=".status.resourceConditions[?(@.type=='Processed')].status"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.resourceConditions[?(@.type=='Processed')].message"
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
@@ -103,53 +113,131 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	PackageName       string `json:"packageName"`
-	PackageRepository string `json:"packageRepository,omitempty"`
-	Version           string `json:"version"`
-	ReleaseChannel    string `json:"releaseChannel,omitempty"`
+	// Name of the application package to install.
+	PackageName string `json:"packageName"`
+
+	// Name of the repository where the package is located.
+	// If not specified, the default repository is used.
+	// +optional
+	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
+
+	// Version of the application package to install.
+	PackageVersion string `json:"packageVersion"`
+
+	// Release channel for the application package.
+	// +optional
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Configuration settings for the application.
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
 	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
-	CurrentVersion     *ApplicationStatusVersion            `json:"currentVersion,omitempty"`
-	Repository         string                               `json:"repository,omitempty"`
-	Status             string                               `json:"status,omitempty"`
-	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	ResourceConditions []ApplicationResourceStatusCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// Information about the currently installed version.
+	// +optional
+	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// Conditions represent the latest available observations of the application's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []ApplicationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// InternalConditions represent internal conditions of the application.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	InternalConditions []ApplicationStatusInternalCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// ResourceConditions represent conditions related to application resources.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	ResourceConditions []ApplicationStatusResourceCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
-	Current string `json:"current,omitempty"`
+	// Semantic version of the installed application.
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// Release channel from which the version was installed.
+	// +optional
 	Channel string `json:"channel,omitempty"`
 }
 
 type ApplicationStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// Type of application condition.
+	Type string `json:"type"`
+
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// Programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-type ApplicationInternalStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+type ApplicationStatusInternalCondition struct {
+	// Type of internal application condition.
+	Type string `json:"type"`
+
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// Programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// The last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
-type ApplicationResourceStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+type ApplicationStatusResourceCondition struct {
+	// Type of resource condition.
+	Type string `json:"type"`
+
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// Programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

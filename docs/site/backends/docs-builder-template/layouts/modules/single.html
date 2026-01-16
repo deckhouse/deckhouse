@@ -119,6 +119,9 @@
         {{- end }}
 
       </div>
+
+      {{ partial "related-links" . }}
+
     </div>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}

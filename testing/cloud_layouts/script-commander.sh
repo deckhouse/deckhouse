@@ -1174,7 +1174,17 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get pods -l app=prom-rules-mutating
-[[ "$(kubectl get pods -l app=prom-rules-mutating -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+
+RS_NAME=$(kubectl get rs -l app=prom-rules-mutating \
+  --sort-by='{.metadata.creationTimestamp}' \
+  -o jsonpath='{.items[-1:].metadata.name}')
+
+WORKING_POD=$(kubectl get pods -l app=prom-rules-mutating \
+  --selector=pod-template-hash=${RS_NAME##*-} \
+  --field-selector=status.phase=Running \
+  --no-headers | awk '$2 == "1/1" {print $1; exit}')
+
+[[ "$WORKING_POD" == prom-rules-mutating* ]]
 END_SCRIPT
 )
 
@@ -1326,6 +1336,7 @@ function run-test() {
   for (( j=1; j<=5; j++ )); do
     sleep "$sleep_second"
     sleep_second=5
+    echo "Trying to connect to Commander"
 
     response=$(curl -s -X POST  \
       "https://${COMMANDER_HOST}/api/v1/clusters" \

@@ -747,10 +747,12 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+Kerberos
 KESL
 Keycloak
 keyField
 KeypairFullAccess
+keytab
 KeyValue
 Kiali
 KiB
@@ -1006,6 +1008,7 @@ oauth
 OAuth
 objectmeta
 OCI
+offline
 OFFLINE
 offtopic
 OICD
@@ -1073,6 +1076,7 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordless
 pathPrefix
 PCI
 pcs
@@ -1321,6 +1325,7 @@ spellchecker
 Spellchecking
 SPIFFE
 Splunk
+SPNEGO
 SQL
 SQLite
 sqs
@@ -1731,6 +1736,7 @@ ZvirtInstanceClass
 валидация
 валидирования
 валидировать
+валидирует
 валидируется
 валидируются
 вебхук
@@ -2047,6 +2053,9 @@ ZvirtInstanceClass
 незашифрованном
 неизменяем
 неинтерактивном
+неймспейс
+неймспейсах
+неймспейсе
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2098,6 +2107,7 @@ ZvirtInstanceClass
 отмасштабирует
 отмонтировать
 отрисовки
+офлайн
 п
 пайплайна
 пайплайнами
@@ -2466,6 +2476,9 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
+хешированные
+хешированный
+хешированных
 хост
 хоста
 хостам

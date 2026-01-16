@@ -250,9 +250,12 @@ spec:
 В параметре `bindPW` укажите пароль в открытом виде (plain text). Dex не поддерживает передачу хешированных паролей в этом параметре.
 {% endalert %}
 
-Также вы можете включить поддержку базовой аутентификации (Basic Authentication) для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-basic-authentication-ldap).
+Также вы можете включить поддержку:
 
-Пример настройки провайдера для интеграции с Active Directory:
+- Базовой аутентификации (Basic Authentication) для доступа к Kubernetes API, используя учетные данные LDAP. Для этого установите параметр `enableBasicAuth: true` в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider). Подробнее в разделе [Доступ с использованием Basic Authentication](k8s-api-lb.html#доступ-с-использованием-базовой-аутентификации-ldap).
+- SSO по Kerberos (SPNEGO) для LDAP. Для этого в ресурсе [DexProvider](/modules/user-authn/cr.html#dexprovider) включите блок `spec.ldap.kerberos` и настройте в нём необходимые параметры. Подробнее в разделе [SSO по Kerberos (SPNEGO) для LDAP](k8s-api-lb.html#sso-по-kerberos-spnego-для-ldap).
+
+Пример настройки провайдера для интеграции с Active Directory (базовая аутентификация):
 
 ```yaml
 apiVersion: deckhouse.io/v1

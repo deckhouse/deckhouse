@@ -56,3 +56,7 @@ Key changes:
 - Added proper logging for all internal errors
 - Added comprehensive tests to prevent future regressions
 - Maintained OAuth2/OIDC protocol compliance
+
+### 009-kerberos-ldap-spnego.patch
+
+Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.

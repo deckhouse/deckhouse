@@ -342,8 +342,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// clear overridden
 		availableModule.Overridden = false
 
-		// get update policy
-		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
+		policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
 			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
