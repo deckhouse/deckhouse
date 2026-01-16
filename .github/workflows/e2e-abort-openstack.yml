@@ -195,9 +195,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -349,7 +349,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -520,9 +520,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -674,7 +674,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -845,9 +845,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -999,7 +999,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1170,9 +1170,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1324,7 +1324,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1495,9 +1495,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1649,7 +1649,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1820,9 +1820,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -1974,7 +1974,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2145,9 +2145,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2299,7 +2299,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2470,9 +2470,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2624,7 +2624,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2795,9 +2795,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -2949,7 +2949,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3120,9 +3120,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3274,7 +3274,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3445,9 +3445,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3599,7 +3599,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3770,9 +3770,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
@@ -3924,7 +3924,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cb79a126-4234-4dac-a01e-2d3804266e3e"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}

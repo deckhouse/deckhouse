@@ -124,6 +124,10 @@ func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+func cleanupEtcdFolder() error {
+	return os.RemoveAll(filepath.Join("/var/lib/etcd/member"))
+}
+
 func backupFile(src string) error {
 	log.Info("backup file", slog.String("path", src))
 

@@ -76,6 +76,8 @@ shell:
   - patch -p1 < /patches/ingress-nginx/017-fix-sorting.patch
   - patch -p1 < /patches/ingress-nginx/018-geoip-ver-metric.patch
   - patch -p1 < /patches/ingress-nginx/019-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/ingress-nginx/020-ingress-update-status.patch
+  - patch -p1 < /patches/ingress-nginx/021-use-proxy-real-ip-cidr-v2.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -395,6 +397,15 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
+  before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/nginx-chroot-wrapper.sh

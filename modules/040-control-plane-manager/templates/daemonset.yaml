@@ -260,7 +260,6 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd
-          readOnly: true
         - mountPath: /pki
           name: pki
           readOnly: true

@@ -431,7 +431,7 @@
   которые нужно использовать для организации межкластерных запросов.
   Ранее эти адреса вычислялись только автоматически, но в некоторых конфигурациях их определить невозможно.
 
-- У аутентификатора (ресурс DexAuthenticator) появился [параметр `highAvailability`](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability),
+- У аутентификатора (ресурс DexAuthenticator) появился [параметр `highAvailability`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability),
   который управляет режимом высокой доступности.
   В режиме высокой доступности запускается несколько реплик аутентификатора.
   Ранее режим высокой доступности всех аутентификаторов определялся [настройками глобального параметра](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/deckhouse-configure-global.html#parameters-highavailability)
@@ -444,7 +444,7 @@
 
 - Добавлена поддержка [облачного провайдера Huawei Cloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/cloud-provider-huaweicloud/).
 
-- Новый параметр [`keepDeletedFilesOpenedFor`](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods-keepdeletedfilesopenedfor) в модуле `log-shipper` позволяет настроить период,
+- Новый параметр [`keepDeletedFilesOpenedFor`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha1-spec-kubernetespods-keepdeletedfilesopenedfor) в модуле `log-shipper` позволяет настроить период,
   в течение которого будут храниться открытыми удалённые файлы логов.
   Опция позволит какое-то время читать логи удалённых подов в случае недоступности хранилища логов.
 

@@ -191,8 +191,8 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 	})
 }
 
-// UpdatePolicy returns policy for the module, if no policy, embeddedPolicy is returned
-func UpdatePolicy(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
+// GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
+func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
 	module := new(v1alpha1.Module)
 	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {

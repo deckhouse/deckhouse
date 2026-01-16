@@ -26,6 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	registry_config "github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
+	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -34,40 +36,40 @@ import (
 
 func TestNewRegistryClientConfigGetter(t *testing.T) {
 	t.Run("Path with leading slash", func(t *testing.T) {
-		config := config.RegistryData{
-			Address:   "registry.deckhouse.io",
-			Path:      "/deckhouse/ee",
-			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=", // {"auths": { "registry.deckhouse.io": {}}}
+		config := registry_config.Data{
+			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
+			Username:   "",
+			Password:   "",
 		}
 		getter, err := newRegistryClientConfigGetter(config)
 		require.NoError(t, err)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Path without leading slash", func(t *testing.T) {
-		config := config.RegistryData{
-			Address:   "registry.deckhouse.io",
-			Path:      "deckhouse/ee",
-			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=", // {"auths": { "registry.deckhouse.io": {}}}
+		config := registry_config.Data{
+			ImagesRepo: "registry.deckhouse.io/deckhouse/ee",
+			Username:   "",
+			Password:   "",
 		}
 		getter, err := newRegistryClientConfigGetter(config)
 		require.NoError(t, err)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io/deckhouse/ee")
 	})
 	t.Run("Host with port, path with leading slash", func(t *testing.T) {
-		config := config.RegistryData{
-			Address:   "registry.deckhouse.io:30000",
-			Path:      "/deckhouse/ee",
-			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbzozMDAwMCI6IHt9fX0=", // {"auths": { "registry.deckhouse.io:30000": {}}}
+		config := registry_config.Data{
+			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
+			Username:   "",
+			Password:   "",
 		}
 		getter, err := newRegistryClientConfigGetter(config)
 		require.NoError(t, err)
 		require.Equal(t, getter.Repository, "registry.deckhouse.io:30000/deckhouse/ee")
 	})
 	t.Run("Host with port, path without leading slash", func(t *testing.T) {
-		config := config.RegistryData{
-			Address:   "registry.deckhouse.io:30000",
-			Path:      "deckhouse/ee",
-			DockerCfg: "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbzozMDAwMCI6IHt9fX0=", // {"auths": { "registry.deckhouse.io:30000	": {}}}
+		config := registry_config.Data{
+			ImagesRepo: "registry.deckhouse.io:30000/deckhouse/ee",
+			Username:   "",
+			Password:   "",
 		}
 		getter, err := newRegistryClientConfigGetter(config)
 		require.NoError(t, err)
@@ -178,6 +180,10 @@ func TestInstallDeckhouse(t *testing.T) {
 	clusterUUID := "848c3b2c-eda6-11ec-9289-dff550c719eb"
 
 	conf := &config.DeckhouseInstaller{
+		Registry: registry_mocks.ConfigBuilder(
+			registry_mocks.WithModeUnmanaged(),
+			registry_mocks.WithLegacyMode(),
+		),
 		Bundle:    "minimal",
 		LogLevel:  "Info",
 		UUID:      clusterUUID,
@@ -206,14 +212,19 @@ func TestInstallDeckhouse(t *testing.T) {
 		require.Equal(t, uuidCm.Data[manifests.ClusterUUIDCmKey], uuid)
 	}
 
+	getInstallParams := func() InstallDeckhouseParams {
+		return InstallDeckhouseParams{
+			BeforeDeckhouseTask: func() error { return nil },
+			State:               NewBootstrapState(cache.NewTestCache()),
+		}
+	}
+
 	t.Run("Does not have cluster uuid config map", func(t *testing.T) {
 		t.Run("should install Deckhouse", func(t *testing.T) {
 			fakeClient := client.NewFakeKubernetesClient()
 			createReadyDeckhousePod(fakeClient)
 
-			_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-				return nil
-			})
+			_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 			require.NoError(t, err, "Should install Deckhouse")
 
@@ -230,9 +241,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -249,9 +258,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, curUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.Error(t, err, "Should not install Deckhouse")
 
@@ -265,9 +272,7 @@ func TestInstallDeckhouse(t *testing.T) {
 				createReadyDeckhousePod(fakeClient)
 				createUUIDConfigMap(fakeClient, clusterUUID)
 
-				_, err := InstallDeckhouse(ctx, fakeClient, conf, func() error {
-					return nil
-				})
+				_, err := InstallDeckhouse(ctx, fakeClient, conf, getInstallParams())
 
 				require.NoError(t, err, "Should install Deckhouse")
 

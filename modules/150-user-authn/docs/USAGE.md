@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the 'user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
 
 {% raw %}
 
@@ -356,6 +356,48 @@ contexts:
 current-context: default
 ```
 
+#### Kerberos (SPNEGO) SSO for LDAP
+
+Dex supports passwordless Kerberos (SPNEGO) flow for the LDAP connector. When enabled, a browser that trusts the Dex host will send `Authorization: Negotiate …` and Dex will validate the Kerberos ticket using a service keytab, skip the login form, map the Kerberos principal to an LDAP username, query groups, and complete the OIDC flow.
+
+Minimal example extending the LDAP provider spec:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Secret in d8-user-authn with key 'krb5.keytab'
+      expectedRealm: EXAMPLE.COM              # optional, case-insensitive match
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # default false; if true, render form when header missing/invalid
+```
+
+Notes:
+
+- The Secret `dex-kerberos-keytab` must exist in the `d8-user-authn` namespace and have a data key named exactly `krb5.keytab`.
+- A single Dex Pod can serve multiple LDAP+Kerberos providers. Each provider mounts its own keytab; a shared `krb5.conf` is not required (Dex validates tickets offline using the keytab).
 To configure authentication, create a read-only user (service account) in LDAP.
 
 Specify the generated user path and password in the `bindDN` and `bindPW` fields of the [DexProvider](cr.html#dexprovider) custom resource.  Enter the password into the `bindPW` in plain-text format (unencrypted). Strategies involving the passing of hashed passwords are not supported.
@@ -539,6 +581,6 @@ Field description:
 After enabling 2FA, each user must register in the authenticator application during their first login.
 {% endalert %}
 
-## How to set permissions for a user or group
+### Assigning permissions to a user or group
 
-Parameters in the custom resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule) are used for configuration.
+For permission configuration, parameters of the custom resource [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) are used.

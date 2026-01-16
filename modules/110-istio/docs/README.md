@@ -130,8 +130,7 @@ The cluster components are divided into two categories:
 - Control plane — managing and maintaining services; "control-plane" usually refers to istiod Pods;
 - Data plane — mediating and controlling all network communication between microservices, it is composed of a set of sidecar-proxy containers.
 
-![Architecture of the cluster with Istio enabled](images/istio-architecture.svg)
-<!--- Source: https://docs.google.com/drawings/d/1wXwtPwC4BM9_INjVVoo1WXj5Cc7Wbov2BjxKp84qjkY/edit --->
+![Architecture of the cluster with Istio enabled](images/istio-architecture.png)
 
 All data plane services are grouped into a mesh with the following features:
 

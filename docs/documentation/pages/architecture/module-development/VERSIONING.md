@@ -3,7 +3,7 @@ title: "Versioning modules"
 permalink: en/architecture/module-development/versioning/
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses [semantic versioning](https://semver.org/lang/en/) for modules.
+Deckhouse Kubernetes Platform (DKP) uses [semantic versioning](https://semver.org/) for modules.
 
 When choosing a version, stick to the following guidelines:
 

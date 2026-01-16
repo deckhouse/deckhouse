@@ -1,6 +1,35 @@
 {
   "entries": [
     {
+      "title": "The csi-vsphere module",
+      "description": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
+      "module": "csi-vsphere",
+      "embedded": "true",
+      "tags": [
+        "embedded",
+        "storage"
+      ],
+      "editionMinimumAvailable": "se-plus",
+      "url": "csi-vsphere/",
+      "ru": {
+        "title": "Модуль csi-vsphere",
+        "description": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
+      },
+      "metadata": {
+        "name": "csi-vsphere",
+        "stage": "General Availability",
+        "subsystems": [
+          "infrastructure"
+        ],
+        "namespace": "d8-csi-vsphere",
+        "descriptions": {
+            "en": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
+            "ru": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
+        },
+        "oss": []
+      }
+    },
+    {
       "title": "The admission-policy-engine module",
       "description": "Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.",
       "module": "admission-policy-engine",

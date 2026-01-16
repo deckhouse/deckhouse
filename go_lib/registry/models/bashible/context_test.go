@@ -22,6 +22,8 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 func validContext() *Context {
@@ -178,7 +180,7 @@ func TestContextValidate(t *testing.T) {
 
 func TestContextToMap(t *testing.T) {
 	type result struct {
-		toMap map[string]interface{}
+		toMap map[string]any
 		err   bool
 	}
 
@@ -216,28 +218,28 @@ func TestContextToMap(t *testing.T) {
 				return ret
 			}(),
 			result: result{
-				toMap: func() map[string]interface{} {
+				toMap: func() map[string]any {
 
-					ret := map[string]interface{}{
+					ret := map[string]any{
 						"registryModuleEnable": true,
 						"mode":                 "unmanaged",
 						"version":              "unknown",
 						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
-						"proxyEndpoints":       []interface{}{"192.168.1.1"},
-						"hosts": map[string]interface{}{
-							"registry.d8-system.svc": map[string]interface{}{
-								"mirrors": []interface{}{
-									map[string]interface{}{
+						"proxyEndpoints":       []any{"192.168.1.1"},
+						"hosts": map[string]any{
+							"registry.d8-system.svc": map[string]any{
+								"mirrors": []any{
+									map[string]any{
 										"host":   "r.example.com",
 										"scheme": "https",
 										"ca":     "==exampleCA==",
-										"auth": map[string]interface{}{
+										"auth": map[string]any{
 											"username": "user",
 											"password": "password",
 											"auth":     "auth",
 										},
-										"rewrites": []interface{}{
-											map[string]interface{}{
+										"rewrites": []any{
+											map[string]any{
 												"from": "^deckhouse/system",
 												"to":   "deckhouse/ce",
 											},
@@ -276,27 +278,93 @@ func TestContextToMap(t *testing.T) {
 				return ret
 			}(),
 			result: result{
-				toMap: func() map[string]interface{} {
+				toMap: func() map[string]any {
 
-					ret := map[string]interface{}{
+					ret := map[string]any{
 						"registryModuleEnable": true,
 						"mode":                 "unmanaged",
 						"version":              "unknown",
 						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
-						"proxyEndpoints":       []interface{}{},
-						"hosts": map[string]interface{}{
-							"registry.d8-system.svc": map[string]interface{}{
-								"mirrors": []interface{}{
-									map[string]interface{}{
+						"proxyEndpoints":       []any{},
+						"hosts": map[string]any{
+							"registry.d8-system.svc": map[string]any{
+								"mirrors": []any{
+									map[string]any{
 										"host":   "r.example.com",
 										"scheme": "http",
 										"ca":     "",
-										"auth": map[string]interface{}{
+										"auth": map[string]any{
 											"username": "",
 											"password": "",
 											"auth":     "",
 										},
-										"rewrites": []interface{}{},
+										"rewrites": []any{},
+									},
+								},
+							},
+						},
+					}
+					return ret
+				}(),
+				err: false,
+			},
+		},
+		{
+			name: "With PKI",
+			input: func() Context {
+				ret := Context{
+					Init: init_secret.Config{
+						CA: &init_secret.CertKey{
+							Cert: "---cert---",
+							Key:  "---key---",
+						},
+					},
+					RegistryModuleEnable: true,
+					Mode:                 "unmanaged",
+					Version:              "unknown",
+					ImagesBase:           "registry.d8-system.svc/deckhouse/system",
+					ProxyEndpoints:       []string{},
+					Hosts: map[string]ContextHosts{
+						"registry.d8-system.svc": {
+							Mirrors: []ContextMirrorHost{{
+								Host:     "r.example.com",
+								Scheme:   "http",
+								Auth:     ContextAuth{},
+								Rewrites: []ContextRewrite{}},
+							},
+						},
+					},
+				}
+				return ret
+			}(),
+			result: result{
+				toMap: func() map[string]any {
+
+					ret := map[string]any{
+						"init": map[string]any{
+							"ca": map[string]any{
+								"cert": "---cert---",
+								"key":  "---key---",
+							},
+						},
+						"registryModuleEnable": true,
+						"mode":                 "unmanaged",
+						"version":              "unknown",
+						"imagesBase":           "registry.d8-system.svc/deckhouse/system",
+						"proxyEndpoints":       []any{},
+						"hosts": map[string]any{
+							"registry.d8-system.svc": map[string]any{
+								"mirrors": []any{
+									map[string]any{
+										"host":   "r.example.com",
+										"scheme": "http",
+										"ca":     "",
+										"auth": map[string]any{
+											"username": "",
+											"password": "",
+											"auth":     "",
+										},
+										"rewrites": []any{},
 									},
 								},
 							},
@@ -310,13 +378,7 @@ func TestContextToMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			toMap, err := tt.input.ToMap()
-			if tt.result.err {
-				assert.Error(t, err, "Expected errors but got none")
-			} else {
-				assert.NoError(t, err, "Expected no errors but got some")
-				require.Equal(t, tt.result.toMap, toMap)
-			}
+			require.Equal(t, tt.result.toMap, tt.input.ToMap())
 		})
 	}
 }

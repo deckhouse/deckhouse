@@ -11,7 +11,7 @@
     height: 100%;
     align-items: center;
     z-index: 1000;
-    color: #5e6697;
+    color: #6e7084;
     text-align: center;
     font-family: 'Noto Sans', sans-serif;
 
@@ -27,8 +27,9 @@
 
     &__wrap {
         position: relative;
-        width: 467px;
-        padding: 32px 41.2px 38.2px;
+        width: 550px;
+        padding: 31.75px 41.2px 22.2px 41.2px;
+        box-sizing: border-box;
         overflow: auto;
         z-index: 1002;
         border-radius: .5em;

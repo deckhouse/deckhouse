@@ -16,6 +16,47 @@ affinity:
   {{- end }}
 {{- end }}
 
+{{- /* Usage: {{- include "helm_lib_pod_affinity" (list . (dict "app" "test") (list "amd64")) }} */}}
+{{- /* Returns affinity spec that combines: podAntiAffinity by provided labels when HA is enabled and optional nodeAffinity that schedules pods only on specified architectures. If the list of architectures is not provided or empty, node affinity is not rendered. */ -}}
+{{- define "helm_lib_pod_affinity" }}
+{{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+{{- $labels := dict -}} {{- /* Match labels for podAntiAffinity label selector */ -}}
+{{- if ge (len .) 2 }}
+  {{- $labels = index . 1 }}
+{{- end }}
+{{- $allowedArchs := list -}} {{- /* List of supported architectures */ -}}
+{{- if ge (len .) 3 }}
+  {{- $allowedArchs = index . 2 }}
+{{- end }}
+{{- $haEnabled := (include "helm_lib_ha_enabled" $context) -}}
+{{- $hasArch := gt (len $allowedArchs) 0 -}}
+{{- if or $haEnabled $hasArch }}
+affinity:
+  {{- if $haEnabled }}
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - labelSelector:
+          matchLabels:
+    {{- range $key, $value := $labels }}
+            {{ $key }}: {{ $value | quote }}
+    {{- end }}
+        topologyKey: kubernetes.io/hostname
+  {{- end }}
+  {{- if $hasArch }}
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/arch
+            operator: In
+            values:
+          {{- range $allowedArchs }}
+                - {{ . | quote }}
+          {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
 {{- /* Usage: {{ include "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }} */ -}}
 {{- /* returns deployment strategy and replicas for ha components running on master nodes */ -}}
 {{- define "helm_lib_deployment_on_master_strategy_and_replicas_for_ha" }}

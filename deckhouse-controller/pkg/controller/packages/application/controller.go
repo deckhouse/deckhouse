@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
@@ -111,6 +112,7 @@ func RegisterController(
 
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.Application{}).
+		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Complete(applicationController)
 }
 
@@ -198,7 +200,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 	logger.Debug("check application package version exists", slog.String("apv", apvName))
 
 	// check if application package version exists
@@ -280,6 +282,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
 	}
 
+	if _, set := app.GetAnnotations()[v1alpha1.ApplicationAnnotationRegistrySpecChanged]; set {
+		delete(app.ObjectMeta.Annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+	}
+
 	app = r.addOwnerReferences(app, apv, ap)
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)
@@ -290,8 +296,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion) error {
 	repo := new(v1alpha1.PackageRepository)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepository}, repo); err != nil {
-		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepository, err)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageRepositoryName}, repo); err != nil {
+		return fmt.Errorf("get package repository '%s': %w", app.Spec.PackageRepositoryName, err)
 	}
 
 	var requirements apps.Requirements
@@ -339,8 +345,8 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
-			Name:         apv.Status.PackageName,
-			Version:      apv.Status.Version,
+			Name:         app.Spec.PackageName,
+			Version:      app.Spec.PackageVersion,
 			Requirements: requirements,
 		},
 		Settings: app.Spec.Settings.GetMap(),
@@ -374,7 +380,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 		}
 	}
 
-	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepository, app.Spec.PackageName, app.Spec.Version)
+	apvName := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 	logger.Debug("check if application package version exists", slog.String("package", apvName))
 
 	apv := new(v1alpha1.ApplicationPackageVersion)
@@ -432,7 +438,7 @@ func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string
 		}
 	}
 
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationResourceStatusCondition{
+	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
 		Type:               condType,
 		Status:             corev1.ConditionTrue,
 		LastProbeTime:      now,
@@ -460,7 +466,7 @@ func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType strin
 		}
 	}
 
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationResourceStatusCondition{
+	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
 		Type:               condType,
 		Status:             corev1.ConditionFalse,
 		Reason:             reason,

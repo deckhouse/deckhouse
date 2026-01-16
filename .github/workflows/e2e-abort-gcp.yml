@@ -195,9 +195,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -521,9 +521,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -847,9 +847,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -1173,9 +1173,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -1499,9 +1499,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -1825,9 +1825,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -2151,9 +2151,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -2477,9 +2477,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -2803,9 +2803,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -3129,9 +3129,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -3455,9 +3455,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
@@ -3781,9 +3781,9 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
-            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
