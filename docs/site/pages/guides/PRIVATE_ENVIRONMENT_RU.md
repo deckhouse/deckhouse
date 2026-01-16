@@ -1427,7 +1427,7 @@ spec:
 sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
 ```
 
-Запуск Ingress-контроллера после завершения установки Deckhouse может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
+Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
 
 ```console
 $ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
