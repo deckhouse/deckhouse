@@ -18,10 +18,10 @@ script_path=$(dirname "${BASH_SOURCE[0]}")
 
 MODULE_NAME="cert-manager"
 GIT_URL=https://github.com/cert-manager/cert-manager
-CRD_FILE_PATH="${script_path:-.}"
+CRD_FILE_PATH="${CRD_FILE_PATH:-$script_path}"
 CRD_GIT_PATH=deploy/crds
 DOWNLOAD="${DOWNLOAD:-true}" # Is needed download crds (used for tests in CI)
-MODULE_VERSION=v$(cat $script_path/../../images/cert-manager-controller/werf.inc.yaml | head -1 | sed -n 's/.*"\(.*\)".*/\1/p')
+MODULE_VERSION=${MODULE_VERSION:-"v$(cat $script_path/../../images/cert-manager-controller/werf.inc.yaml | head -1 | sed -n 's/.*"\(.*\)".*/\1/p')"}
 CRDS_FOR_BACKUP=(issuers.cert-manager.io clusterissuers.cert-manager.io)
 echo "Update $MODULE_NAME crds"
 echo $MODULE_NAME version: $MODULE_VERSION
