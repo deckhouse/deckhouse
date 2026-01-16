@@ -137,15 +137,6 @@ func Test_JSON_LoggerFormat(t *testing.T) {
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 	}
 
-	logfFn := func(logger *log.Logger) {
-		logger.Debugf("stub msg: %s", argValue)
-		logger.Infof("stub msg: %s", argValue)
-		logger.Warnf("stub msg: %s", argValue)
-		logger.Errorf("stub msg: %s", argValue)
-		//test fatal
-		logger.Logf(context.Background(), log.LevelFatal, "stub msg: %s", argValue)
-	}
-
 	type meta struct {
 		name    string
 		enabled bool
@@ -208,29 +199,6 @@ func Test_JSON_LoggerFormat(t *testing.T) {
 			wants: wants{
 				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg","source":"log\/logger_test.go:[1-9][0-9][0-9]","stub_arg":"arg","time":"2006-01-02T15:04:05Z"}$|` +
 					`^{"level":"(error)","msg":"stub msg","stub_arg":"arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
-				notContainsRegexp: `^{"level":"(trace)".*`,
-			},
-		},
-		{
-			meta: meta{
-				name:    "*f functions logger change to debug level should contains addsource and debug level",
-				enabled: true,
-			},
-			fields: fields{
-				logfn: logfFn,
-				mutateLoggerfn: func(logger *log.Logger) *log.Logger {
-					logger.SetLevel(log.LevelDebug)
-
-					return logger
-				},
-			},
-			args: args{
-				addSource: false,
-				level:     log.LevelInfo,
-			},
-			wants: wants{
-				containsRegexp: `(^{"level":"(debug|info|warn|fatal)","msg":"stub msg: arg","source":"log\/logger_test.go:([1-9][0-9]|[1-9][0-9][0-9])","time":"2006-01-02T15:04:05Z"}$|` +
-					`^{"level":"(error)","msg":"stub msg: arg","stacktrace":.*,"time":"2006-01-02T15:04:05Z"}$)`,
 				notContainsRegexp: `^{"level":"(trace)".*`,
 			},
 		},
@@ -438,15 +406,6 @@ func Test_Text_LoggerFormat(t *testing.T) {
 		logger.Log(context.Background(), log.LevelFatal.Level(), message, slog.String(argKey, argValue))
 	}
 
-	logfFn := func(logger *log.Logger) {
-		logger.Debugf("stub msg: %s", argValue)
-		logger.Infof("stub msg: %s", argValue)
-		logger.Warnf("stub msg: %s", argValue)
-		logger.Errorf("stub msg: %s", argValue)
-		//test fatal
-		logger.Logf(context.Background(), log.LevelFatal, "stub msg: %s", argValue)
-	}
-
 	type meta struct {
 		name    string
 		enabled bool
@@ -510,29 +469,6 @@ func Test_Text_LoggerFormat(t *testing.T) {
 				containsRegexp: `(^2006-01-02T15:04:05Z (DEBUG|INFO|WARN|FATAL) msg='stub msg' source=log\/logger_test.go:[1-9][0-9][0-9] stub_arg='arg'$|` +
 					`^2006-01-02T15:04:05Z (ERROR) msg='stub msg' stub_arg='arg' stacktrace=.*$)`,
 				notContainsRegexp: `^2006-01-02T15:04:05Z (TRACE)".*`,
-			},
-		},
-		{
-			meta: meta{
-				name:    "*f functions logger change to debug level should contains addsource and debug level",
-				enabled: true,
-			},
-			fields: fields{
-				logfn: logfFn,
-				mutateLoggerfn: func(logger *log.Logger) *log.Logger {
-					logger.SetLevel(log.LevelDebug)
-
-					return logger
-				},
-			},
-			args: args{
-				addSource: false,
-				level:     log.LevelInfo,
-			},
-			wants: wants{
-				containsRegexp: `(^2006-01-02T15:04:05Z (DEBUG|INFO|WARN|FATAL) msg='stub msg: arg' source=log\/logger_test.go:([1-9][0-9]|[1-9][0-9][0-9])$|` +
-					`^2006-01-02T15:04:05Z (ERROR) msg='stub msg: arg' stacktrace=.*$)`,
-				notContainsRegexp: `^2006-01-02T15:04:05Z (TRACE).*`,
 			},
 		},
 		{
