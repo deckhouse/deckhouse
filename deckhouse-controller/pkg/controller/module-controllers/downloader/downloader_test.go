@@ -83,3 +83,55 @@ func TestDownloadMetadataByVersion(t *testing.T) {
 	require.Equal(t, "v1.2.3", meta.ModuleVersion)
 	require.Equal(t, map[string]any{"feat": []any{"Added new feature"}}, meta.Changelog)
 }
+
+func TestValidateModuleDefinitionName(t *testing.T) {
+	tests := []struct {
+		name           string
+		definitionName string
+		expectedName   string
+		wantErr        bool
+	}{
+		{
+			name:           "matching names",
+			definitionName: "my-module",
+			expectedName:   "my-module",
+			wantErr:        false,
+		},
+		{
+			name:           "empty definition name",
+			definitionName: "",
+			expectedName:   "my-module",
+			wantErr:        false,
+		},
+		{
+			name:           "whitespace-only definition name",
+			definitionName: "   ",
+			expectedName:   "my-module",
+			wantErr:        false,
+		},
+		{
+			name:           "definition name with leading/trailing whitespace",
+			definitionName: "  my-module  ",
+			expectedName:   "my-module",
+			wantErr:        false,
+		},
+		{
+			name:           "mismatched names",
+			definitionName: "wrong-name",
+			expectedName:   "my-module",
+			wantErr:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateModuleDefinitionName(tt.definitionName, tt.expectedName)
+			if tt.wantErr {
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrModuleNameMismatch)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
