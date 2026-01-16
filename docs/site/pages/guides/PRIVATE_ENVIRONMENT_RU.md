@@ -723,7 +723,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 {% endofftopic %}
 {% endalert %}
 
-Выполните команду, которая скачает все необходимые образы в архив `d8.tar`. Укажите в команде лицензионной ключ и редакцию DKP (например, `se-plus` — для Standard Edition+, `ee` — для Enterprise Edition и т.д.):
+Выполните команду, которая скачает все необходимые образы и упакует их в архив `d8.tar`. Укажите лицензионный ключ и редакцию DKP (например, `se-plus` — для Standard Edition+, `ee` — для Enterprise Edition и т.д.):
 
 ```bash
 d8 mirror pull --source="registry.deckhouse.ru/deckhouse/<РЕДАКЦИЯ_DKP>" --license="<ЛИЦЕНЗИОННЫЙ КЛЮЧ>" $(pwd)/d8.tar
