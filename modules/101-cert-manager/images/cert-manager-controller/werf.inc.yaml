@@ -1,4 +1,5 @@
-{{- $version := "1.19.2" }}
+{{- $version := (include "get_oss_item_by_id" (dict "OSS_YAML" .OSS_YAML "moduleName" $.ModuleName "id" "cert-manager" ) | fromYaml).version  -}} # see in oss.yaml
+
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
@@ -63,14 +64,12 @@ shell:
     for f in $dir1/*.yaml; do
       base=$(basename "$f")
         diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
-
     done  
 
   - |
     echo "Checking cert-manager version in documentation"
     cat /docs/README.md    | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README.md"    && exit 1 )
     cat /docs/README_RU.md | grep {{ $version }} || ( echo "ERROR: version v{{ $version }} not found in /docs/README_RU.md" && exit 1 )
-
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-bookworm-svace" }}
@@ -105,3 +104,5 @@ shell:
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+
+
