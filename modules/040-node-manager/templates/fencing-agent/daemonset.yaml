@@ -75,6 +75,8 @@ spec:
           env:
             - name: GRPC_ADDRESS
               value: "/tmp/fencing-agent.sock"
+            - name:  MEMBERLIST_BOOTSTRAP_DELAY
+              value: "5s"
             - name: PROBE_INTERVAL
               value: "200ms"
             - name: PROBE_TIMEOUT

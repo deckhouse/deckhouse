@@ -100,7 +100,7 @@ func (a *Applicaion) Run(ctx context.Context) error {
 		for err != nil {
 			a.logger.Warn("failed to start memberlist", zap.Error(err))
 			err = a.membershipProvider.Start(peers)
-			time.Sleep(5 * time.Second) // TODO sleep?
+			time.Sleep(a.config.MemberlistConfig.MemberlistBootstrapDelay)
 		}
 	}()
 
@@ -127,15 +127,15 @@ func (a *Applicaion) Run(ctx context.Context) error {
 }
 
 func (a *Applicaion) Stop() error {
-	if a.watchDogController.IsArmed() {
-		if err := a.watchDogController.Stop(); err != nil {
-			a.logger.Error("Unable to disarm watchdog", zap.Error(err))
-		}
+	// Stop health monitor which will properly disarm watchdog and remove label
+	ctx, cancel := context.WithTimeout(context.Background(), a.config.KubernetesAPITimeout)
+	defer cancel()
+
+	if err := a.healthMonitor.Stop(ctx); err != nil {
+		a.logger.Error("Unable to stop health monitor", zap.Error(err))
 	}
 
 	if a.healthzServer != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 		return a.healthzServer.Shutdown(ctx)
 	}
 	return nil
