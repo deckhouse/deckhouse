@@ -166,3 +166,41 @@
         ```
 
         For more information about Kubernetes feature gates, refer to the [official documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/).
+
+  - alert: D8EtcdUnstartedMemberDetected
+    for: 15m
+    expr: d8_control_plane_manager_unstarted_etcd_members_count > 0
+    labels:
+      d8_component: control-plane-manager
+      d8_module: control-plane-manager
+      severity_level: "3"
+      tier: cluster
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Unstarted etcd member detected in the cluster.
+      description: |-
+        There is at least one unstarted etcd member in the cluster that has not published its attributes for more than 15 minutes.
+
+        An unstarted etcd member is a member that was added to the etcd cluster but has not yet started and published its name. This can happen during:
+        - etcd updates
+        - adding new control-plane nodes
+        - etcd member recovery
+
+        **Recommended actions:**
+
+        1. Check the status of etcd members:
+
+        ```bash
+        kubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key member list -w table        
+        ```
+
+        2. Check etcd pod logs on the affected node:
+
+        ```bash
+        kubectl -n kube-system logs $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)
+        ```
+
+        3. If the member is stuck and should not be in the cluster, it may need to be manually removed.
+
+        4. If this is during a planned update, wait for the member to start. If it doesn't start within a reasonable time, investigate the root cause.

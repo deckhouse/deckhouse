@@ -1232,6 +1232,16 @@ alerts:
         etcd cluster database is growing rapidly.
       severity: "4"
       markupFormat: markdown
+    - name: D8EtcdUnstartedMemberDetected
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: "There is at least one unstarted etcd member in the cluster that has not published its attributes for more than 15 minutes.\n\nAn unstarted etcd member is a member that was added to the etcd cluster but has not yet started and published its name. This can happen during:\n- etcd updates\n- adding new control-plane nodes\n- etcd member recovery\n\n**Recommended actions:**\n\n1. Check the status of etcd members:\n\n```bash\nkubectl -n kube-system exec -ti $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key member list -w table        \n```\n\n2. Check etcd pod logs on the affected node:\n\n```bash\nkubectl -n kube-system logs $(kubectl -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1)\n```\n\n3. If the member is stuck and should not be in the cluster, it may need to be manually removed.\n\n4. If this is during a planned update, wait for the member to start. If it doesn't start within a reasonable time, investigate the root cause."
+      summary: |
+        Unstarted etcd member detected in the cluster.
+      severity: "3"
+      markupFormat: markdown
     - name: D8GrafanaDeploymentReplicasUnavailable
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/grafana.tpl
       moduleUrl: 300-prometheus

@@ -155,10 +155,10 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 	}
 
 	removeListIDs := make([]uint64, 0)
-	var hasUnstartedMember float64
+	var unstartedEtcdMembersCount float64
 	for _, mem := range etcdMembersResp.Members {
 		if mem.Name == "" { // unstarted etcd member
-			hasUnstartedMember = 1.0
+			unstartedEtcdMembersCount += 1.0
 			continue
 		}
 		if _, ok := discoveredEtcdNodesMap[mem.Name]; !ok {
@@ -167,7 +167,7 @@ func handleRecicleEtcdMembers(_ context.Context, input *go_hook.HookInput, dc de
 		}
 	}
 
-	input.MetricsCollector.Set("d8_control_plane_manager_has_unstarted_etcd_member", hasUnstartedMember, nil)
+	input.MetricsCollector.Set("d8_control_plane_manager_unstarted_etcd_members_count", unstartedEtcdMembersCount, nil)
 
 	input.Logger.Warn("etcd members to remove", slog.Any("removeListIDs", removeListIDs))
 
