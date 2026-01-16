@@ -85,11 +85,19 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 		},
 		{
-			Name:          "namespaces_global_revision",
-			ApiVersion:    "v1",
-			Kind:          "Namespace",
-			FilterFunc:    applyNamespaceFilter,
-			LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"istio-injection": "enabled"}},
+			Name:       "namespaces_global_revision",
+			ApiVersion: "v1",
+			Kind:       "Namespace",
+			FilterFunc: applyNamespaceFilter,
+			LabelSelector: &metav1.LabelSelector{
+				MatchExpressions: []metav1.LabelSelectorRequirement{
+					{
+						Key:      "istio-injection",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"enabled"},
+					},
+				},
+			},
 		},
 		{
 			Name:       "namespaces_definite_revision",
