@@ -180,7 +180,7 @@ drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
 
 {% endofftopic %}
 
-Следующим шагом настройте Docker для работы с новым приватным container registry, доступ к которому будет осуществляться по SSL. Для этого создайте директорию `harbor.local` в директории `/etc/docker/certs.d/`:
+Далее настройте Docker для работы с приватным container registry, доступ к которому выполняется по TLS. Для этого создайте директорию `harbor.local` в `/etc/docker/certs.d/`:
 
 ```bash
 sudo mkdir -p /etc/docker/certs.d/harbor.local
