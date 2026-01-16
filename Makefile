@@ -206,11 +206,11 @@ endef
 
 .PHONY: lint-all
 lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
-	$(call iterateAllGoModules,Running golangci-lint in,GOGC=50 GOFLAGS="-buildvcs=false" golangci-lint run)
+	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
-	$(call iterateAllGoModules,Running golangci-lint --fix in,GOGC=50 GOFLAGS="-buildvcs=false" golangci-lint run --fix)
+	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
