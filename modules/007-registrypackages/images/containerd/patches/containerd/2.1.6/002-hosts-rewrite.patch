@@ -1,30 +1,24 @@
-Subject: [PATCH] rewrite
----
-Index: core/remotes/docker/config/hosts.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/hosts.go
---- a/core/remotes/docker/config/hosts.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
-+++ b/core/remotes/docker/config/hosts.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-@@ -27,6 +27,7 @@
+index 681d97e0b..40d451af0 100644
+--- a/core/remotes/docker/config/hosts.go
++++ b/core/remotes/docker/config/hosts.go
+@@ -27,6 +27,7 @@ import (
  	"os"
  	"path"
  	"path/filepath"
 +	"regexp"
  	"strings"
  	"time"
-
-@@ -56,9 +57,17 @@
-
+ 
+@@ -56,9 +57,17 @@ type hostConfig struct {
+ 
  	header http.Header
-
+ 
 +	rewrites []hostPathRewrite
 +
  	// TODO: Add credential configuration (domain alias, username)
  }
-
+ 
 +// HostPathRewrite is used to confirure rewrite paths in the mirror hosts
 +type hostPathRewrite struct {
 +	regexp      *regexp.Regexp
@@ -34,7 +28,7 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
  // HostOptions is used to configure registry hosts
  type HostOptions struct {
  	HostDir       func(string) (string, error)
-@@ -231,6 +240,17 @@
+@@ -231,6 +240,17 @@ func ConfigureHosts(ctx context.Context, options HostOptions) docker.RegistryHos
  			rhosts[i].Path = host.path
  			rhosts[i].Capabilities = host.capabilities
  			rhosts[i].Header = host.header
@@ -50,12 +44,12 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +			}
 +
  		}
-
+ 
  		return rhosts, nil
-@@ -373,6 +393,11 @@
+@@ -373,6 +393,11 @@ type hostFileConfig struct {
  	// a connect to complete.
  	DialTimeout string `toml:"dial_timeout"`
-
+ 
 +	Rewrites []struct {
 +		Regex       string `toml:"regex"`
 +		Replacement string `toml:"replace"`
@@ -63,11 +57,11 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +
  	// TODO: Credentials: helper? name? username? alternate domain? token?
  }
-
-@@ -541,6 +566,23 @@
+ 
+@@ -541,6 +566,23 @@ func parseHostConfig(server string, baseDir string, config hostFileConfig) (host
  		result.dialTimeout = &dialTimeout
  	}
-
+ 
 +	if len(config.Rewrites) > 0 {
 +		result.rewrites = make([]hostPathRewrite, len(config.Rewrites))
 +
@@ -87,27 +81,23 @@ diff --git a/core/remotes/docker/config/hosts.go b/core/remotes/docker/config/ho
 +
  	return result, nil
  }
-
-Index: core/remotes/docker/config/hosts_test.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
+ 
 diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/config/hosts_test.go
---- a/core/remotes/docker/config/hosts_test.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
-+++ b/core/remotes/docker/config/hosts_test.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-@@ -24,6 +24,7 @@
+index b314e7f8d..bfa1dde8c 100644
+--- a/core/remotes/docker/config/hosts_test.go
++++ b/core/remotes/docker/config/hosts_test.go
+@@ -24,6 +24,7 @@ import (
  	"net/http"
  	"os"
  	"path/filepath"
 +	"regexp"
  	"testing"
  	"time"
-
-@@ -232,6 +233,73 @@
+ 
+@@ -232,6 +233,73 @@ ca = "/etc/path/default"
  	}
  }
-
+ 
 +func TestParseHostFileWithRewrites(t *testing.T) {
 +	const testtoml = `
 +server = "https://test-default.registry"
@@ -177,11 +167,11 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
 +
  func TestLoadCertFiles(t *testing.T) {
  	dir := t.TempDir()
-
-@@ -576,6 +644,18 @@
+ 
+@@ -576,6 +644,18 @@ func compareHostConfig(j, k hostConfig) bool {
  		return false
  	}
-
+ 
 +	if len(j.rewrites) != len(k.rewrites) {
 +		return false
 +	}
@@ -196,8 +186,8 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
 +	}
  	return true
  }
-
-@@ -597,6 +677,10 @@
+ 
+@@ -597,6 +677,10 @@ func printHostConfig(hc []hostConfig) string {
  		if hc[i].dialTimeout != nil {
  			fmt.Fprintf(b, "\t\tdial-timeout: %v\n", hc[i].dialTimeout)
  		}
@@ -208,23 +198,19 @@ diff --git a/core/remotes/docker/config/hosts_test.go b/core/remotes/docker/conf
  	}
  	return b.String()
  }
-Index: core/remotes/docker/registry.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
---- a/core/remotes/docker/registry.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
-+++ b/core/remotes/docker/registry.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-@@ -21,6 +21,7 @@
+index bbae768b1..574a5dc35 100644
+--- a/core/remotes/docker/registry.go
++++ b/core/remotes/docker/registry.go
+@@ -21,6 +21,7 @@ import (
  	"errors"
  	"net"
  	"net/http"
 +	"regexp"
  	"time"
  )
-
-@@ -76,6 +77,12 @@
+ 
+@@ -76,6 +77,12 @@ type RegistryHost struct {
  	Path         string
  	Capabilities HostCapabilities
  	Header       http.Header
@@ -235,20 +221,16 @@ diff --git a/core/remotes/docker/registry.go b/core/remotes/docker/registry.go
 +	Regex       *regexp.Regexp
 +	Replacement string
  }
-
+ 
  func (h RegistryHost) isProxy(refhost string) bool {
-Index: core/remotes/docker/resolver.go
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
 diff --git a/core/remotes/docker/resolver.go b/core/remotes/docker/resolver.go
---- a/core/remotes/docker/resolver.go	(revision 1de895276b374cb272e9848530d5305055266b8a)
-+++ b/core/remotes/docker/resolver.go	(revision f5bc380d2c2dcb9662f1e1a874a0e7f6f1a19fd4)
-@@ -528,7 +528,15 @@
+index 05bebd36c..b3b62b1fd 100644
+--- a/core/remotes/docker/resolver.go
++++ b/core/remotes/docker/resolver.go
+@@ -526,7 +526,15 @@ func (r *dockerBase) request(host RegistryHost, method string, ps ...string) *re
  		header.Set("User-Agent", "containerd/"+version.Version)
  	}
-
+ 
 -	parts := append([]string{"/", host.Path, r.repository}, ps...)
 +	repo := r.repository
 +	for _, rewrite := range host.RepoRewrites {
