@@ -204,7 +204,7 @@ cp harbor.local.key /etc/docker/certs.d/harbor.local/
 cp harbor.yml.tmpl harbor.yml
 ```
 
-Измените в нём следующие параметры:
+Измените в `harbor.yml` следующие параметры:
 
 * `hostname` — задайте `harbor.local`, для которого мы генерировали сертификаты;
 * `certificate` — укажите путь к сгенерированному сертификату в директории `certs` (например, `/home/ubuntu/harbor/certs/harbor.local.crt`);
