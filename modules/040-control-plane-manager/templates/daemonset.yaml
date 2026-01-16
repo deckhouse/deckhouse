@@ -342,7 +342,6 @@ spec:
         command:
         - /update-observer
         livenessProbe:
-          failureThreshold: 3
           httpGet:
             path: /healthz
             port: 4264
@@ -353,7 +352,6 @@ spec:
           successThreshold: 1
           failureThreshold: 3
         readinessProbe:
-          failureThreshold: 3
           httpGet:
             path: /readyz
             port: 4264
