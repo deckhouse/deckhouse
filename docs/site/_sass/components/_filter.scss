@@ -83,12 +83,13 @@
                     background-image: url(/images/opening_filter.svg);
                     background-position: calc(100% - 10px) top;
                     background-repeat: no-repeat;
-                    transition: transform .3s ease-in-out;
+                    transition: transform .3s ease-in-out, top .3s ease-in-out;
                     cursor: pointer;
                 }
 
                 &.rotated::before {
                     transform: rotateX(180deg);
+                    top: -5px;
                 }
             }
 
