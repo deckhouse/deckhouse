@@ -431,13 +431,13 @@ properties:
             enum: [Default, Relax]
             default: Default
         x-deckhouse-validations: &registryDirectPropertiesValidations
-          - expression: "has(self.imagesRepo) : true"
+          - expression: "true ? has(self.imagesRepo) : true"
             message: "'imagesRepo' is required."
-          - expression: "(has(self.username) ? has(self.password) : true) : true"
+          - expression: "has(self.username) ? has(self.password) : true"
             message: "'password' is required when 'username' is provided."
-          - expression: "(has(self.password) ? has(self.username) : true) : true"
+          - expression: "has(self.password) ? has(self.username) : true"
             message: "'username' is required when 'password' is provided."
-          - expression: "!(has(self.license) && (has(self.username) || has(self.password))) : true"
+          - expression: "has(self.license) ? (!has(self.username) || !has(self.password)) : true"
             message: "'license' and 'username'/'password' are mutually exclusive."
 
       unmanaged:
@@ -457,8 +457,7 @@ properties:
               -----END CERTIFICATE-----
         properties:
           <<: *registryDirectProperties
-        x-deckhouse-validations:
-          <<: *registryDirectPropertiesValidations
+        x-deckhouse-validations: *registryDirectPropertiesValidations
 
       proxy:
         type: object
@@ -494,13 +493,13 @@ properties:
               - "168h10m5s"
         x-deckhouse-validations:
           # Copy from Direct:
-          - expression: "has(self.imagesRepo) : true"
+          - expression: "true ? has(self.imagesRepo) : true"
             message: "'imagesRepo' is required."
-          - expression: "(has(self.username) ? has(self.password) : true) : true"
+          - expression: "has(self.username) ? has(self.password) : true"
             message: "'password' is required when 'username' is provided."
-          - expression: "(has(self.password) ? has(self.username) : true) : true"
+          - expression: "has(self.password) ? has(self.username) : true"
             message: "'username' is required when 'password' is provided."
-          - expression: "!(has(self.license) && (has(self.username) || has(self.password))) : true"
+          - expression: "has(self.license) ? (!has(self.username) || !has(self.password)) : true"
             message: "'license' and 'username'/'password' are mutually exclusive."
           # Proxy mode params
           - expression: "has(self.ttl) ? duration(self.ttl) >= duration('5m') : true"
