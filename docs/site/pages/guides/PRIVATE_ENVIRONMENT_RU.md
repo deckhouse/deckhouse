@@ -206,7 +206,7 @@ cp harbor.yml.tmpl harbor.yml
 
 Измените в `harbor.yml` следующие параметры:
 
-* `hostname` — задайте `harbor.local`, для которого мы генерировали сертификаты;
+* `hostname` — укажите `harbor.local` (для него генерировались сертификаты);
 * `certificate` — укажите путь к сгенерированному сертификату в директории `certs` (например, `/home/ubuntu/harbor/certs/harbor.local.crt`);
 * `private_key` — укажите путь к приватному ключу (например, `/home/ubuntu/harbor/certs/harbor.local.key`);
 * `harbor_admin_password` — задайте пароль для доступа в веб-интерфейс.
