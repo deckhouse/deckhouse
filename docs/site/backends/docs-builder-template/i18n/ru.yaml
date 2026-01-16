@@ -103,6 +103,7 @@ modules_documentation: Документация модулей
 modules_list: Список модулей
 filters: Фильтры
 search_filter: Поиск по&nbsp;модулям
+search_placeholder_text_filter: Введите название
 editorial_filter: Редакции
 statuses_filter: Статусы
 tags_filter: Теги
