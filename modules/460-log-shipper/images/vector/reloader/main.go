@@ -45,7 +45,7 @@ const (
 	dynamicConfigPath = "/etc/vector/dynamic/vector.json"
 )
 
-var errorMetric = prometheus.NewGauge(
+var configValidationErrorMetric = prometheus.NewGauge(
 	prometheus.GaugeOpts{
 		Name: "vector_config_validation_error",
 		Help: "Vector config validation error flag (1=invalid, 0=valid)",
@@ -94,16 +94,16 @@ func reloadOnce() {
 		// - It compares the current config with the previous one.
 		// - Since they are now identical again, it will NOT run validation.
 		// - It simply sees "no change" and skips validation.
-		errorMetric.Set(0.0)
+		configValidationErrorMetric.Set(0.0)
 		return
 	}
 
 	if err := sampleConfig.Validate(); err != nil {
-		errorMetric.Set(1.0)
+		configValidationErrorMetric.Set(1.0)
 		log.Println("invalid config, skip running")
 		return
 	}
-	errorMetric.Set(0.0)
+	configValidationErrorMetric.Set(0.0)
 
 	if err := sampleConfig.SaveTo(dynamicConfigPath); err != nil {
 		log.Println(err)
@@ -200,7 +200,7 @@ func compareConfigs(c1, c2 *Config) bool {
 }
 
 func main() {
-	prometheus.MustRegister(errorMetric)
+	prometheus.MustRegister(configValidationErrorMetric)
 
 	go func() {
 		mux := http.NewServeMux()
