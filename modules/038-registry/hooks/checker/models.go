@@ -150,13 +150,25 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 		}
 	}()
 
+	imagesFingerprint, err := computeImagesFingerprint(inputs.ImagesInfo, inputs.Params.CheckMode)
+	if err != nil {
+		return fmt.Errorf("cannot compute images fingerprint: %w", err)
+	}
+
+	fullVersion, err := registry_pki.ComputeHash(inputs.Params.Version, imagesFingerprint)
+	if err != nil {
+		return fmt.Errorf("cannot compute full version: %w", err)
+	}
+
 	var isNewConfig bool
-	if state.Version != inputs.Params.Version {
+	if state.Version != fullVersion {
 		log.Info("Initializing checker with new config",
 			"params.version", inputs.Params.Version,
+			"images.fingerprint", imagesFingerprint,
+			"full.version", fullVersion,
 		)
 
-		state.handleNewConfig(inputs)
+		state.handleNewConfig(fullVersion)
 		isNewConfig = true
 	}
 
@@ -186,9 +198,9 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	return nil
 }
 
-func (state *stateModel) handleNewConfig(inputs inputsModel) {
+func (state *stateModel) handleNewConfig(fullVersion string) {
 	state.Queues = nil
-	state.Version = inputs.Params.Version
+	state.Version = fullVersion
 	state.Ready = false
 	state.Message = "Initializing"
 }
