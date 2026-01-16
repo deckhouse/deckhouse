@@ -246,7 +246,9 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 			return fmt.Errorf("cannot build registry %q queue: %w", name, err)
 		}
 
-		q := registryQueue{Items: repoImages, ParamsHash: hash}
+		q := registryQueue{
+			Items: repoImages,
+			ParamsHash: hash}
 
 		state.Queues[name] = q
 		log.Info("Added queue", "queue.name", name, "queue.items", q.total())
