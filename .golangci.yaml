@@ -28,6 +28,7 @@ linters:
       exclude-functions:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose
         - io:Copy
+        - (io.Writer).Write
     nonamedreturns:
       report-error-in-defer: false
     sloglint:
