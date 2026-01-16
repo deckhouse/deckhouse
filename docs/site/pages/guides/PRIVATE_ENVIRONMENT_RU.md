@@ -765,7 +765,7 @@ drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
 d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
-> Ключ `--tls-skip-verify` указывает утилите, что мы доверяем сертификату и пропускаем его проверку.
+> Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
 
 Скачанный архив распакуется и загрузится в registry. Процесс пройдёт быстрее, чем загрузка образов на предыдущем шаге, так как работа ведётся с локальным репозиторием. Обычно это занимает около 15 минут.
 
