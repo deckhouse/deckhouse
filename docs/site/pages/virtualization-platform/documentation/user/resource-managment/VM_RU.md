@@ -93,7 +93,7 @@ lang: ru
    Создайте виртуальную машину из следующей спецификации:
 
    ```yaml
-   d8 k apply -f - <<EOF
+   d8 k apply -f - <<'EOF'
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
    metadata:
@@ -243,7 +243,7 @@ lang: ru
 Создайте виртуальную машину с диском созданным [ранее](/products/virtualization-platform/documentation/user/resource-management/disks.html#создание-диска-из-образа):
 
 ```yaml
-d8 k apply -f - <<"EOF"
+d8 k apply -f - <<'EOF'
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:
