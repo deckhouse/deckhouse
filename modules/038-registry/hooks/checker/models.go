@@ -247,8 +247,9 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 		}
 
 		q := registryQueue{
-			Items: repoImages,
-			ParamsHash: hash}
+			Items:      repoImages,
+			ParamsHash: hash,
+		}
 
 		state.Queues[name] = q
 		log.Info("Added queue", "queue.name", name, "queue.items", q.total())
