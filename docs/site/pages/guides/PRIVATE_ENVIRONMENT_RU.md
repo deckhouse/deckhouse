@@ -660,7 +660,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_create_new_user.png" alt="Главная страница Harbor...">
 </div>
 
-Задайте ему имя, адрес электронной почты и пароль:
+Укажите имя пользователя, адрес электронной почты и пароль:
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Главная страница Harbor...">
