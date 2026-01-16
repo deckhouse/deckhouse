@@ -187,9 +187,9 @@ lint-fix: golangci-lint ## Fix lint violations.
 lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
 		echo ""; \
-		echo ============================================================ \
+		echo "============================================================"; \
 		echo "Running golangci-lint in $$dir"; \
-		echo ============================================================ \
+		echo "============================================================"; \
 		echo ""; \
 		(cd $$dir && GOGC=50 GOFLAGS="-buildvcs=false" golangci-lint run); \
 	done
@@ -198,9 +198,9 @@ lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
 		echo ""; \
-		echo ============================================================ \
+		echo "============================================================"; \
 		echo "Running golangci-lint in $$dir"; \
-		echo ============================================================ \
+		echo "============================================================"; \
 		echo ""; \
 		(cd $$dir && GOGC=50 GOFLAGS="-buildvcs=false" golangci-lint run --fix); \
 	done
