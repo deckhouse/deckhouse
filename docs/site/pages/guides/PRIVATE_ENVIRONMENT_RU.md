@@ -77,7 +77,7 @@ wget https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline
 
 {% endofftopic %}
 
-{% offtopic title="Как скачать файл с помощью curl..." %}
+{% offtopic title="Как скачать архив с помощью curl..." %}
 Выполните команду (укажите актуальную ссылку):
 
 ```console
