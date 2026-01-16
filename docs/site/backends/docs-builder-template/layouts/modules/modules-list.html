@@ -126,25 +126,26 @@
       <div class="block__tile">
       {{- range (sort $modulesList "module" "asc") }}
         <a class="button-tile" href="{{ .url }}">
-        <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-          <img src="/images/{{- $moduleStage }}" alt="{{- $moduleStage }}">
-        </span>
-        <h2 class="button-tile__title">{{ .module }}</h2>
-        {{- $moduleStage := "" }}
-        {{- $moduleDescription := default "" .description }}
+          {{- $moduleStage := "" }}
+          {{- $moduleDescription := default "" .description }}
 
-        {{- if .metadata }}
-          {{- $moduleStage = .metadata.stage }}
+          {{- if .metadata }}
+            {{- $moduleStage = .metadata.stage }}
 
-          {{/* Try to get description from module metadata (module.yaml) */}}
-          {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
-          {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
-            {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
+            {{/* Try to get description from module metadata (module.yaml) */}}
+            {{- $moduleMetadataDescriptions := index .metadata "descriptions" }}
+            {{- if and $moduleMetadataDescriptions (index $moduleMetadataDescriptions $lang) (gt (index $moduleMetadataDescriptions $lang | len ) 0) }}
+              {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
+            {{- end }}
           {{- end }}
-        {{- end }}
 
-        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-        {{- end }}
+          {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
+              <img src="/images/{{- $moduleStage }}" alt="{{- $moduleStage }}">
+            </span>
+          {{- end }}
+        <h2 class="button-tile__title">{{ .module }}</h2>
+
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>
