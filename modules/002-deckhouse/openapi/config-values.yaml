@@ -437,7 +437,7 @@ properties:
             message: "'password' is required when 'username' is provided."
           - expression: "has(self.password) ? has(self.username) : true"
             message: "'username' is required when 'password' is provided."
-          - expression: "has(self.license) ? !(has(self.username) || has(self.password)) : true"
+          - expression: "has(self.license) ? (!has(self.username) || !has(self.password)) : true"
             message: "'license' and 'username'/'password' are mutually exclusive."
 
       unmanaged:
@@ -499,7 +499,7 @@ properties:
             message: "'password' is required when 'username' is provided."
           - expression: "has(self.password) ? has(self.username) : true"
             message: "'username' is required when 'password' is provided."
-          - expression: "has(self.license) ? !(has(self.username) || has(self.password)) : true"
+          - expression: "has(self.license) ? (!has(self.username) || !has(self.password)) : true"
             message: "'license' and 'username'/'password' are mutually exclusive."
           # Proxy mode params
           - expression: "has(self.ttl) ? duration(self.ttl) >= duration('5m') : true"
