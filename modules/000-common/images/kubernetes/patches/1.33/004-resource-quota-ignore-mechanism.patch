@@ -204,11 +204,55 @@ index 8f91588db2e..d2fa603996e 100644
  func isBestEffort(pod *corev1.Pod) bool {
  	return qos.GetPodQOS(pod) == corev1.PodQOSBestEffort
  }
+diff --git a/pkg/quota/v1/install/update_filter.go b/pkg/quota/v1/install/update_filter.go
+index 9a4ce799727..cf3211b7d3e 100644
+--- a/pkg/quota/v1/install/update_filter.go
++++ b/pkg/quota/v1/install/update_filter.go
+@@ -44,6 +44,11 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 				return true
+ 			}
+
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPod.Labels, newPod.Labels) {
++				return true
++			}
++
+ 			return core.QuotaV1Pod(oldPod, clock.RealClock{}) && !core.QuotaV1Pod(newPod, clock.RealClock{})
+ 		case schema.GroupResource{Resource: "services"}:
+ 			oldService := oldObj.(*v1.Service)
+@@ -52,6 +57,10 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 		case schema.GroupResource{Resource: "persistentvolumeclaims"}:
+ 			oldPVC := oldObj.(*v1.PersistentVolumeClaim)
+ 			newPVC := newObj.(*v1.PersistentVolumeClaim)
++			// when resource quota labels changed
++			if hasResourceQuotaLabelsChanged(oldPVC.Labels, newPVC.Labels) {
++				return true
++			}
+ 			return core.RequiresQuotaReplenish(newPVC, oldPVC)
+ 		}
+
+@@ -59,6 +68,16 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 	}
+ }
+
++// hasResourceQuotaLabelsChanged checks if any resource quota control labels have changed
++func hasResourceQuotaLabelsChanged(oldLabels, newLabels map[string]string) bool {
++	for _, label := range v1.ResourceQuotaLabels {
++		if oldLabels[label] != newLabels[label] {
++			return true
++		}
++	}
++	return false
++}
++
+ // hasResourcesChanged function to compare resources in container statuses
+ func hasResourcesChanged(oldPod *v1.Pod, newPod *v1.Pod) bool {
+ 	for _, oldStatus := range oldPod.Status.ContainerStatuses {
 diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-index 8c3cb87b82a..499e454a207 100644
+index 8c3cb87b82a..46d0768fdc0 100644
 --- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
 +++ b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-@@ -71,4 +71,13 @@ const (
+@@ -71,4 +71,25 @@ const (
  	LabelNodeExcludeBalancers = "node.kubernetes.io/exclude-from-external-load-balancers"
  	// LabelMetadataName is the label name which, in-tree, is used to automatically label namespaces, so they can be selected easily by tools which require definitive labels
  	LabelMetadataName = "kubernetes.io/metadata.name"
@@ -222,3 +266,15 @@ index 8c3cb87b82a..499e454a207 100644
 +	LabelResourceQuotaDiscountMemory  = "resource-quota-overrides.deckhouse.io/discount-memory"
 +	LabelResourceQuotaCapMemory       = "resource-quota-overrides.deckhouse.io/cap-memory"
  )
++
++// ResourceQuotaLabels is a list of all resource quota labels.
++// This list is used to check if any of these labels have changed on a pod or PVC.
++var ResourceQuotaLabels = []string{
++	LabelResourceQuotaIgnore,
++	LabelResourceQuotaDiscountStorage,
++	LabelResourceQuotaCapStorage,
++	LabelResourceQuotaDiscountCPU,
++	LabelResourceQuotaCapCPU,
++	LabelResourceQuotaDiscountMemory,
++	LabelResourceQuotaCapMemory,
++}
