@@ -101,7 +101,11 @@ documentation: документация
 Documentation: Документация
 modules_documentation: Документация модулей
 modules_list: Список модулей
-category: категория
+filters: Фильтры
+search_filter: Поиск по&nbsp;модулям
+editorial_filter: Редакции
+statuses_filter: Статусы
+tags_filter: Теги
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
