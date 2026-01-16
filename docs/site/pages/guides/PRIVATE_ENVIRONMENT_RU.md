@@ -6,7 +6,7 @@ lang: ru
 layout: sidebar-guides
 ---
 
-В приведённом ниже руководстве описывается, как развернуть кластер под управлением Deckhouse Kubernetes Platform в закрытом окружении, из которого нет прямого доступа к хранилищу образов контейнеров DKP (`registry.deckhouse.ru`) и к внешним репозиториям deb/rpm-пакетов, установленных на узлах [операционных систем](../documentation/v1/reference/supported_versions.html#linux).
+В этом руководстве описано, как развернуть кластер Deckhouse Kubernetes Platform в закрытом окружении без прямого доступа к хранилищу образов контейнеров DKP (`registry.deckhouse.ru`) и внешним репозиториям deb/rpm-пакетов, используемых на узлах [поддерживаемых операционных систем](../documentation/v1/reference/supported_versions.html#linux).
 
 {% alert level="warning" %}
 Обратите внимание, что установка DKP в закрытое окружение доступна в следующих редакциях: SE, SE+, EE, CSE Lite (1.67), CSE Pro (1.67).
