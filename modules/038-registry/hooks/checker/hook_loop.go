@@ -78,7 +78,7 @@ var _ = sdk.RegisterFunc(
 				},
 			},
 			{
-				Name: deckhouseDeploymentSnapName,
+				Name:                         deckhouseDeploymentSnapName,
 				ExecuteHookOnEvents:          go_hook.Bool(false),
 				ExecuteHookOnSynchronization: go_hook.Bool(false),
 				ApiVersion:                   "apps/v1",
