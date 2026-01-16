@@ -1199,7 +1199,7 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 ```
 
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
-Несмотря на скопированные в `/etc/docker/certs.d/harbor.local/` сертификаты, Docker может выдавать предупреждение о неподтверждённой подписи сертификата (по сути, о том, что он самоподписанный). Решить это можно, скопировав `ca.crt` в директорию `/usr/local/share/ca-certificates/` и перезапустив Docker командой `sudo systemctl restart docker`. Для вашего дистрибутива решение может отличаться.
+Даже при наличии сертификатов в `/etc/docker/certs.d/harbor.local/` Docker может сообщать, что сертификат неизвестного центра сертификации (типично для самоподписанных сертификатов). Как правило, помогает добавить `ca.crt` в системное хранилище доверенных сертификатов и перезапустить Docker.
 {% endofftopic %}
 
 {% alert level="info" %}
