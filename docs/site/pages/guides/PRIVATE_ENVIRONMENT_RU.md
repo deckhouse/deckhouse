@@ -51,7 +51,7 @@ layout: sidebar-guides
 {% alert level="warning" %}
 DKP поддерживает только Bearer token-схему авторизации в container registry.
 
-Протестирована и гарантируется работа со следующими container registries: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
+Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 {% endalert %}
 
 ### Установка Harbor
