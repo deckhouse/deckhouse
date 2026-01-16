@@ -8,7 +8,6 @@ package controller
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -103,25 +102,35 @@ func RegisterController(runtimeManager manager.Manager) error {
 		Complete(c)
 }
 
-func (r *reconciler) getControllerRevisionByLabelSelector(ctx context.Context, namespace string, labelSelector labels.Selector) (string, error) {
+func (r *reconciler) getControllerRevisionHashByLabelSelector(ctx context.Context, namespace string, labelSelector labels.Selector) (string, error) {
 	controllerRevisionList := new(appsv1.ControllerRevisionList)
 	err := r.client.List(ctx, controllerRevisionList, &client.ListOptions{LabelSelector: labelSelector, Namespace: namespace})
 	if err != nil {
 		return "", err
 	}
 
-	var currentRevision int64
+	var (
+		maxRevision     int64
+		maxRevisionHash string
+	)
+
 	for _, cr := range controllerRevisionList.Items {
-		if cr.Revision > currentRevision {
-			currentRevision = cr.Revision
+		if cr.Revision > maxRevision {
+			maxRevision = cr.Revision
+			if hash, ok := cr.GetLabels()[constant.ControllerRevisionHashLabel]; ok {
+				maxRevisionHash = hash
+				continue
+			}
+
+			return "", fmt.Errorf("no controller revision hash found for the %s controller revision", cr.Name)
 		}
 	}
 
-	if currentRevision == 0 {
+	if maxRevision == 0 {
 		return "", fmt.Errorf("no controller revision found")
 	}
 
-	return strconv.FormatInt(currentRevision, 10), nil
+	return maxRevisionHash, nil
 }
 
 func (r *reconciler) listPodsByLabelSelector(ctx context.Context, namespace string, labelSelector labels.Selector) (*corev1.PodList, error) {
@@ -131,11 +140,16 @@ func (r *reconciler) listPodsByLabelSelector(ctx context.Context, namespace stri
 	return podList, err
 }
 
-func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
+func (r *reconciler) updateNextReadyPod(ctx context.Context, pods *corev1.PodList, currentRevisionHash string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
 ExtLoop:
 	for _, pod := range pods.Items {
-		podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
-		if podRevision != currentRevision {
+		podControllerRevisionHash, found := pod.GetLabels()[constant.ControllerRevisionHashLabel]
+		if !found {
+			klog.Warningf("Pod %s has no controller-revision-hash label and is skipped", pod.Name)
+			continue
+		}
+
+		if podControllerRevisionHash != currentRevisionHash {
 			for _, check := range externalChecks {
 				checkRes := check.GetCheckResult(&pod)
 				klog.V(5).Infof("Updating %s is %s by the %s check", pod.Name, checkRes, check.GetName())
@@ -159,7 +173,7 @@ ExtLoop:
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.PodList, currentRevision string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
+func (r *reconciler) updateNextNotReadyPod(ctx context.Context, pods *corev1.PodList, currentRevisionHash string, externalChecks ...checks.ExternalCheck) (ctrl.Result, error) {
 ExtLoop:
 	for _, pod := range pods.Items {
 		if !checks.PodIsReadyAndRunning(&pod) {
@@ -167,8 +181,13 @@ ExtLoop:
 				break
 			}
 
-			podRevision := pod.GetLabels()[constant.PodTemplateGenerationLabel]
-			if podRevision != currentRevision {
+			podControllerRevisionHash, found := pod.GetLabels()[constant.ControllerRevisionHashLabel]
+			if !found {
+				klog.Warningf("Pod %s has no controller-revision-hash label and is skipped", pod.Name)
+				continue
+			}
+
+			if podControllerRevisionHash != currentRevisionHash {
 				for _, check := range externalChecks {
 					checkRes := check.GetCheckResult(&pod)
 					klog.V(5).Infof("Updating %s is %s by the %s check", pod.Name, checkRes, check.GetName())
@@ -204,33 +223,33 @@ func (r *reconciler) reconcileDaemonSet(ctx context.Context, ds *appsv1.DaemonSe
 		return ctrl.Result{}, err
 	}
 
-	nodeLocalDNSControllerRevision, err := r.getControllerRevisionByLabelSelector(ctx, constant.NodeLocalDNSNamespace, constant.ControllerRevisionLabelSelector)
+	nodeLocalDNSControllerRevisionHash, err := r.getControllerRevisionHashByLabelSelector(ctx, constant.NodeLocalDNSNamespace, constant.ControllerRevisionLabelSelector)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get the node-local-dns controller revision: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get the node-local-dns controller revision hash: %w", err)
 	}
-	klog.V(5).Infof("current node-local-dns controller revision is %s", nodeLocalDNSControllerRevision)
+	klog.V(5).Infof("current node-local-dns controller revision hash is %s", nodeLocalDNSControllerRevisionHash)
 
 	ciliumPods, err := r.listPodsByLabelSelector(ctx, constant.CiliumNamespace, constant.CiliumAgentPodLabelSelector)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	ciliumControllerRevision, err := r.getControllerRevisionByLabelSelector(ctx, constant.CiliumNamespace, constant.CiliumAgentPodLabelSelector)
+	ciliumControllerRevisionHash, err := r.getControllerRevisionHashByLabelSelector(ctx, constant.CiliumNamespace, constant.CiliumAgentPodLabelSelector)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get the cilium controller revision: %w", err)
+		return ctrl.Result{}, fmt.Errorf("failed to get the cilium controller revision hash: %w", err)
 	}
-	klog.V(5).Infof("current cilium controller revision is %s", ciliumControllerRevision)
+	klog.V(5).Infof("current cilium controller revision hash is %s", ciliumControllerRevisionHash)
 
-	ciliumCheck, err := checks.NewCniCiliumCheck(ctx, ciliumPods, ciliumControllerRevision)
+	ciliumCheck, err := checks.NewCniCiliumCheck(ctx, ciliumPods, ciliumControllerRevisionHash)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to get a new cilium check: %w", err)
 	}
 
 	if checks.DaemonSetIsStable(pods) {
-		return r.updateNextReadyPod(ctx, pods, nodeLocalDNSControllerRevision, ciliumCheck)
+		return r.updateNextReadyPod(ctx, pods, nodeLocalDNSControllerRevisionHash, ciliumCheck)
 	}
 
-	return r.updateNextNotReadyPod(ctx, pods, nodeLocalDNSControllerRevision, ciliumCheck)
+	return r.updateNextNotReadyPod(ctx, pods, nodeLocalDNSControllerRevisionHash, ciliumCheck)
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

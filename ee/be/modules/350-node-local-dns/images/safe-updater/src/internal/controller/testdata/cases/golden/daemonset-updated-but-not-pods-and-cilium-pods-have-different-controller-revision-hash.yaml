@@ -20,7 +20,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 6dc65d9f6
+    controller-revision-hash: 6dc65d9f5
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xxlml
@@ -81,7 +81,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 6dc65d9f6
+    controller-revision-hash: 6dc65d9f5
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xylml
@@ -206,7 +206,6 @@ metadata:
     vpaUpdates: 'Pod resources updated by node-local-dns: container 0: cpu request,
       memory request; container 1: cpu request, memory request'
   creationTimestamp: "2025-11-18T14:57:37Z"
-  deletionTimestamp: "2025-11-30T22:08:41Z"
   finalizers:
   - test.suite/dontgetdeleted
   generateName: node-local-dns-
@@ -225,7 +224,7 @@ metadata:
     kind: DaemonSet
     name: node-local-dns
     uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
-  resourceVersion: "925143872"
+  resourceVersion: "925143871"
   uid: 2181f7d5-5d11-4788-a451-f588177a3d6a
 spec:
   affinity:
