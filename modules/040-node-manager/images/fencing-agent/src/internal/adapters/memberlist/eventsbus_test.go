@@ -196,33 +196,183 @@ func TestEventsBus_Publish_NoSubscribers(t *testing.T) {
 	bus.Publish(testEvent)
 }
 
-func TestEventsBus_Publish_DropsBehavior(t *testing.T) {
-	bus := NewEventsBus()
+func TestEventsBus_Publish_TimeoutWithBlockedSubscriber(t *testing.T) {
+	// Use short timeout for testing
+	bus := &EventsBus{
+		subscribers:         make([]subscriber, 0),
+		mu:                  &sync.RWMutex{},
+		timeoutFOrReadEvent: 50 * time.Millisecond,
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create subscriber that never reads
+	ch := bus.Subscribe(ctx)
+
+	event := domain.Event{
+		Node:      domain.Node{Name: "timeout-test"},
+		EventType: domain.EventTypeJoin,
+		Timestamp: time.Now().Unix(),
+	}
+
+	start := time.Now()
+	bus.Publish(event)
+	duration := time.Since(start)
+
+	// Should timeout after ~50ms
+	if duration < 40*time.Millisecond || duration > 100*time.Millisecond {
+		t.Errorf("Expected Publish to timeout after ~50ms, took %v", duration)
+	}
+
+	// Channel might still be blocked
+	select {
+	case <-ch:
+	default:
+	}
+}
+
+func TestEventsBus_Publish_DelayedReader(t *testing.T) {
+	bus := &EventsBus{
+		subscribers:         make([]subscriber, 0),
+		mu:                  &sync.RWMutex{},
+		timeoutFOrReadEvent: 200 * time.Millisecond,
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	ch := bus.Subscribe(ctx)
 
-	// Don't read from channel - it's unbuffered
-	// Publish should not block due to select/default
-	for i := 0; i < 10; i++ {
-		event := domain.Event{
-			Node:      domain.Node{Name: "dropped-event"},
-			EventType: domain.EventTypeJoin,
-			Timestamp: int64(i),
-		}
-		bus.Publish(event)
+	event := domain.Event{
+		Node:      domain.Node{Name: "delayed-test"},
+		EventType: domain.EventTypeJoin,
+		Timestamp: time.Now().Unix(),
 	}
 
-	// If we got here, Publish didn't block - good!
-	// Channel should be empty or have at most one pending send
+	// Start Publish in goroutine (will block waiting)
+	publishDone := make(chan time.Duration)
+	go func() {
+		start := time.Now()
+		bus.Publish(event)
+		publishDone <- time.Since(start)
+	}()
 
-	// Try to read - might get nothing due to timing
+	// Wait 50ms before reading (less than timeout)
+	time.Sleep(50 * time.Millisecond)
+
+	// Now read the event
 	select {
-	case <-ch:
-		// Might receive one
-	case <-time.After(10 * time.Millisecond):
-		// Or timeout - both are ok
+	case receivedEvent := <-ch:
+		if receivedEvent.Node.Name != event.Node.Name {
+			t.Errorf("Expected node '%s', got '%s'", event.Node.Name, receivedEvent.Node.Name)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Timeout reading event")
+	}
+
+	// Check that Publish completed when reader read (not waited for full timeout)
+	duration := <-publishDone
+	if duration < 40*time.Millisecond || duration > 150*time.Millisecond {
+		t.Errorf("Expected Publish to complete after ~50ms (when reader read), took %v", duration)
+	}
+}
+
+func TestEventsBus_Publish_FastPathNotSlowed(t *testing.T) {
+	bus := NewEventsBus() // Use default timeout
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ch := bus.Subscribe(ctx)
+
+	// Start immediate reader
+	received := make(chan domain.Event, 1)
+	go func() {
+		event := <-ch
+		received <- event
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+
+	event := domain.Event{
+		Node:      domain.Node{Name: "fast-test"},
+		EventType: domain.EventTypeJoin,
+		Timestamp: time.Now().Unix(),
+	}
+
+	start := time.Now()
+	bus.Publish(event)
+	duration := time.Since(start)
+
+	// Should complete quickly (not wait for timer)
+	if duration > 100*time.Millisecond {
+		t.Errorf("Expected fast Publish (<100ms), took %v", duration)
+	}
+
+	// Verify event received
+	select {
+	case receivedEvent := <-received:
+		if receivedEvent.Node.Name != event.Node.Name {
+			t.Errorf("Expected node '%s', got '%s'", event.Node.Name, receivedEvent.Node.Name)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Error("Timeout waiting for event")
+	}
+}
+
+func TestEventsBus_Publish_MultipleSubscribers_OneBlocked(t *testing.T) {
+	bus := &EventsBus{
+		subscribers:         make([]subscriber, 0),
+		mu:                  &sync.RWMutex{},
+		timeoutFOrReadEvent: 50 * time.Millisecond,
+	}
+	ctx := context.Background()
+
+	ctx1, cancel1 := context.WithCancel(ctx)
+	defer cancel1()
+	ctx2, cancel2 := context.WithCancel(ctx)
+	defer cancel2()
+
+	ch1 := bus.Subscribe(ctx1)
+	ch2 := bus.Subscribe(ctx2)
+
+	// ch1 has active reader, ch2 doesn't
+	received1 := make(chan domain.Event, 1)
+	go func() {
+		event := <-ch1
+		received1 <- event
+	}()
+
+	time.Sleep(10 * time.Millisecond)
+
+	event := domain.Event{
+		Node:      domain.Node{Name: "mixed-test"},
+		EventType: domain.EventTypeJoin,
+		Timestamp: time.Now().Unix(),
+	}
+
+	start := time.Now()
+	bus.Publish(event)
+	duration := time.Since(start)
+
+	// Should timeout waiting for ch2 (blocked subscriber)
+	if duration < 40*time.Millisecond || duration > 100*time.Millisecond {
+		t.Errorf("Expected Publish to wait ~50ms for blocked subscriber, took %v", duration)
+	}
+
+	// ch1 should have received the event
+	select {
+	case receivedEvent := <-received1:
+		if receivedEvent.Node.Name != event.Node.Name {
+			t.Errorf("Expected node '%s', got '%s'", event.Node.Name, receivedEvent.Node.Name)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Error("ch1 should have received event")
+	}
+
+	// ch2 might not have received anything (timeout)
+	select {
+	case <-ch2:
+	default:
+		// Expected - ch2 was blocked
 	}
 }
 
@@ -241,7 +391,6 @@ func TestEventsBus_Subscribe_ContextCancellation(t *testing.T) {
 		t.Fatalf("Expected 1 subscriber, got %d", initialCount)
 	}
 
-	// Cancel context
 	cancel()
 
 	// Wait for unsubscribe to complete
@@ -270,7 +419,6 @@ func TestEventsBus_Subscribe_ContextCancellation(t *testing.T) {
 func TestEventsBus_Subscribe_MultipleContextCancellations(t *testing.T) {
 	bus := NewEventsBus()
 
-	// Create 3 subscribers
 	ctx1, cancel1 := context.WithCancel(context.Background())
 	ctx2, cancel2 := context.WithCancel(context.Background())
 	ctx3, cancel3 := context.WithCancel(context.Background())
@@ -279,14 +427,12 @@ func TestEventsBus_Subscribe_MultipleContextCancellations(t *testing.T) {
 	ch2 := bus.Subscribe(ctx2)
 	ch3 := bus.Subscribe(ctx3)
 
-	// Verify 3 subscribers
 	bus.mu.RLock()
 	if len(bus.subscribers) != 3 {
 		t.Fatalf("Expected 3 subscribers, got %d", len(bus.subscribers))
 	}
 	bus.mu.RUnlock()
 
-	// Cancel first subscriber
 	cancel1()
 	time.Sleep(50 * time.Millisecond)
 
@@ -296,7 +442,6 @@ func TestEventsBus_Subscribe_MultipleContextCancellations(t *testing.T) {
 	}
 	bus.mu.RUnlock()
 
-	// Cancel second subscriber
 	cancel2()
 	time.Sleep(50 * time.Millisecond)
 
@@ -306,7 +451,6 @@ func TestEventsBus_Subscribe_MultipleContextCancellations(t *testing.T) {
 	}
 	bus.mu.RUnlock()
 
-	// Cancel third subscriber
 	cancel3()
 	time.Sleep(50 * time.Millisecond)
 
@@ -316,7 +460,6 @@ func TestEventsBus_Subscribe_MultipleContextCancellations(t *testing.T) {
 	}
 	bus.mu.RUnlock()
 
-	// Verify all channels are closed
 	for i, ch := range []<-chan domain.Event{ch1, ch2, ch3} {
 		select {
 		case _, ok := <-ch:
@@ -340,7 +483,6 @@ func TestEventsBus_ConcurrentSubscribe(t *testing.T) {
 	channels := make([]<-chan domain.Event, numSubscribers)
 	cancels := make([]context.CancelFunc, numSubscribers)
 
-	// Launch concurrent subscribers
 	for i := 0; i < numSubscribers; i++ {
 		go func(idx int) {
 			defer wg.Done()
@@ -352,7 +494,6 @@ func TestEventsBus_ConcurrentSubscribe(t *testing.T) {
 
 	wg.Wait()
 
-	// Verify all subscribers registered
 	bus.mu.RLock()
 	subscribersCount := len(bus.subscribers)
 	bus.mu.RUnlock()
@@ -361,7 +502,6 @@ func TestEventsBus_ConcurrentSubscribe(t *testing.T) {
 		t.Errorf("Expected %d subscribers, got %d", numSubscribers, subscribersCount)
 	}
 
-	// Cleanup
 	for _, cancel := range cancels {
 		cancel()
 	}
@@ -386,10 +526,8 @@ func TestEventsBus_ConcurrentPublish(t *testing.T) {
 	const numPublishers = 5
 	const eventsPerPublisher = 10
 
-	// Use atomic counter for thread-safe counting
 	var receivedCount int32
 
-	// Start receiver
 	var receiverWg sync.WaitGroup
 	receiverWg.Add(1)
 	go func() {
@@ -404,13 +542,11 @@ func TestEventsBus_ConcurrentPublish(t *testing.T) {
 		}
 	}()
 
-	// Small delay to ensure receiver is ready
 	time.Sleep(20 * time.Millisecond)
 
 	var wg sync.WaitGroup
 	wg.Add(numPublishers)
 
-	// Launch concurrent publishers
 	for i := 0; i < numPublishers; i++ {
 		go func(publisherID int) {
 			defer wg.Done()
@@ -428,14 +564,11 @@ func TestEventsBus_ConcurrentPublish(t *testing.T) {
 
 	wg.Wait()
 
-	// Give time for all events to be received
 	time.Sleep(100 * time.Millisecond)
 
-	// Cancel context to stop receiver
 	cancel()
 	receiverWg.Wait()
 
-	// Get final count
 	count := atomic.LoadInt32(&receivedCount)
 
 	// Should have received all or most events
@@ -584,7 +717,6 @@ func TestEventsBus_EventTypes(t *testing.T) {
 
 	time.Sleep(10 * time.Millisecond)
 
-	// Test both event types
 	events := []domain.Event{
 		{
 			Node:      domain.Node{Name: "joining-node"},

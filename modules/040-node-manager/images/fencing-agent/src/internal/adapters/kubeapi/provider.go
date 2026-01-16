@@ -46,7 +46,7 @@ func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		// TODO logging
+		p.logger.Warn("Failed to get nodes from kubeapi", zap.Error(err))
 		return nil, err
 	}
 	p.logger.Debug("Get nodes", zap.Int("count", len(nodes.Items)))
