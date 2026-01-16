@@ -43,6 +43,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	for range sigs {
+		klog.Info("Shutdown signal received")
 		cancel()
 		klog.Infof("Bye from %s", constant.ControllerName)
 		break

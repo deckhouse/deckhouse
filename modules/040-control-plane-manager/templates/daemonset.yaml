@@ -347,20 +347,22 @@ spec:
             path: /healthz
             port: 4264
             scheme: HTTPS
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 10
+          timeoutSeconds: 1
           successThreshold: 1
-          timeoutSeconds: 5
+          failureThreshold: 3
         readinessProbe:
           failureThreshold: 3
           httpGet:
             path: /readyz
             port: 4264
             scheme: HTTPS
-          initialDelaySeconds: 5
-          periodSeconds: 5
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 1
           successThreshold: 1
-          timeoutSeconds: 3
+          failureThreshold: 3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
