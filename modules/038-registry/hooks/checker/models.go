@@ -150,25 +150,13 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 		}
 	}()
 
-	imagesFingerprint, err := computeImagesFingerprint(inputs.ImagesInfo, inputs.Params.CheckMode)
-	if err != nil {
-		return fmt.Errorf("cannot compute images fingerprint: %w", err)
-	}
-
-	fullVersion, err := registry_pki.ComputeHash(inputs.Params.Version, imagesFingerprint)
-	if err != nil {
-		return fmt.Errorf("cannot compute full version: %w", err)
-	}
-
 	var isNewConfig bool
-	if state.Version != fullVersion {
+	if state.Version != inputs.Params.Version {
 		log.Info("Initializing checker with new config",
 			"params.version", inputs.Params.Version,
-			"images.fingerprint", imagesFingerprint,
-			"full.version", fullVersion,
 		)
 
-		state.handleNewConfig(fullVersion)
+		state.handleNewConfig(inputs)
 		isNewConfig = true
 	}
 
@@ -198,9 +186,9 @@ func (state *stateModel) Process(log go_hook.Logger, inputs inputsModel) error {
 	return nil
 }
 
-func (state *stateModel) handleNewConfig(fullVersion string) {
+func (state *stateModel) handleNewConfig(inputs inputsModel) {
 	state.Queues = nil
-	state.Version = fullVersion
+	state.Version = inputs.Params.Version
 	state.Ready = false
 	state.Message = "Initializing"
 }
@@ -215,11 +203,6 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 		state.Queues = make(map[string]registryQueue)
 	}
 
-	imagesFingerprint, err := computeImagesFingerprint(inputs.ImagesInfo, inputs.Params.CheckMode)
-	if err != nil {
-		return fmt.Errorf("cannot compute images fingerprint: %w", err)
-	}
-
 	for name := range state.Queues {
 		if _, ok := inputs.Params.Registries[name]; !ok {
 			log.Info("Deleting queue", "queue.name", name)
@@ -229,17 +212,12 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 
 	t := time.Now().UTC()
 	for name, registryParams := range inputs.Params.Registries {
-		registryParamsHash, err := registry_pki.ComputeHash(registryParams)
+		hash, err := registry_pki.ComputeHash(registryParams, inputs.ImagesInfo.DeckhouseImages)
 		if err != nil {
 			return fmt.Errorf("cannot compute registry %q params hash: %w", name, err)
 		}
 
-		queueHash, err := registry_pki.ComputeHash(registryParamsHash, imagesFingerprint)
-		if err != nil {
-			return fmt.Errorf("cannot compute registry %q queue hash: %w", name, err)
-		}
-
-		if q, ok := state.Queues[name]; ok && q.ParamsHash == queueHash {
+		if q, ok := state.Queues[name]; ok && q.ParamsHash == hash {
 			if len(q.Items) == 0 && len(q.Retry) > 0 {
 				q.Items = q.Retry
 				q.Retry = nil
@@ -263,39 +241,13 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 			return fmt.Errorf("cannot build registry %q queue: %w", name, err)
 		}
 
-		q := registryQueue{Items: repoImages, ParamsHash: queueHash}
+		q := registryQueue{Items: repoImages, ParamsHash: hash}
 
 		state.Queues[name] = q
 		log.Info("Added queue", "queue.name", name, "queue.items", q.total())
 	}
 
 	return nil
-}
-
-func computeImagesFingerprint(info clusterImagesInfo, mode registry_const.CheckModeType) (string, error) {
-	currentRepo, err := gcr_name.NewRepository(info.Repo)
-	if err != nil {
-		return "", fmt.Errorf("cannot parse registry base %q: %w", info.Repo, err)
-	}
-
-	switch mode {
-	case registry_const.CheckModeRelax:
-		deckhouseContainerImage, err := collectDeckhouseContainerImage(info.DeckhouseImages, currentRepo)
-		if err != nil {
-			return "", err
-		}
-
-		var image string
-		for k := range deckhouseContainerImage {
-			image = k
-			break
-		}
-
-		return registry_pki.ComputeHash(info.Repo, mode, image)
-	default:
-		deckhouseImages := collectDeckhouseQueueImages(info.DeckhouseImages, currentRepo)
-		return registry_pki.ComputeHash(info.Repo, mode, info.ModulesImagesDigests, deckhouseImages)
-	}
 }
 
 func (state *stateModel) processQueues(log go_hook.Logger, inputs inputsModel) (int64, error) {
