@@ -62,7 +62,6 @@
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
-  {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
   {{- $_ := set $csiControllerConfig "resizerEnabled" true }}
   {{- $_ := set $csiControllerConfig "topologyEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
