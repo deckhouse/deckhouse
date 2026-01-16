@@ -103,8 +103,8 @@ Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
 filters: Filters
-search_filter: Search by&nbsp;module
-search_placeholder_text_filter: Enter a&nbsp;name
+search_filter: Search by module
+search_placeholder_text_filter: Enter a name
 editorial_filter: Editorial
 statuses_filter: Statuses
 tags_filter: Tags
