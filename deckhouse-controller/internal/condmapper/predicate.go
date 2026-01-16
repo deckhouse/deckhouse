@@ -16,63 +16,63 @@ package condmapper
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// Match holds predicate result with source condition for Reason/Message.
-type Match struct {
+// match holds predicate result with source condition for Reason/Message.
+type match struct {
 	Ok     bool   // predicate matched
 	Source string // internal condition that caused match
 }
 
-// Pred evaluates state and returns match with source.
-type Pred func(State) Match
+// Predicate evaluates state and returns match with source.
+type Predicate func(State) match
 
 // IsTrue checks if a single condition is True.
-func IsTrue(cond string) Pred {
-	return func(s State) Match {
+func IsTrue(cond string) Predicate {
+	return func(s State) match {
 		c, ok := s.Internal[cond]
 		if ok && c.Status == metav1.ConditionTrue {
-			return Match{Ok: true, Source: cond}
+			return match{Ok: true, Source: cond}
 		}
-		return Match{}
+		return match{}
 	}
 }
 
 // AllTrue checks if all conditions are True. Returns first condition as source.
-func AllTrue(conds ...string) Pred {
-	return func(s State) Match {
+func AllTrue(conds ...string) Predicate {
+	return func(s State) match {
 		for _, cond := range conds {
 			c, ok := s.Internal[cond]
 			if !ok || c.Status != metav1.ConditionTrue {
-				return Match{}
+				return match{}
 			}
 		}
 		if len(conds) > 0 {
-			return Match{Ok: true, Source: conds[0]}
+			return match{Ok: true, Source: conds[0]}
 		}
-		return Match{Ok: true}
+		return match{Ok: true}
 	}
 }
 
 // AnyFalse checks if any condition is False. Returns failing condition as source.
-func AnyFalse(conds ...string) Pred {
-	return func(s State) Match {
+func AnyFalse(conds ...string) Predicate {
+	return func(s State) match {
 		for _, cond := range conds {
 			c, ok := s.Internal[cond]
 			if ok && c.Status == metav1.ConditionFalse {
-				return Match{Ok: true, Source: cond}
+				return match{Ok: true, Source: cond}
 			}
 		}
-		return Match{}
+		return match{}
 	}
 }
 
 // And combines predicates with logical AND. Returns last source.
-func And(preds ...Pred) Pred {
-	return func(s State) Match {
-		var last Match
+func And(preds ...Predicate) Predicate {
+	return func(s State) match {
+		var last match
 		for _, p := range preds {
 			m := p(s)
 			if !m.Ok {
-				return Match{}
+				return match{}
 			}
 			if m.Source != "" {
 				last = m
@@ -84,44 +84,44 @@ func And(preds ...Pred) Pred {
 }
 
 // Or combines predicates with logical OR. Returns first matching source.
-func Or(preds ...Pred) Pred {
-	return func(s State) Match {
+func Or(preds ...Predicate) Predicate {
+	return func(s State) match {
 		for _, p := range preds {
 			if m := p(s); m.Ok {
 				return m
 			}
 		}
-		return Match{}
+		return match{}
 	}
 }
 
 // Not negates a predicate. Clears source on negation.
-func Not(p Pred) Pred {
-	return func(s State) Match {
+func Not(p Predicate) Predicate {
+	return func(s State) match {
 		if m := p(s); !m.Ok {
-			return Match{Ok: true}
+			return match{Ok: true}
 		}
-		return Match{}
+		return match{}
 	}
 }
 
 // VersionChanged checks if version changed flag is set.
-func VersionChanged() Pred {
-	return func(s State) Match {
+func VersionChanged() Predicate {
+	return func(s State) match {
 		if s.VersionChanged {
-			return Match{Ok: true}
+			return match{Ok: true}
 		}
-		return Match{}
+		return match{}
 	}
 }
 
 // ExtTrue checks if an external condition is True.
-func ExtTrue(cond string) Pred {
-	return func(s State) Match {
+func ExtTrue(cond string) Predicate {
+	return func(s State) match {
 		c, ok := s.External[cond]
 		if ok && c.Status == metav1.ConditionTrue {
-			return Match{Ok: true}
+			return match{Ok: true}
 		}
-		return Match{}
+		return match{}
 	}
 }

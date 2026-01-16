@@ -14,12 +14,7 @@
 
 package condmapper
 
-import (
-	"maps"
-	"slices"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-)
+import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // State holds internal and external conditions for mapping.
 type State struct {
@@ -33,58 +28,76 @@ type Mapper struct {
 	Rules []Rule
 }
 
+// Rule defines how to compute an external condition from internal state.
+type Rule struct {
+	Type    string    // external condition type name
+	TrueIf  Predicate // set True when matched; source used for Reason/Message
+	FalseIf Predicate // set False when matched; source used for Reason/Message
+	OnlyIf  Predicate // precondition; skip rule if not matched
+	Sticky  bool      // once True, stays True forever
+}
+
 // Map evaluates all rules and returns computed external conditions.
 func (m Mapper) Map(state State) []metav1.Condition {
-	result := make(map[string]metav1.Condition, len(m.Rules))
+	result := make([]metav1.Condition, 0, len(m.Rules))
 
 	for _, r := range m.Rules {
-		if r.OnlyIf != nil && !r.OnlyIf(state).Ok {
-			continue
+		if cond, ok := r.evaluate(state); ok {
+			result = append(result, cond)
 		}
-
-		// Sticky: skip if already True in previous state (no update needed)
-		if r.Sticky {
-			if c, ok := state.External[r.Type]; ok && c.Status == metav1.ConditionTrue {
-				continue
-			}
-		}
-
-		// FalseIf checked first: failure state takes precedence
-		var match Match
-		var status metav1.ConditionStatus
-
-		if r.FalseIf != nil {
-			match = r.FalseIf(state)
-			if match.Ok {
-				status = metav1.ConditionFalse
-			}
-		}
-		if !match.Ok && r.TrueIf != nil {
-			match = r.TrueIf(state)
-			if match.Ok {
-				status = metav1.ConditionTrue
-			}
-		}
-
-		if !match.Ok {
-			if c, ok := state.External[r.Type]; ok {
-				result[r.Type] = c
-			}
-			continue
-		}
-
-		// build condition with Reason/Message from source
-		cond := metav1.Condition{
-			Type:   r.Type,
-			Status: status,
-		}
-		if src, ok := state.Internal[match.Source]; ok {
-			cond.Reason = src.Reason
-			cond.Message = src.Message
-		}
-		result[r.Type] = cond
 	}
 
-	// Convert map to slice
-	return slices.Collect(maps.Values(result))
+	return result
+}
+
+// evaluate applies a single rule and returns the resulting condition.
+// Returns false if the rule should be skipped (OnlyIf not met, sticky already True, or no match).
+func (r Rule) evaluate(state State) (metav1.Condition, bool) {
+	// Check precondition
+	if r.OnlyIf != nil && !r.OnlyIf(state).Ok {
+		return metav1.Condition{}, false
+	}
+
+	// Sticky: skip if already True - no change needed
+	if r.Sticky {
+		if c, ok := state.External[r.Type]; ok && c.Status == metav1.ConditionTrue {
+			return metav1.Condition{}, false
+		}
+	}
+
+	// Evaluate predicates: FalseIf takes precedence over TrueIf
+	res, status := r.evaluatePredicates(state)
+	if !res.Ok {
+		return metav1.Condition{}, false
+	}
+
+	// Build condition with Reason/Message from source
+	cond := metav1.Condition{
+		Type:   r.Type,
+		Status: status,
+	}
+	if src, ok := state.Internal[res.Source]; ok {
+		cond.Reason = src.Reason
+		cond.Message = src.Message
+	}
+
+	return cond, true
+}
+
+// evaluatePredicates checks FalseIf and TrueIf predicates.
+// FalseIf is checked first as failure state takes precedence.
+func (r Rule) evaluatePredicates(state State) (match, metav1.ConditionStatus) {
+	if r.FalseIf != nil {
+		if res := r.FalseIf(state); res.Ok {
+			return res, metav1.ConditionFalse
+		}
+	}
+
+	if r.TrueIf != nil {
+		if res := r.TrueIf(state); res.Ok {
+			return res, metav1.ConditionTrue
+		}
+	}
+
+	return match{}, ""
 }
