@@ -89,6 +89,8 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 			Cache: &client.CacheOptions{
 				DisableFor: []client.Object{
 					&corev1.Node{},
+					&corev1.Pod{},
+					&corev1.ConfigMap{},
 				},
 			},
 		},
