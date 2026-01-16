@@ -56,13 +56,14 @@ shell:
   install:
   - | 
     echo "Checking if module crds are the same as cert-manager crds"
-    DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds /module_crds/update.sh
+    DOWNLOAD=false CRD_FILE_PATH=/src/deploy/crds MODULE_VERSION=v{{ $version }} /module_crds/cert-manager/update.sh
 
     dir1="/src/deploy/crds"
     dir2="/module_crds/cert-manager"
     for f in $dir1/*.yaml; do
       base=$(basename "$f")
-        diff -u "$dir1/$base" "$dir2/$base"
+        diff <(yq -P 'sort_keys(..)' $dir1/$base) <(yq -P 'sort_keys(..)' $dir2/$base)
+
     done  
 
   - |
