@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ru: {
       search: 'Поиск',
       experimental: 'Экспериментальная версия. Функциональность модуля может сильно измениться. Совместимость с будущими версиями не гарантируется.',
-      preview: 'Предварительная версия. вункциональность модуля может изменитсья, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребоваться миграция.',
+      preview: 'Предварительная версия. Функциональность модуля может измениться, но основные возможности сохранятся. Совместимость с будущими версиями обеспечивается, но может потребоваться миграция.',
       generalAvailability: 'Общедоступная версия. Модуль готов к использованию в production-средах.',
       deprecated: 'Модуль устарел. Дальнейшее развитие и поддержка модуля прекращены.'
     },
@@ -33,6 +33,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const texts = description[lang];
+  const filterSearch = document.getElementById('search-filter');
+  let fullResetHandler = null;
 
   function hideAllItems() {
     articles.forEach(article => article.style.display = 'none');
@@ -46,6 +48,19 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   }
 
+  function createSelectedFilterElement(text, onRemove) {
+    const selectedElement = document.createElement('div');
+    selectedElement.classList.add('selected__filter');
+    selectedElement.textContent = text;
+
+    const removeButton = document.createElement('a');
+    removeButton.classList.add('remove__filter');
+    removeButton.addEventListener('click', onRemove);
+
+    selectedElement.appendChild(removeButton);
+    return selectedElement;
+  }
+
   function getTags() {
     const tags = new Set();
     articles.forEach(article => {
@@ -57,6 +72,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function createCheckboxes(tag) {
+    if (!filterCheckboxesTags) return;
+    
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.id = tag;
@@ -72,78 +89,77 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function createFilters() {
+    if (!filterCheckboxesTags) return;
+    
     const tags = getTags();
     tags.forEach(tag => {
       createCheckboxes(tag);
     });
   }
 
-  createFilters();
+  if (filterCheckboxesTags) {
+    createFilters();
+  }
   
-  function filterArticles() {
-    selectedFiltersList.innerHTML = '';
-    const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked');
-    let search = document.getElementById('search-filter');
-    const query = search.value;
-
-    checkedCheckboxes.forEach(checkbox => {
-      const filterName = checkbox.closest('.filter__container').querySelector('.filter__container--title.closing-title').textContent;
-      const checkboxValue = checkbox.value;
-      const checkboxText = `${filterName}: ${checkboxValue}`;
-
-      const selectedElement = document.createElement('div');
-      selectedElement.classList.add('selected__filter');
-      selectedElement.textContent = checkboxText;
-
-      const removeButton = document.createElement('a');
-      removeButton.classList.add('remove__filter');
-
-      removeButton.addEventListener('click', function() {
-        checkbox.checked = false;
-        filterArticles();
-      });
-
-      selectedElement.appendChild(removeButton);
-      selectedFiltersList.appendChild(selectedElement);
+  function resetAllFilters() {
+    if (filterSearch) {
+      filterSearch.value = '';
+    }
+    
+    document.querySelectorAll('.filter input[type="checkbox"]:checked').forEach(checkbox => {
+      checkbox.checked = false;
     });
 
-    if(query.length > 0) {
-      const searchText = `${texts.search}: ${query}`;
+    document.querySelectorAll('.filter__container--title').forEach(title => {
+      title.classList.remove('filter-selected');
+    });
+    
+    filterArticles();
+  }
 
-      const selectedElement = document.createElement('div');
-      selectedElement.classList.add('selected__filter');
-      selectedElement.textContent = searchText;
+  function filterArticles() {
+    if (selectedFiltersList) {
+      selectedFiltersList.innerHTML = '';
+    }
+    
+    const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked');
+    const query = filterSearch ? filterSearch.value.trim() : '';
 
-      const removeButton = document.createElement('a');
-      removeButton.classList.add('remove__filter');
+    if (selectedFiltersList) {
+      checkedCheckboxes.forEach(checkbox => {
+        const filterContainer = checkbox.closest('.filter__container');
+        const filterName = filterContainer?.querySelector('.filter__container--title.closing-title')?.textContent || '';
+        const checkboxValue = checkbox.value;
+        const checkboxText = `${filterName}: ${checkboxValue}`;
 
-      removeButton.addEventListener('click', function() {
-        search.value = '';
-        filterArticles();
+        const selectedElement = createSelectedFilterElement(checkboxText, () => {
+          checkbox.checked = false;
+          filterArticles();
+        });
+
+        selectedFiltersList.appendChild(selectedElement);
       });
 
-      selectedElement.appendChild(removeButton);
-      selectedFiltersList.appendChild(selectedElement);
-    }
+      if(query.length > 0) {
+        const searchText = `${texts.search}: ${query}`;
+        const selectedElement = createSelectedFilterElement(searchText, () => {
+          if (filterSearch) {
+            filterSearch.value = '';
+          }
+          filterArticles();
+        });
 
-    if(checkedCheckboxes.length > 0 || query.length > 0) {
-      selectedFiltersList.appendChild(fullReset);
-      fullReset.addEventListener('click', function() {
-        search.value = '';
-        checkedCheckboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        })
-        filterArticles();
-      })
-    }
+        selectedFiltersList.appendChild(selectedElement);
+      }
 
-    if(resetButton) {
-      resetButton.addEventListener('click', () => {
-        checkedCheckboxes.forEach(checkbox => {
-          checkbox.checked = false;
-        })
-        filterArticles();
-      })
+      if(checkedCheckboxes.length > 0 || query.length > 0) {
+        if (fullResetHandler) {
+          fullReset.removeEventListener('click', fullResetHandler);
+        }
+        fullResetHandler = resetAllFilters;
+        fullReset.addEventListener('click', fullResetHandler);
+        selectedFiltersList.appendChild(fullReset);
+      }
     }
 
     const checkboxesEditorialChecked = document.querySelectorAll('.filter__container--editorial input[type="checkbox"]:checked');
@@ -156,31 +172,41 @@ document.addEventListener('DOMContentLoaded', () => {
     const selectedTags = Array.from(checkboxesTagsChecked).map(checkbox => checkbox.value);
 
     const filtered = Array.from(articles).filter(article => {
-      const title = article.querySelector('h2').textContent.toLowerCase();
-      if(query.toLowerCase() && !title.includes(query.toLowerCase())) {
+      const titleElement = article.querySelector('h2');
+      if (!titleElement) return false;
+      
+      const title = titleElement.textContent.toLowerCase();
+      if(query && !title.includes(query.toLowerCase())) {
         return false;
       }
 
       if(selectedEditorial.length > 0) {
-        for(const editorial of selectedEditorial) {
-          if(editorial === 'commercialEditions' && article.dataset.commercialEditions !== true) {
-              return false;
+        const hasEditorial = selectedEditorial.every(editorial => {
+          if(editorial === 'commercialEditions') {
+            return article.dataset.commercialEditions === 'true';
           }
+          return false;
+        });
+        if(!hasEditorial) {
+          return false;
         }
       }
 
       if(selectedStatuses.length > 0) {
-        for(const status of selectedStatuses) {
-          const statusElement = article.querySelector(`.button-tile__stage-` + status);
-          if(!statusElement) {
-            return false;
-          }
+        const hasAllStatuses = selectedStatuses.every(status => {
+          return article.querySelector(`.button-tile__stage-${status}`) !== null;
+        });
+        if(!hasAllStatuses) {
+          return false;
         }
       }
 
       if(selectedTags.length > 0) {
-        const tagElement = Array.from(article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')).map(tag => tag.textContent);
-        if(!selectedTags.every(tag => tagElement.includes(tag))) {
+        const articleTags = Array.from(
+          article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+        ).map(tag => tag.textContent);
+        
+        if(!selectedTags.every(tag => articleTags.includes(tag))) {
           return false;
         }
       }
@@ -198,8 +224,13 @@ document.addEventListener('DOMContentLoaded', () => {
     })
   })
 
-  const filterSearch = document.getElementById('search-filter');
-  filterSearch.addEventListener('input', filterArticles);
+  if (filterSearch) {
+    filterSearch.addEventListener('input', filterArticles);
+  }
+
+  if(resetButton) {
+    resetButton.addEventListener('click', resetAllFilters);
+  }
 
   document.querySelectorAll('.filter__container').forEach(container => {
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
@@ -219,104 +250,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   initializeArticleFilter(Array.from(articles));
 
-  const experimentalIcon = document.querySelectorAll('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img');
-  const previewIcon = document.querySelectorAll('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img');
-  const generalAvailabilityIcon = document.querySelectorAll('.filter__container label[for="generalAvailability"] > img, .button-tile__stage-generalAvailability > img');
-  const deprecatedIcon = document.querySelectorAll('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img');
+  function createTooltipContent(titleText, descriptionText) {
+    const container = document.createElement('div');
+    container.classList.add('statuses-tooltip');
+    
+    const title = document.createElement('p');
+    title.classList.add('statuses-tooltip__title');
+    title.textContent = titleText;
+    
+    const description = document.createElement('p');
+    description.classList.add('statuses-tooltip__descr');
+    description.textContent = descriptionText;
+    
+    container.appendChild(title);
+    container.appendChild(description);
+    return container;
+  }
+  
+  function initTooltip(selector, titleText, descriptionText) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length === 0) return;
 
-  tippy(experimentalIcon, {
-    allowHTML: true,
-    content: () => {
-      const container = document.createElement('div');
-      container.classList.add('statuses-tooltip');
-      const title = document.createElement('p');
-      title.classList.add('statuses-tooltip__title');
-      title.textContent = 'Experimental';
-      const description = document.createElement('p');
-      description.classList.add('statuses-tooltip__descr');
-      description.textContent = texts.experimental;
-      container.appendChild(title);
-      container.appendChild(description);
+    tippy(elements, {
+      allowHTML: true,
+      content: () => createTooltipContent(titleText, descriptionText),
+      arrow: true,
+      appendTo: 'parent',
+      hideOnClick: false,
+      delay: [300, 50],
+      offset: [0, 10],
+      duration: [300],
+    });
+  }
 
-      return container;
-    },
-    arrow: true,
-    appendTo: 'parent',
-    hideOnClick: false,
-    delay: [300, 50],
-    offset: [0, 10],
-    duration: [300],
-  });
-
-  tippy(previewIcon, {
-    allowHTML: true,
-    content: () => {
-      const container = document.createElement('div');
-      container.classList.add('statuses-tooltip');
-      const title = document.createElement('p');
-      title.classList.add('statuses-tooltip__title');
-      title.textContent = 'Preview';
-      const description = document.createElement('p');
-      description.classList.add('statuses-tooltip__descr');
-      description.textContent = texts.preview;
-      container.appendChild(title);
-      container.appendChild(description);
-
-      return container;
-    },
-    arrow: true,
-    appendTo: 'parent',
-    hideOnClick: false,
-    delay: [300, 50],
-    offset: [0, 10],
-    duration: [300],
-  });
-
-  tippy(generalAvailabilityIcon, {
-    allowHTML: true,
-    content: () => {
-      const container = document.createElement('div');
-      container.classList.add('statuses-tooltip');
-      const title = document.createElement('p');
-      title.classList.add('statuses-tooltip__title');
-      title.textContent = 'General Availability (GA)';
-      const description = document.createElement('p');
-      description.classList.add('statuses-tooltip__descr');
-      description.textContent = texts.generalAvailability;
-      container.appendChild(title);
-      container.appendChild(description);
-
-      return container;
-    },
-    arrow: true,
-    appendTo: 'parent',
-    hideOnClick: false,
-    delay: [300, 50],
-    offset: [0, 10],
-    duration: [300],
-  });
-
-  tippy(deprecatedIcon, {
-    allowHTML: true,
-    content: () => {
-      const container = document.createElement('div');
-      container.classList.add('statuses-tooltip');
-      const title = document.createElement('p');
-      title.classList.add('statuses-tooltip__title');
-      title.textContent = 'Deprecated';
-      const description = document.createElement('p');
-      description.classList.add('statuses-tooltip__descr');
-      description.textContent = texts.deprecated;
-      container.appendChild(title);
-      container.appendChild(description);
-
-      return container;
-    },
-    arrow: true,
-    appendTo: 'parent',
-    hideOnClick: false,
-    delay: [300, 50],
-    offset: [0, 10],
-    duration: [300],
-  });
+  initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
+  initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
+  initTooltip('.filter__container label[for="generalAvailability"] > img, .button-tile__stage-generalAvailability > img', 'General Availability (GA)', texts.generalAvailability);
+  initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
 })
