@@ -672,7 +672,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Главная страница Harbor...">
 </div>
 
-Роль пользователя оставьте предложенную по умолчанию: «Администратор проекта»:
+Оставьте роль по умолчанию: «Администратор проекта».
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_new_project_user.png" alt="Главная страница Harbor...">
