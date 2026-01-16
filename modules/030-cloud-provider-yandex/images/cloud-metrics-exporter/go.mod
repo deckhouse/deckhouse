@@ -7,7 +7,7 @@ toolchain go1.24.1
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250324182836-0c3154b802ca
 	github.com/go-chi/chi v1.5.4
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/yandex-cloud/go-sdk v0.0.0-20241220131134-2393e243c134
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
