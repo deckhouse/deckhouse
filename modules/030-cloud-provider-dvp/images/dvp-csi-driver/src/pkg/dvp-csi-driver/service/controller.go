@@ -464,8 +464,6 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 				return nil, status.Error(codes.Internal, msg.Error())
 			}
 
-			snapshotCreationTimestamp := timestamppb.New(virtualDiskSnapshot.CreationTimestamp.Time)
-
 			// we have to return response even if snapshot is not ready yet
 			// to let snapshotter delete it if it get Failed phase later
 			return &csi.CreateSnapshotResponse{
@@ -473,7 +471,6 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 					SnapshotId:     request.Name,
 					SourceVolumeId: request.SourceVolumeId,
 					ReadyToUse:     false,
-					CreationTime:   snapshotCreationTimestamp,
 				},
 			}, nil
 		} else {
