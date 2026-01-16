@@ -60,6 +60,25 @@ diff --git a/server/passwordchangehandler.go b/server/passwordchangehandler.go
 index 040a33d..c242c65 100644
 --- a/server/passwordchangehandler.go
 +++ b/server/passwordchangehandler.go
+@@ -150,12 +150,16 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+ 
+ 		updater := func(p storage.Password) (storage.Password, error) {
+-			p.PreviousHashes = append(p.PreviousHashes, p.Hash)
+-			if len(p.PreviousHashes) > int(s.passwordPolicy.passwordHistoryLimit) {
+-				p.PreviousHashes = p.PreviousHashes[1:]
+-			}
++			// Password policy is optional. Forced password changes (e.g. admin-initiated)
++			// must work even when policy isn't configured.
++			if s.passwordPolicy != nil && s.passwordPolicy.passwordHistoryLimit > 0 {
++				p.PreviousHashes = append(p.PreviousHashes, p.Hash)
++				if len(p.PreviousHashes) > int(s.passwordPolicy.passwordHistoryLimit) {
++					p.PreviousHashes = p.PreviousHashes[1:]
++				}
++			}
+ 			p.HashUpdatedAt = time.Now()
+ 			p.Hash = hash
+ 			return p, nil
+ 		}
 @@ -157,6 +157,7 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  			}
  			p.HashUpdatedAt = time.Now()
