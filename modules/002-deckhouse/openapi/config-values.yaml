@@ -430,7 +430,7 @@ properties:
               - `Relax` — checks only for the presence of the Deckhouse image tag in the container registry (used for switching between Deckhouse editions).
             enum: [Default, Relax]
             default: Default
-        x-deckhouse-validations: &registryDirectValidations
+        x-deckhouse-validations: &registryDirectPropertiesValidations
           - expression: "has(self.imagesRepo) : true"
             message: "'imagesRepo' is required."
           - expression: "(has(self.username) ? has(self.password) : true) : true"
@@ -458,7 +458,7 @@ properties:
         properties:
           <<: *registryDirectProperties
         x-deckhouse-validations:
-          <<: *registryDirectValidations
+          <<: *registryDirectPropertiesValidations
 
       proxy:
         type: object
