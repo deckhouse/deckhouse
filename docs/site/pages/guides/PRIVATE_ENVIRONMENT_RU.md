@@ -685,7 +685,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Следующим шагом необходимо скопировать образы компонентов DKP из публичного registry Deckhouse Kubernetes Platform в Harbor.
 
 {% alert level="info" %}
-Для дальнейших действий в этом разделе понадобится установленная утилита Deckhouse CLI. Установите её на сервер Bastion, согласно[документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
+Для дальнейших действий в этом разделе потребуется утилита Deckhouse CLI. Установите её на сервер Bastion согласно [документации](../documentation/v1/cli/d8/#как-установить-deckhouse-cli).
 {% endalert %}
 
 {% alert level="warning" %}
