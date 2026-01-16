@@ -183,6 +183,17 @@ lint: golangci-lint ## Run linter.
 lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
 
+.PHONY: lint-all
+lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
+		echo ""; \
+		echo "================================================================================================"; \
+		echo "Running golangci-lint in $$dir"; \
+		echo "================================================================================================"; \
+		echo ""; \
+		(cd $$dir && GOGC=50 GOFLAGS="-buildvcs=false" golangci-lint run); \
+	done
+
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
 	@docker pull -q ${MDLINTER_IMAGE}
