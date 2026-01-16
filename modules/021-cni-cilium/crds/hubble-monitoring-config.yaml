@@ -31,6 +31,7 @@ spec:
                   type: object
                   description: |
                     Configuration for exporting extended metrics from Cilium agents.
+                    
                     Extended metrics provide deeper insight into cluster network behavior.
 
                     > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
@@ -50,7 +51,9 @@ spec:
                     collectors:
                       type: array
                       description: |
-                        List of Hubble extended metrics to export. Each collector represents a specific metric type.
+                        List of Hubble extended metrics to export.
+                        
+                        Each collector represents a specific metric type.
 
                         For more details, see the [Cilium documentation](https://docs.cilium.io/en/v1.17/observability/metrics/#hubble-exported-metrics).
                       x-examples:
@@ -77,6 +80,7 @@ spec:
                             type: string
                             description: |
                               Optional context options for Hubble metrics.
+                              
                               Context options allow customizing metric collection behavior.
 
                               > **Warning.** A large number of labels on metrics can lead to Prometheus performance degradation.
@@ -86,6 +90,7 @@ spec:
                   type: object
                   description: |
                     Configuration for exporting event logs from Cilium agents.
+                    
                     Event logs provide detailed visibility into Cilium's network events.
 
                     > **Warning.** Changing this parameter will trigger a restart of the Cilium agents.
@@ -118,6 +123,7 @@ spec:
                       type: array
                       description: >
                         Defines filters that control which events are exported for logging.
+                        
                         Only events that match at least one of the specified filter objects
                         will be exported. If no filters are specified, all events are allowed.
 
@@ -523,6 +529,7 @@ spec:
                       type: array
                       description: >
                         Defines filters that control which events are explicitly excluded from logging.
+                        
                         Any event that matches at least one of the specified filter objects
                         will be denied from being exported. If no filters are specified, no events are denied.
                         This allows you to refine the set of events that are logged by excluding certain types.
