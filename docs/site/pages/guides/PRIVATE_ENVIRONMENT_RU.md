@@ -830,7 +830,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
 059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
 ```
 
-В списке запущенных контейнеров должен быть контейнер с соответствующим именем.
+В списке запущенных контейнеров должен быть контейнер с соответствующим именем (`squid`).
 
 ## Вход в registry для запуска установщика
 
