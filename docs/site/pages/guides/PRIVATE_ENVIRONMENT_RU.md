@@ -628,7 +628,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 Создайте проект и пользователя, от имени которого будет выполняться работа с этим проектом.
 
-Перейдите на главную страницу Harbor по адресу `harbor.local`:
+Откройте веб-интерфейс Harbor по адресу `harbor.local`:
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Главная страница Harbor...">
