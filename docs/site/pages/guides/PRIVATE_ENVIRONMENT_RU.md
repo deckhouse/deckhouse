@@ -25,7 +25,7 @@ layout: sidebar-guides
 
 Общая схема закрытого окружения:
 
-<img src="/images/gs/private-env-schema-RU.svg" alt="Схема развертывания Deckhouse в закрытом окружении">
+<img src="/images/gs/private-env-schema-RU.svg" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
 
 {% alert level="info" %}
 На схеме также показан внутренний репозиторий пакетов ОС, который необходим для установки curl на узлах будущего кластера при отсутствии возможности доступа к официальным репозиториям через прокси-сервер.
