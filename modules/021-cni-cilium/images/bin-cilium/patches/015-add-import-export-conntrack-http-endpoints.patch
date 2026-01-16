@@ -303,7 +303,7 @@ index 02a05c5cd6..86de5b205f 100644
  	return bpf.GetMap(getMapName(epname, ipv4, proto))
  }
 
-commit f50a7baa97f4b5dfdd9e57bd0ce1b56cda3ff83b
+commit 17375dc529fe99ea08ab11204ca25125618d6b14
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Thu Jan 15 16:46:30 2026 +0300
 
@@ -2004,7 +2004,7 @@ index 1f2b41919b..4f26841bae 100644
  	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
  	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
 diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index d42dae075b..caaa0ac678 100644
+index d42dae075b..611f5f3512 100644
 --- a/daemon/cmd/status.go
 +++ b/daemon/cmd/status.go
 @@ -4,20 +4,31 @@
@@ -2058,7 +2058,7 @@ index d42dae075b..caaa0ac678 100644
  )
  
  const (
-@@ -484,6 +499,601 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
+@@ -484,6 +499,594 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
  	return NewGetHealthzOK().WithPayload(&sr)
  }
  
@@ -2334,27 +2334,20 @@ index d42dae075b..caaa0ac678 100644
 +		return
 +	}
 +
-+	// only pass the filled part of the arrays
-+	keys := ctx.keys[:currentCount]
-+	values := ctx.values[:currentCount]
-+	for currentCount > 0 {
++	writtenCount := uint32(0)
++	for writtenCount < currentCount {
++		// only pass the filled and don't yet written part of the arrays
++		keys := ctx.keys[writtenCount:currentCount]
++		values := ctx.values[writtenCount:currentCount]
 +		count, err := ctx.m.BatchUpdate(keys, values, nil)
-+		// hard failure - abort
-+		if (err != nil && count == 0) || errors.Is(err, unix.EFAULT) {
++		if count == 0 || (err != nil && errors.Is(err, unix.EFAULT)) {
 +			log.WithFields(logrus.Fields{
 +				"error": err,
 +			}).Error("Failed batch update")
 +			break
 +		}
-+
-+		writtenCount := uint32(count)
-+		if writtenCount < currentCount {
-+			keys = keys[writtenCount:]
-+			values = values[writtenCount:]
-+		}
-+		currentCount -= writtenCount
++		writtenCount += uint32(count)
 +	}
-+
 +	ctx.next = 0
 +}
 +
