@@ -63,5 +63,5 @@ func (rd *RegistryData) toMap() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("failed: is empty")
 	}
 	ctx := bashible.Context(*rd)
-	return ctx.ToMap()
+	return ctx.ToMap(), nil
 }

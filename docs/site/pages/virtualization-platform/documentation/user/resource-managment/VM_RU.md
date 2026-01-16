@@ -93,7 +93,7 @@ lang: ru
    Создайте виртуальную машину из следующей спецификации:
 
    ```yaml
-   d8 k apply -f - <<EOF
+   d8 k apply -f - <<'EOF'
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
    metadata:
@@ -243,7 +243,7 @@ lang: ru
 Создайте виртуальную машину с диском созданным [ранее](/products/virtualization-platform/documentation/user/resource-management/disks.html#создание-диска-из-образа):
 
 ```yaml
-d8 k apply -f - <<"EOF"
+d8 k apply -f - <<'EOF'
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:
@@ -1837,7 +1837,9 @@ nodeplacement-update-dabk4   Completed   Evict   linux-vm            1m
 
 ### IP-адреса ВМ
 
-Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля `virtualization` задает список подсетей для назначения ip-адресов виртуальным машинам (общий пул ip-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес).
+Блок `.spec.settings.virtualMachineCIDRs` в конфигурации модуля `virtualization` задает список подсетей для назначения IP-адресов виртуальным машинам (общий пул IP-адресов). Все адреса в этих подсетях доступны для использования, за исключением первого (адрес сети) и последнего (широковещательный адрес). Например:
+- Для подсети `10.20.30.0/26`: зарезервированы `10.20.30.0` и `10.20.30.63`.
+- Для подсети `10.20.30.64/26`: зарезервированы `10.20.30.64` и `10.20.30.127`.
 
 Ресурс `VirtualMachineIPAddressLease` (`vmipl`): кластерный ресурс, который управляет арендой IP-адресов из общего пула, указанного в `virtualMachineCIDRs`.
 

@@ -106,7 +106,6 @@ curl --request POST "https://example.com/api/v4/admin/audit_events/search" \
 
 В таблице приведены примеры системных сообщений. В production-среде события аудита содержат полную информацию в самом сообщении или в дополнительном JSON-поле с данными.
 
-<div class="table-wrapper" markdown="0">
 <table class="supported_versions" markdown="0" style="table-layout: fixed">
 <thead>
 <tr>
@@ -832,4 +831,3 @@ curl --request POST "https://example.com/api/v4/admin/audit_events/search" \
 </tr>
 </tbody>
 </table>
-</div>

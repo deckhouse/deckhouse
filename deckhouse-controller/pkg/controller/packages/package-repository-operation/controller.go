@@ -121,22 +121,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
-	// ensure operation trigger label
-	res, err := r.EnsureLabelOperationTrigger(ctx, operation)
+	// ensure operation labels
+	res, err := r.ensureOperationLabels(ctx, operation)
 	if err != nil {
 		logger.Warn("failed to ensure operation trigger label", log.Err(err))
-
-		return res, err
-	}
-
-	if res.Requeue {
-		return res, nil
-	}
-
-	// ensure operation type label
-	res, err = r.EnsureLabelOperationType(ctx, operation)
-	if err != nil {
-		logger.Warn("failed to ensure operation type label", log.Err(err))
 
 		return res, err
 	}
@@ -156,53 +144,44 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return res, nil
 }
 
-func (r *reconciler) EnsureLabelOperationTrigger(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
-	if operation.Labels == nil {
-		operation.Labels = make(map[string]string)
+// ensureOperationLabels ensures that operation has all required labels set correctly.
+// It sets default trigger (manual), syncs operation type with spec, and adds repository label for filtering.
+// Returns Requeue=true if labels were updated to allow fresh object retrieval in next reconciliation.
+func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	if len(op.Labels) == 0 {
+		op.Labels = make(map[string]string)
 	}
 
-	if _, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
-		original := operation.DeepCopy()
-		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+	var update bool
+	original := op.DeepCopy()
 
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return res, fmt.Errorf("patch operation trigger label: %w", err)
+	// Set default trigger to manual if not already set
+	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+	}
+
+	// Ensure operation type label matches spec (sync on every reconcile)
+	if label, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || label != op.Spec.Type {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = op.Spec.Type
+	}
+
+	// Set repository label for efficient filtering/querying
+	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository]; !ok {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
+	}
+
+	if update {
+		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	return res, nil
-}
-
-func (r *reconciler) EnsureLabelOperationType(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
-	if operation.Labels == nil {
-		operation.Labels = make(map[string]string)
-	}
-
-	var opType string
-	if operation.Spec.Type != "" {
-		opType = operation.Spec.Type
-	} else {
-		opType = ""
-	}
-
-	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || existing != opType {
-		original := operation.DeepCopy()
-		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = opType
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return res, fmt.Errorf("patch operation type label: %w", err)
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
@@ -273,7 +252,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	logger.Debug("handling discover state")
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -364,7 +343,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 	}
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -541,7 +520,7 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	// List all operations for the same repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)
 	err := r.client.List(ctx, operations, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepository,
+		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepositoryName,
 	})
 	if err != nil {
 		return fmt.Errorf("list operations: %w", err)

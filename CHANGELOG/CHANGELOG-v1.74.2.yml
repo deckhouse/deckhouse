@@ -1,0 +1,76 @@
+admission-policy-engine:
+  fixes:
+    - summary: fix namespaceSelector for constraints, add CRDs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17344
+candi:
+  fixes:
+    - summary: Remove duplicate `additional_disks_hashes` definition in static-node Terraform module.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17441
+    - summary: Updated the bashible step to include Linux kernel versions that address CVE-2025-37999
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17300
+    - summary: >-
+        Allow manually stopping DVP node VirtualMachines in nested clusters by using runPolicy
+        AlwaysOnUnlessStoppedManually.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17110
+cloud-provider-azure:
+  fixes:
+    - summary: fixed cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16839
+cloud-provider-dvp:
+  fixes:
+    - summary: this PR gives a lot more informational errors and messages to user
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17165
+cloud-provider-openstack:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17082
+common:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+control-plane-manager:
+  fixes:
+    - summary: Fix validation for resource-quota-overrides labels
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17417
+deckhouse:
+  fixes:
+    - summary: Fix mpo cleanup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17452
+    - summary: Fix module installer cleanup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17301
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Exclude all service accounts from `d8-` namespaces in `d8ms-prefix`
+        ValidatingAdmissionPolicy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17440
+ingress-nginx:
+  fixes:
+    - summary: Latest CVEs are fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17222
+      impact: All pods running kube-rbac-proxy will be restarted.
+kube-dns:
+  fixes:
+    - summary: Reverts https://github.com/deckhouse/deckhouse/pull/17120
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17315
+log-shipper:
+  fixes:
+    - summary: Fixed incorrect apiVersion in ClusterLogDestination documentation examples.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17306
+node-manager:
+  fixes:
+    - summary: Change NodeGroup maxPods validation from hard rejection to warning.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17275
+prometheus:
+  features:
+    - summary: >-
+        Replace PrometheusRules with ClusterObservabilityMetricsRulesGroups or
+        ClusterObservabilityPropagatedMetricsRulesGroups when deployed using
+        helm_lib_prometheus_rules helper and the observability module is enabled
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17329
+registry:
+  fixes:
+    - summary: Omitted the auth field in DockerConfig when credentials (username and password) are empty.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17333
+

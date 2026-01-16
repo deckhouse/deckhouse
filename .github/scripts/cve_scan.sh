@@ -236,9 +236,9 @@ for d8_tag in "${d8_tags[@]}"; do
     a_module_name=""
     a_image_name=$(echo "${additional_image}" | grep -o '[^/]*$')
     # if it is deckhouse-oss - add it as deckhouse-controller module
-    if [ "${a_image_name}" == "deckhouse-oss" ]; then
+    if [ "${additional_image}" == "${d8_image}" ]; then
       a_module_name="deckhouseController"
-    elif [ "${a_image_name}" == "install" ]; then
+    elif [ "${additional_image}" == "${d8_image}/install" ]; then
       a_module_name="dhctl"
     fi
     echo "----------------------------------------------"

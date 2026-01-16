@@ -43,11 +43,13 @@ You can use several external authentication providers simultaneously.
 
 To enable authentication for any web application running in Kubernetes, create a [_DexAuthenticator_](cr.html#dexauthenticator) resource in the application's _Namespace_ and add several annotations to the _Ingress_ resource.
 This will enable you to:
+
 * limit the list of groups with access;
 * limit the list of addresses for which authentication is allowed;
 * integrate the application into a unified authentication system if the application supports OIDC. For that, Kubernetes will create a resource [_DexClient_](cr.html#dexclient) in the application _Namespace_. A secret with data for connecting to Dex via OIDC will also be created in that _Namespace_.
 
-Following such an integration, you can: 
+Following such an integration, you can:
+
 * limit the list of groups for which the connection is allowed; 
 * define a list of clients with trusted OIDC tokens (`trustedPeers`).
 
@@ -65,6 +67,7 @@ On top of that, you can configure multiple `kube-apiserver` addresses and CA cer
 The kube-apiserver component (without advanced configuration) is only accessible in the internal cluster network. This module enables easy and secure access to Kubernetes API from outside the cluster. The API server is exposed on a dedicated domain (for more details, see the [section on service domains in the documentation](/products/kubernetes-platform/documentation/v1/reference/api/global.html)).
 
 When configuring, you can:
+
 * list network addresses from which connection is allowed;
 * list groups that are allowed to access the API server;
 * specify Ingress-controller to authenticate on.
@@ -74,9 +77,11 @@ By default, a special CA certificate will be generated and the kubeconfig genera
 ## Extensions by Flant
 
 The module uses a modified version of Dex to support:
+
 * groups for static user accounts and Bitbucket Cloud provider (parameter [`bitbucketCloud`](cr.html#dexprovider-v1-spec-bitbucketcloud));
 * passing the `group` parameter to clients;
 * the `obsolete tokens` mechanism to avoid a race condition when an OIDC client renews a token.
+* Kerberos (SPNEGO) support for the LDAP connector. When enabled, Dex accepts `Authorization: Negotiate` tickets, validates them with a service keytab, and completes the login without rendering the password form.
 
 ## High availability mode
 

@@ -92,7 +92,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
    Create a virtual machine from the following specification:
 
    ```yaml
-   d8 k apply -f - <<EOF
+   d8 k apply -f - <<'EOF'
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
    metadata:
@@ -241,7 +241,7 @@ The password in the example was generated using the command `mkpasswd --method=S
 Create a virtual machine with the disk created [previously](/products/virtualization-platform/documentation/user/resource-management/disks.html#creating-a-disk-from-an-image):
 
 ```yaml
-d8 k apply -f - <<EOF
+d8 k apply -f - <<'EOF'
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:
@@ -1809,7 +1809,9 @@ Now the current node (groups green) does not match the new conditions. The syste
 
 ### IP addresses of virtual machines
 
-The `.spec.settings.virtualMachineCIDRs` block in the `virtualization` module configuration specifies a list of subnets to assign ip addresses to virtual machines (a shared pool of ip addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address).
+The `.spec.settings.virtualMachineCIDRs` block in the `virtualization` module configuration specifies a list of subnets to assign IP addresses to virtual machines (a shared pool of IP addresses). All addresses in these subnets are available for use except the first (network address) and the last (broadcast address). For example:
+- In subnet `10.20.30.0/26`, the addresses `10.20.30.0` and `10.20.30.63` are reserved.
+- In subnet `10.20.30.64/26`, the addresses `10.20.30.64` and `10.20.30.127` are reserved.
 
 `VirtualMachineIPAddressLease` (`vmipl`) resource: A cluster resource that manages IP address leases from the shared pool specified in `virtualMachineCIDRs`.
 

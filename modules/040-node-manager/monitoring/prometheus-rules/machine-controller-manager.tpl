@@ -1,4 +1,3 @@
-{{- if include "machine_controller_manager_enabled" . }}
 - name: d8.machine-controller-manager.availability
   rules:
   - alert: D8MachineControllerManagerPodIsNotReady
@@ -123,7 +122,3 @@
         ```shell
         d8 k -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
         ```
-
-{{- else }}
-[]
-{{- end }}

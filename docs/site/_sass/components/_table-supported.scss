@@ -1,6 +1,6 @@
 @use "components/common/_breakpoints";
 
-.supported_versions {
+.supported_versions, .table-wrapper__shadow {
     width: auto;
     margin-bottom: 0;
     padding: .3125rem .65rem;
@@ -76,7 +76,8 @@
     }
 }
 
-.supported_versions:not(.supported_versions__kubernetes-container) {
+.supported_versions:not(.supported_versions__kubernetes-container),
+.table-wrapper__shadow:not(.supported_versions__kubernetes-container) {
     thead {
         th:nth-child(odd), td:nth-child(odd) {
             background-color: #F3F3FA;
