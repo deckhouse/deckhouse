@@ -398,8 +398,16 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
-# remove owasp-modsecurity-crs/util because of bash scripts cve
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/plugins
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/regex-assembly
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/renovate.json
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/LICENSE
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/.[^.]*
 # takes ~1GB
   - rm -rf /chroot/usr/lib64/locale
 imageSpec:
