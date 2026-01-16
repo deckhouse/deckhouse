@@ -346,10 +346,10 @@ spec:
           httpGet:
             path: /healthz
             port: 4264
-            scheme: HTTPS
-          initialDelaySeconds: 10
+            scheme: HTTP
+          initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 1
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
         readinessProbe:
@@ -357,10 +357,10 @@ spec:
           httpGet:
             path: /readyz
             port: 4264
-            scheme: HTTPS
-          initialDelaySeconds: 10
+            scheme: HTTP
+          initialDelaySeconds: 30
           periodSeconds: 10
-          timeoutSeconds: 1
+          timeoutSeconds: 5
           successThreshold: 1
           failureThreshold: 3
         resources:
