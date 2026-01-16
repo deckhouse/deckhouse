@@ -824,7 +824,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
 
 {% endofftopic %}
 
-Убедитесь, что Squid запустился:
+Убедитесь, что контейнер запущен:
 
 ```console
 059b21fddbd2   ubuntu/squid                          "entrypoint.sh -f /e…"   About a minute ago   Up About a minute     0.0.0.0:3128->3128/tcp, [::]:3128->3128/tcp                                          squid
