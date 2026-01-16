@@ -83,7 +83,9 @@ type OfflineSession struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 	UserID            string `json:"userID"`
-	TOTPConfirmed     bool   `json:"totpConfirmed"`
+	// Some Dex versions / storages may serialize this field as `userId`.
+	UserId        string `json:"userId,omitempty"`
+	TOTPConfirmed bool   `json:"totpConfirmed"`
 }
 
 const userOperationRetentionPeriod = 24 * time.Hour
@@ -123,6 +125,22 @@ func applyOfflineSessionFilter(obj *unstructured.Unstructured) (go_hook.FilterRe
 	err := sdk.FromUnstructured(obj, offlineSession)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	}
+
+	// Be tolerant to different json field names / nesting. We only need user identity for Reset2FA.
+	if offlineSession.UserID == "" {
+		offlineSession.UserID = offlineSession.UserId
+	}
+	if offlineSession.UserID == "" {
+		if v, found, _ := unstructured.NestedString(obj.Object, "userID"); found {
+			offlineSession.UserID = v
+		} else if v, found, _ := unstructured.NestedString(obj.Object, "userId"); found {
+			offlineSession.UserID = v
+		} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userID"); found {
+			offlineSession.UserID = v
+		} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userId"); found {
+			offlineSession.UserID = v
+		}
 	}
 
 	return offlineSession, nil
