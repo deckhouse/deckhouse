@@ -132,17 +132,22 @@ func (s *Service) Render(ctx context.Context, app *apps.Application) (string, er
 	}
 	defer os.Remove(valuesPath)
 
-	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
+	runtimeValues := app.GetRuntimeValues()
+	instanceJSON, err := json.Marshal(runtimeValues.Instance)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("marshal metadata values: %w", err)
+		return "", fmt.Errorf("marshal instance values: %w", err)
+	}
+	packageJSON, err := json.Marshal(runtimeValues.Package)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("marshal package values: %w", err)
 	}
 
 	return s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON),
 	})
 }
 
@@ -208,18 +213,25 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
-	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
+	runtimeValues := app.GetRuntimeValues()
+	instanceJSON, err := json.Marshal(runtimeValues.Instance)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newMarshalRuntimeValuesError(err)
+	}
+	packageJSON, err := json.Marshal(runtimeValues.Package)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newMarshalRuntimeValuesError(err)
 	}
 
+	extraValues := fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
+
 	// Render chart to get manifests for checksum calculation
 	renderedManifests, err := s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: extraValues,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -250,8 +262,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: extraValues,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())

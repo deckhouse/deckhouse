@@ -45,6 +45,10 @@
 | [helm_lib_ha_enabled](#helm_lib_ha_enabled) |
 | **Kube Rbac Proxy** |
 | [helm_lib_kube_rbac_proxy_ca_certificate](#helm_lib_kube_rbac_proxy_ca_certificate) |
+| **Module Controller** |
+| [helm_lib_module_controller_resources](#helm_lib_module_controller_resources) |
+| [helm_lib_module_webhooks_resources](#helm_lib_module_webhooks_resources) |
+| [helm_lib_module_controller_log_level](#helm_lib_module_controller_log_level) |
 | **Module Documentation Uri** |
 | [helm_lib_module_documentation_uri](#helm_lib_module_documentation_uri) |
 | **Module Ephemeral Storage** |
@@ -567,6 +571,37 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Namespace where CA configmap will be created  
+
+## Module Controller
+
+### helm_lib_module_controller_resources
+
+ Returns default controller resources 
+
+#### Usage
+
+`{{ include "helm_lib_module_controller_resources" . }} `
+
+
+
+### helm_lib_module_webhooks_resources
+
+ Returns default webhooks resources 
+
+#### Usage
+
+`{{ include "helm_lib_module_webhooks_resources" . }} `
+
+
+
+### helm_lib_module_controller_log_level
+
+ Returns numeric log level from module values 
+
+#### Usage
+
+`{{ include "helm_lib_module_controller_log_level" (list . "csiHpe") }} `
+
 
 ## Module Documentation Uri
 
