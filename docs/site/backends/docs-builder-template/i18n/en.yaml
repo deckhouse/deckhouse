@@ -102,7 +102,11 @@ documentation: documentation
 Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
-category: category
+filters: Filters
+search_filter: Search by&nbsp;module
+editorial_filter: Editorial
+statuses_filter: Statuses
+tags_filter: Tags
 core: core
 community_edition_en: community edition
 commercial_editions_en: commercial editions
