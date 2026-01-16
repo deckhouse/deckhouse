@@ -65,10 +65,10 @@
     {%- endif %}
 {%- endif %}
 
-{%- if include.mode=='documentation' %}
-  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
-{%- elsif page.sidebar == 'embedded-modules' %}
+{%- if page.sidebar == 'embedded-modules' %}
   {%- assign page_meta_url = page_url_without_lang | relative_url %}
+{%- elsif include.mode=='documentation' %}
+  {%- assign page_meta_url = site.canonical_url_prefix_documentation | append: (page_url_without_lang | relative_url) %}
 {%- else %}
   {%- if page.product_code == 'kubernetes-platform' %}
     {%- assign page_url_without_lang = page_url_without_lang | relative_url | prepend: page.product_code | prepend: '/' %}
@@ -88,13 +88,22 @@
 <meta name="keywords" content="{{page.tags}}{% if page.tags %}, {% endif %}{% if page.keywords %}{{page.keywords}}, {% endif %}{% if page.search %}{{page.search}}{% endif %}">
 
 <!-- Open Graph / Facebook -->
-<meta property="og:type" content="website">
+<meta property="og:type" content="article">
 <meta property="og:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
 <meta property="og:title" content="{{ generated_title }} | {{ site.site_title }}">
 <meta property="og:description" content="{{ description }}">
 
+{%- if page.product_code == 'stronghold' or page.product_code == "virtualization-platform" or page.product_code == "code" or page.product_code == "delivery-kit" or page.product_code == "kubernetes-platform" or page.product_code == "observability-platform" or page.product_code == "prompp" %}
+<meta property="og:image" content="{{ site.urls[page.lang] }}/images/og/{{ page.product_code }}.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="628">
+<meta property="og:image:type" content="image/png">
+{%- endif %}
+
 <!-- Twitter -->
-<meta property="twitter:card" content="summary_large_image">
-<meta property="twitter:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
-<meta property="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
-<meta property="twitter:description" content="{{ description }}">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:url" content="{{ site.urls[page.lang] }}{{ page_meta_url }}">
+<meta name="twitter:title" content="{{ generated_title }} | {{ site.site_title }}">
+<meta name="twitter:description" content="{{ description }}">
+<meta name="twitter:image" content="{{ site.urls[page.lang] }}/images/favicon/logo-180.png" />
+<meta name="twitter:image:alt" content="{{ site.Title }}">

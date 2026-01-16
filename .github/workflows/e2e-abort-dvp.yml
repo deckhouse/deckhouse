@@ -349,7 +349,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -674,7 +674,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -999,7 +999,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1324,7 +1324,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1649,7 +1649,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -1974,7 +1974,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2299,7 +2299,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2624,7 +2624,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2949,7 +2949,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3274,7 +3274,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3599,7 +3599,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3924,7 +3924,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
