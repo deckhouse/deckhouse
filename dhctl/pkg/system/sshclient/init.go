@@ -20,6 +20,8 @@ import (
 	"sync"
 	"time"
 
+	"os"
+
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -210,6 +212,42 @@ func NewClientFromFlagsWithHosts(ctx context.Context) (node.SSHClient, error) {
 	}
 
 	return NewClientFromFlags(ctx)
+}
+
+type ClientConfig struct {
+	User                string
+	SSHPort             int
+	PrivateSSHKey       string
+	SudoPasswordEncoded string
+}
+
+func NewClientFromConfig(ctx context.Context, host string, cred ClientConfig) (node.SSHClient, error) {
+	settings := session.NewSession(session.Input{
+		AvailableHosts: []session.Host{{Host: host}},
+		User:           cred.User,
+		Port:           fmt.Sprintf("%d", cred.SSHPort),
+		BecomePass:     cred.SudoPasswordEncoded,
+	})
+
+	var keys []session.AgentPrivateKey
+	if cred.PrivateSSHKey != "" {
+		tmpFile, err := os.CreateTemp(app.TmpDirName, "sshkey-for-staticinstance-*")
+		if err != nil {
+			return nil, fmt.Errorf("Cannot create temp file for SSH key: %w", err)
+		}
+		defer tmpFile.Close()
+		_, err = tmpFile.WriteString(cred.PrivateSSHKey)
+		if err != nil {
+			return nil, fmt.Errorf("Cannot write SSH key to temp file: %w", err)
+		}
+
+		keys = []session.AgentPrivateKey{
+			{Key: tmpFile.Name()},
+		}
+	}
+
+	client := gossh.NewClient(ctx, settings, keys)
+	return client, nil
 }
 
 func IsModernMode() bool {
