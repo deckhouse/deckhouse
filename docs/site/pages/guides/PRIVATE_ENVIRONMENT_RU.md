@@ -64,7 +64,7 @@ DKP поддерживает только Bearer token-схему авториз
 <img src="/images/guides/install_to_private_environment/download-harbor-installer.png" alt="Скачивание установщика Harbor...">
 </div>
 
-Скопируйте адрес ссылки. Для версии `harbor-offline-installer-v2.14.1.tgz` ссылка будет выглядеть следующим образом: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
+Скопируйте адрес ссылки. Например, для версии `harbor-offline-installer-v2.14.1.tgz` ссылка будет выглядеть следующим образом: `https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz`.
 
 Подключитесь к серверу Bastion по SSH и скачайте файл любым удобным вам способом.
 
