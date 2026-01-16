@@ -287,7 +287,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'openstack';
-            const kubernetesDefaultVersion = '1.32';
+            const kubernetesDefaultVersion = '1.33';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
