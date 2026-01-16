@@ -35,7 +35,7 @@ shell:
   - git show -s --format=%ct HEAD > GITEPOCH
   - rm -rf /src/.git
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-validator
+image: {{ $.ModuleName }}/{{ $.ImageName }}-ci-validator
 fromImage: common/src-artifact
 final: false
 git:
@@ -59,7 +59,7 @@ shell:
     DOWNLOAD=false CRD_PATH=/src/deploy/crds /module_crds/pull_crds.sh
 
     dir1="/src/deploy/crds"
-    dir2="/module_crds"
+    dir2="/module_crds/cert-manager"
     for f in $dir1/*.yaml; do
       base=$(basename "$f")
         diff -u "$dir1/$base" "$dir2/$base"
