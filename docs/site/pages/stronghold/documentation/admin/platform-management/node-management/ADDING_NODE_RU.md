@@ -375,11 +375,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
 
    # bootstrapStatus:
-   #   description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+   #   description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
    #   logsEndpoint: 192.168.199.178:8000
    ```
 
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
+1. Выполните полученную команду (в примере выше — `curl -N http://192.168.199.158:8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 

@@ -346,11 +346,11 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы просмотреть логи `cloud-init` и определить, на каком этапе остановилась настройка узла.
+1. Выполните полученную команду (в примере выше — `curl -N http://192.168.199.158:8000`), чтобы просмотреть логи `cloud-init` и определить, на каком этапе остановилась настройка узла.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 
