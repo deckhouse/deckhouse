@@ -1,8 +1,8 @@
 diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
-index 71068f0e7ed..43ca30a9127 100644
+index d1596bf761e..fbcf01a6083 100644
 --- a/pkg/kubelet/kubelet.go
 +++ b/pkg/kubelet/kubelet.go
-@@ -1039,6 +1039,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
+@@ -1068,6 +1068,7 @@ func NewMainKubelet(ctx context.Context,
  		NodeRef:                          nodeRef,
  		GetPodsFunc:                      klet.GetActivePods,
  		KillPodFunc:                      killPodNow(klet.podWorkers, kubeDeps.Recorder),
@@ -11,10 +11,10 @@ index 71068f0e7ed..43ca30a9127 100644
  		ShutdownGracePeriodRequested:     kubeCfg.ShutdownGracePeriod.Duration,
  		ShutdownGracePeriodCriticalPods:  kubeCfg.ShutdownGracePeriodCriticalPods.Duration,
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-index 3113c1db779..14f43367489 100644
+index 2d7786f71f1..31074cf10db 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-@@ -56,6 +56,7 @@ type Config struct {
+@@ -54,6 +54,7 @@ type Config struct {
  	NodeRef                          *v1.ObjectReference
  	GetPodsFunc                      eviction.ActivePodsFunc
  	KillPodFunc                      eviction.KillPodFunc
@@ -23,7 +23,7 @@ index 3113c1db779..14f43367489 100644
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 12dcb66ec77..fe8e4e32e66 100644
+index c998a2663d9..0d55f15dbeb 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 @@ -21,6 +21,7 @@ limitations under the License.
@@ -32,17 +32,17 @@ index 12dcb66ec77..fe8e4e32e66 100644
  import (
 +	"context"
  	"fmt"
+ 	"os"
  	"path/filepath"
- 	"sync"
 @@ -37,6 +38,7 @@ import (
+ 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
  	"k8s.io/kubernetes/pkg/kubelet/metrics"
  	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
- 	"k8s.io/kubernetes/pkg/kubelet/prober"
 +	"k8s.io/utils/clock"
  )
  
  const (
-@@ -69,6 +71,8 @@ type managerImpl struct {
+@@ -68,6 +70,8 @@ type managerImpl struct {
  	dbusCon     dbusInhibiter
  	inhibitLock systemd.InhibitLock
  
@@ -51,7 +51,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	nodeShuttingDownMutex sync.Mutex
  	nodeShuttingDownNow   bool
  	podManager            *podManager
-@@ -105,6 +109,10 @@ func NewManager(conf *Config) Manager {
+@@ -103,6 +107,10 @@ func NewManager(conf *Config) Manager {
  			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
  		},
  	}
@@ -62,16 +62,16 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	manager.logger.Info("Creating node shutdown manager",
  		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
  		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
-@@ -210,7 +218,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -208,7 +216,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, err
  	}
  
--	events, err := m.dbusCon.MonitorShutdown()
-+	dbusEvents, err := m.dbusCon.MonitorShutdown()
+-	events, err := m.dbusCon.MonitorShutdown(m.logger)
++	dbusEvents, err := m.dbusCon.MonitorShutdown(m.logger)
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -219,6 +227,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -217,6 +225,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
  	}
  
@@ -102,7 +102,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -226,10 +258,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -224,10 +256,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
@@ -116,10 +116,14 @@ index 12dcb66ec77..fe8e4e32e66 100644
  					close(stop)
  					return
  				}
-@@ -248,6 +282,33 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -246,10 +280,37 @@ func (m *managerImpl) start() (chan struct{}, error) {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
  
+-			    // Clean up memory manager state before shutdown
+-			    if isShuttingDown {
+-				    m.cleanupMemoryManagerState()
+-			    }
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
 +					postponeStatus, err := m.conditionChecker.PostponeStatus()
@@ -147,14 +151,17 @@ index 12dcb66ec77..fe8e4e32e66 100644
 +					m.conditionChecker.PauseMonitor()
 +				}
 +
++				// Clean up memory manager state before shutdown
++				if isShuttingDown {
++					m.cleanupMemoryManagerState()
++				}
+ 
  				m.nodeShuttingDownMutex.Lock()
  				m.nodeShuttingDownNow = isShuttingDown
- 				m.nodeShuttingDownMutex.Unlock()
-@@ -324,3 +385,124 @@ func (m *managerImpl) processShutdownEvent() error {
- 
- 	return m.podManager.killPods(activePods)
+@@ -269,6 +330,127 @@ func (m *managerImpl) start() (chan struct{}, error) {
+ 	return stop, nil
  }
-+
+ 
 +type conditionChecker struct {
 +	logger klog.Logger
 +
@@ -275,3 +282,7 @@ index 12dcb66ec77..fe8e4e32e66 100644
 +func isPostponed(status v1.ConditionStatus) bool {
 +	return status == v1.ConditionTrue || status == v1.ConditionUnknown
 +}
++
+ func (m *managerImpl) acquireInhibitLock() error {
+ 	lock, err := m.dbusCon.InhibitShutdown()
+ 	if err != nil {
