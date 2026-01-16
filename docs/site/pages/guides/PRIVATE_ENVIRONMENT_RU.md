@@ -666,7 +666,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Главная страница Harbor...">
 </div>
 
-Добавьте созданного пользователя к созданному ранее проекту. Перейдите обратно на вкладку «Проекты», выберите проект «deckhouse», перейдите на вкладку «Участники» и добавьте туда созданного пользователя, нажав на кнопку «Пользователь».
+Добавьте созданного пользователя в проект `deckhouse`: перейдите в «Проекты», откройте проект `deckhouse`, затем вкладку «Участники» и нажмите «Пользователь», чтобы добавить участника.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Главная страница Harbor...">
