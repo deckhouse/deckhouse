@@ -4,7 +4,7 @@ go 1.24.9
 
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
-	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/log v0.1.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/deckhouse/module-sdk v0.1.0
 	github.com/gojuno/minimock/v3 v3.4.1
