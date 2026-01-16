@@ -3,6 +3,7 @@ RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
@@ -27,7 +28,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
 {{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.32 <1.35" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
 {{- $runtimeConfig := join "," $runtimeConfig -}}
