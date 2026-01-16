@@ -50,6 +50,14 @@ variable "size" {
   type    = string
 }
 
+variable "cluster_uuid" {
+  type = string
+}
+
+variable "hostname" {
+  type = string
+}
+
 variable "timeouts" {
   default = { "create" = "30m", "update" = "1m", "delete" = "1m" }
   type = object({
@@ -79,5 +87,10 @@ locals {
     "last_applied_destructive_root_disk_parameters"      = local.root_disk_destructive_params_json
     "last_applied_destructive_root_disk_parameters_hash" = local.root_disk_destructive_params_json_hash
   }
-}
 
+  root_disk_labels = {
+    "deckhouse.io/managed-by"       = "deckhouse"
+    "dvp.deckhouse.io/cluster-uuid" = var.cluster_uuid
+    "dvp.deckhouse.io/hostname"     = var.hostname
+  }
+}

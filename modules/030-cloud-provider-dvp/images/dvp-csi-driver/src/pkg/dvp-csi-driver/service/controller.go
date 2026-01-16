@@ -18,18 +18,20 @@ package service
 
 import (
 	"context"
-	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
 
-	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+
+	dvpapi "dvp-common/api"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 const (
@@ -39,6 +41,7 @@ const (
 type ControllerService struct {
 	csi.UnimplementedControllerServer
 	dvpCloudAPI *dvpapi.DVPCloudAPI
+	clusterUUID string
 }
 
 var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
@@ -49,9 +52,11 @@ var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 
 func NewController(
 	dvpCloudAPI *dvpapi.DVPCloudAPI,
+	clusterUUID string,
 ) *ControllerService {
 	return &ControllerService{
 		dvpCloudAPI: dvpCloudAPI,
+		clusterUUID: clusterUUID,
 	}
 }
 
@@ -128,6 +133,8 @@ func (c *ControllerService) CreateVolume(
 
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
+		c.clusterUUID,
+		"",
 		diskName,
 		requiredSize,
 		dvpStorageClass,

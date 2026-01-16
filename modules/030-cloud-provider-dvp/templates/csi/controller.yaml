@@ -1,6 +1,7 @@
 {{- define "csi_controller_args" }}
 - "--node-name=$(NODE_ID)"
 - "--endpoint=unix:///csi/csi.sock"
+- "--cluster-uuid=$(CLUSTER_UUID)"
 {{- end }}
 
 {{- define "csi_controller_envs" }}
@@ -18,6 +19,11 @@
     secretKeyRef:
       name: dvp-credentials
       key: namespace
+- name: CLUSTER_UUID
+  valueFrom:
+    secretKeyRef:
+      name: dvp-credentials
+      key: clusterUUID
 {{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 
@@ -30,6 +36,7 @@
 {{- define "csi_node_args" }}
 - "--node-name=$(NODE_ID)"
 - "--endpoint=unix:///csi/csi.sock"
+- "--cluster-uuid=$(CLUSTER_UUID)"
 {{- end }}
 
 {{- define "csi_node_envs" }}
@@ -47,6 +54,11 @@
     secretKeyRef:
       name: dvp-credentials
       key: namespace
+- name: CLUSTER_UUID
+  valueFrom:
+    secretKeyRef:
+      name: dvp-credentials
+      key: clusterUUID
 {{- include "helm_lib_envs_for_proxy" . }}
 {{- end }}
 

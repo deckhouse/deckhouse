@@ -91,6 +91,11 @@ spec:
               secretKeyRef:
                 name: dvp-credentials-capdvp
                 key: namespace
+          - name: CLUSTER_UUID
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials-capdvp
+                key: clusterUUID
         livenessProbe:
           httpGet:
             path: /healthz
