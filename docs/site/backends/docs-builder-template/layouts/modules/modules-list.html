@@ -141,7 +141,7 @@
 
           {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
             <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-              <img src="/images/{{- $moduleStage }}" alt="{{- $moduleStage }}">
+              <img src="/images/{{lower $moduleStage }}.svg" alt="{{- $moduleStage }}">
             </span>
           {{- end }}
         <h2 class="button-tile__title">{{ .module }}</h2>
