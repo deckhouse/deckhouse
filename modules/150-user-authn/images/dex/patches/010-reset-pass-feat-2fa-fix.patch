@@ -60,7 +60,7 @@ diff --git a/server/passwordchangehandler.go b/server/passwordchangehandler.go
 index 040a33d..c242c65 100644
 --- a/server/passwordchangehandler.go
 +++ b/server/passwordchangehandler.go
-@@ -150,12 +150,16 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -150,10 +150,14 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  
  		updater := func(p storage.Password) (storage.Password, error) {
 -			p.PreviousHashes = append(p.PreviousHashes, p.Hash)
