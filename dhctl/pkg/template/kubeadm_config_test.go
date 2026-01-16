@@ -163,7 +163,7 @@ func testAPIServerConfiguration(t *testing.T) {
 	}{
 		{
 			name:       "v1beta3 configuration",
-			k8sVersion: "1.30",
+			k8sVersion: "1.29",
 		},
 		{
 			name:       "v1beta4 configuration",
@@ -184,14 +184,14 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 
-				if !strings.Contains(result, "authorization-mode") {
-					t.Error("Expected authorization-mode not found")
+				// When webhookURL is configured, we always use structured authorization config (authorization-config).
+				if !strings.Contains(result, "authorization-config") {
+					t.Error("Expected authorization-config not found")
 				}
-				if !strings.Contains(result, "Node,Webhook,RBAC") {
-					t.Error("Expected webhook authorization mode not found")
-				}
-				if !strings.Contains(result, "authorization-webhook-config-file") {
-					t.Error("Expected webhook config file not found")
+
+				// For Kubernetes < 1.30, StructuredAuthorizationConfiguration is feature-gated and must be enabled explicitly.
+				if tt.k8sVersion == "1.29" && !strings.Contains(result, "StructuredAuthorizationConfiguration=true") {
+					t.Error("Expected StructuredAuthorizationConfiguration feature gate to be enabled for Kubernetes 1.29")
 				}
 			})
 
@@ -905,7 +905,7 @@ func testEdgeCases(t *testing.T) {
 			}
 
 			expectedStrings := []string{
-				"Node,Webhook,RBAC",
+				"authorization-config", // structured authorization config (instead of Node,Webhook,RBAC flags)
 				"authentication-token-webhook-config-file",
 				"audit-webhook-config-file",
 				"authentication-config",

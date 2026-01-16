@@ -890,6 +890,20 @@ apiserver:
     webhookCacheTTL: "5m"
 `
 
+		const webhookAuthzMissingCATestValues = `
+internal:
+  effectiveKubernetesVersion: "1.31"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+`
+
 		const v1beta3TestValues = `
 internal:
   effectiveKubernetesVersion: "1.30"
@@ -924,16 +938,22 @@ apiserver:
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(secret.Exists()).To(BeTrue())
 
+				// structured authorization config file should be present in extra-files secret
+				_, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
 				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
 
 				configYaml := string(kubeadmConfigData)
 				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
 
-				// v1beta4 uses array syntax with name/value pairs
-				Expect(configYaml).To(ContainSubstring("- name: authorization-mode"))
-				Expect(configYaml).To(ContainSubstring("value: Node,Webhook,RBAC"))
-				Expect(configYaml).To(ContainSubstring("- name: authorization-webhook-config-file"))
+				// v1beta4 uses array syntax with name/value pairs.
+				// Kubernetes >= 1.30 uses structured authorization config.
+				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
+				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
 
 				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
 				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
@@ -943,6 +963,18 @@ apiserver:
 
 				// v1beta4 should NOT have the map syntax
 				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+			})
+		})
+
+		Context("v1beta4 with authz webhookURL but without webhookCA", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", webhookAuthzMissingCATestValues)
+				f.HelmRender()
+			})
+
+			It("should fail helm render with explicit error", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+				Expect(f.RenderError.Error()).To(ContainSubstring("controlPlaneManager.apiserver.authz.webhookCA is required"))
 			})
 		})
 
@@ -958,6 +990,10 @@ apiserver:
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(secret.Exists()).To(BeTrue())
 
+				// structured authorization config file should be present in extra-files secret
+				_, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
 				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
 
@@ -965,8 +1001,10 @@ apiserver:
 				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
 
 				// v1beta3 uses map syntax (key: value) instead of array syntax
-				Expect(configYaml).To(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
-				Expect(configYaml).To(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
+				// Kubernetes >= 1.30 uses structured authorization config.
+				Expect(configYaml).To(ContainSubstring("authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
 				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml"))
 				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-cache-ttl: \"5m\""))
 				Expect(configYaml).To(ContainSubstring("audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml"))
@@ -976,6 +1014,7 @@ apiserver:
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
 			})
 		})
+
 	})
 
 	Context("terminated-pod-gc-threshold based on node count", func() {
