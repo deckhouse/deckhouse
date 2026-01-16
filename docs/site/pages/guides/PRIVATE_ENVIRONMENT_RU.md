@@ -143,7 +143,8 @@ DNS.1=harbor.local
 EOF
 ```
 
-{% alert level="warning" %}Не забудьте заменить в этой команде `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес сервера Bastion. По нему будет происходить обращение к container registry изнутри закрытого контура. С этим же адресом будет связано доменное имя `harbor.local`.
+{% alert level="warning" %}
+Не забудьте заменить `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес сервера Bastion. По нему будет выполняться обращение к container registry изнутри закрытого контура. С этим же адресом связано доменное имя `harbor.local`.
 {% endalert %}
 
 ```bash
