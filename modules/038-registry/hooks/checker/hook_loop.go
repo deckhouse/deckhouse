@@ -79,8 +79,10 @@ var _ = sdk.RegisterFunc(
 			},
 			{
 				Name: deckhouseDeploymentSnapName,
-				ApiVersion: "apps/v1",
-				Kind:       "Deployment",
+				ExecuteHookOnEvents:          go_hook.Bool(false),
+				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				ApiVersion:                   "apps/v1",
+				Kind:                         "Deployment",
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{
 						MatchNames: []string{"d8-system"},
