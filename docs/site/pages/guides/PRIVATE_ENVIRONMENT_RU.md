@@ -991,7 +991,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
   deckhouse:
     # Адрес Docker registry с образами Deckhouse (укажите редакцию DKP).
     imagesRepo: harbor.local/deckhouse/<РЕДАКЦИЯ_DKP>
-    # Строка с ключом для доступа к Docker registry в формате base64.
+    # Строка с ключом для доступа к Docker registry в формате Base64.
     # Получить их можно командой `cat .docker/config.json | base64`.
     registryDockerCfg: <DOCKER_CFG_BASE64>
     # Протокол доступа к registry (HTTP или HTTPS).
