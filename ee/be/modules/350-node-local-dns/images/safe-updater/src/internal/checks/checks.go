@@ -75,7 +75,7 @@ func (c *cniCiliumCheck) GetCheckResult(pod *corev1.Pod) checkResult {
 
 	podControllerRevisionHash := ciliumPod.GetLabels()[constant.ControllerRevisionHashLabel]
 	if podControllerRevisionHash != c.controllerRevisionHash {
-		klog.Warningf("updating %s: the %s cilium pod on the %s node has wrong template generation: expected %s, current %s", pod.Name, ciliumPod.Name, pod.Spec.NodeName, c.controllerRevisionHash, podControllerRevisionHash)
+		klog.Warningf("updating %s: the %s cilium pod on the %s node has wrong controller revision hash: expected %s, current %s", pod.Name, ciliumPod.Name, pod.Spec.NodeName, c.controllerRevisionHash, podControllerRevisionHash)
 		return Denied
 	}
 
