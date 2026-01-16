@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	ParameterDVPStorageClass                           = "dvpStorageClass"
-	ParameterDVPVirtualDiskSnapshotRequiredConsistency = "dvpVirtualDiskSnapshotRequiredConsistency"
+	ParameterDVPStorageClass        = "dvpStorageClass"
+	ParameterDVPRequiredConsistency = "dvpRequiredConsistency"
 )
 
 type ControllerService struct {
@@ -442,15 +442,13 @@ func (d *ControllerService) CreateSnapshot(ctx context.Context, request *csi.Cre
 		if k8serrors.IsNotFound(err) {
 			klog.Infof("snapshot %v of disk %v is not found, creating", request.Name, request.SourceVolumeId)
 
-			requiredConsistency, ok := request.Parameters[ParameterDVPVirtualDiskSnapshotRequiredConsistency]
-			if !ok {
-				requiredConsistency = "true"
-			}
+			requiredConsistency := "false"
+			requiredConsistency = request.Parameters[ParameterDVPRequiredConsistency]
 
 			requiredConsistencyBool, err := strconv.ParseBool(requiredConsistency)
 			if err != nil {
 				msg := fmt.Errorf("failed to parse %s parameter value %s to bool: %v",
-					ParameterDVPVirtualDiskSnapshotRequiredConsistency, requiredConsistency, err)
+					ParameterDVPRequiredConsistency, requiredConsistency, err)
 				klog.Error(msg)
 				return nil, status.Error(codes.Internal, msg.Error())
 			}
