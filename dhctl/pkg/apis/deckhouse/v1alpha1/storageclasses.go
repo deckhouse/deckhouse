@@ -23,16 +23,28 @@ import (
 )
 
 var (
-	LocalStorageClassGRV     = storageClassGVR("localstorageclasses")
-	ReplicateStorageClassGRV = storageClassGVR("replicatedstorageclasses")
-	NFSStorageClassGRV       = storageClassGVR("nfsstorageclasses")
-	CephStorageClassGRV      = storageClassGVR("cephstorageclasses")
+	LocalStorageClassGVR              = storageClassGVR("localstorageclasses")
+	ReplicatedStorageClassGVR         = storageClassGVR("replicatedstorageclasses")
+	NFSStorageClassGVR                = storageClassGVR("nfsstorageclasses")
+	CephStorageClassGVR               = storageClassGVR("cephstorageclasses")
+	SCSIStorageClassGVR               = storageClassGVR("scsistorageclasses")
+	S3StorageClassGVR                 = storageClassGVR("s3storageclasses")
+	YadroTatlinUnifiedStorageClassGVR = storageClassGVR("yadrotatlinunifiedstorageclasses")
+	NetappStorageClassGVR             = storageClassGVR("netappstorageclasses")
+	HuaweiStorageClassGVR             = storageClassGVR("huaweistorageclasses")
+	HPEStorageClassGVR                = storageClassGVR("hpestorageclasses")
 
 	d8StoragesListKindToGVR = apis.ListKindToGVR{
-		"LocalStorageClassList":      LocalStorageClassGRV,
-		"ReplicatedStorageClassList": ReplicateStorageClassGRV,
-		"NfsStorageClassList":        NFSStorageClassGRV,
-		"CephStorageClassList":       CephStorageClassGRV,
+		"LocalStorageClassList":              LocalStorageClassGVR,
+		"ReplicatedStorageClassList":         ReplicatedStorageClassGVR,
+		"NfsStorageClassList":                NFSStorageClassGVR,
+		"CephStorageClassList":               CephStorageClassGVR,
+		"SCSIStorageClassList":               SCSIStorageClassGVR,
+		"S3StorageClassList":                 S3StorageClassGVR,
+		"YadroTatlinUnifiedStorageClassList": YadroTatlinUnifiedStorageClassGVR,
+		"NetappStorageClassList":             NetappStorageClassGVR,
+		"HuaweiStorageClassList":             HuaweiStorageClassGVR,
+		"HPEStorageClassList":                HPEStorageClassGVR,
 	}
 )
 
