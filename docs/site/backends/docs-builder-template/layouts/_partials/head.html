@@ -1,5 +1,5 @@
 {{- $description := "" }}
-{{- if .Description }}{{ $description = .Description }}{{ else }}{{ $description = .Summary }}{{ end }}
+{{- if .Description }}{{ $description = .Description | strings.TrimSpace }}{{ else }}{{ $description = .Summary | strings.TrimSpace }}{{ end }}
 {{- if lt ( $description | len ) 20 }}{{ $description = .Site.Params.description }}{{ end }}
 {{- $canonicalURL := strings.TrimSuffix "readme.html" .RelPermalink }}
 {{- $canonicalURL = replaceRE "^(/modules/[a-zA-Z0-9-]+)/(alpha|beta|early-access|stable|rock-solid)/(.*)$" "$1/$3" $canonicalURL 1 }}
