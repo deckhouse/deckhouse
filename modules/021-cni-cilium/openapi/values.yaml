@@ -86,6 +86,47 @@ properties:
                   ca:
                     type: string
                     x-examples: ["---ROOT PEM---"]
+          settings:
+            type: object
+            properties:
+              extendedMetrics:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  collectors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        contextOptions:
+                          type: string
+              flowLogs:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  allowFilterList:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  denyFilterList:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  fieldMaskList:
+                    type: array
+                    items:
+                      type: string
+                  fileMaxSizeMB:
+                    type: integer
+                    default: 10
       egressGatewaysMap:
         type: object
         additionalProperties:
