@@ -44,7 +44,7 @@ type manager interface {
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 }
 
@@ -83,9 +83,8 @@ func (t *task) Execute(ctx context.Context) error {
 		Err: errors.New("startup package"),
 		Conditions: []status.Condition{
 			{
-				Name:   status.ConditionReadyInRuntime,
+				Type:   status.ConditionWaitConverge,
 				Status: metav1.ConditionFalse,
-				Reason: "Startup",
 			},
 		},
 	})
