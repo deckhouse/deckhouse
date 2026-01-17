@@ -1,0 +1,21 @@
+cloud-provider-aws:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17470
+cloud-provider-vcd:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17136
+cloud-provider-yandex:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17469
+docs:
+  fixes:
+    - summary: Added a link to the ModuleSource to the explanation table of the editions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17411
+prometheus:
+  features:
+    - summary: Add prometheus configuration reload failed alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17128
+
