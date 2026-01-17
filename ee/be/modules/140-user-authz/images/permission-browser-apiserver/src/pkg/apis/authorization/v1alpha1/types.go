@@ -136,3 +136,31 @@ type SubjectAccessReviewResult struct {
 	// +optional
 	EvaluationError string `json:"evaluationError,omitempty" protobuf:"bytes,4,opt,name=evaluationError"`
 }
+
+// +genclient
+// +genclient:nonNamespaced
+// +genclient:onlyVerbs=get,list
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AccessibleNamespace represents a namespace that the requesting user has access to.
+// This is a read-only, computed resource similar to OpenShift Projects.
+//
+// LIMITATIONS:
+// - Watch is NOT supported - clients must poll for updates
+// - resourceVersion is always empty ("") - do not rely on it for caching
+// - The list is computed at request time based on RBAC and multi-tenancy rules
+type AccessibleNamespace struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+}
+
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+
+// AccessibleNamespaceList is a list of accessible namespaces for the requesting user
+type AccessibleNamespaceList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
+
+	// Items is the list of accessible namespaces
+	Items []AccessibleNamespace `json:"items" protobuf:"bytes,2,rep,name=items"`
+}

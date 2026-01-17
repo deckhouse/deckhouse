@@ -546,13 +546,13 @@ func (t *testAttrs) GetVerb() string    { return t.verb }
 func (t *testAttrs) IsReadOnly() bool {
 	return t.verb == "get" || t.verb == "list" || t.verb == "watch"
 }
-func (t *testAttrs) GetNamespace() string                              { return t.namespace }
-func (t *testAttrs) GetResource() string                               { return t.resource }
-func (t *testAttrs) GetSubresource() string                            { return t.subresource }
-func (t *testAttrs) GetName() string                                   { return t.name }
-func (t *testAttrs) GetAPIGroup() string                               { return t.apiGroup }
-func (t *testAttrs) GetAPIVersion() string                             { return t.apiVersion }
-func (t *testAttrs) IsResourceRequest() bool                           { return t.resourceRequest }
-func (t *testAttrs) GetPath() string                                   { return t.path }
-func (t *testAttrs) GetFieldSelector() (fields.Requirements, error)    { return nil, nil }
-func (t *testAttrs) GetLabelSelector() (labels.Requirements, error)    { return nil, nil }
+func (t *testAttrs) GetNamespace() string                           { return t.namespace }
+func (t *testAttrs) GetResource() string                            { return t.resource }
+func (t *testAttrs) GetSubresource() string                         { return t.subresource }
+func (t *testAttrs) GetName() string                                { return t.name }
+func (t *testAttrs) GetAPIGroup() string                            { return t.apiGroup }
+func (t *testAttrs) GetAPIVersion() string                          { return t.apiVersion }
+func (t *testAttrs) IsResourceRequest() bool                        { return t.resourceRequest }
+func (t *testAttrs) GetPath() string                                { return t.path }
+func (t *testAttrs) GetFieldSelector() (fields.Requirements, error) { return nil, nil }
+func (t *testAttrs) GetLabelSelector() (labels.Requirements, error) { return nil, nil }
