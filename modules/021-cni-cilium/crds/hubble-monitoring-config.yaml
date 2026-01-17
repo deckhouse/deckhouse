@@ -513,8 +513,6 @@ spec:
                             type: array
                             description: |
                               Node label selectors.
-
-                              For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                             x-doc-examples:
                               - "node-role.kubernetes.io/control-plane="
                               - "topology.kubernetes.io/ru-central1-a"
@@ -926,8 +924,6 @@ spec:
                             type: array
                             description: |
                               Node label selectors.
-
-                              For more information, please see the [Cilium documentation](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                             x-doc-examples:
                               - "node-role.kubernetes.io/control-plane="
                               - "topology.kubernetes.io/ru-central1-a"

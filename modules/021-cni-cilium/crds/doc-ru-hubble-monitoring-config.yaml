@@ -199,8 +199,6 @@ spec:
                           node_labels:
                             description: |
                               Селекторы лейблов узлов.
-
-                              Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           ip_version:
                             description: Версия IP.
                           trace_id:
@@ -348,8 +346,6 @@ spec:
                           node_labels:
                             description: |
                               Селекторы лейблов узлов.
-
-                              Для получения дополнительной информации смотрите [документацию Cilium](https://docs.cilium.io/en/stable/gettingstarted/terminology/#labels).
                           ip_version:
                             description: Версия IP.
                           trace_id:
