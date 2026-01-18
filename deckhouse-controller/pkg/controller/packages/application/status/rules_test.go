@@ -214,21 +214,31 @@ func TestUpdateInstalledRule(t *testing.T) {
 			},
 		},
 		{
-			name: "absent when no version change",
+			name: "true when healthy after rollback (no version change)",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
-				ConditionUpdateInstalled: nil,
+				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: "Ready"},
 			},
 		},
 		{
-			name: "false when core condition fails",
+			name: "false when core condition fails during update",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
 				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
 				withVersionChanged(),
+			},
+			expected: map[string]*expectedCondition{
+				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
+			},
+		},
+		{
+			name: "false when core condition fails without version change",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionDownloaded), metav1.ConditionFalse, "DownloadFailed"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: {status: metav1.ConditionFalse, reason: "DownloadFailed"},
