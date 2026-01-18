@@ -32,6 +32,7 @@ var _ = Describe("User Authn hooks :: handle UserOperation creation ::", func() 
 	f.RegisterCRD("deckhouse.io", "v1", "UserOperation", false)
 	f.RegisterCRD("dex.coreos.com", "v1", "Password", true)
 	f.RegisterCRD("dex.coreos.com", "v1", "OfflineSessions", true)
+	f.RegisterCRD("dex.coreos.com", "v1", "RefreshToken", true)
 
 	nowStr := time.Now().UTC().Format(time.RFC3339)
 	const (
@@ -148,6 +149,52 @@ spec:
   initiatorType: Admin
   type: Reset2FA
   user: admin
+`
+		refreshTokensForAdmin = `
+---
+apiVersion: dex.coreos.com/v1
+kind: RefreshToken
+metadata:
+  name: rt-1
+  namespace: d8-user-authn
+claims:
+  email: admin@yourcompany.com
+  username: admin
+  userID: ""
+clientID: console-d8-console-dex-authenticator
+connectorID: local
+scopes: ["openid", "profile", "email", "offline_access"]
+token: token1
+---
+apiVersion: dex.coreos.com/v1
+kind: RefreshToken
+metadata:
+  name: rt-2
+  namespace: d8-user-authn
+claims:
+  email: admin@yourcompany.com
+  username: admin
+  userID: ""
+clientID: console-d8-console-dex-authenticator
+connectorID: local
+scopes: ["openid", "profile", "email", "offline_access"]
+token: token2
+`
+		offlineSessionsNoUserID = `
+---
+apiVersion: dex.coreos.com/v1
+kind: OfflineSessions
+metadata:
+  creationTimestamp: "%s"
+  name: offsess-no-userid
+  namespace: d8-user-authn
+connID: local
+refresh:
+  console-d8-console-dex-authenticator:
+    ClientID: console-d8-console-dex-authenticator
+    CreatedAt: "2026-01-18T23:25:02Z"
+    ID: rt-1
+    LastUsed: "2026-01-18T23:25:02Z"
 `
 		offlineSessions = `
 ---
@@ -274,6 +321,27 @@ status:
 			for _, offsessName := range []string{"offsess-1", "offsess-2"} {
 				offsess := f.KubernetesResource("OfflineSessions", "d8-user-authn", offsessName)
 				Expect(offsess.Exists()).To(BeFalse())
+			}
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Reset user's 2FA when OfflineSessions has no userID (match via RefreshToken claims)", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(offlineSessionsNoUserID, nowStr) + refreshTokensForAdmin + fmt.Sprintf(userOperationReset2FA, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			offsess := f.KubernetesResource("OfflineSessions", "d8-user-authn", "offsess-no-userid")
+			Expect(offsess.Exists()).To(BeFalse())
+
+			for _, rtName := range []string{"rt-1", "rt-2"} {
+				rt := f.KubernetesResource("RefreshToken", "d8-user-authn", rtName)
+				Expect(rt.Exists()).To(BeFalse())
 			}
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")

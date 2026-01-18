@@ -79,13 +79,23 @@ const (
 	UserOperationStatusPhaseFailed    = UserOperationStatusPhase("Failed")
 )
 
-type OfflineSession struct {
-	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
-	UserID            string `json:"userID"`
-	// Some Dex versions / storages may serialize this field as `userId`.
-	UserId        string `json:"userId,omitempty"`
-	TOTPConfirmed bool   `json:"totpConfirmed"`
+// OfflineSessionSnapshot is a minimal representation of Dex OfflineSessions object used by this hook.
+// We intentionally keep it flexible: different Dex versions/storages may store user identity differently,
+// and OfflineSessions may not have userID at all but contain refresh token references.
+type OfflineSessionSnapshot struct {
+	Name            string   `json:"name"`
+	Namespace       string   `json:"namespace"`
+	UserID          string   `json:"userID"`
+	RefreshTokenIDs []string `json:"refreshTokenIDs,omitempty"`
+}
+
+// RefreshTokenSnapshot is a minimal representation of Dex RefreshToken object used by this hook.
+type RefreshTokenSnapshot struct {
+	Name            string `json:"name"`
+	Namespace       string `json:"namespace"`
+	ClaimsUserID    string `json:"claimsUserID,omitempty"`
+	ClaimsUsername  string `json:"claimsUsername,omitempty"`
+	ClaimsPreferred string `json:"claimsPreferredUsername,omitempty"`
 }
 
 const userOperationRetentionPeriod = 24 * time.Hour
@@ -117,33 +127,78 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:          applyOfflineSessionFilter,
 			ExecuteHookOnEvents: lo.ToPtr(false),
 		},
+		{
+			Name:                "refreshtokens",
+			ApiVersion:          "dex.coreos.com/v1",
+			Kind:                "RefreshToken",
+			FilterFunc:          applyRefreshTokenFilter,
+			ExecuteHookOnEvents: lo.ToPtr(false),
+		},
 	},
 }, getUserOperations)
 
 func applyOfflineSessionFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var offlineSession = &OfflineSession{}
-	err := sdk.FromUnstructured(obj, offlineSession)
-	if err != nil {
-		return nil, fmt.Errorf("cannot convert kubernetes object: %v", err)
+	snap := &OfflineSessionSnapshot{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
 	}
 
 	// Be tolerant to different json field names / nesting. We only need user identity for Reset2FA.
-	if offlineSession.UserID == "" {
-		offlineSession.UserID = offlineSession.UserId
-	}
-	if offlineSession.UserID == "" {
-		if v, found, _ := unstructured.NestedString(obj.Object, "userID"); found {
-			offlineSession.UserID = v
-		} else if v, found, _ := unstructured.NestedString(obj.Object, "userId"); found {
-			offlineSession.UserID = v
-		} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userID"); found {
-			offlineSession.UserID = v
-		} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userId"); found {
-			offlineSession.UserID = v
-		}
+	if v, found, _ := unstructured.NestedString(obj.Object, "userID"); found {
+		snap.UserID = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "userId"); found {
+		snap.UserID = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userID"); found {
+		snap.UserID = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "spec", "userId"); found {
+		snap.UserID = v
 	}
 
-	return offlineSession, nil
+	// Collect refresh token IDs referenced by OfflineSessions. They can be used to infer user identity.
+	if refreshMap, found, _ := unstructured.NestedMap(obj.Object, "refresh"); found && len(refreshMap) > 0 {
+		ids := make([]string, 0, len(refreshMap))
+		for _, v := range refreshMap {
+			m, ok := v.(map[string]any)
+			if !ok {
+				continue
+			}
+			if id, ok := m["ID"].(string); ok && id != "" {
+				ids = append(ids, id)
+				continue
+			}
+			// Be tolerant to different key casing.
+			if id, ok := m["id"].(string); ok && id != "" {
+				ids = append(ids, id)
+				continue
+			}
+		}
+		snap.RefreshTokenIDs = ids
+	}
+
+	return snap, nil
+}
+
+func applyRefreshTokenFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	snap := &RefreshTokenSnapshot{
+		Name:      obj.GetName(),
+		Namespace: obj.GetNamespace(),
+	}
+
+	if v, found, _ := unstructured.NestedString(obj.Object, "claims", "userID"); found {
+		snap.ClaimsUserID = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "claims", "userId"); found {
+		snap.ClaimsUserID = v
+	}
+	if v, found, _ := unstructured.NestedString(obj.Object, "claims", "username"); found {
+		snap.ClaimsUsername = v
+	}
+	if v, found, _ := unstructured.NestedString(obj.Object, "claims", "preferredUsername"); found {
+		snap.ClaimsPreferred = v
+	} else if v, found, _ := unstructured.NestedString(obj.Object, "claims", "preferred_username"); found {
+		snap.ClaimsPreferred = v
+	}
+
+	return snap, nil
 }
 
 func applyUserOperationFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -332,21 +387,61 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 }
 
 func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
-	var someOfflineSessionDeleted bool
-	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSession](input.Snapshots.Get("offlinesessions")) {
+	refreshTokensByID := make(map[string]RefreshTokenSnapshot, len(input.Snapshots.Get("refreshtokens")))
+	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
+		if err != nil {
+			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+		}
+		// metadata.name is the refresh token ID
+		refreshTokensByID[rt.Name] = rt
+	}
+
+	var anyDeleted bool
+
+	for sess, err := range sdkobjectpatch.SnapshotIter[OfflineSessionSnapshot](input.Snapshots.Get("offlinesessions")) {
 		if err != nil {
 			return fmt.Errorf("cannot iter over OfflineSessions: %v", err)
 		}
-		if sess.UserID != operation.Spec.User {
-			input.Logger.Error("session.UserID != operation.Spec.User", "sess.UserID", sess.UserID, "operation.Spec.User", operation.Spec.User)
+
+		matchesUser := false
+		if sess.UserID != "" {
+			matchesUser = (sess.UserID == operation.Spec.User)
+		} else if len(sess.RefreshTokenIDs) > 0 {
+			for _, id := range sess.RefreshTokenIDs {
+				rt, ok := refreshTokensByID[id]
+				if !ok {
+					continue
+				}
+				if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
+					matchesUser = true
+					break
+				}
+			}
+		}
+
+		if !matchesUser {
+			input.Logger.Debug("OfflineSessions does not match requested user", "offlinesession", sess.Name, "userID", sess.UserID, "requestedUser", operation.Spec.User, "refreshTokenIDs", sess.RefreshTokenIDs)
 			continue
 		}
 
-		input.Logger.Info("Resetting user 2FA", "user", sess.UserID)
+		input.Logger.Info("Resetting user 2FA: deleting OfflineSessions", "user", operation.Spec.User, "offlinesession", sess.Name)
 		input.PatchCollector.Delete("dex.coreos.com/v1", "OfflineSessions", sess.Namespace, sess.Name)
-		someOfflineSessionDeleted = true
+		anyDeleted = true
 	}
-	if !someOfflineSessionDeleted {
+
+	// Also delete refresh tokens for the user to invalidate offline_access sessions and ensure consistent 2FA reset.
+	for rt, err := range sdkobjectpatch.SnapshotIter[RefreshTokenSnapshot](input.Snapshots.Get("refreshtokens")) {
+		if err != nil {
+			return fmt.Errorf("cannot iter over RefreshTokens: %v", err)
+		}
+		if rt.ClaimsUsername == operation.Spec.User || rt.ClaimsUserID == operation.Spec.User || rt.ClaimsPreferred == operation.Spec.User {
+			input.Logger.Info("Resetting user 2FA: deleting RefreshToken", "user", operation.Spec.User, "refreshtoken", rt.Name)
+			input.PatchCollector.Delete("dex.coreos.com/v1", "RefreshToken", rt.Namespace, rt.Name)
+			anyDeleted = true
+		}
+	}
+
+	if !anyDeleted {
 		return fmt.Errorf("cannot find user's 2FA objects: %v", operation.Spec.User)
 	}
 
