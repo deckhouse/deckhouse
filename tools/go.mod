@@ -1,8 +1,6 @@
 module tools
 
-go 1.24.2
-
-toolchain go1.24.6
+go 1.24.6
 
 require (
 	github.com/Masterminds/sprig v2.22.0+incompatible
@@ -23,7 +21,7 @@ require (
 	github.com/Djarvur/go-err113 v0.0.0-20210108212216-aea10b59be24 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
-	github.com/Masterminds/semver/v3 v3.3.1 // indirect
+	github.com/Masterminds/semver/v3 v3.4.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.3.0 // indirect
 	github.com/OpenPeeDeeP/depguard v1.0.1 // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
@@ -184,7 +182,7 @@ require (
 	golang.org/x/tools v0.38.0 // indirect
 	golang.org/x/tools/go/expect v0.1.1-deprecated // indirect
 	golang.org/x/tools/go/packages/packagestest v0.1.1-deprecated // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.17.4 // indirect

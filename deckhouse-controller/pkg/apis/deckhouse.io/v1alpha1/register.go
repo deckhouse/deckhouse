@@ -72,6 +72,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&ModuleSettingsDefinitionList{},
 		&DeckhouseRelease{},
 		&DeckhouseReleaseList{},
+		&ObjectKeeper{},
+		&ObjectKeeperList{},
 		// Package system types
 		&PackageRepository{},
 		&PackageRepositoryList{},

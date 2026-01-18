@@ -281,9 +281,10 @@ spec:
             host: app-svc
 ```
 
-### NGINX Ingress
+### Ingress NGINX
 
-Для работы с NGINX Ingress требуется подготовить:
+Для работы с Ingress NGINX требуется подготовить:
+
 * Ingress-контроллер, добавив к нему sidecar от Istio. В нашем случае включить параметр `enableIstioSidecar` в кастомном ресурсе [IngressNginxController](../../modules/ingress-nginx/cr.html#ingressnginxcontroller) модуля [ingress-nginx](../../modules/ingress-nginx/).
 * Ingress-ресурс, который ссылается на Service. Обязательные аннотации для Ingress-ресурса:
   * `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы слать их напрямую в поды приложения. Sidecar-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
@@ -647,7 +648,7 @@ annotations:
   * Одна глобальная, обслуживает пространства имён или поды без явного указания версии (лейбл у пространства имён `istio-injection: enabled`). Настраивается параметром [globalVersion](configuration.html#parameters-globalversion).
   * Остальные — дополнительные, обслуживают пространства имён или поды с явным указанием версии (лейбл у пространства имён или пода `istio.io/rev: v1x21`). Настраиваются параметром [additionalVersions](configuration.html#parameters-additionalversions).
 * Istio заявляет обратную совместимость между data plane и control plane в диапазоне двух минорных версий:
-![Istio data-plane and control-plane compatibility](https://istio.io/latest/blog/2021/extended-support/extended_support.png)
+![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
 * Алгоритм обновления (для примера, с версии `1.19` на версию `1.21`):
   * Добавить желаемую версию в параметр модуля [additionalVersions](configuration.html#parameters-additionalversions) (`additionalVersions: ["1.21"]`).
   * Дождаться появления соответствующего пода `istiod-v1x21-xxx-yyy` в пространства имён `d8-istio`.

@@ -110,11 +110,10 @@ help:
 	  /^##@/                  { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
-GOLANGCI_VERSION = 2.1.2
-TRIVY_VERSION= 0.63.0
+TRIVY_VERSION= 0.67.2
 PROMTOOL_VERSION = 2.37.0
 GATOR_VERSION = 3.9.0
-GH_VERSION = 2.52.0
+GH_VERSION = 2.83.2
 TESTS_TIMEOUT="15m"
 
 ##@ General
@@ -175,13 +174,13 @@ validate: ## Check common patterns through all modules.
 
 bin/golangci-lint:
 	mkdir -p bin
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- v${GOLANGCI_VERSION}
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | BINARY=golangci-lint bash -s -- ${GOLANGCI_LINT_VERSION}
 
 .PHONY: lint lint-fix
-lint: ## Run linter.
+lint: golangci-lint ## Run linter.
 	golangci-lint run
 
-lint-fix: ## Fix lint violations.
+lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
@@ -213,7 +212,7 @@ lint-src-artifact: set-build-envs ## Run src-artifact stapel linter
 
 ## Run all generate-* jobs in bulk.
 .PHONY: generate render-workflow
-generate: generate-kubernetes generate-tools
+generate: generate-kubernetes generate-tools generate-docs generate-werf
 
 .PHONY: generate-tools
 generate-tools:
@@ -321,9 +320,15 @@ bin/werf: bin bin/trdl ## Install werf for images-digests generator.
 		fi;
 
 bin/gh: bin ## Install gh cli.
+ifeq ($(OS_NAME), Darwin)
+	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).zip -o bin/gh.zip
+	unzip -d bin -oj bin/gh.zip gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh
+	rm bin/gh.zip
+else
 	curl -sSfL https://github.com/cli/cli/releases/download/v$(GH_VERSION)/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH).tar.gz -o bin/gh.tar.gz
 	tar zxf bin/gh.tar.gz -C bin/ && ln -s bin/gh_$(GH_VERSION)_$(GH_PLATFORM)_$(GH_ARCH)/bin/gh bin/gh
 	rm bin/gh.tar.gz
+endif
 
 .PHONY: update-k8s-patch-versions
 update-k8s-patch-versions: ## Run update-patchversion script to generate new version_map.yml.
@@ -439,7 +444,6 @@ build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
 
 GO=$(shell which go)
 GIT=$(shell which git)
-GOLANGCI_LINT=$(shell which golangci-lint)
 
 .PHONY: go-check
 go-check:
@@ -458,12 +462,15 @@ all-mod: go-check
 
 ##@ Dependencies
 
+WHOAMI ?= $(shell whoami)
+
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 DECKHOUSE_CLI ?= $(LOCALBIN)/d8
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 CLIENT_GEN ?= $(LOCALBIN)/client-gen
@@ -471,17 +478,33 @@ INFORMER_GEN ?= $(LOCALBIN)/informer-gen
 LISTER_GEN ?= $(LOCALBIN)/lister-gen
 YQ = $(LOCALBIN)/yq
 
+## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
-DECKHOUSE_CLI_VERSION ?= v0.24.2
+GOLANGCI_LINT_VERSION = v2.7.2
+DECKHOUSE_CLI_VERSION ?= v0.26.3
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2
 
+## Generate werf
+.PHONY: generate-werf
+generate-werf: yq ## Generate changes in werf files.
+  ##~ Options: GOLANGCI_LINT_VERSION=vX.Y.Z
+	@if [ -n "$(GOLANGCI_LINT_VERSION)" ]; then \
+		sed -i 's/export GOLANGCI_LINT_VERSION=v[0-9.]\+/export GOLANGCI_LINT_VERSION=$(GOLANGCI_LINT_VERSION)/' .werf/werf-golang-ci-lint.yaml; \
+		echo "Updated golangci-lint version to $(GOLANGCI_LINT_VERSION) in .werf/werf-golang-ci-lint.yaml"; \
+	else \
+		echo "No GOLANGCI_LINT_VERSION specified. Skipping update."; \
+	fi
+
+
 ## Generate tools documentation
 .PHONY: generate-docs
-generate-docs: deckhouse-cli ## Generate documentation for deckhouse-cli.
-	@$(DECKHOUSE_CLI) help-json > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(DECKHOUSE_CLI) --version
+	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
+	@DECKHOUSE_PLUGINS_ENABLED=false $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -491,6 +514,19 @@ generate-kubernetes: controller-gen-generate client-gen-generate lister-gen-gene
 .PHONY: controller-gen-generate
 controller-gen-generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="./deckhouse-controller/hack/boilerplate.go.txt" paths="./deckhouse-controller/pkg/apis/..."
+
+.PHONY: manifests
+manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+	@echo "Removing old CRDs..."
+	@rm -rf ./bin/crd
+	@echo "Generating CRDs..."
+	@-$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./deckhouse-controller/pkg/apis/deckhouse.io/..." output:crd:artifacts:config=bin/crd/bases 2>&1
+	@echo "Copying CRDs to deckhouse-controller/crds..."
+	@cp bin/crd/bases/deckhouse.io_applications.yaml deckhouse-controller/crds/application.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositoryoperations.yaml deckhouse-controller/crds/packagerepositoryoperation.yaml
+	@cp bin/crd/bases/deckhouse.io_packagerepositories.yaml deckhouse-controller/crds/packagerepository.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackageversions.yaml deckhouse-controller/crds/applicationpackageversion.yaml
+	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 
 ## Generate clientset
 .PHONY: client-gen-generate
@@ -527,6 +563,12 @@ informer-gen-generate: informer-gen lister-gen-generate client-gen-generate
 
 ## Tool installations
 
+
+.PHONY: golangci-lint
+golangci-lint: $(GOLANGCI_LINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCI_LINT): $(LOCALBIN)
+	$(call go-install-tool,$(GOLANGCI_LINT),github.com/golangci/golangci-lint/v2/cmd/golangci-lint,$(GOLANGCI_LINT_VERSION))
+
 ## Download deckhouse-cli locally if necessary.
 .PHONY: deckhouse-cli
 deckhouse-cli:
@@ -534,13 +576,13 @@ deckhouse-cli:
 		CURRENT_VERSION=$$($(DECKHOUSE_CLI) --version 2>/dev/null | head -n1 | awk '{print $$3}' || echo "unknown"); \
 		if [ "$$CURRENT_VERSION" != "$(DECKHOUSE_CLI_VERSION)" ]; then \
 			echo "Current d8 version ($$CURRENT_VERSION) does not match required version ($(DECKHOUSE_CLI_VERSION)), downloading new binary..."; \
-			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+			INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
 		else \
 			echo "d8 version $(DECKHOUSE_CLI_VERSION) is already installed."; \
 		fi; \
 	else \
 		echo "d8 not found, downloading..."; \
-		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)" >/dev/null 2>&1; \
+		INSTALL_DIR=$(LOCALBIN) VERSION=$(DECKHOUSE_CLI_VERSION) FORCE=yes sh -c "$$(curl -fsSL https://raw.githubusercontent.com/deckhouse/deckhouse-cli/main/tools/install.sh)"; \
 	fi
 
 ## Download client-gen locally if necessary.

@@ -10,14 +10,14 @@ alerts:
         Check the status of the instances in the cluster with the following command:
 
         ```shell
-        kubectl get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}
+        d8 k get instance -l node.deckhouse.io/group={{ $labels.machine_deployment_name }}
         ```
       summary: |
         There are unavailable instances in the {{ $labels.machine_deployment_name }} MachineDeployment.
       severity: "8"
       markupFormat: markdown
     - name: CertificateSecretExpired
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/propagated-certificate.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -44,7 +44,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: CertificateSecretExpiredSoon
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/certificate.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/certificates/propagated-certificate.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -71,7 +71,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: CertmanagerCertificateExpired
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -88,7 +88,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateExpiredSoon
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -105,7 +105,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CertmanagerCertificateOrderErrors
-      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/certificate.yaml
+      sourceFile: modules/101-cert-manager/monitoring/prometheus-rules/propagated-certificate.yaml
       moduleUrl: 101-cert-manager
       module: cert-manager
       edition: ce
@@ -269,7 +269,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: CronJobAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -286,7 +286,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -303,7 +303,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -320,7 +320,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobFailed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -351,7 +351,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: CronJobImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -368,7 +368,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobPodsNotCreated
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -399,7 +399,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: CronJobRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -416,7 +416,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: CronJobSchedulingError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/cronjob.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -431,7 +431,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: CronJobUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -445,7 +445,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -610,7 +610,7 @@ alerts:
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        d8 k -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
         ```
       summary: |
         Cloud data discoverer cannot get data from the cloud.
@@ -625,7 +625,7 @@ alerts:
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
+        d8 k -n {{ $labels.namespace }} logs deploy/cloud-data-discoverer
         ```
       summary: |
         Cloud data discoverer cannot save data to a Kubernetes resource.
@@ -659,7 +659,7 @@ alerts:
         To check the Pod's status, run the following command:
 
         ```shell
-        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
         ```
       summary: |
         The cluster-autoscaler Pod is NOT Running.
@@ -679,7 +679,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
       summary: |
         Too many cluster-autoscaler restarts detected.
@@ -700,19 +700,19 @@ alerts:
         1. Check availability and status of cluster-autoscaler Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get pods -l app=cluster-autoscaler
            ```
 
         2. Verify that the cluster-autoscaler Deployment exists:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager get deploy cluster-autoscaler
            ```
 
         3. Check the Deployment's status:
 
            ```bash
-           kubectl -n d8-cloud-instance-manager describe deploy cluster-autoscaler
+           d8 k -n d8-cloud-instance-manager describe deploy cluster-autoscaler
            ```
       summary: |
         Cluster-autoscaler target is missing in Prometheus.
@@ -739,7 +739,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
+        d8 k -n d8-cloud-instance-manager logs -f -l app=cluster-autoscaler -c cluster-autoscaler
         ```
       summary: |
         Cluster-autoscaler is issuing too many errors.
@@ -1137,6 +1137,67 @@ alerts:
         Prometheus is unable to scrape Dex metrics.
       severity: "6"
       markupFormat: markdown
+    - name: D8DexAuthRequestsQuotaExhausted
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` has been fully exhausted.
+
+        Dex is currently unable to create new AuthRequest custom resources, which will cause:
+        * Dex health checks to fail immediately.
+        * Authentication through external identity providers to stop working.
+        * Users unable to log in via OAuth/OIDC flows.
+
+        **Immediate actions required:**
+
+        1. Check current AuthRequest objects and clean up stale ones:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn --no-headers | wc -l
+           d8 k delete authrequests.dex.coreos.com --all -n d8-user-authn
+           ```
+
+        2. Temporarily increase the ResourceQuota limit:
+           ```bash
+           d8 k patch resourcequota authrequest-quota -n d8-user-authn --type='json' -p='[{"op": "replace", "path": "/spec/hard/count\/authrequests.dex.coreos.com", "value": "20000"}]'
+           ```
+
+        3. Investigate why Dex is not cleaning up AuthRequest objects automatically.
+
+        4. Review Dex configuration for AuthRequest TTL settings.
+      summary: |
+        Dex AuthRequest objects ResourceQuota is exhausted in namespace &quot;d8-user-authn&quot;.
+      severity: "3"
+      markupFormat: markdown
+    - name: D8DexAuthRequestsQuotaHigh
+      sourceFile: modules/150-user-authn/monitoring/prometheus-rules/dex.yaml
+      moduleUrl: 150-user-authn
+      module: user-authn
+      edition: ce
+      description: |-
+        The ResourceQuota for `authrequests.dex.coreos.com` objects in namespace `d8-user-authn` is approaching its limit.
+
+        **Current usage:** {{ $value | printf "%.1f" }}%
+
+        When the quota is exhausted, Dex will be unable to create new AuthRequest custom resources, which may cause:
+        * Dex health checks to fail.
+        * Authentication through external identity providers (GitLab, GitHub, etc.) to stop working.
+
+        **Investigation steps:**
+
+        1. Check for stale AuthRequest objects that Dex should have cleaned up:
+           ```bash
+           d8 k get authrequests.dex.coreos.com -n d8-user-authn
+           ```
+
+        2. Review Dex configuration for AuthRequest TTL settings.
+
+        3. Consider temporarily increasing the ResourceQuota limit if needed.
+      summary: |
+        Dex AuthRequest objects quota usage is higher than 80% in namespace &quot;d8-user-authn&quot;.
+      severity: "4"
+      markupFormat: markdown
     - name: D8EtcdDatabaseHighFragmentationRatio
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/etcd-maintenance.yaml
       moduleUrl: 040-control-plane-manager
@@ -1186,13 +1247,13 @@ alerts:
         - To check the Deployment's status:
 
           ```shell
-          kubectl -n d8-monitoring get deployment grafana-v10 -o json | jq .status
+          d8 k -n d8-monitoring get deployment grafana-v10 -o json | jq .status
           ```
 
         - To check a Pod's status:
 
           ```shell
-          kubectl -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
+          d8 k -n d8-monitoring get pods -l app=grafana-v10 -o json | jq '.items[] | {(.metadata.name):.status}'
           ```
       summary: |
         One or more Grafana Pods are NOT Running.
@@ -1237,7 +1298,7 @@ alerts:
         To investigate the issue, check the logs:
 
         ```shell
-        kubectl -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
+        d8 k -n d8-monitoring logs -f -l app=grafana-v10 -c grafana
         ```
       summary: |
         Excessive Grafana restarts detected.
@@ -1258,19 +1319,19 @@ alerts:
         1. Check the availability and status of Grafana Pods:
 
            ```shell
-           kubectl -n d8-monitoring get pods -l app=grafana-v10
+           d8 k -n d8-monitoring get pods -l app=grafana-v10
            ```
 
         2. Check the availability of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring get deployment grafana-v10
+           d8 k -n d8-monitoring get deployment grafana-v10
            ```
 
         3. Examine the status of the Grafana Deployment:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment grafana-v10
+           d8 k -n d8-monitoring describe deployment grafana-v10
            ```
       summary: |
         Grafana target is missing in Prometheus.
@@ -1944,7 +2005,7 @@ alerts:
         To check the Pod's status, run the following command:
 
         ```shell
-        kubectl -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
+        d8 k -n {{$labels.namespace}} get pods {{$labels.pod}} -o json | jq .status
         ```
       summary: |
         The machine-controller-manager Pod is NOT Running.
@@ -1964,7 +2025,7 @@ alerts:
         Check the logs for details:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
+        d8 k -n d8-cloud-instance-manager logs -f -l app=machine-controller-manager -c controller
         ```
       summary: |
         Too many machine-controller-manager restarts detected.
@@ -1984,19 +2045,19 @@ alerts:
         1. Check availability and status of `machine-controller-manager` Pods:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get pods -l app=machine-controller-manager
            ```
 
         2. Verify availability of the `machine-controller-manager` Deployment:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager get deployment machine-controller-manager
            ```
 
         3. Check the Deployment’s status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager describe deployment machine-controller-manager
+           d8 k -n d8-cloud-instance-manager describe deployment machine-controller-manager
            ```
       summary: |
         Machine-controller-manager target is missing in Prometheus.
@@ -2122,14 +2183,14 @@ alerts:
         To check the module releases status, run the following command:
 
         ```bash
-        kubectl get mr -l module={{ $labels.moduleName }}
+        d8 k get mr -l module={{ $labels.moduleName }}
         ```{{ if ne $labels.majorReleaseName "nil" }}{{ if ne $labels.fromToName "nil" }}
 
         This major release has from-to version constraints that must be met before applying the update.
         To check the update instructions (from-to versions), run the following command:
 
         ```bash
-        kubectl get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
+        d8 k get mr {{ $labels.name }} -o jsonpath='{.spec.update.versions[*]}'
         ```
 
         This will show you the update paths including the from-to versions defined in the release.{{ end }}
@@ -2432,7 +2493,7 @@ alerts:
       description: |
         The `denial` (NXDOMAIN) cache in node-local-dns is evicting entries frequently.
 
-        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 9984` is currently configured).
+        This might indicate that there are Services that are being recreated too often in cluster. So, denial cache size is not enough (`denial 65536` is currently configured).
 
         Affected node: `{{$labels.node}}`
       summary: |
@@ -2447,7 +2508,7 @@ alerts:
       description: |
         The `success` cache in node-local-dns is evicting entries frequently (>100 in 5 minutes).
 
-        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 39936` is currently configured), or traffic patterns changed.
+        This could mean there are too many different DNS records application have to resolve (to many Services?). So, node-local-dns cache capacity is too small (`success 120000` is currently configured), or traffic patterns changed.
 
         Affected node: `{{$labels.node}}`
       summary: |
@@ -2473,10 +2534,10 @@ alerts:
       edition: be
       description: |
         The 95th percentile DNS request latency for A-records through kubeforward on node `{{$labels.node}}`
-        exceeded 300 milliseconds over the last 5 minutes.
+        exceeded 300 milliseconds over the last 5 minutes while handling more than 0.1 QPS.
         This may indicate slow upstreams, network issues, or DNS overload on this node.
       summary: |
-        High DNS request latency in kubeforward (p95 &gt; 300ms).
+        High DNS request latency in kubeforward (p95 &gt; 300ms under load).
       severity: "4"
       markupFormat: default
     - name: D8NodeLocalDNSUpstreamHealthcheckFailed
@@ -2600,6 +2661,34 @@ alerts:
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
       markupFormat: markdown
+    - name: D8PrometheusConfigReloadFailed
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |-
+        The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
+
+        This usually happens when:
+        - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
+        - Invalid RemoteWrite configuration.
+
+        Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
+        Troubleshooting steps:
+
+        1. Check the Prometheus container logs for configuration errors:
+
+           ```shell
+           d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
+           ```
+
+        2. If using remote write, verify the remote write configuration.
+
+        Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.
+      summary: |
+        Prometheus configuration reload failed.
+      severity: "5"
+      markupFormat: markdown
     - name: D8PrometheusLongtermFederationTargetDown
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/longterm-target-down.yaml
       moduleUrl: 300-prometheus
@@ -2632,19 +2721,19 @@ alerts:
         1. Check the StatefulSet status:
 
            ```shell
-           kubectl -n d8-monitoring describe statefulset prometheus-longterm
+           d8 k -n d8-monitoring describe statefulset prometheus-longterm
            ```
 
         2. Inspect the PersistentVolumeClaim (if used):
 
            ```shell
-           kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+           d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
            ```
 
         3. Inspect the Pod's state:
 
            ```shell
-           kubectl -n d8-monitoring describe pod prometheus-longterm-0
+           d8 k -n d8-monitoring describe pod prometheus-longterm-0
            ```
       summary: |
         Prometheus-longterm target is missing in Prometheus.
@@ -2869,7 +2958,7 @@ alerts:
         To get more details, check the Pod logs:
 
         ```shell
-        kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+        d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
         ```
       summary: |
         Terraform-state-exporter has encountered errors.
@@ -2969,13 +3058,13 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
       summary: |
         Terraform-state-exporter Pod is not Ready.
@@ -2994,13 +3083,13 @@ alerts:
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
       summary: |
         Terraform-state-exporter Pod is not Running.
@@ -3019,13 +3108,13 @@ alerts:
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
 
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
       summary: |
         Terraform-state-exporter target is missing in Prometheus.
@@ -3044,13 +3133,13 @@ alerts:
         - Check the Pod status:
 
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
 
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
       summary: |
         Prometheus can't scrape terraform-state-exporter.
@@ -3064,7 +3153,7 @@ alerts:
       description: |-
         The following modules use the Trickster component:
 
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
         * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
         * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -3073,13 +3162,13 @@ alerts:
         1. Inspect the Deployment's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment trickster
+           d8 k -n d8-monitoring describe deployment trickster
            ```
 
         2. Inspect the Pod's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app=trickster
+           d8 k -n d8-monitoring describe pod -l app=trickster
            ```
 
         3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -3087,7 +3176,7 @@ alerts:
            Make sure Prometheus is running:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
            ```
       summary: |
         Trickster target is missing in Prometheus.
@@ -3101,7 +3190,7 @@ alerts:
       description: |-
         The following modules use the Trickster component:
 
-        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+        * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
         * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
         * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -3110,13 +3199,13 @@ alerts:
         1. Inspect the Deployment's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe deployment trickster
+           d8 k -n d8-monitoring describe deployment trickster
            ```
 
         2. Inspect the Pod's stats:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app=trickster
+           d8 k -n d8-monitoring describe pod -l app=trickster
            ```
 
         3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -3124,7 +3213,7 @@ alerts:
            Make sure Prometheus is running:
 
            ```shell
-           kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+           d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
            ```
       summary: |
         Trickster target is missing in Prometheus.
@@ -3492,7 +3581,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DaemonSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3509,7 +3598,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3526,7 +3615,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3543,7 +3632,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3560,7 +3649,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3577,7 +3666,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DaemonSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3591,7 +3680,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -3872,7 +3961,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: DeploymentAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3889,7 +3978,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3906,7 +3995,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3923,7 +4012,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentGenerationMismatch
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/kube-state-metrics.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/generic/propagated-kube-state-metrics.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -3934,7 +4023,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: DeploymentImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3951,7 +4040,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3968,7 +4057,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: DeploymentUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -3982,7 +4071,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -4001,13 +4090,13 @@ alerts:
         To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
+        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
         ```
 
         To get a list of the Ingress objects using GeoIPv1 variables, run the following command:
 
         ```shell
-        kubectl get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
+        d8 k get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
         ```
       summary: |
         Deprecated GeoIP version 1 is used in the cluster.
@@ -4024,7 +4113,7 @@ alerts:
         For details, check the logs:
 
         ```shell
-        kubectl -n d8-cloud-instance-manager logs {{$labels.pod}}
+        d8 k -n d8-cloud-instance-manager logs {{$labels.pod}}
         ```
 
         Troubleshooting options:
@@ -4130,6 +4219,20 @@ alerts:
         GeoIP DB download error in controller {{ $labels.controller }}.
       severity: "4"
       markupFormat: markdown
+    - name: GeoIPDownloadErrorDetectedFromMaxMind
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database from MaxMind.
+        **Reason:** `{{ $labels.reason }}`
+        **Type:** `{{ $labels.type }}`
+        If this issue persists, investigate network connectivity or database availability.
+      summary: |
+        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}).
+      severity: "4"
+      markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
       moduleUrl: 300-prometheus
@@ -4229,7 +4332,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: IngressResponses5xx
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-ingress.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4242,7 +4345,7 @@ alerts:
       severity: "4"
       markupFormat: default
     - name: IngressResponses5xx
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/ingress.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-ingress.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4255,7 +4358,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: IstioIrrelevantExternalServiceFound
-      sourceFile: modules/110-istio/monitoring/prometheus-rules/services.yaml
+      sourceFile: modules/110-istio/monitoring/prometheus-rules/propagated-services.yaml
       moduleUrl: 110-istio
       module: istio
       edition: ce
@@ -4725,7 +4828,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetNotUpToDate
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4758,7 +4861,7 @@ alerts:
       severity: "9"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4781,7 +4884,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDaemonSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4807,7 +4910,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4824,7 +4927,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesDeploymentReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4856,20 +4959,20 @@ alerts:
         1. Check the deployment details:
 
            ```bash
-           kubectl -n kube-system describe deployment -l k8s-app=kube-dns
+           d8 k -n kube-system describe deployment -l k8s-app=kube-dns
            ```
 
         2. Check the pod details:
 
            ```bash
-           kubectl -n kube-system describe pod -l k8s-app=kube-dns
+           d8 k -n kube-system describe pod -l k8s-app=kube-dns
            ```
       summary: |
         Kube-dns or CoreDNS are not being monitored.
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4886,7 +4989,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: KubernetesStatefulSetReplicasUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/application-controllers.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-application-controllers.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -4981,7 +5084,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: LoadBalancerServiceWithoutExternalIP
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/loadbalancer.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-loadbalancer.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -5320,7 +5423,7 @@ alerts:
 
         3. Check for errors in the `configuration-snippet` or `server-snippet` annotations.
       summary: |
-        Configuration test failed on NGINX Ingress {{ $labels.controller_namespace }}/{{ $labels.controller }}.
+        Configuration test failed on Ingress NGINX {{ $labels.controller_namespace }}/{{ $labels.controller }}.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressDaemonSetNotUpToDate
@@ -5329,7 +5432,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Deckhouse has detected {{ .Value }} outdated pods in NGINX Ingress DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
+        Deckhouse has detected {{ .Value }} outdated pods in Ingress NGINX DaemonSet `{{ $labels.namespace }}/{{ $labels.daemonset }}` over the last 20 minutes.
 
         Steps to resolve:
 
@@ -5346,9 +5449,9 @@ alerts:
            ```
 
         3. If the parameter `Number of Nodes Scheduled with Up-to-date Pods` does not match
-        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding NGINX Ingress Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
+        `Current Number of Nodes Scheduled`, check the 'nodeSelector' and 'toleration' settings of the corresponding Ingress NGINX Controller and compare them to the 'labels' and 'taints' settings of the relevant nodes.
       summary: |
-        There were {{ .Value }} outdated pods in NGINX Ingress DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} over the last 20 minutes.
+        There were {{ .Value }} outdated pods in Ingress NGINX DaemonSet {{ $labels.namespace }}/{{ $labels.daemonset }} over the last 20 minutes.
       severity: "9"
       markupFormat: markdown
     - name: NginxIngressDaemonSetReplicasUnavailable
@@ -5357,7 +5460,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Deckhouse has detected that there are no available replicas remaining in NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
+        Deckhouse has detected that there are no available replicas remaining in Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}`.
 
         List of unavailable pods:
 
@@ -5371,7 +5474,7 @@ alerts:
         d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
-        No available replicas remaining in NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
+        No available replicas remaining in Ingress NGINX DaemonSet {{$labels.namespace}}/{{$labels.daemonset}}.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressDaemonSetReplicasUnavailable
@@ -5380,7 +5483,7 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Deckhouse has detected that some replicas of NGINX Ingress DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
+        Deckhouse has detected that some replicas of Ingress NGINX DaemonSet `{{$labels.namespace}}/{{$labels.daemonset}}` are unavailable.
 
         Current number: {{ .Value }} unavailable replica(s).
 
@@ -5396,7 +5499,20 @@ alerts:
         d8 k -n {{$labels.namespace}} get pod -ojson | jq -r '.items[] | select(.metadata.ownerReferences[] | select(.name =="{{$labels.daemonset}}")) | select(.status.phase != "Running" or ([ .status.conditions[] | select(.type == "Ready" and .status == "False") ] | length ) == 1 ) | .spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms[].matchFields[].values[]'
         ```
       summary: |
-        Some replicas of NGINX Ingress DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+        Some replicas of Ingress NGINX DaemonSet {{$labels.namespace}}/{{$labels.daemonset}} are unavailable.
+      severity: "6"
+      markupFormat: markdown
+    - name: NginxIngressMaxMindAccountIDNotSet
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      moduleUrl: 402-ingress-nginx
+      module: ingress-nginx
+      edition: ce
+      description: |-
+        The controller **"{{ $labels.controller_name }}"** downloads the GeoIP database using the legacy flow because `spec.geoIP2.maxmindAccountID` is not set.
+        This fallback is less reliable and may be throttled by MaxMind. Specify both `maxmindAccountID` and `maxmindLicenseKey`
+        in the corresponding `ingressnginxcontroller` resource to use the official GeoIP update client.
+      summary: |
+        MaxMind Account ID is missing for the Ingress NGINX Controller &quot;{{ $labels.controller_name }}&quot;.
       severity: "6"
       markupFormat: markdown
     - name: NginxIngressPodIsRestartingTooOften
@@ -5405,11 +5521,11 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        {{ $value }} NGINX Ingress controller restarts detected in the last hour.
+        {{ $value }} Ingress NGINX Controller restarts detected in the last hour.
 
-        Excessive NGINX Ingress restarts indicate that something is wrong. Normally, it should be up and running all the time.
+        Excessive Ingress NGINX restarts indicate that something is wrong. Normally, it should be up and running all the time.
       summary: |
-        Too many NGINX Ingress restarts detected.
+        Too many Ingress NGINX restarts detected.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressProfilingIsEnabled
@@ -5418,12 +5534,12 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        Profiling mode is enabled for the NGINX Ingress Controller **"{{ $labels.controller_name }}"**.
+        Profiling mode is enabled for the Ingress NGINX Controller **"{{ $labels.controller_name }}"**.
         This may increase memory consumption, slow down request processing, and the process may run as root.
         It is recommended to disable profiling unless it is actively needed for debugging or performance analysis.
         To disable profiling, set `nginxProfilingEnabled: false` in the `ingressnginxcontroller` resource configuration for this controller.
       summary: |
-        Warning: Profiling mode is enabled in the NGINX Ingress Controller &quot;{{ $labels.controller_name }}&quot;.
+        Warning: Profiling mode is enabled in the Ingress NGINX Controller &quot;{{ $labels.controller_name }}&quot;.
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressProtobufExporterHasErrors
@@ -5444,7 +5560,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: NginxIngressSslExpired
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
       module: ingress-nginx
       edition: ce
@@ -5463,7 +5579,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: NginxIngressSslWillExpire
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
+      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/propagated-ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
       module: ingress-nginx
       edition: ce
@@ -5494,7 +5610,7 @@ alerts:
         d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq -r '.items[] | select(.metadata.annotations."network.deckhouse.io/ingress-nginx-validation-suspended" != null) | "\(.metadata.name)"'
         ```
       summary: |
-        Warning: Ingress resource validation in the NGINX Ingress Controller is currently disabled.
+        Warning: Ingress resource validation in the Ingress NGINX Controller is currently disabled.
       severity: "4"
       markupFormat: markdown
     - name: NodeConntrackTableFull
@@ -5647,7 +5763,20 @@ alerts:
       moduleUrl: 040-node-manager
       module: node-manager
       edition: ce
-      description: "The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.  \nThis may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.\n\nTo resolve the issue, add the following to the `master` NodeGroup spec:\n\n```yaml\n  nodeTemplate:\n    taints:\n    - effect: NoSchedule\n      key: node-role.kubernetes.io/control-plane\n```\n\nNote that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.\n"
+      description: |
+        The `master` NodeGroup doesn't have the `node-role.kubernetes.io/control-plane: NoSchedule` taint.
+        This may indicate a misconfiguration where control-plane nodes can run non-control-plane Pods.
+
+        To resolve the issue, add the following to the `master` NodeGroup spec:
+
+        ```yaml
+          nodeTemplate:
+            taints:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/control-plane
+        ```
+
+        Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.
       summary: |
         The master NodeGroup is missing the required control-plane taint.
       severity: "4"
@@ -5695,7 +5824,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5703,13 +5832,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -5748,7 +5877,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5756,13 +5885,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -5800,7 +5929,7 @@ alerts:
         1. Check the status of the NodeGroup:
 
            ```shell
-           kubectl get ng {{ $labels.node_group }} -o yaml
+           d8 k get ng {{ $labels.node_group }} -o yaml
            ```
 
            Look for errors in the `.status.lastMachineFailures` field.
@@ -5808,13 +5937,13 @@ alerts:
         2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine
+           d8 k -n d8-cloud-instance-manager get machine
            ```
 
         3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
 
            ```shell
-           kubectl -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
            ```
 
         4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
@@ -6241,7 +6370,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: OperationPolicyViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6267,7 +6396,7 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6286,7 +6415,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimBytesUsage
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6305,7 +6434,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6324,7 +6453,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PersistentVolumeClaimInodesUsed
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/persistent-volume-claim.yaml
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-persistent-volume-claim.yaml
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6360,7 +6489,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PodSecurityStandardsViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6388,7 +6517,7 @@ alerts:
       severity: "3"
       markupFormat: markdown
     - name: PodStatusIsIncorrect
-      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/pod-status.yaml
+      sourceFile: modules/340-monitoring-kubernetes/monitoring/prometheus-rules/kubernetes/propagated-pod-status.yaml
       moduleUrl: 340-monitoring-kubernetes
       module: monitoring-kubernetes
       edition: ce
@@ -6488,7 +6617,7 @@ alerts:
       severity: "4"
       markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6501,7 +6630,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: PrometheusServiceMonitorDeprecated
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/deprecation.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6531,7 +6660,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: SecurityPolicyViolation
-      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/audit.yaml
+      sourceFile: modules/015-admission-policy-engine/monitoring/prometheus-rules/propagated-audit.yaml
       moduleUrl: 015-admission-policy-engine
       module: admission-policy-engine
       edition: ce
@@ -6570,7 +6699,7 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: StatefulSetAuthenticationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6587,7 +6716,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetAuthorizationFailure
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6604,7 +6733,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetBadImageFormat
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6621,7 +6750,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetImageAbsent
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6638,7 +6767,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6655,7 +6784,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: StatefulSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/image-checks.tpl
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
@@ -6669,7 +6798,7 @@ alerts:
         To resolve this issue, review the exporter logs:
 
         ```bash
-        kubectl -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image.
@@ -6703,7 +6832,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6713,7 +6842,7 @@ alerts:
       severity: "5"
       markupFormat: default
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6723,7 +6852,7 @@ alerts:
       severity: "6"
       markupFormat: default
     - name: TargetDown
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6733,7 +6862,7 @@ alerts:
       severity: "7"
       markupFormat: default
     - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce
@@ -6744,7 +6873,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: TargetSampleLimitExceeded
-      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/target-down.yaml
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-target-down.yaml
       moduleUrl: 300-prometheus
       module: prometheus
       edition: ce

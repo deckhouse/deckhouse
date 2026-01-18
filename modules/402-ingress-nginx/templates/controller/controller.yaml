@@ -15,6 +15,7 @@ memory: 10Mi
 
 {{- $resourcesRequests := $crd.spec.resourcesRequests | default dict }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $hostPort := $crd.spec.hostPort | default dict }}
 {{- $hostPortWithProxyProtocol := $crd.spec.hostPortWithProxyProtocol | default dict }}
 {{- $hostPortWithSSLPassthrough := $crd.spec.hostPortWithSSLPassthrough | default dict }}
@@ -37,7 +38,7 @@ kind: VerticalPodAutoscaler
 metadata:
   name: controller-{{ $name }}
   namespace: d8-ingress-nginx
-  {{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
+{{ include "helm_lib_module_labels" (list $context (dict "app" "controller" "name" $name )) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps.kruise.io/v1alpha1"
@@ -126,6 +127,9 @@ spec:
   template:
     metadata:
       labels:
+      {{- if or (eq $crd.spec.inlet "HostWithFailover") (eq $crd.spec.inlet "HostPort") }}
+        network.deckhouse.io/ingress-nginx-class: {{ $crd.spec.ingressClass }}
+      {{- end }}
       {{- if and (eq $crd.spec.inlet "HostWithFailover") (not $failover) }}
         ingress.deckhouse.io/block-deleting: "true"
       {{- end }}
@@ -254,7 +258,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: "127.0.0.1"
-        {{- if $geoIP2.maxmindLicenseKey }}
+        {{- if $geoIP2 }}
         - name: LUA_USE_GEOIP2
           value: "true"
         {{- end }}
@@ -309,10 +313,22 @@ spec:
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
-    {{- if $geoIP2.maxmindLicenseKey }}
-        - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
-      {{- if $geoIP2.maxmindEditionIDs }}
+    {{- if $geoIP2 }}
+      {{- if $geoproxyReady }}
+        - --maxmind-mirror=https://geoproxy:4250/download
+        - --maxmind-skip-tls-verification=true
+        - --maxmind-retries-count=5
+        - --maxmind-retries-timeout=15s
+        {{- if $geoIP2.maxmindEditionIDs }}
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+        {{- end }}
+      {{- else }}
+        {{- if $geoIP2.maxmindLicenseKey }}
+        - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+        {{- end }}
+        {{- if $geoIP2.maxmindEditionIDs }}
+        - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+        {{- end }}
       {{- end }}
     {{- end }}
         - --healthz-host=127.0.0.1
@@ -320,6 +336,7 @@ spec:
         {{- if or (eq $crd.spec.inlet "HostPortWithSSLPassthrough") (eq $crd.spec.inlet "LoadBalancerWithSSLPassthrough")}}
         - --enable-ssl-passthrough
         {{- end }}
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class={{ $crd.spec.ingressClass }}
         lifecycle:
           preStop:
             exec:

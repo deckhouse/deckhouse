@@ -14,9 +14,9 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "8"
+  resourceVersion: "7"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -29,8 +29,9 @@ status:
     status: "True"
     type: Processed
   packages:
-    discovered: 1
-    processed: 1
+    processed:
+    - name: test-package
+    processedOverall: 1
     total: 1
   phase: Completed
   startTime: "2025-10-31T12:00:00Z"
@@ -43,8 +44,6 @@ metadata:
   resourceVersion: "2"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: registry.example.com/test
 status:
   packages:

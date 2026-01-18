@@ -41,6 +41,10 @@ properties:
         type: integer
         minimum: 0
         x-examples: [3]
+      hasEtcdArbiterNode:
+        type: boolean
+        default: false
+        x-examples: [false]
       pkiChecksum:
         type: string
         pattern: '^[0-9a-zA-Z]+$'
@@ -71,6 +75,12 @@ properties:
           type: object
           properties:
             urlPrefix:
+              type: string
+            filterVerb:
+              type: string
+            preemptVerb:
+              type: string
+            prioritizeVerb:
               type: string
             weight:
               type: integer

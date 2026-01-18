@@ -60,6 +60,9 @@ shell:
   - patch -p1 < /patches/019-maxmind-alerts.patch
   - patch -p1 < /patches/020-fix-sorting.patch
   - patch -p1 < /patches/021-geoip-ver-metric.patch
+  - patch -p1 < /patches/022-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/023-ingress-update-status.patch
+  - patch -p1 < /patches/024-use-proxy-real-ip-cidr-v2.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
@@ -317,6 +320,15 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
+  before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
   before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh

@@ -14,3 +14,9 @@ moduleStageBageMap:
   preview: Pre
   general_availability: GA
   deprecated: Dep
+
+moduleAllowedStages:
+- Experimental
+- Preview
+- General Availability
+- Deprecated

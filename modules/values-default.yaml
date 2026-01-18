@@ -28,7 +28,6 @@ operatorPrometheusEnabled: true
 prometheusEnabled: true
 prometheusMetricsAdapterEnabled: true
 secretCopierEnabled: true
-snapshotControllerEnabled: true
 terraformManagerEnabled: true
 upmeterEnabled: true
 userAuthnEnabled: true

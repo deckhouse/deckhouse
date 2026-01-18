@@ -24,6 +24,7 @@ import (
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -32,10 +33,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
@@ -59,8 +61,9 @@ type Application struct {
 	digests    map[string]string // Package digests
 	registry   registry.Registry // Application registry
 
-	hooks  *hooks.Storage  // Hook storage with indices
-	values *values.Storage // Values storage with layering
+	hooks         *hooks.Storage      // Hook storage with indices
+	values        *values.Storage     // Values storage with layering
+	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.
@@ -76,6 +79,8 @@ type ApplicationConfig struct {
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
 	Hooks []*addonhooks.ModuleHook // Discovered hooks
+
+	SettingsCheck *kind.SettingsCheck
 }
 
 // NewApplication creates a new Application instance with the specified configuration.
@@ -99,6 +104,7 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
 	a.registry = cfg.Registry
+	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -146,6 +152,7 @@ func (a *Application) GetRuntimeValues() addonutils.Values {
 	return addonutils.Values{
 		"Name":      a.instance,
 		"Namespace": a.namespace,
+		"Package":   a.definition.Name,
 		"Digests":   a.digests,
 		"Registry":  a.registry,
 	}
@@ -166,6 +173,7 @@ func (a *Application) GetNamespace() string {
 	return a.namespace
 }
 
+// GetVersion return the package version
 func (a *Application) GetVersion() string {
 	return a.definition.Version
 }
@@ -187,6 +195,26 @@ func (a *Application) GetSettingsChecksum() string {
 	return a.values.GetConfigChecksum()
 }
 
+// ValidateSettings validates settings against openAPI and call setting check if exists
+func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+	if err := a.values.ValidateConfigValues(settings); err != nil {
+		return settingscheck.Result{}, err
+	}
+
+	// no need to call the settings check if nothing changed
+	if a.values.GetConfigChecksum() == settings.Checksum() {
+		return settingscheck.Result{Valid: true}, nil
+	}
+
+	if a.settingsCheck != nil {
+		return a.settingsCheck.Check(ctx, settings)
+	}
+
+	return settingscheck.Result{
+		Valid: true,
+	}, nil
+}
+
 // GetValues returns values for rendering
 func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
@@ -199,19 +227,7 @@ func (a *Application) ApplySettings(settings addonutils.Values) error {
 
 // GetChecks return scheduler checks, their determine if an app should be enabled/disabled
 func (a *Application) GetChecks() schedule.Checks {
-	deps := make(map[string]dependency.Dependency)
-	for module, dep := range a.definition.Requirements.Modules {
-		deps[module] = dependency.Dependency{
-			Constraint: dep.Constraints,
-			Optional:   dep.Optional,
-		}
-	}
-
-	return schedule.Checks{
-		Kubernetes: a.definition.Requirements.Kubernetes,
-		Deckhouse:  a.definition.Requirements.Deckhouse,
-		Modules:    deps,
-	}
+	return a.definition.Requirements.Checks()
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.

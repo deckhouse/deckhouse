@@ -3,3 +3,6 @@ stage: General Availability
 subsystems:
   - observability
 namespace: d8-upmeter
+descriptions:
+  en: Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.
+  ru: Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов.

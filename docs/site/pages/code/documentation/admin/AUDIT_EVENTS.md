@@ -108,7 +108,6 @@ Each audit event contains a date, time, IP address and user account details, as 
 The table below shows example system messages.  
 Audit events in a production environment contain full information either directly in the message or in an additional JSON field with data.  
 
-<div class="table-wrapper" markdown="0">
 <table class="supported_versions" markdown="0" style="table-layout: fixed">
 <thead>
 <tr>
@@ -834,4 +833,3 @@ Audit events in a production environment contain full information either directl
 </tr>
 </tbody>
 </table>
-</div>

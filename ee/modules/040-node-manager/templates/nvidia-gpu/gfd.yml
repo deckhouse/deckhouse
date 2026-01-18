@@ -16,7 +16,7 @@ spec:
     kind: DaemonSet
     name: {{ $gfdName }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: gpu-feature-discovery-ctr

@@ -14,8 +14,13 @@ import (
 	"os"
 	"time"
 
-	"webhook/internal/cache"
+	discoverycache "webhook/internal/cache"
 	"webhook/internal/web/hook"
+
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	kcache "k8s.io/client-go/tools/cache"
 )
 
 const (
@@ -56,18 +61,39 @@ func buildTLSConfig() (*tls.Config, error) {
 }
 
 type Server struct {
-	cache   cache.Cache
-	handler *hook.Handler
-	logger  *log.Logger
+	cache            discoverycache.Cache
+	handler          *hook.Handler
+	logger           *log.Logger
+	informerFactory  informers.SharedInformerFactory
+	nsInformerSynced kcache.InformerSynced
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
-	c := cache.NewNamespacedDiscoveryCache(logger)
-	h, err := hook.NewHandler(logger, c)
+	config, err := rest.InClusterConfig()
 	if err != nil {
 		return nil, err
 	}
-	return &Server{logger: logger, cache: c, handler: h}, nil
+
+	clientSet, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	c := discoverycache.NewNamespacedDiscoveryCache(logger)
+	informerFactory := informers.NewSharedInformerFactory(clientSet, 0)
+	nsInformer := informerFactory.Core().V1().Namespaces()
+
+	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced)
+	if err != nil {
+		return nil, err
+	}
+	return &Server{
+		logger:           logger,
+		cache:            c,
+		handler:          h,
+		informerFactory:  informerFactory,
+		nsInformerSynced: nsInformer.Informer().HasSynced,
+	}, nil
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
@@ -111,15 +137,22 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	s.logger.Println("server is starting to listen on ", ListenAddr, "...")
-
 	// Register and stop config updater
 	stopCh := make(chan struct{})
+
+	s.informerFactory.Start(stopCh)
+
+	if ok := kcache.WaitForCacheSync(stopCh, s.nsInformerSynced); !ok {
+		return fmt.Errorf("failed to sync namespace informer cache")
+	}
+
 	go s.handler.StartRenewConfigLoop(stopCh)
 
 	httpServer.RegisterOnShutdown(func() {
-		stopCh <- struct{}{}
+		close(stopCh)
 	})
+
+	s.logger.Println("server is starting to listen on ", ListenAddr, "...")
 
 	if err = httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
 		return fmt.Errorf("could not listen on %s: %v", ListenAddr, err)

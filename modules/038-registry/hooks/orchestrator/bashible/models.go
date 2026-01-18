@@ -22,8 +22,10 @@ import (
 	"strings"
 
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	registry_helpers "github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 	bashible "github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
-	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouse-registry"
+	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
@@ -195,7 +197,6 @@ func (s *State) process(params Params, inputs Inputs, isTransitionStage bool) (R
 	if params.ModeParams.isEmpty() {
 		return failedResult, fmt.Errorf("mode params are empty")
 	}
-
 	// Transition stage + params already contained -> skip (stage already done)
 	if isTransitionStage &&
 		s.ActualParams != nil && s.ActualParams.isEqual(params.ModeParams) {
@@ -245,13 +246,13 @@ func (b *ConfigBuilder) build() (*Config, error) {
 	}
 
 	ret := Config{
-		Mode:           mode,
+		Mode:           string(mode),
 		ImagesBase:     imagesBase,
 		ProxyEndpoints: b.proxyEndpoints(),
 		Hosts:          b.hosts(),
 	}
 
-	version, err := helpers.ComputeHash(&ret)
+	version, err := registry_pki.ComputeHash(&ret)
 	if err != nil {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
@@ -304,7 +305,7 @@ func (b *ConfigBuilder) hosts() map[string]bashible.ConfigHosts {
 }
 
 func (p *ModeParams) fromRegistrySecret(registrySecret deckhouse_registry.Config) error {
-	username, password, err := helpers.CredsFromDockerCfg(
+	username, password, err := registry_helpers.CredsFromDockerCfg(
 		registrySecret.DockerConfig,
 		registrySecret.Address,
 	)
@@ -380,7 +381,7 @@ func (p *DirectModeParams) isEqual(other *DirectModeParams) bool {
 }
 
 func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, _ := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, _ := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,
@@ -393,7 +394,7 @@ func (p *UnmanagedModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost
 }
 
 func (p *DirectModeParams) hostMirrors() (string, []bashible.ConfigMirrorHost) {
-	host, path := helpers.RegistryAddressAndPathFromImagesRepo(p.ImagesRepo)
+	host, path := registry_helpers.SplitAddressAndPath(p.ImagesRepo)
 	return registry_const.Host, []bashible.ConfigMirrorHost{{
 		Host:   host,
 		CA:     p.CA,

@@ -1,9 +1,11 @@
 name: extended-monitoring
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - observability
 namespace: d8-monitoring
-
 requirements:
   modules:
     prometheus: ">= 0.0.0"
+descriptions:
+  en: Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.
+  ru: Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов.

@@ -119,7 +119,7 @@ data:
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
+	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.MappedFields, creationTime *time.Time) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -132,7 +132,7 @@ data:
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: settings,
+				Settings: &settings,
 				Enabled:  enabled,
 			},
 		}
@@ -248,7 +248,7 @@ data:
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(false), v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -273,7 +273,7 @@ data:
 			f.ValuesSet("global.clusterIsBootstrapped", false)
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -299,7 +299,7 @@ data:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -325,7 +325,7 @@ data:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, `{}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -351,7 +351,7 @@ data:
 		BeforeEach(func() {
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -405,7 +405,7 @@ data:
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, nil, v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, nil, v1alpha1.MappedFields{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -435,7 +435,7 @@ data:
 
 			resources := []string{
 				cniSecretYAML(cni, ``, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -466,7 +466,7 @@ data:
 
 			resources := []string{
 				cniSecretYAML(cni, ``, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -497,7 +497,7 @@ data:
 
 			resources := []string{
 				cniSecretYAML(cni, ``, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -528,7 +528,7 @@ data:
 
 			resources := []string{
 				cniSecretYAML(cni, ``, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -559,7 +559,7 @@ data:
 
 			resources := []string{
 				cniSecretYAML(cni, ``, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{}, &mcTime),
+				cniMCYAML(cniName, ptr.To(true), v1alpha1.MappedFields{}, &mcTime),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())

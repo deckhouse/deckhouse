@@ -17,12 +17,6 @@
   group: jekyll
   stageDependencies:
     setup: ['**/*']
-- add: /dhctl/pkg/config/base.go
-  to: /srv/jekyll-data/documentation/_data/dhctl-base.go
-  owner: jekyll
-  group: jekyll
-  stageDependencies:
-    setup: ['**/*']
 - add: /global-hooks/openapi
   to: /src/global
   owner: jekyll
@@ -59,7 +53,9 @@
   excludePaths:
     - docs
     - candi
+    - deckhouse-controller/crds/
   includePaths:
     - '**/docs/README.md'
     - '**/docs/readme.md'
     - '**/oss.yaml'
+    - '**/module.yaml'

@@ -668,7 +668,16 @@ metadata:
 spec:
   clusterName: static
   replicas: 0
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
+    metadata:
+      labels:
+        cluster.x-k8s.io/cluster-name: static
+        cluster.x-k8s.io/deployment-name: worker
     spec:
       bootstrap:
         dataSecretName: manual-bootstrap-for-worker
@@ -678,7 +687,10 @@ spec:
         kind: StaticMachineTemplate
         namespace: d8-cloud-instance-manager
         name: worker
-  selector: {}
+  selector:
+    matchLabels:
+      cluster.x-k8s.io/cluster-name: static
+      cluster.x-k8s.io/deployment-name: worker
 `
 )
 
@@ -726,31 +738,17 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "operator-prometheus", "vertical-pod-autoscaler-crd", "operator-prometheus-crd"]`)
 		})
 
-		assertSpecDotGroupsArray := func(rule object_store.KubeObject, shouldEmpty bool) {
-			Expect(rule.Exists()).To(BeTrue())
-
-			groups := rule.Field("spec.groups")
-
-			Expect(groups.IsArray()).To(BeTrue())
-			if shouldEmpty {
-				Expect(groups.Array()).To(BeEmpty())
-			} else {
-				Expect(groups.Array()).ToNot(BeEmpty())
-			}
-		}
-
 		Context("For cluster auto-scaler", func() {
 			Context("cluster auto-scaler disabled", func() {
 				BeforeEach(func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -762,10 +760,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-cluster-autoscaler")
+					Expect(rule.Exists()).Should(BeTrue())
 					cm := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "cluster-autoscaler-priority-expander")
 					Expect(cm.Field("data.priorities").String()).To(MatchYAML(`
 50:
@@ -778,7 +777,6 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
   - ^xxx-staging-spot-c5.16xlarge-[0-9a-zA-Z]+$
 `))
 
-					assertSpecDotGroupsArray(rule, false)
 				})
 			})
 		})
@@ -789,12 +787,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be empty array", func() {
+				It("PrometheusRule does not Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, true)
+					Expect(rule.Exists()).Should(BeFalse())
 				})
 			})
 
@@ -806,12 +803,11 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 					f.HelmRender()
 				})
 
-				It("spec.groups should be none empty array", func() {
+				It("PrometheusRule Exists", func() {
 					Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 					rule := f.KubernetesResource("PrometheusRule", "d8-cloud-instance-manager", "node-manager-machine-controller-manager")
-
-					assertSpecDotGroupsArray(rule, false)
+					Expect(rule.Exists()).Should(BeTrue())
 				})
 			})
 		})

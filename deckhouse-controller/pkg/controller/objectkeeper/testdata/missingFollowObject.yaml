@@ -1,0 +1,13 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  name: missing-follow-obj
+spec:
+  mode: FollowObject
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    namespace: default
+    name: not-existing-pod
+    uid: befc4950-0348-494d-af5e-94d65ad0d03e
+  ttl: 1h

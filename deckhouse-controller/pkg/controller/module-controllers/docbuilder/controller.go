@@ -354,6 +354,11 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
+	moduleDir, err = filepath.EvalSymlinks(moduleDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve symlinks: %w", err)
+	}
+
 	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err

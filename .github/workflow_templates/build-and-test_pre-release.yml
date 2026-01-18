@@ -20,7 +20,7 @@ name: Build and test for release branches
 on:
   push:
     branches:
-      - 'release-*'
+      - 'release-[0-9].[0-9]+'
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}

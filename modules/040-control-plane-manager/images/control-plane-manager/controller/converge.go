@@ -35,6 +35,16 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// Generate etcd performance patch before converge phase
+func generateEtcdPerformancePatch() error {
+	log.Info("phase: generate etcd performance patch")
+	params := GetEtcdPerformanceParams()
+	if err := GenerateEtcdPerformancePatch(params); err != nil {
+		return fmt.Errorf("failed to generate etcd performance patch: %w", err)
+	}
+	return nil
+}
+
 // Synchronize extra files with the destination directory,
 // ensuring the destination contains exactly the same set of files as in the config.
 func syncExtraFiles() error {
@@ -99,9 +109,39 @@ func syncExtraFiles() error {
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+
+	var components []string
+	if config.EtcdArbiter {
+		components = []string{"etcd"}
+		log.Info("ETCD_ARBITER mode: skipping control-plane components")
+	} else {
+		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+	}
+
+	for _, v := range components {
 		if err := convergeComponent(v); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func rejoinEtcdMemberIfNeeded(etcd *Etcd) error {
+	_, err := os.Stat("/var/lib/etcd/member")
+	if err == nil {
+		memberExists, err := etcd.checkMemberExists(config.NodeName)
+		if err != nil {
+			return fmt.Errorf("failed to check if etcd member %s exists: %w", config.NodeName, err)
+		}
+
+		if !memberExists {
+			log.Infof("etcd member folder exists but %s is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", config.NodeName)
+			if err := cleanupEtcdFolder(); err != nil {
+				return fmt.Errorf("failed to cleanup etcd folder: %w", err)
+			}
+			if err := EtcdJoinConverge(); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -111,7 +151,19 @@ func convergeComponent(componentName string) error {
 	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
-
+	// handle etcd member deletion after converge, if etcd member is not a member of the cluster, cleanup etcd folder and join etcd
+	var etcd *Etcd
+	var err error
+	if componentName == "etcd" {
+		etcd, err = NewEtcd()
+		if err != nil {
+			return fmt.Errorf("failed to create etcd client: %w", err)
+		}
+		defer etcd.client.Close()
+		if err := rejoinEtcdMemberIfNeeded(etcd); err != nil {
+			return err
+		}
+	}
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
 	}
@@ -145,6 +197,9 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
+			if config.EtcdArbiter {
+				log.Info("etcd-arbiter mode: joining etcd cluster using kubeadm")
+			}
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
@@ -174,13 +229,7 @@ func convergeComponent(componentName string) error {
 
 	// Handle the situation when etcd member remains in the learner state
 	if componentName == "etcd" {
-		etcd, err := NewEtcd()
-		if err != nil {
-			return err
-		}
-		defer etcd.client.Close()
-
-		err = etcd.PromoteLearnersIfNeeded()
+		err = etcd.promoteLearnersIfNeeded()
 		if err != nil {
 			return err
 		}

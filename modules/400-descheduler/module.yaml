@@ -1,9 +1,8 @@
 name: descheduler
 subsystems:
-  - infrastructure
+- infrastructure
 namespace: d8-descheduler
-description: |
-  The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
 descriptions:
-  en: The module runs a descheduler with strategies defined in a `Descheduler` custom resource.
+  en: Analyzes the cluster state every 15 minutes and performs pod eviction according to conditions described in active strategies. Evicted pods are rescheduled considering the current cluster state.
+  ru: Анализирует состояние кластера каждые 15 минут и выполняет вытеснение подов согласно условиям, описанным в активных стратегиях. Позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией.
 stage: General Availability

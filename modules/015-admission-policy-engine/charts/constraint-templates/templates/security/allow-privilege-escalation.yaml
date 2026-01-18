@@ -34,9 +34,82 @@ spec:
               package d8.pod_security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any(c)
-                msg := sprintf("Privilege escalation container is not allowed: %v", [c.name])
+                allowed_by_policy := "allowPrivilegeEscalation: false"
+                actual_value := get_actual_privilege_escalation(c)
+                exception_allowed := get_exception_allowed(c)
+                msg := build_message(c.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_privilege_escalation(c) := out if {
+                has_field(c, "securityContext")
+                has_field(c.securityContext, "allowPrivilegeEscalation")
+                out := sprintf("allowPrivilegeEscalation: %v", [c.securityContext.allowPrivilegeEscalation])
+              }
+
+              get_actual_privilege_escalation(c) := "allowPrivilegeEscalation: not set (defaults to true)" if {
+                not has_field(c, "securityContext")
+              }
+
+              get_actual_privilege_escalation(c) := "allowPrivilegeEscalation: not set (defaults to true)" if {
+                has_field(c, "securityContext")
+                not has_field(c.securityContext, "allowPrivilegeEscalation")
+              }
+
+              get_exception_allowed(c) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
+                has_field(exception.spec.securityContext.allowPrivilegeEscalation, "allowedValue")
+                out := sprintf("SecurityPolicyException allowed: allowPrivilegeEscalation: %v", [exception.spec.securityContext.allowPrivilegeEscalation.allowedValue])
+              }
+
+              get_exception_allowed(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
+                not has_field(exception.spec.securityContext.allowPrivilegeEscalation, "allowedValue")
+              }
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("Privilege escalation container is not allowed: %v.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("Privilege escalation container is not allowed: %v.\n%v\n%v", [name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any(c) if {
@@ -51,6 +124,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "allowPrivilegeEscalation")
+                has_field(exception.spec.securityContext.allowPrivilegeEscalation, "allowedValue")
                 exception.spec.securityContext.allowPrivilegeEscalation.allowedValue == c.securityContext.allowPrivilegeEscalation
               }
 

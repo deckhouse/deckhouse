@@ -23,6 +23,9 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
+
+	"github.com/godbus/dbus/v5"
 )
 
 const usage = `Wrapper for legacy power commands to invoke shutdown via logind
@@ -71,15 +74,15 @@ func (a Action) String() string {
 }
 
 type Config struct {
-	action      Action
-	dryRun      bool
-	help        bool
-	unknownArgs []string
+	action       Action
+	dryRun       bool
+	help         bool
+	delaySeconds int
+	unknownArgs  []string
 }
 
 func main() {
 	config, err := parseArgs()
-
 	if err != nil {
 		fmt.Fprint(os.Stderr, err.Error())
 		os.Exit(1)
@@ -90,8 +93,15 @@ func main() {
 		os.Exit(0)
 	}
 
-	systemctlArgs := []string{"systemctl", config.action.String(), "-i"}
-	systemctlArgs = append(systemctlArgs, config.unknownArgs...)
+	if config.delaySeconds > 0 {
+		if err := scheduleShutdownViaLogind(config.action, config.delaySeconds); err != nil {
+			fmt.Fprintf(os.Stderr, "schedule via logind: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	systemctlArgs := append([]string{"systemctl", config.action.String(), "-i"}, config.unknownArgs...)
 
 	if config.dryRun {
 		fmt.Printf("Cmd: %s\n", strings.Join(systemctlArgs, " "))
@@ -106,6 +116,25 @@ func main() {
 		fmt.Fprintf(os.Stderr, "exec systemctl: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func scheduleShutdownViaLogind(action Action, delaySeconds int) error {
+	target := action.String()
+	when := time.Now().Add(time.Duration(delaySeconds) * time.Second)
+
+	conn, err := dbus.SystemBus()
+	if err != nil {
+		return fmt.Errorf("connect system bus: %w", err)
+	}
+	defer conn.Close()
+
+	obj := conn.Object("org.freedesktop.login1", "/org/freedesktop/login1")
+	call := obj.Call("org.freedesktop.login1.Manager.ScheduleShutdown", 0, target, uint64(when.UnixMicro()))
+	if call.Err != nil {
+		return fmt.Errorf("ScheduleShutdown: %w", call.Err)
+	}
+
+	return nil
 }
 
 func parseArgs() (*Config, error) {
@@ -143,10 +172,12 @@ func parseArgs() (*Config, error) {
 		"--halt":     true,
 		"-H":         true,
 		"-h":         true,
+		"-t":         true,
 	}
 
 	// Separate known and unknown arguments
-	for _, arg := range args {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		// Check if it's a known flag (handle --flag=value format)
 		flagName := arg
 		if strings.Contains(arg, "=") {
@@ -155,6 +186,13 @@ func parseArgs() (*Config, error) {
 
 		if knownFlags[flagName] {
 			knownArgs = append(knownArgs, arg)
+			if !strings.Contains(arg, "=") && i+1 < len(args) {
+				next := args[i+1]
+				if !strings.HasPrefix(next, "-") {
+					i++
+					knownArgs = append(knownArgs, next)
+				}
+			}
 		} else {
 			unknownArgs = append(unknownArgs, arg)
 		}
@@ -177,6 +215,7 @@ func parseArgs() (*Config, error) {
 		halt           = fs.Bool("halt", false, "poweroff command compatibility: halt")
 		haltH          = fs.Bool("H", false, "poweroff command compatibility: halt")
 		haltLowerH     = fs.Bool("h", false, "poweroff command compatibility: halt")
+		delay          = fs.Int("t", 0, "command delay compatibility in seconds")
 	)
 
 	// Suppress error output for unknown flags since we handle them separately
@@ -192,6 +231,7 @@ func parseArgs() (*Config, error) {
 
 	config.dryRun = *dryRun
 	config.help = *help
+	config.delaySeconds = *delay
 	config.unknownArgs = unknownArgs
 
 	// Handle action overrides from flags

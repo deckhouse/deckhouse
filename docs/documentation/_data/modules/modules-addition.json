@@ -51,6 +51,36 @@
     "external": "true",
     "path": "/modules/code/stable/"
   },
+  "managed-postgres": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-postgres/"
+  },
+  "managed-memcached": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-memcached/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-valkey/"
+  },
   "commander": {
     "editions": [
       "ce",
@@ -125,8 +155,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -142,8 +172,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -159,8 +189,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -247,8 +277,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -283,6 +313,7 @@
   "operator-argo": {
     "editions": [
       "ee",
+      "se-plus",
       "cse-pro"
     ],
     "editionsWithRestrictions": [
@@ -290,12 +321,21 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from external source",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+        "en": "Not included in the edition. Can be used as a module from <a href='./api/cr.html#modulesource'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='./api/cr.html#modulesource'>из внешнего источника</a>"
       }
     },
     "external": "true",
     "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/"
   },
   "payload-registry": {
     "editions": [

@@ -30,6 +30,23 @@ import (
 type RunExecutorParams struct {
 	TofuBinPath string
 	RootDir     string
+	ExecutorID  string
+}
+
+func (p *RunExecutorParams) validateRunParams() error {
+	if p.RootDir == "" {
+		return fmt.Errorf("RootDir is required for tofu executor")
+	}
+
+	if p.TofuBinPath == "" {
+		return fmt.Errorf("TofuBinPath is required for tofu executor")
+	}
+
+	if p.ExecutorID == "" {
+		return fmt.Errorf("ExecutorID is required for tofu executor")
+	}
+
+	return nil
 }
 
 func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, args ...string) *exec.Cmd {
@@ -45,11 +62,13 @@ func tofuCmd(ctx context.Context, params RunExecutorParams, workingDir string, a
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
 
+	dataDir := filepath.Join(params.RootDir, fmt.Sprintf("tf_%s", params.ExecutorID))
+
 	envs := append(
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
 		"TF_SKIP_CREATING_DEPS_LOCK_FILE=yes",
-		"TF_DATA_DIR="+filepath.Join(params.RootDir, "tf_dhctl"),
+		fmt.Sprintf("TF_DATA_DIR=%s", dataDir),
 	)
 
 	cmd.Env = infraexec.ReplaceHomeDirEnv(envs, params.RootDir)
