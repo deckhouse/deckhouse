@@ -61,7 +61,7 @@ build:
 {{- include "base_k8s_versions" . }}
 ---
 # Parse all oss.yaml files 
-{{- $_ := set . "OSS_YAML" (include "merge_oss_files" . | fromYaml ) }}
+{{- include "merge_oss_files" . }}
 
 # Terraform Versions
 {{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}

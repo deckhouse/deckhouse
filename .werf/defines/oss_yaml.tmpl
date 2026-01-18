@@ -23,16 +23,37 @@
       {{- $_ := set $mergedData $folderName $yamlContent -}}
     {{- end -}}
   {{- end -}}
-  {{- $mergedData | toYaml  -}}
+  {{- $_ := set $root "OSS_YAML" $mergedData -}}
 {{- end }}
 
 {{- define "get_oss_item_by_id" -}}
   {{- $id := .id -}}
   {{- $list := index .OSS_YAML .moduleName -}}
+  {{- $result := "" -}}
   
   {{- range $list -}}
     {{- if eq .id $id -}}
-      {{- . | toYaml -}}
+      {{- $result = . -}}
+      {{- break -}}
     {{- end -}}
   {{- end -}}
+  {{- if $result -}}
+    {{- $result | toJson -}}
+  {{- else -}}
+    {{- "{}" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "get_oss_version_by_id" -}}
+  {{- $id := .id -}}
+  {{- $list := index .OSS_YAML .moduleName -}}
+  {{- $version := "" -}}
+  
+  {{- range $list -}}
+    {{- if eq .id $id -}}
+      {{- $version = .version -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $version -}}
 {{- end -}}
