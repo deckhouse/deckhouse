@@ -21,9 +21,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/spf13/fsync"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/spf13/fsync"
 
 	"github.com/flant/docs-builder/internal/metrics"
 )
