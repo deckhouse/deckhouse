@@ -473,17 +473,16 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	// Determine starting version for step-by-step update
 	actual := releaseForUpdate
 
-	// Check if all releases in cluster are in sequence
-	isSequence := true
+	isSequenceInCluster := true
 	for i := 1; i < len(releasesInCluster); i++ {
 		if !isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion()) {
-			isSequence = false
+			isSequenceInCluster = false
 			break
 		}
 	}
 
 	// If all releases are in sequence, use the last one as starting point
-	if isSequence && len(releasesInCluster) > 0 {
+	if isSequenceInCluster {
 		actual = releasesInCluster[len(releasesInCluster)-1]
 	}
 
