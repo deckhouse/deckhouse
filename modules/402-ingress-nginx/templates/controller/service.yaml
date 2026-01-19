@@ -1,10 +1,6 @@
 {{- $context := . -}}
 
-{{- $lbKeyByInlet := dict
-  "LoadBalancer"                  "loadBalancer"
-  "LoadBalancerWithProxyProtocol" "loadBalancerWithProxyProtocol"
-  "LoadBalancerWithSSLPassthrough" "loadBalancerWithSSLPassthrough"
--}}
+{{- $lbKeyByInlet := dict "LoadBalancer" "loadBalancer" "LoadBalancerWithProxyProtocol" "loadBalancerWithProxyProtocol" "LoadBalancerWithSSLPassthrough" "loadBalancerWithSSLPassthrough" -}}
 
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers -}}
   {{- $inlet := $crd.spec.inlet | default "" | toString -}}
