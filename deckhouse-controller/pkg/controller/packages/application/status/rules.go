@@ -133,9 +133,12 @@ func managedRule() condmapper.Rule {
 	return condmapper.Rule{
 		Type:   ConditionManaged,
 		TrueIf: condmapper.AllTrue(managedConds...),
-		FalseIf: condmapper.Or(
-			condmapper.AnyFalse(managedConds...),
-			condmapper.IsTrue(string(status.ConditionWaitConverge)),
+		FalseIf: condmapper.And(
+			condmapper.ExtTrue(ConditionInstalled),
+			condmapper.Or(
+				condmapper.AnyFalse(managedConds...),
+				condmapper.IsTrue(string(status.ConditionWaitConverge)),
+			),
 		),
 	}
 }
