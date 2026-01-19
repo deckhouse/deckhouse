@@ -217,10 +217,23 @@ func TestUpdateInstalledRule(t *testing.T) {
 			name: "true when healthy after rollback (no version change)",
 			opts: []mappingOption{
 				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				// In a real rollback scenario, UpdateInstalled was set to False during the failed update
+				withExternalCondition(ConditionUpdateInstalled, metav1.ConditionFalse, "UpdateFailed"),
 				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
 			},
 			expected: map[string]*expectedCondition{
 				ConditionUpdateInstalled: {status: metav1.ConditionTrue, reason: "Ready"},
+			},
+		},
+		{
+			name: "absent after fresh install with no updates",
+			opts: []mappingOption{
+				withExternalCondition(ConditionInstalled, metav1.ConditionTrue, "Installed"),
+				withInternalCondition(string(intstatus.ConditionReadyInCluster), metav1.ConditionTrue, "Ready"),
+				// No UpdateInstalled in external state = no update ever happened
+			},
+			expected: map[string]*expectedCondition{
+				ConditionUpdateInstalled: nil, // Should not be present for fresh installs
 			},
 		},
 		{

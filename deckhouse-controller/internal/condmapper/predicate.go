@@ -125,3 +125,13 @@ func ExtTrue(cond string) Predicate {
 		return match{}
 	}
 }
+
+// ExtPresent checks if an external condition exists (regardless of status).
+func ExtPresent(cond string) Predicate {
+	return func(s State) match {
+		if _, ok := s.External[cond]; ok {
+			return match{Ok: true}
+		}
+		return match{}
+	}
+}
