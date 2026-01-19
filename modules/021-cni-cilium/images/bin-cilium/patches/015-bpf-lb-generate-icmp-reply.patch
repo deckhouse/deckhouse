@@ -1,41 +1,26 @@
-diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
-index 15dacfa4df..28cff178ee 100644
---- a/bpf/lib/lb.h
-+++ b/bpf/lib/lb.h
-@@ -1300,7 +1300,8 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
- 			return ret;
- 		return 0;
- 	case IPPROTO_ICMP:
--		return DROP_UNSUPP_SERVICE_PROTO;
-+		//return DROP_UNSUPP_SERVICE_PROTO;
-+		return 0;
- 	default:
- 		return DROP_UNKNOWN_L4;
- 	}
-diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..c67d3b6265 100644
---- a/bpf/lib/nodeport.h
-+++ b/bpf/lib/nodeport.h
-@@ -2679,6 +2679,72 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
- 				  ext_err);
- }
+diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
+index 7c0176f604..cade6e2c8f 100644
+--- a/bpf/bpf_host.c
++++ b/bpf/bpf_host.c
+@@ -593,6 +593,75 @@ struct {
+ 	__uint(max_entries, 1);
+ } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
  
++#if 0
 +static __always_inline 
-+int make_icmp_responce_lb4(struct __ctx_buff *ctx,
-+					struct iphdr *ip4,
-+					int * l3_off) {
++int make_icmp_responce_lb4_h(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
 +	void *data, *data_end;
 +	struct ethhdr *ethhdr;
 +	struct icmphdr *icmphdr;
 +	union macaddr smac = {};
 +	union macaddr dmac = {};
 +	__be32 tmp_addr;
-+	__u8	tos;
-+	__wsum csum;
++	__wsum csum = 0;
 +	/* changing size invalidates pointers, so we need to re-fetch them. */
 +	data = ctx_data(ctx);
 +	data_end = ctx_data_end(ctx);
-+	printk("MEG: GOT A NEW ICMP HANDLER ENTER!\n");
++	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER ENTER!\n");
 +
 +	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
 +		sizeof(struct icmphdr) > data_end)
@@ -46,6 +31,10 @@ index 0142716855..c67d3b6265 100644
 +
 +	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
 +		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++	if (icmphdr->type != ICMP_ECHO) 
++		return CTX_ACT_OK;
 +
 +	/* Write reversed eth header, ready for egress */
 +	ethhdr = data;
@@ -71,7 +60,6 @@ index 0142716855..c67d3b6265 100644
 +	ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
 +
 +	/* Write reversed icmp header */
-+	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
 +	icmphdr->type = ICMP_ECHOREPLY;
 +	icmphdr->code = 0;
 +	icmphdr->checksum = 0;
@@ -82,22 +70,304 @@ index 0142716855..c67d3b6265 100644
 +	icmphdr->checksum = csum_fold(csum);
 +
 +	/* Redirect ICMP to the interface we received it on. */
-+	printk("MEG: GOT A NEW ICMP HANDLER DONE!\n");
++	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE!\n");
 +	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
 +}
++#endif
 +
+ static __always_inline int
+ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+ 	    __u32 ipcache_srcid __maybe_unused,
+@@ -619,8 +688,17 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+ 	if (ipv4_is_fragment(ip4))
+ 		return DROP_FRAG_NOSUPPORT;
+ #endif
+-
++	if(ip4->protocol == IPPROTO_ICMP ) {
++		//int ret;
++		__be32 vip = bpf_htonl(0xac1200c8);
++		if ((ip4->daddr == vip || ip4->saddr == vip))
++			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        //ret = make_icmp_responce_lb4_h(ctx, ip4);
++		//if (ret != CTX_ACT_OK)
++		//	return ret;
++	}
+ #ifdef ENABLE_NODEPORT
++	
+ 	if (!from_host) {
+ 		if (!ctx_skip_nodeport(ctx)) {
+ 			bool __maybe_unused is_dsr = false;
+@@ -650,6 +728,8 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+ 
+ #ifdef ENABLE_HOST_FIREWALL
+ 	if (from_host) {
++		int ret = 0;
++		
+ 		/* We're on the egress path of cilium_host. */
+ 		if (ipv4_host_policy_egress_lookup(ctx, secctx, ipcache_srcid, ip4, &ct_buffer)) {
+ 			if (unlikely(ct_buffer.ret < 0))
+@@ -713,7 +793,14 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
+ 
+ 	if (!revalidate_data(ctx, &data, &data_end, &ip4))
+ 		return DROP_INVALID;
+-
++	if(ip4->protocol == IPPROTO_ICMP ) {
++		//int ret;
++		if ((ip4->daddr == 0xc80012ac || ip4->saddr == 0xc80012ac))
++			printk("MEG:3333 GOT A HANDLE IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        /*ret = make_icmp_responce_lb4_h(ctx, ip4);
++		if (ret != CTX_ACT_OK)
++			return ret;*/
++	}
+ #ifdef ENABLE_HOST_FIREWALL
+ 	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
+ 
+@@ -1178,6 +1265,10 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+ 		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
+ 					      from_host);
+ 		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
++		if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++			if ((ip4->daddr == 0xc80012ac || ip4->saddr == 0xc80012ac))
++				printk("MEG:4444 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++		}
+ 
+ # if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_MASQUERADE_IPV4)
+ 		if (from_host) {
+diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
+index 878185780a..23c77c8597 100644
+--- a/bpf/bpf_lxc.c
++++ b/bpf/bpf_lxc.c
+@@ -69,6 +69,77 @@
+ #ifdef ENABLE_PER_PACKET_LB
+ 
+ #ifdef ENABLE_IPV4
++
++#if 1
++static __always_inline 
++int make_icmp_responce_lb4_n(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
++	void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	__be32 tmp_addr;
++	__wsum csum = 0;
++	/* changing size invalidates pointers, so we need to re-fetch them. */
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++	//printk("MEG: GOT A NEW ICMP HANDLER ENTER!\n");
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++	if (icmphdr->type != ICMP_ECHO) 
++		return DROP_UNSUPP_SERVICE_PROTO;
++
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++	ethhdr->h_proto = bpf_htons(ETH_P_IP);
++
++	/* Write reversed ip header, ready for egress */
++	//ip4 = data + sizeof(struct ethhdr);
++	ip4->version = 4;
++	ip4->ihl = sizeof(struct iphdr) >> 2;
++	//ip4->tos = tos;
++	//ip4->tot_len = bpf_htons(sizeof(struct iphdr) + sizeof(struct icmphdr) +
++	//	       (__u16)sample_len);
++	ip4->id = 0;
++	//ip4->frag_off = 0;
++	ip4->ttl = IPDEFTTL;
++	ip4->protocol = IPPROTO_ICMP;
++	ip4->check = 0;
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++	ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++	icmphdr->code = 0;
++	icmphdr->checksum = 0;
++	icmphdr->un.gateway = 0;
++
++	/* Add ICMP header checksum to sum of its body */
++	csum += csum_diff(icmphdr, 0, icmphdr, sizeof(struct icmphdr), 0);
++	icmphdr->checksum = csum_fold(csum);
++
++	/* Redirect ICMP to the interface we received it on. */
++	printk("MEG: 222 bpf_LXC GOT A NEW ICMP HANDLER DONE!\n");
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++	//return 0;//DROP_UNSUPP_SERVICE_PROTO;
++}
++#endif
++
+ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *ip4,
+ 						       __s8 *ext_err)
+ {
+@@ -81,10 +152,20 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+ 	__u32 cluster_id = 0;
+ 	int l4_off;
+ 	int ret = 0;
+-
++	
+ 	has_l4_header = ipv4_has_l4_header(ip4);
+ 
+ 	ret = lb4_extract_tuple(ctx, ip4, ETH_HLEN, &l4_off, &tuple);
++	
++	if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++		if ((ip4->daddr == 0xc80012ac || ip4->saddr == 0xc80012ac))
++			printk("MEG:222 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        ret = make_icmp_responce_lb4_n(ctx, ip4);
++		if (ret == CTX_ACT_REDIRECT) {
++			return ret;
++		}
++	}
++
+ 	if (IS_ERR(ret)) {
+ 		if (ret == DROP_UNSUPP_SERVICE_PROTO || ret == DROP_UNKNOWN_L4)
+ 			goto skip_service_lookup;
+diff --git a/bpf/bpf_sock.c b/bpf/bpf_sock.c
+index 7bdc7753c2..9811c624ec 100644
+--- a/bpf/bpf_sock.c
++++ b/bpf/bpf_sock.c
+@@ -270,7 +270,7 @@ static __always_inline int __sock4_xlate_fwd(struct bpf_sock_addr *ctx,
+ 
+ 	if (!udp_only && !sock_proto_enabled(protocol))
+ 		return -ENOTSUP;
+-
++	
+ 	/* In case a direct match fails, we try to look-up surrogate
+ 	 * service entries via wildcarded lookup for NodePort and
+ 	 * HostPort services.
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 15dacfa4df..28cff178ee 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -1300,7 +1300,8 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+ 			return ret;
+ 		return 0;
+ 	case IPPROTO_ICMP:
+-		return DROP_UNSUPP_SERVICE_PROTO;
++		//return DROP_UNSUPP_SERVICE_PROTO;
++		return 0;
+ 	default:
+ 		return DROP_UNKNOWN_L4;
+ 	}
+diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
+index 0142716855..07743cae76 100644
+--- a/bpf/lib/nodeport.h
++++ b/bpf/lib/nodeport.h
+@@ -2679,6 +2679,75 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+ 				  ext_err);
+ }
+ 
++#if 1
++static __always_inline 
++int make_icmp_responce_lb4(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
++	void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	__be32 tmp_addr;
++	__wsum csum = 0;
++	/* changing size invalidates pointers, so we need to re-fetch them. */
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++	//printk("MEG: GOT A NEW ICMP HANDLER ENTER!\n");
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++	if (icmphdr->type != ICMP_ECHO) 
++		return CTX_ACT_OK;
++
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++	ethhdr->h_proto = bpf_htons(ETH_P_IP);
++
++	/* Write reversed ip header, ready for egress */
++	//ip4 = data + sizeof(struct ethhdr);
++	ip4->version = 4;
++	ip4->ihl = sizeof(struct iphdr) >> 2;
++	//ip4->tos = tos;
++	//ip4->tot_len = bpf_htons(sizeof(struct iphdr) + sizeof(struct icmphdr) +
++	//	       (__u16)sample_len);
++	ip4->id = 0;
++	//ip4->frag_off = 0;
++	ip4->ttl = IPDEFTTL;
++	ip4->protocol = IPPROTO_ICMP;
++	ip4->check = 0;
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++	ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++	icmphdr->code = 0;
++	icmphdr->checksum = 0;
++	icmphdr->un.gateway = 0;
++
++	/* Add ICMP header checksum to sum of its body */
++	csum += csum_diff(icmphdr, 0, icmphdr, sizeof(struct icmphdr), 0);
++	icmphdr->checksum = csum_fold(csum);
++
++	/* Redirect ICMP to the interface we received it on. */
++	printk("MEG: 222 bpf_LXC GOT A NEW ICMP HANDLER DONE!\n");
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++	//return 0;//DROP_UNSUPP_SERVICE_PROTO;
++}
++#endif
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2716,6 +2782,11 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
- 	lb4_fill_key(&key, &tuple);
+@@ -2699,7 +2768,7 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 	int ret, l4_off;
  
+ 	cilium_capture_in(ctx);
+-
++	//printk("MEG: GOT A NEW PACKET!\n");
+ 	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
+ 	if (IS_ERR(ret)) {
+ 		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
+@@ -2714,9 +2783,16 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 	}
+ 
+ 	lb4_fill_key(&key, &tuple);
+-
++	
  	svc = lb4_lookup_service(&key, false);
-+
-+	if(ip4->protocol == IPPROTO_ICMP && lb4_svc_is_loadbalancer(svc)) {
-+		return make_icmp_responce_lb4(ctx, ip4, &l3_off);
-+	}
-+
++	
  	if (svc) {
++        if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++			if ((ip4->daddr == 0xc80012ac || ip4->saddr == 0xc80012ac))
++				printk("MEG:2222 GOT A NODEPORT NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        	return make_icmp_responce_lb4(ctx, ip4);
++        }
++
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
+ 					src_sec_identity, punt_to_stack, ext_err);
