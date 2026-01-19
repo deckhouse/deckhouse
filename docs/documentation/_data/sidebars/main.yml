@@ -1086,135 +1086,134 @@ entries:
             ru: Обзор
           url: /architecture/
         - title:
-            en: TODO Overview
-            ru: TODO Обзор
-          url: /architecture/architecture-overview.html
-          draft: true
-        - title:
-            en: TODO Installation
-            ru: TODO Установка
-          url: /architecture/installation.html
-          draft: true
-        - title:
-            en: Modules
-            ru: Модули
-          folders:
-            - title:
-                en: Description
-                ru: Описание
-              url: /architecture/module-development/
-            - title:
-                en: Module structure
-                ru: Структура
-              url: /architecture/module-development/structure/
-            - title:
-                en: Building and publication
-                ru: Сборка и публикация
-              url: /architecture/module-development/build/
-            - title:
-                en: Running and verifying in the cluster
-                ru: Запуск и проверка в кластере
-              url: /architecture/module-development/run/
-            - title:
-                en: Module dependencies
-                ru: Зависимости модуля
-              url: /architecture/module-development/dependencies/
-            - title:
-                en: Versioning
-                ru: Версионирование
-              url: /architecture/module-development/versioning/
-            - title:
-                en: Examples
-                ru: Примеры
-              url: /architecture/module-development/example/
-            - title:
-                en: Development and debugging
-                ru: Разработка и отладка
-              url: /architecture/module-development/development/
-        - title:
-            en: Disaster resilience
-            ru: Катастрофоустойчивость
-          folders:
-            - title:
-                en: Overview
-                ru: Обзор
-              url: /architecture/disaster-resilience/
-            - title:
-                en: Geo-distribution
-                ru: Геораспределённость
-              url: /architecture/disaster-resilience/geo-distribution.html
-            - title:
-                en: Geo-reserving
-                ru: Георезервирование
-              url: /architecture/disaster-resilience/geo-reserving.html
-        - title:
-            en: Updating
-            ru: Обновление
-          url: /architecture/updating.html
-        - title:
-            en: Logging
-            ru: Логирование
-          folders:
-            - title:
-                en: Log collection and delivery
-                ru: Сбор и доставка логов
-              url: /architecture/logging/delivery.html
-            - title:
-                en: Short-term storage
-                ru: Кратковременное хранение
-              url: /architecture/logging/storage.html
-        - title:
-            en: VPA
-            ru: VPA
-          url: /architecture/vpa.html
-        - title:
-            en: Authentication
-            ru: Аутентификация
-          url: /architecture/authentication.html
-        - title:
-            en: Node management
-            ru: Управление узлами
-          url: /architecture/node.html
-        - title:
-            en: Monitoring
-            ru: Мониторинг
-          url: /architecture/monitoring/
-        - title:
-            en: Network
-            ru: Сеть
+            en: "--OLD"
+            ru: "---СТАРОЕ"
           folders:
           - title:
-              en: Cluster architecture with Istio enabled
-              ru: Архитектура кластера с включенным Istio
-            url: /architecture/network/cluster-with-istio.html
+              en: TODO Installation
+              ru: TODO Установка
+            url: /architecture/installation.html
+            draft: true
           - title:
-              en: Application service architecture with Istio enabled
-              ru: Архитектура прикладного сервиса с включенным Istio
-            url: /architecture/network/service-with-istio.html
+              en: Modules
+              ru: Модули
+            folders:
+              - title:
+                  en: Description
+                  ru: Описание
+                url: /architecture/module-development/
+              - title:
+                  en: Module structure
+                  ru: Структура
+                url: /architecture/module-development/structure/
+              - title:
+                  en: Building and publication
+                  ru: Сборка и публикация
+                url: /architecture/module-development/build/
+              - title:
+                  en: Running and verifying in the cluster
+                  ru: Запуск и проверка в кластере
+                url: /architecture/module-development/run/
+              - title:
+                  en: Module dependencies
+                  ru: Зависимости модуля
+                url: /architecture/module-development/dependencies/
+              - title:
+                  en: Versioning
+                  ru: Версионирование
+                url: /architecture/module-development/versioning/
+              - title:
+                  en: Examples
+                  ru: Примеры
+                url: /architecture/module-development/example/
+              - title:
+                  en: Development and debugging
+                  ru: Разработка и отладка
+                url: /architecture/module-development/development/
           - title:
-              en: Caching DNS server in a cluster
-              ru: Кэширующий DNS-сервер в кластере
-            url: /architecture/network/dns-caching.html
-        - title:
-            en: Multitenancy
-            ru: Мультитенантность
-          url: /architecture/multitenancy/
-        - title:
-            en: Security
-            ru: Безопасность
-          folders:
+              en: Disaster resilience
+              ru: Катастрофоустойчивость
+            folders:
+              - title:
+                  en: Overview
+                  ru: Обзор
+                url: /architecture/disaster-resilience/
+              - title:
+                  en: Geo-distribution
+                  ru: Геораспределённость
+                url: /architecture/disaster-resilience/geo-distribution.html
+              - title:
+                  en: Geo-reserving
+                  ru: Георезервирование
+                url: /architecture/disaster-resilience/geo-reserving.html
+          - title:
+              en: Updating
+              ru: Обновление
+            url: /architecture/updating.html
+          - title:
+              en: Logging
+              ru: Логирование
+            folders:
+              - title:
+                  en: Log collection and delivery
+                  ru: Сбор и доставка логов
+                url: /architecture/logging/delivery.html
+              - title:
+                  en: Short-term storage
+                  ru: Кратковременное хранение
+                url: /architecture/logging/storage.html
+          - title:
+              en: VPA
+              ru: VPA
+            url: /architecture/vpa.html
+          - title:
+              en: Authentication
+              ru: Аутентификация
+            url: /architecture/authentication.html
+          - title:
+              en: Node management
+              ru: Управление узлами
+            url: /architecture/node.html
+          - title:
+              en: Monitoring
+              ru: Мониторинг
+            url: /architecture/monitoring/
+          - title:
+              en: Network
+              ru: Сеть
+            folders:
             - title:
-                en: Integrity control
-                ru: Контроль целостности
-              url: /architecture/security/integrity-control.html
+                en: Cluster architecture with Istio enabled
+                ru: Архитектура кластера с включенным Istio
+              url: /architecture/network/cluster-with-istio.html
             - title:
-                en: Architecture of security event audit
-                ru: Архитектура аудита событий безопасности
-              url: /architecture/security/runtime-audit.html
-        - title:
-            en: Direct mode architecture (registry)
-            ru: Архитектура режима Direct (registry)
-          url: /architecture/registry-direct-mode.html
+                en: Application service architecture with Istio enabled
+                ru: Архитектура прикладного сервиса с включенным Istio
+              url: /architecture/network/service-with-istio.html
+            - title:
+                en: Caching DNS server in a cluster
+                ru: Кэширующий DNS-сервер в кластере
+              url: /architecture/network/dns-caching.html
+          - title:
+              en: Multitenancy
+              ru: Мультитенантность
+            url: /architecture/multitenancy/
+          - title:
+              en: Security
+              ru: Безопасность
+            folders:
+              - title:
+                  en: Integrity control
+                  ru: Контроль целостности
+                url: /architecture/security/integrity-control.html
+              - title:
+                  en: Architecture of security event audit
+                  ru: Архитектура аудита событий безопасности
+                url: /architecture/security/runtime-audit.html
+          - title:
+              en: Direct mode architecture (registry)
+              ru: Архитектура режима Direct (registry)
+            url: /architecture/registry-direct-mode.html
     - title:
         en: Reference
         ru: Справка
