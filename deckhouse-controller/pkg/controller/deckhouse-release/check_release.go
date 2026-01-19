@@ -435,7 +435,8 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 //     3.2 Get all new versions from registry between starting version and channel version
 //     (includes patches of current minor version to avoid skipping migrations)
 //     3.3 If no new versions (actual >= target) - return channel metadata for updating existing releases
-//     3.4 Otherwise - create releases for each version in the chain
+//     3.4 Create releases sequentially; if a gap is detected (missing minor version),
+//     return error (some releases may have been created before the gap)
 func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
@@ -524,38 +525,50 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 			f.logger.Warn("not sequential version",
 				slog.String("previous", currentVer.Original()),
 				slog.String("next", ver.Original()),
-				slog.String("actual", actual.GetVersion().Original()),
-				slog.String("new", newSemver.Original()))
+			)
 
 			// Return error on gap - some releases may have been created before this point
 			return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
 				currentVer.Original(), ver.Original())
 		}
 
-		image, err := f.registryClient.Image(ctx, ver.Original())
+		releaseMeta, err := f.fetchAndCreateRelease(ctx, ver, notificationShiftTime)
 		if err != nil {
-			return nil, fmt.Errorf("get image: %w", err)
+			return nil, fmt.Errorf("fetch and create release: %w", err)
 		}
-
-		releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
-		if err != nil {
-			return nil, fmt.Errorf("fetch release metadata: %w", err)
-		}
-
-		if releaseMeta.Version == "" {
-			return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
-		}
-
-		err = f.createRelease(ctx, releaseMeta, notificationShiftTime, "step-by-step")
-		if err != nil {
-			return nil, fmt.Errorf("create release %s: %w", releaseMeta.Version, err)
-		}
-
 		releaseMetadata = releaseMeta
 		currentVer = ver
 	}
 
 	return releaseMetadata, nil
+}
+
+// fetchAndCreateRelease fetches image metadata from registry and creates a release
+func (f *DeckhouseReleaseFetcher) fetchAndCreateRelease(
+	ctx context.Context,
+	version *semver.Version,
+	notificationShiftTime *metav1.Time,
+) (*ReleaseMetadata, error) {
+	image, err := f.registryClient.Image(ctx, version.Original())
+	if err != nil {
+		return nil, fmt.Errorf("get image: %w", err)
+	}
+
+	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release metadata: %w", err)
+	}
+
+	if releaseMeta.Version == "" {
+		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+	}
+
+	err = f.createRelease(ctx, releaseMeta, notificationShiftTime, "step-by-step")
+	if err != nil {
+		return nil, fmt.Errorf("create release %s: %w", releaseMeta.Version, err)
+	}
+
+	return releaseMeta, nil
 }
 
 // createRelease create new release by metadata,
