@@ -101,7 +101,7 @@ spec:
           emptyDir:
             medium: Memory
       initContainers:
-      {{ include "helm_lib_module_iptables_wrapper_init_container" . | nindent 6 }}
+      {{ include "helm_lib_module_iptables_wrapper_init_container" $context  | nindent 6 }}
       containers:
       - image: {{ include "helm_lib_module_image" (list $context "proxyFailover") }}
         name: controller
