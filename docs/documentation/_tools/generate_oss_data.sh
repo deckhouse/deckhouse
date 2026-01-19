@@ -34,6 +34,11 @@ trap "rm -f ${TMP_FILE}" EXIT
 
 # Find all oss.yaml files and process them
 while IFS= read -r oss_file; do
+  # Skip output file itself and files in _data directories
+  if [[ "${oss_file}" == "${OSS_OUTPUT_FILE}" ]] || [[ "${oss_file}" == *"/_data/"* ]]; then
+    continue
+  fi
+  
   # Extract module name from path
   # Examples:
   #   modules/101-cert-manager/oss.yaml -> cert-manager
