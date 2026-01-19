@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: kube-summary-exporter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "kube-summary-exporter"
