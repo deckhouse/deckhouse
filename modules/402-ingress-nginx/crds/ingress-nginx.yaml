@@ -790,11 +790,13 @@ spec:
                       type: string
                       pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                       description: |
-                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type). This field can only be set when creating the controller; the admission validation will reject any later changes.
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
 
-                        > **Caution.** A cloud provider may not support this option or ignore it.
-                        >
-                        > **Cloud-specific behavior.** Support for reassigning or reusing this IP when recreating the load balancer or controller depends on the cloud provider: some honor the same IP on a freshly provisioned resource, others require recreating the load balancer or controller, and some ignore such updates entirely. Confirm the behavior with your provider before relying on changes.
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
                       x-doc-examples: ['203.0.113.10']
                     behindL7Proxy:
                       type: boolean
@@ -869,11 +871,13 @@ spec:
                       type: string
                       pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                       description: |
-                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type). This field can only be set when creating the controller; the admission validation will reject any later changes.
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
 
-                        > **Caution.** A cloud provider may not support this option or ignore it.
-                        >
-                        > **Cloud-specific behavior.** Support for reassigning or reusing this IP when recreating the load balancer or controller depends on the cloud provider: some honor the same IP on a freshly provisioned resource, others require recreating the load balancer or controller, and some ignore such updates entirely. Confirm the behavior with your provider before relying on changes.
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
                       x-doc-examples: ['203.0.113.10']
                 loadBalancerWithSSLPassthrough:
                   type: object
@@ -914,11 +918,13 @@ spec:
                       type: string
                       pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
                       description: |
-                        Static IP address to assign to the load balancer (passed to the `spec.loadBalancerIP` parameter of the provisioned service with the `LoadBalancer` type). This field can only be set when creating the controller; the admission validation will reject any later changes.
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
 
-                        > **Caution.** A cloud provider may not support this option or ignore it.
-                        >
-                        > **Cloud-specific behavior.** Support for reassigning or reusing this IP when recreating the load balancer or controller depends on the cloud provider: some honor the same IP on a freshly provisioned resource, others require recreating the load balancer or controller, and some ignore such updates entirely. Confirm the behavior with your provider before relying on changes.
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
                       x-doc-examples: ['203.0.113.10']
                 hostPort:
                   type: object
