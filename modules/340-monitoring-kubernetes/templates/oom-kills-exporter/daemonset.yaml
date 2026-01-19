@@ -91,6 +91,11 @@ spec:
             readOnly: true
           - name: containerd
             mountPath: /run/containerd/containerd.sock
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
