@@ -73,7 +73,7 @@ admissionPolicyEngine:
 		It("Rego policy test must have passed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			gatorCLI := exec.Command(gatorPath, "verify", "-v", "../charts/constraint-templates/tests/...")
-			res, err := gatorCLI.Output()
+			res, err := gatorCLI.CombinedOutput()
 			if err != nil {
 				output := strings.ReplaceAll(string(res), "modules/015-admission-policy-engine/charts/constraint-templates", "...")
 				fmt.Println(output)
