@@ -70,15 +70,15 @@ while IFS= read -r oss_file; do
       }
     fi
   fi
-done < <(find ${OSS_SOURCE_DIR} -name "oss.yaml" -type f)
+done < <(find ${OSS_SOURCE_DIR} -name "oss.yaml" -type f | sort)
 
 # Ensure output directory exists
 mkdir -p "$(dirname "${OSS_OUTPUT_FILE}")"
 
 # Merge all module data into single structure
 if [[ -f "${TMP_FILE}" ]] && [[ -s "${TMP_FILE}" ]]; then
-  # Read all JSON objects and merge them
-  jq -s 'add' "${TMP_FILE}" | yq -P '.' > "${OSS_OUTPUT_FILE}"
+  # Read all JSON objects and merge them, then sort keys alphabetically for stable output
+  jq -s 'add | to_entries | sort_by(.key) | from_entries' "${TMP_FILE}" | yq -P '.' > "${OSS_OUTPUT_FILE}"
   echo "OSS data generated successfully: ${OSS_OUTPUT_FILE}"
 else
   # Create empty structure
