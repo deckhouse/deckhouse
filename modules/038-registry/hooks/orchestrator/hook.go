@@ -255,7 +255,7 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("get RegistrySecret snapshot error: %w", err)
 	}
 
-	inputs.IngressClientCA, err = helpers.GetIngressClientCA(input)
+	inputs.IngressClientCA, err = helpers.IngressClientCA(input)
 	if err != nil {
 		return fmt.Errorf("get Ingress client CA value error: %w", err)
 	}
@@ -309,16 +309,31 @@ func handle(ctx context.Context, input *go_hook.HookInput) error {
 	values.State.CheckerParams = checker.GetParams(ctx, input)
 
 	// Process the state with init secret
-	if initSecret.IsExist {
-		if !initSecret.Applied {
-			input.Logger.Info("initializing state from init configuration")
+	if initSecret.IsExist && !initSecret.Applied {
+		input.Logger.Info("initializing state from init configuration")
 
-			err = values.State.initialize(input.Logger, inputs)
-			if err != nil {
-				return fmt.Errorf("cannot initialize state from init secret: %w", err)
-			}
+		err = values.State.initialize(input.Logger, inputs)
+		if err != nil {
+			return fmt.Errorf("cannot initialize state from init secret: %w", err)
 		}
+	}
 
+	// Registry parameters are frozen during two critical phases:
+	//
+	// 1. Initialization: User input changes are locked to ensure the registry
+	//    configuration can complete without being overwritten. This also prevents
+	//    the Commander agent from inadvertently overriding registry settings
+	//    if Commander itself was misconfigured.
+	//
+	// 2. Cluster Bootstrap: To avoid port collisions. During bootstrap, the registry runs in
+	//    Direct mode on the host network so that Deckhouse (which also uses the host network
+	//    at this stage) can access it directly. If the registry mode were changed during
+	//    bootstrap, the new registry Pod would conflict on the same host port that is already
+	//    occupied by the existing Direct-mode registry, preventing it from starting.
+	//
+	// During these phases, parameters are frozen to prevent external modification.
+	// Any external changes are ignored, and the last saved parameters are used.
+	if initSecret.IsExist || !helpers.ClusterIsBootstrapped(input) {
 		// Ensure we have frozen params
 		if values.State.InitParams == nil {
 			state := inputs.Params.toState()
