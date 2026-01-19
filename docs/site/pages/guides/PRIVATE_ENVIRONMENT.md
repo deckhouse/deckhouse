@@ -84,6 +84,8 @@ Run the command (use the current URL):
 curl -O https://github.com/goharbor/harbor/releases/download/v2.14.1/harbor-offline-installer-v2.14.1.tgz
 ```
 
+{% endofftopic %}
+
 Extract the downloaded archive (specify the archive name):
 
 ```console
