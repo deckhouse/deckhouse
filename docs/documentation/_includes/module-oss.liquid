@@ -1,0 +1,40 @@
+{%- assign moduleKebabName = page['module-kebab-name'] | default: '<module-name>' %}
+{%- assign ossItems = site.data.oss[moduleKebabName] %}
+
+{%- if ossItems and ossItems.size > 0 %}
+<div markdown="0">
+  <div class="oss">
+    {%- for item in ossItems %}
+      <div class="oss__item">
+        {%- if item.logo %}
+        <div class="oss__item-logo">
+          <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">
+            <img src="{{ item.logo }}" alt="{{ item.name }} logo" class="oss__item-logo-img" />
+          </a>
+        </div>
+        {%- endif %}
+        <div class="oss__item-content">
+          <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="oss__item-title">
+            {{ item.name }}
+          </a>
+          {%- if item.version %}
+          <span class="oss__item-version">v{{ item.version }}</span>
+          {%- endif %}
+          {%- if item.description %}
+          <div class="oss__item-description">
+            {{ item.description }}
+          </div>
+          {%- endif %}
+          {%- if item.license %}
+          <div class="oss__item-license">
+            <strong>{{ site.data.i18n.common.license[page.lang] | default: 'License' }}:</strong> {{ item.license }}
+          </div>
+          {%- endif %}
+        </div>
+      </div>
+    {%- endfor %}
+  </div>
+</div>
+{%- else %}
+<p>{{ site.data.i18n.common.no_oss_data[page.lang] | default: 'No open source components information available for this module.' }}</p>
+{%- endif %}

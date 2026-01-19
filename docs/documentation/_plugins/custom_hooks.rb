@@ -143,6 +143,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   pageAllowedSuffixes = [
     'CONFIGURATION.md', 'CONFIGURATION_RU.md',
     'CR_RU.md', 'CR.md',
+    'OSS.html', 'OSS_RU.html',
     'EXAMPLES_RU.md', 'EXAMPLES.md',
     'USAGE_RU.md', 'USAGE.md',
     'FAQ_RU.md', 'FAQ.md'
@@ -167,7 +168,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase
       page.data['sidebar'] = 'embedded-modules'
-      if  page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
+      if page.name && page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
         page.data['legacy-enabled-commands'] = %Q(#{moduleSnakeCase}Enabled)
       else
         page.data['module-index-page'] = true
@@ -178,20 +179,20 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       insert_module_webiface_block(page)
     end
 
-    if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
+    if page.data['module-kebab-name'] and page.name && !page.name.match?(/CR(\.ru|_RU)?\.md$/)
       insert_module_stage_block(page)
 
-      if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
-         page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
+      if page.name && (page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
+         page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i))
         insert_module_edition_block(page)
       end
     end
 
-    if page.data['module-kebab-name'] and page.name.match?(/CR(\.ru|_RU)?\.md$/)
+    if page.data['module-kebab-name'] and page.name && page.name.match?(/CR(\.ru|_RU)?\.md$/)
       insert_crd_warning_block(page)
     end
 
-    next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
+    next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') or page.name.end_with?('OSS.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false
   end

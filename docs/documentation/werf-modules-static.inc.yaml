@@ -55,6 +55,13 @@ shell:
           fi
         done
 
+        echo '[] Generating OSS pages for modules...'
+        export OSS_DATA_FILE=${PWD}/_data/oss.yaml
+        export MODULES_DIR=modules_en
+        bash _tools/modules_generate_oss.sh
+        export MODULES_DIR=modules_ru
+        bash _tools/modules_generate_oss.sh
+
         echo '[] Generating configuration schemas...'
         export MODULES_DIR=/src/modules
         export MODULES_DIR=modules_en
