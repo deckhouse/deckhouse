@@ -37,13 +37,11 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git /src
-  - git clone --depth 1 --branch v0.2.0 $(cat /run/secrets/SOURCE_REPO)/gofsutil.git /src/gofsutil
   - cd /src
+  - git clone --depth 1 --branch {{ $src_version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/vsphere-csi-driver.git  .
   {{- if $patch }}
   - git apply /patches/*.patch --verbose
   {{- end }}
-  - sed -i -e 's# ../gofsutil# /src/gofsutil#g' go.mod
   - rm -rf vendor
   - rm -rf .git
 ---
@@ -63,11 +61,9 @@ secrets:
 shell:
   install:
   - export GO_VERSION=${GOLANG_VERSION}
-  - cd /src/gofsutil
-  - go mod init deckhouse/3p/gofsutil
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - GOOS=linux GOARCH=amd64 CGO_ENABLED=1 GOEXPERIMENT=boringcrypto go build -a -ldflags="-w -s -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $version }}" -o vsphere-syncer ./cmd/syncer
+  - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -a -ldflags="-w -s -extldflags=static -X sigs.k8s.io/vsphere-csi-driver/v3/pkg/syncer.Version={{ $version }}" -o vsphere-syncer ./cmd/syncer
   {{- end }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName ($version | replace "." "-"))) }}
