@@ -25,7 +25,7 @@ layout: sidebar-guides
 
 Общая схема закрытого окружения:
 
-<img src="/images/gs/private-env-schema-RU.svg" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
+<img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
 
 {% alert level="info" %}
 На схеме также показан внутренний репозиторий пакетов ОС. Он требуется для установки `curl` на узлах будущего кластера, если доступ к официальным репозиториям невозможен даже через прокси-сервер.
@@ -631,7 +631,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Откройте веб-интерфейс Harbor по адресу `harbor.local`:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_main_page_ru.png" alt="Главная страница Harbor...">
 </div>
 
 {% alert level="info" %}
@@ -641,7 +641,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Для входа в интерфейс воспользуйтесь логином и паролем, указанными в конфигурационном файле `harbor.yml`.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_main_dashboard.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_main_dashboard_ru.png" alt="Главная страница Harbor...">
 </div>
 
 {% alert level="info" %}
@@ -651,31 +651,31 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 Создайте новый проект. Для этого нажмите на кнопку «Новый проект» и введите его название: `deckhouse`. Остальные настройки оставьте без изменений.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_new_project.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_new_project_ru.png" alt="Главная страница Harbor...">
 </div>
 
 Создайте нового пользователя для этого проекта. Перейдите на вкладку «Пользователи» в левом меню и нажмите «Новый пользователь»:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_new_user.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_create_new_user_ru.png" alt="Главная страница Harbor...">
 </div>
 
 Укажите имя пользователя, адрес электронной почты и пароль:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_creating_user.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_creating_user_ru.png" alt="Главная страница Harbor...">
 </div>
 
 Добавьте созданного пользователя в проект `deckhouse`: перейдите в «Проекты», откройте проект `deckhouse`, затем вкладку «Участники» и нажмите «Пользователь», чтобы добавить участника.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project_ru.png" alt="Главная страница Harbor...">
 </div>
 
 Оставьте роль по умолчанию: «Администратор проекта».
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_new_project_user.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_new_project_user_ru.png" alt="Главная страница Harbor...">
 </div>
 
 На этом настройка Harbor завершена! 🎉
@@ -791,7 +791,7 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 Проверить, что образы загружены, можно в веб-интерфейсе Harbor: откройте проект `deckhouse` в веб-интерфейсе Harbor.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_state_with_images.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_state_with_images_ru.png" alt="Главная страница Harbor...">
 </div>
 
 Образы загружены и готовы к использованию! 🎉
@@ -971,6 +971,7 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
 ## Подготовка конфигурационного файла
 
 Конфигурационный файл для установки в закрытом окружении отличается от конфигурации для установки [на bare-metal](../gs/bm/step2.html) несколькими параметрами. Возьмите файл `config.yml` [из четвёртого шага](../gs/bm/step4.html) руководства по установке на bare-metal и внесите следующие изменения:
+
 * В секции `deckhouse` блока `ClusterConfiguration` измените параметры используемого container registry с публичного registry Deckhouse Kubernetes Platform на приватный:
 
   ```yaml
@@ -1380,7 +1381,7 @@ pdpl-user -i 63 caps
   d8cluster-worker   Ready    worker                 10m   v1.23.17
   ```
 
-  Запуск всех компонентов Deckhouse после завершения установки может занять некоторое время.
+  Запуск всех компонентов DKP после завершения установки может занять некоторое время.
 
 ## Настройка Ingress-контроллера и создание пользователя
 
