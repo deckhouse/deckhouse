@@ -8,14 +8,13 @@ package nodecondition
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
-
-	"d8_shutdown_inhibitor/pkg/kubernetes"
 
 	v1 "k8s.io/api/core/v1"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 const (

@@ -64,7 +64,6 @@ func (w *WatchDog) Feed() error {
 }
 
 func (w *WatchDog) Stop() error {
-
 	if !w.isArmed {
 		return fmt.Errorf("watchdog is already closed")
 	}
