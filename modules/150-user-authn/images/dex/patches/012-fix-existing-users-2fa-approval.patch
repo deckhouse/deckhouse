@@ -1,0 +1,38 @@
+diff --git a/server/handlers.go b/server/handlers.go
+index 1474c49b..c65d1b5d 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -809,10 +809,23 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
+ 	if err != nil {
+ 		s.logger.ErrorContext(r.Context(), "failed to get auth request", "err", err)
+ 		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
+ 		return
+ 	}
+-	if !authReq.LoggedIn || !authReq.TOTPValidated {
+-		s.logger.ErrorContext(r.Context(), "auth request does not have an identity for approval")
+-		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
+-		return
+-	}
++	if !authReq.LoggedIn {
++		s.logger.ErrorContext(r.Context(), "auth request does not have an identity for approval")
++		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
++		return
++	}
++	// If 2FA was enabled after AuthRequest creation, users can end up on /approval with TOTPValidated=false.
++	// Instead of failing with "Login process not yet finalized", redirect them to /totp to complete 2FA.
++	if s.totp.enabledForConnector(authReq.ConnectorID) && !authReq.TOTPValidated {
++		returnURL, _ := url.Parse(s.issuerURL.String())
++		values := returnURL.Query()
++		values.Set("req", authReq.ID)
++		values.Set("hmac", macEncoded)
++		values.Set("state", authReq.Claims.UserID)
++		returnURL = returnURL.JoinPath("totp")
++		returnURL.RawQuery = values.Encode()
++		http.Redirect(w, r, returnURL.String(), http.StatusSeeOther)
++		return
++	}
+ 
+ 	// build expected hmac with secret key
+ 	h := hmac.New(sha256.New, authReq.HMACKey)
+ 	h.Write([]byte(authReq.ID))
+
