@@ -302,6 +302,14 @@ shutdown -P now
    * `disk.enableUUID`;
    * `guestinfo.hostname`.
 
+   Для **каждого** поля в форме добавления/редактирования укажите:
+
+   * Type: `Text` (текстовое значение)
+   * User access: `Read/Write`
+   * Value: один пробел (` `)
+
+   > Интерфейс VCD может не сохранять метаданные с пустым значением. Пробел используется как техническое заполнение и не влияет на работу. Фактические значения будут подставлены автоматически при создании виртуальных машин.
+
    ![Настройка шаблона, Guest Properties 2](images/template/GuestProperties2.png)
 
    ![Настройка шаблона, Guest Properties 3](images/template/GuestProperties3.png)

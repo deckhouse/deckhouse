@@ -288,12 +288,20 @@ shutdown -P now
 
 1. В созданном шаблоне перейдите на вкладку «Metadata» и добавьте шесть полей:
 
-* `guestinfo.metadata`;
-* `guestinfo.metadata.encoding`;
-* `guestinfo.userdata`;
-* `guestinfo.userdata.encoding`;
-* `disk.enableUUID`;
-* `guestinfo.hostname`.
+   * `guestinfo.metadata`;
+   * `guestinfo.metadata.encoding`;
+   * `guestinfo.userdata`;
+   * `guestinfo.userdata.encoding`;
+   * `disk.enableUUID`;
+   * `guestinfo.hostname`.
+
+   Для **каждого** поля в форме добавления/редактирования укажите:
+
+   * Type: `Text` (текстовое значение)
+   * User access: `Read/Write`
+   * Value: один пробел (` `)
+
+   > Интерфейс VCD может не сохранять метаданные с пустым значением. Пробел используется как техническое заполнение и не влияет на работу. Фактические значения будут подставлены автоматически при создании виртуальных машин.
 
    ![Настройка шаблона, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
 

@@ -290,6 +290,14 @@ shutdown -P now
    * `disk.enableUUID`
    * `guestinfo.hostname`
 
+   For **each** field in the add/edit form, set the following:
+
+   * Type: `Text`
+   * User access: `Read/Write`
+   * Value: a single space (` `)
+
+   > The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
+
    ![Template setup, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
 
    ![Template setup, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
