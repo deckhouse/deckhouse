@@ -78,7 +78,7 @@ type Config struct {
 
 // New creates a new package manager with the specified apps directory.
 func New(conf Config, logger *log.Logger) *Manager {
-	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
