@@ -83,7 +83,7 @@ func (q *queue) getTasksDump() []dumpTask {
 			Index:     index,
 			Name:      wrapper.task.String(),
 			Enqueued:  time.Since(wrapper.enqueuedAt).String(),
-			NextRetry: time.Now().Sub(wrapper.nextRetry).String(),
+			NextRetry: wrapper.nextRetry.Sub(time.Now()).String(),
 			Error:     errStr,
 		})
 
