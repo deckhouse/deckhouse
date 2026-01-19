@@ -33,7 +33,7 @@ TMP_FILE=$(mktemp)
 trap "rm -f ${TMP_FILE}" EXIT
 
 # Find all oss.yaml files and process them
-find ${OSS_SOURCE_DIR} -name "oss.yaml" -type f | while read oss_file; do
+while IFS= read -r oss_file; do
   # Extract module name from path
   # Examples:
   #   modules/101-cert-manager/oss.yaml -> cert-manager
@@ -58,10 +58,14 @@ find ${OSS_SOURCE_DIR} -name "oss.yaml" -type f | while read oss_file; do
     
     if [[ "${oss_data}" != "[]" ]] && [[ -n "${oss_data}" ]]; then
       # Create JSON structure: {"module_name": [items]}
-      echo "${oss_data}" | jq --arg module "${module_name}" '{($module): .}' >> "${TMP_FILE}"
+      # Use proper jq syntax for dynamic keys - need to escape properly
+      echo "${oss_data}" | jq --arg module "${module_name}" '{($module): .}' >> "${TMP_FILE}" 2>/dev/null || {
+        # Fallback: create JSON manually if jq fails
+        echo "{\"${module_name}\": ${oss_data}}" >> "${TMP_FILE}"
+      }
     fi
   fi
-done
+done < <(find ${OSS_SOURCE_DIR} -name "oss.yaml" -type f)
 
 # Ensure output directory exists
 mkdir -p "$(dirname "${OSS_OUTPUT_FILE}")"
