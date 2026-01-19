@@ -65,7 +65,7 @@
       {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 6 }}
 {{- end }}
 
-{{- /* Usage: {{ include "helm_lib_module_iptables_wrapper_init_container" . }} */ -}}
+{{- /* Usage: {{ include "helm_lib_module_iptables_wrapper_init_container" (list .) }} */ -}}
 {{- /* returns iptables-wrapper-init container */ -}}
 {{- define "helm_lib_module_iptables_wrapper_init_container"  }}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
