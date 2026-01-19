@@ -76,9 +76,14 @@
     runAsGroup: 0
   image: {{ include "helm_lib_module_image" (list $context "iptablesWrapperInit") }}
   command:
-    - /bin/bash
-    - -ec
-    - "/usr/bin/cp /iptables-wrapper /sbin/ -rv && /usr/bin/cp /_sbin/* /sbin/ -rv && /usr/bin/cp /relocate/sbin/* /sbin/ -rv && /sbin/iptables --version && /usr/bin/rm /sbin/iptables-wrapper -v"
+  - /bin/bash
+  - -ec
+  - |
+    /usr/bin/cp /iptables-wrapper /sbin/ -rv
+    /usr/bin/cp /_sbin/* /sbin/ -rv
+    /usr/bin/cp /relocate/sbin/* /sbin/ -rv
+    /sbin/iptables --version
+    /usr/bin/rm /sbin/iptables-wrapper -v
   volumeMounts:
   - mountPath: /sbin
     name: sbin
