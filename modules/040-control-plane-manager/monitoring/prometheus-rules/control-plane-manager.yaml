@@ -49,7 +49,7 @@
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.31)
+        Please migrate to the next kubernetes version (at least 1.32)
 
         Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
   - alert: D8KubernetesStaleTokensDetected
