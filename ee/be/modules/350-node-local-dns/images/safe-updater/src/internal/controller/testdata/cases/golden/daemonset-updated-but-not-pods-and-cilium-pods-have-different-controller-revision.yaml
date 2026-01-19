@@ -22,7 +22,7 @@ metadata:
     app: agent
     controller-revision-hash: 6dc65d9f6
     module: cni-cilium
-    pod-template-generation: "40"
+    pod-template-generation: "39"
   name: agent-xxlml
   namespace: d8-cni-cilium
   ownerReferences:
@@ -83,7 +83,7 @@ metadata:
     app: agent
     controller-revision-hash: 6dc65d9f6
     module: cni-cilium
-    pod-template-generation: "40"
+    pod-template-generation: "39"
   name: agent-xylml
   namespace: d8-cni-cilium
   ownerReferences:
