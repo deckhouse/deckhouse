@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
@@ -64,6 +65,8 @@ type Application struct {
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
+
+	deleting atomic.Bool
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.
@@ -181,6 +184,16 @@ func (a *Application) GetVersion() string {
 // GetPath returns path to the package dir
 func (a *Application) GetPath() string {
 	return a.path
+}
+
+// IsDeleting returns true if the application is being deleted.
+func (a *Application) IsDeleting() bool {
+	return a.deleting.Load()
+}
+
+// TryMarkDeleting atomically marks the application as being deleted.
+func (a *Application) TryMarkDeleting() bool {
+	return a.deleting.CompareAndSwap(false, true)
 }
 
 // GetValuesChecksum returns a checksum of the current values.
