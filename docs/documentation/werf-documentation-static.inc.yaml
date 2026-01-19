@@ -25,6 +25,11 @@ shell:
         export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
         bash _tools/modules_generate_metadata.sh
 
+        echo "[] Generating OSS data from oss.yaml files..."
+        export OSS_SOURCE_DIR=/src
+        export OSS_OUTPUT_FILE=${PWD}/_data/oss.yaml
+        bash _tools/generate_oss_data.sh
+
         echo "Render global OpenAPI DKP schemas..."
         bash _tools/prepare_resources.sh
 
