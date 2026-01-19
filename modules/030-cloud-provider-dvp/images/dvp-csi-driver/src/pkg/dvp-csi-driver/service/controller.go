@@ -137,6 +137,7 @@ func (c *ControllerService) CreateVolume(
 		diskName,
 		requiredSize,
 		dvpStorageClass,
+		nil, // no additional labels for CSI-created disks
 	)
 	if err != nil {
 		msg := fmt.Errorf("error from parent DVP cluster while creating disk %s: %v", diskName, err)

@@ -428,15 +428,21 @@ func (r *DeckhouseMachineReconciler) createVM(
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (*v1alpha2.VirtualMachine, error) {
+	logger := log.FromContext(ctx)
+
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
+	var cloudInitSecretName string
+	var createdDiskNames []string
+
+	bootDiskName := dvpMachine.Name + "-boot"
 	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
 		r.ClusterUUID,
 		dvpMachine.Name,
-		dvpMachine.Name+"-boot",
+		bootDiskName,
 		dvpMachine.Spec.RootDiskSize,
 		dvpMachine.Spec.RootDiskStorageClass,
 		&v1alpha2.VirtualDiskDataSource{
@@ -448,8 +454,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		},
 	)
 	if err != nil {
+		logger.Info("Boot disk creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
 	}
+	createdDiskNames = append(createdDiskNames, bootDiskName)
 
 	bootstrapDataSecret := &corev1.Secret{}
 	if err := r.Client.Get(
@@ -457,17 +466,23 @@ func (r *DeckhouseMachineReconciler) createVM(
 		client.ObjectKey{Namespace: machine.GetNamespace(), Name: *machine.Spec.Bootstrap.DataSecretName},
 		bootstrapDataSecret,
 	); err != nil {
+		logger.Info("Failed to get bootstrap data secret, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot get cloud-init data secret: %w", err)
 	}
 
 	cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
 	if !hasBootstrapScript {
+		logger.Info("Bootstrap script not found in secret, cleaning up created resources")
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
-	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+	cloudInitSecretName = "cloud-init-" + dvpMachine.Name
 	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(r.ClusterUUID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
+		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
@@ -478,8 +493,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
 		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, r.ClusterUUID, dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
 		if err != nil {
+			logger.Info("Additional disk creation failed, cleaning up created resources", "error", err.Error(), "diskName", addDiskName)
+			r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
 		}
+		createdDiskNames = append(createdDiskNames, addDiskName)
 		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
 			Kind: v1alpha2.DiskDevice,
 			Name: addDisk.Name,
@@ -537,8 +555,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 		},
 	})
 	if err != nil {
-		// Get logger for detailed error logging
-		logger := log.FromContext(ctx)
+		// Cleanup resources on VM creation failure
+		logger.Info("VM creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 
 		// Log the request details for debugging
 		logger.Error(err, "Failed to create VM in parent DVP cluster",

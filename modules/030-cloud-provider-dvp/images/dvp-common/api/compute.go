@@ -456,6 +456,7 @@ func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, 
 				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
 			}
 			existing.StringData = map[string]string{"userData": string(userData)}
+			existing.Labels = labels
 			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
 				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
 			}
