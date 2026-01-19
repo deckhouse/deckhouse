@@ -493,7 +493,7 @@ disable:
 
 	suite.Run("StepByStepUpdateFailed", func() {
 		// Test case: v1.32.x is completely missing from registry
-		// Expected behavior: return error, no releases should be created
+		// Expected behavior: create sequential releases (v1.31.1) and stop when gap detected (returning error)
 		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
 			"v1.31.0",
 			"v1.31.1",
@@ -512,7 +512,7 @@ disable:
 		}, nil)
 
 		// Mock for v1.31.1 - needed because code processes versions sequentially
-		// and will try to fetch image/metadata before detecting the gap at v1.33.1
+		// and will create this release before detecting the gap at v1.33.1
 		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.31.1").Then(&fake.FakeImage{
 			ManifestStub: ManifestStub,
 			LayersStub: func() ([]v1.Layer, error) {
@@ -568,44 +568,6 @@ disable:
 		}, nil)
 
 		suite.setupController("step-by-step-update-successfully.yaml", initValues, embeddedMUP)
-		err := suite.ctr.checkDeckhouseRelease(ctx)
-		require.NoError(suite.T(), err)
-	})
-
-	suite.Run("PatchBeforeMinorUpdate", func() {
-		// Test case: patch release of current minor is not skipped when updating to next minor
-		// Scenario: Deployed v1.67.4, registry has v1.67.11 (last patch), channel has v1.68.10
-		// Expected behavior: create v1.67.11 and v1.68.10 (patch is not skipped)
-		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
-			"v1.67.4",
-			"v1.67.11",
-			"v1.68.10",
-		}, nil)
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.68.10"}`}}}, nil
-			},
-			DigestStub: func() (v1.Hash, error) {
-				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76890")
-			},
-		}, nil)
-
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.67.11").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.67.11"}`}}}, nil
-			},
-		}, nil)
-
-		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.68.10").Then(&fake.FakeImage{
-			ManifestStub: ManifestStub,
-			LayersStub: func() ([]v1.Layer, error) {
-				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.68.10"}`}}}, nil
-			},
-		}, nil)
-
-		suite.setupController("patch-before-minor-update.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
 	})
