@@ -497,7 +497,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		"version": releaseForUpdate.GetVersion().Original(),
 	}
 
-	metas, err := f.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
+	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
@@ -514,17 +514,45 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	// Example: Deployed v1.16.0, channel has v1.16.0 (same version but with suspend: true).
 	// getNewVersions returns empty list (no new versions), but we return channel metadata
 	// to update suspend annotation on existing v1.16.0 release.
-	if len(metas) == 0 {
+	if len(vers) == 0 {
 		return releaseMetadata, nil
 	}
 
-	for _, meta := range metas {
-		releaseMetadata = &meta
+	currentVer := actual.GetVersion()
+	for _, ver := range vers {
+		if !isUpdatingSequence(currentVer, ver) {
+			f.logger.Warn("not sequential version",
+				slog.String("previous", currentVer.Original()),
+				slog.String("next", ver.Original()),
+				slog.String("actual", actual.GetVersion().Original()),
+				slog.String("new", newSemver.Original()))
 
-		err = f.createRelease(ctx, releaseMetadata, notificationShiftTime, "step-by-step")
-		if err != nil {
-			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+			// Return error on gap - some releases may have been created before this point
+			return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
+				currentVer.Original(), ver.Original())
 		}
+
+		image, err := f.registryClient.Image(ctx, ver.Original())
+		if err != nil {
+			return nil, fmt.Errorf("get image: %w", err)
+		}
+
+		releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
+		if err != nil {
+			return nil, fmt.Errorf("fetch release metadata: %w", err)
+		}
+
+		if releaseMeta.Version == "" {
+			return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+		}
+
+		err = f.createRelease(ctx, releaseMeta, notificationShiftTime, "step-by-step")
+		if err != nil {
+			return nil, fmt.Errorf("create release %s: %w", releaseMeta.Version, err)
+		}
+
+		releaseMetadata = releaseMeta
+		currentVer = ver
 	}
 
 	return releaseMetadata, nil
@@ -780,48 +808,6 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	}
 
 	return meta, nil
-}
-
-// FetchReleasesMetadata realize step by step update
-func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewReleasesMetadata")
-	defer span.End()
-
-	vers, err := f.getNewVersions(ctx, actual, target)
-	if err != nil {
-		return nil, fmt.Errorf("get next versions: %w", err)
-	}
-
-	result := make([]ReleaseMetadata, 0, len(vers))
-
-	current := actual
-	for _, ver := range vers {
-		// Validate that no minor version is skipped in registry
-		if !isUpdatingSequence(current, ver) {
-			return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
-				current.Original(), ver.Original())
-		}
-
-		image, err := f.registryClient.Image(ctx, ver.Original())
-		if err != nil {
-			return nil, fmt.Errorf("get image: %w", err)
-		}
-
-		releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
-		if err != nil {
-			return nil, fmt.Errorf("fetch release metadata: %w", err)
-		}
-
-		if releaseMeta.Version == "" {
-			return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
-		}
-
-		result = append(result, *releaseMeta)
-
-		current = ver
-	}
-
-	return result, nil
 }
 
 // getNewVersions - getting all last patches from registry for each minor version
