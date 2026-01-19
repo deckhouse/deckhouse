@@ -187,7 +187,7 @@ spec:
 
                     By default, it corresponds to the version selected for the cluster globally (see installation documentation) or to the current version of the control plane (if the global version is not defined).
                   type: string
-                  x-doc-examples: ["1.31"]
+                  x-doc-examples: ["1.32"]
                   enum:
                     - "1.31"
                     - "1.32"
