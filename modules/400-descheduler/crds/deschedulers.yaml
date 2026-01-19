@@ -519,18 +519,18 @@ spec:
                           properties:
                             cpu:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: CPU fraction in percents
                             memory:
                               type: integer
-                              minimal: 0
+                              minimum: 0
                               maximal: 100
                               description: Memory fraction in percents
                             pods:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Pods count in percents
                           additionalProperties: true
                         targetThresholds:
