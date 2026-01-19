@@ -18,7 +18,6 @@ package helpers
 
 import (
 	"crypto/x509"
-	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 
@@ -34,7 +33,7 @@ const (
 func GetIngressClientCA(input *go_hook.HookInput) (*x509.Certificate, error) {
 	certValue, exists := input.Values.GetOk(ingressClientCAPath)
 	if !exists {
-		return nil, fmt.Errorf("%s is not exist", ingressClientCAPath)
+		return nil, nil
 	}
 	certStr := certValue.String()
 	if certStr == "" {
