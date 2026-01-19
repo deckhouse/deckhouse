@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -74,7 +73,7 @@ func (pc *Checker) CheckDhctlEdition(ctx context.Context) error {
 	if imageConfig == nil ||
 		imageConfig.Config.Labels == nil ||
 		imageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
-		return errors.New(fmt.Sprintf(dhctlEditionMismatchError, app.AppEdition, imageConfig.Config.Labels["io.deckhouse.edition"]))
+		return fmt.Errorf(dhctlEditionMismatchError, app.AppEdition, imageConfig.Config.Labels["io.deckhouse.edition"])
 	}
 
 	return nil

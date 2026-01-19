@@ -20,13 +20,14 @@ import (
 	"strings"
 	"time"
 
-	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
+
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
