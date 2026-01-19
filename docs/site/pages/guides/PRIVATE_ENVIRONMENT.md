@@ -926,7 +926,7 @@ There are two ways to connect:
 
 ### Creating a user for the master node
 
-To install DKP, create a user on the будущий master node that will be used to connect to the node and perform the platform installation.
+To install DKP, create a user on the future master node that will be used to connect to the node and perform the platform installation.
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
