@@ -54,10 +54,10 @@ func IngressClientCA(input *go_hook.HookInput) (*x509.Certificate, error) {
 // ClusterIsBootstrapped checks whether the cluster has completed initial bootstrapping.
 //
 // Returns:
-//   - bool: true if the cluster is bootstrapped or if the status flag doesn't exist
+//   - bool: true if the cluster is bootstrapped, else false
 func ClusterIsBootstrapped(input *go_hook.HookInput) bool {
 	if isBootstrapped, exists := input.Values.GetOk(clusterIsBootstrappedPath); exists {
 		return isBootstrapped.Bool()
 	}
-	return true
+	return false
 }
