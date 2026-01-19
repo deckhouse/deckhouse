@@ -36,9 +36,7 @@ func (t *TaggerImpl) InitTags(ctx context.Context, tags []string) error {
 	}
 
 	for _, existingTag := range existingTags {
-		if _, found := tagsToCreate[existingTag.Name()]; found {
-			delete(tagsToCreate, existingTag.Name())
-		}
+		delete(tagsToCreate, existingTag.Name())
 	}
 
 	ctp := ovirt.NewCreateTagParams().MustWithDescription("Tag created by cluster-api-provider-zvirt, do not delete")
