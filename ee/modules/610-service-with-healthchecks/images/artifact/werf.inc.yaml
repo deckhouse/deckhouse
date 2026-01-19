@@ -44,13 +44,11 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src/cmd/agent
   - | 
-    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
     {{- include "image-build.build" (set $ "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /agent .`) | indent 6 }}
   - chown 64535:64535 /agent
   - chmod +x /agent
   - cd /src/cmd/controller
   - | 
-    {{- $_ := set $ "SvaceBuildOptions" "--enable-ptrace-all" -}}
     {{- include "image-build.build" (set $ "BuildCommand" `go build -mod=vendor -ldflags="-s -w" -o /controller .`) | indent 6 }}
   - chown 64535:64535 /controller
   - chmod +x /controller
