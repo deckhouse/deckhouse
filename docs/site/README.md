@@ -13,25 +13,26 @@ This document describes the architecture of Deckhouse documentation and explains
 - Install [werf](https://werf.io/getting_started/).
   When installing, set the release channel to `alpha`.
 
-### Running the documentation site using separate services
+### Running the documentation site (option 1)
 
 #### Starting the documentation site
 
-To start the documentation site, open two separate terminal windows or tabs and follow these steps:
+To start the documentation site follow these steps:
 
-1. In the first terminal, run:
+1. Run the local container registry (if you don't have it):
 
    ```shell
-   cd docs/documentation
-   make up
+   make registry
    ```
-
-1. In the second terminal, run:
+   
+1. Run documentation:
 
    ```shell
    cd docs/site
    make up
    ```
+   
+   If you want to work with uncommited files, use `make dev` instead of `make up`.
 
 1. Open the documentation site in your browser at <http://localhost>.
 
@@ -42,14 +43,19 @@ To stop the documentation site, cancel the running processes and run the followi
 ```shell
 make down
 ```
+To destroy created registry run the following command:
 
-### Running the documentation site using a single command
+```shell
+make registry-down
+```
+
+### Running the documentation site (option 2)
 
 #### Starting the documentation site
 
 To start the documentation site, open a terminal and follow these steps:
 
-1. Run the following command:
+1. Run the following command in the repository root:
 
    ```shell
    make docs
