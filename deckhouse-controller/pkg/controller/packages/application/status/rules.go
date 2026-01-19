@@ -89,14 +89,17 @@ func installedRule() condmapper.Rule {
 }
 
 // updateInstalledRule: True when system is healthy after initial install.
-// False during an active update when core conditions fail.
+// False only during an active update (version changed) when core conditions fail.
 // This ensures that after a rollback from a failed update, the error is cleared.
 func updateInstalledRule() condmapper.Rule {
 	return condmapper.Rule{
-		Type:    ConditionUpdateInstalled,
-		TrueIf:  condmapper.IsTrue(string(status.ConditionReadyInCluster)),
-		FalseIf: condmapper.AnyFalse(coreConds...),
-		OnlyIf:  condmapper.ExtTrue(ConditionInstalled),
+		Type:   ConditionUpdateInstalled,
+		TrueIf: condmapper.IsTrue(string(status.ConditionReadyInCluster)),
+		FalseIf: condmapper.And(
+			condmapper.VersionChanged(),
+			condmapper.AnyFalse(coreConds...),
+		),
+		OnlyIf: condmapper.ExtTrue(ConditionInstalled),
 	}
 }
 

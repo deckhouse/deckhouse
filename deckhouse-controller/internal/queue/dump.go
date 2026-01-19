@@ -30,10 +30,11 @@ type dumpQueue struct {
 }
 
 type dumpTask struct {
-	Index    int     `json:"index" yaml:"index"`
-	Name     string  `json:"name" yaml:"name"`
-	Enqueued string  `json:"enqueued" yaml:"enqueued"`
-	Error    *string `json:"error,omitempty" yaml:"error,omitempty"`
+	Index     int     `json:"index" yaml:"index"`
+	Name      string  `json:"name" yaml:"name"`
+	Enqueued  string  `json:"enqueued" yaml:"enqueued"`
+	NextRetry string  `json:"next_retry" yaml:"next_retry"`
+	Error     *string `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 // Dump creates dump of all queues
@@ -79,10 +80,11 @@ func (q *queue) getTasksDump() []dumpTask {
 		}
 
 		tasks = append(tasks, dumpTask{
-			Index:    index,
-			Name:     wrapper.task.String(),
-			Enqueued: time.Since(wrapper.enqueuedAt).String(),
-			Error:    errStr,
+			Index:     index,
+			Name:      wrapper.task.String(),
+			Enqueued:  time.Since(wrapper.enqueuedAt).String(),
+			NextRetry: time.Now().Sub(wrapper.nextRetry).String(),
+			Error:     errStr,
 		})
 
 		index++
