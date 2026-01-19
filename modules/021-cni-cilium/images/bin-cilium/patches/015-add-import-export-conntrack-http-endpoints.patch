@@ -303,7 +303,7 @@ index 02a05c5cd6..86de5b205f 100644
  	return bpf.GetMap(getMapName(epname, ipv4, proto))
  }
 
-commit 17375dc529fe99ea08ab11204ca25125618d6b14
+commit 377d3043c2942f7f07fb1dd457ae40b5f089405c
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Thu Jan 15 16:46:30 2026 +0300
 
@@ -2004,7 +2004,7 @@ index 1f2b41919b..4f26841bae 100644
  	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
  	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
 diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index d42dae075b..611f5f3512 100644
+index d42dae075b..9044bc2a6c 100644
 --- a/daemon/cmd/status.go
 +++ b/daemon/cmd/status.go
 @@ -4,20 +4,31 @@
@@ -2058,7 +2058,7 @@ index d42dae075b..611f5f3512 100644
  )
  
  const (
-@@ -484,6 +499,594 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
+@@ -484,6 +499,593 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
  	return NewGetHealthzOK().WithPayload(&sr)
  }
  
@@ -2340,7 +2340,7 @@ index d42dae075b..611f5f3512 100644
 +		keys := ctx.keys[writtenCount:currentCount]
 +		values := ctx.values[writtenCount:currentCount]
 +		count, err := ctx.m.BatchUpdate(keys, values, nil)
-+		if count == 0 || (err != nil && errors.Is(err, unix.EFAULT)) {
++		if count <= 0 || (err != nil && errors.Is(err, unix.EFAULT)) {
 +			log.WithFields(logrus.Fields{
 +				"error": err,
 +			}).Error("Failed batch update")
@@ -2416,6 +2416,7 @@ index d42dae075b..611f5f3512 100644
 +
 +	t, _ := timestamp.GetCTCurTime(timestamp.GetClockSourceFromOptions())
 +	currTime := uint32(t)
++
 +	for {
 +		k, v, err := deserializeConntrackFromReader(r.Body)
 +		if err != nil {
@@ -2427,7 +2428,6 @@ index d42dae075b..611f5f3512 100644
 +	}
 +
 +	flushContexts([]*batchContext{tcp, udp})
-+
 +	return NewPostConntrackImportOK()
 +}
 +
@@ -2633,11 +2633,10 @@ index d42dae075b..611f5f3512 100644
 +		currTime := uint32(t)
 +
 +		isConnClosed := false
-+		maps := getCtMaps()
-+		for _, m := range maps {
-+			if err = processCtMap(m, w, ctx, ip4, &isConnClosed, currTime); err != nil {
++		for _, ctMap := range getCtMaps() {
++			if err = processCtMap(ctMap, w, ctx, ip4, &isConnClosed, currTime); err != nil {
 +				log.WithFields(logrus.Fields{
-+					"map":   m,
++					"map":   ctMap,
 +					"error": err,
 +				}).Error("Failed process conntrack map")
 +			}
