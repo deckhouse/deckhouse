@@ -66,28 +66,6 @@ func (c *ComputeService) CreateVM(ctx context.Context, machine *v1alpha2.Virtual
 		return nil, fmt.Errorf("create VirtualMachine resource: %w", err)
 	}
 
-	err := c.Wait(ctx, machine.Name, machine, func(obj client.Object) (bool, error) {
-		if obj == nil {
-			return false, nil
-		}
-
-		vm, ok := obj.(*v1alpha2.VirtualMachine)
-		if !ok {
-			return false, fmt.Errorf("expected a VirtualMachine but got a %T", obj)
-		}
-
-		expectedPhase := v1alpha2.MachineRunning
-		runPolicy := vm.Spec.RunPolicy
-		if runPolicy == v1alpha2.AlwaysOffPolicy || runPolicy == v1alpha2.ManualPolicy {
-			expectedPhase = v1alpha2.MachineStopped
-		}
-
-		return vm.Status.Phase == expectedPhase, nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("await VirtualMachine creation: %w", err)
-	}
-
 	return machine, nil
 }
 
