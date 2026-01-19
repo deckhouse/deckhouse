@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index eb95dd81f..18db3b0fc 100644
+index eb95dd81..18db3b0f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -211,6 +211,7 @@ replace (
- 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.2
- 	k8s.io/code-generator => k8s.io/code-generator v0.34.2
- 	k8s.io/component-base => k8s.io/component-base v0.34.2
+ 	k8s.io/cluster-bootstrap => k8s.io/cluster-bootstrap v0.34.0
+ 	k8s.io/code-generator => k8s.io/code-generator v0.34.0
+ 	k8s.io/component-base => k8s.io/component-base v0.34.0
 +	github.com/akutz/gofsutil => ../gofsutil
- 	k8s.io/component-helpers => k8s.io/component-helpers v0.34.2
- 	k8s.io/controller-manager => k8s.io/controller-manager v0.34.2
- 	k8s.io/cri-api => k8s.io/cri-api v0.34.2
+ 	k8s.io/component-helpers => k8s.io/component-helpers v0.34.0
+ 	k8s.io/controller-manager => k8s.io/controller-manager v0.34.0
+ 	k8s.io/cri-api => k8s.io/cri-api v0.34.0
