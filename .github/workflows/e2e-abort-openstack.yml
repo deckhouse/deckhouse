@@ -138,7 +138,7 @@ jobs:
       PROVIDER: OpenStack
       CRI: Containerd
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.30"
+      KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, regular]
     steps:
@@ -339,7 +339,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: Containerd
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
@@ -2413,7 +2413,7 @@ jobs:
       PROVIDER: OpenStack
       CRI: ContainerdV2
       LAYOUT: Standard
-      KUBERNETES_VERSION: "1.30"
+      KUBERNETES_VERSION: "1.31"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, regular]
     steps:
@@ -2614,7 +2614,7 @@ jobs:
           PROVIDER: OpenStack
           CRI: ContainerdV2
           LAYOUT: Standard
-          KUBERNETES_VERSION: "1.30"
+          KUBERNETES_VERSION: "1.31"
           LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
           LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
           LAYOUT_FOX_DOCKERCFG: ${{ steps.secrets.outputs.FOX_DOCKERCFG }}
