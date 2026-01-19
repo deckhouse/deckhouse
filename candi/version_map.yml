@@ -55,7 +55,6 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   "1.32":
-    default: true
     status: available
     patch: 11
     bashible: *bashible
@@ -80,6 +79,7 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
   "1.33":
+    default: true
     status: available
     patch: 7
     bashible: *bashible
