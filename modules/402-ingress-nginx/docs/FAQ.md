@@ -345,7 +345,7 @@ spec:
       SecRuleEngine On
 ```
 
-### Adding SecRule's
+### Adding SecRules
 
 An example of a rule to limit the number of arguments in a request URL. If the number of arguments exceeds 10, the server will reject the request with an error code 400 (Bad Request).
 
