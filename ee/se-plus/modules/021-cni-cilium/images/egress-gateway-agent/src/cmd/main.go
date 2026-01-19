@@ -12,22 +12,19 @@ import (
 	"os"
 	"regexp"
 
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/controller"
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
-
-	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
-
 	internalv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
+	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 const (
