@@ -423,17 +423,19 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 	return release, nil
 }
 
-// ensureReleases create releases and return metadata of last created release.
-// flow:
-//  1. if no releases in cluster - create from channel
-//  2. if deployed release patch version is lower than channel (with same minor and major) - create from channel
-//  3. if deployed release minor version is lower than channel (with same major) - create from channel
-//  4. if deployed release minor version is lower by 2 or more than channel (with same major) - look at releases in cluster
-//     4.1 if update sequence between deployed release and last release in cluster is broken - get releases from registry between deployed and version from channel, and create releases
-//     4.2 if update sequence between deployed release and last release in cluster not broken - check update sequence between last release in cluster and version in channel
-//     4.2.1 if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
-//     4.2.2 if update sequence between last release in cluster and version in channel not broken - create from channel
-//     4.3 if update sequences not broken - create from channel
+// ensureReleases creates releases and returns metadata of last created release.
+//
+// Flow:
+//  1. If no releases in cluster - create release from channel
+//  2. If release channel is LTS - create release from channel
+//  3. Otherwise - always use step-by-step update:
+//     3.1 Determine starting version:
+//     - Use deployed release, or
+//     - Use last release in sequence if all releases in cluster are sequential
+//     3.2 Get all new versions from registry between starting version and channel version
+//     (includes patches of current minor version to avoid skipping migrations)
+//     3.3 If no new versions (actual >= target) - return channel metadata for updating existing releases
+//     3.4 Otherwise - create releases for each version in the chain
 func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
@@ -508,6 +510,10 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 
 	// If no new versions to create (actual >= target), return the channel metadata
 	// so subsequent code can still update existing releases (e.g., suspend annotation)
+	//
+	// Example: Deployed v1.16.0, channel has v1.16.0 (same version but with suspend: true).
+	// getNewVersions returns empty list (no new versions), but we return channel metadata
+	// to update suspend annotation on existing v1.16.0 release.
 	if len(metas) == 0 {
 		return releaseMetadata, nil
 	}
@@ -923,6 +929,15 @@ func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semve
 	return versions
 }
 
+// isVersionInRange checks if version 'ver' is within the range between 'actual' and 'target'.
+// Returns true if ver > actual and ver is within target's minor version.
+//
+// Example:
+//
+//	[actual=v1.67.4, ver=v1.67.3, target=v1.68.10] -> false  // ver <= actual
+//	[actual=v1.67.4, ver=v1.67.11, target=v1.68.10] -> true  // patch of current minor
+//	[actual=v1.67.4, ver=v1.68.10, target=v1.68.10] -> true  // target version
+//	[actual=v1.67.4, ver=v1.69.0, target=v1.68.10] -> false  // exceeds target minor
 func isVersionInRange(ver, actual, target *semver.Version) bool {
 	// Must be strictly greater than actual
 	if !ver.GreaterThan(actual) {
