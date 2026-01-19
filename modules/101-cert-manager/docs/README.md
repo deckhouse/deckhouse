@@ -8,7 +8,7 @@ description: "Managing certificates in the Deckhouse Kubernetes Platform cluster
 This module installs the reliable and highly available cert-manager [release {{ target_item.version }}](<{{ target_item.link }}/tree/v{{ target_item.version }}>).
 {%- else -%}
 This module installs the reliable and highly available [cert-manager](https://github.com/jetstack/cert-manager).
-{%- endif -%}
+{%- endif %}
 
 The installation process automatically takes into account cluster aspects:
 - the component (webhook) that the `kube-apiserver` is accessing is installed on master nodes;
