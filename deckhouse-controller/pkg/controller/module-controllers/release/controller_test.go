@@ -1101,7 +1101,7 @@ func (s stubModulesManager) IsModuleEnabled(_ string) bool {
 	return true
 }
 
-func (s stubModulesManager) RunModuleWithNewOpenAPISchema(_, _, _ string) error {
+func (s stubModulesManager) PushRunModuleTask(_ string, _ bool) error {
 	return nil
 }
 

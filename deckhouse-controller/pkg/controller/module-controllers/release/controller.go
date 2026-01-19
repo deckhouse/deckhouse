@@ -176,7 +176,8 @@ type reconciler struct {
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	IsModuleEnabled(moduleName string) bool
+	PushRunModuleTask(moduleName string, doStartup bool) error
 	GetEnabledModuleNames() []string
 	AreModulesInited() bool
 }
@@ -539,13 +540,13 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
 		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 			module.InjectRegistryValue(utils.BuildRegistryValue(source))
-		}
 
-		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), "", modulePath); err != nil {
-			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
-
-			return res, fmt.Errorf("run module with new open api schema: %w", err)
+			// run module with new registry value
+			if r.moduleManager.IsModuleEnabled(release.GetModuleName()) {
+				if err = r.moduleManager.PushRunModuleTask(release.GetModuleName(), false); err != nil {
+					return res, fmt.Errorf("push run module task: %w", err)
+				}
+			}
 		}
 
 		// delete annotation and requeue
