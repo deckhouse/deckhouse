@@ -1,0 +1,8 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.67.4
+spec:
+  version: "v1.67.4"
+status:
+  phase: Deployed

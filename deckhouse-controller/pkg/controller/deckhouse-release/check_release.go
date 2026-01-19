@@ -795,19 +795,11 @@ func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, ac
 	result := make([]ReleaseMetadata, 0, len(vers))
 
 	current := actual
-	for idx, ver := range vers {
+	for _, ver := range vers {
 		// Validate that no minor version is skipped in registry
 		if !isUpdatingSequence(current, ver) {
-			if idx == 0 {
-				return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
-					current.Original(), ver.Original())
-			}
-			// For subsequent versions, log warning and stop processing
-			// This allows creating available releases up to the gap
-			f.logger.Warn("not sequential version, stopping step-by-step update",
-				slog.String("previous", current.Original()),
-				slog.String("next", ver.Original()))
-			break
+			return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
+				current.Original(), ver.Original())
 		}
 
 		image, err := f.registryClient.Image(ctx, ver.Original())

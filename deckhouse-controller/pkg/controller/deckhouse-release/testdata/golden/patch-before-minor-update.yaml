@@ -3,11 +3,30 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  annotations:
+    release.deckhouse.io/change-cause: check release (step-by-step)
+    release.deckhouse.io/isUpdating: "false"
+    release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  name: v1.31.0
+  name: v1.67.11
+  resourceVersion: "1"
+spec:
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.67.11
+  version: v1.67.11
+status:
+  approved: false
+  message: ""
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  creationTimestamp: null
+  name: v1.67.4
   resourceVersion: "999"
 spec:
-  version: v1.31.0
+  version: v1.67.4
 status:
   approved: false
   message: ""
@@ -23,49 +42,11 @@ metadata:
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
   creationTimestamp: null
-  name: v1.31.1
+  name: v1.68.10
   resourceVersion: "1"
 spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.31.1
-  version: v1.31.1
-status:
-  approved: false
-  message: ""
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/change-cause: check release (step-by-step)
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  name: v1.32.3
-  resourceVersion: "1"
-spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.32.3
-  version: v1.32.3
-status:
-  approved: false
-  message: ""
-  transitionTime: null
----
-apiVersion: deckhouse.io/v1alpha1
-approved: false
-kind: DeckhouseRelease
-metadata:
-  annotations:
-    release.deckhouse.io/change-cause: check release (step-by-step)
-    release.deckhouse.io/isUpdating: "false"
-    release.deckhouse.io/notified: "false"
-  creationTimestamp: null
-  name: v1.33.1
-  resourceVersion: "1"
-spec:
-  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.33.1
-  version: v1.33.1
+  changelogLink: https://github.com/deckhouse/deckhouse/releases/tag/v1.68.10
+  version: v1.68.10
 status:
   approved: false
   message: ""
