@@ -106,6 +106,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - ^tools/
       - _test\.go$
 formatters:
   enable:
@@ -130,3 +131,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - ^tools$
