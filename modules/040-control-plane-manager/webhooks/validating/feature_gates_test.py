@@ -167,7 +167,7 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
     def test_validate_with_multiple_feature_gates(self):
         ctx = _prepare_validation_binding_context('1.31.0', ['CPUManager', 'MemoryManager', 'UnknownGate'])
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.30 and will not be applied")
+        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.31 and will not be applied")
     
     def test_validate_with_apiserver_feature_gate(self):
         ctx = _prepare_validation_binding_context('1.31.0', ['APIServerIdentity'])
