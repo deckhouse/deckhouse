@@ -344,7 +344,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 			}
 		}
 
-		return fmt.Errorf("exec hook: %w", err)
+		return fmt.Errorf("exec hook '%s': %w", h.GetName(), err)
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
