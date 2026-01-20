@@ -417,3 +417,38 @@ func getRestrictedConstraintNames() []string {
 	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "restricted", "constraint.yaml"))
 	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_restricted")
 }
+
+// getOperationConstraintNames extracts constraint names from operation-policy template
+// by parsing "kind: D8XXX" lines in define blocks
+func getOperationConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "operation-policy", "constraint.yaml"))
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
+	}
+
+	// Pattern to match: kind: D8XXX (where XXX is the constraint name)
+	// This appears in define blocks like: kind: D8AllowedRepos
+	pattern := `kind:\s+(D8[A-Za-z0-9]+)`
+	re := regexp.MustCompile(pattern)
+
+	matches := re.FindAllStringSubmatch(string(content), -1)
+	constraintNames := make(map[string]bool)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			constraintName := match[1]
+			// Only include names that start with D8 (constraint kinds)
+			if strings.HasPrefix(constraintName, "D8") {
+				constraintNames[constraintName] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(constraintNames))
+	for name := range constraintNames {
+		result = append(result, name)
+	}
+
+	return result
+}

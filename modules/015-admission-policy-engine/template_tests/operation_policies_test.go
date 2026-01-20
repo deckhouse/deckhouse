@@ -105,23 +105,9 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 		It("All operation policy constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			operationConstraints := []string{
-				"D8AllowedRepos",
-				"D8RequiredResources",
-				"D8DisallowedTags",
-				"D8RequiredProbes",
-				"D8RevisionHistoryLimit",
-				"D8ImagePullPolicy",
-				"D8PriorityClass",
-				"D8IngressClass",
-				"D8StorageClass",
-				"D8DNSPolicy",
-				"D8RequiredLabels",
-				"D8RequiredAnnotations",
-				"D8ContainerDuplicates",
-				"D8ReplicaLimits",
-				"D8DisallowedTolerations",
-			}
+			// Dynamically extract constraint names from template files
+			operationConstraints := getOperationConstraintNames()
+			Expect(operationConstraints).NotTo(BeEmpty(), "No operation constraints found in templates")
 
 			for _, constraintKind := range operationConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
