@@ -79,8 +79,8 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		return false
 	}
 
-	oldLocation := filepath.Join(hugoInitDir)
-	newLocation := filepath.Join(svc.baseDir)
+	oldLocation := hugoInitDir
+	newLocation := svc.baseDir
 	err = syncer.Sync(newLocation, oldLocation)
 	if err != nil {
 		svc.logger.Error("sync init folder with base dir", log.Err(err))
