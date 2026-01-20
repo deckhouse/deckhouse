@@ -8,7 +8,7 @@ import (
 	"fencing-agent/internal/adapters/memberlist/event_handler"
 	"fencing-agent/internal/adapters/memberlist/eventbus"
 	"fencing-agent/internal/adapters/watchdog/softdog"
-	fencing_config "fencing-agent/internal/config"
+	fencingconfig "fencing-agent/internal/config"
 	"fencing-agent/internal/core/domain"
 	"fencing-agent/internal/core/service"
 	"fencing-agent/internal/lib/logger/sl"
@@ -20,6 +20,7 @@ import (
 	"log/slog"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"golang.org/x/time/rate"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -28,7 +29,7 @@ import (
 )
 
 type Application struct {
-	config fencing_config.Config
+	config fencingconfig.Config
 	logger *log.Logger
 
 	clusterProvider    *kubeapi.Provider
@@ -46,7 +47,7 @@ type Application struct {
 func NewApplication(
 	ctx context.Context,
 	logger *log.Logger,
-	config fencing_config.Config,
+	config fencingconfig.Config,
 ) (*Application, error) {
 	kubeClient, err := getClientset(config.KubernetesAPITimeout)
 	if err != nil {
@@ -82,8 +83,10 @@ func NewApplication(
 
 	grpcServer := grpc.NewServer(eventBus, statusProvider)
 
-	// TODO configurate rate limiting
-	grpcRunner, err := grpc.NewRunner(config.GRPCAddress, grpcServer)
+	unaryRateLimit := rate.NewLimiter(rate.Limit(config.GRPSRateLimit.UnaryRPS), config.GRPSRateLimit.UnaryBurst)
+	streamRateLimit := rate.NewLimiter(rate.Limit(config.GRPSRateLimit.StreamRPS), config.GRPSRateLimit.StreamBurst)
+
+	grpcRunner, err := grpc.NewRunner(config.GRPCAddress, logger, grpcServer, unaryRateLimit, streamRateLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC runner: %w", err)
 	}
