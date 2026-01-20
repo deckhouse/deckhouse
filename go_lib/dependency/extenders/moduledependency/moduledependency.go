@@ -194,7 +194,7 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 	if formsLoop, dependentModule := e.constraintFormsLoop(moduleName, value); formsLoop {
 		validateErr = multierror.Append(validateErr, fmt.Errorf("module depency error: add '%s' module release dependencies forms a dependency loop with the installed \"%s\" module", moduleName, dependentModule))
 		if err := validateErr.ErrorOrNil(); err != nil {
-			return fmt.Errorf("error or nil: %w", err)
+			return err
 		}
 		return nil
 	}
