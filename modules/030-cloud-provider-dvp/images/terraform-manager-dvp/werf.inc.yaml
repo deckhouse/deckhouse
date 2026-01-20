@@ -32,6 +32,7 @@ git:
     - '**/*'
 shell:
   install:
+  - set -x
   - git clone --depth 1 --branch v{{ .TF.kubernetes.version }} {{ $.SOURCE_REPO }}/hashicorp/terraform-provider-kubernetes.git /src
   - cd /src
   - git apply /patches/*.patch --verbose
