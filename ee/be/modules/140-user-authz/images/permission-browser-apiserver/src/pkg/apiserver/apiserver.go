@@ -181,10 +181,9 @@ func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer
 		Codecs,
 	)
 
+	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth)
 	if nsResolver != nil {
 		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver)
-	} else {
-		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth)
 	}
 
 	return server.InstallAPIGroup(&apiGroupInfo)

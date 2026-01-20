@@ -57,8 +57,6 @@ func NewNamespaceResolver(
 
 // ResolveAccessibleNamespaces returns a sorted list of namespace names that
 // the given user has access to (any namespaced RBAC permission AND multi-tenancy allows).
-//
-// Algorithm complexity: O(#bindings + #roles + #namespaces)
 func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]string, error) {
 	if userInfo == nil {
 		return nil, nil
@@ -95,8 +93,10 @@ func (r *NamespaceResolver) ResolveAccessibleNamespaces(userInfo user.Info) ([]s
 	// Step 2: Filter by multi-tenancy rules
 	result := r.filterByMultitenancy(userInfo, candidateNamespaces)
 
-	// Step 3: Sort for stable output
-	sort.Strings(result)
+	// Step 3: Sort for deterministic output
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i] < result[j]
+	})
 
 	klog.V(4).Infof("User %s has access to %d namespaces after multi-tenancy filtering", userName, len(result))
 	return result, nil
@@ -124,10 +124,14 @@ func (r *NamespaceResolver) IsNamespaceAccessible(userInfo user.Info, namespace 
 	userName := userInfo.GetName()
 	userGroups := userInfo.GetGroups()
 
-	// Check global access via ClusterRoleBindings
+	// Check global access via ClusterRoleBindings.
+	// Error is intentionally not returned here: this is a fail-open check.
+	// If we can't determine global access (e.g., informer cache issue), we fall through
+	// to RoleBinding check which may still grant access. Returning error here would
+	// deny access to users who have valid RoleBindings in the namespace.
 	globalAccess, err := r.hasGlobalNamespacedAccess(userName, userGroups)
 	if err != nil {
-		klog.V(4).Infof("Error checking global access: %v", err)
+		klog.V(4).Infof("Error checking global access (continuing with RoleBinding check): %v", err)
 	}
 	if globalAccess {
 		return true, nil
@@ -315,26 +319,33 @@ func (r *NamespaceResolver) hasNamespacedRules(rules []rbacv1.PolicyRule) bool {
 // isResourceNamespaced checks if a resource is namespaced using discovery.
 // Returns true if the resource is namespaced or if we can't determine (fail-open for this check).
 func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
-	// Common namespaced resources (optimization to avoid discovery calls)
-	commonNamespaced := map[string]bool{
-		"pods": true, "services": true, "deployments": true, "configmaps": true,
-		"secrets": true, "serviceaccounts": true, "replicasets": true,
-		"statefulsets": true, "daemonsets": true, "jobs": true, "cronjobs": true,
-		"persistentvolumeclaims": true, "endpoints": true, "events": true,
-		"ingresses": true, "networkpolicies": true, "roles": true, "rolebindings": true,
+	// Build fully qualified resource key (group/resource) to avoid collisions
+	// between resources with the same name in different API groups.
+	fqKey := group + "/" + resource
+
+	// Common namespaced resources.
+	// Key format: "apiGroup/resource" where core API group is empty string.
+	commonNamespaced := map[string]struct{}{
+		"/pods": {}, "/services": {}, "/configmaps": {}, "/secrets": {},
+		"/serviceaccounts": {}, "/endpoints": {}, "/events": {},
+		"/persistentvolumeclaims": {}, "/replicationcontrollers": {},
+		"apps/deployments": {}, "apps/replicasets": {}, "apps/statefulsets": {},
+		"apps/daemonsets": {}, "batch/jobs": {}, "batch/cronjobs": {},
+		"networking.k8s.io/ingresses": {}, "networking.k8s.io/networkpolicies": {},
+		"rbac.authorization.k8s.io/roles": {}, "rbac.authorization.k8s.io/rolebindings": {},
 	}
-	if namespaced, known := commonNamespaced[resource]; known {
-		return namespaced
+	if _, known := commonNamespaced[fqKey]; known {
+		return true
 	}
 
-	// Common cluster-scoped resources
-	commonClusterScoped := map[string]bool{
-		"namespaces": true, "nodes": true, "persistentvolumes": true,
-		"clusterroles": true, "clusterrolebindings": true,
-		"storageclasses": true, "priorityclasses": true,
+	// Common cluster-scoped resources.
+	commonClusterScoped := map[string]struct{}{
+		"/namespaces": {}, "/nodes": {}, "/persistentvolumes": {},
+		"rbac.authorization.k8s.io/clusterroles": {}, "rbac.authorization.k8s.io/clusterrolebindings": {},
+		"storage.k8s.io/storageclasses": {}, "scheduling.k8s.io/priorityclasses": {},
 	}
-	if clusterScoped, known := commonClusterScoped[resource]; known {
-		return !clusterScoped
+	if _, known := commonClusterScoped[fqKey]; known {
+		return false
 	}
 
 	// Without discovery client, assume unknown resources could be namespaced

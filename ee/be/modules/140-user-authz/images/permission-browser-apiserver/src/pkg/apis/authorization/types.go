@@ -138,17 +138,17 @@ type SubjectAccessReviewResult struct {
 // AccessibleNamespace represents a namespace that the requesting user has access to.
 // This is a read-only, computed resource - watch is not supported.
 type AccessibleNamespace struct {
-	metav1.TypeMeta
-	metav1.ObjectMeta
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // AccessibleNamespaceList is a list of accessible namespaces
 type AccessibleNamespaceList struct {
-	metav1.TypeMeta
-	metav1.ListMeta
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 
 	// Items is the list of accessible namespaces
-	Items []AccessibleNamespace
+	Items []AccessibleNamespace `json:"items"`
 }

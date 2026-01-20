@@ -45,7 +45,7 @@ A namespace is considered "accessible" if BOTH conditions are met:
 
 - **Watch NOT supported**: Clients must poll for updates. The `resourceVersion` is always empty.
 - **Computed at request time**: The list is calculated based on current RBAC and multi-tenancy rules. Changes propagate after informer cache sync (up to 30 minutes).
-- **Best-effort resource discovery**: Unknown resources are assumed to be namespaced.
+- **Best-effort resource scope detection**: If a resource's scope can't be determined via discovery (transient errors / unavailable APIService), we treat it as namespaced.
 
 #### Security
 
