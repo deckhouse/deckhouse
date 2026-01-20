@@ -15,37 +15,52 @@
 package main
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stretchr/testify/assert"
 	dto "github.com/prometheus/client_model/go"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestGetContainerIDFromLog(t *testing.T) {
+	testApp := &app{
+		kmesgRE: regexp.MustCompile(defaultPattern),
+	}
+
 	logLine := "oom-kill:constraint=CONSTRAINT_MEMCG,nodemask=(null),cpuset=9f02d9fa0049eb2655fc83c765f142362b2cb403b57b70ba3185071015ca3b64,mems_allowed=0-1,oom_memcg=/kubepods/burstable/podd11ab7b0-d6db-4a24-a7de-4a2faf1e6980/9f02d9fa0049eb2655fc83c765f142362b2cb403b57b70ba3185071015ca3b64,task_memcg=/kubepods/burstable/podd11ab7b0-d6db-4a24-a7de-4a2faf1e6980/9f02d9fa0049eb2655fc83c765f142362b2cb403b57b70ba3185071015ca3b64,task=prometheus-conf,pid=3401999,uid=0"
-	podUID, containerID := getContainerIDFromLog(logLine)
+	podUID, containerID := testApp.getContainerIDFromLog(logLine)
 	assert.Equal(t, "d11ab7b0-d6db-4a24-a7de-4a2faf1e6980", podUID)
 	assert.Equal(t, "9f02d9fa0049eb2655fc83c765f142362b2cb403b57b70ba3185071015ca3b64", containerID)
 
 	logLine = "oom-kill: no task_memcg present"
-	podUID, containerID = getContainerIDFromLog(logLine)
+	podUID, containerID = testApp.getContainerIDFromLog(logLine)
 	assert.Equal(t, "", podUID)
 	assert.Equal(t, "", containerID)
 
 	logLine = "random log line"
-	podUID, containerID = getContainerIDFromLog(logLine)
+	podUID, containerID = testApp.getContainerIDFromLog(logLine)
 	assert.Equal(t, "", podUID)
 	assert.Equal(t, "", containerID)
 }
 
 func TestPrometheusEnsureSeriesAndCount(t *testing.T) {
+	testApp := &app{
+		containerLabels: map[string]string{
+			"io.kubernetes.container.name": "container_name",
+			"io.kubernetes.pod.namespace":  "namespace",
+			"io.kubernetes.pod.uid":        "pod_uid",
+			"io.kubernetes.pod.name":       "pod_name",
+		},
+		nodeName: "test-node",
+	}
+
 	counter := prometheus.NewCounterVec(prometheus.CounterOpts{
 		Name: "test_klog_pod_oomkill",
 		Help: "Test metric",
-	}, []string{"container_name", "namespace", "pod_uid", "pod_name"})
+	}, []string{"container_name", "namespace", "pod_uid", "pod_name", "node_name"})
 
-	kubernetesCounterVec = counter
+	testApp.kubernetesCounterVec = counter
 
 	labels := map[string]string{
 		"io.kubernetes.container.name": "test-container",
@@ -54,16 +69,17 @@ func TestPrometheusEnsureSeriesAndCount(t *testing.T) {
 		"io.kubernetes.pod.name":       "mypod",
 	}
 
-	prometheusEnsureSeries(labels)
+	testApp.prometheusEnsureSeries(labels)
 
-	prometheusCount(labels)
-	prometheusCount(labels)
+	testApp.prometheusCount(labels)
+	testApp.prometheusCount(labels)
 
-	metric, err := kubernetesCounterVec.GetMetricWith(map[string]string{
+	metric, err := testApp.kubernetesCounterVec.GetMetricWith(map[string]string{
 		"container_name": "test-container",
 		"namespace":      "default",
 		"pod_uid":        "pod123",
 		"pod_name":       "mypod",
+		"node_name":      "test-node",
 	})
 	assert.NoError(t, err)
 
@@ -72,4 +88,3 @@ func TestPrometheusEnsureSeriesAndCount(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2.0, pb.GetCounter().GetValue())
 }
-
