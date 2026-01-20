@@ -1,4 +1,4 @@
-commit 7d607dd3e06d6a0c205ae487bfd89a50b6ea003d
+commit 69b9001dcab61df8f43bfa4cf0771e63406063c0
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Mon Nov 24 13:44:22 2025 +0300
 
@@ -59,7 +59,7 @@ index 37b0e54781..715cd6b514 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..77e1de9b02 100644
+index ad69a5379d..200f122b23 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
 @@ -178,6 +178,14 @@ type GCFilter struct {
@@ -88,11 +88,11 @@ index ad69a5379d..77e1de9b02 100644
 +		_, dstMatch := f.MatchIPs[dstIP]
 +
 +		if f.MigrationSafeCleanup {
-+			if flags == TUPLE_F_OUT || flags == TUPLE_F_SERVICE {
++			if flags == TUPLE_F_OUT || flags&TUPLE_F_SERVICE != 0 {
 +				if srcMatch {
 +					return deleteEntry
 +				}
-+			} else if flags == TUPLE_F_IN {
++			} else if flags&TUPLE_F_IN != 0 {
 +				if dstMatch {
 +					return deleteEntry
 +				}
