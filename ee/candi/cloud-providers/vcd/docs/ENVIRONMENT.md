@@ -306,9 +306,9 @@ shutdown -P now
 
    For **each** field in the add/edit form, set the following:
 
-   * Type: `Text`
-   * User access: `Read/Write`
-   * Value: a single space
+   * "Type": `Text` (text value)
+   * "User access": `Read/Write`
+   * "Value": A single space
 
    > The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
 
