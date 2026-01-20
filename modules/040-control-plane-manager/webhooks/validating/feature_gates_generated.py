@@ -290,7 +290,7 @@ versions = {
             "ComponentFlagz",
             "ComponentStatusz",
             "ConcurrentWatchObjectDecode",
-            "ContainerRestartRules"",
+            "ContainerRestartRules",
         ],
     },
 }
