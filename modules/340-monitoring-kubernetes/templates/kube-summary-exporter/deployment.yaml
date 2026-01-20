@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "kube_summary_exporter_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 100m
+        memory: 200Mi
     {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
 {{- end }}
 ---
