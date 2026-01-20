@@ -21,18 +21,14 @@ import (
 	"errors"
 	"fmt"
 
-	"dvp-csi-driver/pkg/utils"
-
-	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
-
+	dvpapi "dvp-common/api"
 	"dvp-csi-driver/pkg/utils"
 )
 

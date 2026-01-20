@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	dvpapi "dvp-common/api"
-
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -46,6 +44,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	dvpapi "dvp-common/api"
 
 	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 
@@ -477,6 +477,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("resource validation failed: %w", err)
 	}
 
+	var createdDiskNames []string
+	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
+
 	bootstrapDataSecret := &corev1.Secret{}
 	if err := r.Client.Get(
 		ctx,
@@ -490,13 +493,14 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	cloudInitScript, hasBootstrapScript := bootstrapDataSecret.Data["value"]
 	if !hasBootstrapScript {
+		logger.Info("Bootstrap script not found in secret, cleaning up created resources")
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Expected to find a cloud-init script in secret %s/%s", bootstrapDataSecret.Namespace, bootstrapDataSecret.Name)
 	}
 
-	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
-
+	bootDiskName := dvpMachine.Name + "-boot"
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
-		{Kind: v1alpha2.DiskDevice, Name: dvpMachine.Name + "-boot"},
+		{Kind: v1alpha2.DiskDevice, Name: bootDiskName},
 	}
 
 	for i := range dvpMachine.Spec.AdditionalDisks {
@@ -603,13 +607,25 @@ func (r *DeckhouseMachineReconciler) createVM(
 			err)
 	}
 
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript, vm.Name, vm.UID); err != nil {
+	if err = r.DVP.ComputeService.CreateCloudInitProvisioningSecret(
+		ctx,
+		r.ClusterUUID,
+		dvpMachine.Name,
+		cloudInitSecretName,
+		cloudInitScript,
+		vm.Name,
+		vm.UID,
+	); err != nil {
+		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
 
 	if _, err = r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
-		dvpMachine.Name+"-boot",
+		r.ClusterUUID,
+		dvpMachine.Name,
+		bootDiskName,
 		dvpMachine.Spec.RootDiskSize,
 		dvpMachine.Spec.RootDiskStorageClass,
 		&v1alpha2.VirtualDiskDataSource{
@@ -628,13 +644,18 @@ func (r *DeckhouseMachineReconciler) createVM(
 			},
 		},
 	); err != nil {
+		logger.Info("Boot disk creation failed, cleaning up created resources", "error", err.Error())
+		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
 	}
+	createdDiskNames = append(createdDiskNames, bootDiskName)
 
 	for i, d := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
 		if _, err = r.DVP.DiskService.CreateDisk(
 			ctx,
+			r.ClusterUUID,
+			dvpMachine.Name,
 			addDiskName,
 			d.Size.Value(),
 			d.StorageClass,
@@ -644,8 +665,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 				Name:       vm.Name,
 				UID:        vm.UID,
 			}}); err != nil {
+			logger.Info("Additional disk creation failed, cleaning up created resources", "error", err.Error(), "diskName", addDiskName)
+			r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
 		}
+		createdDiskNames = append(createdDiskNames, addDiskName)
 	}
 
 	return vm, nil
