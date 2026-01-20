@@ -1,0 +1,166 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package preflightnew
+
+import (
+	"context"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/cenkalti/backoff/v4"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+)
+
+type Preflight struct {
+	suites    []Suite
+	disabled  map[CheckName]struct{}
+	cache     cache
+	cacheSalt string
+}
+
+type cache interface {
+	Save(string, []byte) error
+	InCache(string) (bool, error)
+}
+
+func New(suites ...Suite) *Preflight {
+	return &Preflight{
+		suites:   append([]Suite(nil), suites...),
+		disabled: make(map[CheckName]struct{}),
+	}
+}
+
+func (p *Preflight) UseCache(cache cache) {
+	p.cache = cache
+}
+
+func (p *Preflight) SetCacheSalt(salt string) {
+	p.cacheSalt = salt
+}
+
+func (p *Preflight) AddSuite(suite Suite) {
+	if suite == nil {
+		return
+	}
+	p.suites = append(p.suites, suite)
+}
+
+func (p *Preflight) DisableCheck(name string) {
+	p.disabled[CheckName(name)] = struct{}{}
+}
+
+func (p *Preflight) DisableChecks(names ...string) {
+	for _, name := range names {
+		p.DisableCheck(name)
+	}
+}
+
+func (p *Preflight) IsDisabled(name string) bool {
+	_, ok := p.disabled[CheckName(name)]
+	return ok
+}
+
+func (p *Preflight) Run(ctx context.Context, phase Phase) error {
+	checks := p.checksForPhase(phase)
+	return log.Process("preflight", fmt.Sprintf("(%s)", phase), func() error { return p.runChecks(ctx, checks) })
+}
+
+func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
+	for _, c := range checks {
+		description := c.Description
+		if _, ok := p.disabled[c.Name]; ok {
+			log.InfoF("✓ %s: %s (skipped)\n", c.Name, description)
+			continue
+		}
+		if c.Enabled != nil && !c.Enabled() {
+			continue
+		}
+		if err := p.runCheck(ctx, c, description); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (p *Preflight) runCheck(ctx context.Context, check Check, description string) error {
+	if p.cache != nil {
+		key := p.cacheKey(check.Name)
+		if ok, err := p.cache.InCache(key); err == nil && ok {
+			log.InfoF("✓ %s: %s (cached)\n", check.Name, description)
+			return nil
+		}
+	}
+
+	if err := p.retry(ctx, check.Name, description, check.Run, check.Retry); err != nil {
+		return fmt.Errorf("preflight check %q failed.\nreason: %w", check.Name, err)
+	}
+	log.InfoF("✓ %s: %s\n", check.Name, description)
+
+	if p.cache != nil {
+		if err := p.cache.Save(p.cacheKey(check.Name), []byte("yes")); err != nil {
+			log.WarnF("cannot cache result of %s: %v\n", check.Name, err)
+		}
+	}
+	return nil
+}
+
+func (p *Preflight) checksForPhase(phase Phase) []Check {
+	var checks []Check
+	for _, suite := range p.suites {
+		if suite == nil {
+			continue
+		}
+		for _, check := range suite.Checks() {
+			if phase != "" && check.Phase != phase {
+				continue
+			}
+			checks = append(checks, check)
+		}
+	}
+	return checks
+}
+
+func (p *Preflight) retry(ctx context.Context, name CheckName, description string, run func(context.Context) error, policy RetryPolicy) error {
+	attempts := policy.Attempts
+	if attempts <= 0 {
+		attempts = 1
+	}
+	var bo backoff.BackOff = backoff.NewExponentialBackOff(policy.Options...)
+	bo = backoff.WithMaxRetries(bo, uint64(attempts-1))
+	bo = backoff.WithContext(bo, ctx)
+	attempt := 0
+	printedHeader := false
+	return backoff.RetryNotify(
+		func() error { attempt++; return run(ctx) },
+		bo,
+		func(err error, next time.Duration) {
+			if !printedHeader {
+				log.WarnF("%s: %s\n\n", name, description)
+				printedHeader = true
+			}
+			log.InfoF("retry %d/%d in %s\nreason: %v\n", attempt, attempts, next, err)
+		},
+	)
+}
+
+func (p *Preflight) cacheKey(name CheckName) string {
+	safe := strings.NewReplacer("/", "-", "\\", "-", " ", "-", "\t", "-", "\n", "-").Replace(name.String())
+	if p.cacheSalt == "" {
+		return fmt.Sprintf("preflight-%s", safe)
+	}
+	return fmt.Sprintf("preflight-%s-%s", p.cacheSalt, safe)
+}

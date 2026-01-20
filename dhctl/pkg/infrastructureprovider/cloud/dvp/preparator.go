@@ -27,7 +27,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	dvppreflight "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
@@ -61,17 +63,13 @@ func (p *MetaConfigPreparator) Validate(ctx context.Context, metaConfig *config.
 	if !p.validateKubeConfig {
 		return nil
 	}
-
-	client, err := p.KubeconfigDataBase64(metaConfig)
-	if err != nil {
-		return err
-	}
-
-	if !p.validateKubeApi {
-		return nil
-	}
-
-	return p.whoAmI(ctx, client)
+	return preflightnew.RunSuite(ctx, preflightnew.NewSuite(
+		dvppreflight.KubeconfigCheck(dvppreflight.KubeconfigDeps{
+			ValidateKubeConfig: p.validateKubeConfig,
+			ValidateKubeAPI:    p.validateKubeApi,
+			MetaConfig:         metaConfig,
+		}),
+	), preflightnew.PhaseProviderConfigCheck)
 }
 
 func (p *MetaConfigPreparator) Prepare(_ context.Context, metaConfig *config.MetaConfig) error {

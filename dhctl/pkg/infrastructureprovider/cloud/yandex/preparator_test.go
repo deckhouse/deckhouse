@@ -214,7 +214,7 @@ func fillTestWithNatInstanceLayout(t *testing.T, cfg *config.MetaConfig, setting
 }
 
 func assertValidation(t *testing.T, validatePrefix bool, cfg *config.MetaConfig, hasError bool) {
-	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout()
+	preparator := NewMetaConfigPreparator(validatePrefix).EnableValidateWithNATLayout(true)
 
 	require.True(t, preparator.validateWithNATLayout)
 
