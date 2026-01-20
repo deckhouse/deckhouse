@@ -167,9 +167,9 @@ properties:
         Settings for the `letsencrypt` ClusterIssuer.
       properties:
         resources:
-          type:
-            - object
-            - boolean
+          oneOf:
+            - type: object
+            - type: boolean
           default: false
           description: |
             Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
@@ -203,9 +203,9 @@ properties:
       Settings for the `letsencrypt-staging` ClusterIssuer.
     properties:
       resources:
-        type:
-          - object
-          - boolean
+        oneOf:
+          - type: object
+          - type: boolean
         default: false
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
