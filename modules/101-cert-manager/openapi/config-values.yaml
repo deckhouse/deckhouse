@@ -161,3 +161,75 @@ properties:
         description: |
           When set to true, only the specified recursive DNS servers will be used to check for the existence of a record in the DNS before starting the domain ownership verification process.
         default: false
+  letsencrypt:
+      type: object
+      description: |
+        Settings for the `letsencrypt` ClusterIssuer.
+      properties:
+        resources:
+          type:
+            - object
+            - boolean
+          default: false
+          description: |
+            Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
+            Set to `false` to avoid specifying resources.
+          properties:
+            requests:
+              type: object
+              additionalProperties:
+                type: string
+                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+              description: |
+                Resource requests for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).
+            limits:
+              type: object
+              additionalProperties:
+                type: string
+                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+              description: |
+                Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).
+          x-examples:
+            - false
+            - requests:
+                cpu: "100m"
+                memory: "128Mi"
+              limits:
+                cpu: "250m"
+                memory: "256Mi"
+  letsencryptStaging:
+    type: object
+    description: |
+      Settings for the `letsencrypt-staging` ClusterIssuer.
+    properties:
+      resources:
+        type:
+          - object
+          - boolean
+        default: false
+        description: |
+          Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
+          Set to `false` to avoid specifying resources.
+        properties:
+          requests:
+            type: object
+            additionalProperties:
+              type: string
+              pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+            description: |
+              Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
+          limits:
+            type: object
+            additionalProperties:
+              type: string
+              pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+            description: |
+              Resource limits for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
+        x-examples:
+          - false
+          - requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

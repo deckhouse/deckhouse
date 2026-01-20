@@ -82,3 +82,37 @@ properties:
       useOnlyRecursive:
         description: |
           Если значение true, для проверки существования записи в DNS перед запуском процесса подтверждения владения доменом будут использоваться только указанные рекурсивные DNS-серверы.
+  letsencrypt:
+    type: object
+    description: |
+      Настройки для ClusterIssuer `letsencrypt`.
+    properties:
+      resources:
+        description: |
+          Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt`.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.
+          Укажите `false`, если не требуется задавать ресурсы явно.
+        properties:
+          requests:
+            description: |
+              Запрашиваемые ресурсы для `letsencrypt` (например, `cpu`, `memory`).
+          limits:
+            description: |
+              Лимиты ресурсов для `letsencrypt` (например, `cpu`, `memory`).
+
+  letsencryptStaging:
+    description: |
+      Настройки для ClusterIssuer `letsencrypt-staging`.
+    properties:
+      resources:
+        description: |
+          Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt-staging`.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.
+          Укажите `false`, если не требуется задавать ресурсы явно.
+        properties:
+          requests:
+            description: |
+              Запрашиваемые ресурсы для `letsencrypt-staging` (например, `cpu`, `memory`).
+          limits:
+            description: |
+              Лимиты ресурсов для `letsencrypt-staging` (например, `cpu`, `memory`).
