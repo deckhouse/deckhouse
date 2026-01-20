@@ -41,8 +41,9 @@ spec:
       allowedValue: true
       metadata:
         description: |
-          User Authz Webhook need to run on hostNetwork for communication with apiserver
-
+          User Authz Webhook need to run on hostNetwork for fault tolerance. Architectural feature.
+          The pod runs on the host network to ensure independence from the state of the "Service" object in k8s.
+          
 ---
 apiVersion: apps/v1
 kind: DaemonSet
