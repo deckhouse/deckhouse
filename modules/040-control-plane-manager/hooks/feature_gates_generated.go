@@ -372,7 +372,7 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"ComponentFlagz",
 			"ComponentStatusz",
 			"ConcurrentWatchObjectDecode",
-			"ContainerRestartRules"",
+			"ContainerRestartRules",
 		},
 	},
 }
