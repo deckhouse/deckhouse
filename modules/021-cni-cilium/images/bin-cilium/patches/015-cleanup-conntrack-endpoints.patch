@@ -1,4 +1,4 @@
-commit 69b9001dcab61df8f43bfa4cf0771e63406063c0
+commit 68151bf8cb5569f36785291c0a10df3dedd34084
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Mon Nov 24 13:44:22 2025 +0300
 
@@ -7,7 +7,7 @@ Date:   Mon Nov 24 13:44:22 2025 +0300
     Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 
 diff --git a/pkg/endpoint/bpf.go b/pkg/endpoint/bpf.go
-index 37b0e54781..715cd6b514 100644
+index 37b0e54781..b2e1e151f3 100644
 --- a/pkg/endpoint/bpf.go
 +++ b/pkg/endpoint/bpf.go
 @@ -9,6 +9,7 @@ import (
@@ -26,7 +26,7 @@ index 37b0e54781..715cd6b514 100644
  	"github.com/cilium/cilium/pkg/maps/policymap"
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/policy"
-@@ -924,12 +926,31 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
+@@ -924,12 +926,32 @@ func (e *Endpoint) garbageCollectConntrack(filter ctmap.GCFilter) {
  	}
  }
  
@@ -49,6 +49,7 @@ index 37b0e54781..715cd6b514 100644
 +}
 +
  func (e *Endpoint) scrubIPsInConntrackTableLocked() {
++	fmt.Printf("DEBUG scrubIPsInConntrackTableLocked\n")
  	e.garbageCollectConntrack(ctmap.GCFilter{
  		MatchIPs: map[netip.Addr]struct{}{
  			e.IPv4: {},
@@ -59,7 +60,7 @@ index 37b0e54781..715cd6b514 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..200f122b23 100644
+index ad69a5379d..4233c940c4 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
 @@ -178,6 +178,14 @@ type GCFilter struct {
@@ -88,7 +89,7 @@ index ad69a5379d..200f122b23 100644
 +		_, dstMatch := f.MatchIPs[dstIP]
 +
 +		if f.MigrationSafeCleanup {
-+			if flags == TUPLE_F_OUT || flags&TUPLE_F_SERVICE != 0 {
++			if (flags == TUPLE_F_OUT) || (flags&TUPLE_F_SERVICE != 0) {
 +				if srcMatch {
 +					return deleteEntry
 +				}
