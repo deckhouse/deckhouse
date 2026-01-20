@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-7c114e6cee1182ff2b165cba363ae5cfbf773e4da8518c90d80049d24c627e94",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 10,
+  "version": 11,
   "statements": [
     {
       "vulnerability": {
@@ -118,6 +118,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-22772"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.4.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал обработки OIDC токенов в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами проходят через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T00:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2025-8869"
       },
       "products": [
@@ -160,5 +174,5 @@
     }
   ],
   "timestamp": "2025-10-09T14:21:14Z",
-  "last_updated": "2025-11-13T02:00:00Z"
+  "last_updated": "2026-01-20T00:00:00Z"
 }
