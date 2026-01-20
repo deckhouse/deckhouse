@@ -455,6 +455,7 @@ eg
 egressgateway
 EgressGateway
 EgressGatewayPolicy
+EgressGateways
 EKS
 EL7
 ElasticIP
@@ -498,6 +499,7 @@ falco
 Falco
 FalcoAuditRules
 Falcosidekick
+failback
 fallback
 FastCGI
 FC
@@ -625,6 +627,7 @@ httpsPort
 httpsProxy
 Huawei
 hubble
+HubbleMonitoringConfig
 HugePage
 HWE
 hyperconverged
@@ -1921,6 +1924,7 @@ ZvirtInstanceClass
 компонента
 конвержа
 консистентного
+консистентное
 консистентности
 консистентность
 консистентный
@@ -2313,6 +2317,7 @@ ZvirtInstanceClass
 ротирован
 ротировать
 ротируется
+ротируются
 роутер
 роутера
 роутерами

@@ -44,7 +44,9 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 	// Get resource
 	var egressGatewayInstance eeInternalCrd.SDNInternalEgressGatewayInstance
 	if err := r.Get(ctx, req.NamespacedName, &egressGatewayInstance); err != nil {
-		logger.Error(err, "unable to fetch egress gateway instance", "name", req.NamespacedName)
+		if client.IgnoreNotFound(err) != nil {
+			logger.Error(err, "unable to fetch egress gateway instance", "name", req.NamespacedName)
+		}
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -56,6 +58,7 @@ func (r *EgressGatewayInstanceReconciler) Reconcile(ctx context.Context, req ctr
 			logger.Error(err, "unable to cleanup egress gateway instance", "name", egressGatewayInstance.Name)
 			return ctrl.Result{}, err
 		}
+		return ctrl.Result{}, nil
 	}
 
 	desiredVirtualIPsToAnnounce := make(map[string][]string)
