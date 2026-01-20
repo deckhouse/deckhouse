@@ -2,24 +2,28 @@ package memberlist
 
 import (
 	"fencing-agent/internal/core/domain"
-	"fencing-agent/internal/core/ports"
 	"time"
 
+	"log/slog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/hashicorp/memberlist"
-	"go.uber.org/zap"
 )
 
+type EventBus interface {
+	Publish(event domain.Event)
+}
 type EventHandler struct {
-	logger   *zap.Logger
-	eventBus ports.EventsBus
+	logger   *log.Logger
+	eventBus EventsBus
 }
 
-func NewEventHandler(logger *zap.Logger, eventBus ports.EventsBus) *EventHandler {
+func NewEventHandler(logger *log.Logger, eventBus EventsBus) *EventHandler {
 	return &EventHandler{logger: logger, eventBus: eventBus}
 }
 
 func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
-	h.logger.Debug("Node joined", zap.String("node_name", node.Name), zap.String("node_addr", node.Addr.String()))
+	h.logger.Debug("Node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false joining?
 	ips := make(map[string]string)
 	ips["eth0"] = node.Addr.String()
@@ -35,7 +39,7 @@ func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 }
 
 func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
-	h.logger.Debug("Node left", zap.String("node_name", node.Name), zap.String("node_addr", node.Addr.String()))
+	h.logger.Debug("Node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
 	ips := make(map[string]string)
 	ips["eth0"] = node.Addr.String()
@@ -51,5 +55,5 @@ func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
 }
 
 func (h *EventHandler) NotifyUpdate(node *memberlist.Node) {
-	h.logger.Debug("Node updated", zap.String("node", node.Name))
+	h.logger.Debug("Node updated", slog.String("node", node.Name))
 }
