@@ -2,34 +2,13 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-На данном этапе вы создали кластер, который состоит из **единственного** узла — master-узла. На master-узле по умолчанию работает только ограниченный набор системных компонентов. Для полноценной работы кластера необходимо либо добавить в кластер хотя бы один worker-узел, либо разрешить остальным компонентам Deckhouse работать на master-узле.
-
-Выберите ниже один из двух вариантов, для продолжения установки кластера:
-
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        Кластер из нескольких узлов
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        Кластер из единственного узла
-        </a>
-</div>
+<style>
+  #block_layout_master, #block_layout_worker { display: none; }
+</style>
 
 <div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>Кластера, состоящего из единственного узла, может быть достаточно, например, для ознакомительных целей.</p>
 <ul>
-  <li>
-<p>Выполните на <strong>master-узле</strong> следующую команду, для того чтобы снять с него <i>taint</i> и разрешить остальным компонентам Deckhouse работать на master-узле:</p>
-<div markdown="1">
-```bash
-sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-</div>
-  </li>
   <li>
 <p>Настройте StorageClass <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">локального хранилища</a>, выполнив на <strong>master-узле</strong> следующую команду:</p>
 <div markdown="1">
@@ -279,6 +258,30 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
   </li>
 </ul>
+{% alert type="info" %}
+{% offtopic title="Добавление двух и более worker-узлов..." %}
+**Bootstrap-скрипт**:  
+Используйте тот же ресурс NodeGroup `worker` и тот же bootstrap-скрипт, которые вы использовали при добавлении первого узла. 
+Для каждого дополнительного узла:
+
+1. Подготовьте чистую виртуальную машину.
+1. На этой ВМ выполните команду с тем же Base64-кодом скрипта, который вы использовали при добавлении первого узла:
+
+   ```shell
+   echo <Base64-КОД-СКРИПТА> | base64 -d | bash
+   ```
+
+**CAPS**:  
+Если вы используете CAPS и хотите добавить статические узлы в NodeGroup `worker`:
+
+1. Увеличьте значение <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> в ресурсе NodeGroup `worker` до нужного количества узлов.  
+1. Создайте по одному ресурсу StaticInstance для каждого нового узла, указав:  
+   - лейбл `role: worker`;
+   - IP-адрес этого узла в поле <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>;
+   - ссылку на <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> в <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
+{%- endofftopic %}
+{% endalert %}
+
 </div>
 
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>
@@ -350,7 +353,11 @@ sudo -i d8 k create -f $PWD/user.yml
 </div>
 </li>
 <li><strong>Создание DNS-записи</strong>, для доступа в веб-интерфейсы кластера
-  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер.</li>
+  <ul><li>Выясните публичный IP-адрес узла, на котором работает Ingress-контроллер:
+  <div class="highlight">
+  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
+  </div>
+  </li>
   <li>Если у вас есть возможность добавить DNS-запись используя DNS-сервер:
     <ul>
       <li>Если ваш шаблон DNS-имен кластера является <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard
@@ -364,10 +371,11 @@ sudo -i d8 k create -f $PWD/user.yml
         <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
+code.example.com
+commander.example.com
+console.example.com
 dex.example.com
+documentation.example.com
 grafana.example.com
 hubble.example.com
 istio.example.com
@@ -376,6 +384,7 @@ kubeconfig.example.com
 openvpn-admin.example.com
 prometheus.example.com
 status.example.com
+tools.example.com
 upmeter.example.com</code>
 </pre>
         </div>
@@ -391,10 +400,11 @@ upmeter.example.com</code>
 export PUBLIC_IP="<PUBLIC_IP>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
+$PUBLIC_IP code.example.com
+$PUBLIC_IP commander.example.com
+$PUBLIC_IP console.example.com
 $PUBLIC_IP dex.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com
 $PUBLIC_IP istio.example.com
@@ -403,6 +413,7 @@ $PUBLIC_IP kubeconfig.example.com
 $PUBLIC_IP openvpn-admin.example.com
 $PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
+$PUBLIC_IP tools.example.com
 $PUBLIC_IP upmeter.example.com
 EOF
 "

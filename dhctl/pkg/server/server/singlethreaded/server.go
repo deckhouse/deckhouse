@@ -30,18 +30,22 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	dhctllog "github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	pbdhctl "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/interceptors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/rpc/dhctl"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
 // Serve starts GRPC server
-func Serve(network, address string) error {
+func Serve(params settings.ServerSingleshotParams) error {
+	if err := params.Validate(); err != nil {
+		return err
+	}
+
 	dhctllog.InitLoggerWithOptions("silent", dhctllog.LoggerOptions{})
 	lvl := &slog.LevelVar{}
 	lvl.Set(slog.LevelDebug)
@@ -64,19 +68,20 @@ func Serve(network, address string) error {
 		log.Info("grpc server stopped")
 	})
 
-	cacheDir, err := cacheDirectory()
+	cacheDir, err := cacheDirectory(params)
 	if err != nil {
-		return fmt.Errorf("failed to init grpc server: %w", err)
+		return fmt.Errorf("Failed to init grpc server: %w", err)
 	}
 
 	log.Info(
 		"starting grpc server",
-		slog.String("network", network),
-		slog.String("address", address),
+		slog.String("network", params.Network),
+		slog.String("address", params.Address),
+		slog.String("tmp_dir", params.TmpDir),
 		slog.String("cache directory", cacheDir),
 	)
 
-	listener, err := net.Listen(network, address)
+	listener, err := net.Listen(params.Network, params.Address)
 	if err != nil {
 		log.Error("failed to listen", logger.Err(err))
 		return err
@@ -111,7 +116,7 @@ func Serve(network, address string) error {
 		PodNamespace: podNamespace,
 		CacheDir:     cacheDir,
 		SchemaStore:  config.NewSchemaStore(),
-		TmpDir:       app.TmpDirName,
+		TmpDir:       params.TmpDir,
 		IsDebug:      false,
 	})
 
@@ -131,13 +136,13 @@ func Serve(network, address string) error {
 	return nil
 }
 
-func cacheDirectory() (string, error) {
+func cacheDirectory(params settings.ServerSingleshotParams) (string, error) {
 	id, err := uuid.NewUUID()
 	if err != nil {
 		return "", fmt.Errorf("creating uuid for cache directory")
 	}
 
-	path := filepath.Join(os.TempDir(), "dhctl", "cache_"+id.String())
+	path := filepath.Join(params.TmpDir, "cache_"+id.String())
 
 	return path, nil
 }

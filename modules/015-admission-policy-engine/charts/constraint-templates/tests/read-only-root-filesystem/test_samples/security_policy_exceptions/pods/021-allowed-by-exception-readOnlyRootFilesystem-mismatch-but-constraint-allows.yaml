@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed-by-exception-readOnlyRootFilesystem-mismatch-but-constraint-allows
+  namespace: testns
+  labels:
+    security.deckhouse.io/security-policy-exception: allow-writable-root-filesystem
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        readOnlyRootFilesystem: true
+

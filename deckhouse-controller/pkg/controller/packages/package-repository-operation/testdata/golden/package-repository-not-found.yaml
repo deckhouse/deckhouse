@@ -4,6 +4,8 @@ kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
   labels:
+    packages.deckhouse.io/operation-trigger: manual
+    packages.deckhouse.io/operation-type: Update
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1571326380
   ownerReferences:
@@ -12,9 +14,9 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "21"
+  resourceVersion: "5"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -40,8 +42,6 @@ metadata:
   resourceVersion: "1"
 spec:
   registry:
-    ca: ""
-    dockerCfg: ""
     repo: registry.example.com/test
 status:
   syncTime: null

@@ -47,37 +47,196 @@ spec:
                     type: integer
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-          input_share_hostnetwork(input.review.object)
-          msg := sprintf("The specified hostNetwork and/or hostPort are not allowed, pod: %v. Allowed values: %v", [input.review.object.metadata.name, input.parameters])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                not allowed_by_any(input.review.object)
+                object.get(input.review.object.spec, "hostNetwork", false) == false
+                allowed_by_policy := sprintf("Allowed values: %v", [input.parameters])
+                actual_value := get_actual_hostnetwork_value(input.review.object)
+                exception_allowed := get_exception_allowed_hostnetwork(input.review.object)
+                msg := build_hostnetwork_message(input.review.object.metadata.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                not allowed_by_any(input.review.object)
+                object.get(input.review.object.spec, "hostNetwork", false) == true
+                allowed_by_policy := sprintf("Allowed values: %v", [input.parameters])
+                actual_value := get_actual_hostnetwork_value(input.review.object)
+                exception_allowed := get_exception_allowed_hostnetwork(input.review.object)
+                msg := build_hostnetwork_message(input.review.object.metadata.name, allowed_by_policy, actual_value, exception_allowed)
+              }
 
-        input_share_hostnetwork(o) {
-          not input.parameters.allowHostNetwork
-          o.spec.hostNetwork
-        }
+              get_actual_hostnetwork_value(obj) := out if {
+                hostNetwork := object.get(obj.spec, "hostNetwork", false)
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort]
+                containerPorts := [cp | cp := input_containers[_].ports[_].containerPort]
+                out := sprintf("Actual hostNetwork: %v, hostPorts: %v, containerPorts: %v", [hostNetwork, hostPorts, containerPorts])
+              }
 
-        input_share_hostnetwork(o) {
-          hostPort := input_containers[_].ports[_].hostPort
-          not in_range(input.parameters.ranges, hostPort)
-        }
+              get_exception_allowed_hostnetwork(obj) := out if {
+                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := obj.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                has_field(exception.spec.network, "hostNetwork")
+                has_field(exception.spec.network.hostNetwork, "allowedValue")
+                has_field(exception.spec.network, "hostPorts")
+                allowed_hostnetwork := exception.spec.network.hostNetwork.allowedValue
+                allowed_hostports := exception.spec.network.hostPorts
+                out := sprintf("SecurityPolicyException allowed: hostNetwork: %v, hostPorts: %v", [allowed_hostnetwork, allowed_hostports])
+              }
 
-        in_range(ranges, port) {
-          matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
-          count(matching) > 0
-        }
+              get_exception_allowed_hostnetwork(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
 
-        input_containers[c] {
-          c := input.review.object.spec.containers[_]
-        }
+              get_exception_allowed_hostnetwork(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
-        input_containers[c] {
-          c := input.review.object.spec.initContainers[_]
-        }
+              get_exception_allowed_hostnetwork(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "network")
+              }
 
-        input_containers[c] {
-          c := input.review.object.spec.ephemeralContainers[_]
-        }
+              get_exception_allowed_hostnetwork(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                not has_field(exception.spec.network, "hostNetwork")
+              }
+
+              get_exception_allowed_hostnetwork(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                has_field(exception.spec.network, "hostNetwork")
+                not has_field(exception.spec.network.hostNetwork, "allowedValue")
+              }
+
+              build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_hostnetwork_message(pod_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("The hostNetwork or hostPort are not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+              }
+              allowed_by_any(obj) if {
+                allowed_by_securitypolicyexeption(obj)
+              }
+
+              # or
+              allowed_by_any(obj) if {
+                allowed_by_securitypolicy(obj)
+              }
+
+              allowed_by_securitypolicyexeption(obj) if {
+                label := obj.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := obj.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "network")
+                has_field(exception.spec.network, "hostNetwork")
+                has_field(exception.spec.network.hostNetwork, "allowedValue")
+                has_field(exception.spec.network, "hostPorts")
+
+                allowed_hostnetwork_by_exception(obj, exception)
+                allowed_hostports_by_exception(obj, exception)
+              }
+
+              allowed_hostnetwork_by_exception(obj, exception) if {
+                obj_hostNetwork := object.get(obj.spec, "hostNetwork", false)
+                exception.spec.network.hostNetwork.allowedValue == obj_hostNetwork
+              }
+
+              allowed_hostports_by_exception(obj, exception) if {
+                obj.spec.hostNetwork == true
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                object_container_ports := [{"port": entry.containerPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in array.concat(object_host_ports, object_container_ports) {
+                  port in allowed_ports
+                }
+              }
+
+              allowed_hostports_by_exception(obj, exception) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+                object_host_ports := [{"port": entry.hostPort, "protocol": entry.protocol} | entry := input_containers[_].ports[_]]
+                allowed_ports := [{"port": entry.port, "protocol": entry.protocol} | entry := exception.spec.network.hostPorts[_]]
+                every port in object_host_ports {
+                  port in allowed_ports
+                }
+              }
+
+              allowed_by_securitypolicy(obj) if {
+                allowed_hostnetwork_by_securitypolicy(obj)
+                allowed_hostports_by_securitypolicy(obj)
+              }
+
+              allowed_hostnetwork_by_securitypolicy(_) if {
+                input.parameters.allowHostNetwork == true
+              }
+
+              allowed_hostnetwork_by_securitypolicy(obj) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+              }
+ 
+
+              allowed_hostports_by_securitypolicy(obj) if {
+                object.get(obj.spec, "hostNetwork", false) == false
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                in_range(input.parameters.ranges, hostPorts)
+              }
+
+
+              allowed_hostports_by_securitypolicy(obj) if {
+                obj.spec.hostNetwork == true
+                hostPorts := [hp | hp := input_containers[_].ports[_].hostPort ]
+                containerPorts := [cp | cp := input_containers[_].ports[_].containerPort]
+                ports = array.concat(hostPorts, containerPorts)
+                in_range(input.parameters.ranges, ports)
+              }
+            
+              in_range(ranges, ports) if {
+                every port in ports{
+                  matching := {1 | port >= ranges[j].min; port <= ranges[j].max}
+                  count(matching) > 0
+                }
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              # or
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              # or
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
+              }

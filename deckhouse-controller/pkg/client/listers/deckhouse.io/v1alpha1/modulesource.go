@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ModuleSourceLister helps list ModuleSources.
@@ -27,39 +27,19 @@ import (
 type ModuleSourceLister interface {
 	// List lists all ModuleSources in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.ModuleSource, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.ModuleSource, err error)
 	// Get retrieves the ModuleSource from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ModuleSource, error)
+	Get(name string) (*deckhouseiov1alpha1.ModuleSource, error)
 	ModuleSourceListerExpansion
 }
 
 // moduleSourceLister implements the ModuleSourceLister interface.
 type moduleSourceLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha1.ModuleSource]
 }
 
 // NewModuleSourceLister returns a new ModuleSourceLister.
 func NewModuleSourceLister(indexer cache.Indexer) ModuleSourceLister {
-	return &moduleSourceLister{indexer: indexer}
-}
-
-// List lists all ModuleSources in the indexer.
-func (s *moduleSourceLister) List(selector labels.Selector) (ret []*v1alpha1.ModuleSource, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.ModuleSource))
-	})
-	return ret, err
-}
-
-// Get retrieves the ModuleSource from the index for a given name.
-func (s *moduleSourceLister) Get(name string) (*v1alpha1.ModuleSource, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("modulesource"), name)
-	}
-	return obj.(*v1alpha1.ModuleSource), nil
+	return &moduleSourceLister{listers.New[*deckhouseiov1alpha1.ModuleSource](indexer, deckhouseiov1alpha1.Resource("modulesource"))}
 }

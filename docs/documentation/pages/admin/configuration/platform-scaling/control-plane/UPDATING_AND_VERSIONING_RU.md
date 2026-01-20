@@ -18,7 +18,7 @@ lang: ru
 1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
 
    ```shell
-   d8 platform edit cluster-configuration
+   d8 system edit cluster-configuration
    ```
 
 1. Установите желаемую версию Kubernetes (`kubernetesVersion`):
@@ -39,3 +39,4 @@ lang: ru
    ```
 
 1. Сохраните изменения.
+1. Дождитесь окончания обновления. Отслеживать ход обновления можно с помощью команды `d8 k get no`. Обновление можно считать завершенным, когда в выводе команды у каждого узла кластера в колонке `VERSION` появится обновленная версия.

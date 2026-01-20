@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-hostnetwork-true
+  namespace: testns
+spec:
+  hostNetwork: true
+  containers:
+    - name: nginx
+      image: nginx
+      ports:
+        - containerPort: 80
+

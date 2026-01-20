@@ -290,4 +290,167 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(oauth2proxyArgTest4).Should(ContainElement("--cookie-refresh=2h20m4s"))
 		})
 	})
+
+	Context("With DexAuthenticator resources", func() {
+		BeforeEach(func() {
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorCRDs", `
+- name: test-with-resources
+  encodedName: testWithResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-with-resources.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "200m"
+        memory: "256Mi"
+- name: test-with-resources-both
+  encodedName: testWithResourcesBoth
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-with-resources-both.example.com
+      ingressClassName: test
+      ingressSecretName: test
+    resources:
+      requests:
+        cpu: "150m"
+        memory: "192Mi"
+      limits:
+        cpu: "300m"
+        memory: "384Mi"
+      redis:
+        requests:
+          cpu: "50m"
+          memory: "64Mi"
+        limits:
+          cpu: "100m"
+          memory: "128Mi"
+- name: test-without-resources
+  encodedName: testWithoutResources
+  namespace: d8-test
+  credentials:
+    appDexSecret: dexSecret
+    cookieSecret: cookieSecret
+  spec:
+    applications:
+    - domain: test-without-resources.example.com
+      ingressClassName: test
+      ingressSecretName: test
+`)
+			hec.ValuesSetFromYaml("userAuthn.internal.dexAuthenticatorNames", `
+"test-with-resources@d8-test":
+  name: "test-with-resources-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-with-resources"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-with-resources-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-with-resources-both@d8-test":
+  name: "test-with-resources-both-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-with-resources-both"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-with-resources-both-dex-authenticator"
+      truncated: false
+      hash: ""
+"test-without-resources@d8-test":
+  name: "test-without-resources-dex-authenticator"
+  truncated: false
+  hash: ""
+  secretName: "dex-authenticator-test-without-resources"
+  secretTruncated: false
+  secretHash: ""
+  ingressNames:
+    "0":
+      name: "test-without-resources-dex-authenticator"
+      truncated: false
+      hash: ""
+`)
+			hec.HelmRender()
+		})
+
+		It("Should disable VPA when resources specified", func() {
+			// VPA should NOT exist when resources are specified
+			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-with-resources-dex-authenticator").Exists()).To(BeFalse())
+			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-with-resources-both-dex-authenticator").Exists()).To(BeFalse())
+
+			// VPA should exist when resources are NOT specified
+			Expect(hec.KubernetesResource("VerticalPodAutoscaler", "d8-test", "test-without-resources-dex-authenticator").Exists()).To(BeTrue())
+		})
+
+		It("Should apply resources to dex-authenticator container", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// Check dex-authenticator container resources
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("100m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("128Mi"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.cpu").String()).To(Equal("200m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.memory").String()).To(Equal("256Mi"))
+		})
+
+		It("Should apply resources to redis container when specified", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-both-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// Check dex-authenticator container resources
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("150m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("192Mi"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.cpu").String()).To(Equal("300m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.limits.memory").String()).To(Equal("384Mi"))
+
+			// Check redis container resources
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("50m"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("64Mi"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.cpu").String()).To(Equal("100m"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.limits.memory").String()).To(Equal("128Mi"))
+		})
+
+		It("Should use default resources for redis when not specified", func() {
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-with-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// Check redis container resources (should not have CPU/Memory when VPA enabled)
+			// CPU/Memory should not be set when VPA is enabled and redis resources not specified
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").Exists()).To(BeFalse())
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").Exists()).To(BeFalse())
+		})
+
+		It("Should use default resources when VPA disabled and resources not specified", func() {
+			hec.ValuesSet("global.enabledModules", []string{"cert-manager"})
+			hec.HelmRender()
+
+			deployment := hec.KubernetesResource("Deployment", "d8-test", "test-without-resources-dex-authenticator")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// Check dex-authenticator container resources
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("25Mi"))
+
+			// Check redis container resources
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.cpu").String()).To(Equal("10m"))
+			Expect(deployment.Field("spec.template.spec.containers.1.resources.requests.memory").String()).To(Equal("25Mi"))
+		})
+	})
 })

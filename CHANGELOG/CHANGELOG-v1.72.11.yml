@@ -1,0 +1,21 @@
+cert-manager:
+  fixes:
+    - summary: Mark module as critical for cluster
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16078
+deckhouse-controller:
+  fixes:
+    - summary: fix deckhouse update accidentally minor skip
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16095
+istio:
+  fixes:
+    - summary: Erroneous option in 1.25 control-plane helm template fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16412
+registrypackages:
+  fixes:
+    - summary: Fixed permissions for directory with cni-plugins in PCI-DSS clusters
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16409
+tools:
+  fixes:
+    - summary: update dmt version to 0.1.53
+      pull_request: https://github.com/deckhouse/deckhouse/pull/16324
+

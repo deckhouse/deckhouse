@@ -302,7 +302,7 @@ func (k *KubeProxy) upTunnel(
 		}
 
 		log.DebugF("[%d] Try up tunnel on %v\n", startID, tunnelAddress)
-		tun = NewTunnel(k.sshClient.sshClient, tunnelAddress)
+		tun = NewTunnel(k.sshClient, tunnelAddress)
 		err := tun.Up()
 		if err != nil {
 			log.DebugF("[%d] Start tunnel was failed. Cleaning...\n", startID)

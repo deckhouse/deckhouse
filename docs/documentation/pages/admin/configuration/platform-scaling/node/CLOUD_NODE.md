@@ -95,7 +95,7 @@ The configuration of the cloud provider used in a cloud or hybrid cluster is sto
 Regardless of the cloud provider used, its settings can be modified using the following command:
 
 ```shell
-d8 platform edit provider-cluster-configuration
+d8 system edit provider-cluster-configuration
 ```
 
 ## NodeGroup autoscaling
@@ -668,7 +668,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    EOF
    ```
 
-1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
+1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1

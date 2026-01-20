@@ -5,4 +5,4 @@ metadata:
 spec:
   version: v1.0.0
   checksum: abc
-  path: /testmodule/v1.0.0
+  path: /modules/testmodule

@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-initContainer-unconfined
+  namespace: testns
+spec:
+  initContainers:
+    - name: init
+      image: busybox
+      securityContext:
+        appArmorProfile:
+          type: Unconfined
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        appArmorProfile:
+          type: RuntimeDefault
+

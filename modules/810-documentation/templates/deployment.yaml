@@ -5,6 +5,8 @@ apiVersion: apps/v1
 metadata:
   name: documentation
   namespace: d8-system
+  annotations:
+    "pod-reloader.deckhouse.io/auto": "true"
   {{- include "helm_lib_module_labels" (list . (dict "app" "documentation")) | nindent 2 }}
 spec:
   replicas: 1

@@ -54,8 +54,8 @@ type entry struct {
 }
 
 // NewManager creates a new cron Manager with the given context and logger.
-func NewManager(ctx context.Context, logger *log.Logger) *Manager {
-	ctx, cancel := context.WithCancel(ctx)
+func NewManager(logger *log.Logger) *Manager {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Manager{
 		ctx:        ctx,
 		cancel:     cancel,

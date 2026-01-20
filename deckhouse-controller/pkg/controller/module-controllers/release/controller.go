@@ -56,6 +56,7 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -178,7 +179,8 @@ type reconciler struct {
 type moduleManager interface {
 	DisableModuleHooks(moduleName string)
 	GetModule(moduleName string) *addonmodules.BasicModule
-	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
+	IsModuleEnabled(moduleName string) bool
+	PushRunModuleTask(moduleName string, doStartup bool) error
 	GetEnabledModuleNames() []string
 	AreModulesInited() bool
 }
@@ -272,6 +274,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	r.resetConfigurationErrorMetric(release)
+
 	// handle delete event
 	if !release.DeletionTimestamp.IsZero() {
 		return r.deleteRelease(ctx, release)
@@ -305,6 +309,16 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 
 	if !res.IsZero() {
 		return res, nil
+	}
+
+	// add finalizer for metrics reset on deletion (so the release resource will be deleted only after metrics are reset)
+	if !controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	switch release.GetPhase() {
@@ -393,6 +407,16 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// resetConfigurationErrorMetric resets the ModuleConfigurationError metric to 0 for the given release.
+// This should be called at the beginning of each reconcile to ensure the metric reflects
+// the current state (no errors) before validation checks are performed.
+func (r *reconciler) resetConfigurationErrorMetric(release *v1alpha1.ModuleRelease) {
+	r.metricStorage.Grouped().ExpireGroupMetricByName(
+		metrics.ModuleReleaseMetricsGroupName(release.GetModuleName(), release.GetVersion().String()),
+		metrics.ModuleConfigurationError,
+	)
 }
 
 // patchManualRelease modify deckhouse release with approved status
@@ -541,13 +565,13 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		r.log.Info("apply new registry settings to module", slog.String("module", release.GetModuleName()))
 		if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
 			module.InjectRegistryValue(utils.BuildRegistryValue(source))
-		}
 
-		modulePath := filepath.Join(r.downloadedModulesDir, release.GetModuleName(), fmt.Sprintf("v%s", release.GetVersion()))
-		if err = r.moduleManager.RunModuleWithNewOpenAPISchema(release.GetModuleName(), "", modulePath); err != nil {
-			r.log.Error("failed to run module with new openAPI schema", slog.String("module", release.GetModuleName()), log.Err(err))
-
-			return res, fmt.Errorf("run module with new open api schema: %w", err)
+			// run module with new registry value
+			if r.moduleManager.IsModuleEnabled(release.GetModuleName()) {
+				if err = r.moduleManager.PushRunModuleTask(release.GetModuleName(), false); err != nil {
+					return res, fmt.Errorf("push run module task: %w", err)
+				}
+			}
 		}
 
 		// delete annotation and requeue
@@ -601,7 +625,8 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 		return res, nil
 	}
 
-	modulePath := fmt.Sprintf("/%s/v%s", release.GetModuleName(), release.GetVersion().String())
+	// Use mount point path: /modules/<module> (modules are mounted at /deckhouse/downloaded/modules/<module>)
+	modulePath := fmt.Sprintf("/modules/%s", release.GetModuleName())
 	moduleVersion := "v" + release.GetVersion().String()
 
 	moduleChecksum := release.Labels[v1alpha1.ModuleReleaseLabelReleaseChecksum]
@@ -750,9 +775,10 @@ func (r *reconciler) handlePendingRelease(ctx context.Context, release *v1alpha1
 		err    error
 	)
 
-	// if release has associated update policy
+	// if the release has associated update policy and it's not empty - just get it
+	// otherwise, try to get it from the module
 	policyName, found := release.GetObjectMeta().GetLabels()[v1alpha1.ModuleReleaseLabelUpdatePolicy]
-	if found {
+	if found && policyName != "" {
 		policy, err = r.getUpdatePolicy(ctx, policyName)
 		if err != nil {
 			r.metricStorage.CounterAdd(metrics.ModuleUpdatePolicyNotFound, 1.0, map[string]string{
@@ -1006,7 +1032,7 @@ func (r *reconciler) getUpdatePolicy(ctx context.Context, name string) (*v1alpha
 }
 
 func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleRelease) (*v1alpha2.ModuleUpdatePolicy, *ctrl.Result, error) {
-	policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
+	policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get update policy", slog.String("release", release.GetName()), log.Err(err))
 
@@ -1313,26 +1339,45 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		Path:   modulePath,
 	}
 
-	var valuesByConfig bool
+	// get values from module config
+	logger.Debug("get module config")
+
+	config := new(v1alpha1.ModuleConfig)
 	values := make(addonutils.Values)
-	if module := r.moduleManager.GetModule(release.GetModuleName()); module != nil {
-		values = module.GetConfigValues(false)
-	} else {
-		config := new(v1alpha1.ModuleConfig)
-		if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
-			}
-		} else {
-			values = addonutils.Values(config.Spec.Settings)
-			valuesByConfig = true
+	var valuesVersion int
+	var isModuleConfigFound bool
+
+	err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, config)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get the '%s' module config: %w", release.GetModuleName(), err)
+	}
+	// if module config not found, try to get values from module manager
+	if err != nil {
+		logger.Debug("module config not found, try to get values from module manager")
+
+		module := r.moduleManager.GetModule(release.GetModuleName())
+		if module != nil {
+			values = module.GetConfigValues(false)
+		}
+	}
+	if err == nil {
+		isModuleConfigFound = true
+
+		values = addonutils.Values(config.Spec.Settings.GetMap())
+
+		// try to get the values version from status
+		valuesVersion, err = strconv.Atoi(config.Status.Version)
+		if err != nil {
+			logger.Warn("failed to parse values version from status", slog.String("version", config.Status.Version), log.Err(err))
 		}
 	}
 
-	configConfigurationErrorMetricsLabels := map[string]string{
-		"version": release.GetVersion().String(),
-		"module":  release.GetModuleName(),
-		"error":   "",
+	// if module config not found or default values (version is greater than 0), skip conversions
+	if isModuleConfigFound && valuesVersion > 0 {
+		values, err = r.handleConversions(ctx, def, values, valuesVersion, release)
+		if err != nil {
+			return fmt.Errorf("handle conversions: %w", err)
+		}
 	}
 
 	if err = def.Validate(values, logger); err != nil {
@@ -1341,11 +1386,20 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 			Message: "validation failed: " + err.Error(),
 		}
 
-		if valuesByConfig || strings.Contains(err.Error(), "is required") {
-			configConfigurationErrorMetricsLabels["error"] = err.Error()
-			r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
+		if strings.Contains(err.Error(), "is required") ||
+			strings.Contains(err.Error(), "is a forbidden property") {
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
 				1,
-				configConfigurationErrorMetricsLabels,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
 			)
 
 			status.Phase = v1alpha1.ModuleReleasePhasePending
@@ -1366,11 +1420,6 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
-	r.metricStorage.GaugeSet(metrics.ModuleConfigurationError,
-		0,
-		configConfigurationErrorMetricsLabels,
-	)
-
 	if err = r.installer.Install(ctx, moduleName, moduleVersion, modulePath); err != nil {
 		r.log.Error("failed to install module", slog.String("module", modulePath), log.Err(err))
 
@@ -1383,6 +1432,76 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 	}
 
 	return nil
+}
+
+func (r *reconciler) handleConversions(ctx context.Context, def *moduletypes.Definition, values addonutils.Values, valuesVersion int, release *v1alpha1.ModuleRelease) (addonutils.Values, error) { // check conversions
+	logger := r.log.With(slog.String("module", release.GetModuleName()), slog.String("release", release.GetName()))
+
+	conversionsDir := filepath.Join(def.Path, "openapi", "conversions")
+	_, err := os.Stat(conversionsDir)
+	if err != nil && !os.IsNotExist(err) {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+	// no conversions found
+	if err != nil {
+		return values, nil
+	}
+
+	logger.Debug("conversions for the module found")
+
+	newValues, err := r.applyValuesConversions(def, conversionsDir, valuesVersion, values)
+	if err != nil {
+		status := &v1alpha1.ModuleReleaseStatus{
+			Phase:   v1alpha1.ModuleReleasePhaseSuspended,
+			Message: "apply conversions failed: " + err.Error(),
+		}
+
+		if strings.Contains(err.Error(), "is required") || strings.Contains(err.Error(), "is a forbidden property") {
+			r.metricStorage.Grouped().GaugeSet(
+				metrics.ModuleReleaseMetricsGroupName(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+				),
+				metrics.ModuleConfigurationError,
+				1,
+				metrics.ModuleConfigurationErrorLabels(
+					release.GetModuleName(),
+					release.GetVersion().String(),
+					err.Error(),
+				),
+			)
+
+			status.Phase = v1alpha1.ModuleReleasePhasePending
+		}
+
+		if err = r.updateReleaseStatus(ctx, release, status); err != nil {
+			return nil, fmt.Errorf("update status: the '%s:v%s' module conversion: %w", release.GetModuleName(), release.GetVersion().String(), err)
+		}
+
+		logger.Debug("successfully updated module conditions")
+		return nil, fmt.Errorf("apply conversions: %w", err)
+	}
+
+	return newValues, nil
+}
+
+func (r *reconciler) applyValuesConversions(def *moduletypes.Definition, pathToConversions string, fromVersion int, values addonutils.Values) (addonutils.Values, error) {
+	// create a temporary store to avoid writing not valid conversions to the main store
+	tmpStore := conversion.NewConversionsStore()
+	err := tmpStore.Add(def.Name, pathToConversions)
+	if err != nil {
+		return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
+	}
+	// apply conversions to values
+	r.log.Debug("apply conversions to values",
+		slog.Int("from_version", fromVersion),
+		slog.Int("to_version", tmpStore.Get(def.Name).LatestVersion()),
+		slog.String("module", def.Name))
+	_, newValues, err := tmpStore.Get(def.Name).ConvertToLatest(fromVersion, values)
+	if err != nil {
+		return nil, fmt.Errorf("convert values to latest version: %w", err)
+	}
+	return newValues, nil
 }
 
 var ErrPreApplyCheckIsFailed = errors.New("pre apply check is failed")
@@ -1660,6 +1779,15 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 		}
 
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// The metric is already reset in the handleRelease function, so we can release the finalizer
+	if controllerutil.ContainsFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered) {
+		controllerutil.RemoveFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
+		if err := r.client.Update(ctx, release); err != nil {
+			r.log.Error("failed to remove metrics finalizer from module release", slog.String("release", release.GetName()), log.Err(err))
+			return ctrl.Result{}, err
+		}
 	}
 
 	if release.GetLabels()[v1alpha1.ModuleReleaseLabelStatus] == strings.ToLower(v1alpha1.ModuleReleasePhaseDeployed) {

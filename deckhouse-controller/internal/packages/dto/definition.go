@@ -16,6 +16,7 @@ package dto
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 
@@ -61,24 +62,34 @@ type DisableOptions struct {
 
 // ToApplication converts package definition to application definition
 func (d *Definition) ToApplication() (apps.Definition, error) {
-	kubernetesConstraint, err := semver.NewConstraint(d.Version)
-	if err != nil {
-		return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+	var err error
+
+	var kubernetesConstraint *semver.Constraints
+	if len(d.Requirements.Kubernetes) > 0 {
+		if kubernetesConstraint, err = semver.NewConstraint(d.Requirements.Kubernetes); err != nil {
+			return apps.Definition{}, fmt.Errorf("parse kubernetes requirement: %w", err)
+		}
 	}
 
-	deckhouseConstraint, err := semver.NewConstraint(d.Requirements.Deckhouse)
-	if err != nil {
-		return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+	var deckhouseConstraint *semver.Constraints
+	if len(d.Requirements.Deckhouse) > 0 {
+		if deckhouseConstraint, err = semver.NewConstraint(d.Requirements.Deckhouse); err != nil {
+			return apps.Definition{}, fmt.Errorf("parse deckhouse requirement: %w", err)
+		}
 	}
 
-	modules := make(map[string]*semver.Constraints)
-	for _, module := range d.Requirements.Modules {
-		constraint, err := semver.NewConstraint(module)
+	modules := make(map[string]apps.Dependency)
+	for module, rawConstraint := range d.Requirements.Modules {
+		raw, optional := strings.CutSuffix(rawConstraint, "!optional")
+		constraint, err := semver.NewConstraint(raw)
 		if err != nil {
 			return apps.Definition{}, fmt.Errorf("parse module requirement '%s': %w", module, err)
 		}
 
-		modules[module] = constraint
+		modules[module] = apps.Dependency{
+			Constraints: constraint,
+			Optional:    optional,
+		}
 	}
 
 	return apps.Definition{

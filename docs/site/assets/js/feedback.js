@@ -161,7 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
         setCookie(cookieName, cookieUserData, 365);
     }
 
-    async function sendFeedback(state, reasons = []) {
+    async function sendFeedback(state, reasons = [], comment = '') {
         const jsonReasons = JSON.stringify(reasons);
 
         try {
@@ -169,11 +169,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 feedback_url: currentUrl,
                 cookieUserId: cookieUserData.cookieUserId,
                 result: state,
-                reasons: jsonReasons
+                reasons: jsonReasons,
+                comment: comment
             };
 
             let url = '/wp-json/articles-feedback/v1/feedback';
-            url = url + '?user_ip=' + cookieUserData.cookieUserIp + '&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons;
+            url = url + '?user_ip=' + cookieUserData.cookieUserIp + '&uuid=' + feedbackData.cookieUserId + '&feedback_url=' + feedbackData.feedback_url + '&feedback_data=' + feedbackData.reasons + '&feedback_comment=' + feedbackData.comment;
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -216,7 +217,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     await sendFeedback(true, []);
                 }
             } else  {
-                await sendFeedback(true, []);
+                await sendFeedback(true, [], '');
             }
         })
     }
@@ -243,16 +244,19 @@ document.addEventListener('DOMContentLoaded', function () {
         moreDetailed.addEventListener('click', async function (e) {
             e.preventDefault();
             const reasons = [];
+            let comment = '';
+
             formModal.querySelectorAll('.checkbox:checked').forEach(checkbox => {
                 reasons.push(checkbox.value);
             })
             const detailedReason = detailedInput ? detailedInput.value.trim() : '';
+            comment = detailedReason;
+
             if (reasons.length === 0 && detailedReason === '') {
                 return;
             }
-
             hideFormModal();
-            await sendFeedback(false, reasons)
+            await sendFeedback(false, reasons, comment)
         })
     }
 

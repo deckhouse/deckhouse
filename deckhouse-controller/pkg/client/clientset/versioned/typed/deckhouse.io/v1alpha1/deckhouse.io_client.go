@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	"net/http"
+	http "net/http"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -28,9 +28,6 @@ type DeckhouseV1alpha1Interface interface {
 	ApplicationsGetter
 	ApplicationPackagesGetter
 	ApplicationPackageVersionsGetter
-	ClusterApplicationsGetter
-	ClusterApplicationPackagesGetter
-	ClusterApplicationPackageVersionsGetter
 	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
@@ -40,6 +37,7 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
+	ObjectKeepersGetter
 	PackageRepositoriesGetter
 	PackageRepositoryOperationsGetter
 }
@@ -59,18 +57,6 @@ func (c *DeckhouseV1alpha1Client) ApplicationPackages() ApplicationPackageInterf
 
 func (c *DeckhouseV1alpha1Client) ApplicationPackageVersions() ApplicationPackageVersionInterface {
 	return newApplicationPackageVersions(c)
-}
-
-func (c *DeckhouseV1alpha1Client) ClusterApplications() ClusterApplicationInterface {
-	return newClusterApplications(c)
-}
-
-func (c *DeckhouseV1alpha1Client) ClusterApplicationPackages() ClusterApplicationPackageInterface {
-	return newClusterApplicationPackages(c)
-}
-
-func (c *DeckhouseV1alpha1Client) ClusterApplicationPackageVersions() ClusterApplicationPackageVersionInterface {
-	return newClusterApplicationPackageVersions(c)
 }
 
 func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
@@ -107,6 +93,10 @@ func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 
 func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
 	return newModuleUpdatePolicies(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ObjectKeepers() ObjectKeeperInterface {
+	return newObjectKeepers(c)
 }
 
 func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {
@@ -162,10 +152,10 @@ func New(c rest.Interface) *DeckhouseV1alpha1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := deckhouseiov1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

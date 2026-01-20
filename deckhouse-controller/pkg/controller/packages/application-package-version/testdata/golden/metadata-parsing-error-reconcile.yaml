@@ -3,16 +3,18 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
+  finalizers:
+  - applicationpackageversion.deckhouse.io/used-by-application
   labels:
-    draft: "true"
-    package: test
-    repository: deckhouse
+    packages.deckhouse.io/draft: "true"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
-  resourceVersion: "2"
+  resourceVersion: "3"
 spec:
   packageName: test
-  repository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status:
   conditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
@@ -21,7 +23,7 @@ status:
       mapping values are not allowed in this context'
     reason: FetchingReleaseError
     status: "False"
-    type: IsEnriched
+    type: MetadataLoaded
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -4,28 +4,38 @@ metadata:
   name: test-app
   namespace: foobar
 spec:
-  applicationPackageName: test
-  repository: deckhouse
-  version: v1.0.0
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  labels:
+    heritage: deckhouse
+  name: test
+status:
+  availableRepositories:
+    - deckhouse
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  name: deckhouse-test-v1.0.0
+  name: deckhouse-test-v1.0.1
   labels:
-    package: test
-    repository: deckhouse
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
 spec:
   packageName: test
-  version: v1.0.0
-  repository: deckhouse
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
 status:
   conditions:
   - lastProbeTime: null
     lastTransitionTime: null
     status: "True"
     type: IsEnriched
-  metadata:
+  packageMetadata:
     category: Misc
     description:
       en: example — test
@@ -35,7 +45,8 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

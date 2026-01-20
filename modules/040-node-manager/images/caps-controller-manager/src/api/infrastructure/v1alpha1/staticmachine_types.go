@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/internal/providerid"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
+
+	"caps-controller-manager/internal/providerid"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

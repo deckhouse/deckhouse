@@ -16,114 +16,34 @@
 package fake
 
 import (
-	"context"
-
 	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
-	types "k8s.io/apimachinery/pkg/types"
-	watch "k8s.io/apimachinery/pkg/watch"
-	testing "k8s.io/client-go/testing"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/typed/deckhouse.io/v1alpha1"
+	gentype "k8s.io/client-go/gentype"
 )
 
-// FakeModulePullOverrides implements ModulePullOverrideInterface
-type FakeModulePullOverrides struct {
+// fakeModulePullOverrides implements ModulePullOverrideInterface
+type fakeModulePullOverrides struct {
+	*gentype.FakeClientWithList[*v1alpha1.ModulePullOverride, *v1alpha1.ModulePullOverrideList]
 	Fake *FakeDeckhouseV1alpha1
 }
 
-var modulepulloverridesResource = v1alpha1.SchemeGroupVersion.WithResource("modulepulloverrides")
-
-var modulepulloverridesKind = v1alpha1.SchemeGroupVersion.WithKind("ModulePullOverride")
-
-// Get takes name of the modulePullOverride, and returns the corresponding modulePullOverride object, and an error if there is any.
-func (c *FakeModulePullOverrides) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModulePullOverride, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(modulepulloverridesResource, name), &v1alpha1.ModulePullOverride{})
-	if obj == nil {
-		return nil, err
+func newFakeModulePullOverrides(fake *FakeDeckhouseV1alpha1) deckhouseiov1alpha1.ModulePullOverrideInterface {
+	return &fakeModulePullOverrides{
+		gentype.NewFakeClientWithList[*v1alpha1.ModulePullOverride, *v1alpha1.ModulePullOverrideList](
+			fake.Fake,
+			"",
+			v1alpha1.SchemeGroupVersion.WithResource("modulepulloverrides"),
+			v1alpha1.SchemeGroupVersion.WithKind("ModulePullOverride"),
+			func() *v1alpha1.ModulePullOverride { return &v1alpha1.ModulePullOverride{} },
+			func() *v1alpha1.ModulePullOverrideList { return &v1alpha1.ModulePullOverrideList{} },
+			func(dst, src *v1alpha1.ModulePullOverrideList) { dst.ListMeta = src.ListMeta },
+			func(list *v1alpha1.ModulePullOverrideList) []*v1alpha1.ModulePullOverride {
+				return gentype.ToPointerSlice(list.Items)
+			},
+			func(list *v1alpha1.ModulePullOverrideList, items []*v1alpha1.ModulePullOverride) {
+				list.Items = gentype.FromPointerSlice(items)
+			},
+		),
+		fake,
 	}
-	return obj.(*v1alpha1.ModulePullOverride), err
-}
-
-// List takes label and field selectors, and returns the list of ModulePullOverrides that match those selectors.
-func (c *FakeModulePullOverrides) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModulePullOverrideList, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(modulepulloverridesResource, modulepulloverridesKind, opts), &v1alpha1.ModulePullOverrideList{})
-	if obj == nil {
-		return nil, err
-	}
-
-	label, _, _ := testing.ExtractFromListOptions(opts)
-	if label == nil {
-		label = labels.Everything()
-	}
-	list := &v1alpha1.ModulePullOverrideList{ListMeta: obj.(*v1alpha1.ModulePullOverrideList).ListMeta}
-	for _, item := range obj.(*v1alpha1.ModulePullOverrideList).Items {
-		if label.Matches(labels.Set(item.Labels)) {
-			list.Items = append(list.Items, item)
-		}
-	}
-	return list, err
-}
-
-// Watch returns a watch.Interface that watches the requested modulePullOverrides.
-func (c *FakeModulePullOverrides) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(modulepulloverridesResource, opts))
-}
-
-// Create takes the representation of a modulePullOverride and creates it.  Returns the server's representation of the modulePullOverride, and an error, if there is any.
-func (c *FakeModulePullOverrides) Create(ctx context.Context, modulePullOverride *v1alpha1.ModulePullOverride, opts v1.CreateOptions) (result *v1alpha1.ModulePullOverride, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(modulepulloverridesResource, modulePullOverride), &v1alpha1.ModulePullOverride{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModulePullOverride), err
-}
-
-// Update takes the representation of a modulePullOverride and updates it. Returns the server's representation of the modulePullOverride, and an error, if there is any.
-func (c *FakeModulePullOverrides) Update(ctx context.Context, modulePullOverride *v1alpha1.ModulePullOverride, opts v1.UpdateOptions) (result *v1alpha1.ModulePullOverride, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(modulepulloverridesResource, modulePullOverride), &v1alpha1.ModulePullOverride{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModulePullOverride), err
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *FakeModulePullOverrides) UpdateStatus(ctx context.Context, modulePullOverride *v1alpha1.ModulePullOverride, opts v1.UpdateOptions) (*v1alpha1.ModulePullOverride, error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(modulepulloverridesResource, "status", modulePullOverride), &v1alpha1.ModulePullOverride{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModulePullOverride), err
-}
-
-// Delete takes name of the modulePullOverride and deletes it. Returns an error if one occurs.
-func (c *FakeModulePullOverrides) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteActionWithOptions(modulepulloverridesResource, name, opts), &v1alpha1.ModulePullOverride{})
-	return err
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *FakeModulePullOverrides) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(modulepulloverridesResource, listOpts)
-
-	_, err := c.Fake.Invokes(action, &v1alpha1.ModulePullOverrideList{})
-	return err
-}
-
-// Patch applies the patch and returns the patched modulePullOverride.
-func (c *FakeModulePullOverrides) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModulePullOverride, err error) {
-	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(modulepulloverridesResource, name, pt, data, subresources...), &v1alpha1.ModulePullOverride{})
-	if obj == nil {
-		return nil, err
-	}
-	return obj.(*v1alpha1.ModulePullOverride), err
 }

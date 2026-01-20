@@ -43,49 +43,154 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        # Block if forbidden
-        violation[{"msg": msg, "details": {}}] {
-            sysctl := input.review.object.spec.securityContext.sysctls[_].name
-            forbidden_sysctl(sysctl)
-            msg := sprintf("The sysctl %v is not allowed, pod: %v. Forbidden sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.forbiddenSysctls])
-        }
+              # Block if forbidden, unless allowed by exception
+              violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
+                  sysctl := input.review.object.spec.securityContext.sysctls[_].name
+                  not allowed_by_exception(sysctl)  
+                  forbidden_sysctl(sysctl)
+                  actual_value := sprintf("Actual sysctl: %v", [sysctl])
+                  allowed_by_policy := sprintf("Forbidden sysctls: %v", [input.parameters.forbiddenSysctls])
+                  exception_allowed := exception_allowed_sysctls_value
+                  msg := build_sysctl_message(input.review.object.metadata.name, actual_value, allowed_by_policy, exception_allowed)
+              }
 
-        # Block if not explicitly allowed
-        violation[{"msg": msg, "details": {}}] {
-            sysctl := input.review.object.spec.securityContext.sysctls[_].name
-            not allowed_sysctl(sysctl)
-            msg := sprintf("The sysctl %v is not explicitly allowed, pod: %v. Allowed sysctls: %v", [sysctl, input.review.object.metadata.name, input.parameters.allowedSysctls])
-        }
+              # Block if not explicitly allowed
+              violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
+                  sysctl := input.review.object.spec.securityContext.sysctls[_].name
+                  not allowed_by_any(sysctl)
+                  actual_value := sprintf("Actual sysctl: %v", [sysctl])
+                  allowed_by_policy := sprintf("Allowed sysctls: %v", [input.parameters.allowedSysctls])
+                  exception_allowed := exception_allowed_sysctls_value
+                  msg := build_sysctl_message(input.review.object.metadata.name, actual_value, allowed_by_policy, exception_allowed)
+              }
 
-        # * may be used to forbid all sysctls
-        forbidden_sysctl(sysctl) {
-            input.parameters.forbiddenSysctls[_] == "*"
-        }
+              exception_allowed_sysctls_value := out if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  has_field(exception.spec.securityContext.sysctls, "allowedValues")
+                  allowed_sysctls := exception.spec.securityContext.sysctls.allowedValues
+                  out := sprintf("SecurityPolicyException allowed sysctls: %v", [allowed_sysctls])
+              }
 
-        forbidden_sysctl(sysctl) {
-            input.parameters.forbiddenSysctls[_] == sysctl
-        }
+              exception_allowed_sysctls_value := "" if {
+                  not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
 
-        forbidden_sysctl(sysctl) {
-            forbidden := input.parameters.forbiddenSysctls[_]
-            endswith(forbidden, "*")
-            startswith(sysctl, trim_suffix(forbidden, "*"))
-        }
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
-        # * may be used to allow all sysctls
-        allowed_sysctl(sysctl) {
-            input.parameters.allowedSysctls[_] == "*"
-        }
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  not has_field(exception.spec, "securityContext")
+              }
 
-        allowed_sysctl(sysctl) {
-            input.parameters.allowedSysctls[_] == sysctl
-        }
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  not has_field(exception.spec.securityContext, "sysctls")
+              }
 
-        allowed_sysctl(sysctl) {
-            allowed := input.parameters.allowedSysctls[_]
-            endswith(allowed, "*")
-            startswith(sysctl, trim_suffix(allowed, "*"))
-        }
+              exception_allowed_sysctls_value := "" if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  not has_field(exception.spec.securityContext.sysctls, "allowedValues")
+              }
+
+              build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                  exception_allowed != ""
+                  msg := sprintf("The sysctl is not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                  exception_allowed == ""
+                  msg := sprintf("The sysctl is not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+              }
+
+              # Check whether sysctl is allowed through any policy
+              allowed_by_any(sysctl) if {
+                  allowed_by_securitypolicyexception(sysctl)
+              }
+
+              allowed_by_any(sysctl) if {
+                  allowed_by_securitypolicy(sysctl)
+              }
+
+              allowed_by_exception(sysctl) if {
+                  allowed_by_securitypolicyexception(sysctl)
+              }
+
+              allowed_by_securitypolicyexception(sysctl) if {
+                  label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                  namespace := input.review.object.metadata.namespace
+                  exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "securityContext")
+                  has_field(exception.spec.securityContext, "sysctls")
+                  has_field(exception.spec.securityContext.sysctls, "allowedValues")
+                  exception_params := exception.spec.securityContext.sysctls.allowedValues
+                  sysctl in exception_params
+              }
+
+              allowed_by_securitypolicy(sysctl) if {
+                  allowed_sysctl(sysctl)
+              }
+
+              # * may be used to forbid all sysctls
+              forbidden_sysctl(sysctl) if {
+                  input.parameters.forbiddenSysctls[_] == "*"
+              }
+
+              forbidden_sysctl(sysctl) if {
+                  input.parameters.forbiddenSysctls[_] == sysctl
+              }
+
+              forbidden_sysctl(sysctl) if {
+                  forbidden := input.parameters.forbiddenSysctls[_]
+                  endswith(forbidden, "*")
+                  startswith(sysctl, trim_suffix(forbidden, "*"))
+              }
+
+              # * may be used to allow all sysctls
+              allowed_sysctl(sysctl) if {
+                  input.parameters.allowedSysctls[_] == "*"
+              }
+
+              allowed_sysctl(sysctl) if {
+                  input.parameters.allowedSysctls[_] == sysctl
+              }
+
+              allowed_sysctl(sysctl) if {
+                  allowed := input.parameters.allowedSysctls[_]
+                  endswith(allowed, "*")
+                  startswith(sysctl, trim_suffix(allowed, "*"))
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
+              }

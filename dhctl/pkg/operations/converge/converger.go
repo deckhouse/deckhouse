@@ -142,7 +142,7 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(false)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, false)
 		if err != nil {
 			return err
 		}
@@ -460,7 +460,7 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}, nil
 }
 
-func (c *Converger) AutoConverge() error {
+func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Duration) error {
 	if err := c.applyParams(); err != nil {
 		return err
 	}
@@ -482,7 +482,7 @@ func (c *Converger) AutoConverge() error {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(false)
+		sshClient, err := sshclient.NewInitClientFromFlags(context.Background(), false)
 		if err != nil {
 			return err
 		}
@@ -542,7 +542,13 @@ func (c *Converger) AutoConverge() error {
 		WithExcludedNodes([]string{app.RunningNodeName}).
 		WithSkipPhases([]phases.OperationPhase{phases.AllNodesPhase, phases.DeckhouseConfigurationPhase})
 
-	converger := NewAutoConverger(r, app.AutoConvergeListenAddress, app.ApplyInterval)
+	converger := NewAutoConverger(r, AutoConvergerParams{
+		ListenAddress: listenAddress,
+		CheckInterval: checkInterval,
+		TmpDir:        c.TmpDir,
+		Logger:        c.Logger,
+	})
+
 	return converger.Start(convergeCtx)
 }
 

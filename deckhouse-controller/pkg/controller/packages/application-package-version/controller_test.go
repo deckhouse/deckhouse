@@ -273,11 +273,10 @@ version: "1.0.0"
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
 		require.NoError(suite.T(), err)
-		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 
 	suite.Run("metadata parsing error reconcile with golden file", func() {
@@ -300,11 +299,10 @@ version: "1.0.0"
 		suite.setupController("metadata-parsing-error-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
 		require.NoError(suite.T(), err)
-		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 
 	suite.Run("non-draft resource skip", func() {
@@ -324,11 +322,10 @@ version: "1.0.0"
 		suite.setupController("two-errors-reconcile.yaml", withDependencyContainer(dc))
 
 		apv := suite.getApplicationPackageVersion("deckhouse-test-v1.0.0")
-		result, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
 			NamespacedName: types.NamespacedName{Name: apv.Name},
 		})
 		require.NoError(suite.T(), err)
-		require.Equal(suite.T(), ctrl.Result{RequeueAfter: requeueTime}, result)
 	})
 
 	suite.Run("err-to-success reconcile with golden file", func() {

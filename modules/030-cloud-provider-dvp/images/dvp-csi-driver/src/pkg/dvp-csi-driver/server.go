@@ -21,12 +21,12 @@ import (
 	"encoding/json"
 	"sync"
 
-	"dvp-csi-driver/internal/endpoint"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"github.com/kubernetes-csi/csi-lib-utils/protosanitizer"
 	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
+
+	"dvp-csi-driver/internal/endpoint"
 )
 
 func NewNonBlockingGRPCServer() *nonBlockingGRPCServer {

@@ -3,16 +3,18 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
+  finalizers:
+  - applicationpackageversion.deckhouse.io/used-by-application
   labels:
-    draft: "false"
-    package: test
-    repository: deckhouse
+    packages.deckhouse.io/draft: "false"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test
-  repository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status: {}
 ---
 apiVersion: deckhouse.io/v1alpha1

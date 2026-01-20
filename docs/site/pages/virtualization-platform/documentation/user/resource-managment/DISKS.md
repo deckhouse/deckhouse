@@ -3,7 +3,7 @@ title: "Disks"
 permalink: en/virtualization-platform/documentation/user/resource-management/disks.html
 ---
 
-Disks in virtual machines are necessary for writing and storing data, ensuring that applications and operating systems can fully function. DVP provides the storage for these disks.
+Virtual machine disks are used to write and store data required for operating systems and applications to run. Various types of storage can be used for this purpose.
 
 Depending on the storage properties, the behavior of disks during creation of virtual machines during operation may differ:
 
@@ -20,7 +20,7 @@ The behavior of disks during their creation depends on the `VolumeBindingMode` p
 The `AccessMode` parameter determines how the virtual machine can access the disk — whether it is used exclusively by one VM or shared among several:
 
 - `ReadWriteMany (RWX)`: Multiple disk access. Live migration of virtual machines with such disks is possible.
-- `ReadWriteOnce (RWO)`: Only one instance of the virtual machine can access the disk. Live migration of virtual machines with such disks is supported only in DVP commercial editions. Live migration is only available if all disks are connected statically via (`.spec.blockDeviceRefs`). Disks connected dynamically via `VirtualMachineBlockDeviceAttachments` must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
+- `ReadWriteOnce (RWO)`: The disk can be accessed by only a single virtual machine instance. Live migration of virtual machines that use such disks is supported only in commercial editions. Live migration is available only if all disks are attached statically via `.spec.blockDeviceRefs`. Disks attached dynamically via VirtualMachineBlockDeviceAttachments must be reattached statically by specifying them in `.spec.blockDeviceRefs`.
 
 When creating a disk, the controller will independently determine the most optimal parameters supported by the storage.
 
@@ -78,15 +78,16 @@ After creation, the `VirtualDisk` resource can be in the following states (phase
 
 - `Pending`: Waiting for all dependent resources required for disk creation to be ready.
 - `Provisioning`: Disk creation process is in progress.
-- `Resizing`: The process of resizing the disk is in progress.
-- `WaitForFirstConsumer`: The disk is waiting for the virtual machine that will use it to be created.
-- `WaitForUserUpload`: The disk is waiting for the user to upload an image (type: Upload).
-- `Ready`: The disk has been created and is ready for use.
+- `Resizing`: Process of resizing the disk is in progress.
+- `WaitForFirstConsumer`: Disk is waiting for the virtual machine that will use it to be created.
+- `WaitForUserUpload`: Disk is waiting for the user to upload an image (type: Upload).
+- `Ready`: Disk has been created and is ready for use.
+- `Migrating`: Live migration of a disk.
 - `Failed`: An error occurred during the creation process.
 - `PVCLost`: System error, PVC with data has been lost.
-- `Terminating`: The disk is being deleted. The disk may "hang" in this state if it is still connected to the virtual machine.
+- `Terminating`: Disk is being deleted. The disk may "hang" in this state if it is still connected to the virtual machine.
 
-As long as the disk has not entered the `Ready` phase, the contents of the entire `.spec` block can be changed. If changes are made, the disk creation process will start over.
+As long as the disk has not reached the `Ready` phase, you can modify any fields in the `.spec` block. When changes are made, the disk creation process is restarted.
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in [module settings](/products/virtualization-platform/documentation/admin/platform-management/virtualization/virtual-machine-classes.html).
 
@@ -210,6 +211,58 @@ How to create a disk from an image in the web interface (this step can be skippe
 - Click the "Create" button.
 - The disk status is displayed at the top left, under the disk name.
 
+### Upload a disk from the command line
+
+To upload a disk from the command line, first create the VirtualDisk resource as shown in the following example:
+
+```yaml
+d8 k apply -f - <<EOF
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualDisk
+metadata:
+  name: uploaded-disk
+spec:
+  dataSource:
+    type: Upload
+EOF
+```
+
+Once created, the resource enters the `WaitForUserUpload` phase, which means it is ready to accept a disk upload.
+
+Two upload options are available: from a cluster node and from any node outside the cluster:
+
+```bash
+d8 k get vd uploaded-disk -o jsonpath="{.status.imageUploadURLs}"  | jq
+```
+
+Example output:
+
+```json
+{
+  "external": "https://virtualization.example.com/upload/<secret-url>",
+  "inCluster": "http://10.222.165.239/upload"
+}
+```
+
+Upload the disk using the following command:
+
+```bash
+curl https://virtualization.example.com/upload/<secret-url> --progress-bar -T <image.name> | cat
+```
+
+After the upload completes, the disk should be created and enter the `Ready` phase:
+
+```bash
+d8 k get vd uploaded-disk
+```
+
+Example output:
+
+```txt
+NAMESPACE   NAME                  PHASE   CAPACITY    AGE
+default     uploaded-disk         Ready   3Gi         7d23h
+```
+
 ## Change disk size
 
 You can increase the size of disks even if they are already attached to a running virtual machine. To do this, edit the `spec.persistentVolumeClaim.size` field:
@@ -231,6 +284,10 @@ Let's apply the changes:
 
 ```bash
 d8 k patch vd linux-vm-root --type merge -p '{"spec":{"persistentVolumeClaim":{"size":"11Gi"}}}'
+
+# Alternatively, apply the changes by editing the resource.
+
+d8 k edit vd linux-vm-root
 ```
 
 Let's check the size after the change:
@@ -266,31 +323,38 @@ Method #2:
 - Click on the "Save" button that appears.
 - The disk status is displayed at the top left, under its name.
 
-## Changing the disk StorageClass
+## Migrating disks to other storage
 
-In the DVP commercial editions, it is possible to change the StorageClass for existing disks. Currently, this is only supported for running VMs (`Phase` should be `Running`).
+In commercial editions, you can migrate (move) a virtual machine disk to another storage by changing its StorageClass.
 
 {% alert level="warning" %}
-Storage class migration is only available for disks connected statically via `.spec.blockDeviceRefs`.
+Limitations of disk migration between storage:
 
-To migrate the storage class of disks attached via `VirtualMachineBlockDeviceAttachments`, they must be reattached statically by specifying disks names in `.spec.blockDeviceRefs`.
+- Migration is only available for virtual machines in the `Running` state.
+- Migration is only supported between disks of the same type: `Block` ↔ `Block`, `FileSystem` ↔ `FileSystem`; conversion between different types is not possible.
+- Migration is only supported for disks attached statically via the `.spec.blockDeviceRefs` parameter in the virtual machine specification.
+- If a disk was attached via the VirtualMachineBlockDeviceAttachments resource, it must be temporarily reattached directly for migration by specifying the disk name in `.spec.blockDeviceRefs`.
 {% endalert %}
 
-Example:
+Example of migrating a disk to the `new-storage-class-name` StorageClass:
 
 ```bash
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+
+# Alternatively, apply the changes by editing the resource.
+
+d8 k edit vd disk
 ```
 
-After the disk configuration is updated, a live migration of the VM is triggered, during which the disk is migrated to the new storage.
+After the disk configuration is updated, a live migration of the VM is triggered, during which the VM disk is moved to the new storage.
 
-If a VM has multiple disks attached and you need to change the storage class for several of them, this operation must be performed sequentially:
+If a VM has multiple disks attached, and you need to change the storage class for several of them, this operation must be performed sequentially:
 
 ```bash
 d8 k patch vd disk1 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 d8 k patch vd disk2 --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
 ```
 
-If migration fails, repeated attempts are made with increasing delays (exponential backoff algorithm). The maximum delay is 300 seconds (5 minutes). Delays: 5 seconds (1st attempt), 10 seconds (2nd), then each delay doubles, reaching 300 seconds (7th and subsequent attempts). The first attempt is performed without delay.
+If migration fails, retry attempts are performed with increasing delays (exponential backoff algorithm). The maximum delay is 300 seconds (5 minutes). Delays are: 5 seconds (1st attempt), 10 seconds (2nd), then each delay doubles until it reaches 300 seconds (7th and subsequent attempts). The first attempt is performed without delay.
 
-To cancel migration, the user must return the storage class in the specification to the original one.
+To cancel migration, the StorageClass in the specification must be reverted to its original value.

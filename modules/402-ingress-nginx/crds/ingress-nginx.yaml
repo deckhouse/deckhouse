@@ -32,7 +32,7 @@ spec:
                 ingressClass:
                   type: string
                   description: |
-                    The name of the Ingress class to use with the NGINX Ingress controller.
+                    The name of the Ingress class to use with the Ingress NGINX Controller.
 
                     Using this option, you can create several controllers to use with a single ingress
 
@@ -67,7 +67,7 @@ spec:
                 controllerVersion:
                   type: string
                   description: |
-                    One of the supported NGINX Ingress controller versions.
+                    One of the supported Ingress NGINX Controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ["1.9", "1.10", "1.12"]
@@ -472,7 +472,7 @@ spec:
                   description: |
                     The section with parameters of custom HTTP errors.
 
-                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all NGINX Ingress controllers**.
+                    All parameters in this section are mandatory if it is defined. Changing any parameter **leads to the restart of all Ingress NGINX Controllers**.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
@@ -576,7 +576,7 @@ spec:
           type: string
         - jsonPath: .spec.controllerVersion
           name: Controller Version
-          description: 'Current NGINX Ingress Controller version.'
+          description: 'Current Ingress NGINX Controller version.'
           type: string
     - name: v1
       served: true
@@ -609,7 +609,7 @@ spec:
                 ingressClass:
                   type: string
                   description: |
-                    Name of the Ingress class to use with the NGINX Ingress Controller.
+                    Name of the Ingress class to use with the Ingress NGINX Controller.
 
                     Using this option, you can create several controllers to use with a single Ingress class.
 
@@ -626,6 +626,7 @@ spec:
 
                     * `LoadBalancer`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned.
                     * `LoadBalancerWithProxyProtocol`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
+                      > **Note.** HTTP/3 (`enableHTTP3`) cannot be enabled with this inlet because QUIC is incompatible with PROXY protocol.
                     * `LoadBalancerWithSSLPassthrough`: The Ingress controller is deployed, and a `LoadBalancer`-type service is provisioned. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
                       > The SSL Passthrough feature is implemented by intercepting all traffic on the configured HTTPS port (default: `443`) and routing it to a local TCP proxy. This implementation bypasses nginx completely and introduces a significant performance penalty.
@@ -642,6 +643,8 @@ spec:
                     * `HostPortWithProxyProtocol`: The Ingress controller is deployed and made available on node ports via `hostPort`. The Ingress controller uses the proxy-protocol to get a real IP address of the client.
 
                       > **Caution.** When using this inlet, ensure that requests to the Ingress come from trusted sources only. To enforce it, use the `acceptRequestsFrom` parameter.
+                      >
+                      > **Note.** HTTP/3 (`enableHTTP3`) cannot be enabled with this inlet because QUIC is incompatible with PROXY protocol.
 
                     * `HostPortWithSSLPassthrough`: The Ingress controller is deployed and made available on node ports via `hostPort`. This option enables the SSL Passthrough feature, allowing backends to be configured to accept SSL traffic directly without termination at the Ingress controller.
 
@@ -666,11 +669,13 @@ spec:
                       > To change the inlet, remove the iptables rules and restart the `kube-proxy` pods or reboot the nodes hosting Ingress controllers.
                       >
                       > This inlet cannot be used if the `enableIstioSidecar` parameter is enabled.
+                      >
+                      > **Note.** When HTTP/3 (`enableHTTP3`) is enabled, it is applied only to the primary controller; the failover controller always runs without HTTP/3.
                   enum: ["LoadBalancer","LoadBalancerWithSSLPassthrough","LoadBalancerWithProxyProtocol","HostPort","HostPortWithSSLPassthrough","HostPortWithProxyProtocol", "HostWithFailover"]
                 controllerVersion:
                   type: string
                   description: |
-                    NGINX Ingress Controller version.
+                    Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
                   enum: ["1.9", "1.10", "1.12"]
@@ -795,6 +800,16 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       x-doc-examples: ['CF-Connecting-IP']
                       default: 'X-Forwarded-For'
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 loadBalancerWithProxyProtocol:
                   type: object
                   x-doc-required: false
@@ -830,6 +845,16 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -908,6 +933,16 @@ spec:
                         > This option works only if `behindL7Proxy` is enabled.
                       default: 'X-Forwarded-For'
                       x-doc-examples: ['CF-Connecting-IP']
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 hostPortWithProxyProtocol:
                   type: object
                   description: |
@@ -937,6 +972,16 @@ spec:
                       x-kubernetes-validations:
                         - message: .spec.hostPortWithProxyProtocol.httpsPort can't be 6443, it's reserved for kube-apiserver
                           rule: 'self != 6443'
+                    acceptClientIPHeadersFrom:
+                      type: array
+                      description: |
+                        Defines a list of trusted CIDR ranges that are known to send correct `X-Forwarded-*`/`ProxyProtocol` headers.
+                      x-doc-examples: [["192.168.0.0/24"]]
+                      default:
+                        - "0.0.0.0/0"
+                      items:
+                        type: string
+                        pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
                 hostPortWithSSLPassthrough:
                   type: object
                   description: |
@@ -1009,6 +1054,41 @@ spec:
                   type: object
                   description: GeoIP2 activation options.
                   properties:
+                    maxmindMirror:
+                      type: object
+                      description: |
+                        Mirror configuration for downloading GeoIP databases.
+                        If no parameter is specified or the parameter has an empty value, the default value will be used, which is `https://download.maxmind.com`.
+
+                        If this mirror is used to host preloaded archives, the `licenseKey` parameter may be omitted.
+                      properties:
+                        url:
+                          type: string
+                          description: The URL for downloading GeoIP databases.
+                          x-doc-examples: ["https://mirror.local", "absolute path https://mirror.local/GeoLite2-City.tar.gz"]
+                          pattern: '^https?://.+$'
+                        ca:
+                          type: string
+                          description: |
+                            Custom CA certificate in PEM format for verifying TLS connections to the mirror.
+                          x-doc-examples:
+                          - |
+                            -----BEGIN CERTIFICATE-----
+                            ...
+                            -----END CERTIFICATE-----
+                        insecureSkipVerify:
+                          type: boolean
+                          description: |
+                            Skip TLS certificate verification for the mirror, for example when using self-signed certificates.
+                      required: ['url']
+                    maxmindAccountID:
+                      type: integer
+                      minimum: 1
+                      description: |
+                        MaxMind Account ID used to authenticate GeoIP2 database downloads.
+
+                        Required when `licenseKey` is set. If `accountID` parameter is provided, downloads are performed using the official library `geoipupdate`, which allows you to skip unchanged updates and save the license limit.
+                        [https://github.com/maxmind/geoipupdate]
                     maxmindLicenseKey:
                       type: string
                       description: |
@@ -1055,7 +1135,11 @@ spec:
                   description: |
                     Enables HTTP/3 support.
 
-                    > HTTP3 is only available in Ingress controller version 1.10.
+                    > HTTP3 is only available in Ingress controller version 1.10 and 1.12
+                    >
+                    > HTTP/3 cannot be enabled when the inlet is set to `HostPortWithProxyProtocol` or `LoadBalancerWithProxyProtocol`.
+                    >
+                    > For the `HostWithFailover` inlet, HTTP/3 is applied only to the primary controller; the failover controller always runs without HTTP/3.
                   default: false
                 config:
                   type: object
@@ -1155,7 +1239,7 @@ spec:
 
                     > If this section is defined in the configuration, all its parameters are required.
                     >
-                    > Changing any parameter causes the restart of all NGINX Ingress Controllers.
+                    > Changing any parameter causes the restart of all Ingress NGINX Controllers.
                   required: ['namespace', 'serviceName', 'codes']
                   properties:
                     serviceName:
@@ -1308,6 +1392,8 @@ spec:
               x-kubernetes-validations:
                 - message: .spec.controllerVersion should be explicitly set to 1.10 or 1.12 for .spec.enableHTTP3 to make effect
                   rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
+                - message: .spec.enableHTTP3 cannot be enabled when inlet is HostPortWithProxyProtocol or LoadBalancerWithProxyProtocol
+                  rule: "!((has(self.enableHTTP3) && self.enableHTTP3 == true) && self.inlet in ['HostPortWithProxyProtocol', 'LoadBalancerWithProxyProtocol'])"
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
                 - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
@@ -1323,13 +1409,13 @@ spec:
           type: string
         - jsonPath: .spec.controllerVersion
           name: Controller Version
-          description: 'Current NGINX Ingress Controller version.'
+          description: 'Current Ingress NGINX Controller version.'
           type: string
         - jsonPath: .status.loadBalancer.ip
           name: IP
-          description: 'Current NGINX Ingress Controller LoadBalancer IP'
+          description: 'Current Ingress NGINX Controller LoadBalancer IP'
           type: string
         - jsonPath: .status.loadBalancer.hostname
           name: Hostname
-          description: 'Current NGINX Ingress Controller LoadBalancer hostname'
+          description: 'Current Ingress NGINX Controller LoadBalancer hostname'
           type: string

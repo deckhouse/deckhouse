@@ -184,7 +184,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 	app.UseTfCache = app.UseStateCacheYes
 	app.ResourcesTimeout = p.request.Options.ResourcesTimeout.AsDuration()
 	app.DeckhouseTimeout = p.request.Options.DeckhouseTimeout.AsDuration()
-	app.CacheDir = s.params.CacheDir
+	app.SetCacheDir(s.params.CacheDir)
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
 	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
@@ -247,7 +247,7 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 		}
 
 		var cleanup func() error
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)
@@ -278,9 +278,9 @@ func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResul
 			[]byte(p.request.ClusterConfig),
 			[]byte(p.request.ProviderSpecificClusterConfig),
 		),
-		TmpDir:  s.params.TmpDir,
-		Logger:  loggerFor,
-		IsDebug: s.params.IsDebug,
+		TmpDir:         s.params.TmpDir,
+		LoggerProvider: log.SimpleLoggerProvider(loggerFor),
+		IsDebug:        s.params.IsDebug,
 	})
 	if err != nil {
 		return &pb.DestroyResult{Err: fmt.Errorf("unable to initialize cluster destroyer: %w", err).Error()}

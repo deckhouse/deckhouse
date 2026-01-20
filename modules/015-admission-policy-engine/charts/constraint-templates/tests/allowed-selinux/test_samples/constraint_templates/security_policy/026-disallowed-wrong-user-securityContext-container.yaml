@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-wrong-user-securityContext-container
+  namespace: testns
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+      securityContext:
+        seLinuxOptions:
+          type: sometype
+          level: somelevel
+          role: somerole
+          user: wronguser
+

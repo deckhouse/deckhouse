@@ -13,7 +13,7 @@ lang: ru
 Включите модуль [`chrony`](/modules/chrony/), чтобы включить синхронизацию времени:
 
 ```shell  
-d8 platform module enable chrony
+d8 system module enable chrony
 ```
 
 По умолчанию в качестве источника времени используется сервер `pool.ntp.org`. Указать список NTP-серверов можно с помощью параметра [`ntpServers`](/modules/chrony/configuration.html#parameters-ntpservers) конфигурации модуля `chrony`.
@@ -41,7 +41,7 @@ spec:
 1. Отключите модуль [`chrony`](/modules/chrony/):
 
    ```shell
-   d8 platform module disable chrony
+   d8 system module disable chrony
    ```
 
    При успешном выполнении команды будет выведено сообщение о том, что модуль был отключён:

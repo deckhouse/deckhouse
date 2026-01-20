@@ -73,6 +73,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость не применима к компонентам, которые не выполняют запуск контейнеров и не используют runc в качестве исполняемого инструмента или библиотеки контейнерного рантайма; таким образом, она не эксплуатируема в данном контексте.",
       "timestamp": "2025-11-07T13:55:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2023-47108"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Уязвимость невозможно эксплуатировать в рамках Deckhouse, так как для включения openTelemetry в компонентах control-plane необходимо добавить специальный ресурс TracingConfiguration (https://opentelemetry.io/blog/2023/k8s-runtime-observability/). Поскольку у пользователя нет возможности применять свою конфигурацию для control-plane компонентов, возможности включить openTelemetry нет.",
+      "timestamp": "2025-11-26T08:49:10.258937Z"
     }
   ],
   "timestamp": "2025-11-07T13:55:00Z"

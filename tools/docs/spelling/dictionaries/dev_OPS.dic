@@ -1,4 +1,4 @@
-2524
+2539
 1GB
 2GB
 5XX
@@ -24,6 +24,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -747,10 +748,12 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+Kerberos
 KESL
 Keycloak
 keyField
 KeypairFullAccess
+keytab
 KeyValue
 Kiali
 KiB
@@ -1006,6 +1009,7 @@ oauth
 OAuth
 objectmeta
 OCI
+offline
 OFFLINE
 offtopic
 OICD
@@ -1073,6 +1077,7 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordless
 pathPrefix
 PCI
 pcs
@@ -1130,6 +1135,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
@@ -1320,6 +1326,7 @@ spellchecker
 Spellchecking
 SPIFFE
 Splunk
+SPNEGO
 SQL
 SQLite
 sqs
@@ -1730,6 +1737,7 @@ ZvirtInstanceClass
 валидация
 валидирования
 валидировать
+валидирует
 валидируется
 валидируются
 вебхук
@@ -2046,6 +2054,9 @@ ZvirtInstanceClass
 незашифрованном
 неизменяем
 неинтерактивном
+неймспейс
+неймспейсах
+неймспейсе
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2097,6 +2108,7 @@ ZvirtInstanceClass
 отмасштабирует
 отмонтировать
 отрисовки
+офлайн
 п
 пайплайна
 пайплайнами
@@ -2465,6 +2477,9 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
+хешированные
+хешированный
+хешированных
 хост
 хоста
 хостам

@@ -10700,6 +10700,180 @@
       },
       "id": 79,
       "panels": [
+	{
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "fieldConfig": {
+            "defaults": {
+              "color": {
+                "fixedColor": "#00000000",
+                "mode": "thresholds"
+              },
+              "custom": {
+                "align": "left",
+                "cellOptions": {
+                  "mode": "gradient",
+                  "type": "color-background"
+                },
+                "filterable": false,
+                "inspect": false
+              },
+              "links": [],
+              "mappings": [
+                {
+                  "options": {
+                    "0": {
+                      "index": 0,
+                      "text": "GeoIP DB not ready"
+                    },
+                    "1": {
+                      "index": 1,
+                      "text": "GeoIP DB ready (stale)"
+                    },
+                    "2": {
+                      "index": 2,
+                      "text": "GeoIP DB ready"
+                    }
+                  },
+                  "type": "value"
+                }
+              ],
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "#dfdfdf",
+                    "value": null
+                  },
+                  {
+                    "color": "red",
+                    "value": 0
+                  },
+                  {
+                    "color": "yellow",
+                    "value": 1
+                  },
+                  {
+                    "color": "green",
+                    "value": 2
+                  }
+                ]
+              }
+            },
+            "overrides": [
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Docs"
+                },
+                "properties": [
+                  {
+                    "id": "mappings",
+                    "value": [
+                      {
+                        "options": {
+                          "2": {
+                            "index": 1,
+                            "text": "-"
+                          }
+                        },
+                        "type": "value"
+                      },
+                      {
+                        "options": {
+                          "from": 0,
+                          "result": {
+                            "index": 0,
+                            "text": "https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2"
+                          },
+                          "to": 1
+                        },
+                        "type": "range"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "gridPos": {
+            "h": 6,
+            "w": 24,
+            "x": 0,
+            "y": 86
+          },
+          "id": 245,
+          "options": {
+            "cellHeight": "sm",
+            "footer": {
+              "countRows": false,
+              "enablePagination": false,
+              "fields": [],
+              "reducer": [
+                "sum"
+              ],
+              "show": false
+            },
+            "showHeader": true
+          },
+          "pluginVersion": "10.4.19",
+          "targets": [
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "$ds_prometheus"
+              },
+              "editorMode": "code",
+              "exemplar": false,
+              "expr": "min by(controller) (geoip_version{controller=~\"$controller\"})",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "__auto",
+              "range": false,
+              "refId": "A"
+            }
+          ],
+          "title": "GeoIP DB status per controller",
+          "transformations": [
+            {
+              "id": "organize",
+              "options": {
+                "excludeByName": {
+                  "Time": true,
+                  "Value": false,
+                  "__name__": false,
+                  "app": true,
+                  "controller": false
+                },
+                "includeByName": {},
+                "indexByName": {},
+                "renameByName": {
+                  "Value": "GeoIP DB Status",
+                  "controller": "Controller Name"
+                }
+              }
+            },
+            {
+              "id": "calculateField",
+              "options": {
+                "alias": "Docs",
+                "mode": "unary",
+                "reduce": {
+                  "reducer": "sum"
+                },
+                "unary": {
+                  "fieldName": "GeoIP DB Status",
+                  "operator": "abs"
+                }
+              }
+            }
+          ],
+          "transparent": true,
+          "type": "table"
+        },
         {
           "circleMaxSize": "10",
           "circleMinSize": 2,
@@ -10718,7 +10892,7 @@
             "h": 18,
             "w": 24,
             "x": 0,
-            "y": 11
+            "y": 94
           },
           "hideEmpty": false,
           "hideZero": false,

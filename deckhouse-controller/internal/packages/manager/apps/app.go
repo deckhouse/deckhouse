@@ -19,10 +19,12 @@ package apps
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -31,8 +33,12 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
 // DependencyContainer provides access to shared services needed by applications.
@@ -46,15 +52,18 @@ type DependencyContainer interface {
 // Thread Safety: The Application itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
 type Application struct {
-	name      string // Application instance name
-	namespace string // Kubernetes namespace where app is deployed
+	name      string // Package name(namespace.name)
+	instance  string // Application instance name
+	namespace string // Application instance namespace
+	path      string // path to the package dir on fs
 
-	path string // path to the package dir on fs
+	definition Definition        // Application definition
+	digests    map[string]string // Package digests
+	registry   registry.Registry // Application registry
 
-	definition Definition // Application definition
-
-	hooks  *hooks.Storage  // Hook storage with indices
-	values *values.Storage // Values storage with layering
+	hooks         *hooks.Storage      // Hook storage with indices
+	values        *values.Storage     // Values storage with layering
+	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.
@@ -63,21 +72,39 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
+	Digests  map[string]string // Package images digests
+	Registry registry.Registry
+
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
 	Hooks []*addonhooks.ModuleHook // Discovered hooks
+
+	SettingsCheck *kind.SettingsCheck
 }
 
 // NewApplication creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
+func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
 	a := new(Application)
 
+	splits := strings.Split(name, ".")
+	if len(splits) != 2 {
+		return nil, fmt.Errorf("invalid application name: %s", name)
+	}
+
+	a.namespace = splits[0]
+	a.instance = splits[1]
+
 	a.name = name
+	a.path = path
+
 	a.definition = cfg.Definition
+	a.digests = cfg.Digests
+	a.registry = cfg.Registry
+	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -85,7 +112,7 @@ func NewApplication(name string, cfg ApplicationConfig) (*Application, error) {
 	}
 
 	var err error
-	a.values, err = values.NewStorage(name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
+	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
 	}
@@ -120,14 +147,49 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetName returns the full application identifier in format "namespace:name".
-func (a *Application) GetName() string {
-	return BuildName(a.namespace, a.name)
+// RuntimeValues holds runtime values that are not part of schema.
+// These values are passed to helm templates under .Runtime prefix.
+type RuntimeValues struct {
+	Instance addonutils.Values
+	Package  addonutils.Values
 }
 
-// BuildName returns the full application identifier in format "namespace:name".
+// GetRuntimeValues returns values that are not part of schema.
+// Instance contains name and namespace of the running instance.
+// Package contains package metadata (name, version, digests, registry).
+func (a *Application) GetRuntimeValues() RuntimeValues {
+	return RuntimeValues{
+		Instance: addonutils.Values{
+			"Name":      a.instance,
+			"Namespace": a.namespace,
+		},
+		Package: addonutils.Values{
+			"Name":     a.definition.Name,
+			"Digests":  a.digests,
+			"Registry": a.registry,
+			"Version":  a.definition.Version,
+		},
+	}
+}
+
+// GetName returns the full application identifier in format "namespace.name".
+func (a *Application) GetName() string {
+	return a.name
+}
+
+// BuildName returns the full application identifier in format "namespace.name".
 func BuildName(namespace, name string) string {
-	return fmt.Sprintf("%s:%s", namespace, name)
+	return fmt.Sprintf("%s.%s", namespace, name)
+}
+
+// GetNamespace returns the application namespace.
+func (a *Application) GetNamespace() string {
+	return a.namespace
+}
+
+// GetVersion return the package version
+func (a *Application) GetVersion() string {
+	return a.definition.Version
 }
 
 // GetPath returns path to the package dir
@@ -141,6 +203,32 @@ func (a *Application) GetValuesChecksum() string {
 	return a.values.GetValuesChecksum()
 }
 
+// GetSettingsChecksum returns a checksum of the current config values.
+// Used to detect if settings changed.
+func (a *Application) GetSettingsChecksum() string {
+	return a.values.GetConfigChecksum()
+}
+
+// ValidateSettings validates settings against openAPI and call setting check if exists
+func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+	if err := a.values.ValidateConfigValues(settings); err != nil {
+		return settingscheck.Result{}, err
+	}
+
+	// no need to call the settings check if nothing changed
+	if a.values.GetConfigChecksum() == settings.Checksum() {
+		return settingscheck.Result{Valid: true}, nil
+	}
+
+	if a.settingsCheck != nil {
+		return a.settingsCheck.Check(ctx, settings)
+	}
+
+	return settingscheck.Result{
+		Valid: true,
+	}, nil
+}
+
 // GetValues returns values for rendering
 func (a *Application) GetValues() addonutils.Values {
 	return a.values.GetValues()
@@ -149,6 +237,11 @@ func (a *Application) GetValues() addonutils.Values {
 // ApplySettings apply setting values to application
 func (a *Application) ApplySettings(settings addonutils.Values) error {
 	return a.values.ApplyConfigValues(settings)
+}
+
+// GetChecks return scheduler checks, their determine if an app should be enabled/disabled
+func (a *Application) GetChecks() schedule.Checks {
+	return a.definition.Requirements.Checks()
 }
 
 // GetHooks returns all hooks for this application in arbitrary order.
@@ -231,6 +324,12 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //
 // Returns error if hook execution or patch application fails.
 func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
+	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("hook", h.GetName()))
+	span.SetAttributes(attribute.String("name", a.GetName()))
+
 	hookConfigValues := a.values.GetConfigValues()
 	hookValues := a.values.GetValues()
 	hookVersion := h.GetConfigVersion()

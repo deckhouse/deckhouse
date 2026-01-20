@@ -1,12 +1,12 @@
 diff --git a/speaker/main.go b/speaker/main.go
-index ea8c1cf8..831ab70b 100644
+index 68b8b66e..66c7ca63 100644
 --- a/speaker/main.go
 +++ b/speaker/main.go
-@@ -167,6 +167,7 @@ func main() {
- 		SList:                  sList,
- 		bgpType:                bgpImplementation(bgpType),
- 		InterfaceExcludeRegexp: interfacesToExclude,
-+		DisableLayer2:          true,
- 		IgnoreExcludeLB:        *ignoreLBExclude,
- 		Layer2StatusChange: func(namespacedName types.NamespacedName) {
- 			statusNotifyChan <- controllers.NewL2StatusEvent(namespacedName.Namespace, namespacedName.Name)
+@@ -310,6 +310,7 @@ func newController(cfg controllerConfig) (*controller, error) {
+ 	protocols := []config.Proto{config.BGP}
+ 
+ 	layer2StatusFetcher := func(types.NamespacedName) []layer2.IPAdvertisement { return nil }
++	cfg.DisableLayer2 = true
+ 	if !cfg.DisableLayer2 {
+ 		a, err := layer2.New(cfg.Logger, cfg.InterfaceExcludeRegexp)
+ 		layer2StatusFetcher = a.GetStatus

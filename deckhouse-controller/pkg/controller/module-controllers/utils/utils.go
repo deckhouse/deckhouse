@@ -199,8 +199,8 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 	return nil
 }
 
-// UpdatePolicy returns policy for the module, if no policy, embeddedPolicy is returned
-func UpdatePolicy(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
+// GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
+func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
 	module := new(v1alpha1.Module)
 	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -296,7 +296,11 @@ func EnsureModuleDocumentation(
 		}
 	}
 
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+	// Check if path needs to be migrated from old format (e.g., "/module/v1.0.0" or "/module/dev")
+	// to new format ("/modules/module")
+	needsPathUpdate := !strings.HasPrefix(md.Spec.Path, "/modules/")
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum || needsPathUpdate {
 		// update module documentation
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion

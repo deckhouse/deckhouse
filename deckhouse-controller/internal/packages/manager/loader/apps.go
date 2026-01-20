@@ -16,6 +16,7 @@ package loader
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -30,11 +31,14 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	appLoaderTracer = "application-loader"
+
+	digestsFile = "images_digests.json"
 )
 
 var (
@@ -79,7 +83,7 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
 // Returns ErrVersionNotFound if version directory doesn't exist.
-func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Application, error) {
+func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, name string) (*apps.Application, error) {
 	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
 
@@ -126,18 +130,29 @@ func (l *ApplicationLoader) Load(ctx context.Context, name string) (*apps.Applic
 		return nil, fmt.Errorf("convert app definition: %w", err)
 	}
 
+	digests, err := loadDigests(path)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
 	// Build application configuration
 	conf := apps.ApplicationConfig{
 		Definition: appDef,
+
+		Digests:  digests,
+		Registry: reg,
 
 		StaticValues: static,
 		ConfigSchema: config,
 		ValuesSchema: values,
 
 		Hooks: hooks,
+
+		SettingsCheck: hooksLoader.settingsCheck,
 	}
 
-	app, err := apps.NewApplication(name, conf)
+	app, err := apps.NewApplication(name, path, conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("create new application: %w", err)
@@ -164,4 +179,26 @@ func loadDefinition(packageDir string) (*dto.Definition, error) {
 	}
 
 	return def, nil
+}
+
+// loadDigests reads and parses the images_digests.json file from package directory.
+// The file contains package images hashes
+func loadDigests(packageDir string) (map[string]string, error) {
+	path := filepath.Join(packageDir, digestsFile)
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("read file '%s': %w", path, err)
+	}
+
+	digests := make(map[string]string)
+	if err = json.Unmarshal(content, &digests); err != nil {
+		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+	}
+
+	return digests, nil
 }

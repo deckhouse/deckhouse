@@ -105,7 +105,7 @@ data:
 		marshaled, _ := yaml.Marshal(s)
 		return string(marshaled)
 	}
-	cniMCYAML := func(cniName string, enabled *bool, settings v1alpha1.SettingsValues, creationTime *time.Time) string {
+	cniMCYAML := func(cniName string, enabled *bool, settings map[string]any, creationTime *time.Time) string {
 		mc := &v1alpha1.ModuleConfig{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "deckhouse.io/v1alpha1",
@@ -118,7 +118,7 @@ data:
 
 			Spec: v1alpha1.ModuleConfigSpec{
 				Version:  1,
-				Settings: settings,
+				Settings: v1alpha1.MakeMappedFields(settings),
 				Enabled:  enabled,
 			},
 		}
@@ -234,7 +234,7 @@ data:
 			f.ValuesSet("global.clusterIsBootstrapped", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(false), v1alpha1.SettingsValues{}, nil),
+				cniMCYAML(cniName, ptr.To(false), map[string]any{}, nil),
 			}
 			f.KubeStateSet(strings.Join(resources, "\n---\n"))
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
@@ -261,7 +261,7 @@ data:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -292,7 +292,7 @@ data:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, ``, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -323,7 +323,7 @@ data:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, `{}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -356,7 +356,7 @@ data:
 			f.ConfigValuesSet("cniCilium.debugLogging", true)
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes", "masqueradeMode": "Netfilter"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":   "VXLAN",
 					"bpfLBMode":    "SNAT",
 					"debugLogging": true,
@@ -408,7 +408,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}, nil),
@@ -459,7 +459,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "DirectWithNodeRoutes"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}, nil),
@@ -510,7 +510,7 @@ status:
 			f.ConfigValuesSet("cniCilium.bpfLBMode", "SNAT")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "UnknownMode", "masqueradeMode": "UnknownMasqueradeMode"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode": "VXLAN",
 					"bpfLBMode":  "SNAT",
 				}, nil),
@@ -543,7 +543,7 @@ status:
 			f.ConfigValuesSet("cniCilium.masqueradeMode", "BPF")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "VXLAN", "masqueradeMode": "BPF"}`, nil, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, nil),
@@ -601,7 +601,7 @@ status:
 			f.ConfigValuesSet("cniCilium.tunnelMode", "VXLAN")
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "BPF"}`, nil, nil),
-				cniMCYAML(cniName, nil, v1alpha1.SettingsValues{
+				cniMCYAML(cniName, nil, map[string]any{
 					"tunnelMode": "VXLAN",
 				}, nil),
 			}
@@ -635,7 +635,7 @@ status:
 
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, &mcTime),
@@ -671,7 +671,7 @@ status:
 
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, &mcTime),
@@ -706,7 +706,7 @@ status:
 
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, &mcTime),
@@ -741,7 +741,7 @@ status:
 
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, &mcTime),
@@ -777,7 +777,7 @@ status:
 
 			resources := []string{
 				cniSecretYAML(cni, `{"mode": "Direct", "masqueradeMode": "Netfilter"}`, &secretTime, nil),
-				cniMCYAML(cniName, ptr.To(true), v1alpha1.SettingsValues{
+				cniMCYAML(cniName, ptr.To(true), map[string]any{
 					"tunnelMode":     "VXLAN",
 					"masqueradeMode": "BPF",
 				}, &mcTime),

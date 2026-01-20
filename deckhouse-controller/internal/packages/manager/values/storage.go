@@ -86,13 +86,18 @@ func (s *Storage) GetValuesChecksum() string {
 	return s.resultValues.Checksum()
 }
 
+func (s *Storage) GetConfigChecksum() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	return s.configValues.Checksum()
+}
+
 func (s *Storage) GetValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return addonutils.Values{
-		s.name: s.resultValues,
-	}
+	return s.resultValues
 }
 
 // GetConfigValues returns only user defined values
@@ -100,9 +105,23 @@ func (s *Storage) GetConfigValues() addonutils.Values {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	return addonutils.Values{
-		s.name: s.configValues,
+	return s.configValues
+}
+
+// ValidateConfigValues validate values against config openAPI
+func (s *Storage) ValidateConfigValues(settings addonutils.Values) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if settings == nil {
+		settings = addonutils.Values{}
 	}
+
+	if err := s.validateConfigValues(settings); err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+
+	return nil
 }
 
 // ApplyConfigValues validates and saves config values
@@ -127,14 +146,8 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if err := addonutils.ValidateHookValuesPatch(patch, s.name); err != nil {
-		return fmt.Errorf("validate values patch: %w", err)
-	}
-
-	currentValues := s.resultValues
-
 	// Apply new patches in Strict mode. Hook should not return 'remove' with nonexistent path.
-	patched, changed, err := addonutils.ApplyValuesPatch(currentValues, patch, addonutils.Strict)
+	patched, changed, err := addonutils.ApplyValuesPatch(s.resultValues, patch, addonutils.Strict)
 	if err != nil {
 		return fmt.Errorf("try apply values patch: %w", err)
 	}
@@ -144,8 +157,8 @@ func (s *Storage) ApplyPatch(patch addonutils.ValuesPatch) error {
 	}
 
 	// Validate updated values against schema
-	if validationErr := s.validateValues(patched); validationErr != nil {
-		return fmt.Errorf("validate values patch: %w", validationErr)
+	if err = s.validateValues(patched); err != nil {
+		return fmt.Errorf("validate values patch: %w", err)
 	}
 
 	s.valuesPatches = addonutils.AppendValuesPatch(s.valuesPatches, patch)
@@ -177,12 +190,12 @@ func (s *Storage) calculateResultValues() error {
 		ops.Operations = append(ops.Operations, patch.Operations...)
 	}
 
-	merged, _, err := addonutils.ApplyValuesPatch(addonutils.Values{s.name: merged}, ops, addonutils.IgnoreNonExistentPaths)
+	merged, _, err := addonutils.ApplyValuesPatch(merged, ops, addonutils.IgnoreNonExistentPaths)
 	if err != nil {
 		return err
 	}
 
-	s.resultValues = merged.GetKeySection(s.name)
+	s.resultValues = merged
 
 	return nil
 }

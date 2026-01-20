@@ -188,9 +188,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 
 ```shell
 govc role.create deckhouse \
-  Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
-  Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-  $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
+   Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
+   Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
+   VcIdentityProviders.Read \
+   Infraprofile.Read\
+   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.')
 ```
 
 Назначьте роль пользователю:
@@ -200,5 +202,5 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-Для более детальной настройки прав обратитесь к [официальной документации](https://vmware.github.io/govmomi/).
+Для более детальной настройки прав обратитесь к [официальной документации](https://pkg.go.dev/github.com/vmware/govmomi).
 {% endalert %}

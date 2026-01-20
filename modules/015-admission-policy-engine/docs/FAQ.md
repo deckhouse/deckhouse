@@ -391,3 +391,99 @@ spec:
     requiredLabelKey: "admission.deckhouse.io/allow-delete"
     requiredLabelValue: "true"
 ```
+
+## How to deny kubectl exec and kubectl attach to specific Pods?
+
+> The `admission-policy-engine` module's webhook routes `CONNECT` requests for `pods/exec` and `pods/attach` through Gatekeeper. This allows custom policies to allow or deny `kubectl exec` and `kubectl attach` operations.
+
+### Built-in policy for heritage: deckhouse Pods
+
+To protect system components managed by Deckhouse, the `admission-policy-engine` module includes a built-in policy `D8DenyExecHeritage` that forbids running `kubectl exec` and `kubectl attach` operations to all Pods with the `heritage: deckhouse` label.
+
+This policy doesn't apply to the following users who are allowed to run `kubectl exec` and `kubectl attach` operations to Pods labeled with `heritage: deckhouse`:
+
+- `system:sudouser`;
+- service accounts from `d8-*` namespaces (`system:serviceaccount:d8-*`);
+- service accounts from `kube-*` namespaces (`system:serviceaccount:kube-*`).
+
+### Custom policy example
+
+You can create your own Gatekeeper policy to deny `kubectl exec` and `kubectl attach` operations in specific namespaces. In the following example,  `input.review.operation` and `input.review.resource.resource` are used to check for `CONNECT` operations:
+
+```yaml
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8customdenyexec
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8CustomDenyExec
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            forbiddenNamespaces:
+              type: array
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package d8.custom
+
+        is_connect {
+          input.review.operation == "CONNECT"
+        }
+
+        # requestSubResource is preferred, but fall back to subResource for older APIs
+        subresource_is(sub) {
+          sr := object.get(input.review, "requestSubResource", input.review.subResource)
+          sr == sub
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("exec")
+        }
+
+        is_exec_or_attach {
+          input.review.resource.resource == "pods"
+          subresource_is("attach")
+        }
+
+        is_forbidden_namespace {
+          ns := input.review.namespace
+          ns == input.parameters.forbiddenNamespaces[_]
+        }
+
+        violation[{"msg": msg}] {
+          is_connect
+          is_exec_or_attach
+          is_forbidden_namespace
+          msg := sprintf("Exec/attach is forbidden in namespace %q", [input.review.namespace])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8CustomDenyExec
+metadata:
+  name: deny-exec-in-namespaces
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups: ["*"]
+        kinds: ["*"]
+    scope: Namespaced
+  parameters:
+    forbiddenNamespaces:
+      - production
+      - staging
+```
+
+Key data and checks for CONNECT validation:
+
+- Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
+- User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
+- The namespace is available in `input.review.namespace`.

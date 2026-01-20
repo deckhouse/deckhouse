@@ -68,6 +68,7 @@ shell:
     ACTIONS_ID_TOKEN=$(jq -r .value <<< $(curl -fsH "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=github-access-aud" )) \
     VAULT_TOKEN="$(curl -X POST "${VAULT_ADDR}/v1/auth/github/login" -d '{"role":"'${COSIGN_AUTH_ROLE}'","jwt":"'${ACTIONS_ID_TOKEN}'"}' | jq -r '.auth.client_token')" \
     cosign attest \
+      --replace \
       --registry-username="${REGISTRY_USER}" \
       --registry-password="${REGISTRY_PASSWORD}" \
       --predicate /known_vulnerabilities.vex \

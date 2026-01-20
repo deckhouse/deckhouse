@@ -209,11 +209,11 @@ async function getLicenseToken(token = '', revision = '') {
     const response = await fetch(`https://license.deckhouse.io/api/license/check?token=${token}`);
     if(response.ok) {
       const data = await response.json();
-      if (revision && data.redactions && Array.isArray(data.redactions)) {
+      if (revision && data.redactions && Array.isArray(data.redactions) && data.redactions.length > 0) {
         const revisionUpper = revision.toUpperCase();
         const redactionsUpper = data.redactions.map(r => r.toUpperCase());
         if (!redactionsUpper.includes(revisionUpper)) {
-          handlerRejectData(token, span, input);
+          handlerRejectData(token, span, input, null, revision, data.redactions);
           return;
         }
       }
@@ -239,9 +239,22 @@ function handlerResolveData(data = '', licenseToken = '', messageElement = '', i
   update_license_parameters(licenseToken);
 }
 
-function handlerRejectData(licenseToken, messageElement, inputField, message = null) {
+function handlerRejectData(licenseToken, messageElement, inputField, message = null, revision = '', redactions = null) {
+  let rejectionMessage = null;
+  
+  if (revision && redactions && Array.isArray(redactions) && redactions.length > 0) {
+    const revisionUpper = revision.toUpperCase();
+    const redactionsUpper = redactions.map(r => r.toUpperCase());
+    if (!redactionsUpper.includes(revisionUpper)) {
+      const redactionNames = redactions.map(r => revisionNames[r.toLowerCase()]).filter(Boolean).join(', ');
+      rejectionMessage = responseFromLicense[pageLang]['invalid_revision'] + redactionNames;
+    }
+  }
+
   if (message) {
     messageElement.html(message);
+  } else if (rejectionMessage) {
+    messageElement.html(rejectionMessage);
   } else {
     messageElement.html(responseFromLicense[pageLang]['reject']);
   }
@@ -334,3 +347,61 @@ function set_license_token_cookie() {
     $.cookie('license-token', token, {path: '/', expires: 365});
   }
 }
+
+(function () {
+  const KEY = 'dhctl-variant';
+  
+  const get = () => {
+    return sessionStorage.getItem(KEY) || window.$?.cookie?.(KEY) || 'worker';
+  };
+  
+  const set = (v) => {
+    sessionStorage.setItem(KEY, v);
+    window.$?.cookie?.(KEY, v, { path: '/', expires: 1 });
+  };
+  
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.hidden = !visible;
+      el.style.display = visible ? 'block' : 'none';
+    }
+  };
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const tabWorker = document.getElementById('tab_layout_worker');
+    const tabMaster = document.getElementById('tab_layout_master');
+    
+    if ((tabWorker || tabMaster) && !sessionStorage.getItem(KEY)) {
+      sessionStorage.setItem(KEY, 'worker');
+    }
+  
+    const variant = get();
+    const isSingle = variant === 'single';
+
+    show('block_layout_master', isSingle);
+    show('block_layout_worker', !isSingle);
+
+    tabWorker?.classList.toggle('active', !isSingle);
+    tabMaster?.classList.toggle('active', isSingle);
+
+    const tabVarWorker = document.querySelector('[id^="tab_variant_worker_"]');
+    const tabVarSingle = document.querySelector('[id^="tab_variant_single_"]');
+    tabVarWorker?.classList.toggle('active', !isSingle);
+    tabVarSingle?.classList.toggle('active', isSingle);
+    
+    const blkVarW = document.querySelector('[id^="block_variant_worker_"]');
+    const blkVarS = document.querySelector('[id^="block_variant_single_"]');
+    if (blkVarW && blkVarS) {
+      blkVarW.style.display = isSingle ? 'none' : 'block';
+      blkVarS.style.display = isSingle ? 'block' : 'none';
+    }
+  
+    tabWorker?.addEventListener('click', () => set('worker'));
+    tabMaster?.addEventListener('click', () => set('single'));
+    tabVarWorker?.addEventListener('click', () => set('worker'));
+    tabVarSingle?.addEventListener('click', () => set('single'));
+  });
+
+  window.openTabAndSaveStatus ??= function () {};
+})();

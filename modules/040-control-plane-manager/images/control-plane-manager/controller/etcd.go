@@ -24,16 +24,19 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
+	"github.com/Masterminds/semver/v3"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -55,30 +58,97 @@ type Etcd struct {
 	wb     wait.Backoff
 }
 
+type EtcdPerformanceParams struct {
+	HeartbeatInterval int
+	ElectionTimeout   int
+}
+
+type EtcdMember struct {
+	NodeName  string
+	IsLearner bool
+	ID        uint64
+}
+
+func GetEtcdPerformanceParams() EtcdPerformanceParams {
+	defaultParams := EtcdPerformanceParams{
+		HeartbeatInterval: 100,
+		ElectionTimeout:   1000,
+	}
+
+	etcdArbiterParams := EtcdPerformanceParams{
+		HeartbeatInterval: 500,
+		ElectionTimeout:   5000,
+	}
+
+	if config.EtcdArbiter {
+		log.Infof("using increased etcd timeouts for EtcdArbiter mode: heartbeat=%dms, election=%dms", etcdArbiterParams.HeartbeatInterval, etcdArbiterParams.ElectionTimeout)
+		return etcdArbiterParams
+	}
+
+	return defaultParams
+}
+
+// We can use this patch to tune etcd performance depending on the disk performance in future
+func GenerateEtcdPerformancePatch(params EtcdPerformanceParams) error {
+	const patchTemplate = `apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+spec:
+  containers:
+    - name: etcd
+      env:
+        - name: ETCD_HEARTBEAT_INTERVAL
+          value: "%d"
+        - name: ETCD_ELECTION_TIMEOUT
+          value: "%d"`
+
+	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", "etcd800performance.yaml")
+	content := fmt.Sprintf(patchTemplate, params.HeartbeatInterval, params.ElectionTimeout)
+
+	log.Infof("generating etcd performance patch: file=%s, heartbeat_interval_ms=%d, election_timeout_ms=%d", patchFile, params.HeartbeatInterval, params.ElectionTimeout)
+
+	return os.WriteFile(patchFile, []byte(content), 0o600)
+}
+
 func EtcdJoinConverge() error {
-	args := []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	var args []string
+	v, err := semver.NewVersion(config.KubernetesVersion)
+	if err != nil {
+		return fmt.Errorf("version not being parsable: %s", err.Error())
+	}
+	c, err := semver.NewConstraint(">= 1.33")
+	if err != nil {
+		return fmt.Errorf("constraint not being parsable: %s", err.Error())
+	}
+	if c.Check(v) { // >= 1.33
+		args = []string{"-v=5", "join", "phase", "etcd-join", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	} else {
+		args = []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	}
 
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),
 		slog.String("component", "etcd"),
+		slog.String("kubernetes_version", config.KubernetesVersion),
 		slog.Any("args", args),
 	)
 
 	cli := exec.Command(kubeadmPath, args...)
 	out, err := cli.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info("etcd join converge", slog.String("output", s))
 	}
 	return err
 }
 
-func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
+func (c *Etcd) findAllMembers() ([]EtcdMember, error) {
 	var (
-		learnerIDs []uint64
-		lastErr    error
-		attempts   int
+		members  []EtcdMember
+		lastErr  error
+		attempts int
 	)
-
 	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
 		attempts++
 
@@ -91,26 +161,51 @@ func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
 			lastErr = err
 			return false, nil
 		}
-
-		var ids []uint64
 		for _, m := range resp.Members {
-			if m.IsLearner {
-				log.Infof("[d8][etcd] Found learner member: ID=%d Name=%q PeerURLs=%v", m.ID, m.Name, m.PeerURLs)
-				ids = append(ids, m.ID)
-			}
+			members = append(members, EtcdMember{
+				NodeName:  m.Name,
+				IsLearner: m.IsLearner,
+				ID:        m.ID,
+			})
 		}
-		learnerIDs = ids
 		return true, nil
 	})
-
 	if err == wait.ErrWaitTimeout {
 		log.Errorf("[d8][etcd] failed to list members after %d attempts: %v", attempts, lastErr)
 		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", lastErr)
 	}
-	return learnerIDs, err
+	return members, nil
 }
 
-func (c *Etcd) PromoteLearnersIfNeeded() error {
+func (c *Etcd) checkMemberExists(nodeName string) (bool, error) {
+	members, err := c.findAllMembers()
+	if err != nil {
+		return false, fmt.Errorf("[d8][etcd] failed to find all members: %v", err)
+	}
+	for _, member := range members {
+		if member.NodeName == nodeName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
+	var learnerIDs []uint64
+	members, err := c.findAllMembers()
+	if err != nil {
+		return nil, fmt.Errorf("[d8][etcd] failed to find all members: %v", err)
+	}
+	for _, member := range members {
+		if member.IsLearner {
+			learnerIDs = append(learnerIDs, member.ID)
+		}
+	}
+
+	return learnerIDs, nil
+}
+
+func (c *Etcd) promoteLearnersIfNeeded() error {
 	learnerIDs, err := c.findAllLearnerMembers()
 	if err != nil {
 		return fmt.Errorf("[d8][etcd] failed to find learner members: %v", err)

@@ -27,12 +27,6 @@ type Interface interface {
 	ApplicationPackages() ApplicationPackageInformer
 	// ApplicationPackageVersions returns a ApplicationPackageVersionInformer.
 	ApplicationPackageVersions() ApplicationPackageVersionInformer
-	// ClusterApplications returns a ClusterApplicationInformer.
-	ClusterApplications() ClusterApplicationInformer
-	// ClusterApplicationPackages returns a ClusterApplicationPackageInformer.
-	ClusterApplicationPackages() ClusterApplicationPackageInformer
-	// ClusterApplicationPackageVersions returns a ClusterApplicationPackageVersionInformer.
-	ClusterApplicationPackageVersions() ClusterApplicationPackageVersionInformer
 	// DeckhouseReleases returns a DeckhouseReleaseInformer.
 	DeckhouseReleases() DeckhouseReleaseInformer
 	// Modules returns a ModuleInformer.
@@ -51,6 +45,8 @@ type Interface interface {
 	ModuleSources() ModuleSourceInformer
 	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
+	// ObjectKeepers returns a ObjectKeeperInformer.
+	ObjectKeepers() ObjectKeeperInformer
 	// PackageRepositories returns a PackageRepositoryInformer.
 	PackageRepositories() PackageRepositoryInformer
 	// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
@@ -81,21 +77,6 @@ func (v *version) ApplicationPackages() ApplicationPackageInformer {
 // ApplicationPackageVersions returns a ApplicationPackageVersionInformer.
 func (v *version) ApplicationPackageVersions() ApplicationPackageVersionInformer {
 	return &applicationPackageVersionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// ClusterApplications returns a ClusterApplicationInformer.
-func (v *version) ClusterApplications() ClusterApplicationInformer {
-	return &clusterApplicationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// ClusterApplicationPackages returns a ClusterApplicationPackageInformer.
-func (v *version) ClusterApplicationPackages() ClusterApplicationPackageInformer {
-	return &clusterApplicationPackageInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
-}
-
-// ClusterApplicationPackageVersions returns a ClusterApplicationPackageVersionInformer.
-func (v *version) ClusterApplicationPackageVersions() ClusterApplicationPackageVersionInformer {
-	return &clusterApplicationPackageVersionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // DeckhouseReleases returns a DeckhouseReleaseInformer.
@@ -141,6 +122,11 @@ func (v *version) ModuleSources() ModuleSourceInformer {
 // ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
 	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ObjectKeepers returns a ObjectKeeperInformer.
+func (v *version) ObjectKeepers() ObjectKeeperInformer {
+	return &objectKeeperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // PackageRepositories returns a PackageRepositoryInformer.

@@ -8,12 +8,15 @@ package tasks
 import (
 	"context"
 	"fmt"
+	"log/slog"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
 	"d8_shutdown_inhibitor/pkg/systemd"
 )
 
 type PowerKeyInhibitor struct {
-	UnlockInhibitorsCh <-chan struct{}
+	UnlockCtx context.Context
 
 	dbusCon     *systemd.DBusCon
 	inhibitLock systemd.InhibitLock
@@ -34,21 +37,21 @@ func (p *PowerKeyInhibitor) Run(ctx context.Context, errCh chan error) {
 		errCh <- fmt.Errorf("powerKeyInhibitor: lock not acquired")
 		return
 	}
-	fmt.Printf("powerKeyInhibitor: got lock\n")
+	dlog.Info("power key inhibitor: lock acquired")
 
 	select {
 	case <-ctx.Done():
-		fmt.Printf("powerKeyInhibitor: unlock on global exit\n")
-	case <-p.UnlockInhibitorsCh:
-		fmt.Printf("powerKeyInhibitor: unlock on meeting shutdown requirements.\n")
+		dlog.Info("power key inhibitor: unlock on context cancel")
+	case <-p.UnlockCtx.Done():
+		dlog.Info("power key inhibitor: unlock on shutdown requirements met")
 	}
 
 	err = p.dbusCon.ReleaseInhibitLock(p.inhibitLock)
 	if err != nil {
-		fmt.Printf("powerKeyInhibitor: unlock error: %v\n", err)
+		dlog.Error("power key inhibitor: unlock error", dlog.Err(err), slog.Int("lock", int(p.inhibitLock)))
 		return
 	}
-	fmt.Printf("powerKeyInhibitor: unlocked\n")
+	dlog.Info("power key inhibitor: lock released")
 }
 
 func (p *PowerKeyInhibitor) acquireLock() error {

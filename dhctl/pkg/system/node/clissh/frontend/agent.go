@@ -19,7 +19,7 @@ import (
 	"net"
 	"os"
 
-	"golang.org/x/crypto/ssh/agent"
+	"github.com/deckhouse/lib-gossh/agent"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"

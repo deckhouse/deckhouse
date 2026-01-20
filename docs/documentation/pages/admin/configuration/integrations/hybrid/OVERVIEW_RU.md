@@ -76,7 +76,7 @@ volumeBindingMode: WaitForFirstConsumer
 
 - Рабочий кластер с параметром `clusterType: Static`.
 - Контроллер CNI переведён в режим VXLAN. Подробнее — [настройка `tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode).
-- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/).
+- Настроенная сетевая связность между Yandex Cloud и сетью узлов статического кластера согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html).
 
 ### Шаги по настройке
 
@@ -246,7 +246,7 @@ volumeBindingMode: WaitForFirstConsumer
 - **Инфраструктура**:
   - Установлен bare-metal кластер DKP.
   - Настроен тенант в VCD [с выделенными ресурсами](../virtualization/vcd/connection-and-authorization.html).
-  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/)).
+  - Настроена сетевая связанность между сетью узлов статического кластера и VCD (на уровне L2, либо на уровне L3 с доступами по портам согласно [необходимым сетевым политикам для работы DKP](../../configuration/network/policy/configuration.html)).
   - Настроена рабочая сеть в VCD с включённым DHCP-сервером.
   - Создан пользователь со статичным паролем и правами администратора VCD.
 
@@ -286,9 +286,9 @@ volumeBindingMode: WaitForFirstConsumer
    ```
 
    Где:
-   - `mainNetwork` — имя сети, в которой будут размещаться облачные ноды в вашем VCD кластере.
+   - `mainNetwork` — имя сети, в которой будут размещаться облачные узлы в кластере VCD.
    - `internalNetworkCIDR` — CIDR-адресация указанной сети.
-   - `organization` — название вашей VCD организации.
+   - `organization` — название вашей организации в VCD.
    - `virtualApplicationName` — имя vApp, где будут создаваться узлы (например, `dkp-vcd-app`).
    - `virtualDataCenter` — имя виртуального датацентра.
    - `template` — шаблон ВМ для создания узлов.
@@ -325,7 +325,7 @@ volumeBindingMode: WaitForFirstConsumer
 1. Включите модуль `cloud-provider-vcd`:
 
    ```shell
-   d8 platform module enable cloud-provider-vcd
+   d8 system module enable cloud-provider-vcd
    ```
 
 1. Отредактируйте секрет `d8-cni-configuration`, чтобы значение параметра `mode` определялось из `mc cni-cilium` (измените `.data.cilium` на `.data.necilium` при необходимости).

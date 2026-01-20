@@ -90,7 +90,7 @@ spec:
         networkPolicy:
           description: |
             NotRestricted — Allow all traffic by default.
-            Restricted — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
+            Isolated — Deny all traffic by default except namespaced traffic, dns, prometheus metrics scraping and ingress-nginx.
           enum:
             - Isolated
             - NotRestricted

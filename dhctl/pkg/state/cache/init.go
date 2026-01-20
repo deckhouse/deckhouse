@@ -42,8 +42,8 @@ var (
 var globalCache state.Cache = &cache.DummyCache{}
 
 func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
-	tmpDir := filepath.Join(app.CacheDir, stringsutil.Sha256Encode(identity))
-	log.DebugF("Cache dir %s\n", tmpDir)
+	tmpDir := filepath.Join(app.GetCacheDir(), stringsutil.Sha256Encode(identity))
+	log.InfoF("State cache directory: %s\n", tmpDir)
 	if err := os.MkdirAll(tmpDir, 0o755); err != nil {
 		return nil, fmt.Errorf("Can't create cache directory: %w", err)
 	}
@@ -86,7 +86,8 @@ func choiceCache(identity string, opts CacheOptions) (state.Cache, error) {
 	}
 
 	if hasTombstone {
-		return nil, fmt.Errorf("Cache exchaused")
+		log.InfoF("Tombstone found in Kubernetes cache - cluster may have already been bootstrapped\n")
+		return nil, fmt.Errorf("Cache exhausted")
 	}
 
 	return k8sCache, nil

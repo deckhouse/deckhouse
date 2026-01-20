@@ -24,6 +24,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	"d8.io/upmeter/pkg/check"
 	"d8.io/upmeter/pkg/kubernetes"
@@ -164,6 +165,17 @@ func createStatefulSetObject(name, agentID string) *appsv1.StatefulSet {
 							Image: "registry.k8s.io/upmeter-nonexistent:3.1415",
 							Command: []string{
 								"/pause",
+							},
+							SecurityContext: &v1.SecurityContext{
+								ReadOnlyRootFilesystem:   ptr.To(true),
+								AllowPrivilegeEscalation: ptr.To(false),
+								Capabilities: &v1.Capabilities{
+									Drop: []v1.Capability{"ALL"},
+								},
+								RunAsNonRoot: ptr.To(true),
+								SeccompProfile: &v1.SeccompProfile{
+									Type: v1.SeccompProfileTypeRuntimeDefault,
+								},
 							},
 						},
 					},

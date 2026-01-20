@@ -27,6 +27,8 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
+Specify `d8-loki` in the ClusterLoggingConfig [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) field to send logs to the loki cluster module. More examples [in the documentation](/modules/loki/examples.html).
+
 ## Reading Pod logs from a specified namespace with a specified label and redirecting to Loki and Elasticsearch
 
 Reading logs from `namespace=whispers` with label `app=booking` and storing them into Loki and Elasticsearch:
@@ -524,7 +526,7 @@ to convert a string in the `message` field into a structured object.
 If multiple `ParseMessage` transformations are used, the one that parses the string must be applied last.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: string-to-json
@@ -559,7 +561,7 @@ You can use the `ParseMessage` transformation
 to parse logs in Klog format and convert them into a structured object.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: klog-to-json
@@ -597,7 +599,7 @@ You can use the `ParseMessage` transformation
 to parse logs in Syslog format and convert them into a structured object.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: syslog-to-json
@@ -643,7 +645,7 @@ You can use the `ParseMessage` transformation
 to parse logs in CLF format and convert them into a structured object.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: clf-to-json
@@ -685,7 +687,7 @@ You can use the `ParseMessage` transformation
 to parse logs in Logfmt format and convert them into a structured object.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: logfmt-to-json
@@ -723,7 +725,7 @@ You can use the `ParseMessage` transformation to parse log entries in JSON forma
 Using the `depth` parameter, you can control the nesting depth.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: parse-json
@@ -758,7 +760,7 @@ Transformed result:
 The string transformation must be applied last.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: parse-json
@@ -817,7 +819,7 @@ You can use the `ReplaceKeys` transformation to replace `source` with `target` i
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: replace-dot
@@ -858,7 +860,7 @@ You can use the `DropLabels` transformation to remove specific labels from log m
 > the log entry must first be parsed into a structured object using the `ParseMessage` transformation.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: drop-label
@@ -878,7 +880,7 @@ The `ParseMessage` transformation is applied first to parse the message,
 followed by `DropLabels` to remove the specified label.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: drop-label

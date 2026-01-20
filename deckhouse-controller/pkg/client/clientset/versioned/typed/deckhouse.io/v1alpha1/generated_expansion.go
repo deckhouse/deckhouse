@@ -21,12 +21,6 @@ type ApplicationPackageExpansion interface{}
 
 type ApplicationPackageVersionExpansion interface{}
 
-type ClusterApplicationExpansion interface{}
-
-type ClusterApplicationPackageExpansion interface{}
-
-type ClusterApplicationPackageVersionExpansion interface{}
-
 type DeckhouseReleaseExpansion interface{}
 
 type ModuleExpansion interface{}
@@ -44,6 +38,8 @@ type ModuleSettingsDefinitionExpansion interface{}
 type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
+
+type ObjectKeeperExpansion interface{}
 
 type PackageRepositoryExpansion interface{}
 

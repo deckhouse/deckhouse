@@ -23,6 +23,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -454,6 +455,7 @@ eg
 egressgateway
 EgressGateway
 EgressGatewayPolicy
+EgressGateways
 EKS
 EL7
 ElasticIP
@@ -497,6 +499,7 @@ falco
 Falco
 FalcoAuditRules
 Falcosidekick
+failback
 fallback
 FastCGI
 FC
@@ -624,6 +627,7 @@ httpsPort
 httpsProxy
 Huawei
 hubble
+HubbleMonitoringConfig
 HugePage
 HWE
 hyperconverged
@@ -746,10 +750,12 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+Kerberos
 KESL
 Keycloak
 keyField
 KeypairFullAccess
+keytab
 KeyValue
 Kiali
 KiB
@@ -1005,6 +1011,7 @@ oauth
 OAuth
 objectmeta
 OCI
+offline
 OFFLINE
 offtopic
 OICD
@@ -1072,6 +1079,7 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordless
 pathPrefix
 PCI
 pcs
@@ -1129,6 +1137,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
@@ -1319,6 +1328,7 @@ spellchecker
 Spellchecking
 SPIFFE
 Splunk
+SPNEGO
 SQL
 SQLite
 sqs
@@ -1729,6 +1739,7 @@ ZvirtInstanceClass
 валидация
 валидирования
 валидировать
+валидирует
 валидируется
 валидируются
 вебхук
@@ -1913,6 +1924,7 @@ ZvirtInstanceClass
 компонента
 конвержа
 консистентного
+консистентное
 консистентности
 консистентность
 консистентный
@@ -2045,6 +2057,9 @@ ZvirtInstanceClass
 незашифрованном
 неизменяем
 неинтерактивном
+неймспейс
+неймспейсах
+неймспейсе
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2096,6 +2111,7 @@ ZvirtInstanceClass
 отмасштабирует
 отмонтировать
 отрисовки
+офлайн
 п
 пайплайна
 пайплайнами
@@ -2301,6 +2317,7 @@ ZvirtInstanceClass
 ротирован
 ротировать
 ротируется
+ротируются
 роутер
 роутера
 роутерами
@@ -2464,6 +2481,9 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
+хешированные
+хешированный
+хешированных
 хост
 хоста
 хостам

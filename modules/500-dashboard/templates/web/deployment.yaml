@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: web
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: web

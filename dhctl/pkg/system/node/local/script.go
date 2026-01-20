@@ -127,3 +127,5 @@ func (s *Script) WithCleanupAfterExec(doCleanup bool) {
 }
 
 func (s *Script) WithCommanderMode(bool) {}
+
+func (s *Script) WithExecuteUploadDir(string) {}

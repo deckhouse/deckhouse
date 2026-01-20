@@ -28,6 +28,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -96,6 +97,20 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.handleDelete(ctx, apv)
 	}
 
+	// add finalizer if it is not set
+	if !controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
+		r.logger.Debug("adding finalizer to application package version", slog.String("name", apv.Name))
+
+		patch := client.MergeFrom(apv.DeepCopy())
+
+		controllerutil.AddFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
+
+		err := r.client.Patch(ctx, apv, patch)
+		if err != nil {
+			return res, fmt.Errorf("add finalizer to ApplicationPackageVersion %s: %w", apv.Name, err)
+		}
+	}
+
 	// skip handle for non drafted resources
 	if !apv.IsDraft() {
 		r.logger.Debug("package is not draft", slog.String("package_name", apv.Name))
@@ -123,13 +138,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.Repository}, &packageRepo)
+	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.PackageRepositoryName}, &packageRepo)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.Repository, err.Error()),
+			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepositoryName, err.Error()),
 		)
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
@@ -137,7 +152,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.Repository, err)
+		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.PackageRepositoryName, err)
 	}
 
 	logger.Debug("got package repository", slog.String("repo", packageRepo.Spec.Registry.Repo))
@@ -159,7 +174,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetRegistryClientErr,
 			fmt.Sprintf("failed to get registry client: %s", err.Error()),
 		)
@@ -173,11 +188,11 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// Get package.yaml from image
-	img, err := registryClient.Image(ctx, apv.Spec.Version)
+	img, err := registryClient.Image(ctx, apv.Spec.PackageVersion)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("failed to get image: %s", err.Error()),
 		)
@@ -187,14 +202,14 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.Version, err)
+		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.PackageVersion, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
-			v1alpha1.ApplicationPackageVersionConditionTypeEnriched,
+			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("failed to fetch package metadata: %s", err.Error()),
 		)
@@ -211,10 +226,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 		logger.Debug("got metadata from package.yaml", slog.String("meta_name", packageMeta.PackageDefinition.Name))
 	}
 
-	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
-
 	// Patch the status
-	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeEnriched)
+	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
+	if apv.Status.PackageRepositoryName == "" {
+		apv.Status.PackageRepositoryName = apv.Spec.PackageRepositoryName
+	}
+
+	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
 	logger.Debug("patch package version status")
 	err = r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
@@ -223,7 +241,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// Delete label "draft" and patch the main object
+	original = apv.DeepCopy()
+
 	delete(apv.Labels, v1alpha1.ApplicationPackageVersionLabelDraft)
+
 	err = r.client.Patch(ctx, apv, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("patch ApplicationPackageVersion %s: %w", apv.Name, err)
@@ -232,12 +253,31 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	return nil
 }
 
-func (r *reconciler) handleDelete(_ context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
+func (r *reconciler) handleDelete(ctx context.Context, apv *v1alpha1.ApplicationPackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", apv.Name))
 	logger.Debug("deleting ApplicationPackageVersion")
 	defer logger.Debug("delete ApplicationPackageVersion complete")
 
 	res := ctrl.Result{}
+
+	if apv.Status.UsedByCount > 0 {
+		logger.Warn("application package version is used by applications, skipping deletion", slog.Int("used_by_count", apv.Status.UsedByCount))
+
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	if controllerutil.ContainsFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer) {
+		logger.Debug("removing finalizer from application package version")
+
+		patch := client.MergeFrom(apv.DeepCopy())
+
+		controllerutil.RemoveFinalizer(apv, v1alpha1.ApplicationPackageVersionFinalizer)
+
+		err := r.client.Patch(ctx, apv, patch)
+		if err != nil {
+			return res, fmt.Errorf("remove finalizer from ApplicationPackageVersion %s: %w", apv.Name, err)
+		}
+	}
 
 	return res, nil
 }
@@ -306,26 +346,26 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 	}
 
 	apv.Status.PackageName = pd.Name
-	apv.Status.Version = pd.Version
+	apv.Status.PackageVersion = pd.Version
 
-	apv.Status.Metadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
+	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Category: pd.Category,
 		Stage:    pd.Stage,
 	}
 	if pd.Description != nil {
-		apv.Status.Metadata.Description = &v1alpha1.PackageDescription{
+		apv.Status.PackageMetadata.Description = &v1alpha1.PackageDescription{
 			Ru: pd.Description.Ru,
 			En: pd.Description.En,
 		}
 	}
 	if pd.Licensing != nil {
-		apv.Status.Metadata.Licensing = &v1alpha1.PackageLicensing{
+		apv.Status.PackageMetadata.Licensing = &v1alpha1.PackageLicensing{
 			Editions: convertLicensingEditions(pd.Licensing.Editions),
 		}
 	}
 
 	if pd.Requirements != nil {
-		apv.Status.Metadata.Requirements = &v1alpha1.PackageRequirements{
+		apv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{
 			Deckhouse:  pd.Requirements.Deckhouse,
 			Kubernetes: pd.Requirements.Kubernetes,
 			Modules:    pd.Requirements.Modules,
@@ -334,7 +374,7 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 
 	if pd.VersionCompatibilityRules != nil {
 		if pd.VersionCompatibilityRules.Upgrade.From != "" || pd.VersionCompatibilityRules.Downgrade.To != "" {
-			apv.Status.Metadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
+			apv.Status.PackageMetadata.Compatibility = &v1alpha1.PackageVersionCompatibilityRules{
 				Upgrade: &v1alpha1.PackageVersionCompatibilityRule{
 					From:             pd.VersionCompatibilityRules.Upgrade.From,
 					AllowSkipPatches: int(pd.VersionCompatibilityRules.Upgrade.AllowSkipPatches),

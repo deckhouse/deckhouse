@@ -4,41 +4,70 @@ kind: Application
 metadata:
   creationTimestamp: null
   finalizers:
-  - application.deckhouse.io/processed
+  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.1
+    uid: ""
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackage
+    name: test
+    uid: ""
   resourceVersion: "3"
 spec:
-  applicationPackageName: test
-  repository: deckhouse
-  version: v1.0.0
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
 status:
-  conditions:
+  resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     status: "True"
     type: Processed
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
+  installed:
+    foobar:
+    - name: test-app
+  installedOverall: 1
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
   creationTimestamp: null
   labels:
-    package: test
-    repository: deckhouse
-  name: deckhouse-test-v1.0.0
-  resourceVersion: "1"
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-test-v1.0.1
+  resourceVersion: "2"
 spec:
   packageName: test
-  repository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
 status:
   conditions:
   - lastProbeTime: null
     lastTransitionTime: null
     status: "True"
     type: IsEnriched
-  metadata:
+  packageMetadata:
     category: Misc
     description:
       en: example — test
@@ -48,7 +77,12 @@ status:
       kubernetes: '>=1.26'
     stage: Preview
   packageName: test
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -16,15 +16,14 @@
 package v1alpha1
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // ApplicationPackageVersionsGetter has a method to return a ApplicationPackageVersionInterface.
@@ -35,147 +34,38 @@ type ApplicationPackageVersionsGetter interface {
 
 // ApplicationPackageVersionInterface has methods to work with ApplicationPackageVersion resources.
 type ApplicationPackageVersionInterface interface {
-	Create(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.CreateOptions) (*v1alpha1.ApplicationPackageVersion, error)
-	Update(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (*v1alpha1.ApplicationPackageVersion, error)
-	UpdateStatus(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (*v1alpha1.ApplicationPackageVersion, error)
+	Create(ctx context.Context, applicationPackageVersion *deckhouseiov1alpha1.ApplicationPackageVersion, opts v1.CreateOptions) (*deckhouseiov1alpha1.ApplicationPackageVersion, error)
+	Update(ctx context.Context, applicationPackageVersion *deckhouseiov1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ApplicationPackageVersion, error)
+	// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+	UpdateStatus(ctx context.Context, applicationPackageVersion *deckhouseiov1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ApplicationPackageVersion, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ApplicationPackageVersion, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ApplicationPackageVersionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*deckhouseiov1alpha1.ApplicationPackageVersion, error)
+	List(ctx context.Context, opts v1.ListOptions) (*deckhouseiov1alpha1.ApplicationPackageVersionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ApplicationPackageVersion, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *deckhouseiov1alpha1.ApplicationPackageVersion, err error)
 	ApplicationPackageVersionExpansion
 }
 
 // applicationPackageVersions implements ApplicationPackageVersionInterface
 type applicationPackageVersions struct {
-	client rest.Interface
+	*gentype.ClientWithList[*deckhouseiov1alpha1.ApplicationPackageVersion, *deckhouseiov1alpha1.ApplicationPackageVersionList]
 }
 
 // newApplicationPackageVersions returns a ApplicationPackageVersions
 func newApplicationPackageVersions(c *DeckhouseV1alpha1Client) *applicationPackageVersions {
 	return &applicationPackageVersions{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*deckhouseiov1alpha1.ApplicationPackageVersion, *deckhouseiov1alpha1.ApplicationPackageVersionList](
+			"applicationpackageversions",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *deckhouseiov1alpha1.ApplicationPackageVersion {
+				return &deckhouseiov1alpha1.ApplicationPackageVersion{}
+			},
+			func() *deckhouseiov1alpha1.ApplicationPackageVersionList {
+				return &deckhouseiov1alpha1.ApplicationPackageVersionList{}
+			},
+		),
 	}
-}
-
-// Get takes name of the applicationPackageVersion, and returns the corresponding applicationPackageVersion object, and an error if there is any.
-func (c *applicationPackageVersions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ApplicationPackageVersion, err error) {
-	result = &v1alpha1.ApplicationPackageVersion{}
-	err = c.client.Get().
-		Resource("applicationpackageversions").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of ApplicationPackageVersions that match those selectors.
-func (c *applicationPackageVersions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ApplicationPackageVersionList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1alpha1.ApplicationPackageVersionList{}
-	err = c.client.Get().
-		Resource("applicationpackageversions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested applicationPackageVersions.
-func (c *applicationPackageVersions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("applicationpackageversions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a applicationPackageVersion and creates it.  Returns the server's representation of the applicationPackageVersion, and an error, if there is any.
-func (c *applicationPackageVersions) Create(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.CreateOptions) (result *v1alpha1.ApplicationPackageVersion, err error) {
-	result = &v1alpha1.ApplicationPackageVersion{}
-	err = c.client.Post().
-		Resource("applicationpackageversions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(applicationPackageVersion).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a applicationPackageVersion and updates it. Returns the server's representation of the applicationPackageVersion, and an error, if there is any.
-func (c *applicationPackageVersions) Update(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (result *v1alpha1.ApplicationPackageVersion, err error) {
-	result = &v1alpha1.ApplicationPackageVersion{}
-	err = c.client.Put().
-		Resource("applicationpackageversions").
-		Name(applicationPackageVersion.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(applicationPackageVersion).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// UpdateStatus was generated because the type contains a Status member.
-// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
-func (c *applicationPackageVersions) UpdateStatus(ctx context.Context, applicationPackageVersion *v1alpha1.ApplicationPackageVersion, opts v1.UpdateOptions) (result *v1alpha1.ApplicationPackageVersion, err error) {
-	result = &v1alpha1.ApplicationPackageVersion{}
-	err = c.client.Put().
-		Resource("applicationpackageversions").
-		Name(applicationPackageVersion.Name).
-		SubResource("status").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(applicationPackageVersion).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the applicationPackageVersion and deletes it. Returns an error if one occurs.
-func (c *applicationPackageVersions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("applicationpackageversions").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *applicationPackageVersions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("applicationpackageversions").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched applicationPackageVersion.
-func (c *applicationPackageVersions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ApplicationPackageVersion, err error) {
-	result = &v1alpha1.ApplicationPackageVersion{}
-	err = c.client.Patch(pt).
-		Resource("applicationpackageversions").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

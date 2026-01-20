@@ -34,98 +34,226 @@ spec:
                     type: boolean
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            volume := input_hostpath_volumes[_]
-            allowedPaths := get_allowed_paths(input)
-            input_hostpath_violation(allowedPaths, volume)
-            msg := sprintf("HostPath volume %v is not allowed, pod: %v. Allowed path: %v", [volume, input.review.object.metadata.name, allowedPaths])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                volume := input_hostpath_volumes[_]
+                not allowed_by_any(volume)
+                allowedPaths := get_allowed_paths(input)
+                actual_value := sprintf("Actual HostPath volume: %v", [volume])
+                allowed_by_policy := sprintf("Allowed paths: %v", [allowedPaths])
+                exception_allowed := get_exception_allowed_hostpaths(volume)
+                msg := build_hostpath_message(input.review.object.metadata.name, actual_value, allowed_by_policy, exception_allowed)
+              }
 
-        input_hostpath_violation(allowedPaths, volume) {
-            # An empty list means all host paths are blocked
-            allowedPaths == []
-        }
-        input_hostpath_violation(allowedPaths, volume) {
-            not input_hostpath_allowed(allowedPaths, volume)
-        }
+              get_exception_allowed_hostpaths(volume) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                has_field(exception.spec.volumes.hostPath, "allowedValues")
+                allowed_paths := exception.spec.volumes.hostPath.allowedValues
+                formatted_paths := [{"hostPath": {"path": path.path, "type": ""}, "name": "<any>"} | path := allowed_paths[_]]
+                out := sprintf("SecurityPolicyException allowed: %v", [formatted_paths])
+              }
 
-        get_allowed_paths(arg) = out {
-            not arg.parameters
-            out = []
-        }
-        get_allowed_paths(arg) = out {
-            not arg.parameters.allowedHostPaths
-            out = []
-        }
-        get_allowed_paths(arg) = out {
-            out = arg.parameters.allowedHostPaths
-        }
+              get_exception_allowed_hostpaths(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
 
-        input_hostpath_allowed(allowedPaths, volume) {
-            allowedHostPath := allowedPaths[_]
-            path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
-            not allowedHostPath.readOnly == true
-        }
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
 
-        input_hostpath_allowed(allowedPaths, volume) {
-            allowedHostPath := allowedPaths[_]
-            path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
-            allowedHostPath.readOnly
-            not writeable_input_volume_mounts(volume.name)
-        }
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "volumes")
+              }
 
-        writeable_input_volume_mounts(volume_name) {
-            container := input_containers[_]
-            mount := container.volumeMounts[_]
-            mount.name == volume_name
-            not mount.readOnly
-        }
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                not has_field(exception.spec.volumes, "hostPath")
+              }
 
-        # This allows "/foo", "/foo/", "/foo/bar" etc., but
-        # disallows "/fool", "/etc/foo" etc.
-        path_matches(prefix, path) {
-            a := path_array(prefix)
-            b := path_array(path)
-            prefix_matches(a, b)
-        }
-        path_array(p) = out {
-            p != "/"
-            out := split(trim(p, "/"), "/")
-        }
-        # This handles the special case for "/", since
-        # split(trim("/", "/"), "/") == [""]
-        path_array("/") = []
+              get_exception_allowed_hostpaths(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                not has_field(exception.spec.volumes.hostPath, "allowedValues")
+              }
 
-        prefix_matches(a, b) {
-            count(a) <= count(b)
-            not any_not_equal_upto(a, b, count(a))
-        }
+              build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("HostPath volume is not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+              }
 
-        any_not_equal_upto(a, b, n) {
-            a[i] != b[i]
-            i < n
-        }
+              build_hostpath_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("HostPath volume is not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+              }
 
-        input_hostpath_volumes[v] {
-            v := input.review.object.spec.volumes[_]
-            has_field(v, "hostPath")
-        }
+              ### SecurityPolicy logic
 
-        # has_field returns whether an object has a field
-        has_field(object, field) = true {
-            object[field]
-        }
-        input_containers[c] {
-            c := input.review.object.spec.containers[_]
-        }
+              allowed_by_any(volume) if {
+                allowed_by_securitypolicy(volume)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.initContainers[_]
-        }
+              allowed_by_securitypolicy(volume) if {
+                allowedPaths := get_allowed_paths(input)
+                input_hostpath_allowed(allowedPaths, volume)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.ephemeralContainers[_]
-        }
+              get_allowed_paths(arg) := out if {
+                not arg.parameters
+                out = []
+              }
+
+              get_allowed_paths(arg) := out if {
+                not arg.parameters.allowedHostPaths
+                out = []
+              }
+
+              get_allowed_paths(arg) := out if {
+                out = arg.parameters.allowedHostPaths
+              }
+
+              input_hostpath_allowed(allowedPaths, volume) if {
+                allowedHostPath := allowedPaths[_]
+                path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+                not allowedHostPath.readOnly == true
+              }
+
+              input_hostpath_allowed(allowedPaths, volume) if {
+                allowedHostPath := allowedPaths[_]
+                path_matches(allowedHostPath.pathPrefix, volume.hostPath.path)
+                allowedHostPath.readOnly
+                not writeable_input_volume_mounts(volume.name)
+              }
+
+              writeable_input_volume_mounts(volume_name) if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
+                not mount.readOnly
+              }
+
+              # This allows "/foo", "/foo/", "/foo/bar" etc., but
+              # disallows "/fool", "/etc/foo" etc.
+              path_matches(prefix, path) if {
+                a := path_array(prefix)
+                b := path_array(path)
+                prefix_matches(a, b)
+              }
+
+              path_array(p) := out if {
+                p != "/"
+                out := split(trim(p, "/"), "/")
+              }
+
+              # This handles the special case for "/", since
+              # split(trim("/", "/"), "/") == [""]
+              path_array("/") := []
+
+              prefix_matches(a, b) if {
+                count(a) <= count(b)
+                not any_not_equal_upto(a, b, count(a))
+              }
+
+              any_not_equal_upto(a, b, n) if {
+                a[i] != b[i]
+                i < n
+              }
+
+              ### SecurityPolicyException logic
+
+              allowed_by_any(volume) if {
+                allowed_by_securitypolicyexception(volume)
+              }
+
+              allowed_by_securitypolicyexception(volume) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "volumes")
+                has_field(exception.spec.volumes, "hostPath")
+                has_field(exception.spec.volumes.hostPath, "allowedValues")
+                allowedPaths := exception.spec.volumes.hostPath.allowedValues
+                input_hostpath_allowed_exact(allowedPaths, volume)
+              }
+
+              input_hostpath_allowed_exact(allowedPaths, volume) if {
+                allowedHostPath := allowedPaths[_]
+                allowedHostPath.path == volume.hostPath.path
+                volume_mount_readonly_matches(allowedHostPath.readOnly, volume.name)
+              }
+
+              volume_mount_readonly_matches(expectedReadOnly, volume_name) if {
+                actualReadOnly := get_volume_mount_readonly(volume_name)
+                actualReadOnly == expectedReadOnly
+              }
+
+              get_volume_mount_readonly(volume_name) := readOnly if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
+                has_field(mount, "readOnly")
+                readOnly := mount.readOnly
+              }
+
+              get_volume_mount_readonly(volume_name) := false if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
+                not has_field(mount, "readOnly")
+              }
+
+              get_volume_mount_readonly(volume_name) := false if {
+                not volume_mount_exists(volume_name)
+              }
+
+              volume_mount_exists(volume_name) if {
+                container := input_containers[_]
+                mount := container.volumeMounts[_]
+                mount.name == volume_name
+              }
+
+              ### Common logic
+
+              input_hostpath_volumes contains v if {
+                v := input.review.object.spec.volumes[_]
+                has_field(v, "hostPath")
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }
+

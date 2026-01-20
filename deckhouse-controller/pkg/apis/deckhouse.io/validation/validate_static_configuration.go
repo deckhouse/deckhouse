@@ -37,8 +37,10 @@ const (
 	staticClusterConfigurationSecretDataKey = "static-cluster-configuration.yaml"
 )
 
-func staticConfigurationHandler(schemaStore *config.SchemaStore) http.Handler {
+func staticConfigurationHandler(_ *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(_ context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+		log.Info("Start validating static cluster configuration")
+		defer log.Info("Finish validating static cluster configuration")
 		if ar.Operation == model.OperationDelete {
 			return rejectResult(fmt.Sprintf(
 				"It is forbidden to delete secret %s",
@@ -53,19 +55,16 @@ func staticConfigurationHandler(schemaStore *config.SchemaStore) http.Handler {
 		}
 
 		clusterConfigurationRaw, ok := secret.Data[staticClusterConfigurationSecretDataKey]
-		if !ok {
-			log.Debug(
-				"no cluster-configuration found in secret",
+		if !ok || len(clusterConfigurationRaw) == 0 {
+			log.Info(
+				"No cluster-configuration found in secret or empty. We have auto discovering configuration if need",
 				slog.String("namespace", obj.GetNamespace()), slog.String("name", obj.GetName()),
 			)
-			return nil, fmt.Errorf(
-				"expected field '%s' not found in secret %s",
-				staticClusterConfigurationSecretDataKey,
-				secret.Name,
-			)
+			return allowResult(nil)
 		}
 
-		return validateClusterConfiguration(schemaStore, clusterConfigurationRaw)
+		result, err := validateClusterConfiguration(context.Background(), clusterConfigurationRaw)
+		return result, err
 	})
 
 	wh, _ := kwhvalidating.NewWebhook(kwhvalidating.WebhookConfig{

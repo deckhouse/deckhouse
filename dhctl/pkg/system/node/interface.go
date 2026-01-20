@@ -63,6 +63,7 @@ type Script interface {
 	WithEnvs(envs map[string]string)
 	WithCleanupAfterExec(doCleanup bool)
 	WithCommanderMode(enabled bool)
+	WithExecuteUploadDir(dir string)
 }
 
 type Tunnel interface {
@@ -151,4 +152,6 @@ type SSHClient interface {
 	Session() *session.Session
 
 	PrivateKeys() []session.AgentPrivateKey
+
+	RefreshPrivateKeys() error
 }

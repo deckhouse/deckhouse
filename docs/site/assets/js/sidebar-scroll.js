@@ -9,7 +9,7 @@ $(window).on('load', function() {
       return pathname.substring(penultimateSlash + 1, lastSlash) + '/';
     } else {
       const partsPathname = pathname.split('/');
-      return partsPathname.slice(-2).join('/');
+      return partsPathname.slice(-3).join('/');
     }
   }
 

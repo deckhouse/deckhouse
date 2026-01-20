@@ -16,10 +16,10 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // PackageRepositoryLister helps list PackageRepositories.
@@ -27,39 +27,19 @@ import (
 type PackageRepositoryLister interface {
 	// List lists all PackageRepositories in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha1.PackageRepository, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha1.PackageRepository, err error)
 	// Get retrieves the PackageRepository from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.PackageRepository, error)
+	Get(name string) (*deckhouseiov1alpha1.PackageRepository, error)
 	PackageRepositoryListerExpansion
 }
 
 // packageRepositoryLister implements the PackageRepositoryLister interface.
 type packageRepositoryLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha1.PackageRepository]
 }
 
 // NewPackageRepositoryLister returns a new PackageRepositoryLister.
 func NewPackageRepositoryLister(indexer cache.Indexer) PackageRepositoryLister {
-	return &packageRepositoryLister{indexer: indexer}
-}
-
-// List lists all PackageRepositories in the indexer.
-func (s *packageRepositoryLister) List(selector labels.Selector) (ret []*v1alpha1.PackageRepository, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha1.PackageRepository))
-	})
-	return ret, err
-}
-
-// Get retrieves the PackageRepository from the index for a given name.
-func (s *packageRepositoryLister) Get(name string) (*v1alpha1.PackageRepository, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha1.Resource("packagerepository"), name)
-	}
-	return obj.(*v1alpha1.PackageRepository), nil
+	return &packageRepositoryLister{listers.New[*deckhouseiov1alpha1.PackageRepository](indexer, deckhouseiov1alpha1.Resource("packagerepository"))}
 }

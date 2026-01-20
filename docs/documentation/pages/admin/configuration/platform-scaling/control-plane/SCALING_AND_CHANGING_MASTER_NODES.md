@@ -42,6 +42,10 @@ Transitioning from 2 to 1 master node requires manual etcd adjustment. All other
 
 ### Common scaling scenarios
 
+{% alert level="warning" %}
+For cluster stability, it is necessary to maintain an odd number of nodes with etcd to ensure quorum.
+{% endalert %}
+
 DKP supports both automatic and manual scaling of master nodes in cloud and bare-metal clusters:
 
 1. **Single-master → Multi-master**:
@@ -61,17 +65,27 @@ DKP supports both automatic and manual scaling of master nodes in cloud and bare
        - Run `d8 k delete node <node-name>`;
        - Power off the corresponding VMs or servers.
 
-{% alert level="warning" %}
-In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
-{% endalert %}
+   > **Important**. In cloud clusters, all necessary actions are automatically handled by the `dhctl converge` command.
 
 1. **Changing the number of master nodes in a cloud cluster**:
 
    - Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
 
-{% alert level="warning" %}
-An odd number of master nodes is required to maintain etcd quorum stability.
-{% endalert %}
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a cloud cluster**:
+
+   - In the cloud provider settings, set `masterNodeGroup.replicas` to `2` and create a NodeGroup for the arbiter node. Similar to node addition/removal, typically done using the `dhctl converge` command or cloud tools.
+
+     For details on configuring HA mode with 2 master nodes and 1 arbiter node in a cloud cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-cloud-cluster).
+
+1. **Multi-master migration (3 master nodes) → 2 master nodes and 1 arbiter node in a static cluster**:
+
+   - Create a NodeGroup for the arbiter node and add the node to the cluster.
+   - Remove the labels `node-role.kubernetes.io/control-plane=""`, `node-role.kubernetes.io/master=""` and `node.deckhouse.io/group-""` from the extra master node.
+   - To correctly remove the node from etcd in **bare-metal clusters**:
+     - Run `d8 k delete node <node-name>`.
+     - Power off the corresponding VM or server.
+
+     For details on configuring HA mode with 2 master nodes and 1 arbiter node in a static cluster, refer to [Managing HA mode](../../high-reliability-and-availability/enable.html#configuring-in-a-static-cluster).
 
 ### Removing the master role from a node without deleting the node itself
 
@@ -256,13 +270,17 @@ Before adding nodes, make sure the required quotas are available.
 It's important to have an odd number of master nodes to maintain etcd quorum.
 {% endalert %}
 
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no active alerts in the cluster that may interfere with adding new master nodes.
 1. Make sure the Deckhouse queue is empty:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. On the **local machine**, run the Deckhouse installer container for the appropriate edition and version (adjust the container registry address if necessary):
@@ -320,13 +338,17 @@ This section describes the process of converting a multi-master cluster into a s
 The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
 {% endalert %}
 
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
 1. Create a [backup of etcd](../../backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
 1. Copy the resulting archive outside the cluster (e.g., to a local machine).
 1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
 1. Make sure the DKP queue is empty:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
@@ -354,54 +376,22 @@ The following steps must be performed starting from the first master node (`mast
    > - "Auto"
    > ```
 
-1. Remove the following labels from the master nodes you plan to delete:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Command to remove the labels:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Make sure the nodes to be removed are no longer part of the etcd cluster:
-
-   ```bash
-   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
-     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-     --endpoints https://127.0.0.1:2379/ member list -w table
-     if [ $? -eq 0 ]; then
-       break
-     fi
-   done
-   ```
-
-1. Drain the nodes to be removed:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Power off the corresponding VMs, delete their instances from the cloud, and detach any associated disks (e.g., `kubernetes-data-master-<N>`).
-
-1. Delete any remaining pods on the removed nodes:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Delete the `Node` objects for the removed nodes:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
 1. **In the installer container**, run the following command to trigger the scaling operation:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > For **OpenStack** and **VKCloud(OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in Openstack itself.
+   >
+   > For example, when deleting the `cloud-demo-master-2` node in the Openstack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   >
+   > If the kubernetes-data disk remains, there may be problems with ETCD operation as the number of master nodes increases.
+
+1. Check the Deckhouse queue and make sure that there are no errors with the command:
+
+   ```shell
+   d8 system queue list
    ```
 
 ### Accessing the DKP controller in a multi-master cluster
@@ -409,5 +399,5 @@ The following steps must be performed starting from the first master node (`mast
 In clusters with multiple master nodes, DKP runs in high-availability mode (with multiple replicas). To access the active DKP controller, you can use the following command (example shown for the `deckhouse-controller queue list` command):
 
 ```console
-d8 platform queue list
+d8 system queue list
 ```

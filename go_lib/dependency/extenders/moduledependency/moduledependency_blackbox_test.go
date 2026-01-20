@@ -61,6 +61,7 @@ func TestVersionHandling(t *testing.T) {
 	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0", nil
 	})
+	extender.SetModulesStateHelper(func() []string { return []string{"prereleaseModule"} })
 
 	// Test version stripping works correctly for constraint validation
 	version, _ := semver.NewVersion("1.0.0")
@@ -111,7 +112,12 @@ func TestAddConstraintAndGetTopologicalHints(t *testing.T) {
 
 	// Test getting topological hints
 	hints := extender.GetTopologicalHints("moduleA")
-	assert.ElementsMatch(t, []string{"moduleB", "moduleC"}, hints)
+	expectedHints := []string{"moduleB", "moduleC"}
+	actualHints := make([]string, 0, len(hints))
+	for _, h := range hints {
+		actualHints = append(actualHints, h.Name)
+	}
+	assert.ElementsMatch(t, expectedHints, actualHints)
 
 	// Test adding a constraint with self-reference
 	err = extender.AddConstraint("moduleD", map[string]string{
@@ -121,7 +127,12 @@ func TestAddConstraintAndGetTopologicalHints(t *testing.T) {
 	require.NoError(t, err, "AddConstraint should succeed even with self-reference")
 
 	hints = extender.GetTopologicalHints("moduleD")
-	assert.ElementsMatch(t, []string{"moduleE"}, hints, "Self-reference should be excluded from hints")
+	expectedHints = []string{"moduleE"}
+	actualHints = make([]string, 0, len(hints))
+	for _, h := range hints {
+		actualHints = append(actualHints, h.Name)
+	}
+	assert.ElementsMatch(t, expectedHints, actualHints)
 
 	// Test adding an invalid constraint
 	err = extender.AddConstraint("moduleF", map[string]string{
@@ -187,7 +198,7 @@ func TestValidateReleaseWithInvalidConstraint(t *testing.T) {
 	})
 
 	assert.Error(t, err, "ValidateRelease should fail with an invalid constraint")
-	assert.Contains(t, err.Error(), "could not validate", "Error should mention validation failure")
+	assert.Contains(t, err.Error(), "improper constraint", "Error should mention validation failure")
 }
 
 // TestValidateReleaseWithMissingDependency tests validation with a missing dependency
@@ -216,6 +227,7 @@ func TestValidateReleaseWithUnparsableVersion(t *testing.T) {
 	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "not.a.valid.version", nil
 	})
+	extender.SetModulesStateHelper(func() []string { return []string{"unparsableDep"} })
 
 	version, _ := semver.NewVersion("1.0.0")
 	err := extender.ValidateRelease("moduleWithUnparsableDepVersion", "v1.0.0", version, map[string]string{
@@ -241,7 +253,7 @@ func TestValidateReleaseWithVersionConstraintFailure(t *testing.T) {
 	})
 
 	assert.Error(t, err, "ValidateRelease should report constraint violation")
-	assert.Contains(t, err.Error(), "does not meet the version constraint", "Error should mention constraint violation")
+	assert.Contains(t, err.Error(), "is not deployed", "Error should mention not deployed")
 }
 
 // TestValidateReleaseWithBreakingCurrentConstraint tests validation when the new version breaks existing constraints
@@ -256,10 +268,11 @@ func TestValidateReleaseWithBreakingCurrentConstraint(t *testing.T) {
 
 	// Try to validate a release of targetModule with version 2.0.0
 	version, _ := semver.NewVersion("2.0.0")
+	extender.SetModulesStateHelper(func() []string { return []string{"dependentModule"} })
 	err = extender.ValidateRelease("targetModule", "v2.0.0", version, map[string]string{})
 
 	assert.Error(t, err, "ValidateRelease should detect breaking existing constraints")
-	assert.Contains(t, err.Error(), "does not meet the version constraint", "Error should mention constraint violation")
+	assert.Contains(t, err.Error(), "not meet requirement", "Error should mention constraint violation")
 }
 
 // TestFilter tests the Filter function with various scenarios
@@ -423,6 +436,7 @@ func TestVersionHandlingWithPrereleaseAndMetadata(t *testing.T) {
 	extender.SetModulesVersionHelper(func(_ string) (string, error) {
 		return "1.0.0-beta+build", nil
 	})
+	extender.SetModulesStateHelper(func() []string { return []string{"prereleaseModule"} })
 
 	version, _ := semver.NewVersion("1.0.0")
 	err := extender.ValidateRelease("moduleWithPrerelease", "v1.0.0", version, map[string]string{
@@ -455,6 +469,7 @@ func TestMultipleErrorFormatting(t *testing.T) {
 			return "", fmt.Errorf("unknown module")
 		}
 	})
+	extender.SetModulesStateHelper(func() []string { return []string{"notFoundModule", "badVersionModule", "validModule"} })
 
 	version, _ := semver.NewVersion("1.0.0")
 	err := extender.ValidateRelease("moduleWithMultipleErrors", "v1.0.0", version, map[string]string{
@@ -474,6 +489,6 @@ func TestMultipleErrorFormatting(t *testing.T) {
 		assert.Contains(t, errString, "errors occurred", "Error should mention multiple errors")
 		assert.Contains(t, errString, "could not get", "Error should mention missing module")
 		assert.Contains(t, errString, "unparsable version", "Error should mention bad version")
-		assert.Contains(t, errString, "does not meet the version constraint", "Error should mention constraint violation")
+		assert.Contains(t, errString, "not meet version constraint", "Error should mention constraint violation")
 	}
 }

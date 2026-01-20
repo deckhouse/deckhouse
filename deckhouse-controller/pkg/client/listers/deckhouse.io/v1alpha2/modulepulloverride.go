@@ -16,10 +16,10 @@
 package v1alpha2
 
 import (
-	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ModulePullOverrideLister helps list ModulePullOverrides.
@@ -27,39 +27,19 @@ import (
 type ModulePullOverrideLister interface {
 	// List lists all ModulePullOverrides in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha2.ModulePullOverride, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha2.ModulePullOverride, err error)
 	// Get retrieves the ModulePullOverride from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha2.ModulePullOverride, error)
+	Get(name string) (*deckhouseiov1alpha2.ModulePullOverride, error)
 	ModulePullOverrideListerExpansion
 }
 
 // modulePullOverrideLister implements the ModulePullOverrideLister interface.
 type modulePullOverrideLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha2.ModulePullOverride]
 }
 
 // NewModulePullOverrideLister returns a new ModulePullOverrideLister.
 func NewModulePullOverrideLister(indexer cache.Indexer) ModulePullOverrideLister {
-	return &modulePullOverrideLister{indexer: indexer}
-}
-
-// List lists all ModulePullOverrides in the indexer.
-func (s *modulePullOverrideLister) List(selector labels.Selector) (ret []*v1alpha2.ModulePullOverride, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha2.ModulePullOverride))
-	})
-	return ret, err
-}
-
-// Get retrieves the ModulePullOverride from the index for a given name.
-func (s *modulePullOverrideLister) Get(name string) (*v1alpha2.ModulePullOverride, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha2.Resource("modulepulloverride"), name)
-	}
-	return obj.(*v1alpha2.ModulePullOverride), nil
+	return &modulePullOverrideLister{listers.New[*deckhouseiov1alpha2.ModulePullOverride](indexer, deckhouseiov1alpha2.Resource("modulepulloverride"))}
 }

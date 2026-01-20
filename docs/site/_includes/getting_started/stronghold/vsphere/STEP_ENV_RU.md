@@ -105,7 +105,9 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreN
 govc role.create deckhouse \
    Cns.Searchable Datastore.AllocateSpace Datastore.Browse Datastore.FileManagement \
    Global.GlobalTag Global.SystemTag Network.Assign StorageProfile.View \
-   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.')
+   VcIdentityProviders.Read \
+   Infraprofile.Read\
+   $(govc role.ls Admin | grep -F -e 'Folder.' -e 'InventoryService.' -e 'Resource.' -e 'VirtualMachine.' -e 'Host.Cim.' -e 'Host.Config.' -e 'Profile.' -e 'VApp.')
 ```
 {% endsnippetcut %}
 

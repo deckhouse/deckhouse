@@ -19,7 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"slices"
+	"strings"
 	"sync"
 
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
@@ -32,9 +34,14 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -42,15 +49,16 @@ const (
 	managerTracer = "package-manager"
 )
 
-var ErrPackageNotFound = errors.New("package not found")
-
 // Manager manages the lifecycle of application packages.
 type Manager struct {
 	mu   sync.Mutex                   // Protects apps map
 	apps map[string]*apps.Application // Loaded applications by name
 
+	onValuesChanged func(name string)
+
 	loader            *loader.ApplicationLoader // Loads packages from filesystem
 	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	scheduler         *schedule.Scheduler
 	kubeObjectPatcher *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -59,9 +67,10 @@ type Manager struct {
 }
 
 type Config struct {
-	AppsDir string
+	OnValuesChanged func(name string)
 
 	NelmService       *nelm.Service
+	Scheduler         *schedule.Scheduler
 	KubeObjectPatcher *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
@@ -69,11 +78,14 @@ type Config struct {
 
 // New creates a new package manager with the specified apps directory.
 func New(conf Config, logger *log.Logger) *Manager {
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
-		loader:            loader.NewApplicationLoader(conf.AppsDir, logger),
+		onValuesChanged:   conf.OnValuesChanged,
+		loader:            loader.NewApplicationLoader(appsPath, logger),
 		nelm:              conf.NelmService,
+		scheduler:         conf.Scheduler,
 		kubeEventsManager: conf.KubeEventsManager,
 		kubeObjectPatcher: conf.KubeObjectPatcher,
 		scheduleManager:   conf.ScheduleManager,
@@ -82,41 +94,76 @@ func New(conf Config, logger *log.Logger) *Manager {
 	}
 }
 
-// LoadApplication loads a package from filesystem and stores it in the manager.
+// LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
-func (m *Manager) LoadApplication(ctx context.Context, name string, settings addonutils.Values) error {
-	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadApplication")
+// It returns the loaded version
+func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("registry", registry.Name))
 
-	app, err := m.loader.Load(ctx, name)
+	app, err := m.loader.Load(ctx, registry, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("load application: %w", err)
+		return "", newLoadFailedErr(err)
 	}
+
+	m.mu.Lock()
+	m.apps[name] = app
+	m.scheduler.Add(app)
+	m.mu.Unlock()
+
+	return app.GetVersion(), nil
+}
+
+// ValidateSettings validates settings against openAPI and setting check
+func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ValidateSettings")
+	defer span.End()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	if err = app.ApplySettings(settings); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("apply settings: %w", err)
+	app, ok := m.apps[name]
+	if !ok {
+		return settingscheck.Result{Valid: true}, nil
 	}
 
-	m.apps[name] = app
-
-	return nil
+	return app.ValidateSettings(ctx, settings)
 }
 
-// ApplySettings validates and apply setting to application
-func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
-	app, err := m.getApp(name)
-	if err != nil {
-		return err
+// ApplySettings validates and applies settings to application
+func (m *Manager) ApplySettings(ctx context.Context, name string, settings addonutils.Values) error {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ApplySettings")
+	defer span.End()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		return nil
 	}
 
-	return app.ApplySettings(settings)
+	m.logger.Debug("apply settings", slog.String("name", name))
+
+	res, err := app.ValidateSettings(ctx, settings)
+	if err != nil {
+		return newApplySettingsErr(err)
+	}
+
+	if !res.Valid {
+		return newApplySettingsErr(errors.New(res.Message))
+	}
+
+	if err = app.ApplySettings(settings); err != nil {
+		return newApplySettingsErr(err)
+	}
+
+	return nil
 }
 
 // StartupPackage runs OnStartup hooks for a package.
@@ -127,17 +174,19 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	span.SetAttributes(attribute.String("name", name))
 
-	m.logger.Debug("startup package", slog.String("name", name))
-
-	app, err := m.getApp(name)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
+	m.mu.Lock()
+	app := m.apps[name]
+	m.mu.Unlock()
+	if app == nil {
+		// package can be disabled and removed before
+		return nil
 	}
 
-	if err = app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
+	m.logger.Debug("run on startup hooks", slog.String("name", name))
+
+	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run startup hooks: %w", err)
+		return newStartupHookErr(err)
 	}
 
 	return nil
@@ -158,40 +207,49 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	span.SetAttributes(attribute.String("name", name))
 
-	app, err := m.getApp(name)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return err
+	m.mu.Lock()
+	app := m.apps[name]
+	m.mu.Unlock()
+	if app == nil {
+		// package can be disabled and removed before
+		return nil
 	}
 
 	// monitor may not be created by this time
 	if m.nelm.HasMonitor(name) {
+		m.logger.Debug("pause helm monitor", slog.String("name", name))
 		// Hooks can delete release resources, so pause resources monitor before run hooks.
 		m.nelm.PauseMonitor(name)
 		defer m.nelm.ResumeMonitor(name)
 	}
 
-	if err = app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
+	m.logger.Debug("run before helm hooks", slog.String("name", name))
+
+	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run before helm hooks: %w", err)
+		return newBeforeHelmHookErr(err)
 	}
 
-	if err = m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	m.logger.Debug("run nelm upgrade", slog.String("name", name))
+
+	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("upgrade nelm package: %w", err)
+		return newHelmUpgradeErr(err)
 	}
+
+	m.logger.Debug("run after helm hooks", slog.String("name", name))
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
-	if err = app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("run after helm hooks: %w", err)
+		return newAfterHelmHookErr(err)
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err = m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
-			return fmt.Errorf("install nelm package: %w", err)
+			return newHelmUpgradeErr(err)
 		}
 	}
 
@@ -208,15 +266,18 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 //  5. Stop all Kubernetes event monitors
 //  6. Remove package from manager store
 func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) error {
-	_, span := otel.Tracer(managerTracer).Start(ctx, "DeletePackage")
+	_, span := otel.Tracer(managerTracer).Start(ctx, "DisablePackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	m.logger.Debug("delete package", slog.String("name", name))
+	m.logger.Debug("disable package", slog.String("name", name))
 
-	app, err := m.getApp(name)
-	if err != nil {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
 		return nil
 	}
 
@@ -224,52 +285,71 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	m.nelm.RemoveMonitor(name)
 
 	if !keep {
+		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err = m.nelm.Delete(ctx, name); err != nil {
+		if err := m.nelm.Delete(ctx, app); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 
+		m.logger.Debug("run after delete helm hooks", slog.String("name", name))
+
 		// Run after delete helm hooks
-		if err = app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
+		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run after delete helm hooks: %w", err)
 		}
 
-		m.mu.Lock()
 		delete(m.apps, name)
-		m.mu.Unlock()
 	}
 
 	// Disable all schedule-based hooks
 	schHooks := app.GetHooksByBinding(shtypes.Schedule)
 	for _, hook := range schHooks {
-		hook.GetHookController().DisableScheduleBindings()
+		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
+		if hook.GetHookController() != nil {
+			hook.GetHookController().DisableScheduleBindings()
+		}
 	}
 
 	// Stop all Kubernetes event monitors
 	kubeHooks := app.GetHooksByBinding(shtypes.OnKubernetesEvent)
 	for _, hook := range kubeHooks {
-		hook.GetHookController().StopMonitors()
+		m.logger.Debug("disable hook", slog.String("name", name), slog.String("hook", hook.GetName()))
+		if hook.GetHookController() != nil {
+			hook.GetHookController().StopMonitors()
+		}
 	}
+
+	m.scheduler.Remove(name)
 
 	return nil
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
 func (m *Manager) UnlockKubernetesMonitors(name, hook string, monitors ...string) {
-	app, err := m.getApp(name)
-	if err != nil {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
 		return
 	}
 
+	m.logger.Debug("unlock kubernetes monitors",
+		slog.String("name", name),
+		slog.String("hook", hook),
+		slog.String("monitors", strings.Join(monitors, ",")))
 	app.UnlockKubernetesMonitors(hook, monitors...)
 }
 
 // GetPackageQueues collects all queues from package hooks
 func (m *Manager) GetPackageQueues(name string) []string {
-	app, err := m.getApp(name)
-	if err != nil {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
 		return nil
 	}
 
@@ -291,18 +371,14 @@ func (m *Manager) GetPackageQueues(name string) []string {
 	return slices.Compact(res)
 }
 
-// getApp retrieves an application from the manager's cache by name.
-// Returns ErrPackageNotFound if the application is not loaded.
-//
-// Thread-safe: Acquires mutex lock before accessing apps map.
-func (m *Manager) getApp(name string) (*apps.Application, error) {
+func (m *Manager) GetAppInfo(name string) apps.Info {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	app, ok := m.apps[name]
-	if !ok {
-		return nil, ErrPackageNotFound
+	app := m.apps[name]
+	if app == nil {
+		return apps.Info{}
 	}
 
-	return app, nil
+	return app.GetInfo()
 }

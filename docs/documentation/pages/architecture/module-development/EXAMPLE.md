@@ -250,7 +250,7 @@ The following is the sequence of steps to enable the `helloworld` in a cluster m
   or check the status of the DKP queue:
 
    ```shell
-   d8 platform queue list
+   d8 system queue list
    ```
 
 ## Migration of ModuleUpdatePolicy to version v1alpha2

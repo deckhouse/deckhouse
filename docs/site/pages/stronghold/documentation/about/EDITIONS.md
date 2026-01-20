@@ -28,11 +28,11 @@ The table below provides a brief comparison of the Deckhouse Stronghold editions
 | Web interface                                                                           | {{ supported }}                    | {{ supported }}                             |
 | Role and access policy management through a web interface                                             | {{ not_supported }}                | {{ supported }}                             |
 | Support for namespaces                                                                                | {{ not_supported }}                | {{ supported }}                             |
-| Built-in automatic unsealing of the vault                                                             | {{ not_supported }}                | {{ supported }}                             |
+| Built-in automatic vault unsealing without requiring any external services or KMS                                                             | {{ not_supported }}                | {{ supported }}                             |
 | Data replication                                                                                      | {{ not_supported }}                | KV1/KV2                                     |
 | Automatic backup creation on a schedule                                                               | {{ not_supported }}                | {{ supported }}                             |
 | Audit logging support                                                                                 | {{ not_supported }}                | {{ supported }}                             |
-| Delivery as standalone executable file                                                                | {{ not_supported }}                | {{ supported }}                             |
-| Launching in DKP CE                                          | {{ supported }}                    | {{ not_supported }}                         |
-| [Technical support «Standard»](https://deckhouse.io/tech-support/)                                    | {{ techsupport_notice_ce }}        | {{ techsupport_notice_commercial }}         |
-| [Technical support «Standard +»](https://deckhouse.io/tech-support/)                                  | {{ techsupport_notice_ce }}        | {{ techsupport_notice_commercial }}         |
+| Delivered as a standalone executable file                                                                | {{ not_supported }}                | {{ supported }}                             |
+| Can be launched in DKP CE                                          | {{ supported }}                    | {{ not_supported }}                         |
+| [Technical support under the "Standard" plan](https://deckhouse.io/tech-support/)                                    | {{ techsupport_notice_ce }}        | {{ techsupport_notice_commercial }}         |
+| [Technical support under the "Standard +" plan](https://deckhouse.io/tech-support/)                                  | {{ techsupport_notice_ce }}        | {{ techsupport_notice_commercial }}         |

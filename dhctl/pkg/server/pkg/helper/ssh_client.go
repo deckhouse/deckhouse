@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -22,15 +23,16 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 )
 
-func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
+func CreateSSHClient(ctx context.Context, config *config.ConnectionConfig) (node.SSHClient, func() error, error) {
 	cleanuper := callback.NewCallback()
 
 	keysPaths := make([]string, 0, len(config.SSHConfig.SSHAgentPrivateKeys))
@@ -60,7 +62,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 			sshHosts = append(sshHosts, session.Host{Host: h.Host, Name: h.Host})
 		}
 	} else {
-		mastersIPs, err := bootstrap.GetMasterHostsIPs()
+		mastersIPs, err := state.GetMasterHostsIPs(cache.Global())
 		if err != nil {
 			return nil, cleanuper.AsFunc(), err
 		}
@@ -91,7 +93,7 @@ func CreateSSHClient(config *config.ConnectionConfig) (node.SSHClient, func() er
 	app.SSHLegacyMode = config.SSHConfig.LegacyMode
 	app.SSHModernMode = config.SSHConfig.ModernMode
 
-	sshClient := sshclient.NewClient(sess, keys)
+	sshClient := sshclient.NewClient(ctx, sess, keys)
 
 	cleanuper.Add(func() error {
 		if !govalue.IsNil(sshClient) {

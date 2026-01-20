@@ -49,12 +49,6 @@ func testVersionSelection(t *testing.T) {
 		expectedConfig string
 	}{
 		{
-			name:           "Kubernetes 1.29 should use v1beta3",
-			k8sVersion:     "1.29",
-			expectedAPI:    "kubeadm.k8s.io/v1beta3",
-			expectedConfig: "ClusterConfiguration",
-		},
-		{
 			name:           "Kubernetes 1.30 should use v1beta3",
 			k8sVersion:     "1.30",
 			expectedAPI:    "kubeadm.k8s.io/v1beta3",
@@ -99,17 +93,6 @@ func testFeatureGates(t *testing.T) {
 		k8sVersion       string
 		expectedFeatures []string
 	}{
-		{
-			name:       "Kubernetes 1.29 should include legacy feature gates",
-			k8sVersion: "1.29",
-			expectedFeatures: []string{
-				"TopologyAwareHints=true",
-				"RotateKubeletServerCertificate=true",
-				"ValidatingAdmissionPolicy=true",
-				"AdmissionWebhookMatchConditions=true",
-				"StructuredAuthenticationConfiguration=true",
-			},
-		},
 		{
 			name:       "Kubernetes 1.30 should not include legacy feature gates",
 			k8sVersion: "1.30",
@@ -822,7 +805,7 @@ func testOptionalArguments(t *testing.T) {
 
 func testPatchesRendering(t *testing.T) {
 	t.Run("All Patches Render Successfully", func(t *testing.T) {
-		versions := []string{"1.29", "1.30", "1.31", "1.32"}
+		versions := []string{"1.30", "1.31", "1.32"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -988,7 +971,6 @@ func testEdgeCases(t *testing.T) {
 			version     string
 			expectBeta3 bool
 		}{
-			{"1.29", true},
 			{"1.30", true},
 			{"1.31", false},
 			{"1.32", false},
@@ -1184,7 +1166,7 @@ func testMissingCoverage(t *testing.T) {
 
 	t.Run("V1beta3 Additional Conditions", func(t *testing.T) {
 		// Test v1beta3 specific conditions
-		data := getBaseTemplateData("1.29")
+		data := getBaseTemplateData("1.30")
 		data["runType"] = "Runtime"
 
 		result, err := renderKubeadmConfig(data)

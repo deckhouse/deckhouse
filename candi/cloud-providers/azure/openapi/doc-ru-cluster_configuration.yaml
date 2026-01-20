@@ -12,7 +12,7 @@ apiVersions:
       d8 system edit provider-cluster-configuration
       ```
 
-      > После изменения параметров узлов необходимо выполнить команду [dhctl converge](../../deckhouse-faq.html#изменение-конфигурации), чтобы изменения вступили в силу.
+      > После изменения параметров узлов необходимо выполнить команду `dhctl converge`, чтобы изменения вступили в силу. Подробнее про изменение конфигурации кластера — в разделе [«Добавление и управление облачными узлами»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
     x-doc-search: |
       ProviderClusterConfiguration
     properties:
@@ -112,7 +112,7 @@ apiVersions:
                 description: |
                   Образ виртуальной машины, который будет использоваться для инстанса.
 
-                  Подробнее про образы виртуальных машин можно прочитать в [официальной документации](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
+                  Подробнее про образы виртуальных машин можно прочитать в [официальной документации Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage).
 
                   Получить `urn` образа c помощью [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli) (столбец №4):
 
@@ -123,7 +123,7 @@ apiVersions:
 
                   По умолчанию используется образ из `AzureCloudDiscoveryData` — образ, из которого был создан мастер-узел при развертывании кластера.
 
-                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
+                  Список поддерживаемых Deckhouse ОС и их версий можно найти в [документации](/products/kubernetes-platform/documentation/v1/supported_versions.html) (учитывайте используемую версию Deckhouse).
               enableExternalIP:
                 description: |
                   Разрешение назначения внешнего IP-адреса для инстанса.

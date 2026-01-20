@@ -1,0 +1,24 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  creationTimestamp: null
+  name: follow-obj
+  resourceVersion: "1000"
+spec:
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    name: my-pod
+    namespace: default
+    uid: befc4950-0348-494d-af5e-94d65ad0d03e
+  mode: FollowObject
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T15:00:00Z"
+    message: Following object v1/Pod/my-pod
+    reason: ObjectExists
+    status: "True"
+    type: Active
+  message: Following object v1/Pod/my-pod
+  phase: Tracking

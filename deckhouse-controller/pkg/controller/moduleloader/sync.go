@@ -16,6 +16,7 @@ package moduleloader
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -112,6 +113,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 	}
 
 	for _, mpo := range mpos.Items {
+		moduleName := mpo.GetModuleName()
+
 		// ignore deleted mpo or unready mpo
 		if !mpo.ObjectMeta.DeletionTimestamp.IsZero() || mpo.Status.Message != v1alpha1.ModulePullOverrideMessageReady {
 			continue
@@ -154,17 +157,39 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
 		}
 
+		currentNode := os.Getenv("DECKHOUSE_NODE_NAME")
+		if len(currentNode) == 0 {
+			return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")
+		}
+
+		// if deployedOn annotation value doesn't equal to current node name - overwrite the module from the repository
+		if deployedOn := mpo.GetAnnotations()[v1alpha1.ModulePullOverrideAnnotationDeployedOn]; deployedOn != currentNode {
+			l.logger.Info("reinitialize module pull override due to stale deployedOn annotation", slog.String("name", mpo.Name))
+			if err = l.installer.Uninstall(ctx, moduleName); err != nil {
+				return fmt.Errorf("uninstall module pull override: %w", err)
+			}
+
+			if len(mpo.ObjectMeta.Annotations) == 0 {
+				mpo.ObjectMeta.Annotations = make(map[string]string)
+			}
+			mpo.ObjectMeta.Annotations[v1alpha1.ModulePullOverrideAnnotationDeployedOn] = currentNode
+
+			if err = l.client.Update(ctx, &mpo); err != nil {
+				l.logger.Warn("failed to annotate module pull override", slog.String("name", mpo.Name), log.Err(err))
+			}
+		}
+
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
 		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, module.Name, mpo.Spec.ImageTag); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", module.Name, err)
+		if err = l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		l.registries[mpo.GetModuleName()] = utils.BuildRegistryValue(source)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
 
 	return nil
@@ -245,11 +270,11 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, module.Name, release.GetModuleVersion()); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", module.Name, err)
+		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
-		l.registries[release.GetModuleName()] = utils.BuildRegistryValue(source)
+		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
 
 	return nil
@@ -262,21 +287,28 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 		return fmt.Errorf("list releases: %w", err)
 	}
 
-	downloaded, err := l.installer.GetDownloaded()
+	installed, err := l.installer.GetInstalled()
 	if err != nil {
-		return fmt.Errorf("get downloaded modules: %w", err)
+		return fmt.Errorf("get installed modules: %w", err)
 	}
 
-	l.logger.Debug("found downloaded modules", slog.Any("downloaded", downloaded))
+	l.logger.Debug("found installed modules", slog.Any("installed", installed))
 
-	// remove modules with release
+	// exclude modules with release
 	for _, release := range releases.Items {
-		delete(downloaded, release.GetModuleName())
+		delete(installed, release.GetModuleName())
 	}
 
-	for module := range downloaded {
+	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); err == nil || !apierrors.IsNotFound(err) {
+		err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo)
+		if err == nil {
+			// MPO exists - module is managed, don't delete
+			continue
+		}
+
+		if !apierrors.IsNotFound(err) {
+			l.logger.Warn("get module pull override", slog.String("name", module), log.Err(err))
 			continue
 		}
 

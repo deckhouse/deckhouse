@@ -23,13 +23,14 @@ import (
 	"net/http"
 	"strings"
 
-	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
-	"github.com/deckhouse/rootca"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/pkg/errors"
+
+	ddk "github.com/deckhouse/delivery-kit-sdk/pkg/signature/image"
+	"github.com/deckhouse/rootca"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/log"
 )
@@ -57,6 +58,17 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		repository.Digest(digest),
 		remoteOpts...)
 
+	if err != nil {
+		e := &transport.Error{}
+		if errors.As(err, &e) {
+			log.Error(e.Error())
+			if e.StatusCode == http.StatusNotFound {
+				return 0, "", nil, ErrPackageNotFound
+			}
+		}
+		return 0, "", nil, err
+	}
+
 	manifest, err := image.Manifest()
 	if err != nil {
 		return 0, "", nil, err
@@ -68,17 +80,6 @@ func (c *DefaultClient) GetPackage(ctx context.Context, log log.Logger, config *
 		if err := ddk.VerifyImageManifestSignature(ctx, []string{rootca.RootCABase64}, manifest); err != nil {
 			log.Error("verify image signature failed: %w", err)
 		}
-	}
-
-	if err != nil {
-		e := &transport.Error{}
-		if errors.As(err, &e) {
-			log.Error(e.Error())
-			if e.StatusCode == http.StatusNotFound {
-				return 0, "", nil, ErrPackageNotFound
-			}
-		}
-		return 0, "", nil, err
 	}
 
 	layers, err := image.Layers()

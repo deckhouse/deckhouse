@@ -5,7 +5,7 @@ permalink: en/architecture/monitoring/
 
 ## Composition and interaction scheme of monitoring components
 
-![Interaction diagram](../../images/prometheus/prometheus_monitoring_new.svg)
+![Interaction diagram](../../images/prometheus/prometheus_monitoring.svg)
 
 ### Components installed by DKP
 
@@ -22,7 +22,6 @@ permalink: en/architecture/monitoring/
 | **upmeter**                 | Module for assessing DKP component availability.                                                                                                                                                                                                                                                  |
 | **trickster**               | Caching proxy that reduces load on Prometheus. Will be deprecated soon.                                                                                                                                                                                                       |
 
-
 ### External components
 
 DKP can integrate with a large number of diverse solutions in the following ways:
@@ -31,7 +30,6 @@ DKP can integrate with a large number of diverse solutions in the following ways
 |--------------------------------|--------------------------------------------------------------------------|
 | **Alertmanagers**              | Alertmanagers can be connected to Prometheus and Grafana and be located both in the DKP cluster and outside it.|
 | **Long-term metrics storages** | Using the `remote write` protocol, it is possible to send metrics from DKP to a large number of storage systems, including [Cortex](https://www.cortex.io/), [Thanos](https://thanos.io/), [VictoriaMetrics](https://victoriametrics.com/products/open-source/).|
-
 
 ## Prometheus
 
@@ -66,7 +64,6 @@ Prometheus is installed by the `prometheus-operator` module of DKP, which perfor
   * config: Mounted secret (two files: `prometheus.yaml` and `configmaps.json`). Connected to both containers.
   * rules: `emptyDir` that is filled by `prometheus-config-reloader` and read by `prometheus`. Connected to both containers, but in `prometheus` in read-only mode.
   * data: Prometheus data. Mounted only in `prometheus`.
-
 
 ### How is Prometheus configured?
 

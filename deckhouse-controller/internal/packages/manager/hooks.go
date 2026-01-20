@@ -16,7 +16,6 @@ package manager
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -41,7 +40,7 @@ import (
 // Returns:
 //   - bool: true if hook modified values (may require Helm upgrade)
 //   - error: if hook execution fails
-func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []bindingcontext.BindingContext) (bool, error) {
+func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []bindingcontext.BindingContext) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "RunPackageHook")
 	defer span.End()
 
@@ -50,30 +49,36 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 
 	m.logger.Debug("run package hook", slog.String("hook", hook), slog.String("name", name))
 
+	m.mu.Lock()
+	app := m.apps[name]
+	m.mu.Unlock()
+	if app == nil {
+		// package can be disabled and removed before
+		return nil
+	}
+
 	// Pause NELM monitoring during hook execution to prevent race conditions.
 	// Hooks may modify resources that the monitor is tracking, which could trigger
 	// false-positive alerts or inconsistent state. Resume monitoring after completion.
 	m.nelm.PauseMonitor(name)
 	defer m.nelm.ResumeMonitor(name)
 
-	app, err := m.getApp(name)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return false, err
-	}
-
 	// Track if values changed during hook execution.
 	// If the checksum differs after hook execution, it indicates that the hook
 	// modified application values (via patches), which may require a Helm upgrade
 	// to reconcile the cluster state with the new values.
 	oldChecksum := app.GetValuesChecksum()
-	if err = app.RunHookByName(ctx, hook, bctx, m); err != nil {
+	if err := app.RunHookByName(ctx, hook, bctx, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return false, err
+		return newEventHookErr(err)
 	}
 
-	// Return true if values were modified, signaling the need for potential reconciliation
-	return oldChecksum != app.GetValuesChecksum(), nil
+	if m.onValuesChanged != nil && oldChecksum != app.GetValuesChecksum() {
+		m.logger.Debug("values changed during the hook", slog.String("hook", hook), slog.String("name", name))
+		m.onValuesChanged(name)
+	}
+
+	return nil
 }
 
 // InitializeHooks initializes hook controllers and returns info for sync tasks.
@@ -89,10 +94,13 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
 
-	app, err := m.getApp(name)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app := m.apps[name]
+	if app == nil {
+		// package can be disabled and removed before
+		return nil, nil
 	}
 
 	m.logger.Debug("initialize hooks", slog.String("name", name))
@@ -127,12 +135,12 @@ func (m *Manager) InitializeHooks(ctx context.Context, name string) (map[string]
 		hookCtrl := hook.GetHookController()
 		// HandleEnableKubernetesBindings starts watching resources and calls the callback
 		// for each existing resource that matches the watch criteria (initial synchronization).
-		err = hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
-			res[name] = append(res[name], info)
+		err := hookCtrl.HandleEnableKubernetesBindings(ctx, func(info hookcontroller.BindingExecutionInfo) {
+			res[hook.GetName()] = append(res[hook.GetName()], info)
 		})
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			return nil, fmt.Errorf("enable kubernetes bindings: %w", err)
+			return nil, newInitHooksErr(err)
 		}
 	}
 
@@ -160,6 +168,9 @@ type TaskBuilder func(ctx context.Context, name, hook string, info hookcontrolle
 func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.KubeEvent, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.OnKubernetesEvent) {
 			hookCtrl := hook.GetHookController()
@@ -167,7 +178,12 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 			// Check if this hook's binding criteria match the incoming event
 			// (e.g., resource type, namespace, labels, event type)
 			if !hookCtrl.CanHandleKubeEvent(kubeEvent) {
-				return nil
+				m.logger.Debug("skip kube hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("monitor", kubeEvent.MonitorId),
+					slog.String("event", kubeEvent.String()))
+				continue
 			}
 
 			// Process the event and generate tasks via the builder callback
@@ -192,13 +208,20 @@ func (m *Manager) BuildKubeTasks(ctx context.Context, kubeEvent shkubetypes.Kube
 func (m *Manager) BuildScheduleTasks(ctx context.Context, crontab string, builder TaskBuilder) map[string][]queue.Task {
 	res := make(map[string][]queue.Task)
 
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	for _, app := range m.apps {
 		for _, hook := range app.GetHooksByBinding(shtypes.Schedule) {
 			hookCtrl := hook.GetHookController()
 
 			// Check if this hook's cron schedule matches the triggered event
 			if !hookCtrl.CanHandleScheduleEvent(crontab) {
-				return nil
+				m.logger.Debug("skip schedule hook",
+					slog.String("hook", hook.GetName()),
+					slog.String("name", app.GetName()),
+					slog.String("crontab", crontab))
+				continue
 			}
 
 			// Process the schedule event and generate tasks via the builder callback

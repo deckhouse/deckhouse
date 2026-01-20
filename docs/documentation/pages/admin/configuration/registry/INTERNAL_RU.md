@@ -16,8 +16,8 @@ lang: ru
 - `Direct` — использование внутреннего registry. Обращение к внутреннему registry выполняется по фиксированному адресу `registry.d8-system.svc:5001/system/deckhouse`. Фиксированный адрес, при изменении параметров registry, позволяет избежать повторного скачивания образов и перезапуска компонентов. Переключение между режимами и registry выполняется через [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html). Переключение выполняется автоматически (подробнее — в примерах переключения ниже). Архитектура режима описана в разделе [«Архитектура режима Direct»](../../../architecture/registry-direct-mode.html).
 - `Unmanaged` — работа без использования внутреннего registry. Обращение внутри кластера выполняется напрямую к внешнему registry.
   Существует 2 вида режима `Unmanaged`:
-  - Конфигурируемый - режим, управляемый с помощью модуля `registry`. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (подробнее — в примерах переключения ниже).
-  - Неконфигурируемый (deprecated) - режим, используемый по умолчанию. Параметры конфигурации задаются [при установке кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развёрнутом кластере](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) с помощью утилиты `helper change registry` (deprecated).
+  - Конфигурируемый — режим, управляемый с помощью модуля `registry`. Переключение между режимами и registry выполняется через ModuleConfig `deckhouse`. Переключение выполняется автоматически (подробнее — в примерах переключения ниже).
+  - Неконфигурируемый (deprecated) — режим, используемый по умолчанию. Параметры конфигурации задаются [при установке кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), или при [изменении в развёрнутом кластере](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) с помощью утилиты `helper change registry` (deprecated).
 
 {% alert level="info" %}
 Для работы в режиме `Direct` необходимо использовать CRI containerd или containerd v2 на всех узлах кластера. Для настройки CRI ознакомьтесь с конфигурацией [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration)
@@ -26,12 +26,6 @@ lang: ru
 ## Ограничения по работе с внутренним registry
 
 Работа с внутренним registry с помощью [модуля `registry`](/modules/registry/) имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
-
-### Ограничения при установке кластера
-
-Bootstrap кластера Deckhouse Kubernetes Platform с включенным режимом `Direct` не поддерживается. Кластер разворачивается с настройками для режима `Unmanaged`. Настройки registry во время bootstrap задаются через [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
 
 ### Ограничения по условиям работы
 

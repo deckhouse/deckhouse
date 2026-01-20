@@ -76,7 +76,7 @@ spec:
                       description: |
                         HTTPS check or not for remote cluster metadata.
                       default: false
-                      x-doc-examples: ['true']
+                      x-doc-examples: [true]
             status:
               type: object
               properties:

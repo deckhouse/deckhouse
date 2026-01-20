@@ -27,6 +27,8 @@ spec:
     endpoint: http://loki.loki:3100
 ```
 
+Чтобы направить логи в кластерный модуль loki укажите `d8-loki` в параметре  [destinationRefs](/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-destinationrefs) ClusterLoggingConfig. Дополнительные примеры можно найти [в документации](/modules/loki/examples.html#чтение-логов-из-всех-подов-из-указанного-namespace-и-направление-их-в-loki).
+
 ## Чтение логов подов из указанного namespace с указанным label и перенаправление одновременно в Loki и Elasticsearch
 
 Чтение логов подов из namespace `whispers` только с label `app=booking` и перенаправление одновременно в Loki и Elasticsearch:
@@ -524,7 +526,7 @@ spec:
 При использовании нескольких трансформаций `ParseMessage`, преобразование строки должно выполняться последним.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: string-to-json
@@ -559,7 +561,7 @@ spec:
 чтобы распарсить логи в формате Klog и преобразовать их в структурированный объект.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: klog-to-json
@@ -597,7 +599,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 чтобы распарсить логи в формате Syslog и преобразовать их в структурированный объект.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: syslog-to-json
@@ -642,7 +644,7 @@ spec:
 чтобы распарсить логи в формате CLF и преобразовать их в структурированный объект.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: clf-to-json
@@ -683,7 +685,7 @@ spec:
 чтобы распарсить логи в формате Logfmt и преобразовать их в структурированный объект.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: logfmt-to-json
@@ -720,7 +722,7 @@ spec:
 С помощью параметра `depth` можно контролировать глубину вложенности.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: parse-json
@@ -755,7 +757,7 @@ spec:
 Преобразование строки должно выполняться последним.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: parse-json
@@ -814,7 +816,7 @@ I0505 17:59:40.692994   28133 klog.go:70] hello from klog
 > необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: replace-dot
@@ -855,7 +857,7 @@ spec:
 > необходимо преобразовать запись лога в структурированный объект с помощью трансформации `ParseMessage`.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: drop-label
@@ -875,7 +877,7 @@ spec:
 после чего применяется `DropLabels` для удаления указанного лейбла.
 
 ```yaml
-apiVersion: deckhouse.io/v1alpha2
+apiVersion: deckhouse.io/v1alpha1
 kind: ClusterLogDestination
 metadata:
   name: drop-label

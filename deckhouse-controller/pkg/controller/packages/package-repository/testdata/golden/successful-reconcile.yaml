@@ -2,9 +2,11 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
+  annotations:
+    packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   registry:
     ca: test-ca
@@ -19,6 +21,8 @@ kind: PackageRepositoryOperation
 metadata:
   creationTimestamp: null
   labels:
+    packages.deckhouse.io/operation-trigger: auto
+    packages.deckhouse.io/operation-type: Update
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1571326380
   ownerReferences:
@@ -29,7 +33,7 @@ metadata:
     uid: ""
   resourceVersion: "1"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true

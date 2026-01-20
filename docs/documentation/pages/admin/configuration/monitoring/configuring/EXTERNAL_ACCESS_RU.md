@@ -148,7 +148,7 @@ Prometheus, находящийся в основе системы монитор
   Включить модуль можно в веб-интерфейсе (Deckhouse Console), или с помощью следующей команды:
 
   ```shell
-  d8 platform module enable prometheus-pushgateway
+  d8 system module enable prometheus-pushgateway
   ```
 
 - Укажите названия шлюзов в параметре `instances` модуля `prometheus-pushgateway` через веб-интерфейс, или с помощью следующей команды:

@@ -43,6 +43,7 @@ env:
   # <template: werf_envs>
   WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
+  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
   REGISTRY_PATH: "sys/deckhouse-oss"
@@ -1176,20 +1177,6 @@ jobs:
           echo "Release version image:"
           echo "  Source: ${SOURCE_RELEASE_VERSION_IMAGE}"
           echo "  Prod: ${PROD_RELEASE_VERSION_IMAGE}"
-
-      - name: Update release branch
-        if: ${{ success() }}
-        continue-on-error: true
-        env:
-          RELEASE_BRANCH_NAME: stable
-        run: |
-          echo "Update branch ${RELEASE_BRANCH_NAME} to SHA:${{ needs.git_info.outputs.github_sha }}. Actor is ${GITHUB_ACTOR}."
-
-          git config --global user.name ${GITHUB_ACTOR}
-          git config --global user.email ${GITHUB_ACTOR}'@users.noreply.github.com'
-          git remote set-url origin https://x-access-token:${{secrets.BOATSWAIN_GITHUB_TOKEN}}@github.com/${{ github.repository }}
-          git checkout -b "${RELEASE_BRANCH_NAME}"
-          git push --force origin "${RELEASE_BRANCH_NAME}"
 
       - name: Send failure report
         if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}

@@ -44,6 +44,7 @@ const (
 	SenderTimeoutRequestsTotalMetric      = "registry_modules_watcher_sender_timeout_requests_total"
 	RegistryScannerNoModuleYamlMetric     = "d8_telemetry_module_validations_no_module_yaml_in_release_image"
 	RegistryScannerNoModuleSign           = "d8_telemetry_module_validations_no_module_sign_in_release_image"
+	RegistryScannerCriticalMetricSet      = "d8_telemetry_module_validations_critical_set"
 )
 
 func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error {
@@ -138,6 +139,12 @@ func RegisterMetrics(ms *metricstorage.MetricStorage, logger *log.Logger) error 
 	_, err = ms.RegisterGauge(RegistryScannerNoModuleSign, []string{"module"}, options.WithHelp("Modules without sign in release image"))
 	if err != nil {
 		return fmt.Errorf("can not register %s: %w", RegistryScannerNoModuleSign, err)
+	}
+
+	logger.Info("register metric", slog.String("metric", RegistryScannerCriticalMetricSet))
+	_, err = ms.RegisterGauge(RegistryScannerCriticalMetricSet, []string{"module"}, options.WithHelp("Modules with critical flag set in module.yaml"))
+	if err != nil {
+		return fmt.Errorf("can not register %s: %w", RegistryScannerCriticalMetricSet, err)
 	}
 
 	logger.Info("register metric", slog.String("metric", SenderTimeoutRequestsTotalMetric))

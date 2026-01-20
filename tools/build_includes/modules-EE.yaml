@@ -24,6 +24,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/be/modules/140-user-authz/templates/permission-browser-apiserver
+  to: /deckhouse/modules/140-user-authz/templates/permission-browser-apiserver
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/be/modules/350-node-local-dns
   to: /deckhouse/modules/350-node-local-dns
   stageDependencies:
@@ -36,6 +41,11 @@
         - '**/*'
 - add: /ee/se-plus/modules/015-admission-policy-engine/templates/ratify
   to: /deckhouse/modules/015-admission-policy-engine/templates/ratify
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/se-plus/modules/015-admission-policy-engine/crds/ratify
+  to: /deckhouse/modules/015-admission-policy-engine/crds/ratify
   stageDependencies:
     install:
         - '**/*'
@@ -116,26 +126,6 @@
         - '**/*'
 - add: /ee/se-plus/modules/040-node-manager/capi/zvirt
   to: /deckhouse/modules/040-node-manager/capi/zvirt
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/templates/trivy-provider
-  to: /deckhouse/modules/015-admission-policy-engine/templates/trivy-provider
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/hooks/common_test.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/common_test.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config.go
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
-  to: /deckhouse/modules/015-admission-policy-engine/hooks/update_trivy_provider_config_test.go
   stageDependencies:
     install:
         - '**/*'
@@ -326,11 +316,6 @@
         - '**/*'
 - add: /ee/modules/450-network-gateway
   to: /deckhouse/modules/450-network-gateway
-  stageDependencies:
-    install:
-        - '**/*'
-- add: /ee/modules/500-operator-trivy
-  to: /deckhouse/modules/500-operator-trivy
   stageDependencies:
     install:
         - '**/*'

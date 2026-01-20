@@ -1,25 +1,8 @@
 diff --git a/speaker/main.go b/speaker/main.go
-index 8b67055a..95797797 100644
+index ee0b0eb5..ae185a6f 100644
 --- a/speaker/main.go
 +++ b/speaker/main.go
-@@ -17,7 +17,6 @@ package main
- import (
- 	"flag"
- 	"fmt"
--	"go.universe.tf/metallb/api/v1alpha1"
- 	"net"
- 	"os"
- 	"os/signal"
-@@ -26,6 +25,8 @@ import (
- 	"strings"
- 	"syscall"
- 
-+	"go.universe.tf/metallb/api/v1alpha1"
-+
- 	"github.com/go-kit/log"
- 	"github.com/go-kit/log/level"
- 	"github.com/prometheus/client_golang/prometheus"
-@@ -35,7 +36,6 @@ import (
+@@ -38,7 +38,6 @@ import (
  	"sigs.k8s.io/controller-runtime/pkg/event"
  	"sigs.k8s.io/yaml"
  
@@ -27,7 +10,7 @@ index 8b67055a..95797797 100644
  	"go.universe.tf/metallb/internal/config"
  	"go.universe.tf/metallb/internal/k8s"
  	"go.universe.tf/metallb/internal/k8s/controllers"
-@@ -219,7 +219,6 @@ func main() {
+@@ -235,7 +234,6 @@ func main() {
  		os.Exit(1)
  	}
  	ctrl.client = client
@@ -35,7 +18,7 @@ index 8b67055a..95797797 100644
  
  	sList.Start(client)
  	defer sList.Stop()
-@@ -268,25 +267,8 @@ type controllerConfig struct {
+@@ -286,30 +284,10 @@ type controllerConfig struct {
  }
  
  func newController(cfg controllerConfig) (*controller, error) {
@@ -46,26 +29,32 @@ index 8b67055a..95797797 100644
 -		secretHandling = SecretConvert
 -	}
 -
+-	bgpController := &bgpController{
+-		logger:             cfg.Logger,
+-		myNode:             cfg.MyNode,
+-		svcAds:             make(map[string][]*bgp.Advertisement),
+-		activeAds:          make(map[string]sets.Set[string]),
+-		adsChangedCallback: cfg.BGPAdsChangedCallback,
+-		bgpType:            cfg.bgpType,
+-		sessionManager:     newBGP(cfg),
+-		ignoreExcludeLB:    cfg.IgnoreExcludeLB,
+-		secretHandling:     secretHandling,
+-	}
+-	bgpPeersFetcher := bgpController.PeersForService
++	var bgpPeersFetcher controllers.PeersForService = func(key string) sets.Set[string] { return nil }
+ 
 -	handlers := map[config.Proto]Protocol{
--		config.BGP: &bgpController{
--			logger:          cfg.Logger,
--			myNode:          cfg.MyNode,
--			svcAds:          make(map[string][]*bgp.Advertisement),
--			bgpType:         cfg.bgpType,
--			sessionManager:  newBGP(cfg),
--			ignoreExcludeLB: cfg.IgnoreExcludeLB,
--			secretHandling:  secretHandling,
--		},
+-		config.BGP: bgpController,
 -	}
 -	protocols := []config.Proto{config.BGP}
-+	handlers := make(map[config.Proto]Protocol)
++	handlers := map[config.Proto]Protocol{}
 +	protocols := []config.Proto{}
  
  	layer2StatusFetcher := func(types.NamespacedName) []layer2.IPAdvertisement { return nil }
  	if !cfg.DisableLayer2 {
-@@ -314,7 +296,6 @@ func newController(cfg controllerConfig) (*controller, error) {
- 		protocols:             protocols,
+@@ -338,7 +316,6 @@ func newController(cfg controllerConfig) (*controller, error) {
  		layer2StatusFetchFunc: layer2StatusFetcher,
+ 		bgpPeersFetcher:       bgpPeersFetcher,
  	}
 -	ret.announced[config.BGP] = map[string]bool{}
  	ret.announced[config.Layer2] = map[string]bool{}

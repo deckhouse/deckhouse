@@ -55,7 +55,7 @@ jobs:
 {!{- $criName := "Containerd" -}!}
 {!{- $kubernetesVersion := "Automatic" -}!}
 {!{- $kubernetesDefaultVersion := (tmpl.Exec "e2e_kubernetes_default_version" $ | strings.TrimSpace ) -}!}
-{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" -}!}
+{!{- $providerNames := slice "AWS" "EKS" "Azure" "GCP" "Yandex.Cloud" "OpenStack" "vSphere" "VCD" "Static" "DVP" -}!}
 {!{- if $enableWorkflowOnTestRepos -}!}
 {!{-   $providerNames = slice "AWS" "OpenStack" "Azure" -}!}
 {!{- end -}!}

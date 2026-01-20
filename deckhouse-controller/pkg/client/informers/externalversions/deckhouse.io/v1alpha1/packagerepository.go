@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // PackageRepositories.
 type PackageRepositoryInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.PackageRepositoryLister
+	Lister() deckhouseiov1alpha1.PackageRepositoryLister
 }
 
 type packageRepositoryInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredPackageRepositoryInformer(client versioned.Interface, resyncPeri
 				return client.DeckhouseV1alpha1().PackageRepositories().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.PackageRepository{},
+		&apisdeckhouseiov1alpha1.PackageRepository{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *packageRepositoryInformer) defaultInformer(client versioned.Interface, 
 }
 
 func (f *packageRepositoryInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.PackageRepository{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.PackageRepository{}, f.defaultInformer)
 }
 
-func (f *packageRepositoryInformer) Lister() v1alpha1.PackageRepositoryLister {
-	return v1alpha1.NewPackageRepositoryLister(f.Informer().GetIndexer())
+func (f *packageRepositoryInformer) Lister() deckhouseiov1alpha1.PackageRepositoryLister {
+	return deckhouseiov1alpha1.NewPackageRepositoryLister(f.Informer().GetIndexer())
 }

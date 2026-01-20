@@ -99,13 +99,13 @@ lang: ru
    - В случае одного master-узла:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
    - В случае мультимастерной инсталляции:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
 2. Проверьте агенты Cilium. Они должны быть в статусе `Running`:

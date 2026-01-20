@@ -9,12 +9,8 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
     namespaceSelector:
-      matchExpressions:
-        - key: security.deckhouse.io/pod-policy
-          operator: In
-          values:
-          - baseline
-          - restricted
+      matchLabels:
+        enforce: deny-all
   parameters:
     allowedProfiles:
     - runtime/default

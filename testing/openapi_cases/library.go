@@ -94,7 +94,7 @@ func getPossiblePathToModules() []string {
 		panic(fmt.Errorf("cannot unmarshal editions file: %v", err))
 	}
 
-	modulesDir := make([]string, 0)
+	modulesDir := make([]string, 0, len(e.Editions))
 	for i, ed := range e.Editions {
 		if ed.Name == "" {
 			panic(fmt.Sprintf("name for %d index is empty", i))

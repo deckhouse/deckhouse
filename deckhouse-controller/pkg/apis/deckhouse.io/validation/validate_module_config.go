@@ -121,6 +121,7 @@ func moduleConfigValidationHandler(
 			}
 
 			if cfg.Spec.Enabled != nil && *cfg.Spec.Enabled {
+				// Check experimental policy from moduleStorage (when module is downloaded).
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -131,6 +132,19 @@ func moduleConfigValidationHandler(
 
 				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
 					return rejectResult(err.Error())
+				}
+
+				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
+				// Create: reject if module not found.
+				m := new(v1alpha1.Module)
+				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+					if apierrors.IsNotFound(err) {
+						return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+					}
+					return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+				}
+				if m.IsExperimental() && !allowExperimentalModules {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
 				}
 			}
 		case kwhmodel.OperationUpdate:
@@ -156,6 +170,7 @@ func moduleConfigValidationHandler(
 			newEnabled := cfg.Spec.Enabled != nil && *cfg.Spec.Enabled
 
 			if !oldEnabled && newEnabled {
+				// Check experimental policy from moduleStorage (when module is downloaded).
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					definition := module.GetModuleDefinition()
 
@@ -167,13 +182,24 @@ func moduleConfigValidationHandler(
 				if err := exts.ModuleDependency.CheckEnabling(cfg.Name); err != nil {
 					return rejectResult(err.Error())
 				}
+
+				// Fallback: check from Module CR (when module not downloaded, but properties synced from registry).
+				// Update: skip if not found (common code handles with warning). Use "else if" to avoid accessing empty object.
+				m := new(v1alpha1.Module)
+				if err := cli.Get(ctx, client.ObjectKey{Name: cfg.Name}, m); err != nil {
+					if !apierrors.IsNotFound(err) {
+						return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+					}
+				} else if m.IsExperimental() && !allowExperimentalModules {
+					return rejectResult(fmt.Sprintf("the '%s' module is experimental, set param in 'deckhouse' ModuleConfig - spec.settings.allowExperimentalModules: true to allow it", cfg.Name))
+				}
 			}
 
 			// if no annotations and module is disabled, check confirmation restriction and confirmation message
 			_, ok = cfg.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 			_, oldOk := oldModuleMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]
 
-			if !ok && !oldOk && cfg.Spec.Enabled != nil && !*cfg.Spec.Enabled {
+			if !ok && !oldOk && oldEnabled && !newEnabled {
 				// we can disable unknown module without any further check
 				if module, err := moduleStorage.GetModuleByName(obj.GetName()); err == nil {
 					if reason, needConfirm := module.GetConfirmationDisableReason(); needConfirm {

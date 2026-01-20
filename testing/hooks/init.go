@@ -698,10 +698,9 @@ func (hec *HookExecutionConfig) RunHook() {
 		BindingContextFile        *os.File
 		KubernetesPatchSetFile    *os.File
 		MetricsFile               *os.File
-
-		hookEnvs []string
 	)
 
+	hookEnvs := make([]string, 0, len(hec.extraHookEnvs)+4)
 	hookEnvs = append(hookEnvs, "ADDON_OPERATOR_NAMESPACE=tests", "DECKHOUSE_POD=tests", "D8_IS_TESTS_ENVIRONMENT=yes", "PATH="+os.Getenv("PATH"))
 	hookEnvs = append(hookEnvs, hec.extraHookEnvs...)
 

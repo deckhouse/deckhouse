@@ -18,17 +18,18 @@ package main
 
 import (
 	"context"
-	"dvp-common/api"
-	"dvp-common/config"
 	"encoding/json"
 	"fmt"
 	"sort"
 
+	"dvp-common/api"
+	"dvp-common/config"
+	corev1 "k8s.io/api/core/v1"
+	storagev1 "k8s.io/api/storage/v1"
+
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
-	corev1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
 )
 
 type CloudConfig struct {
@@ -102,7 +103,7 @@ func (d *Discoverer) DiscoveryData(
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
 	}
 
-	d.logger.Debug("discovery data", "discoveryDataJSON", discoveryDataJSON)
+	d.logger.Debug("discovery data", "discovery_data_json", discoveryDataJSON)
 	return discoveryDataJSON, nil
 }
 
@@ -135,7 +136,6 @@ func mergeStorageDomains(
 	result := []cloudDataV1.DVPStorageClass{}
 	cloudSdsMap := make(map[string]cloudDataV1.DVPStorageClass)
 	for _, sc := range cloudSds {
-
 		volumeBindingMode := storagev1.VolumeBindingWaitForFirstConsumer
 		if sc.VolumeBindingMode != nil {
 			volumeBindingMode = *sc.VolumeBindingMode

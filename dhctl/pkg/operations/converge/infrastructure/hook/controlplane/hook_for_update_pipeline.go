@@ -18,7 +18,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"time"
 
 	flantkubeclient "github.com/flant/kube-client/client"
@@ -27,11 +26,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
+	infra_utils "github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/utils"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
@@ -124,6 +125,11 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
+	}
+
+	err = infra_utils.DeleteNodeObjectFromCluster(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge)
+	if err != nil {
+		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
 
 	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)

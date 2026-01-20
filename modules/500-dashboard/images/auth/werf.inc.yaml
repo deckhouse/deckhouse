@@ -1,7 +1,7 @@
 # #####################################################################
 # Based on https://github.com/kubernetes/dashboard/blob/kubernetes-dashboard-7.10.4/modules/auth/Dockerfile
 # #####################################################################
-{{- $version := "1.2.3" }}
+{{- $version := "1.4.0" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
@@ -37,6 +37,12 @@ shell:
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 final: false
 fromImage: common/src-artifact
+git:
+  - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+    to: /patches
+    stageDependencies:
+      install:
+      - '**/*.patch'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -44,4 +50,6 @@ shell:
   install:
   - cd /src
   - git clone --depth 1 -b auth/v{{ $version }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/dashboard .
+  - git apply /patches/*.patch --verbose
+
   - rm -r .git .github charts docs hack

@@ -3,6 +3,7 @@
 {{- $crd := index . 1 }}
 {{- $name := index . 2 }}
 {{- $geoIP2 := $crd.spec.geoIP2 | default dict }}
+{{- $geoproxyReady := $context.Values.ingressNginx.internal.geoproxyReady | default false }}
 {{- $checksum := toJson $crd | sha256sum }}
 {{- $controllerVersion := $crd.spec.controllerVersion | default $context.Values.ingressNginx.defaultControllerVersion }}
 {{- $resources := $crd.spec.resourcesRequests | default dict }}
@@ -76,7 +77,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple $context "master") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $context "any-node") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $context "system-cluster-critical") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "validator" "name" $name )) | nindent 6 }}
+      {{- include "helm_lib_pod_affinity" (list $context (dict "app" "validator" "name" $name ) (list "amd64")) | nindent 6 }}
       {{ include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $context | nindent 6 }}
       serviceAccountName: validator
       automountServiceAccountToken: true
@@ -140,7 +141,7 @@ spec:
                 fieldPath: metadata.namespace
           - name: POD_IP
             value: "127.0.0.1"
-          {{- if $geoIP2.maxmindLicenseKey }}
+          {{- if $geoIP2 }}
           - name: LUA_USE_GEOIP2
             value: "true"
           {{- end }}
@@ -165,11 +166,23 @@ spec:
           - --v={{ get $logLevels (default "Info" $crd.spec.controllerLogLevel) }}
           - --healthz-port=10254
           - --healthz-host=0.0.0.0
-          {{- if $geoIP2.maxmindLicenseKey }}
-          - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
-          {{- if $geoIP2.maxmindEditionIDs }}
+          {{- if $geoIP2 }}
+            {{- if $geoproxyReady }}
+          - --maxmind-mirror=https://geoproxy:4250/download
+          - --maxmind-skip-tls-verification=true
+          - --maxmind-retries-count=5
+          - --maxmind-retries-timeout=15s
+              {{- if $geoIP2.maxmindEditionIDs }}
           - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
-          {{- end }}
+              {{- end }}
+            {{- else }}
+              {{- if $geoIP2.maxmindLicenseKey }}
+          - --maxmind-license-key={{ $geoIP2.maxmindLicenseKey }}
+              {{- end }}
+              {{- if $geoIP2.maxmindEditionIDs }}
+          - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
+              {{- end }}
+            {{- end }}
           {{- end }}
           - --validating-webhook=:8443
           - --validating-webhook-certificate=/etc/nginx/webhook-ssl/tls.crt

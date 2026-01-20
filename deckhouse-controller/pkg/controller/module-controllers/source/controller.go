@@ -49,6 +49,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/d8env"
@@ -345,8 +346,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// clear overridden
 		availableModule.Overridden = false
 
-		// get update policy
-		policy, err := utils.UpdatePolicy(ctx, r.client, r.embeddedPolicy, moduleName)
+		policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, moduleName)
 		if err != nil {
 			logger.Warn("failed to get update policy for module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
@@ -422,6 +422,19 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			availableModules = append(availableModules, availableModule)
 
 			continue
+		}
+
+		// update module with its metadata after meta is fetched
+		// but only if module is available to not overwrite the properties that are already set locally
+		if module.Status.Phase == v1alpha1.ModulePhaseAvailable {
+			if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition, meta.ModuleVersion); err != nil {
+				logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
 		}
 
 		// check if release exists
@@ -580,4 +593,32 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
+}
+
+// updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
+// Only syncs properties that come from module.yaml definition.
+func (r *reconciler) updateModulePropertiesFromDefinition(
+	ctx context.Context,
+	module *v1alpha1.Module,
+	def *moduletypes.Definition,
+	moduleVersion string,
+) error {
+	if def == nil {
+		return nil
+	}
+
+	return ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
+		props := &module.Properties
+		props.Stage = def.Stage
+		props.Weight = def.Weight
+		props.Critical = def.Critical
+		props.Namespace = def.Namespace
+		props.Subsystems = def.Subsystems
+		props.ExclusiveGroup = def.ExclusiveGroup
+		props.Requirements = def.Requirements
+		props.DisableOptions = def.DisableOptions
+		props.Accessibility = def.Accessibility.ToV1Alpha1()
+		props.Version = moduleVersion
+		return nil
+	})
 }

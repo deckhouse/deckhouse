@@ -49,7 +49,6 @@ admissionPolicyEngine:
       key: YjY0ZW5jX3N0cmluZwo=
     trackedConstraintResources: []
     trackedMutateResources: []
-  denyVulnerableImages: {}
   podSecurityStandards:
     policies:
       hostPorts:
@@ -74,7 +73,7 @@ admissionPolicyEngine:
 		It("Rego policy test must have passed", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			gatorCLI := exec.Command(gatorPath, "verify", "-v", "../charts/constraint-templates/tests/...")
-			res, err := gatorCLI.Output()
+			res, err := gatorCLI.CombinedOutput()
 			if err != nil {
 				output := strings.ReplaceAll(string(res), "modules/015-admission-policy-engine/charts/constraint-templates", "...")
 				fmt.Println(output)
@@ -91,5 +90,5 @@ func gatorAvailable() (string, bool) {
 	}
 
 	info, err := os.Lstat(gatorPath)
-	return gatorPath, err == nil && (info.Mode().Perm()&0111 != 0)
+	return gatorPath, err == nil && (info.Mode().Perm()&0o111 != 0)
 }

@@ -58,8 +58,10 @@ type taskWrapper struct {
 	ctx context.Context // Task-specific context
 	wg  *sync.WaitGroup
 
-	id   string // Unique task identifier
-	task Task   // The task to execute
+	id         string    // Unique task identifier
+	task       Task      // The task to execute
+	enqueuedAt time.Time // The time task enqueued
+	onDone     func()    // Callback to track done status
 
 	err error // last task error
 
@@ -85,6 +87,7 @@ func newQueue(name string, logger *log.Logger) *queue {
 type EnqueueOptions struct {
 	wg     *sync.WaitGroup // Optional WaitGroup to track task completion
 	unique bool
+	onDone func()
 }
 
 // EnqueueOption is a functional option for configuring Enqueue.
@@ -104,10 +107,17 @@ func WithUnique() EnqueueOption {
 	}
 }
 
+func WithOnDone(onDone func()) EnqueueOption {
+	return func(o *EnqueueOptions) {
+		o.onDone = onDone
+	}
+}
+
 // Enqueue adds a task to the queue's tail.
 // If a WaitGroup is provided via WithWait, WaitGroup sticks with task, add Done will be called after task success
 func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	opt := new(EnqueueOptions)
+
 	for _, o := range opts {
 		o(opt)
 	}
@@ -116,13 +126,22 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 		opt.wg.Add(1)
 	}
 
+	if opt.onDone == nil {
+		opt.onDone = func() {}
+	}
+
 	wrapper := &taskWrapper{
-		ctx:       ctx,
-		wg:        opt.wg,
-		id:        uuid.New().String(),
-		task:      task,
-		backoff:   backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
-		nextRetry: time.Now(),
+		ctx:  ctx,
+		wg:   opt.wg,
+		id:   uuid.New().String(),
+		task: task,
+		backoff: backoff.NewExponentialBackOff(
+			backoff.WithMaxElapsedTime(0),
+			backoff.WithMaxInterval(time.Minute),
+			backoff.WithInitialInterval(15*time.Second)),
+		nextRetry:  time.Now(),
+		enqueuedAt: time.Now(),
+		onDone:     opt.onDone,
 	}
 
 	q.logger.Debug("enqueue task", slog.String("id", wrapper.id), slog.String("name", wrapper.task.String()))
@@ -208,11 +227,6 @@ func (q *queue) processOne() bool {
 		return false
 	}
 
-	if time.Now().Before(t.nextRetry) {
-		q.mu.Unlock()
-		return false // Task not ready for retry
-	}
-
 	q.mu.Unlock()
 
 	// Check for parent context cancellation
@@ -230,6 +244,10 @@ func (q *queue) processOne() bool {
 
 		return true // Task was processed (canceled)
 	default:
+	}
+
+	if time.Now().Before(t.nextRetry) {
+		return false // Task not ready for retry
 	}
 
 	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
@@ -261,26 +279,34 @@ func (q *queue) processOne() bool {
 			t.err = err
 			t.nextRetry = time.Now().Add(delay)
 
-			// Schedule retry signal after delay
-			time.AfterFunc(delay, func() {
+			// Schedule retry signal after delay with context-aware waiting
+			go func(tw *taskWrapper, d time.Duration) {
+				select {
+				case <-time.After(d):
+					// Backoff completed normally
+				case <-tw.ctx.Done():
+					// Context canceled during backoff - signal immediately for cleanup
+				}
+				// Signal queue to process (either retry or cleanup canceled task)
 				select {
 				case q.signal <- struct{}{}:
 				default:
 				}
-			})
+			}(t, delay)
 
 			return true // Task was processed (will retry later)
 		}
 	}
 
+	if t.wg != nil {
+		t.wg.Done()
+	}
+	t.onDone()
+
 	// Task succeeded, remove from queue
 	q.mu.Lock()
 	q.deque.PopFront()
 	q.mu.Unlock()
-
-	if t.wg != nil {
-		t.wg.Done()
-	}
 
 	return true // Task was processed successfully
 }

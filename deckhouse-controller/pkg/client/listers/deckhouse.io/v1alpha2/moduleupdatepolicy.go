@@ -16,10 +16,10 @@
 package v1alpha2
 
 import (
-	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/client-go/tools/cache"
+	deckhouseiov1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	labels "k8s.io/apimachinery/pkg/labels"
+	listers "k8s.io/client-go/listers"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // ModuleUpdatePolicyLister helps list ModuleUpdatePolicies.
@@ -27,39 +27,19 @@ import (
 type ModuleUpdatePolicyLister interface {
 	// List lists all ModuleUpdatePolicies in the indexer.
 	// Objects returned here must be treated as read-only.
-	List(selector labels.Selector) (ret []*v1alpha2.ModuleUpdatePolicy, err error)
+	List(selector labels.Selector) (ret []*deckhouseiov1alpha2.ModuleUpdatePolicy, err error)
 	// Get retrieves the ModuleUpdatePolicy from the index for a given name.
 	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha2.ModuleUpdatePolicy, error)
+	Get(name string) (*deckhouseiov1alpha2.ModuleUpdatePolicy, error)
 	ModuleUpdatePolicyListerExpansion
 }
 
 // moduleUpdatePolicyLister implements the ModuleUpdatePolicyLister interface.
 type moduleUpdatePolicyLister struct {
-	indexer cache.Indexer
+	listers.ResourceIndexer[*deckhouseiov1alpha2.ModuleUpdatePolicy]
 }
 
 // NewModuleUpdatePolicyLister returns a new ModuleUpdatePolicyLister.
 func NewModuleUpdatePolicyLister(indexer cache.Indexer) ModuleUpdatePolicyLister {
-	return &moduleUpdatePolicyLister{indexer: indexer}
-}
-
-// List lists all ModuleUpdatePolicies in the indexer.
-func (s *moduleUpdatePolicyLister) List(selector labels.Selector) (ret []*v1alpha2.ModuleUpdatePolicy, err error) {
-	err = cache.ListAll(s.indexer, selector, func(m interface{}) {
-		ret = append(ret, m.(*v1alpha2.ModuleUpdatePolicy))
-	})
-	return ret, err
-}
-
-// Get retrieves the ModuleUpdatePolicy from the index for a given name.
-func (s *moduleUpdatePolicyLister) Get(name string) (*v1alpha2.ModuleUpdatePolicy, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, errors.NewNotFound(v1alpha2.Resource("moduleupdatepolicy"), name)
-	}
-	return obj.(*v1alpha2.ModuleUpdatePolicy), nil
+	return &moduleUpdatePolicyLister{listers.New[*deckhouseiov1alpha2.ModuleUpdatePolicy](indexer, deckhouseiov1alpha2.Resource("moduleupdatepolicy"))}
 }

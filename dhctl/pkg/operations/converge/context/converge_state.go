@@ -23,6 +23,7 @@ import (
 	k8errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
@@ -34,8 +35,8 @@ const (
 )
 
 type State struct {
-	Phase               phases.OperationPhase `json:"phase"`
-	NodeUserCredentials *NodeUserCredentials  `json:"nodeUserCredentials"`
+	Phase               phases.OperationPhase   `json:"phase"`
+	NodeUserCredentials *v1.NodeUserCredentials `json:"nodeUserCredentials"`
 }
 
 type stateStore interface {

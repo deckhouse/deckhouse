@@ -106,7 +106,7 @@ Cilium полностью заменяет собой функционал мо�
 
 ## Использование Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE.{% endalert %}
 
 Egress Gateway в Deckhouse Kubernetes Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.node`).
 
@@ -123,3 +123,12 @@ Egress Gateway в Deckhouse Kubernetes Platform может быть исполь
 
 <div data-presentation="../../presentations/cni-cilium/egressgateway_virtualip_ru.pdf"></div>
 <!--- Source: https://docs.google.com/presentation/d/1tmhbydjpCwhNVist9RT6jzO1CMpc-G1I7rczmdLzV8E/ --->
+
+## Экспорт данных из Hubble
+
+Deckhouse Kubernetes Platform позволяет настраивать экспорт данных из Hubble, работающего внутри агентов Cilium, с помощью кластерного пользовательского ресурса [`HubbleMonitoringConfig`](cr.html#hubblemonitoringconfig):
+Чтобы включить экспорт, [создайте ресурс HubbleMonitoringConfig](examples.html#hubblemonitoringconfig).
+
+{% alert level="warning" %}
+Создание или изменение ресурса HubbleMonitoringConfig приведёт **к перезапуску всех агентов Cilium** в кластере.
+{% endalert %}

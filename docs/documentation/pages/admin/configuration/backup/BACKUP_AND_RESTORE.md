@@ -13,7 +13,7 @@ To properly restore the cluster, follow these steps on the master node:
 1. Prepare the `etcdutl` utility. Locate and copy the executable on the node:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
@@ -25,7 +25,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    Make sure the output of `etcdutl version` is displayed without errors.
 
-   If `etcdutl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
+   If `etcdutl` is not found, download the binary from [the official etcd repository](https://github.com/etcd-io/etcd/releases), choosing a version that matches your cluster's etcd version:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -127,6 +127,8 @@ To properly restore a multi-master cluster, follow these steps:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
    - In a static cluster, manually remove the additional master nodes.
+   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
 
@@ -141,7 +143,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
