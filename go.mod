@@ -3,16 +3,16 @@ module github.com/deckhouse/deckhouse
 go 1.24.6
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/benjamintf1/unmarshalledmatchers v0.0.0-20190408201839-bb1c1f34eaea
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.17.13-0.20251229112103-094f25dc8697
+	github.com/flant/addon-operator v1.18.4-0.20260120123253-8fbdbed12594
 	github.com/flant/kube-client v1.5.1
-	github.com/flant/shell-operator v1.12.3
+	github.com/flant/shell-operator v1.13.1
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -23,7 +23,7 @@ require (
 	github.com/imdario/mergo v0.3.16
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/onsi/ginkgo v1.16.5
-	github.com/onsi/gomega v1.37.0
+	github.com/onsi/gomega v1.38.2
 	github.com/otiai10/copy v1.14.0
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.9.3 // indirect
@@ -36,7 +36,7 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.16
 	go.etcd.io/etcd/client/v3 v3.5.16
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.6 // indirect
+	google.golang.org/protobuf v1.36.7 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -182,7 +182,7 @@ require (
 	github.com/flopp/go-findfont v0.1.0 // indirect
 	github.com/fluxcd/flagger v1.36.1 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-gorp/gorp/v3 v3.1.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
