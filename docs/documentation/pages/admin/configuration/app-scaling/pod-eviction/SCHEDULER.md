@@ -321,7 +321,7 @@ spec:
         memory: 50
 ```
 
-If any of these resource types is not specified, all its thresholds default to 100% to avoid nodes going from underutilized to overutilized
+If any of these resource types is not specified, all its thresholds default to 100 to avoid nodes going from underutilized to overutilized
 For example, If the memory threshold is not specified in thresholds, it defaults to 100.
 
 ```yaml
