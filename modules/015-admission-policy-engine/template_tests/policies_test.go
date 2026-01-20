@@ -20,6 +20,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -93,18 +96,9 @@ admissionPolicyEngine:
 		It("All pod security standards baseline constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			baselineConstraints := []string{
-				"D8HostNetwork",
-				"D8HostProcesses",
-				"D8AppArmor",
-				"D8AllowedCapabilities",
-				"D8AllowedHostPaths",
-				"D8PrivilegedContainer",
-				"D8AllowedProcMount",
-				"D8SeLinux",
-				"D8AllowedSysctls",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
 
 			for _, constraintKind := range baselineConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
@@ -123,13 +117,9 @@ admissionPolicyEngine:
 		It("All pod security standards restricted constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			restrictedConstraints := []string{
-				"D8AllowedCapabilities",
-				"D8AllowPrivilegeEscalation",
-				"D8AllowedVolumeTypes",
-				"D8AllowedUsers",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
 
 			for _, constraintKind := range restrictedConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
@@ -159,18 +149,9 @@ admissionPolicyEngine:
 		It("All pod security standards baseline constraints must have valid YAML with defaultPolicy: Privileged", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			baselineConstraints := []string{
-				"D8HostNetwork",
-				"D8HostProcesses",
-				"D8AppArmor",
-				"D8AllowedCapabilities",
-				"D8AllowedHostPaths",
-				"D8PrivilegedContainer",
-				"D8AllowedProcMount",
-				"D8SeLinux",
-				"D8AllowedSysctls",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
 
 			for _, constraintKind := range baselineConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
@@ -189,13 +170,9 @@ admissionPolicyEngine:
 		It("All pod security standards restricted constraints must have valid YAML with defaultPolicy: Privileged", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			restrictedConstraints := []string{
-				"D8AllowedCapabilities",
-				"D8AllowPrivilegeEscalation",
-				"D8AllowedVolumeTypes",
-				"D8AllowedUsers",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
 
 			for _, constraintKind := range restrictedConstraints {
 				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
@@ -236,18 +213,9 @@ admissionPolicyEngine:
 		It("All pod security standards baseline constraints with -d8-default suffix must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			baselineConstraints := []string{
-				"D8HostNetwork",
-				"D8HostProcesses",
-				"D8AppArmor",
-				"D8AllowedCapabilities",
-				"D8AllowedHostPaths",
-				"D8PrivilegedContainer",
-				"D8AllowedProcMount",
-				"D8SeLinux",
-				"D8AllowedSysctls",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
 
 			for _, constraintKind := range baselineConstraints {
 				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
@@ -266,13 +234,9 @@ admissionPolicyEngine:
 		It("All pod security standards restricted constraints with -d8-default suffix must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			restrictedConstraints := []string{
-				"D8AllowedCapabilities",
-				"D8AllowPrivilegeEscalation",
-				"D8AllowedVolumeTypes",
-				"D8AllowedUsers",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
 
 			for _, constraintKind := range restrictedConstraints {
 				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
@@ -304,18 +268,9 @@ admissionPolicyEngine:
 		It("All pod security standards baseline constraints with -d8 suffix (non-default) must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			baselineConstraints := []string{
-				"D8HostNetwork",
-				"D8HostProcesses",
-				"D8AppArmor",
-				"D8AllowedCapabilities",
-				"D8AllowedHostPaths",
-				"D8PrivilegedContainer",
-				"D8AllowedProcMount",
-				"D8SeLinux",
-				"D8AllowedSysctls",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
 
 			for _, constraintKind := range baselineConstraints {
 				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
@@ -334,13 +289,9 @@ admissionPolicyEngine:
 		It("All pod security standards restricted constraints with -d8 suffix (non-default) must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			restrictedConstraints := []string{
-				"D8AllowedCapabilities",
-				"D8AllowPrivilegeEscalation",
-				"D8AllowedVolumeTypes",
-				"D8AllowedUsers",
-				"D8AllowedSeccompProfiles",
-			}
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
 
 			for _, constraintKind := range restrictedConstraints {
 				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
@@ -386,4 +337,83 @@ func validateYAML(constraint interface{}, resourceName string) {
 	if err != nil {
 		Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", resourceName, err, string(yamlBytes)))
 	}
+}
+
+// extractConstraintNamesFromTemplate parses template file and extracts constraint kind names
+// from include statements like: include "pod_security_standard_baseline" (list $context "D8HostNetwork" ...)
+// or include "pod_security_standard_restricted" (list $context "D8AllowedCapabilities" ...)
+func extractConstraintNamesFromTemplate(templatePath string, helperName string) []string {
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
+	}
+
+	// Pattern to match: include "pod_security_standard_baseline" (list $context "D8XXX" ...)
+	// or include "pod_security_standard_restricted" (list $context "D8XXX" ...)
+	// The pattern looks for the helper name followed by a list that contains a quoted string starting with D8
+	pattern := fmt.Sprintf(`include\s+"%s"\s+\([^)]*list[^)]*"([D8][^"]+)"`, regexp.QuoteMeta(helperName))
+	re := regexp.MustCompile(pattern)
+
+	matches := re.FindAllStringSubmatch(string(content), -1)
+	constraintNames := make(map[string]bool)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			constraintName := match[1]
+			// Only include names that start with D8 (constraint kinds)
+			if strings.HasPrefix(constraintName, "D8") {
+				constraintNames[constraintName] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(constraintNames))
+	for name := range constraintNames {
+		result = append(result, name)
+	}
+
+	return result
+}
+
+// findTemplatePath finds the template file by trying multiple possible paths
+func findTemplatePath(relativePath string) string {
+	// Get the directory where this test file is located
+	_, testFile, _, _ := runtime.Caller(0)
+	testDir := filepath.Dir(testFile)
+	
+	// Try different possible paths
+	possiblePaths := []string{
+		// Relative to test file (when running from module root)
+		filepath.Join(testDir, "..", relativePath),
+		// Relative to current working directory
+		relativePath,
+		// From workspace root
+		filepath.Join("modules", "015-admission-policy-engine", relativePath),
+	}
+
+	for _, path := range possiblePaths {
+		absPath, _ := filepath.Abs(path)
+		if _, err := os.Stat(absPath); err == nil {
+			return absPath
+		}
+		// Also try the relative path as-is
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	Fail(fmt.Sprintf("Could not find template file %s. Tried paths: %v (test file: %s)", relativePath, possiblePaths, testFile))
+	return ""
+}
+
+// getBaselineConstraintNames extracts constraint names from baseline template
+func getBaselineConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "baseline", "constraint.yaml"))
+	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_baseline")
+}
+
+// getRestrictedConstraintNames extracts constraint names from restricted template
+func getRestrictedConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "restricted", "constraint.yaml"))
+	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_restricted")
 }
