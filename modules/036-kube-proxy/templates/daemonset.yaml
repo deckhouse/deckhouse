@@ -2,10 +2,6 @@
 cpu: 15m
 memory: 25Mi
 {{- end }}
-{{- define "iptables_wrapper_init_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
 
 {{- $kubeVersion := semver .Values.global.discovery.kubernetesVersion -}}
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

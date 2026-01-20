@@ -1,8 +1,3 @@
-{{- define "iptables_wrapper_init_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
-
 {{- $context := . }}
 {{- range $crd := $context.Values.ingressNginx.internal.ingressControllers }}
 {{- $crdChecksum := toJson $crd | sha256sum }}

@@ -18,10 +18,6 @@ memory: 10Mi
 cpu: 10m
 memory: 70Mi
 {{- end }}
-{{- define "iptables_wrapper_init_resources" }}
-cpu: 10m
-memory: 10Mi
-{{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
