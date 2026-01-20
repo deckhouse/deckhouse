@@ -1,0 +1,2383 @@
+commit a4d36cbb6321fcfc13d8b5ed655e0edcb3e829a6
+Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date:   Thu Jan 15 16:46:30 2026 +0300
+
+    new import/export conntrack http endpoints
+    
+    Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+
+diff --git a/api/v1/client/daemon/daemon_client.go b/api/v1/client/daemon/daemon_client.go
+index 8a5d78313b..1c99877e5f 100644
+--- a/api/v1/client/daemon/daemon_client.go
++++ b/api/v1/client/daemon/daemon_client.go
+@@ -58,6 +58,50 @@ type Client struct {
+ // ClientOption may be used to customize the behavior of Client methods.
+ type ClientOption func(*runtime.ClientOperation)
+ 
++// This client is generated with a few options you might find useful for your swagger spec.
++//
++// Feel free to add you own set of options.
++
++// WithContentType allows the client to force the Content-Type header
++// to negotiate a specific Consumer from the server.
++//
++// You may use this option to set arbitrary extensions to your MIME media type.
++func WithContentType(mime string) ClientOption {
++	return func(r *runtime.ClientOperation) {
++		r.ConsumesMediaTypes = []string{mime}
++	}
++}
++
++// WithContentTypeApplicationJSON sets the Content-Type header to "application/json".
++func WithContentTypeApplicationJSON(r *runtime.ClientOperation) {
++	r.ConsumesMediaTypes = []string{"application/json"}
++}
++
++// WithContentTypeApplicationOctetStream sets the Content-Type header to "application/octet-stream".
++func WithContentTypeApplicationOctetStream(r *runtime.ClientOperation) {
++	r.ConsumesMediaTypes = []string{"application/octet-stream"}
++}
++
++// WithAccept allows the client to force the Accept header
++// to negotiate a specific Producer from the server.
++//
++// You may use this option to set arbitrary extensions to your MIME media type.
++func WithAccept(mime string) ClientOption {
++	return func(r *runtime.ClientOperation) {
++		r.ProducesMediaTypes = []string{mime}
++	}
++}
++
++// WithAcceptApplicationJSON sets the Accept header to "application/json".
++func WithAcceptApplicationJSON(r *runtime.ClientOperation) {
++	r.ProducesMediaTypes = []string{"application/json"}
++}
++
++// WithAcceptApplicationOctetStream sets the Accept header to "application/octet-stream".
++func WithAcceptApplicationOctetStream(r *runtime.ClientOperation) {
++	r.ProducesMediaTypes = []string{"application/octet-stream"}
++}
++
+ // ClientService is the interface for Client methods
+ type ClientService interface {
+ 	GetCgroupDumpMetadata(params *GetCgroupDumpMetadataParams, opts ...ClientOption) (*GetCgroupDumpMetadataOK, error)
+@@ -66,6 +110,8 @@ type ClientService interface {
+ 
+ 	GetConfig(params *GetConfigParams, opts ...ClientOption) (*GetConfigOK, error)
+ 
++	GetConntrackExport(params *GetConntrackExportParams, opts ...ClientOption) (*GetConntrackExportOK, error)
++
+ 	GetDebuginfo(params *GetDebuginfoParams, opts ...ClientOption) (*GetDebuginfoOK, error)
+ 
+ 	GetHealthz(params *GetHealthzParams, opts ...ClientOption) (*GetHealthzOK, error)
+@@ -80,6 +126,8 @@ type ClientService interface {
+ 
+ 	PatchConfig(params *PatchConfigParams, opts ...ClientOption) (*PatchConfigOK, error)
+ 
++	PostConntrackImport(params *PostConntrackImportParams, opts ...ClientOption) (*PostConntrackImportOK, error)
++
+ 	SetTransport(transport runtime.ClientTransport)
+ }
+ 
+@@ -199,6 +247,44 @@ func (a *Client) GetConfig(params *GetConfigParams, opts ...ClientOption) (*GetC
+ 	panic(msg)
+ }
+ 
++/*
++GetConntrackExport exports conntrack entries for an IPv4 endpoint
++*/
++func (a *Client) GetConntrackExport(params *GetConntrackExportParams, opts ...ClientOption) (*GetConntrackExportOK, error) {
++	// TODO: Validate the params before sending
++	if params == nil {
++		params = NewGetConntrackExportParams()
++	}
++	op := &runtime.ClientOperation{
++		ID:                 "GetConntrackExport",
++		Method:             "GET",
++		PathPattern:        "/conntrack/export",
++		ProducesMediaTypes: []string{"application/octet-stream"},
++		ConsumesMediaTypes: []string{"application/json"},
++		Schemes:            []string{"http"},
++		Params:             params,
++		Reader:             &GetConntrackExportReader{formats: a.formats},
++		Context:            params.Context,
++		Client:             params.HTTPClient,
++	}
++	for _, opt := range opts {
++		opt(op)
++	}
++
++	result, err := a.transport.Submit(op)
++	if err != nil {
++		return nil, err
++	}
++	success, ok := result.(*GetConntrackExportOK)
++	if ok {
++		return success, nil
++	}
++	// unexpected success response
++	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
++	msg := fmt.Sprintf("unexpected success response for GetConntrackExport: API contract not enforced by server. Client expected to get an error, but got: %T", result)
++	panic(msg)
++}
++
+ /*
+ GetDebuginfo retrieves information about the agent and environment for debugging
+ */
+@@ -479,6 +565,44 @@ func (a *Client) PatchConfig(params *PatchConfigParams, opts ...ClientOption) (*
+ 	panic(msg)
+ }
+ 
++/*
++PostConntrackImport imports conntrack entries as plain binary stream
++*/
++func (a *Client) PostConntrackImport(params *PostConntrackImportParams, opts ...ClientOption) (*PostConntrackImportOK, error) {
++	// TODO: Validate the params before sending
++	if params == nil {
++		params = NewPostConntrackImportParams()
++	}
++	op := &runtime.ClientOperation{
++		ID:                 "PostConntrackImport",
++		Method:             "POST",
++		PathPattern:        "/conntrack/import",
++		ProducesMediaTypes: []string{"application/json"},
++		ConsumesMediaTypes: []string{"application/octet-stream"},
++		Schemes:            []string{"http"},
++		Params:             params,
++		Reader:             &PostConntrackImportReader{formats: a.formats},
++		Context:            params.Context,
++		Client:             params.HTTPClient,
++	}
++	for _, opt := range opts {
++		opt(op)
++	}
++
++	result, err := a.transport.Submit(op)
++	if err != nil {
++		return nil, err
++	}
++	success, ok := result.(*PostConntrackImportOK)
++	if ok {
++		return success, nil
++	}
++	// unexpected success response
++	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
++	msg := fmt.Sprintf("unexpected success response for PostConntrackImport: API contract not enforced by server. Client expected to get an error, but got: %T", result)
++	panic(msg)
++}
++
+ // SetTransport changes the transport on the client
+ func (a *Client) SetTransport(transport runtime.ClientTransport) {
+ 	a.transport = transport
+diff --git a/api/v1/client/daemon/get_conntrack_export_parameters.go b/api/v1/client/daemon/get_conntrack_export_parameters.go
+new file mode 100644
+index 0000000000..d55975fd8e
+--- /dev/null
++++ b/api/v1/client/daemon/get_conntrack_export_parameters.go
+@@ -0,0 +1,159 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"context"
++	"net/http"
++	"time"
++
++	"github.com/go-openapi/errors"
++	"github.com/go-openapi/runtime"
++	cr "github.com/go-openapi/runtime/client"
++	"github.com/go-openapi/strfmt"
++)
++
++// NewGetConntrackExportParams creates a new GetConntrackExportParams object,
++// with the default timeout for this client.
++//
++// Default values are not hydrated, since defaults are normally applied by the API server side.
++//
++// To enforce default values in parameter, use SetDefaults or WithDefaults.
++func NewGetConntrackExportParams() *GetConntrackExportParams {
++	return &GetConntrackExportParams{
++		timeout: cr.DefaultTimeout,
++	}
++}
++
++// NewGetConntrackExportParamsWithTimeout creates a new GetConntrackExportParams object
++// with the ability to set a timeout on a request.
++func NewGetConntrackExportParamsWithTimeout(timeout time.Duration) *GetConntrackExportParams {
++	return &GetConntrackExportParams{
++		timeout: timeout,
++	}
++}
++
++// NewGetConntrackExportParamsWithContext creates a new GetConntrackExportParams object
++// with the ability to set a context for a request.
++func NewGetConntrackExportParamsWithContext(ctx context.Context) *GetConntrackExportParams {
++	return &GetConntrackExportParams{
++		Context: ctx,
++	}
++}
++
++// NewGetConntrackExportParamsWithHTTPClient creates a new GetConntrackExportParams object
++// with the ability to set a custom HTTPClient for a request.
++func NewGetConntrackExportParamsWithHTTPClient(client *http.Client) *GetConntrackExportParams {
++	return &GetConntrackExportParams{
++		HTTPClient: client,
++	}
++}
++
++/*
++GetConntrackExportParams contains all the parameters to send to the API endpoint
++
++	for the get conntrack export operation.
++
++	Typically these are written to a http.Request.
++*/
++type GetConntrackExportParams struct {
++
++	/* Ip4.
++
++	   IPv4 address of the endpoint
++	*/
++	Ip4 string
++
++	timeout    time.Duration
++	Context    context.Context
++	HTTPClient *http.Client
++}
++
++// WithDefaults hydrates default values in the get conntrack export params (not the query body).
++//
++// All values with no default are reset to their zero value.
++func (o *GetConntrackExportParams) WithDefaults() *GetConntrackExportParams {
++	o.SetDefaults()
++	return o
++}
++
++// SetDefaults hydrates default values in the get conntrack export params (not the query body).
++//
++// All values with no default are reset to their zero value.
++func (o *GetConntrackExportParams) SetDefaults() {
++	// no default values defined for this parameter
++}
++
++// WithTimeout adds the timeout to the get conntrack export params
++func (o *GetConntrackExportParams) WithTimeout(timeout time.Duration) *GetConntrackExportParams {
++	o.SetTimeout(timeout)
++	return o
++}
++
++// SetTimeout adds the timeout to the get conntrack export params
++func (o *GetConntrackExportParams) SetTimeout(timeout time.Duration) {
++	o.timeout = timeout
++}
++
++// WithContext adds the context to the get conntrack export params
++func (o *GetConntrackExportParams) WithContext(ctx context.Context) *GetConntrackExportParams {
++	o.SetContext(ctx)
++	return o
++}
++
++// SetContext adds the context to the get conntrack export params
++func (o *GetConntrackExportParams) SetContext(ctx context.Context) {
++	o.Context = ctx
++}
++
++// WithHTTPClient adds the HTTPClient to the get conntrack export params
++func (o *GetConntrackExportParams) WithHTTPClient(client *http.Client) *GetConntrackExportParams {
++	o.SetHTTPClient(client)
++	return o
++}
++
++// SetHTTPClient adds the HTTPClient to the get conntrack export params
++func (o *GetConntrackExportParams) SetHTTPClient(client *http.Client) {
++	o.HTTPClient = client
++}
++
++// WithIp4 adds the ip4 to the get conntrack export params
++func (o *GetConntrackExportParams) WithIp4(ip4 string) *GetConntrackExportParams {
++	o.SetIp4(ip4)
++	return o
++}
++
++// SetIp4 adds the ip4 to the get conntrack export params
++func (o *GetConntrackExportParams) SetIp4(ip4 string) {
++	o.Ip4 = ip4
++}
++
++// WriteToRequest writes these params to a swagger request
++func (o *GetConntrackExportParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
++
++	if err := r.SetTimeout(o.timeout); err != nil {
++		return err
++	}
++	var res []error
++
++	// query param ip4
++	qrIp4 := o.Ip4
++	qIp4 := qrIp4
++	if qIp4 != "" {
++
++		if err := r.SetQueryParam("ip4", qIp4); err != nil {
++			return err
++		}
++	}
++
++	if len(res) > 0 {
++		return errors.CompositeValidationError(res...)
++	}
++	return nil
++}
+diff --git a/api/v1/client/daemon/get_conntrack_export_responses.go b/api/v1/client/daemon/get_conntrack_export_responses.go
+new file mode 100644
+index 0000000000..407771ad94
+--- /dev/null
++++ b/api/v1/client/daemon/get_conntrack_export_responses.go
+@@ -0,0 +1,91 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"fmt"
++
++	"github.com/go-openapi/runtime"
++	"github.com/go-openapi/strfmt"
++)
++
++// GetConntrackExportReader is a Reader for the GetConntrackExport structure.
++type GetConntrackExportReader struct {
++	formats strfmt.Registry
++}
++
++// ReadResponse reads a server response into the received o.
++func (o *GetConntrackExportReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
++	switch response.Code() {
++	case 200:
++		result := NewGetConntrackExportOK()
++		if err := result.readResponse(response, consumer, o.formats); err != nil {
++			return nil, err
++		}
++		return result, nil
++	default:
++		return nil, runtime.NewAPIError("[GET /conntrack/export] GetConntrackExport", response, response.Code())
++	}
++}
++
++// NewGetConntrackExportOK creates a GetConntrackExportOK with default headers values
++func NewGetConntrackExportOK() *GetConntrackExportOK {
++	return &GetConntrackExportOK{}
++}
++
++/*
++GetConntrackExportOK describes a response with status code 200, with default header values.
++
++OK
++*/
++type GetConntrackExportOK struct {
++}
++
++// IsSuccess returns true when this get conntrack export o k response has a 2xx status code
++func (o *GetConntrackExportOK) IsSuccess() bool {
++	return true
++}
++
++// IsRedirect returns true when this get conntrack export o k response has a 3xx status code
++func (o *GetConntrackExportOK) IsRedirect() bool {
++	return false
++}
++
++// IsClientError returns true when this get conntrack export o k response has a 4xx status code
++func (o *GetConntrackExportOK) IsClientError() bool {
++	return false
++}
++
++// IsServerError returns true when this get conntrack export o k response has a 5xx status code
++func (o *GetConntrackExportOK) IsServerError() bool {
++	return false
++}
++
++// IsCode returns true when this get conntrack export o k response a status code equal to that given
++func (o *GetConntrackExportOK) IsCode(code int) bool {
++	return code == 200
++}
++
++// Code gets the status code for the get conntrack export o k response
++func (o *GetConntrackExportOK) Code() int {
++	return 200
++}
++
++func (o *GetConntrackExportOK) Error() string {
++	return fmt.Sprintf("[GET /conntrack/export][%d] getConntrackExportOK", 200)
++}
++
++func (o *GetConntrackExportOK) String() string {
++	return fmt.Sprintf("[GET /conntrack/export][%d] getConntrackExportOK", 200)
++}
++
++func (o *GetConntrackExportOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
++
++	return nil
++}
+diff --git a/api/v1/client/daemon/post_conntrack_import_parameters.go b/api/v1/client/daemon/post_conntrack_import_parameters.go
+new file mode 100644
+index 0000000000..c9e17bc4c7
+--- /dev/null
++++ b/api/v1/client/daemon/post_conntrack_import_parameters.go
+@@ -0,0 +1,154 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"context"
++	"net/http"
++	"time"
++
++	"github.com/go-openapi/errors"
++	"github.com/go-openapi/runtime"
++	cr "github.com/go-openapi/runtime/client"
++	"github.com/go-openapi/strfmt"
++)
++
++// NewPostConntrackImportParams creates a new PostConntrackImportParams object,
++// with the default timeout for this client.
++//
++// Default values are not hydrated, since defaults are normally applied by the API server side.
++//
++// To enforce default values in parameter, use SetDefaults or WithDefaults.
++func NewPostConntrackImportParams() *PostConntrackImportParams {
++	return &PostConntrackImportParams{
++		timeout: cr.DefaultTimeout,
++	}
++}
++
++// NewPostConntrackImportParamsWithTimeout creates a new PostConntrackImportParams object
++// with the ability to set a timeout on a request.
++func NewPostConntrackImportParamsWithTimeout(timeout time.Duration) *PostConntrackImportParams {
++	return &PostConntrackImportParams{
++		timeout: timeout,
++	}
++}
++
++// NewPostConntrackImportParamsWithContext creates a new PostConntrackImportParams object
++// with the ability to set a context for a request.
++func NewPostConntrackImportParamsWithContext(ctx context.Context) *PostConntrackImportParams {
++	return &PostConntrackImportParams{
++		Context: ctx,
++	}
++}
++
++// NewPostConntrackImportParamsWithHTTPClient creates a new PostConntrackImportParams object
++// with the ability to set a custom HTTPClient for a request.
++func NewPostConntrackImportParamsWithHTTPClient(client *http.Client) *PostConntrackImportParams {
++	return &PostConntrackImportParams{
++		HTTPClient: client,
++	}
++}
++
++/*
++PostConntrackImportParams contains all the parameters to send to the API endpoint
++
++	for the post conntrack import operation.
++
++	Typically these are written to a http.Request.
++*/
++type PostConntrackImportParams struct {
++
++	/* CiliumConntrackExportVersion.
++
++	   Conntrack binary export format version
++	*/
++	CiliumConntrackExportVersion string
++
++	timeout    time.Duration
++	Context    context.Context
++	HTTPClient *http.Client
++}
++
++// WithDefaults hydrates default values in the post conntrack import params (not the query body).
++//
++// All values with no default are reset to their zero value.
++func (o *PostConntrackImportParams) WithDefaults() *PostConntrackImportParams {
++	o.SetDefaults()
++	return o
++}
++
++// SetDefaults hydrates default values in the post conntrack import params (not the query body).
++//
++// All values with no default are reset to their zero value.
++func (o *PostConntrackImportParams) SetDefaults() {
++	// no default values defined for this parameter
++}
++
++// WithTimeout adds the timeout to the post conntrack import params
++func (o *PostConntrackImportParams) WithTimeout(timeout time.Duration) *PostConntrackImportParams {
++	o.SetTimeout(timeout)
++	return o
++}
++
++// SetTimeout adds the timeout to the post conntrack import params
++func (o *PostConntrackImportParams) SetTimeout(timeout time.Duration) {
++	o.timeout = timeout
++}
++
++// WithContext adds the context to the post conntrack import params
++func (o *PostConntrackImportParams) WithContext(ctx context.Context) *PostConntrackImportParams {
++	o.SetContext(ctx)
++	return o
++}
++
++// SetContext adds the context to the post conntrack import params
++func (o *PostConntrackImportParams) SetContext(ctx context.Context) {
++	o.Context = ctx
++}
++
++// WithHTTPClient adds the HTTPClient to the post conntrack import params
++func (o *PostConntrackImportParams) WithHTTPClient(client *http.Client) *PostConntrackImportParams {
++	o.SetHTTPClient(client)
++	return o
++}
++
++// SetHTTPClient adds the HTTPClient to the post conntrack import params
++func (o *PostConntrackImportParams) SetHTTPClient(client *http.Client) {
++	o.HTTPClient = client
++}
++
++// WithCiliumConntrackExportVersion adds the ciliumConntrackExportVersion to the post conntrack import params
++func (o *PostConntrackImportParams) WithCiliumConntrackExportVersion(ciliumConntrackExportVersion string) *PostConntrackImportParams {
++	o.SetCiliumConntrackExportVersion(ciliumConntrackExportVersion)
++	return o
++}
++
++// SetCiliumConntrackExportVersion adds the ciliumConntrackExportVersion to the post conntrack import params
++func (o *PostConntrackImportParams) SetCiliumConntrackExportVersion(ciliumConntrackExportVersion string) {
++	o.CiliumConntrackExportVersion = ciliumConntrackExportVersion
++}
++
++// WriteToRequest writes these params to a swagger request
++func (o *PostConntrackImportParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
++
++	if err := r.SetTimeout(o.timeout); err != nil {
++		return err
++	}
++	var res []error
++
++	// header param Cilium-Conntrack-Export-Version
++	if err := r.SetHeaderParam("Cilium-Conntrack-Export-Version", o.CiliumConntrackExportVersion); err != nil {
++		return err
++	}
++
++	if len(res) > 0 {
++		return errors.CompositeValidationError(res...)
++	}
++	return nil
++}
+diff --git a/api/v1/client/daemon/post_conntrack_import_responses.go b/api/v1/client/daemon/post_conntrack_import_responses.go
+new file mode 100644
+index 0000000000..da8f80db4b
+--- /dev/null
++++ b/api/v1/client/daemon/post_conntrack_import_responses.go
+@@ -0,0 +1,221 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"fmt"
++
++	"github.com/go-openapi/runtime"
++	"github.com/go-openapi/strfmt"
++)
++
++// PostConntrackImportReader is a Reader for the PostConntrackImport structure.
++type PostConntrackImportReader struct {
++	formats strfmt.Registry
++}
++
++// ReadResponse reads a server response into the received o.
++func (o *PostConntrackImportReader) ReadResponse(response runtime.ClientResponse, consumer runtime.Consumer) (interface{}, error) {
++	switch response.Code() {
++	case 200:
++		result := NewPostConntrackImportOK()
++		if err := result.readResponse(response, consumer, o.formats); err != nil {
++			return nil, err
++		}
++		return result, nil
++	case 400:
++		result := NewPostConntrackImportBadRequest()
++		if err := result.readResponse(response, consumer, o.formats); err != nil {
++			return nil, err
++		}
++		return nil, result
++	case 500:
++		result := NewPostConntrackImportInternalServerError()
++		if err := result.readResponse(response, consumer, o.formats); err != nil {
++			return nil, err
++		}
++		return nil, result
++	default:
++		return nil, runtime.NewAPIError("[POST /conntrack/import] PostConntrackImport", response, response.Code())
++	}
++}
++
++// NewPostConntrackImportOK creates a PostConntrackImportOK with default headers values
++func NewPostConntrackImportOK() *PostConntrackImportOK {
++	return &PostConntrackImportOK{}
++}
++
++/*
++PostConntrackImportOK describes a response with status code 200, with default header values.
++
++OK
++*/
++type PostConntrackImportOK struct {
++}
++
++// IsSuccess returns true when this post conntrack import o k response has a 2xx status code
++func (o *PostConntrackImportOK) IsSuccess() bool {
++	return true
++}
++
++// IsRedirect returns true when this post conntrack import o k response has a 3xx status code
++func (o *PostConntrackImportOK) IsRedirect() bool {
++	return false
++}
++
++// IsClientError returns true when this post conntrack import o k response has a 4xx status code
++func (o *PostConntrackImportOK) IsClientError() bool {
++	return false
++}
++
++// IsServerError returns true when this post conntrack import o k response has a 5xx status code
++func (o *PostConntrackImportOK) IsServerError() bool {
++	return false
++}
++
++// IsCode returns true when this post conntrack import o k response a status code equal to that given
++func (o *PostConntrackImportOK) IsCode(code int) bool {
++	return code == 200
++}
++
++// Code gets the status code for the post conntrack import o k response
++func (o *PostConntrackImportOK) Code() int {
++	return 200
++}
++
++func (o *PostConntrackImportOK) Error() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportOK", 200)
++}
++
++func (o *PostConntrackImportOK) String() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportOK", 200)
++}
++
++func (o *PostConntrackImportOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
++
++	return nil
++}
++
++// NewPostConntrackImportBadRequest creates a PostConntrackImportBadRequest with default headers values
++func NewPostConntrackImportBadRequest() *PostConntrackImportBadRequest {
++	return &PostConntrackImportBadRequest{}
++}
++
++/*
++	PostConntrackImportBadRequest describes a response with status code 400, with default header values.
++
++	Invalid or unsupported conntrack export version.
++
++The value of the Cilium-Conntrack-Export-Version header does not
++match any version supported by this cilium agent.
++*/
++type PostConntrackImportBadRequest struct {
++}
++
++// IsSuccess returns true when this post conntrack import bad request response has a 2xx status code
++func (o *PostConntrackImportBadRequest) IsSuccess() bool {
++	return false
++}
++
++// IsRedirect returns true when this post conntrack import bad request response has a 3xx status code
++func (o *PostConntrackImportBadRequest) IsRedirect() bool {
++	return false
++}
++
++// IsClientError returns true when this post conntrack import bad request response has a 4xx status code
++func (o *PostConntrackImportBadRequest) IsClientError() bool {
++	return true
++}
++
++// IsServerError returns true when this post conntrack import bad request response has a 5xx status code
++func (o *PostConntrackImportBadRequest) IsServerError() bool {
++	return false
++}
++
++// IsCode returns true when this post conntrack import bad request response a status code equal to that given
++func (o *PostConntrackImportBadRequest) IsCode(code int) bool {
++	return code == 400
++}
++
++// Code gets the status code for the post conntrack import bad request response
++func (o *PostConntrackImportBadRequest) Code() int {
++	return 400
++}
++
++func (o *PostConntrackImportBadRequest) Error() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportBadRequest", 400)
++}
++
++func (o *PostConntrackImportBadRequest) String() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportBadRequest", 400)
++}
++
++func (o *PostConntrackImportBadRequest) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
++
++	return nil
++}
++
++// NewPostConntrackImportInternalServerError creates a PostConntrackImportInternalServerError with default headers values
++func NewPostConntrackImportInternalServerError() *PostConntrackImportInternalServerError {
++	return &PostConntrackImportInternalServerError{}
++}
++
++/*
++	PostConntrackImportInternalServerError describes a response with status code 500, with default header values.
++
++	Internal server error. Failed to allocate or initialize conntrack
++
++batch contexts, or another server-side error occurred while processing
++the import.
++*/
++type PostConntrackImportInternalServerError struct {
++}
++
++// IsSuccess returns true when this post conntrack import internal server error response has a 2xx status code
++func (o *PostConntrackImportInternalServerError) IsSuccess() bool {
++	return false
++}
++
++// IsRedirect returns true when this post conntrack import internal server error response has a 3xx status code
++func (o *PostConntrackImportInternalServerError) IsRedirect() bool {
++	return false
++}
++
++// IsClientError returns true when this post conntrack import internal server error response has a 4xx status code
++func (o *PostConntrackImportInternalServerError) IsClientError() bool {
++	return false
++}
++
++// IsServerError returns true when this post conntrack import internal server error response has a 5xx status code
++func (o *PostConntrackImportInternalServerError) IsServerError() bool {
++	return true
++}
++
++// IsCode returns true when this post conntrack import internal server error response a status code equal to that given
++func (o *PostConntrackImportInternalServerError) IsCode(code int) bool {
++	return code == 500
++}
++
++// Code gets the status code for the post conntrack import internal server error response
++func (o *PostConntrackImportInternalServerError) Code() int {
++	return 500
++}
++
++func (o *PostConntrackImportInternalServerError) Error() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportInternalServerError", 500)
++}
++
++func (o *PostConntrackImportInternalServerError) String() string {
++	return fmt.Sprintf("[POST /conntrack/import][%d] postConntrackImportInternalServerError", 500)
++}
++
++func (o *PostConntrackImportInternalServerError) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
++
++	return nil
++}
+diff --git a/api/v1/openapi.yaml b/api/v1/openapi.yaml
+index e7290116b8..d636d8190d 100644
+--- a/api/v1/openapi.yaml
++++ b/api/v1/openapi.yaml
+@@ -12,6 +12,49 @@ produces:
+ consumes:
+ - application/json
+ paths:
++  "/conntrack/export":
++    get:
++      summary: Export conntrack entries for an IPv4 endpoint
++      tags:
++        - daemon
++      produces:
++        - application/octet-stream
++      parameters:
++        - name: ip4
++          in: query
++          description: IPv4 address of the endpoint
++          required: true
++          type: string
++          pattern: "^([0-9]{1,3}\\.){3}[0-9]{1,3}$"
++      responses:
++        '200':
++          description: OK
++  "/conntrack/import":
++    post:
++      summary: Import conntrack entries as plain binary stream
++      tags:
++        - daemon
++      consumes:
++        - application/octet-stream
++      parameters:
++        - name: Cilium-Conntrack-Export-Version
++          in: header
++          required: true
++          type: string
++          description: Conntrack binary export format version
++      responses:
++          '200':
++            description: OK
++          '400':
++            description: |
++              Invalid or unsupported conntrack export version.
++              The value of the Cilium-Conntrack-Export-Version header does not
++              match any version supported by this cilium agent.
++          '500':
++            description: |
++              Internal server error. Failed to allocate or initialize conntrack
++              batch contexts, or another server-side error occurred while processing
++              the import.
+   "/cluster/nodes":
+     get:
+       summary: Get nodes information stored in the cilium-agent
+diff --git a/api/v1/server/doc.go b/api/v1/server/doc.go
+index afc3a394f2..ade23a609c 100644
+--- a/api/v1/server/doc.go
++++ b/api/v1/server/doc.go
+@@ -12,9 +12,11 @@
+ //	Version: v1beta1
+ //
+ //	Consumes:
++//	  - application/octet-stream
+ //	  - application/json
+ //
+ //	Produces:
++//	  - application/octet-stream
+ //	  - application/json
+ //
+ // swagger:meta
+diff --git a/api/v1/server/embedded_spec.go b/api/v1/server/embedded_spec.go
+index f199be313b..ddea191443 100644
+--- a/api/v1/server/embedded_spec.go
++++ b/api/v1/server/embedded_spec.go
+@@ -258,6 +258,63 @@ func init() {
+         }
+       }
+     },
++    "/conntrack/export": {
++      "get": {
++        "produces": [
++          "application/octet-stream"
++        ],
++        "tags": [
++          "daemon"
++        ],
++        "summary": "Export conntrack entries for an IPv4 endpoint",
++        "parameters": [
++          {
++            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
++            "type": "string",
++            "description": "IPv4 address of the endpoint",
++            "name": "ip4",
++            "in": "query",
++            "required": true
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "OK"
++          }
++        }
++      }
++    },
++    "/conntrack/import": {
++      "post": {
++        "consumes": [
++          "application/octet-stream"
++        ],
++        "tags": [
++          "daemon"
++        ],
++        "summary": "Import conntrack entries as plain binary stream",
++        "parameters": [
++          {
++            "type": "string",
++            "description": "Conntrack binary export format version",
++            "name": "Cilium-Conntrack-Export-Version",
++            "in": "header",
++            "required": true
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "OK"
++          },
++          "400": {
++            "description": "Invalid or unsupported conntrack export version.\nThe value of the Cilium-Conntrack-Export-Version header does not\nmatch any version supported by this cilium agent.\n"
++          },
++          "500": {
++            "description": "Internal server error. Failed to allocate or initialize conntrack\nbatch contexts, or another server-side error occurred while processing\nthe import.\n"
++          }
++        }
++      }
++    },
+     "/debuginfo": {
+       "get": {
+         "tags": [
+@@ -5763,6 +5820,63 @@ func init() {
+         }
+       }
+     },
++    "/conntrack/export": {
++      "get": {
++        "produces": [
++          "application/octet-stream"
++        ],
++        "tags": [
++          "daemon"
++        ],
++        "summary": "Export conntrack entries for an IPv4 endpoint",
++        "parameters": [
++          {
++            "pattern": "^([0-9]{1,3}\\.){3}[0-9]{1,3}$",
++            "type": "string",
++            "description": "IPv4 address of the endpoint",
++            "name": "ip4",
++            "in": "query",
++            "required": true
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "OK"
++          }
++        }
++      }
++    },
++    "/conntrack/import": {
++      "post": {
++        "consumes": [
++          "application/octet-stream"
++        ],
++        "tags": [
++          "daemon"
++        ],
++        "summary": "Import conntrack entries as plain binary stream",
++        "parameters": [
++          {
++            "type": "string",
++            "description": "Conntrack binary export format version",
++            "name": "Cilium-Conntrack-Export-Version",
++            "in": "header",
++            "required": true
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "OK"
++          },
++          "400": {
++            "description": "Invalid or unsupported conntrack export version.\nThe value of the Cilium-Conntrack-Export-Version header does not\nmatch any version supported by this cilium agent.\n"
++          },
++          "500": {
++            "description": "Internal server error. Failed to allocate or initialize conntrack\nbatch contexts, or another server-side error occurred while processing\nthe import.\n"
++          }
++        }
++      }
++    },
+     "/debuginfo": {
+       "get": {
+         "tags": [
+diff --git a/api/v1/server/restapi/cilium_api_api.go b/api/v1/server/restapi/cilium_api_api.go
+index 7034fbb7f6..a8a883d1d6 100644
+--- a/api/v1/server/restapi/cilium_api_api.go
++++ b/api/v1/server/restapi/cilium_api_api.go
+@@ -50,8 +50,10 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
+ 		APIKeyAuthenticator: security.APIKeyAuth,
+ 		BearerAuthenticator: security.BearerAuth,
+ 
++		BinConsumer:  runtime.ByteStreamConsumer(),
+ 		JSONConsumer: runtime.JSONConsumer(),
+ 
++		BinProducer:  runtime.ByteStreamProducer(),
+ 		JSONProducer: runtime.JSONProducer(),
+ 
+ 		EndpointDeleteEndpointHandler: endpoint.DeleteEndpointHandlerFunc(func(params endpoint.DeleteEndpointParams) middleware.Responder {
+@@ -96,6 +98,9 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
+ 		DaemonGetConfigHandler: daemon.GetConfigHandlerFunc(func(params daemon.GetConfigParams) middleware.Responder {
+ 			return middleware.NotImplemented("operation daemon.GetConfig has not yet been implemented")
+ 		}),
++		DaemonGetConntrackExportHandler: daemon.GetConntrackExportHandlerFunc(func(params daemon.GetConntrackExportParams) middleware.Responder {
++			return middleware.NotImplemented("operation daemon.GetConntrackExport has not yet been implemented")
++		}),
+ 		DaemonGetDebuginfoHandler: daemon.GetDebuginfoHandlerFunc(func(params daemon.GetDebuginfoParams) middleware.Responder {
+ 			return middleware.NotImplemented("operation daemon.GetDebuginfo has not yet been implemented")
+ 		}),
+@@ -195,6 +200,9 @@ func NewCiliumAPIAPI(spec *loads.Document) *CiliumAPIAPI {
+ 		PrefilterPatchPrefilterHandler: prefilter.PatchPrefilterHandlerFunc(func(params prefilter.PatchPrefilterParams) middleware.Responder {
+ 			return middleware.NotImplemented("operation prefilter.PatchPrefilter has not yet been implemented")
+ 		}),
++		DaemonPostConntrackImportHandler: daemon.PostConntrackImportHandlerFunc(func(params daemon.PostConntrackImportParams) middleware.Responder {
++			return middleware.NotImplemented("operation daemon.PostConntrackImport has not yet been implemented")
++		}),
+ 		IpamPostIpamHandler: ipam.PostIpamHandlerFunc(func(params ipam.PostIpamParams) middleware.Responder {
+ 			return middleware.NotImplemented("operation ipam.PostIpam has not yet been implemented")
+ 		}),
+@@ -241,10 +249,16 @@ type CiliumAPIAPI struct {
+ 	// It has a default implementation in the security package, however you can replace it for your particular usage.
+ 	BearerAuthenticator func(string, security.ScopedTokenAuthentication) runtime.Authenticator
+ 
++	// BinConsumer registers a consumer for the following mime types:
++	//   - application/octet-stream
++	BinConsumer runtime.Consumer
+ 	// JSONConsumer registers a consumer for the following mime types:
+ 	//   - application/json
+ 	JSONConsumer runtime.Consumer
+ 
++	// BinProducer registers a producer for the following mime types:
++	//   - application/octet-stream
++	BinProducer runtime.Producer
+ 	// JSONProducer registers a producer for the following mime types:
+ 	//   - application/json
+ 	JSONProducer runtime.Producer
+@@ -277,6 +291,8 @@ type CiliumAPIAPI struct {
+ 	DaemonGetClusterNodesHandler daemon.GetClusterNodesHandler
+ 	// DaemonGetConfigHandler sets the operation handler for the get config operation
+ 	DaemonGetConfigHandler daemon.GetConfigHandler
++	// DaemonGetConntrackExportHandler sets the operation handler for the get conntrack export operation
++	DaemonGetConntrackExportHandler daemon.GetConntrackExportHandler
+ 	// DaemonGetDebuginfoHandler sets the operation handler for the get debuginfo operation
+ 	DaemonGetDebuginfoHandler daemon.GetDebuginfoHandler
+ 	// EndpointGetEndpointHandler sets the operation handler for the get endpoint operation
+@@ -343,6 +359,8 @@ type CiliumAPIAPI struct {
+ 	EndpointPatchEndpointIDLabelsHandler endpoint.PatchEndpointIDLabelsHandler
+ 	// PrefilterPatchPrefilterHandler sets the operation handler for the patch prefilter operation
+ 	PrefilterPatchPrefilterHandler prefilter.PatchPrefilterHandler
++	// DaemonPostConntrackImportHandler sets the operation handler for the post conntrack import operation
++	DaemonPostConntrackImportHandler daemon.PostConntrackImportHandler
+ 	// IpamPostIpamHandler sets the operation handler for the post ipam operation
+ 	IpamPostIpamHandler ipam.PostIpamHandler
+ 	// IpamPostIpamIPHandler sets the operation handler for the post ipam IP operation
+@@ -424,10 +442,16 @@ func (o *CiliumAPIAPI) RegisterFormat(name string, format strfmt.Format, validat
+ func (o *CiliumAPIAPI) Validate() error {
+ 	var unregistered []string
+ 
++	if o.BinConsumer == nil {
++		unregistered = append(unregistered, "BinConsumer")
++	}
+ 	if o.JSONConsumer == nil {
+ 		unregistered = append(unregistered, "JSONConsumer")
+ 	}
+ 
++	if o.BinProducer == nil {
++		unregistered = append(unregistered, "BinProducer")
++	}
+ 	if o.JSONProducer == nil {
+ 		unregistered = append(unregistered, "JSONProducer")
+ 	}
+@@ -474,6 +498,9 @@ func (o *CiliumAPIAPI) Validate() error {
+ 	if o.DaemonGetConfigHandler == nil {
+ 		unregistered = append(unregistered, "daemon.GetConfigHandler")
+ 	}
++	if o.DaemonGetConntrackExportHandler == nil {
++		unregistered = append(unregistered, "daemon.GetConntrackExportHandler")
++	}
+ 	if o.DaemonGetDebuginfoHandler == nil {
+ 		unregistered = append(unregistered, "daemon.GetDebuginfoHandler")
+ 	}
+@@ -573,6 +600,9 @@ func (o *CiliumAPIAPI) Validate() error {
+ 	if o.PrefilterPatchPrefilterHandler == nil {
+ 		unregistered = append(unregistered, "prefilter.PatchPrefilterHandler")
+ 	}
++	if o.DaemonPostConntrackImportHandler == nil {
++		unregistered = append(unregistered, "daemon.PostConntrackImportHandler")
++	}
+ 	if o.IpamPostIpamHandler == nil {
+ 		unregistered = append(unregistered, "ipam.PostIpamHandler")
+ 	}
+@@ -620,6 +650,8 @@ func (o *CiliumAPIAPI) ConsumersFor(mediaTypes []string) map[string]runtime.Cons
+ 	result := make(map[string]runtime.Consumer, len(mediaTypes))
+ 	for _, mt := range mediaTypes {
+ 		switch mt {
++		case "application/octet-stream":
++			result["application/octet-stream"] = o.BinConsumer
+ 		case "application/json":
+ 			result["application/json"] = o.JSONConsumer
+ 		}
+@@ -637,6 +669,8 @@ func (o *CiliumAPIAPI) ProducersFor(mediaTypes []string) map[string]runtime.Prod
+ 	result := make(map[string]runtime.Producer, len(mediaTypes))
+ 	for _, mt := range mediaTypes {
+ 		switch mt {
++		case "application/octet-stream":
++			result["application/octet-stream"] = o.BinProducer
+ 		case "application/json":
+ 			result["application/json"] = o.JSONProducer
+ 		}
+@@ -738,6 +772,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
+ 	if o.handlers["GET"] == nil {
+ 		o.handlers["GET"] = make(map[string]http.Handler)
+ 	}
++	o.handlers["GET"]["/conntrack/export"] = daemon.NewGetConntrackExport(o.context, o.DaemonGetConntrackExportHandler)
++	if o.handlers["GET"] == nil {
++		o.handlers["GET"] = make(map[string]http.Handler)
++	}
+ 	o.handlers["GET"]["/debuginfo"] = daemon.NewGetDebuginfo(o.context, o.DaemonGetDebuginfoHandler)
+ 	if o.handlers["GET"] == nil {
+ 		o.handlers["GET"] = make(map[string]http.Handler)
+@@ -870,6 +908,10 @@ func (o *CiliumAPIAPI) initHandlerCache() {
+ 	if o.handlers["POST"] == nil {
+ 		o.handlers["POST"] = make(map[string]http.Handler)
+ 	}
++	o.handlers["POST"]["/conntrack/import"] = daemon.NewPostConntrackImport(o.context, o.DaemonPostConntrackImportHandler)
++	if o.handlers["POST"] == nil {
++		o.handlers["POST"] = make(map[string]http.Handler)
++	}
+ 	o.handlers["POST"]["/ipam"] = ipam.NewPostIpam(o.context, o.IpamPostIpamHandler)
+ 	if o.handlers["POST"] == nil {
+ 		o.handlers["POST"] = make(map[string]http.Handler)
+diff --git a/api/v1/server/restapi/daemon/get_conntrack_export.go b/api/v1/server/restapi/daemon/get_conntrack_export.go
+new file mode 100644
+index 0000000000..790f60b478
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/get_conntrack_export.go
+@@ -0,0 +1,59 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/runtime/middleware"
++)
++
++// GetConntrackExportHandlerFunc turns a function with the right signature into a get conntrack export handler
++type GetConntrackExportHandlerFunc func(GetConntrackExportParams) middleware.Responder
++
++// Handle executing the request and returning a response
++func (fn GetConntrackExportHandlerFunc) Handle(params GetConntrackExportParams) middleware.Responder {
++	return fn(params)
++}
++
++// GetConntrackExportHandler interface for that can handle valid get conntrack export params
++type GetConntrackExportHandler interface {
++	Handle(GetConntrackExportParams) middleware.Responder
++}
++
++// NewGetConntrackExport creates a new http.Handler for the get conntrack export operation
++func NewGetConntrackExport(ctx *middleware.Context, handler GetConntrackExportHandler) *GetConntrackExport {
++	return &GetConntrackExport{Context: ctx, Handler: handler}
++}
++
++/*
++	GetConntrackExport swagger:route GET /conntrack/export daemon getConntrackExport
++
++Export conntrack entries for an IPv4 endpoint
++*/
++type GetConntrackExport struct {
++	Context *middleware.Context
++	Handler GetConntrackExportHandler
++}
++
++func (o *GetConntrackExport) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
++	route, rCtx, _ := o.Context.RouteInfo(r)
++	if rCtx != nil {
++		*r = *rCtx
++	}
++	var Params = NewGetConntrackExportParams()
++	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
++		o.Context.Respond(rw, r, route.Produces, route, err)
++		return
++	}
++
++	res := o.Handler.Handle(Params) // actually handle the request
++	o.Context.Respond(rw, r, route.Produces, route, res)
++
++}
+diff --git a/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go b/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go
+new file mode 100644
+index 0000000000..9a9e3d75c9
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/get_conntrack_export_parameters.go
+@@ -0,0 +1,100 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/errors"
++	"github.com/go-openapi/runtime"
++	"github.com/go-openapi/runtime/middleware"
++	"github.com/go-openapi/strfmt"
++	"github.com/go-openapi/validate"
++)
++
++// NewGetConntrackExportParams creates a new GetConntrackExportParams object
++//
++// There are no default values defined in the spec.
++func NewGetConntrackExportParams() GetConntrackExportParams {
++
++	return GetConntrackExportParams{}
++}
++
++// GetConntrackExportParams contains all the bound params for the get conntrack export operation
++// typically these are obtained from a http.Request
++//
++// swagger:parameters GetConntrackExport
++type GetConntrackExportParams struct {
++
++	// HTTP Request Object
++	HTTPRequest *http.Request `json:"-"`
++
++	/*IPv4 address of the endpoint
++	  Required: true
++	  Pattern: ^([0-9]{1,3}\.){3}[0-9]{1,3}$
++	  In: query
++	*/
++	Ip4 string
++}
++
++// BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
++// for simple values it will use straight method calls.
++//
++// To ensure default values, the struct must have been initialized with NewGetConntrackExportParams() beforehand.
++func (o *GetConntrackExportParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
++	var res []error
++
++	o.HTTPRequest = r
++
++	qs := runtime.Values(r.URL.Query())
++
++	qIp4, qhkIp4, _ := qs.GetOK("ip4")
++	if err := o.bindIp4(qIp4, qhkIp4, route.Formats); err != nil {
++		res = append(res, err)
++	}
++	if len(res) > 0 {
++		return errors.CompositeValidationError(res...)
++	}
++	return nil
++}
++
++// bindIp4 binds and validates parameter Ip4 from query.
++func (o *GetConntrackExportParams) bindIp4(rawData []string, hasKey bool, formats strfmt.Registry) error {
++	if !hasKey {
++		return errors.Required("ip4", "query", rawData)
++	}
++	var raw string
++	if len(rawData) > 0 {
++		raw = rawData[len(rawData)-1]
++	}
++
++	// Required: true
++	// AllowEmptyValue: false
++
++	if err := validate.RequiredString("ip4", "query", raw); err != nil {
++		return err
++	}
++	o.Ip4 = raw
++
++	if err := o.validateIp4(formats); err != nil {
++		return err
++	}
++
++	return nil
++}
++
++// validateIp4 carries on validations for parameter Ip4
++func (o *GetConntrackExportParams) validateIp4(formats strfmt.Registry) error {
++
++	if err := validate.Pattern("ip4", "query", o.Ip4, `^([0-9]{1,3}\.){3}[0-9]{1,3}$`); err != nil {
++		return err
++	}
++
++	return nil
++}
+diff --git a/api/v1/server/restapi/daemon/get_conntrack_export_responses.go b/api/v1/server/restapi/daemon/get_conntrack_export_responses.go
+new file mode 100644
+index 0000000000..30be48bb23
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/get_conntrack_export_responses.go
+@@ -0,0 +1,40 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/runtime"
++)
++
++// GetConntrackExportOKCode is the HTTP code returned for type GetConntrackExportOK
++const GetConntrackExportOKCode int = 200
++
++/*
++GetConntrackExportOK OK
++
++swagger:response getConntrackExportOK
++*/
++type GetConntrackExportOK struct {
++}
++
++// NewGetConntrackExportOK creates GetConntrackExportOK with default headers values
++func NewGetConntrackExportOK() *GetConntrackExportOK {
++
++	return &GetConntrackExportOK{}
++}
++
++// WriteResponse to the client
++func (o *GetConntrackExportOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
++
++	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
++
++	rw.WriteHeader(200)
++}
+diff --git a/api/v1/server/restapi/daemon/post_conntrack_import.go b/api/v1/server/restapi/daemon/post_conntrack_import.go
+new file mode 100644
+index 0000000000..9abeec4011
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/post_conntrack_import.go
+@@ -0,0 +1,59 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/runtime/middleware"
++)
++
++// PostConntrackImportHandlerFunc turns a function with the right signature into a post conntrack import handler
++type PostConntrackImportHandlerFunc func(PostConntrackImportParams) middleware.Responder
++
++// Handle executing the request and returning a response
++func (fn PostConntrackImportHandlerFunc) Handle(params PostConntrackImportParams) middleware.Responder {
++	return fn(params)
++}
++
++// PostConntrackImportHandler interface for that can handle valid post conntrack import params
++type PostConntrackImportHandler interface {
++	Handle(PostConntrackImportParams) middleware.Responder
++}
++
++// NewPostConntrackImport creates a new http.Handler for the post conntrack import operation
++func NewPostConntrackImport(ctx *middleware.Context, handler PostConntrackImportHandler) *PostConntrackImport {
++	return &PostConntrackImport{Context: ctx, Handler: handler}
++}
++
++/*
++	PostConntrackImport swagger:route POST /conntrack/import daemon postConntrackImport
++
++Import conntrack entries as plain binary stream
++*/
++type PostConntrackImport struct {
++	Context *middleware.Context
++	Handler PostConntrackImportHandler
++}
++
++func (o *PostConntrackImport) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
++	route, rCtx, _ := o.Context.RouteInfo(r)
++	if rCtx != nil {
++		*r = *rCtx
++	}
++	var Params = NewPostConntrackImportParams()
++	if err := o.Context.BindValidRequest(r, route, &Params); err != nil { // bind params
++		o.Context.Respond(rw, r, route.Produces, route, err)
++		return
++	}
++
++	res := o.Handler.Handle(Params) // actually handle the request
++	o.Context.Respond(rw, r, route.Produces, route, res)
++
++}
+diff --git a/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go b/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go
+new file mode 100644
+index 0000000000..a1d2bc126b
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/post_conntrack_import_parameters.go
+@@ -0,0 +1,80 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/errors"
++	"github.com/go-openapi/runtime/middleware"
++	"github.com/go-openapi/strfmt"
++	"github.com/go-openapi/validate"
++)
++
++// NewPostConntrackImportParams creates a new PostConntrackImportParams object
++//
++// There are no default values defined in the spec.
++func NewPostConntrackImportParams() PostConntrackImportParams {
++
++	return PostConntrackImportParams{}
++}
++
++// PostConntrackImportParams contains all the bound params for the post conntrack import operation
++// typically these are obtained from a http.Request
++//
++// swagger:parameters PostConntrackImport
++type PostConntrackImportParams struct {
++
++	// HTTP Request Object
++	HTTPRequest *http.Request `json:"-"`
++
++	/*Conntrack binary export format version
++	  Required: true
++	  In: header
++	*/
++	CiliumConntrackExportVersion string
++}
++
++// BindRequest both binds and validates a request, it assumes that complex things implement a Validatable(strfmt.Registry) error interface
++// for simple values it will use straight method calls.
++//
++// To ensure default values, the struct must have been initialized with NewPostConntrackImportParams() beforehand.
++func (o *PostConntrackImportParams) BindRequest(r *http.Request, route *middleware.MatchedRoute) error {
++	var res []error
++
++	o.HTTPRequest = r
++
++	if err := o.bindCiliumConntrackExportVersion(r.Header[http.CanonicalHeaderKey("Cilium-Conntrack-Export-Version")], true, route.Formats); err != nil {
++		res = append(res, err)
++	}
++	if len(res) > 0 {
++		return errors.CompositeValidationError(res...)
++	}
++	return nil
++}
++
++// bindCiliumConntrackExportVersion binds and validates parameter CiliumConntrackExportVersion from header.
++func (o *PostConntrackImportParams) bindCiliumConntrackExportVersion(rawData []string, hasKey bool, formats strfmt.Registry) error {
++	if !hasKey {
++		return errors.Required("Cilium-Conntrack-Export-Version", "header", rawData)
++	}
++	var raw string
++	if len(rawData) > 0 {
++		raw = rawData[len(rawData)-1]
++	}
++
++	// Required: true
++
++	if err := validate.RequiredString("Cilium-Conntrack-Export-Version", "header", raw); err != nil {
++		return err
++	}
++	o.CiliumConntrackExportVersion = raw
++
++	return nil
++}
+diff --git a/api/v1/server/restapi/daemon/post_conntrack_import_responses.go b/api/v1/server/restapi/daemon/post_conntrack_import_responses.go
+new file mode 100644
+index 0000000000..e5f1170b85
+--- /dev/null
++++ b/api/v1/server/restapi/daemon/post_conntrack_import_responses.go
+@@ -0,0 +1,94 @@
++// Code generated by go-swagger; DO NOT EDIT.
++
++// Copyright Authors of Cilium
++// SPDX-License-Identifier: Apache-2.0
++
++package daemon
++
++// This file was generated by the swagger tool.
++// Editing this file might prove futile when you re-run the swagger generate command
++
++import (
++	"net/http"
++
++	"github.com/go-openapi/runtime"
++)
++
++// PostConntrackImportOKCode is the HTTP code returned for type PostConntrackImportOK
++const PostConntrackImportOKCode int = 200
++
++/*
++PostConntrackImportOK OK
++
++swagger:response postConntrackImportOK
++*/
++type PostConntrackImportOK struct {
++}
++
++// NewPostConntrackImportOK creates PostConntrackImportOK with default headers values
++func NewPostConntrackImportOK() *PostConntrackImportOK {
++
++	return &PostConntrackImportOK{}
++}
++
++// WriteResponse to the client
++func (o *PostConntrackImportOK) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
++
++	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
++
++	rw.WriteHeader(200)
++}
++
++// PostConntrackImportBadRequestCode is the HTTP code returned for type PostConntrackImportBadRequest
++const PostConntrackImportBadRequestCode int = 400
++
++/*
++PostConntrackImportBadRequest Invalid or unsupported conntrack export version.
++The value of the Cilium-Conntrack-Export-Version header does not
++match any version supported by this cilium agent.
++
++swagger:response postConntrackImportBadRequest
++*/
++type PostConntrackImportBadRequest struct {
++}
++
++// NewPostConntrackImportBadRequest creates PostConntrackImportBadRequest with default headers values
++func NewPostConntrackImportBadRequest() *PostConntrackImportBadRequest {
++
++	return &PostConntrackImportBadRequest{}
++}
++
++// WriteResponse to the client
++func (o *PostConntrackImportBadRequest) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
++
++	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
++
++	rw.WriteHeader(400)
++}
++
++// PostConntrackImportInternalServerErrorCode is the HTTP code returned for type PostConntrackImportInternalServerError
++const PostConntrackImportInternalServerErrorCode int = 500
++
++/*
++PostConntrackImportInternalServerError Internal server error. Failed to allocate or initialize conntrack
++batch contexts, or another server-side error occurred while processing
++the import.
++
++swagger:response postConntrackImportInternalServerError
++*/
++type PostConntrackImportInternalServerError struct {
++}
++
++// NewPostConntrackImportInternalServerError creates PostConntrackImportInternalServerError with default headers values
++func NewPostConntrackImportInternalServerError() *PostConntrackImportInternalServerError {
++
++	return &PostConntrackImportInternalServerError{}
++}
++
++// WriteResponse to the client
++func (o *PostConntrackImportInternalServerError) WriteResponse(rw http.ResponseWriter, producer runtime.Producer) {
++
++	rw.Header().Del(runtime.HeaderContentType) //Remove Content-Type on empty responses
++
++	rw.WriteHeader(500)
++}
+diff --git a/api/v1/server/server.go b/api/v1/server/server.go
+index 26648da341..a0195ea93b 100644
+--- a/api/v1/server/server.go
++++ b/api/v1/server/server.go
+@@ -78,6 +78,7 @@ type apiParams struct {
+ 	DaemonGetCgroupDumpMetadataHandler   daemon.GetCgroupDumpMetadataHandler
+ 	DaemonGetClusterNodesHandler         daemon.GetClusterNodesHandler
+ 	DaemonGetConfigHandler               daemon.GetConfigHandler
++	DaemonGetConntrackExportHandler      daemon.GetConntrackExportHandler
+ 	DaemonGetDebuginfoHandler            daemon.GetDebuginfoHandler
+ 	EndpointGetEndpointHandler           endpoint.GetEndpointHandler
+ 	EndpointGetEndpointIDHandler         endpoint.GetEndpointIDHandler
+@@ -111,6 +112,7 @@ type apiParams struct {
+ 	EndpointPatchEndpointIDConfigHandler endpoint.PatchEndpointIDConfigHandler
+ 	EndpointPatchEndpointIDLabelsHandler endpoint.PatchEndpointIDLabelsHandler
+ 	PrefilterPatchPrefilterHandler       prefilter.PatchPrefilterHandler
++	DaemonPostConntrackImportHandler     daemon.PostConntrackImportHandler
+ 	IpamPostIpamHandler                  ipam.PostIpamHandler
+ 	IpamPostIpamIPHandler                ipam.PostIpamIPHandler
+ 	EndpointPutEndpointIDHandler         endpoint.PutEndpointIDHandler
+@@ -138,6 +140,7 @@ func newAPI(p apiParams) *restapi.CiliumAPIAPI {
+ 	api.DaemonGetCgroupDumpMetadataHandler = p.DaemonGetCgroupDumpMetadataHandler
+ 	api.DaemonGetClusterNodesHandler = p.DaemonGetClusterNodesHandler
+ 	api.DaemonGetConfigHandler = p.DaemonGetConfigHandler
++	api.DaemonGetConntrackExportHandler = p.DaemonGetConntrackExportHandler
+ 	api.DaemonGetDebuginfoHandler = p.DaemonGetDebuginfoHandler
+ 	api.EndpointGetEndpointHandler = p.EndpointGetEndpointHandler
+ 	api.EndpointGetEndpointIDHandler = p.EndpointGetEndpointIDHandler
+@@ -171,6 +174,7 @@ func newAPI(p apiParams) *restapi.CiliumAPIAPI {
+ 	api.EndpointPatchEndpointIDConfigHandler = p.EndpointPatchEndpointIDConfigHandler
+ 	api.EndpointPatchEndpointIDLabelsHandler = p.EndpointPatchEndpointIDLabelsHandler
+ 	api.PrefilterPatchPrefilterHandler = p.PrefilterPatchPrefilterHandler
++	api.DaemonPostConntrackImportHandler = p.DaemonPostConntrackImportHandler
+ 	api.IpamPostIpamHandler = p.IpamPostIpamHandler
+ 	api.IpamPostIpamIPHandler = p.IpamPostIpamIPHandler
+ 	api.EndpointPutEndpointIDHandler = p.EndpointPutEndpointIDHandler
+diff --git a/daemon/cmd/api_handlers.go b/daemon/cmd/api_handlers.go
+index 1f2b41919b..4f26841bae 100644
+--- a/daemon/cmd/api_handlers.go
++++ b/daemon/cmd/api_handlers.go
+@@ -21,8 +21,10 @@ import (
+ type handlersOut struct {
+ 	cell.Out
+ 
+-	DaemonGetDebuginfoHandler daemon.GetDebuginfoHandler
+-	DaemonGetHealthzHandler   daemon.GetHealthzHandler
++	DaemonGetDebuginfoHandler        daemon.GetDebuginfoHandler
++	DaemonGetHealthzHandler          daemon.GetHealthzHandler
++	DaemonPostConntrackImportHandler daemon.PostConntrackImportHandler
++	DaemonGetConntrackExportHandler  daemon.GetConntrackExportHandler
+ 
+ 	EndpointDeleteEndpointHandler        endpoint.DeleteEndpointHandler
+ 	EndpointDeleteEndpointIDHandler      endpoint.DeleteEndpointIDHandler
+@@ -86,6 +88,9 @@ func ciliumAPIHandlers(dp promise.Promise[*Daemon], cfg *option.DaemonConfig, _
+ 	// /healthz/
+ 	out.DaemonGetHealthzHandler = wrapAPIHandler(dp, getHealthzHandler)
+ 
++	out.DaemonPostConntrackImportHandler = wrapAPIHandler(dp, postConntrackImportHandler)
++	out.DaemonGetConntrackExportHandler = wrapAPIHandler(dp, getConntrackExportHandler)
++
+ 	// /endpoint/
+ 	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
+ 	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
+diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
+index d42dae075b..9044bc2a6c 100644
+--- a/daemon/cmd/status.go
++++ b/daemon/cmd/status.go
+@@ -4,20 +4,31 @@
+ package cmd
+ 
+ import (
++	"bytes"
+ 	"context"
++	"encoding/binary"
++	"errors"
+ 	"fmt"
++	"io"
++	"net"
++	"net/http"
+ 	"sort"
+ 	"strings"
++	"unsafe"
+ 
++	lb "github.com/cilium/cilium/pkg/loadbalancer"
++	"github.com/go-openapi/runtime"
+ 	"github.com/go-openapi/runtime/middleware"
+ 	"github.com/go-openapi/strfmt"
+ 	"github.com/sirupsen/logrus"
++	"golang.org/x/sys/unix"
+ 	versionapi "k8s.io/apimachinery/pkg/version"
+ 
+ 	"github.com/cilium/cilium/api/v1/models"
+ 	. "github.com/cilium/cilium/api/v1/server/restapi/daemon"
+ 	"github.com/cilium/cilium/pkg/annotation"
+ 	"github.com/cilium/cilium/pkg/backoff"
++	"github.com/cilium/cilium/pkg/bpf"
+ 	"github.com/cilium/cilium/pkg/controller"
+ 	"github.com/cilium/cilium/pkg/datapath/linux/probes"
+ 	datapathOption "github.com/cilium/cilium/pkg/datapath/option"
+@@ -29,6 +40,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/kvstore"
+ 	"github.com/cilium/cilium/pkg/lock"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
++	"github.com/cilium/cilium/pkg/maps/ctmap"
+ 	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
+ 	ipmasqmap "github.com/cilium/cilium/pkg/maps/ipmasq"
+ 	"github.com/cilium/cilium/pkg/maps/lbmap"
+@@ -40,7 +52,10 @@ import (
+ 	"github.com/cilium/cilium/pkg/option"
+ 	"github.com/cilium/cilium/pkg/status"
+ 	"github.com/cilium/cilium/pkg/time"
++	"github.com/cilium/cilium/pkg/types"
++	"github.com/cilium/cilium/pkg/u8proto"
+ 	"github.com/cilium/cilium/pkg/version"
++	"github.com/cilium/ebpf"
+ )
+ 
+ const (
+@@ -484,6 +499,593 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
+ 	return NewGetHealthzOK().WithPayload(&sr)
+ }
+ 
++func deserializeConntrackFromReader(
++	r io.Reader,
++) (*ctmap.CtKey4Global, *ctmap.CtEntry, error) {
++
++	order := binary.LittleEndian
++
++	key := &ctmap.CtKey4Global{}
++	entry := &ctmap.CtEntry{}
++
++	if _, err := io.ReadFull(r, key.DestAddr[:]); err != nil {
++		return nil, nil, err
++	}
++	if _, err := io.ReadFull(r, key.SourceAddr[:]); err != nil {
++		return nil, nil, err
++	}
++	if _, err := io.ReadFull(r, (*[2]byte)(unsafe.Pointer(&key.DestPort))[:]); err != nil {
++		return nil, nil, err
++	}
++	if _, err := io.ReadFull(r, (*[2]byte)(unsafe.Pointer(&key.SourcePort))[:]); err != nil {
++		return nil, nil, err
++	}
++	if _, err := io.ReadFull(r, (*[1]byte)(unsafe.Pointer(&key.NextHeader))[:]); err != nil {
++		return nil, nil, err
++	}
++	if _, err := io.ReadFull(r, (*[1]byte)(unsafe.Pointer(&key.Flags))[:]); err != nil {
++		return nil, nil, err
++	}
++
++	if err := binary.Read(r, order, &entry.Reserved0); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.BackendID); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.Packets); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.Bytes); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.Lifetime); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.Flags); err != nil {
++		return nil, nil, err
++	}
++	// revnat value is already in network byte order
++	if _, err := io.ReadFull(r, (*[2]byte)(unsafe.Pointer(&entry.RevNAT))[:]); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.TxFlagsSeen); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.RxFlagsSeen); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.SourceSecurityID); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.LastTxReport); err != nil {
++		return nil, nil, err
++	}
++	if err := binary.Read(r, order, &entry.LastRxReport); err != nil {
++		return nil, nil, err
++	}
++
++	return key, entry, nil
++}
++
++type UnresolvedEntry struct {
++	key *ctmap.CtKey4Global
++	val *ctmap.CtEntry
++}
++
++type RevNatContext struct {
++	// foreign node revnat mapping to current node revnat
++	revnatMap map[uint16]uint16
++	// entries waiting for revnat translation
++	entries map[uint16][]UnresolvedEntry
++}
++
++func NewRevNatContext() *RevNatContext {
++	return &RevNatContext{
++		revnatMap: make(map[uint16]uint16, 256),
++		entries:   make(map[uint16][]UnresolvedEntry, 256),
++	}
++}
++
++type batchContext struct {
++	m        *ctmap.Map
++	keys     []ctmap.CtKey4Global
++	values   []ctmap.CtEntry
++	next     uint32
++	capacity uint32
++	revNat   *RevNatContext
++}
++
++func NewBatchContext(m *ctmap.Map, chunkSize uint32) (*batchContext, error) {
++	_, err := ctmap.OpenCTMap(m)
++	if err != nil {
++		return nil, err
++	}
++
++	return &batchContext{
++		m:        m,
++		keys:     make([]ctmap.CtKey4Global, chunkSize),
++		values:   make([]ctmap.CtEntry, chunkSize),
++		next:     0,
++		capacity: chunkSize,
++		revNat:   NewRevNatContext(),
++	}, nil
++}
++
++func (ctx *batchContext) Close() {
++	if ctx.m != nil {
++		ctx.m.Close()
++	}
++}
++
++type RevNatDecision int
++
++const (
++	RevNatWrite RevNatDecision = iota
++	RevNatFlush
++	RevNatBuffered
++)
++
++func getOrOpenServiceMap() (*bpf.Map, error) {
++	if m := bpf.GetMap(lbmap.Service4MapV2Name); m != nil {
++		return m, nil
++	}
++
++	return bpf.OpenMap(bpf.MapPath(lbmap.Service4MapV2Name), &lbmap.Service4Key{}, &lbmap.Service4Value{})
++}
++
++func lookupService(key *lbmap.Service4Key) (*lbmap.Service4Value, error) {
++	m, err := getOrOpenServiceMap()
++	if err != nil || m == nil {
++		return nil, err
++	}
++
++	v, err := m.Lookup(key)
++	if err != nil || v == nil {
++		return nil, err
++	}
++	return v.(*lbmap.Service4Value), nil
++}
++
++func resolveForeignRevNat(key *ctmap.CtKey4Global) (uint16, error) {
++	svcKey := lbmap.NewService4Key(key.DestAddr.IP(), key.SourcePort, key.NextHeader, lb.ScopeExternal, 0)
++	svcVal, err := lookupService(svcKey)
++	if err == nil {
++		return svcVal.RevNat, nil
++	}
++
++	svcKey.Scope = lb.ScopeInternal
++	svcVal, err = lookupService(svcKey)
++	if err != nil {
++		return 0, fmt.Errorf("failed to lookup ct service: %w", err)
++	}
++
++	return svcVal.RevNat, nil
++}
++
++func (ctx *RevNatContext) Handle(
++	key *ctmap.CtKey4Global,
++	val *ctmap.CtEntry,
++) RevNatDecision {
++	// foreign-node revnat
++	foreign := val.RevNAT
++	if foreign == 0 {
++		return RevNatWrite
++	}
++
++	if local, isExist := ctx.revnatMap[foreign]; isExist {
++		// local-node revnat
++		val.RevNAT = local
++		return RevNatWrite
++	}
++
++	// buffer the entry with unknown local revnat
++	ctx.entries[foreign] = append(
++		ctx.entries[foreign],
++		UnresolvedEntry{
++			key: key,
++			val: val,
++		},
++	)
++
++	if key.Flags&ctmap.TUPLE_F_SERVICE == 0 {
++		return RevNatBuffered
++	}
++
++	// conntrack have service type - try resolve local revnat
++	local, err := resolveForeignRevNat(key)
++	if err != nil {
++		log.WithFields(logrus.Fields{
++			"revNat": foreign,
++			"error":  err,
++		}).Debug("Failed resolve foreign RevNat to local RevNat")
++		return RevNatBuffered
++	}
++
++	ctx.revnatMap[foreign] = local
++	return RevNatFlush
++}
++
++type RevNatFlushCallback func(
++	key *ctmap.CtKey4Global,
++	val *ctmap.CtEntry,
++)
++
++func (ctx *RevNatContext) Flush(
++	foreign uint16,
++	cb RevNatFlushCallback,
++) {
++	entries, ok := ctx.entries[foreign]
++	if !ok {
++		return
++	}
++
++	local, ok := ctx.revnatMap[foreign]
++	if !ok {
++		return
++	}
++
++	for _, e := range entries {
++		e.val.RevNAT = local
++		cb(e.key, e.val)
++	}
++
++	delete(ctx.entries, foreign)
++}
++
++func (ctx *batchContext) Append(k *ctmap.CtKey4Global, v *ctmap.CtEntry) {
++	state := ctx.revNat.Handle(k, v)
++	switch state {
++	case RevNatWrite:
++		ctx.Write(k, v)
++	case RevNatFlush:
++		ctx.revNat.Flush(v.RevNAT, func(
++			key *ctmap.CtKey4Global,
++			val *ctmap.CtEntry,
++		) {
++			ctx.Write(key, val)
++		})
++	}
++}
++
++func (ctx *batchContext) Write(k *ctmap.CtKey4Global, v *ctmap.CtEntry) {
++	curr := ctx.next
++	if curr < ctx.capacity {
++		ctx.keys[curr] = *k
++		ctx.values[curr] = *v
++		ctx.next++
++	}
++
++	isForced := false
++	ctx.Flush(isForced)
++}
++
++func (ctx *batchContext) Flush(isForced bool) {
++	currentCount := ctx.next
++	if currentCount == 0 {
++		return
++	}
++
++	isFull := currentCount == ctx.capacity
++	if !isForced && !isFull {
++		return
++	}
++
++	writtenCount := uint32(0)
++	for writtenCount < currentCount {
++		// only pass the filled and don't yet written part of the arrays
++		keys := ctx.keys[writtenCount:currentCount]
++		values := ctx.values[writtenCount:currentCount]
++		count, err := ctx.m.BatchUpdate(keys, values, nil)
++		if count <= 0 || (err != nil && errors.Is(err, unix.EFAULT)) {
++			log.WithFields(logrus.Fields{
++				"error": err,
++			}).Error("Failed batch update")
++			break
++		}
++		writtenCount += uint32(count)
++	}
++	ctx.next = 0
++}
++
++func flushContexts(ctxs []*batchContext) {
++	for _, ctx := range ctxs {
++		if ctx != nil {
++			ctx.Flush(true)
++			ctx.Close()
++		}
++	}
++}
++
++func appendToContext(tcp *batchContext, udp *batchContext,
++	k *ctmap.CtKey4Global, v *ctmap.CtEntry) {
++	var ctx *batchContext
++	if k.NextHeader == u8proto.TCP && tcp != nil {
++		ctx = tcp
++	} else if k.NextHeader != u8proto.TCP && udp != nil {
++		ctx = udp
++	} else {
++		// context for this conntrack is not available, silently skip
++		return
++	}
++
++	ctx.Append(k, v)
++}
++
++func createContexts() (tcp *batchContext, udp *batchContext) {
++	const chunkSize uint32 = 4096
++	tcp, errTCP := NewBatchContext(ctmap.GetTCPCtMap(), chunkSize)
++	if errTCP != nil {
++		log.WithFields(logrus.Fields{
++			"map":   "tcp4",
++			"error": errTCP,
++		}).Warn("Failed create batch context")
++	}
++
++	udp, errUDP := NewBatchContext(ctmap.GetAnyCtMap(), chunkSize)
++	if errUDP != nil {
++		log.WithFields(logrus.Fields{
++			"map":   "any4",
++			"error": errUDP,
++		}).Warn("Failed create batch context")
++	}
++
++	return
++}
++
++func postConntrackImportHandler(
++	d *Daemon,
++	params PostConntrackImportParams,
++) middleware.Responder {
++	r := params.HTTPRequest
++	defer r.Body.Close()
++
++	const SupportedExportVersion = "1"
++	v := r.Header.Get("Cilium-Conntrack-Export-Version")
++	if v != SupportedExportVersion {
++		return NewPostConntrackImportBadRequest()
++	}
++
++	tcp, udp := createContexts()
++	if tcp == nil && udp == nil {
++		return NewPostConntrackImportInternalServerError()
++	}
++
++	t, _ := timestamp.GetCTCurTime(timestamp.GetClockSourceFromOptions())
++	currTime := uint32(t)
++
++	for {
++		k, v, err := deserializeConntrackFromReader(r.Body)
++		if err != nil {
++			break
++		}
++		// convert from relative value to absolute
++		v.Lifetime += currTime
++		appendToContext(tcp, udp, k, v)
++	}
++
++	flushContexts([]*batchContext{tcp, udp})
++	return NewPostConntrackImportOK()
++}
++
++func getCtMaps() []*ctmap.Map {
++	// our cilium build really support only ipv4
++	ipv4, ipv6 := true, false
++	return ctmap.GlobalMaps(ipv4, ipv6)
++}
++
++func parseIPv4ToBinary(s string) (types.IPv4, error) {
++	var out types.IPv4
++
++	ip := net.ParseIP(s)
++	if ip == nil {
++		return out, fmt.Errorf("invalid IP: %s", s)
++	}
++
++	ip4 := ip.To4()
++	if ip4 == nil {
++		return out, fmt.Errorf("not an IPv4 address: %s", s)
++	}
++
++	copy(out[:], ip4)
++	return out, nil
++}
++
++func writeRawToBuf[T any](buf *bytes.Buffer, v *T) error {
++	size := unsafe.Sizeof(*v)
++	b := unsafe.Slice((*byte)(unsafe.Pointer(v)), size)
++	_, err := buf.Write(b)
++	return err
++}
++
++func serializeConntrack(
++	key *ctmap.CtKey4Global,
++	entry *ctmap.CtEntry,
++) ([]byte, error) {
++	// for performance buffer len must be equal to serialized data
++	buf := bytes.NewBuffer(make([]byte, 0, 68))
++	order := binary.LittleEndian
++
++	// Key = 14 bytes
++	if _, err := buf.Write(key.DestAddr[:]); err != nil {
++		return nil, err
++	}
++	if _, err := buf.Write(key.SourceAddr[:]); err != nil {
++		return nil, err
++	}
++	if err := writeRawToBuf(buf, &key.DestPort); err != nil {
++		return nil, err
++	}
++	if err := writeRawToBuf(buf, &key.SourcePort); err != nil {
++		return nil, err
++	}
++	if err := writeRawToBuf(buf, &key.NextHeader); err != nil {
++		return nil, err
++	}
++	if err := writeRawToBuf(buf, &key.Flags); err != nil {
++		return nil, err
++	}
++
++	// Entry = 54 bytes
++	if err := binary.Write(buf, order, entry.Reserved0); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.BackendID); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.Packets); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.Bytes); err != nil {
++		return nil, err
++	}
++	// TODO convert from abs node specific to relative node-aware value
++	if err := binary.Write(buf, order, entry.Lifetime); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.Flags); err != nil {
++		return nil, err
++	}
++	// revnat value is already in network byte order
++	if err := writeRawToBuf(buf, &entry.RevNAT); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.TxFlagsSeen); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.RxFlagsSeen); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.SourceSecurityID); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.LastTxReport); err != nil {
++		return nil, err
++	}
++	if err := binary.Write(buf, order, entry.LastRxReport); err != nil {
++		return nil, err
++	}
++
++	return buf.Bytes(), nil
++}
++
++func writeBinaryConntrack(
++	w http.ResponseWriter,
++	key *ctmap.CtKey4Global,
++	entry *ctmap.CtEntry,
++	currTime uint32,
++) error {
++	if entry.Lifetime < currTime {
++		// skip expired conntrack
++		return nil
++	}
++	// convert from absolute(node specific) to relative(node aware) value
++	entry.Lifetime -= currTime
++
++	data, err := serializeConntrack(key, entry)
++	if err != nil {
++		return err
++	}
++
++	_, err = w.Write(data)
++	return err
++}
++
++func processCtMap(
++	m *ctmap.Map,
++	w http.ResponseWriter,
++	ctx context.Context,
++	ip4 types.IPv4,
++	isConnClosed *bool,
++	currTime uint32,
++) error {
++	_, err := ctmap.OpenCTMap(m)
++	if err != nil {
++		return err
++	}
++	defer m.Close()
++
++	const chunkSize uint32 = 4096
++	kout := make([]ctmap.CtKey4Global, chunkSize)
++	vout := make([]ctmap.CtEntry, chunkSize)
++
++	var cursor ebpf.MapBatchCursor
++	for {
++		// Check cancellation early
++		select {
++		case <-ctx.Done():
++			*isConnClosed = true
++			return nil
++		default:
++		}
++
++		count, batchErr := m.BatchLookup(&cursor, kout, vout, nil)
++		for i := range count {
++			k := &kout[i]
++			v := &vout[i]
++
++			flags := k.GetFlags()
++			src, dst := k.SourceAddr, k.DestAddr
++			isIngress := flags&ctmap.TUPLE_F_IN != 0 || flags&ctmap.TUPLE_F_SERVICE != 0
++			isEgress := flags == ctmap.TUPLE_F_OUT
++			if !(isIngress && ip4 == src || isEgress && ip4 == dst) {
++				continue
++			}
++
++			if err := writeBinaryConntrack(w, k, v, currTime); err != nil {
++				*isConnClosed = true
++				return err
++			}
++		}
++
++		if batchErr != nil {
++			if errors.Is(batchErr, ebpf.ErrKeyNotExist) {
++				return nil // end of map
++			}
++			return batchErr
++		}
++	}
++}
++
++func getConntrackExportHandler(
++	d *Daemon,
++	params GetConntrackExportParams,
++) middleware.Responder {
++	return middleware.ResponderFunc(func(w http.ResponseWriter, _ runtime.Producer) {
++		r := params.HTTPRequest
++		ctx := r.Context()
++		defer r.Body.Close()
++
++		ip4, err := parseIPv4ToBinary(params.Ip4)
++		if err != nil {
++			http.Error(w, "invalid IPv4 address", http.StatusBadRequest)
++			return
++		}
++
++		w.Header().Set("Content-Type", "application/octet-stream")
++		w.Header().Set("Cilium-Conntrack-Export-Version", "1")
++		w.WriteHeader(http.StatusOK)
++
++		t, _ := timestamp.GetCTCurTime(timestamp.GetClockSourceFromOptions())
++		currTime := uint32(t)
++
++		isConnClosed := false
++		for _, ctMap := range getCtMaps() {
++			if err = processCtMap(ctMap, w, ctx, ip4, &isConnClosed, currTime); err != nil {
++				log.WithFields(logrus.Fields{
++					"map":   ctMap,
++					"error": err,
++				}).Error("Failed process conntrack map")
++			}
++
++			if isConnClosed {
++				log.Debug("client closed connection")
++				break
++			}
++		}
++	})
++}
++
+ // getStatus returns the daemon status. If brief is provided a minimal version
+ // of the StatusResponse is provided.
+ func (d *Daemon) getStatus(brief bool, requireK8sConnectivity bool) models.StatusResponse {
+diff --git a/pkg/bpf/map_linux.go b/pkg/bpf/map_linux.go
+index b89f1bcb8f..da06180ef6 100644
+--- a/pkg/bpf/map_linux.go
++++ b/pkg/bpf/map_linux.go
+@@ -1009,6 +1009,10 @@ func (m *Map) BatchLookup(cursor *ebpf.MapBatchCursor, keysOut, valuesOut interf
+ 	return m.m.BatchLookup(cursor, keysOut, valuesOut, opts)
+ }
+ 
++func (m *Map) BatchUpdate(keysOut, valuesOut interface{}, opts *ebpf.BatchOptions) (int, error) {
++	return m.m.BatchUpdate(keysOut, valuesOut, opts)
++}
++
+ // DumpIfExists dumps the contents of the map into hash via Dump() if the map
+ // file exists
+ func (m *Map) DumpIfExists(hash map[string][]string) error {
+diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
+index 77e1de9b02..55b82b9c8c 100644
+--- a/pkg/maps/ctmap/ctmap.go
++++ b/pkg/maps/ctmap/ctmap.go
+@@ -815,6 +815,14 @@ func DeleteIfUpgradeNeeded(e CtEndpoint) {
+ 	}
+ }
+ 
++func GetTCPCtMap() *Map {
++	return newMap(MapNameTCP4Global, mapTypeIPv4TCPGlobal)
++}
++
++func GetAnyCtMap() *Map {
++	return newMap(MapNameAny4Global, mapTypeIPv4AnyGlobal)
++}
++
+ // maps returns all connecting tracking maps associated with endpoint 'e' (or
+ // the global maps if 'e' is nil).
+ func maps(e CtEndpoint, ipv4, ipv6 bool) []*Map {
