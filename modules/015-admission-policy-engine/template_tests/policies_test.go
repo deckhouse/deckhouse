@@ -20,10 +20,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -81,6 +85,231 @@ admissionPolicyEngine:
 			}
 		})
 	})
+
+	Context("Pod security standards constraints YAML validation", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
+
+			for _, constraintKind := range baselineConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
+
+			for _, constraintKind := range restrictedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+	})
+
+	Context("Pod security standards with explicit defaultPolicy: Privileged and enforcementAction: Deny", func() {
+		BeforeEach(func() {
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Privileged")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints must have valid YAML with defaultPolicy: Privileged", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
+
+			for _, constraintKind := range baselineConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints must have valid YAML with defaultPolicy: Privileged", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
+
+			for _, constraintKind := range restrictedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+	})
+
+	// ============================================================================
+	// TODO: REMOVE THIS SECTION AFTER REMOVING d8-prefixed constraints from templates
+	// ============================================================================
+	// This section tests constraints with "-d8" suffix that are generated
+	// when defaultPolicy != "privileged" (for baseline) or != "restricted" (for restricted).
+	// These constraints are marked for removal in templates/_helpers.tpl with TODO comment.
+	// After removing the template code that generates these constraints, this test section
+	// should be deleted as well.
+	// ============================================================================
+	Context("Pod security standards constraints with -d8 suffix (temporary, for removal)", func() {
+		BeforeEach(func() {
+			// Set defaultPolicy to Baseline to trigger generation of -d8 constraints for baseline
+			// Set defaultPolicy to Privileged to trigger generation of -d8 constraints for restricted
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Baseline")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints with -d8-default suffix must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
+
+			for _, constraintKind := range baselineConstraints {
+				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-d8-default")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8-default): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8-default)", constraintKind))
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints with -d8-default suffix must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
+
+			for _, constraintKind := range restrictedConstraints {
+				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-d8-default")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8-default): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8-default)", constraintKind))
+				}
+			}
+		})
+	})
+
+	Context("Pod security standards constraints with -d8 suffix (non-default action, temporary, for removal)", func() {
+		BeforeEach(func() {
+			// Set defaultPolicy to Baseline to trigger generation of -d8 constraints for baseline
+			// Set enforcementAction to "warn" (non-default) to test -d8 suffix (without -default)
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Baseline")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny", "warn"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints with -d8 suffix (non-default) must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			baselineConstraints := getBaselineConstraintNames()
+			Expect(baselineConstraints).NotTo(BeEmpty(), "No baseline constraints found in templates")
+
+			for _, constraintKind := range baselineConstraints {
+				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-warn-d8")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8)", constraintKind))
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints with -d8 suffix (non-default) must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			restrictedConstraints := getRestrictedConstraintNames()
+			Expect(restrictedConstraints).NotTo(BeEmpty(), "No restricted constraints found in templates")
+
+			for _, constraintKind := range restrictedConstraints {
+				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-warn-d8")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8)", constraintKind))
+				}
+			}
+		})
+	})
+	// ============================================================================
+	// END OF TEMPORARY SECTION - REMOVE AFTER REMOVING d8-prefixed constraints
+	// ============================================================================
 })
 
 func gatorAvailable() (string, bool) {
@@ -91,4 +320,135 @@ func gatorAvailable() (string, bool) {
 
 	info, err := os.Lstat(gatorPath)
 	return gatorPath, err == nil && (info.Mode().Perm()&0o111 != 0)
+}
+
+// validateYAML checks if the constraint resource has valid YAML structure
+// by attempting to marshal it back to YAML
+func validateYAML(constraint interface{}, resourceName string) {
+	// Try to marshal the resource to YAML to validate its structure
+	yamlBytes, err := yaml.Marshal(constraint)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to marshal resource %s to YAML: %v", resourceName, err))
+	}
+
+	// Try to unmarshal it back to validate it's valid YAML
+	var result interface{}
+	err = yaml.Unmarshal(yamlBytes, &result)
+	if err != nil {
+		Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", resourceName, err, string(yamlBytes)))
+	}
+}
+
+// extractConstraintNamesFromTemplate parses template file and extracts constraint kind names
+// from include statements like: include "pod_security_standard_baseline" (list $context "D8HostNetwork" ...)
+// or include "pod_security_standard_restricted" (list $context "D8AllowedCapabilities" ...)
+func extractConstraintNamesFromTemplate(templatePath string, helperName string) []string {
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
+	}
+
+	// Pattern to match: include "pod_security_standard_baseline" (list $context "D8XXX" ...)
+	// or include "pod_security_standard_restricted" (list $context "D8XXX" ...)
+	// The pattern looks for the helper name followed by a list that contains a quoted string starting with D8
+	pattern := fmt.Sprintf(`include\s+"%s"\s+\([^)]*list[^)]*"([D8][^"]+)"`, regexp.QuoteMeta(helperName))
+	re := regexp.MustCompile(pattern)
+
+	matches := re.FindAllStringSubmatch(string(content), -1)
+	constraintNames := make(map[string]bool)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			constraintName := match[1]
+			// Only include names that start with D8 (constraint kinds)
+			if strings.HasPrefix(constraintName, "D8") {
+				constraintNames[constraintName] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(constraintNames))
+	for name := range constraintNames {
+		result = append(result, name)
+	}
+
+	return result
+}
+
+// findTemplatePath finds the template file by trying multiple possible paths
+func findTemplatePath(relativePath string) string {
+	// Get the directory where this test file is located
+	_, testFile, _, _ := runtime.Caller(0)
+	testDir := filepath.Dir(testFile)
+	
+	// Try different possible paths
+	possiblePaths := []string{
+		// Relative to test file (when running from module root)
+		filepath.Join(testDir, "..", relativePath),
+		// Relative to current working directory
+		relativePath,
+		// From workspace root
+		filepath.Join("modules", "015-admission-policy-engine", relativePath),
+	}
+
+	for _, path := range possiblePaths {
+		absPath, _ := filepath.Abs(path)
+		if _, err := os.Stat(absPath); err == nil {
+			return absPath
+		}
+		// Also try the relative path as-is
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	Fail(fmt.Sprintf("Could not find template file %s. Tried paths: %v (test file: %s)", relativePath, possiblePaths, testFile))
+	return ""
+}
+
+// getBaselineConstraintNames extracts constraint names from baseline template
+func getBaselineConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "baseline", "constraint.yaml"))
+	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_baseline")
+}
+
+// getRestrictedConstraintNames extracts constraint names from restricted template
+func getRestrictedConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "pod-security-standards", "restricted", "constraint.yaml"))
+	return extractConstraintNamesFromTemplate(templatePath, "pod_security_standard_restricted")
+}
+
+// getOperationConstraintNames extracts constraint names from operation-policy template
+// by parsing "kind: D8XXX" lines in define blocks
+func getOperationConstraintNames() []string {
+	templatePath := findTemplatePath(filepath.Join("templates", "policies", "operation-policy", "constraint.yaml"))
+	content, err := os.ReadFile(templatePath)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to read template file %s: %v", templatePath, err))
+	}
+
+	// Pattern to match: kind: D8XXX (where XXX is the constraint name)
+	// This appears in define blocks like: kind: D8AllowedRepos
+	pattern := `kind:\s+(D8[A-Za-z0-9]+)`
+	re := regexp.MustCompile(pattern)
+
+	matches := re.FindAllStringSubmatch(string(content), -1)
+	constraintNames := make(map[string]bool)
+
+	for _, match := range matches {
+		if len(match) > 1 {
+			constraintName := match[1]
+			// Only include names that start with D8 (constraint kinds)
+			if strings.HasPrefix(constraintName, "D8") {
+				constraintNames[constraintName] = true
+			}
+		}
+	}
+
+	result := make([]string, 0, len(constraintNames))
+	for name := range constraintNames {
+		result = append(result, name)
+	}
+
+	return result
 }
