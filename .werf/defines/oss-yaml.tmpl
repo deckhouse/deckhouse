@@ -1,0 +1,59 @@
+{{- define "merge_oss_files" }}
+  {{- $root := . -}}
+  {{- $mergedData := dict -}}
+
+  {{- range $path, $_ := .Files.Glob "**/oss.yaml" -}}
+    {{- $rawFolderName := base (dir $path) -}}
+    {{- $folderName := regexReplaceAll "^[0-9]{3}-" $rawFolderName "" -}}
+    
+    {{- /* Wrap sequence to handle fromYaml limitation */ -}}
+    {{- $rawContent := $root.Files.Get $path -}}
+    {{- $wrappedYaml := printf "data:\n%s" $rawContent -}}
+    {{- $parsed := $wrappedYaml | fromYaml -}}
+    {{- $yamlContent := index $parsed "data" -}}
+    
+    {{- if hasKey $mergedData $folderName -}}
+      {{- /* Retrieve existing debug structure */ -}}
+      {{- $currentEntry := get $mergedData $folderName -}}
+      {{- $updatedData := concat $currentEntry $yamlContent -}}
+      
+      {{- $_ := set $mergedData $folderName  $updatedData -}}
+    {{- else -}}
+      {{- /* Initialize folder entry with path and data */ -}}
+      {{- $_ := set $mergedData $folderName $yamlContent -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $_ := set $root "OSS_YAML" $mergedData -}}
+{{- end }}
+
+{{- define "get_oss_item_by_id" -}}
+  {{- $id := .id -}}
+  {{- $list := index .OSS_YAML .moduleName -}}
+  {{- $result := "" -}}
+  
+  {{- range $list -}}
+    {{- if eq .id $id -}}
+      {{- $result = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if $result -}}
+    {{- $result | toJson -}}
+  {{- else -}}
+    {{- "{}" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "get_oss_version_by_id" -}}
+  {{- $id := .id -}}
+  {{- $list := index .OSS_YAML .moduleName -}}
+  {{- $version := "" -}}
+  
+  {{- range $list -}}
+    {{- if eq .id $id -}}
+      {{- $version = .version -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $version -}}
+{{- end -}}
