@@ -18,6 +18,8 @@ package main
 
 import (
 	"context"
+	agentconfig "fencing-controller/internal/config"
+	"fencing-controller/internal/gossip"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,6 +30,7 @@ import (
 
 	_ "github.com/jpfuentes2/go-env/autoload"
 	"go.uber.org/zap"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func main() {
@@ -37,7 +40,7 @@ func main() {
 
 	logger := common.NewLogger()
 	defer func() { _ = logger.Sync() }()
-
+	logger.Info("Start v0.0.3")
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
 		syscall.SIGHUP,
@@ -51,7 +54,7 @@ func main() {
 		cancel()
 	}()
 
-	var config agent.Config
+	var config agentconfig.Config
 	err := config.Load()
 	if err != nil {
 		logger.Fatal("Unable to read env vars", zap.Error(err))
@@ -63,9 +66,23 @@ func main() {
 	if err != nil {
 		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
 	}
-
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, config.NodeName, v1.GetOptions{})
+	if err != nil {
+		logger.Fatal("Unable to get node", zap.Error(err))
+	}
+	var internalIp string
+	for _, address := range node.Status.Addresses {
+		if address.Type == "InternalIP" {
+			internalIp = address.Address
+			break
+		}
+	}
 	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, wd)
+	sw, err := gossip.NewMemberList(logger, config, internalIp)
+	if err != nil {
+		logger.Fatal("Unable to create a swarm member list", zap.Error(err))
+	}
+	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, sw, wd)
 	err = fencingAgent.Run(ctx)
 	if err != nil {
 		logger.Fatal("Unable run the fencing-agent", zap.Error(err))
