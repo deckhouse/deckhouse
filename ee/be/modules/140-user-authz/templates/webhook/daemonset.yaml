@@ -32,7 +32,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
 metadata:
-  name: {{ $.Chart.Name }}
+  name: {{ $.Chart.Name }}-webhook
   namespace: d8-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
 spec:
@@ -58,7 +58,7 @@ spec:
     metadata:
       labels:
         app: user-authz-webhook
-        security.deckhouse.io/security-policy-exception: {{ $.Chart.Name }}
+        security.deckhouse.io/security-policy-exception: {{ $.Chart.Name }}-webhook
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
