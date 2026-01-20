@@ -98,5 +98,40 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
 		})
+
+		It("All operation policy constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			operationConstraints := []string{
+				"D8AllowedRepos",
+				"D8RequiredResources",
+				"D8DisallowedTags",
+				"D8RequiredProbes",
+				"D8RevisionHistoryLimit",
+				"D8ImagePullPolicy",
+				"D8PriorityClass",
+				"D8IngressClass",
+				"D8StorageClass",
+				"D8DNSPolicy",
+				"D8RequiredLabels",
+				"D8RequiredAnnotations",
+				"D8ContainerDuplicates",
+				"D8ReplicaLimits",
+				"D8DisallowedTolerations",
+			}
+
+			for _, constraintKind := range operationConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
 	})
 })

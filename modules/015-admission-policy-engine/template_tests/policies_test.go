@@ -24,6 +24,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -81,6 +82,135 @@ admissionPolicyEngine:
 			}
 		})
 	})
+
+	Context("Pod security standards constraints YAML validation", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			baselineConstraints := []string{
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8AppArmor",
+				"D8AllowedCapabilities",
+				"D8AllowedHostPaths",
+				"D8PrivilegedContainer",
+				"D8AllowedProcMount",
+				"D8SeLinux",
+				"D8AllowedSysctls",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range baselineConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			restrictedConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowPrivilegeEscalation",
+				"D8AllowedVolumeTypes",
+				"D8AllowedUsers",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range restrictedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+	})
+
+	Context("Pod security standards with explicit defaultPolicy: Privileged and enforcementAction: Deny", func() {
+		BeforeEach(func() {
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Privileged")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints must have valid YAML with defaultPolicy: Privileged", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			baselineConstraints := []string{
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8AppArmor",
+				"D8AllowedCapabilities",
+				"D8AllowedHostPaths",
+				"D8PrivilegedContainer",
+				"D8AllowedProcMount",
+				"D8SeLinux",
+				"D8AllowedSysctls",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range baselineConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints must have valid YAML with defaultPolicy: Privileged", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			restrictedConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowPrivilegeEscalation",
+				"D8AllowedVolumeTypes",
+				"D8AllowedUsers",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range restrictedConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-default")
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
+	})
 })
 
 func gatorAvailable() (string, bool) {
@@ -91,4 +221,21 @@ func gatorAvailable() (string, bool) {
 
 	info, err := os.Lstat(gatorPath)
 	return gatorPath, err == nil && (info.Mode().Perm()&0o111 != 0)
+}
+
+// validateYAML checks if the constraint resource has valid YAML structure
+// by attempting to marshal it back to YAML
+func validateYAML(constraint interface{}, resourceName string) {
+	// Try to marshal the resource to YAML to validate its structure
+	yamlBytes, err := yaml.Marshal(constraint)
+	if err != nil {
+		Fail(fmt.Sprintf("Failed to marshal resource %s to YAML: %v", resourceName, err))
+	}
+
+	// Try to unmarshal it back to validate it's valid YAML
+	var result interface{}
+	err = yaml.Unmarshal(yamlBytes, &result)
+	if err != nil {
+		Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", resourceName, err, string(yamlBytes)))
+	}
 }

@@ -88,5 +88,44 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8VerifyImageSignatures", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8AllowRbacWildcards", testPolicyName).Exists()).To(BeTrue())
 		})
+
+		It("All security policy constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			securityConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowedFlexVolumes",
+				"D8AllowedHostPaths",
+				"D8AllowedProcMount",
+				"D8AllowedSeccompProfiles",
+				"D8AllowedSysctls",
+				"D8AllowedUsers",
+				"D8AllowedVolumeTypes",
+				"D8AllowPrivilegeEscalation",
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8PrivilegedContainer",
+				"D8ReadOnlyRootFilesystem",
+				"D8AllowedClusterRoles",
+				"D8AutomountServiceAccountTokenPod",
+				"D8SeLinux",
+				"D8AppArmor",
+				"D8VerifyImageSignatures",
+				"D8AllowRbacWildcards",
+			}
+
+			for _, constraintKind := range securityConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
+		})
 	})
 })
