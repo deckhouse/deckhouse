@@ -96,10 +96,10 @@ func Test_struct_vs_unmarshal(t *testing.T) {
 	}()
 
 	params := DeckhouseDeploymentParams{
-		Registry:         "registry.example.com/deckhouse:master",
-		LogLevel:         "debug",
-		Bundle:           "default",
-		DeployTime:       time.Now(),
+		Registry:   "registry.example.com/deckhouse:master",
+		LogLevel:   "debug",
+		Bundle:     "default",
+		DeployTime: time.Now(),
 	}
 
 	depl1 := DeckhouseDeployment(params)
@@ -126,9 +126,9 @@ func Test_DeployTime(t *testing.T) {
 
 	paramsGet := func() DeckhouseDeploymentParams {
 		return DeckhouseDeploymentParams{
-			Registry:         "registry.example.com/deckhouse:master",
-			LogLevel:         "debug",
-			Bundle:           "default",
+			Registry: "registry.example.com/deckhouse:master",
+			LogLevel: "debug",
+			Bundle:   "default",
 		}
 	}
 

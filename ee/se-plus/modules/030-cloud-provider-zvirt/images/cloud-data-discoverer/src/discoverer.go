@@ -13,11 +13,11 @@ import (
 	"sort"
 	"strings"
 
+	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
+
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
-
-	ovirtclient "github.com/ovirt/go-ovirt-client/v3"
 )
 
 const (

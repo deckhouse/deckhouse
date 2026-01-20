@@ -27,7 +27,7 @@ import (
 
 	"github.com/name212/govalue"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy/kube"

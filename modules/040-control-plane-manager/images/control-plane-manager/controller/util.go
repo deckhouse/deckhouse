@@ -27,10 +27,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const kubeconfigPath = "/etc/kubernetes/admin.conf"

@@ -27,9 +27,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vishvananda/netlink"
 	"golang.org/x/sys/unix"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

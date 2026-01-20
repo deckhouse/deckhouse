@@ -40,7 +40,7 @@ func (c *Klient) FilterPods(podList *corev1.PodList, matchers ...PodMatcher) []c
 	}
 
 	filtered := make([]corev1.Pod, 0, len(podList.Items))
-	
+
 	for i := range podList.Items {
 		pod := podList.Items[i]
 		matched := true

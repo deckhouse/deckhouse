@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	dvpapi "dvp-common/api"
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -43,8 +43,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
-	dvpapi "dvp-common/api"
 )
 
 const ProviderIDPrefix = "dvp://"
@@ -309,7 +310,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 
 	disksToDetach, disksToDelete, err := r.DVP.ComputeService.GetDisksForDetachAndDelete(ctx, vm, true)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error geting disks for detach and delete: %w", err)
+		return ctrl.Result{}, fmt.Errorf("error getting disks for detach and delete: %w", err)
 	}
 
 	vmHostname, err := r.DVP.ComputeService.GetVMHostname(vm)

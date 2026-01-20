@@ -85,7 +85,7 @@ func main() {
 
 func doHttpRequest(client *http.Client, url string) error {
 	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-	req, err := http.NewRequestWithContext(ctx, "GET", healthUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, healthUrl, nil)
 	if err != nil {
 		return err
 	}
@@ -125,10 +125,8 @@ func doDnsRequest(domain, dnsServer string) error {
 				return nil
 			}
 		}
-
 	}
 
-	return fmt.Errorf("failed to get A record for %s domain", domain)
 }
 
 func livenessCheck() error {

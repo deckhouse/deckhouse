@@ -29,8 +29,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -78,7 +79,7 @@ func installBasePKIfiles() error {
 func renewCertificates() error {
 	log.Info("phase: renew certificates")
 	components := make(map[string]string, 7)
-	
+
 	if config.EtcdArbiter {
 		components["etcd-server"] = "etcd/server"
 		components["etcd-peer"] = "etcd/peer"
@@ -93,7 +94,7 @@ func renewCertificates() error {
 		components["etcd-peer"] = "etcd/peer"
 		components["etcd-healthcheck-client"] = "etcd/healthcheck-client"
 	}
-	
+
 	for k, v := range components {
 		if err := renewCertificate(k, v); err != nil {
 			return err
@@ -130,7 +131,7 @@ func renewCertificate(componentName, f string) error {
 		}
 
 		if !certificateEncAndLengthIsEqual(currentCert, tmpCert) {
-			log.Infof("certificate %s encription or lenght has been changed", path)
+			log.Infof("certificate %s encryption or length has been changed", path)
 			remove = true
 		}
 

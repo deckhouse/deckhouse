@@ -67,7 +67,6 @@ func NewDiskMigrator(logger *log.Entry, kubeClient *kubernetes.Clientset, folder
 }
 
 func (d *DiskMigrator) MigrateDisks(ctx context.Context) error {
-
 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get disks: %v", err)
