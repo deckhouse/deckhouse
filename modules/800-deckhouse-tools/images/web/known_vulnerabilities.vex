@@ -188,20 +188,6 @@
     },
     {
       "vulnerability": {
-        "name": "CVE-2025-8869"
-      },
-      "products": [
-        {
-          "@id": "pkg:pip:25.3"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. d8 delivery-kit не использует функционал извлечения tar-архивов с уязвимым fallback pip. Все используемые версии Python соответствуют требованиям PEP 706.",
-      "timestamp": "2025-10-09T14:31:32.069712443Z"
-    },
-    {
-      "vulnerability": {
         "name": "CVE-2024-25621"
       },
       "products": [
