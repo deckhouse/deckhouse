@@ -1,4 +1,4 @@
-package memberlist
+package event_handler
 
 import (
 	"fencing-agent/internal/core/domain"
@@ -10,15 +10,15 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-type EventBus interface {
+type Producer interface {
 	Publish(event domain.Event)
 }
 type EventHandler struct {
 	logger   *log.Logger
-	eventBus EventsBus
+	eventBus Producer
 }
 
-func NewEventHandler(logger *log.Logger, eventBus EventsBus) *EventHandler {
+func NewEventHandler(logger *log.Logger, eventBus Producer) *EventHandler {
 	return &EventHandler{logger: logger, eventBus: eventBus}
 }
 
@@ -26,7 +26,7 @@ func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 	h.logger.Debug("Node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false joining?
 	ips := make(map[string]string)
-	ips["eth0"] = node.Addr.String()
+	ips[domain.InterfaceName] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
 			Name:      node.Name,
@@ -42,7 +42,7 @@ func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
 	h.logger.Debug("Node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
 	ips := make(map[string]string)
-	ips["eth0"] = node.Addr.String()
+	ips[domain.InterfaceName] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
 			Name:      node.Name,

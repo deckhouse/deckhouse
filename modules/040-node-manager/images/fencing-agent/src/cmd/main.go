@@ -3,24 +3,26 @@ package main
 import (
 	"context"
 	"fencing-agent/internal/app"
-	fencing_config "fencing-agent/internal/config"
-	"fencing-agent/internal/infrastructures/kubernetes"
-	"fencing-agent/internal/infrastructures/logging"
+	fencingconfig "fencing-agent/internal/config"
+	"fencing-agent/internal/lib/logger/sl"
+	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
-	"go.uber.org/zap"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	logger := logging.NewLogger()
-	defer func() { _ = logger.Sync() }()
+	var config fencingconfig.Config
+	config.MustLoad()
 
-	var config fencing_config.Config
+	logger := NewLogger(config.LogLevel)
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan,
 		syscall.SIGHUP,
@@ -30,22 +32,44 @@ func main() {
 	go func() {
 		s := <-sigChan
 		close(sigChan)
-		logger.Info("Got a signal", zap.String("signal", s.String()))
+		logger.Info("Got a signal", slog.String("signal", s.String()))
 		cancel()
 		_ = os.Remove(config.GRPCAddress)
 	}()
-	if err := config.Load(); err != nil {
-		logger.Fatal("Unable to read config", zap.Error(err))
-	}
-	kubeClient, err := kubernetes.GetClientset(config.KubernetesAPITimeout)
+
+	application, err := app.NewApplication(ctx, logger, config)
+
 	if err != nil {
-		logger.Fatal("Unable to create a kube-client", zap.Error(err))
+		logger.Fatal("Unable to create an application", sl.Err(err))
 	}
-	application, err := app.NewApplication(logger, kubeClient, config)
-	if err != nil {
-		logger.Fatal("Unable to create an application", zap.Error(err))
-	}
+
 	if err = application.Run(ctx); err != nil {
-		logger.Fatal("Unable to run the application", zap.Error(err))
+		logger.Fatal("Unable to run the application", sl.Err(err))
+	}
+}
+
+func NewLogger(levelStr string) *log.Logger {
+	level := getLogLevel(levelStr)
+
+	logger := log.NewLogger(
+		log.WithOutput(os.Stdout),
+		log.WithLevel(level),
+		log.WithHandlerType(log.JSONHandlerType),
+	)
+	return logger
+}
+
+func getLogLevel(levelStr string) slog.Level {
+	switch strings.ToLower(levelStr) {
+	case "debug":
+		return slog.LevelDebug
+	case "info":
+		return slog.LevelInfo
+	case "warn":
+		return slog.LevelWarn
+	case "error":
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
 	}
 }

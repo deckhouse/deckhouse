@@ -2,24 +2,43 @@ package service
 
 import (
 	"context"
-	"fencing-agent/internal/core/ports"
+	"fencing-agent/internal/lib/logger/sl"
 	"time"
 
-	"go.uber.org/zap"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
 	fencingNodeLabel = "node-manager.deckhouse.io/fencing-enabled"
 )
 
-type HealthMonitor struct {
-	cluster    ports.ClusterProvider
-	membership ports.MembershipProvider
-	watchdog   ports.WatchDog
-	logger     *zap.Logger
+type WatchDog interface {
+	IsArmed() bool
+	Feed() error
+	Start() error
+	Stop() error
 }
 
-func NewHealthMonitor(cluster ports.ClusterProvider, membership ports.MembershipProvider, watchdog ports.WatchDog, logger *zap.Logger) *HealthMonitor {
+type ClusterProvider interface {
+	IsAvailable(ctx context.Context) bool
+	IsMaintenanceMode(ctx context.Context) (bool, error)
+	SetNodeLabel(ctx context.Context, key string, value string) error
+	RemoveNodeLabel(ctx context.Context, key string) error
+}
+
+type MembershipProvider interface {
+	NumOtherMembers() int
+	IsAlone() bool
+}
+
+type HealthMonitor struct {
+	cluster    ClusterProvider
+	membership MembershipProvider
+	watchdog   WatchDog
+	logger     *log.Logger
+}
+
+func NewHealthMonitor(cluster ClusterProvider, membership MembershipProvider, watchdog WatchDog, logger *log.Logger) *HealthMonitor {
 	return &HealthMonitor{
 		cluster:    cluster,
 		membership: membership,
@@ -51,13 +70,13 @@ func (h *HealthMonitor) Stop(ctx context.Context) error {
 func (h *HealthMonitor) check(ctx context.Context) {
 	inMaintenance, err := h.cluster.IsMaintenanceMode(ctx)
 	if err != nil {
-		h.logger.Debug("Cannot check maintenance mode", zap.Error(err))
+		h.logger.Debug("Cannot check maintenance mode", sl.Err(err))
 		inMaintenance = false
 	}
 	if inMaintenance {
 		if h.watchdog.IsArmed() {
 			if err := h.stopWatchdog(ctx); err != nil {
-				h.logger.Error("Unable to disarm watchdog", zap.Error(err))
+				h.logger.Error("Unable to disarm watchdog", sl.Err(err))
 			}
 		}
 		h.logger.Info("Maintenance mode is on, so not feeding the watchdog")
@@ -66,7 +85,7 @@ func (h *HealthMonitor) check(ctx context.Context) {
 	if !h.watchdog.IsArmed() {
 		h.logger.Info("Arming watchdog")
 		if err := h.startWatchdog(ctx); err != nil {
-			h.logger.Error("Unable to arm watchdog", zap.Error(err))
+			h.logger.Error("Unable to arm watchdog", sl.Err(err))
 			return
 		}
 	}
@@ -74,7 +93,7 @@ func (h *HealthMonitor) check(ctx context.Context) {
 	if shouldFeed {
 		h.logger.Debug("Feeding the watchdog")
 		if err := h.watchdog.Feed(); err != nil {
-			h.logger.Error("Unable to feed watchdog", zap.Error(err))
+			h.logger.Error("Unable to feed watchdog", sl.Err(err))
 		}
 	} else {
 		h.logger.Warn("Not feeding the watchdog, will reboot soon")
@@ -88,9 +107,9 @@ func (h *HealthMonitor) startWatchdog(ctx context.Context) error {
 
 	// Set node label to indicate fencing is enabled
 	if err := h.cluster.SetNodeLabel(ctx, fencingNodeLabel, ""); err != nil {
-		h.logger.Error("Unable to set node label, disarming watchdog for safety", zap.Error(err))
+		h.logger.Error("Unable to set node label, disarming watchdog for safety", sl.Err(err))
 		if stopErr := h.watchdog.Stop(); stopErr != nil {
-			h.logger.Error("Failed to stop watchdog after label error", zap.Error(stopErr))
+			h.logger.Error("Failed to stop watchdog after label error", sl.Err(stopErr))
 		}
 		return err
 	}
@@ -100,7 +119,7 @@ func (h *HealthMonitor) startWatchdog(ctx context.Context) error {
 
 func (h *HealthMonitor) stopWatchdog(ctx context.Context) error {
 	if err := h.cluster.RemoveNodeLabel(ctx, fencingNodeLabel); err != nil {
-		h.logger.Error("Unable to remove node label", zap.Error(err))
+		h.logger.Error("Unable to remove node label", sl.Err(err))
 	}
 
 	if err := h.watchdog.Stop(); err != nil {

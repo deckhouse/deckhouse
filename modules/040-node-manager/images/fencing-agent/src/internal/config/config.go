@@ -9,14 +9,14 @@ import (
 type Config struct {
 	WatchdogConfig   WatchdogConfig
 	MemberlistConfig MemberlistConfig
-	// TODO decide: create structures for kube-api and node
+	LogLevel         string `env:"LOG_LEVEL" env-default:"info"`
 	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
 	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
 	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`
 	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
-	NodeName                   string        `env:"NODE_NAME"`
-	NodeGroup                  string        `env:"NODE_GROUP"`
+	NodeName                   string        `env:"NODE_NAME" env-required:"true"`
+	NodeGroup                  string        `env:"NODE_GROUP" env-required:"true"`
 }
 
 type WatchdogConfig struct {
@@ -25,23 +25,21 @@ type WatchdogConfig struct {
 }
 
 type MemberlistConfig struct {
-	MemberlistBootstrapDelay time.Duration `env:"MEMBERLIST_BOOTSTRAP_DELAY"`
-	MemberListPort           int           `env:"MEMBERLIST_PORT"`
-	ProbeInterval            time.Duration `env:"PROBE_INTERVAL"`
-	ProbeTimeout             time.Duration `env:"PROBE_TIMEOUT"`
-	SuspicionMult            int           `env:"SUSPICION_MULT"`
-	IndirectChecks           int           `env:"INDIRECT_CHECKS"`
-	GossipInterval           time.Duration `env:"GOSSIP_INTERVAL"`
-	RetransmitMult           int           `env:"RETRANSMIT_MULT"`
-	GossipToTheDeadTime      time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME"`
-	MinEventIntervalJoin     time.Duration `env:"MIN_EVENT_INTERVAL_JOIN"`
-	MinEventIntervalLeft     time.Duration `env:"MIN_EVENT_INTERVAL_LEFT"`
+	MemberListPort           int           `env:"MEMBERLIST_PORT" env-required:"true"`
+	ProbeInterval            time.Duration `env:"PROBE_INTERVAL" env-default:"500ms"`
+	ProbeTimeout             time.Duration `env:"PROBE_TIMEOUT" env-default:"200ms"`
+	SuspicionMult            int           `env:"SUSPICION_MULT" env-default:"2"`
+	IndirectChecks           int           `env:"INDIRECT_CHECKS" env-default:"3"`
+	GossipInterval           time.Duration `env:"GOSSIP_INTERVAL" env-default:"200ms"`
+	RetransmitMult           int           `env:"RETRANSMIT_MULT" env-default:"4"`
+	GossipToTheDeadTime      time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME" env-default:"2s"`
+	MinEventIntervalJoin     time.Duration `env:"MIN_EVENT_INTERVAL_JOIN" env-default:"200ms"`
+	MinEventIntervalLeft     time.Duration `env:"MIN_EVENT_INTERVAL_LEFT" env-default:"600ms"`
 }
 
-func (c *Config) Load() error {
+func (c *Config) MustLoad() {
 	err := cleanenv.ReadEnv(c)
 	if err != nil {
-		return err
+		panic(err)
 	}
-	return nil
 }

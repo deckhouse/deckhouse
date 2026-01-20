@@ -5,40 +5,56 @@ import (
 	"fencing-agent/internal/adapters/api/grpc"
 	"fencing-agent/internal/adapters/kubeapi"
 	"fencing-agent/internal/adapters/memberlist"
+	"fencing-agent/internal/adapters/memberlist/event_handler"
+	"fencing-agent/internal/adapters/memberlist/eventbus"
 	"fencing-agent/internal/adapters/watchdog/softdog"
 	fencing_config "fencing-agent/internal/config"
+	"fencing-agent/internal/core/domain"
 	"fencing-agent/internal/core/service"
+	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
-	"go.uber.org/zap"
+	"log/slog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
-type Applicaion struct {
+type Application struct {
 	config fencing_config.Config
-	logger *zap.Logger
+	logger *log.Logger
 
 	clusterProvider    *kubeapi.Provider
 	membershipProvider *memberlist.Provider
 	watchDogController *softdog.WatchDog
-	eventBus           *memberlist.EventsBus
+	eventBus           *eventbus.EventsBus
 
 	healthMonitor  *service.HealthMonitor
 	statusProvider *service.StatusProvider
 
-	grpcServer    *grpc.Server
+	grpcRunner    *grpc.Runner
 	healthzServer *http.Server
 }
 
 func NewApplication(
-	logger *zap.Logger,
-	kubeClient kubernetes.Interface,
+	ctx context.Context,
+	logger *log.Logger,
 	config fencing_config.Config,
-) (*Applicaion, error) {
-	eventBus := memberlist.NewEventsBus()
+) (*Application, error) {
+	kubeClient, err := getClientset(config.KubernetesAPITimeout)
+	if err != nil {
+		logger.Fatal("Unable to create a kube-client", sl.Err(err))
+	}
+
+	eventBus := eventbus.NewEventsBus()
+	eventHandler := event_handler.NewEventHandler(logger, eventBus)
 
 	clusterProvider := kubeapi.NewProvider(
 		kubeClient,
@@ -48,14 +64,14 @@ func NewApplication(
 		config.NodeGroup,
 	)
 
-	nodeIP, err := getCurrentNodeIP(kubeClient, config.NodeName, config.KubernetesAPITimeout)
+	nodeIP, err := getCurrentNodeIP(ctx, kubeClient, config.NodeName, config.KubernetesAPITimeout)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get current node IP: %w", err)
+		return nil, fmt.Errorf("failed to get current node IP: %w", err)
 	}
 
-	memberlistProvider, err := memberlist.NewProvider(config.MemberlistConfig, logger, eventBus, nodeIP, config.NodeName)
+	memberlistProvider, err := memberlist.NewProvider(config.MemberlistConfig, logger, eventHandler, nodeIP, config.NodeName)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create memberlist provider: %w", err)
+		return nil, fmt.Errorf("failed to create memberlist provider: %w", err)
 	}
 
 	watchdogController := softdog.NewWatchdog(config.WatchdogConfig.WatchdogDevice)
@@ -66,13 +82,19 @@ func NewApplication(
 
 	grpcServer := grpc.NewServer(eventBus, statusProvider)
 
+	// TODO configurate rate limiting
+	grpcRunner, err := grpc.NewRunner(config.GRPCAddress, grpcServer)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC runner: %w", err)
+	}
+
 	var healthServer *http.Server
 	if config.HealthProbeBindAddress != "" {
 		healthServer = createHealthzServer(config.HealthProbeBindAddress)
 	}
-	logger.Info("Application components initialized")
+	logger.Info("application components initialized")
 
-	return &Applicaion{
+	return &Application{
 		config:             config,
 		logger:             logger,
 		clusterProvider:    clusterProvider,
@@ -81,26 +103,36 @@ func NewApplication(
 		eventBus:           eventBus,
 		healthMonitor:      healthMonitor,
 		statusProvider:     statusProvider,
-		grpcServer:         grpcServer,
+		grpcRunner:         grpcRunner,
 		healthzServer:      healthServer,
 	}, nil
 }
 
-func (a *Applicaion) Run(ctx context.Context) error {
-	a.logger.Debug("Start v0.0.1")
-
+func (a *Application) Run(ctx context.Context) error {
 	if a.healthzServer != nil {
-		go a.startHealthzServer(ctx)
+		go a.startHealthzServer()
 	}
 
 	peers, err := a.discoverPeersIps(ctx)
-
+	if err != nil {
+		return err
+	}
 	go func() {
-		err = a.membershipProvider.Start(peers)
-		for err != nil {
-			a.logger.Warn("failed to start memberlist", zap.Error(err))
-			err = a.membershipProvider.Start(peers)
-			time.Sleep(a.config.MemberlistConfig.MemberlistBootstrapDelay)
+		memberErr := a.membershipProvider.Start(peers)
+		base, mx := time.Second, time.Minute
+		for backoff := base; memberErr != nil; backoff <<= 1 {
+			if backoff > mx {
+				backoff = mx
+			}
+			a.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()))
+
+			time.Sleep(backoff)
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				memberErr = a.membershipProvider.Start(peers)
+			}
 		}
 	}()
 
@@ -112,36 +144,48 @@ func (a *Applicaion) Run(ctx context.Context) error {
 
 	grpcErrChan := make(chan error, 1)
 	go func() {
-		a.logger.Debug("Starting GRPC server")
-		if err = grpc.Run(a.config.GRPCAddress, a.grpcServer); err != nil {
-			grpcErrChan <- err
+		a.logger.Debug("starting gRPC server", slog.String("address", a.config.GRPCAddress))
+		if grpcErr := a.grpcRunner.Run(); grpcErr != nil {
+			grpcErrChan <- grpcErr
 		}
 	}()
 
 	select {
-	case err = <-grpcErrChan:
-		return fmt.Errorf("Failed to run GRPC server: %w", err)
+	case grpcErr := <-grpcErrChan:
+		return fmt.Errorf("gRPC server failed: %w", grpcErr)
 	case <-ctx.Done():
+		a.logger.Debug("context done, starting graceful shutdown")
 		return a.Stop()
 	}
 }
 
-func (a *Applicaion) Stop() error {
-	// Stop health monitor which will properly disarm watchdog and remove label
-	ctx, cancel := context.WithTimeout(context.Background(), a.config.KubernetesAPITimeout)
+func (a *Application) Stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
+	a.logger.Debug("stopping health monitor")
 	if err := a.healthMonitor.Stop(ctx); err != nil {
-		a.logger.Error("Unable to stop health monitor", zap.Error(err))
+		a.logger.Error("failed to stop health monitor", sl.Err(err))
+	}
+
+	a.logger.Debug("shutting down gRPC server")
+	if err := a.grpcRunner.Shutdown(ctx); err != nil {
+		a.logger.Error("failed to shutdown gRPC server", sl.Err(err))
 	}
 
 	if a.healthzServer != nil {
-		return a.healthzServer.Shutdown(ctx)
+		a.logger.Debug("shutting down healthz server")
+		if err := a.healthzServer.Shutdown(ctx); err != nil {
+			a.logger.Error("failed to shutdown healthz server", sl.Err(err))
+			return err
+		}
 	}
+
+	a.logger.Info("application stopped gracefully")
 	return nil
 }
 
-func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
+func (a *Application) discoverPeersIps(ctx context.Context) ([]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, a.config.KubernetesAPICheckInterval)
 	defer cancel()
 
@@ -154,18 +198,17 @@ func (a *Applicaion) discoverPeersIps(ctx context.Context) ([]string, error) {
 		if node.Name == a.config.NodeName {
 			continue
 		}
-		peersIps = append(peersIps, node.Addresses["eth0"])
+		peersIps = append(peersIps, node.Addresses[domain.InterfaceName])
 	}
-	a.logger.Debug("Discovered peers", zap.Strings("peers", peersIps))
+	a.logger.Debug("Discovered peers", slog.Any("peers", peersIps))
 	return peersIps, nil
 }
 
-// TODO unused context
-func (a *Applicaion) startHealthzServer(ctx context.Context) {
-	a.logger.Info("Stating healthz server", zap.String("bindAddress", a.config.HealthProbeBindAddress))
+func (a *Application) startHealthzServer() {
+	a.logger.Info("Stating healthz server", slog.String("bindAddress", a.config.HealthProbeBindAddress))
 
 	if err := a.healthzServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		a.logger.Error("Healthz server failed", zap.Error(err))
+		a.logger.Error("Healthz server failed", sl.Err(err))
 	}
 }
 func createHealthzServer(bindAddress string) *http.Server {
@@ -175,8 +218,9 @@ func createHealthzServer(bindAddress string) *http.Server {
 	})
 	return &http.Server{Addr: bindAddress, Handler: mux}
 }
-func getCurrentNodeIP(kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
-	ctx, _ := context.WithTimeout(context.Background(), timeout)
+func getCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
 	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", nodeName, err)
@@ -189,4 +233,36 @@ func getCurrentNodeIP(kubeClient kubernetes.Interface, nodeName string, timeout 
 		}
 	}
 	return "", fmt.Errorf("node %s has no InternalIP address", nodeName)
+}
+
+// Reimplementation of clientcmd.buildConfig to avoid default warn message
+func buildConfig(kubeconfigPath string) (*rest.Config, error) {
+	if kubeconfigPath == "" {
+		kubeconfig, err := rest.InClusterConfig()
+		if err == nil {
+			return kubeconfig, nil
+		}
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}}).ClientConfig()
+}
+
+func getClientset(timeout time.Duration) (*kubernetes.Clientset, error) {
+	var restConfig *rest.Config
+	var kubeClient *kubernetes.Clientset
+	var err error
+
+	restConfig, err = buildConfig(os.Getenv("KUBECONFIG"))
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig.Timeout = timeout
+
+	kubeClient, err = kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return nil, err
+	}
+	return kubeClient, nil
 }

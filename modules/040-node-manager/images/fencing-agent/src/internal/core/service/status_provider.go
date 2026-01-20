@@ -3,15 +3,21 @@ package service
 import (
 	"context"
 	"fencing-agent/internal/core/domain"
-	"fencing-agent/internal/core/ports"
 )
 
-type StatusProvider struct {
-	cluster ports.ClusterProvider
-	members ports.MembershipProvider
+type ClusterCheck interface {
+	GetNodes(ctx context.Context) ([]domain.Node, error)
 }
 
-func NewStatusProvider(cluster ports.ClusterProvider, members ports.MembershipProvider) *StatusProvider {
+type MembershipCheck interface {
+	GetMembers() []domain.Node
+}
+type StatusProvider struct {
+	cluster ClusterCheck
+	members MembershipCheck
+}
+
+func NewStatusProvider(cluster ClusterCheck, members MembershipCheck) *StatusProvider {
 	return &StatusProvider{cluster: cluster, members: members}
 }
 
