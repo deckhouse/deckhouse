@@ -1,4 +1,4 @@
-commit 1bd19e70ebdd97db0b9e6cd218f840a947403163
+commit cf4d34b90bd4fef23dcc7dab66db6fb3adb0887c
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Mon Nov 24 13:44:22 2025 +0300
 
@@ -60,7 +60,7 @@ index 37b0e54781..b2e1e151f3 100644
  }
  
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index ad69a5379d..75b38714b0 100644
+index ad69a5379d..4ad734046f 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
 @@ -178,6 +178,14 @@ type GCFilter struct {
@@ -78,7 +78,7 @@ index ad69a5379d..75b38714b0 100644
  }
  
  // EmitCTEntryCBFunc is the type used for the EmitCTEntryCB callback in GCFilter
-@@ -610,9 +618,23 @@ func (f GCFilter) doFiltering(srcIP, dstIP netip.Addr, srcPort, dstPort uint16,
+@@ -610,9 +618,29 @@ func (f GCFilter) doFiltering(srcIP, dstIP netip.Addr, srcPort, dstPort uint16,
  	}
  
  	if f.MatchIPs != nil {
@@ -89,9 +89,15 @@ index ad69a5379d..75b38714b0 100644
 +		_, dstMatch := f.MatchIPs[dstIP]
 +
 +		if f.MigrationSafeCleanup {
-+			fmt.Printf("DEBUG MigrationSafeCleanup flags: %v, src: %v, dst: %v\n", flags, srcIP, dstIP)
-+			if (flags == TUPLE_F_OUT) || (flags&TUPLE_F_SERVICE != 0) {
++			if flags == TUPLE_F_OUT {
 +				if srcMatch {
++					return deleteEntry
++				}
++			} else if flags&TUPLE_F_SERVICE != 0 {
++				// this service conntrack related to TUPLE_F_OUT
++				// but cilium safe src|dst in reverse order for this type conntrack
++				// so we must check relation by dst address
++				if dstMatch {
 +					return deleteEntry
 +				}
 +			} else if flags&TUPLE_F_IN != 0 {
