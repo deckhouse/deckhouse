@@ -1,5 +1,5 @@
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-raw-artifact
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 secrets:
@@ -8,14 +8,8 @@ secrets:
 shell:
   install:
   - git clone --branch 7.4.0 --depth 1 $(cat /run/secrets/SOURCE_REPO)/redis/redis.git /src
----
-image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
-fromImage: {{ $.ModuleName }}/{{ $.ImageName }}-src-raw-artifact
-final: false
-shell:
-  install:
+  - rm -r /src/utils/req-res-validator/requirements.txt
   - rm -r /src/.git
-  - rm -r /src/utils
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/alpine
@@ -24,10 +18,6 @@ import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src
   to: /src
-  before: install
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-raw-artifact
-  add: /src/utils
-  to: /src/utils
   before: install
 shell:
   beforeInstall:
