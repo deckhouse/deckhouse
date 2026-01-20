@@ -1,6 +1,8 @@
 ---
 title: How to change the instance type for nodes with the CloudPermanent type?
-permalink: en/faq-common/change-instance-type-cloud-permanent.html
+subsystems:
+  - сluster_infrastructure
+lang: en
 ---
 
 To change the instance type for nodes with the CloudPermanent type, follow these steps:
@@ -11,7 +13,7 @@ To change the instance type for nodes with the CloudPermanent type, follow these
 1. Make sure that Deckhouse queue is empty. To view the status of all Deckhouse job queues, run the following command:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 s queue list
    ```
 
    Example output (queues are empty):

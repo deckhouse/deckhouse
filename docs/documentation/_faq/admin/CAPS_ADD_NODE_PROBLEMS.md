@@ -1,6 +1,8 @@
 ---
 title: What to do if problems adding a node to the cluster via Cluster API Provider Static are present?
-permalink: en/faq-common/caps-adding-node-problems.html
+subsystems:
+  - сluster_infrastructure
+lang: en
 ---
 
 If, when adding a node to the cluster via Cluster API Provider Static (CAPS), it remains in `Pending` or `Bootstrapping` status, perform the following steps:

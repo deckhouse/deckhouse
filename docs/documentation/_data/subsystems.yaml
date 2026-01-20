@@ -1,0 +1,36 @@
+_common:
+  en: Common
+  ru: Общее
+deckhouse:
+  en: Deckhouse
+  ru: Deckhouse
+cluster_infrastructure:
+  en: Cluster and Infrastructure
+  ru: Кластер и инфраструктура
+iam:
+  en: IAM
+  ru: Индентификация и доступ
+security:
+  en: Security
+  ru: Безопасность
+network:
+  en: Network
+  ru: Сеть
+storage:
+  en: Storage
+  ru: Хранилище
+observability:
+  en: Observability
+  ru: Наблюдаемость
+kubernetes_scheduling:
+  en: Kubernetes and Scheduling
+  ru: Kubernetes и планировщик
+managed_services:
+  en: Managed Services
+  ru: Управляемые сервисы
+delivery:
+  en: Delivery
+  ru: Доставка
+virtualization:
+  en: Virtualization
+  ru: Виртуализация

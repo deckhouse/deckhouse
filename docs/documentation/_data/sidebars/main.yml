@@ -864,43 +864,44 @@ entries:
         - title:
             en: FAQ
             ru: FAQ
-          folders:
-            - title:
-                en: High load on the API server
-                ru: Высокая нагрузка на API-сервер
-              url: /faq-common/api-server-overloaded.html
-            - title:
-                en: Problems with updating Kubernetes components, node synchronization, and applying NodeGroup Configuration
-                ru: Проблемы с обновлением компонентов Kubernetes, синхронизацией узлов, применением NodeGroup Configuration
-              url: /faq-common/update-kubernetes-components-problems.html
-            - title:
-                en: Problems adding a node via CAPS
-                ru: Проблемы с добавлением узла через CAPS
-              url: /faq-common/caps-adding-node-problems.html
-            - title:
-                en: Kubernetes version checking
-                ru: Проверка версии Kubernetes
-              url: /faq-common/check-kubernetes-version.html
-            - title:
-                en: Deckhouse queue checking
-                ru: Проверка очереди Deckhouse
-              url: /faq-common/check-queue.html
-            - title:
-                en: Changing the instance type for CloudPermanent nodes
-                ru: Изменение типа инстанса у CloudPermanent-узлов
-              url: /faq-common/change-instance-type-cloud-permanent.html
-            - title:
-                en: Problems with applying DexProvider settings
-                ru: Проблемы с применением настроек DexProvider
-              url: /faq-common/dex-problems.html
-            - title:
-                en: Resources are not created
-                ru: Ресурсы не создаются
-              url: /faq-common/resources-not-create.html
-            - title:
-                en: Problems with updating DKP
-                ru: Проблемы с обновлением DKP
-              url: /faq-common/updating-dkp-problems.html
+          url: /admin/faq.html
+          #folders:
+          #  - title:
+          #      en: High load on the API server
+          #      ru: Высокая нагрузка на API-сервер
+          #    url: /faq-common/api-server-overloaded.html
+          #  - title:
+          #      en: Problems with updating Kubernetes components, node synchronization, and applying NodeGroup Configuration
+          #      ru: Проблемы с обновлением компонентов Kubernetes, синхронизацией узлов, применением NodeGroup Configuration
+          #    url: /faq-common/update-kubernetes-components-problems.html
+          #  - title:
+          #      en: Problems adding a node via CAPS
+          #      ru: Проблемы с добавлением узла через CAPS
+          #    url: /faq-common/caps-adding-node-problems.html
+          #  - title:
+          #      en: Kubernetes version checking
+          #      ru: Проверка версии Kubernetes
+          #    url: /faq-common/check-kubernetes-version.html
+          #  - title:
+          #      en: Deckhouse queue checking
+          #      ru: Проверка очереди Deckhouse
+          #    url: /faq-common/check-queue.html
+          #  - title:
+          #      en: Changing the instance type for CloudPermanent nodes
+          #      ru: Изменение типа инстанса у CloudPermanent-узлов
+          #    url: /faq-common/change-instance-type-cloud-permanent.html
+          #  - title:
+          #      en: Problems with applying DexProvider settings
+          #      ru: Проблемы с применением настроек DexProvider
+          #    url: /faq-common/dex-problems.html
+          #  - title:
+          #      en: Resources are not created
+          #      ru: Ресурсы не создаются
+          #    url: /faq-common/resources-not-create.html
+          #  - title:
+          #      en: Problems with updating DKP
+          #      ru: Проблемы с обновлением DKP
+          #    url: /faq-common/updating-dkp-problems.html
 
 # ------------- Using -------------
     - title:

@@ -1,6 +1,8 @@
 ---
 title: What to do if there are problems applying DexProvider settings?
-permalink: en/faq-common/dex-problems.html
+subsystems:
+  - iam
+lang: en
 ---
 
 If you have changed the DexProvider settings in the `user-authn` module and one of the following problems occurs:

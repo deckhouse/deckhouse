@@ -1,6 +1,8 @@
 ---
 title: What to do if you encounter problems updating Kubernetes components on cluster nodes, synchronizing nodes, or applying NodeGroup Configuration?
-permalink: en/faq-common/update-kubernetes-components-problems.html
+subsystems:
+  - сluster_infrastructure
+lang: en  
 ---
 
 If Kubernetes components are not updated on the cluster node, the [NodeGroup](/modules/node-manager/cr.html#nodegroup) configuration is not applied, and not all [NodeGroup](/modules/node-manager/cr.html#nodegroup) nodes are synchronized (have the `UPTODATE` status), perform the following steps:

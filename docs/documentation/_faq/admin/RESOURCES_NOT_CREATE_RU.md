@@ -1,6 +1,7 @@
 ---
 title: Что делать если после добавления объекта не создаются порождаемые им ресурсы?
-permalink: ru/faq-common/resources-not-create.html
+subsystems:
+  - cluster_infrastructure
 lang: ru
 ---
 
@@ -34,7 +35,7 @@ lang: ru
 1. Проверьте очередь заданий Deckhouse:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 s queue list
    ```
 
    Пример вывода (очереди пусты):

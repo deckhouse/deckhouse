@@ -1,9 +1,11 @@
 ---
 title: What to do if there are problems updating DKP?
-permalink: en/faq-common/updating-dkp-problems.html
+subsystems:
+  - deckhouse
+lang: en
 ---
 
-## Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods are in an unworkable state
+#### Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods are in an unworkable state
 
 If the Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods in the `d8-system` namespace are in an unworkable state. Perform the following steps:
 
@@ -48,7 +50,7 @@ If the Deckhouse Kubernetes Platform update fails, one or more Deckhouse pods in
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
 
-## DKP update is stuck in the Release is suspended status
+#### DKP update is stuck in the Release is suspended status
 
 The status `Release is suspended` indicates that it has been postponed and is currently unavailable (not recommended) for installation. In this case, it is recommended to remain on the latest available release or on the one currently installed (it will have the status `Deployed`).
 

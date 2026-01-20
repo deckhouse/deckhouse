@@ -1,6 +1,8 @@
 ---
 title: How to check the Kubernetes version in use?
-permalink: en/faq-common/check-kubernetes-version.html
+subsystems:
+  - kubernetes_scheduling
+lang: en
 ---
 
 To check the Kubernetes version in use, run the command:

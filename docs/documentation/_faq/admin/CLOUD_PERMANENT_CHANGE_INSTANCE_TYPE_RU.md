@@ -1,6 +1,7 @@
 ---
 title: Как изменить тип инстанса у узлов с типом CloudPermanent?
-permalink: ru/faq-common/change-instance-type-cloud-permanent.html
+subsystems:
+  - сluster_infrastructure
 lang: ru
 ---
 
@@ -12,7 +13,7 @@ lang: ru
 1. Убедитесь, что очередь Deckhouse пуста. Для просмотра состояния всех очередей заданий Deckhouse выполните следующую команду:
 
    ```shell
-   d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+   d8 s queue list
    ```
 
    Пример вывода (очереди пусты):

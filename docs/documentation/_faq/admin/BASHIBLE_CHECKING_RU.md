@@ -1,7 +1,7 @@
 ---
 title: Что делать при наличии проблем с обновлением компонентов Kubernetes на узлах кластера, с синхронизацией узлов, применением NodeGroup Configuration?
-permalink: ru/faq-common/update-kubernetes-components-problems.html
-lang: ru
+subsystems:
+  - сluster_infrastructure
 ---
 
 Если на узле кластера не обновляются компоненты Kubernetes, не применяется конфигурация [NodeGroup](/modules/node-manager/cr.html#nodegroup), не все узлы [NodeGroup](/modules/node-manager/cr.html#nodegroup) синхронизированы (имеют статус `UPTODATE`), выполните следующие шаги:

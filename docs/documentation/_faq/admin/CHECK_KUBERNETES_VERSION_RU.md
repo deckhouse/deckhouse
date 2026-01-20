@@ -1,6 +1,7 @@
 ---
 title: Как проверить используемую версию Kubernetes?
-permalink: ru/faq-common/check-kubernetes-version.html
+subsystems:
+  - kubernetes_scheduling
 lang: ru
 ---
 

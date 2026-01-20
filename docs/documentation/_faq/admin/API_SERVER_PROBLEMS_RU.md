@@ -1,6 +1,7 @@
 ---
 title: Что делать при высокой нагрузке на API-сервер?
-permalink: ru/faq-common/api-server-overloaded.html
+subsystems:
+- kubernetes_scheduling
 lang: ru
 ---
 

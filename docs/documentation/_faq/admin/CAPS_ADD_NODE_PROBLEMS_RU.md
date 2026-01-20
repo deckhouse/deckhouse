@@ -1,6 +1,7 @@
 ---
 title: Что делать в случае проблем с добавлением узла в кластер через Cluster API Provider Static?
-permalink: ru/faq-common/caps-adding-node-problems.html
+subsystems:
+  - сluster_infrastructure
 lang: ru
 ---
 

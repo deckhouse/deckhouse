@@ -1,6 +1,7 @@
 ---
 title: Что делать при проблемах с применением настроек DexProvider?
-permalink: ru/faq-common/dex-problems.html
+subsystems:
+  - iam
 lang: ru
 ---
 

@@ -1,10 +1,11 @@
 ---
 title: Что делать при наличии проблем с обновлением DKP?
-permalink: ru/faq-common/updating-dkp-problems.html
+subsystems:
+  - deckhouse
 lang: ru
 ---
 
-## Обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в нерабочем состоянии
+#### Обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в нерабочем состоянии
 
 Если обновление Deckhouse Kubernetes Platform не проходит, один или несколько подов Deckhouse в пространстве имен `d8-system` находятся в нерабочем состоянии, выполните следующие действия:
 
@@ -49,7 +50,7 @@ lang: ru
    Warning  Unhealthy  4m44s (x1918 over 154m)  kubelet  Readiness probe failed: HTTP probe failed with statuscode: 500
    ```
 
-## Обновление DKP висит в статусе Release is suspended
+#### Обновление DKP висит в статусе Release is suspended
 
 Состояние релиза `Release is suspended` говорит о том, что он был отложен, и на данный момент недоступен (не рекомендуется) для установки. В таком случае предлагается оставаться на последнем доступном релизе, либо на установленном в данный момент (он будет иметь статус `Deployed`).
 

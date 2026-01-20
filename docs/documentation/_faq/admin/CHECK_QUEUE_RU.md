@@ -1,15 +1,16 @@
 ---
 title: Как проверить очередь заданий в Deckhouse?
-permalink: ru/faq-common/check-queue.html
+subsystems:
+  - deckhouse
 lang: ru
 ---
 
-## Как посмотреть состояние всех очередей заданий Deckhouse?
+#### Как посмотреть состояние всех очередей заданий Deckhouse?
 
 Для просмотра состояния всех очередей заданий Deckhouse выполните следующую команду:
 
 ```shell
-d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue list
+d8 s queue list
 ```
 
 Пример вывода (очереди пусты):
@@ -21,12 +22,12 @@ Summary:
 - no tasks to handle.
 ```
 
-## Как посмотреть состояние очереди заданий main?
+#### Как посмотреть состояние очереди заданий main?
 
 Для просмотра состояния очереди заданий `main` Deckhouse выполните следующую команду:
 
 ```shell
-d8 k -n d8-system exec -it svc/deckhouse-leader -c deckhouse -- deckhouse-controller queue main
+d8 s queue main
 ```
 
 Пример вывода (в очереди `main` 38 заданий):
