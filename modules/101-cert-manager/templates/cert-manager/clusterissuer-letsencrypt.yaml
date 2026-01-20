@@ -37,12 +37,8 @@ spec:
                 - key: "dedicated.deckhouse.io"
                   operator: "Equal"
                   value: "cert-manager"
-              {{- if .Values.certManager.letsencrypt.resources }}
-              {{- toYaml .Values.certManager.letsencrypt.resources | indent 4 }}
-              {{- end }}
+              {{- if and (.Values.certManager) (.Values.certManager.letsencrypt) (hasKey .Values.certManager.letsencrypt "resources") }}
               resources:
-                requests:
-                  cpu: 10m
-                  memory: 30Mi
+              {{ .Values.certManager.letsencrypt.resources | toYaml | nindent 16 }}
+              {{- end }}                                   
 {{- end }}
-
