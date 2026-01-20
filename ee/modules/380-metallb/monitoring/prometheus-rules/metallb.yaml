@@ -43,7 +43,7 @@
         summary: MetalLB is running on a stale configuration.
 
     - alert: D8MetallbBGPSessionDown
-      expr: metallb_bgp_session_up == 0
+      expr: metallb_bgp_session_up{peer=~".+:.+"} == 0
       for: 5m
       labels:
         severity_level: "4"
