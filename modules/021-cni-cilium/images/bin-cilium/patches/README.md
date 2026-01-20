@@ -73,6 +73,14 @@ Ignore error when using IPv4 address for egress gateway other than assigned
 
 Added kernel verifer statistics in logs and prometeus metric as max bpf program complexity
 
-## 015-add-import-export-conntrack-http-endpoints.patch
+## 015-cleanup-conntrack-endpoints.patch
+
+Add new cleanup for vm pods
+
+## 016-add-import-export-conntrack-http-endpoints.patch
 
 Add import/export conntrack http endpoints
+
+## 017-debug.patch
+
+Add debug patch
