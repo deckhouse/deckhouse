@@ -12,10 +12,3 @@ spec:
   parameters:
     allowedClusterRoles:
     - admin
-  gatorVerifyCmd:
-    command: [gatorPath, "verify", "-v", "../charts/constraint-templates/tests/"]
-    args:
-      - gatorPath
-      - verify
-      - -v
-      - ../charts/constraint-templates/tests/

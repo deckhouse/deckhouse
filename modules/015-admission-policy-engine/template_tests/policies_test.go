@@ -211,6 +211,154 @@ admissionPolicyEngine:
 			}
 		})
 	})
+
+	// ============================================================================
+	// TODO: REMOVE THIS SECTION AFTER REMOVING d8-prefixed constraints from templates
+	// ============================================================================
+	// This section tests constraints with "-d8" suffix that are generated
+	// when defaultPolicy != "privileged" (for baseline) or != "restricted" (for restricted).
+	// These constraints are marked for removal in templates/_helpers.tpl with TODO comment.
+	// After removing the template code that generates these constraints, this test section
+	// should be deleted as well.
+	// ============================================================================
+	Context("Pod security standards constraints with -d8 suffix (temporary, for removal)", func() {
+		BeforeEach(func() {
+			// Set defaultPolicy to Baseline to trigger generation of -d8 constraints for baseline
+			// Set defaultPolicy to Privileged to trigger generation of -d8 constraints for restricted
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Baseline")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints with -d8-default suffix must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			baselineConstraints := []string{
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8AppArmor",
+				"D8AllowedCapabilities",
+				"D8AllowedHostPaths",
+				"D8PrivilegedContainer",
+				"D8AllowedProcMount",
+				"D8SeLinux",
+				"D8AllowedSysctls",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range baselineConstraints {
+				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-deny-d8-default")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8-default): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8-default)", constraintKind))
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints with -d8-default suffix must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			restrictedConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowPrivilegeEscalation",
+				"D8AllowedVolumeTypes",
+				"D8AllowedUsers",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range restrictedConstraints {
+				// Check constraint with -d8-default suffix (when policyAction matches default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-deny-d8-default")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8-default): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8-default)", constraintKind))
+				}
+			}
+		})
+	})
+
+	Context("Pod security standards constraints with -d8 suffix (non-default action, temporary, for removal)", func() {
+		BeforeEach(func() {
+			// Set defaultPolicy to Baseline to trigger generation of -d8 constraints for baseline
+			// Set enforcementAction to "warn" (non-default) to test -d8 suffix (without -default)
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.defaultPolicy", "Baseline")
+			f.ValuesSet("admissionPolicyEngine.podSecurityStandards.enforcementAction", "Deny")
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.podSecurityStandards.enforcementActions", `["deny", "warn"]`)
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.HelmRender()
+		})
+
+		It("All pod security standards baseline constraints with -d8 suffix (non-default) must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			baselineConstraints := []string{
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8AppArmor",
+				"D8AllowedCapabilities",
+				"D8AllowedHostPaths",
+				"D8PrivilegedContainer",
+				"D8AllowedProcMount",
+				"D8SeLinux",
+				"D8AllowedSysctls",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range baselineConstraints {
+				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-baseline-warn-d8")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8)", constraintKind))
+				}
+			}
+		})
+
+		It("All pod security standards restricted constraints with -d8 suffix (non-default) must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			restrictedConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowPrivilegeEscalation",
+				"D8AllowedVolumeTypes",
+				"D8AllowedUsers",
+				"D8AllowedSeccompProfiles",
+			}
+
+			for _, constraintKind := range restrictedConstraints {
+				// Check constraint with -d8 suffix (when policyAction doesn't match default enforcement action)
+				constraint := f.KubernetesGlobalResource(constraintKind, "d8-pod-security-restricted-warn-d8")
+				if constraint.Exists() {
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s (d8): %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, fmt.Sprintf("%s (d8)", constraintKind))
+				}
+			}
+		})
+	})
+	// ============================================================================
+	// END OF TEMPORARY SECTION - REMOVE AFTER REMOVING d8-prefixed constraints
+	// ============================================================================
 })
 
 func gatorAvailable() (string, bool) {
