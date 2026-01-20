@@ -43,6 +43,8 @@
         summary: MetalLB is running on a stale configuration.
 
     - alert: D8MetallbBGPSessionDown
+      # TODO: After updating to a version higher than 0.15.3, change the expression
+      # Fixed in upstream: https://github.com/metallb/metallb/issues/2806
       expr: metallb_bgp_session_up{peer=~".+:.+"} == 0
       for: 5m
       labels:
