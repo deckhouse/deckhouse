@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
+fromImage: base/distroless
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
@@ -11,7 +11,7 @@ git:
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /terraform-provider-kubernetes
-  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
+  to: /terraform-manager/terraform-provider-kubernetes
   before: setup
 {{ include "image_spec_for_infrastructure_manager" . }}
 ---
