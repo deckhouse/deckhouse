@@ -1,12 +1,5 @@
 <script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
-<!-- <div class="filter__container">
-    <h2 class="filter__container--title">{{ T "category" | humanize }}</h2>
-
-    <div class="filter__checkboxes"></div>
-    <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button>
-</div> -->
-
 <div class="filter">
     <h2 class="filter--title">{{ T "filters" | humanize }}</h2>
     <div class="filter__container filter__container--search">
@@ -19,7 +12,7 @@
             </div>
         </div>
     </div>
-    <div class="filter__container filter__container--editorial">
+    <!-- <div class="filter__container filter__container--editorial">
         <h3 class="filter__container--title closing-title">{{ T "editorial_filter" | humanize }}</h3>
         <div class="filter__checkboxes filter__checkboxes--editorial">
             <input type="checkbox" id="commercialEditions" value="commercialEditions">
@@ -27,7 +20,7 @@
             <input type="checkbox" id="commercialEditionsw" value="commercialEditions">
             <label for="commercialEditionsw" style="text-transform: capitalize;">commercial editions</label>
         </div>
-    </div>
+    </div> -->
     <div class="filter__container filter__container--statuses">
         <h3 class="filter__container--title closing-title">{{ T "statuses_filter" | humanize }}</h3>
         <div class="filter__checkboxes filter__checkboxes--statuses">
