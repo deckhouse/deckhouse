@@ -60,7 +60,7 @@ func k8sUpgradeHookTriggerFilter(obj *unstructured.Unstructured) (go_hook.Filter
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 	version, ok := secret.Data["maxUsedControlPlaneKubernetesVersion"]
 	if !ok {

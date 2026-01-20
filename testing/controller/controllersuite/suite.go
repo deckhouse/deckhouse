@@ -17,6 +17,7 @@ package controllersuite
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"os"
@@ -71,7 +72,10 @@ func (suite *Suite) SetupNoLock(initObjects []client.Object, opts ...SuiteOption
 
 	var err error
 	suite.client, err = testclient.New(logger.Named("test k8s client"), initObjects)
-	return err
+	if err != nil {
+		return fmt.Errorf("new: %w", err)
+	}
+	return nil
 }
 
 func (suite *Suite) Check(err error) {

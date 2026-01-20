@@ -2171,7 +2171,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "78012fa3-293e-4784-9621-4c91da472043"
+          TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
           LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
@@ -2242,7 +2242,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "78012fa3-293e-4784-9621-4c91da472043"
+          TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
           LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
           LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
           LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
@@ -2580,7 +2580,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "f1f3e857-0bb2-4346-a877-c7bea36918e7"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2647,7 +2647,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "f1f3e857-0bb2-4346-a877-c7bea36918e7"
+          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -2983,7 +2983,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3054,7 +3054,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "a34b5e03-31c9-4ade-b54a-6a306486c771"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3397,7 +3397,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "d4bc64b4-38ef-4418-a401-6383adcc4093"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3474,7 +3474,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "d4bc64b4-38ef-4418-a401-6383adcc4093"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3822,7 +3822,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3a6f2490-870e-4765-aaee-9b9aa8c057c2"
+          TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -3893,7 +3893,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "3a6f2490-870e-4765-aaee-9b9aa8c057c2"
+          TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4231,7 +4231,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "dfb25a4f-5395-4d06-80ef-e6d575756cb5"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -4298,7 +4298,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "dfb25a4f-5395-4d06-80ef-e6d575756cb5"
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
           LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}

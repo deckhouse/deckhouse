@@ -18,6 +18,7 @@ package helm
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"gopkg.in/yaml.v3"
 )
@@ -27,12 +28,12 @@ func ConvertYAMLToJSON(yamlBytes []byte) ([]byte, error) {
 
 	err := yaml.Unmarshal(yamlBytes, &obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	jsonBytes, err := json.Marshal(obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
 	return jsonBytes, nil
@@ -43,12 +44,12 @@ func ConvertJSONToYAML(jsonBytes []byte) ([]byte, error) {
 
 	err := json.Unmarshal(jsonBytes, &obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	yamlBytes, err := yaml.Marshal(obj)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
 	return yamlBytes, nil

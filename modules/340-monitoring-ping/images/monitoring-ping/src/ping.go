@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	fastping "ping/pkg/fastping"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	fastping "ping/pkg/fastping"
 )
 
 // PingAll sends ICMP pings to all cluster and external targets in batch mode.

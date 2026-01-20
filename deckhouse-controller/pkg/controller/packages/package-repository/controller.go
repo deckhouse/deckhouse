@@ -16,6 +16,8 @@ package packagerepository
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
@@ -123,6 +125,10 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	logger := r.logger.With(slog.String("name", packageRepository.Name))
 
 	logger.Debug("handling PackageRepository")
+
+	if err := r.syncRegistrySettings(ctx, packageRepository); err != nil {
+		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
+	}
 
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
@@ -237,6 +243,88 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	}
 
 	logger.Info("cleanup completed")
+
+	return nil
+}
+
+// syncRegistrySettings checks if package repository registry settings were updated
+// (comparing PackageRepositoryAnnotationRegistryChecksum annotation and the current registry spec)
+// and triggers reconciliation of related Applications if it is the case
+func (r *reconciler) syncRegistrySettings(ctx context.Context, repo *v1alpha1.PackageRepository) error {
+	marshaled, err := json.Marshal(repo.Spec.Registry)
+	if err != nil {
+		return fmt.Errorf("marshal registry spec: %w", err)
+	}
+
+	currentChecksum := fmt.Sprintf("%x", md5.Sum(marshaled))
+
+	if len(repo.ObjectMeta.Annotations) == 0 {
+		original := repo.DeepCopy()
+		repo.ObjectMeta.Annotations = map[string]string{
+			v1alpha1.PackageRepositoryAnnotationRegistryChecksum: currentChecksum,
+		}
+		if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+			return fmt.Errorf("set initial checksum annotation: %w", err)
+		}
+		return nil
+	}
+
+	if repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] == currentChecksum {
+		return nil
+	}
+
+	apps := new(v1alpha1.ApplicationList)
+	if err := r.client.List(ctx, apps); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	now := r.dc.GetClock().Now().UTC().Format(time.RFC3339)
+
+	var (
+		updateErrors []error
+		updatedCount = 0
+	)
+
+	for _, app := range apps.Items {
+		if app.Spec.PackageRepositoryName != repo.Name {
+			continue
+		}
+
+		original := app.DeepCopy()
+		if len(app.ObjectMeta.Annotations) == 0 {
+			app.ObjectMeta.Annotations = make(map[string]string)
+		}
+
+		app.ObjectMeta.Annotations[v1alpha1.ApplicationAnnotationRegistrySpecChanged] = now
+		if err := r.client.Patch(ctx, &app, client.MergeFrom(original)); err != nil {
+			updateErrors = append(updateErrors, fmt.Errorf("application %s/%s: %w", app.Namespace, app.Name, err))
+			r.logger.Warn("failed to set registry-spec-changed annotation on application",
+				slog.String("application", app.Name),
+				slog.String("namespace", app.Namespace),
+				log.Err(err))
+			continue
+		}
+
+		updatedCount++
+		r.logger.Info("triggered application reconciliation due to registry settings change",
+			slog.String("application", app.Name),
+			slog.String("namespace", app.Namespace))
+	}
+
+	original := repo.DeepCopy()
+	repo.ObjectMeta.Annotations[v1alpha1.PackageRepositoryAnnotationRegistryChecksum] = currentChecksum
+	if err := r.client.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update checksum annotation: %w", err)
+	}
+
+	if len(updateErrors) > 0 {
+		r.logger.Warn("failed to update some applications",
+			slog.Int("failed", len(updateErrors)),
+			slog.Int("succeeded", updatedCount))
+		if updatedCount == 0 {
+			return fmt.Errorf("failed to update all %d application(s): %w", len(updateErrors), updateErrors[0])
+		}
+	}
 
 	return nil
 }

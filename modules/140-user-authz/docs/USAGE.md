@@ -597,8 +597,8 @@ Working in multi-tenancy mode requires enabling the [Webhook authorization plugi
 
 Changes to the `kube-apiserver` manifest that will occur after enabling multi-tenancy mode:
 
-* The `--authorization-mode` argument will be modified: the Webhook method will be added in front of the RBAC method (e.g., `--authorization-mode=Node,Webhook,RBAC`);
-* The `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml` will be added;
+* The authorization chain will be configured using the structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) with `Node`, `Webhook`, and `RBAC` authorizers;
+* The `kubeconfig` for the authorization webhook will be created at `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`;
 * The `volumeMounts` parameter will be added:
 
   ```yaml

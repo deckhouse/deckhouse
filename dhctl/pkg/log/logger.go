@@ -32,8 +32,9 @@ import (
 	"github.com/werf/logboek/pkg/types"
 	"k8s.io/klog/v2"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 )
 
 var (

@@ -114,7 +114,7 @@ func GetDeviceInfo(device string) (string, error) {
 	reader := bufio.NewReader(bytes.NewReader(out))
 	line, _, err := reader.ReadLine()
 	if err != nil {
-		klog.Errorf("Error occured while trying to read lsblk output")
+		klog.Errorf("Error occurred while trying to read lsblk output")
 		return "", err
 	}
 	return string(line), nil

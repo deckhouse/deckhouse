@@ -27,11 +27,6 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	ApplicationConditionRequirementsMet        = "RequirementsMet"
-	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
-	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
-	ApplicationConditionReplicasAvailable      = "ReplicasAvailable"
-
 	// ApplicationConditionTypeProcessed changes only by application controller
 	ApplicationConditionTypeProcessed                    = "Processed"
 	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
@@ -39,32 +34,9 @@ const (
 	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
 	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
 
-	// Application condition types
-	ApplicationConditionInstalled            = "Installed"
-	ApplicationConditionUpdateInstalled      = "UpdateInstalled"
-	ApplicationConditionConfigurationApplied = "ConfigurationApplied"
-	ApplicationConditionPartiallyDegraded    = "PartiallyDegraded"
-	ApplicationConditionManaged              = "Managed"
-	ApplicationConditionReady                = "Ready"
-
-	// Application condition reasons
-	ApplicationConditionInstalledReasonDownloading                              = "Downloading"
-	ApplicationConditionInstalledReasonInstallationInProgress                   = "InstallationInProgress"
-	ApplicationConditionInstalledReasonDownloadWasFailed                        = "DownloadWasFailed"
-	ApplicationConditionInstalledReasonRequirementsNotMet                       = "RequirementsNotMet"
-	ApplicationConditionInstalledReasonManifestsDeploymentFailed                = "ManifestsDeploymentFailed"
-	ApplicationConditionInstalledReasonLicenseCheckFailed                       = "LicenseCheckFailed"
-	ApplicationConditionInstalledReasonUpdateWasFailed                          = "UpdateWasFailed"
-	ApplicationConditionUpdateInstalledReasonDownloading                        = "Downloading"
-	ApplicationConditionUpdateInstalledReasonUpdateInProgress                   = "UpdateInProgress"
-	ApplicationConditionUpdateInstalledReasonUpdateFailed                       = "UpdateFailed"
-	ApplicationConditionUpdateInstalledReasonRequirementsNotMet                 = "RequirementsNotMet"
-	ApplicationConditionConfigurationAppliedReasonConfigurationValidationFailed = "ConfigurationValidationFailed"
-	ApplicationConditionPartiallyDegradedReasonScalingInProgress                = "ScalingInProgress"
-	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
-	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
-
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
+
+	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 )
 
 var (

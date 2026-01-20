@@ -327,7 +327,7 @@ func (r *StaticMachineReconciler) cleanup(
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+	estimated := DefaultStaticInstanceCleanupTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && estimated < (10*time.Second) {
 		instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
@@ -372,7 +372,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
 
 		estimated := DefaultStaticInstanceAdoptTimeout -
-			time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+			time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail(capierrors.UpdateMachineError,
@@ -401,7 +401,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.MachineScope.SetNotReady()
 		instanceScope.Logger.V(1).Info("StaticInstance is bootstrapping")
 
-		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+		estimated := DefaultStaticInstanceBootstrapTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail(capierrors.CreateMachineError, errors.New("timed out waiting for StaticInstance to bootstrap"))

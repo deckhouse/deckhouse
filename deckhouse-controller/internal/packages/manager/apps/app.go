@@ -147,14 +147,28 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetRuntimeValues returns values that is not part of schema(name, namespace, version)
-func (a *Application) GetRuntimeValues() addonutils.Values {
-	return addonutils.Values{
-		"Name":      a.instance,
-		"Namespace": a.namespace,
-		"Package":   a.definition.Name,
-		"Digests":   a.digests,
-		"Registry":  a.registry,
+// RuntimeValues holds runtime values that are not part of schema.
+// These values are passed to helm templates under .Runtime prefix.
+type RuntimeValues struct {
+	Instance addonutils.Values
+	Package  addonutils.Values
+}
+
+// GetRuntimeValues returns values that are not part of schema.
+// Instance contains name and namespace of the running instance.
+// Package contains package metadata (name, version, digests, registry).
+func (a *Application) GetRuntimeValues() RuntimeValues {
+	return RuntimeValues{
+		Instance: addonutils.Values{
+			"Name":      a.instance,
+			"Namespace": a.namespace,
+		},
+		Package: addonutils.Values{
+			"Name":     a.definition.Name,
+			"Digests":  a.digests,
+			"Registry": a.registry,
+			"Version":  a.definition.Version,
+		},
 	}
 }
 
@@ -330,7 +344,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 			}
 		}
 
-		return fmt.Errorf("exec hook: %w", err)
+		return fmt.Errorf("exec hook '%s': %w", h.GetName(), err)
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {

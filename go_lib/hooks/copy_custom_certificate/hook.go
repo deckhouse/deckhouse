@@ -45,7 +45,7 @@ func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	cs := &CustomCertificate{}
@@ -53,7 +53,7 @@ func applyCustomCertificateFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	cs.Name = secret.GetName()
 	cs.Data, err = yaml.Marshal(secret.Data)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 	return cs, nil
 }
@@ -128,7 +128,7 @@ func copyCustomCertificatesHandler(moduleName string) func(_ context.Context, in
 
 		err := yaml.Unmarshal(secretData, &c)
 		if err != nil {
-			return err
+			return fmt.Errorf("unmarshal: %w", err)
 		}
 
 		vc := valuesCert{}

@@ -2,9 +2,11 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
+  annotations:
+    packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   registry:
     ca: test-ca

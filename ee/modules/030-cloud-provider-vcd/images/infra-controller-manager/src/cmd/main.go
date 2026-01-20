@@ -16,6 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -25,17 +28,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"infra-controller-manager/api/v1alpha1"
 	"infra-controller-manager/internal/controller"
 	"infra-controller-manager/internal/logr"
 	"infra-controller-manager/internal/vcd"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -110,7 +108,7 @@ func main() {
 
 	if len(webhookCertPath) > 0 {
 		setupLog.Info("Initializing webhook certificate watcher using provided certificates",
-			"webhook-cert-path", webhookCertPath, "webhook-cert-name", webhookCertName, "webhook-cert-key", webhookCertKey)
+			"webhook_cert_path", webhookCertPath, "webhook_cert_name", webhookCertName, "webhook_cert_key", webhookCertKey)
 
 		var err error
 		webhookCertWatcher, err = certwatcher.New(
@@ -159,7 +157,7 @@ func main() {
 	// - [PROMETHEUS-WITH-CERTS] at config/prometheus/kustomization.yaml for TLS certification.
 	if len(metricsCertPath) > 0 {
 		setupLog.Info("Initializing metrics certificate watcher using provided certificates",
-			"metrics-cert-path", metricsCertPath, "metrics-cert-name", metricsCertName, "metrics-cert-key", metricsCertKey)
+			"metrics_cert_path", metricsCertPath, "metrics_cert_name", metricsCertName, "metrics_cert_key", metricsCertKey)
 
 		var err error
 		metricsCertWatcher, err = certwatcher.New(

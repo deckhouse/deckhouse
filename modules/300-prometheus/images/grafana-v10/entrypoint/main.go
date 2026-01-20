@@ -160,7 +160,6 @@ func installPlugins(gfInstallPlugins, gfPathsPlugins string) error {
 	}
 
 	for _, plugin := range strings.Split(gfInstallPlugins, ",") {
-
 		if strings.Contains(plugin, ";") {
 			part := strings.Split(plugin, ";")
 			cmd := exec.Command(

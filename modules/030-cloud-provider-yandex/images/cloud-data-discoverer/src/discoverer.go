@@ -21,12 +21,12 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
 	ycsdk "github.com/yandex-cloud/go-sdk"
 	"github.com/yandex-cloud/go-sdk/iamkey"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {
