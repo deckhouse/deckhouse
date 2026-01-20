@@ -41,9 +41,8 @@ type PreflightChecks struct {
 }
 
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
+	logger log.Logger
+	phase  DhctlPhase
 }
 
 func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
@@ -52,10 +51,6 @@ func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
 
 func (p *PreparatorProviderParams) WithPhaseBootstrap() {
 	p.WithPhase(DhctlPhaseBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
-	p.PreflightChecks = checks
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -85,9 +80,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
 			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			if params.phase == DhctlPhaseBootstrap {
-				yandexPreparator.EnableValidateWithNATLayout()
-			}
+			yandexPreparator.EnableValidateWithNATLayout(params.phase == DhctlPhaseBootstrap)
 			return yandexPreparator
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{

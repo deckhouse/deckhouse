@@ -210,6 +210,7 @@ func NewPrettyLogger(opts LoggerOptions) *PrettyLogger {
 	res := &PrettyLogger{
 		processTitles: map[string]styleEntry{
 			"common":           {"🎈 ~ Common: %s", CommonOptions},
+			"preflight":        {"🎈 ~ Preflight checks %s", CommonOptions},
 			"infrastructure":   {"🌱 ~ Infrastructure: %s", InfrastructureOptions},
 			"converge":         {"🛸 ~ Converge: %s", ConvergeOptions},
 			"bootstrap":        {"⛵ ~ Bootstrap: %s", BootstrapOptions},

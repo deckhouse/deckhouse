@@ -27,7 +27,9 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	dvppreflight "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
