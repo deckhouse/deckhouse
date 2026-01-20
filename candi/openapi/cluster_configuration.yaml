@@ -154,8 +154,6 @@ apiVersions:
       encryptionAlgorithm:
         type: string
         description: |
-          In Kubernetes version **1.30** and earlier, only the `RSA-2048` algorithm is supported.
-
           Starting from version **1.31**, kubeadm use the specified asymmetric encryption algorithm
           when generating keys and certificates for the following control-plane components:
 
