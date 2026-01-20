@@ -446,7 +446,7 @@ func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string,
 		return "", fmt.Errorf("%s: decoding response error: %w", logTag, err)
 	}
 
-	if resp.StatusCode == 404 {
+	if resp.StatusCode == http.StatusNotFound {
 		return "", ErrNotFound
 	}
 

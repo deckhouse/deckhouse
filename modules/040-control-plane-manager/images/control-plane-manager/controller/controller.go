@@ -81,7 +81,7 @@ func main() {
 	}
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
-	
+
 	if !config.EtcdArbiter {
 		runPhase(renewKubeconfigs())
 		runPhase(updateRootKubeconfig())
@@ -89,7 +89,7 @@ func main() {
 		log.Info("ETCD_ARBITER mode: creating only admin.conf for kubeadm")
 		runPhase(renewAdminKubeconfig())
 	}
-	
+
 	runPhase(syncExtraFiles())
 	runPhase(convergeComponents())
 	runPhase(config.writeLastAppliedConfigurationChecksum())

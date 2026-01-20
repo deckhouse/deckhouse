@@ -8,12 +8,11 @@ package tasks
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
 
-	"d8_shutdown_inhibitor/pkg/systemd"
-
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/systemd"
 )
 
 type PowerKeyInhibitor struct {

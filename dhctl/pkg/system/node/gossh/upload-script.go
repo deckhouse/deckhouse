@@ -27,12 +27,13 @@ import (
 
 	"github.com/alessio/shellescape"
 
+	ssh "github.com/deckhouse/lib-gossh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	genssh "github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tar"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
-	ssh "github.com/deckhouse/lib-gossh"
 )
 
 type SSHUploadScript struct {

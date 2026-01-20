@@ -21,12 +21,12 @@ import (
 	"net/url"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/vmware/go-vcloud-director/v3/govcd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/vmware/go-vcloud-director/v3/govcd"
 )
 
 func VersionContentProvider(ctx context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {

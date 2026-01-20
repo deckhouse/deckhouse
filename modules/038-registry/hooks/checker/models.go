@@ -203,6 +203,11 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 		state.Queues = make(map[string]registryQueue)
 	}
 
+	imagesFingerprint, err := registry_pki.ComputeHash(inputs.ImagesInfo)
+	if err != nil {
+		return fmt.Errorf("cannot compute images fingerprint: %w", err)
+	}
+
 	for name := range state.Queues {
 		if _, ok := inputs.Params.Registries[name]; !ok {
 			log.Info("Deleting queue", "queue.name", name)
@@ -212,7 +217,7 @@ func (state *stateModel) initQueues(log go_hook.Logger, inputs inputsModel) erro
 
 	t := time.Now().UTC()
 	for name, registryParams := range inputs.Params.Registries {
-		hash, err := registry_pki.ComputeHash(registryParams)
+		hash, err := registry_pki.ComputeHash(registryParams, imagesFingerprint)
 		if err != nil {
 			return fmt.Errorf("cannot compute registry %q params hash: %w", name, err)
 		}
