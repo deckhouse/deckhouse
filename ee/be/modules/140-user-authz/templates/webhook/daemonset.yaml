@@ -29,6 +29,21 @@ spec:
         memory: 50Mi
   {{- end }}
 ---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: {{ $.Chart.Name }}
+  namespace: d8-{{ $.Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" $.Chart.Name)) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          User Authz Webhook need to run on hostNetwork for communication with apiserver
+
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -43,6 +58,7 @@ spec:
     metadata:
       labels:
         app: user-authz-webhook
+        security.deckhouse.io/security-policy-exception: {{ $.Chart.Name }}
     spec:
       {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
