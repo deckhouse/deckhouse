@@ -42,7 +42,7 @@ spec:
     - 192.168.2.100-192.168.2.150
   isDefault: false
   nodeSelector:
-    node.deckhouse.io/group: frontend
+    node-role.deckhouse.io/frontend: ""
   tolerations:
   - effect: NoExecute
     key: dedicated.deckhouse.io
@@ -122,7 +122,7 @@ spec:
     - 192.168.2.100-192.168.2.150
   isDefault: false
   nodeSelector:
-    node.deckhouse.io/group: frontend
+    node-role.deckhouse.io/frontend: ""
   tolerations:
   - effect: NoExecute
     key: dedicated.deckhouse.io
@@ -149,10 +149,10 @@ spec:
       # The number of addresses that will be allocated from the pool declared in MetalLoadBalancerClass.
       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
       # A list of addresses from the pool declared in MetalLoadBalancerClass that will be allocated to the service.
-      network.deckhouse.io/load-balancer-ips: "192.168.2.102, 192.168.2.103, 192.168.2.104"
+      network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
   # Selector and tolerations. Ingress controllers must be placed on the same nodes as MetalLB speakers.
   nodeSelector:
-    node.deckhouse.io/group: frontend
+    node-role.deckhouse.io/frontend: ""
   tolerations:
   - effect: NoExecute
     key: dedicated.deckhouse.io

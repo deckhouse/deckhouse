@@ -166,7 +166,7 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node.deckhouse.io/group: frontend
+       node-role.deckhouse.io/frontend: ""
      tolerations:
      - effect: NoExecute
        key: dedicated.deckhouse.io
@@ -192,7 +192,7 @@ metallb:
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
      # Label selector and tolerations. Ingress-controller pods must be scheduled on same nodes as MetalLB speaker pods.
      nodeSelector:
-       node.deckhouse.io/group: frontend
+       node-role.deckhouse.io/frontend: ""
      tolerations:
      - effect: NoExecute
        key: dedicated.deckhouse.io

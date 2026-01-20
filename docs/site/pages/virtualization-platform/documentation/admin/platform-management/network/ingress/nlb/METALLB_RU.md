@@ -97,7 +97,7 @@ lang: ru
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node.deckhouse.io/group: frontend
+       node-role.deckhouse.io/frontend: ""
      tolerations:
      - effect: NoExecute
        key: dedicated.deckhouse.io
@@ -181,7 +181,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node.deckhouse.io/group: frontend
+       node-role.deckhouse.io/frontend: ""
      tolerations:
      - effect: NoExecute
        key: dedicated.deckhouse.io
@@ -208,10 +208,10 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
          # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
          # Список адресов из пула, объявленного в MetalLoadBalancerClass, которые будут выделены сервису.
-         network.deckhouse.io/load-balancer-ips: "192.168.2.102, 192.168.2.103, 192.168.2.104"
+         network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
      # Селектор и tolerations. Поды ingress-controller должны быть размещены на тех же узлах, что и поды MetalLB speaker.
      nodeSelector:
-       node.deckhouse.io/group: frontend
+       node-role.deckhouse.io/frontend: ""
      tolerations:
      - effect: NoExecute
        key: dedicated.deckhouse.io
