@@ -17,8 +17,11 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
