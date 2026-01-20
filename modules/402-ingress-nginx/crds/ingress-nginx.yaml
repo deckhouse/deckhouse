@@ -794,7 +794,7 @@ spec:
                         External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
@@ -810,7 +810,7 @@ spec:
                         External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
@@ -883,7 +883,7 @@ spec:
                         External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
@@ -899,7 +899,7 @@ spec:
                         External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
@@ -958,7 +958,7 @@ spec:
                         External port for insecure HTTP connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
@@ -974,7 +974,7 @@ spec:
                         External port for secure HTTPS connections exposed by the provisioned `LoadBalancer` service.
 
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
-                        If at least one of these parameters is set, the service exposes only the explicitly set ports.
+                        If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
                         > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
                         >
