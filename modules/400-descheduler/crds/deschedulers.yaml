@@ -514,6 +514,9 @@ spec:
                             Sets threshold values to identify to identify under utilized nodes.
 
                             If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
@@ -538,6 +541,9 @@ spec:
                             Sets threshold values to identify to identify over utilized nodes.
 
                             If the resource usage of the node exceeds at least one of the threshold values, then the node is considered over utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
@@ -575,6 +581,9 @@ spec:
                             Sets threshold values to identify to identify under utilized nodes.
 
                             If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
