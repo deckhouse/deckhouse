@@ -26,10 +26,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/zvirt-cloud-controller-manager/pkg/zvirtapi"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 	cloudprovider "k8s.io/cloud-provider"
 
-	"k8s.io/client-go/tools/cache"
+	"github.com/deckhouse/zvirt-cloud-controller-manager/pkg/zvirtapi"
 )
 
 const (

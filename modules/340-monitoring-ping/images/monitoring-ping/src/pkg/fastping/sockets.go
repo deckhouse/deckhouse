@@ -22,11 +22,12 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"net"
 	"sync"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -38,7 +39,7 @@ type pendingPacket struct {
 
 type socketConn struct {
 	fd          int // raw socket file descriptor
-	epfd int        // event poll file descriptor
+	epfd        int // event poll file descriptor
 	id          int
 	seqPerHost  map[string]int
 	pending     sync.Map // thread-safe map: key -> pendingPacket
@@ -116,7 +117,7 @@ func newSocket(_ context.Context) (*socketConn, error) {
 
 	conn := &socketConn{
 		fd:         fd,
-		epfd: epfd,
+		epfd:       epfd,
 		id:         genIdentifier(),
 		seqPerHost: make(map[string]int),
 		pending:    sync.Map{},

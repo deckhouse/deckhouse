@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type NodeTracker struct {

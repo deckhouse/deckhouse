@@ -28,12 +28,14 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"tools/helm_generate/helper"
+
+	"github.com/yuin/goldmark"
+	"gopkg.in/yaml.v3"
 
 	"github.com/deckhouse/deckhouse/testing/library"
 	"github.com/deckhouse/deckhouse/testing/library/helm"
-	"github.com/yuin/goldmark"
-	"gopkg.in/yaml.v3"
+
+	"tools/helm_generate/helper"
 )
 
 // ../deckhouse/tools/helm_generate/runners/alert_templates/template_values/[module-name].yaml
@@ -206,7 +208,7 @@ func getAlertsFromTemplate(templateContent []byte, moduleName, moduleUrlName, ed
 				} else {
 					var buf bytes.Buffer
 					if err := goldmark.Convert([]byte(strings.ReplaceAll(summary, "\n", " ")), &buf); err == nil {
-						summary = stripHTMLTags(string(buf.Bytes()))
+						summary = stripHTMLTags(buf.String())
 						// summary = strings.TrimLeft(summary,"<p>")
 						// summary = strings.TrimRight(summary,"</p>\n")
 					}

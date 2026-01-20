@@ -423,17 +423,20 @@ func (f *DeckhouseReleaseFetcher) restoreCurrentDeployedRelease(ctx context.Cont
 	return release, nil
 }
 
-// ensureReleases create releases and return metadata of last created release.
-// flow:
-//  1. if no releases in cluster - create from channel
-//  2. if deployed release patch version is lower than channel (with same minor and major) - create from channel
-//  3. if deployed release minor version is lower than channel (with same major) - create from channel
-//  4. if deployed release minor version is lower by 2 or more than channel (with same major) - look at releases in cluster
-//     4.1 if update sequence between deployed release and last release in cluster is broken - get releases from registry between deployed and version from channel, and create releases
-//     4.2 if update sequence between deployed release and last release in cluster not broken - check update sequence between last release in cluster and version in channel
-//     4.2.1 if update sequence between last release in cluster and version in channel is broken - get releases from registry between last release in cluster and version from channel, and create releases
-//     4.2.2 if update sequence between last release in cluster and version in channel not broken - create from channel
-//     4.3 if update sequences not broken - create from channel
+// ensureReleases creates releases and returns metadata of last created release.
+//
+// Flow:
+//  1. If no releases in cluster - create release from channel
+//  2. If release channel is LTS - create release from channel
+//  3. Otherwise - always use step-by-step update:
+//     3.1 Determine starting version:
+//     - Use deployed release, or
+//     - Use last release in sequence if all releases in cluster are sequential
+//     3.2 Get all new versions from registry between starting version and channel version
+//     (includes patches of current minor version to avoid skipping migrations)
+//     3.3 If no new versions (actual >= target) - return channel metadata for updating existing releases
+//     3.4 Create releases sequentially; if a gap is detected (missing minor version),
+//     return error (some releases may have been created before the gap)
 func (f *DeckhouseReleaseFetcher) ensureReleases(
 	ctx context.Context,
 	releaseMetadata *ReleaseMetadata,
@@ -467,39 +470,20 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		return releaseMetadata, nil
 	}
 
-	// create release if deployed release and new release are in updating sequence
+	// Determine starting version for step-by-step update
 	actual := releaseForUpdate
-	if isUpdatingSequence(actual.GetVersion(), newSemver) {
-		err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from deployed")
-		if err != nil {
-			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
-		}
 
-		return releaseMetadata, nil
-	}
-
-	isSequence := false
+	isSequenceInCluster := true
 	for i := 1; i < len(releasesInCluster); i++ {
-		isSequence = isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion())
-		if !isSequence {
+		if !isUpdatingSequence(releasesInCluster[i-1].GetVersion(), releasesInCluster[i].GetVersion()) {
+			isSequenceInCluster = false
 			break
 		}
 	}
 
-	if isSequence {
-		// check
+	// If all releases are in sequence, use the last one as starting point
+	if isSequenceInCluster {
 		actual = releasesInCluster[len(releasesInCluster)-1]
-
-		// create release if last release and new release are in updating sequence
-		if isUpdatingSequence(actual.GetVersion(), newSemver) {
-			// TODO: remove cooldown?
-			err := f.createRelease(ctx, releaseMetadata, notificationShiftTime, "from last release in cluster")
-			if err != nil {
-				return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
-			}
-
-			return releaseMetadata, nil
-		}
 	}
 
 	if actual.GetNotificationShift() &&
@@ -513,7 +497,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 		"version": releaseForUpdate.GetVersion().Original(),
 	}
 
-	metas, err := f.GetNewReleasesMetadata(ctx, actual.GetVersion(), newSemver)
+	vers, err := f.getNewVersions(ctx, actual.GetVersion(), newSemver)
 	if err != nil {
 		f.logger.Error("step by step update failed", log.Err(err))
 
@@ -524,16 +508,66 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 
 	f.metricStorage.Grouped().GaugeSet(metrics.D8UpdatingIsFailed, metrics.D8UpdatingIsFailed, 0, metricLabels)
 
-	for _, meta := range metas {
-		releaseMetadata = &meta
+	// If no new versions to create (actual >= target), return the channel metadata
+	// so subsequent code can still update existing releases (e.g., suspend annotation)
+	//
+	// Example: Deployed v1.16.0, channel has v1.16.0 (same version but with suspend: true).
+	// getNewVersions returns empty list (no new versions), but we return channel metadata
+	// to update suspend annotation on existing v1.16.0 release.
+	if len(vers) == 0 {
+		return releaseMetadata, nil
+	}
 
-		err = f.createRelease(ctx, releaseMetadata, notificationShiftTime, "step-by-step")
-		if err != nil {
-			return nil, fmt.Errorf("create release %s: %w", releaseMetadata.Version, err)
+	currentVer := actual.GetVersion()
+	for _, ver := range vers {
+		if !isUpdatingSequence(currentVer, ver) {
+			f.logger.Warn("not sequential version",
+				slog.String("previous", currentVer.Original()),
+				slog.String("next", ver.Original()),
+			)
+
+			// Return error on gap - some releases may have been created before this point
+			return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s', missing intermediate minor version in registry",
+				currentVer.Original(), ver.Original())
 		}
+
+		releaseMeta, err := f.fetchAndCreateRelease(ctx, ver, notificationShiftTime)
+		if err != nil {
+			return nil, fmt.Errorf("fetch and create release: %w", err)
+		}
+		releaseMetadata = releaseMeta
+		currentVer = ver
 	}
 
 	return releaseMetadata, nil
+}
+
+// fetchAndCreateRelease fetches image metadata from registry and creates a release
+func (f *DeckhouseReleaseFetcher) fetchAndCreateRelease(
+	ctx context.Context,
+	version *semver.Version,
+	notificationShiftTime *metav1.Time,
+) (*ReleaseMetadata, error) {
+	image, err := f.registryClient.Image(ctx, version.Original())
+	if err != nil {
+		return nil, fmt.Errorf("get image: %w", err)
+	}
+
+	releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
+	if err != nil {
+		return nil, fmt.Errorf("fetch release metadata: %w", err)
+	}
+
+	if releaseMeta.Version == "" {
+		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+	}
+
+	err = f.createRelease(ctx, releaseMeta, notificationShiftTime, "step-by-step")
+	if err != nil {
+		return nil, fmt.Errorf("create release %s: %w", releaseMeta.Version, err)
+	}
+
+	return releaseMeta, nil
 }
 
 // createRelease create new release by metadata,
@@ -788,67 +822,20 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	return meta, nil
 }
 
-// FetchReleasesMetadata realize step by step update
-func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, actual, target *semver.Version) ([]ReleaseMetadata, error) {
-	ctx, span := otel.Tracer(serviceName).Start(ctx, "getNewReleasesMetadata")
-	defer span.End()
-
-	vers, err := f.getNewVersions(ctx, actual, target)
-	if err != nil {
-		return nil, fmt.Errorf("get next versions: %w", err)
-	}
-
-	result := make([]ReleaseMetadata, 0, len(vers))
-
-	current := actual
-	for idx, ver := range vers {
-		// if next version is not in sequence with actual
-		if !isUpdatingSequence(current, ver) {
-			if idx == 0 {
-				return nil, fmt.Errorf("versions is not in sequence: '%s' and '%s'", actual.Original(), ver.Original())
-			}
-
-			f.logger.Warn("not sequential version", slog.String("previous", actual.Original()), slog.String("next", ver.Original()))
-
-			break
-		}
-
-		image, err := f.registryClient.Image(ctx, ver.Original())
-		if err != nil {
-			return nil, fmt.Errorf("get image: %w", err)
-		}
-
-		releaseMeta, err := f.fetchReleaseMetadata(ctx, image)
-		if err != nil {
-			return nil, fmt.Errorf("fetch release metadata: %w", err)
-		}
-
-		if releaseMeta.Version == "" {
-			return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
-		}
-
-		result = append(result, *releaseMeta)
-
-		current = ver
-	}
-
-	return result, nil
-}
-
-// getNewVersions - getting all last patches from registry
-// it's ignore last patch of actual minor version, if it has new minor version
+// getNewVersions - getting all last patches from registry for each minor version
+// between actual and target versions (inclusive of actual minor's patches).
 //
 // f.e.
 // in registry:
 // 1.66.3 (deployed)
 // 1.66.5
-// result will be 1.66.5
+// result will be [1.66.5]
 //
-// but if we have a new minor version like:
+// with a new minor version:
 // 1.66.3 (deployed)
 // 1.66.5
 // 1.67.11
-// result will be 1.67.11
+// result will be [1.66.5, 1.67.11]
 //
 // several patches:
 // 1.66.3 (deployed)
@@ -858,7 +845,7 @@ func (f *DeckhouseReleaseFetcher) GetNewReleasesMetadata(ctx context.Context, ac
 // 1.68.1
 // 1.68.3
 // 1.68.5
-// result will be [1.67.11, 1.68.5]
+// result will be [1.66.5, 1.67.11, 1.68.5]
 func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, target *semver.Version) ([]*semver.Version, error) {
 	tags, err := f.registryClient.ListTags(ctx)
 	if err != nil {
@@ -906,15 +893,7 @@ func (f *DeckhouseReleaseFetcher) getNewVersions(ctx context.Context, actual, ta
 		}
 	}
 
-	// Remove highest patch from actual minor version if we have more versions
-	if len(result) > 1 && result[0].Minor() == actual.Minor() {
-		result = result[1:]
-	}
-
-	if len(result) == 0 {
-		return nil, fmt.Errorf("no acceptable for step by step update tags in registry")
-	}
-
+	// Empty result is not an error - it means actual >= target, no new versions needed
 	return result, nil
 }
 
@@ -940,10 +919,24 @@ func (f *DeckhouseReleaseFetcher) parseAndFilterVersions(tags []string) []*semve
 	return versions
 }
 
+// isVersionInRange checks if version 'ver' is within the range between 'actual' and 'target'.
+// Returns true if ver > actual and ver is within target's minor version.
+//
+// Example:
+//
+//	[actual=v1.67.4, ver=v1.67.3, target=v1.68.10] -> false  // ver <= actual
+//	[actual=v1.67.4, ver=v1.67.11, target=v1.68.10] -> true  // patch of current minor
+//	[actual=v1.67.4, ver=v1.68.10, target=v1.68.10] -> true  // target version
+//	[actual=v1.67.4, ver=v1.69.0, target=v1.68.10] -> false  // exceeds target minor
 func isVersionInRange(ver, actual, target *semver.Version) bool {
-	return (ver.Major() > actual.Major() ||
-		(ver.Major() == actual.Major() && ver.Minor() >= actual.Minor())) &&
-		(ver.Major() < target.Major() || (ver.Major() == target.Major() && ver.Minor() <= target.Minor()))
+	// Must be strictly greater than actual
+	if !ver.GreaterThan(actual) {
+		return false
+	}
+
+	// Must be within target minor
+	return ver.Major() < target.Major() ||
+		(ver.Major() == target.Major() && ver.Minor() <= target.Minor())
 }
 
 func isVersionGreaterThanTarget(ver, target *semver.Version) bool {

@@ -14,13 +14,13 @@ import (
 	"os"
 	"time"
 
-	discoverycache "webhook/internal/cache"
-	"webhook/internal/web/hook"
-
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	kcache "k8s.io/client-go/tools/cache"
+
+	discoverycache "webhook/internal/cache"
+	"webhook/internal/web/hook"
 )
 
 const (

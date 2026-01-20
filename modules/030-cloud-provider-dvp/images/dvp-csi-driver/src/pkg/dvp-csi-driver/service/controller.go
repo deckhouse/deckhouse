@@ -18,18 +18,19 @@ package service
 
 import (
 	"context"
-	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
 
 	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 const (
@@ -244,7 +245,6 @@ func (c *ControllerService) getDiskAttachState(
 	diskName string,
 	vmHostname string,
 ) (exists bool, attached bool, err error) {
-
 	vmbda, err := c.dvpCloudAPI.ComputeService.GetVMBDA(ctx, diskName, vmHostname)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
@@ -270,7 +270,6 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	ctx context.Context,
 	req *csi.ControllerUnpublishVolumeRequest,
 ) (*csi.ControllerUnpublishVolumeResponse, error) {
-
 	if len(req.VolumeId) == 0 {
 		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
 	}

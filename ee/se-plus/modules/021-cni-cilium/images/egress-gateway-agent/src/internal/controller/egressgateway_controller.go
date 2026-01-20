@@ -22,9 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
-
 	eeCommon "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
-
 	eeInternalCrd "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
 )
 

@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/deckhouse/deckhouse/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+
+	"github.com/deckhouse/deckhouse/pkg/registry"
 )
 
 type Image struct {

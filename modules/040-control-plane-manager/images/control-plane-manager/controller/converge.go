@@ -29,10 +29,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Generate etcd performance patch before converge phase
@@ -210,7 +211,6 @@ func convergeComponent(componentName string) error {
 		}
 
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
-
 	} else {
 		log.Info("skip manifest generation for component because checksum in manifest is up to date", slog.String("component", componentName))
 	}
@@ -312,7 +312,7 @@ func manifestChecksumIsEqual(componentName, checksum string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return strings.Index(string(content), checksum) != -1, nil
+	return strings.Contains(string(content), checksum), nil
 }
 
 func generateChecksumPatch(componentName string, checksum string) error {
