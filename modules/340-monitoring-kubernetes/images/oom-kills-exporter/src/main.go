@@ -55,12 +55,11 @@ type app struct {
 }
 
 func main() {
-	flag.Parse()
-
 	var metricsAddr string
 	var newPattern string
 	flag.StringVar(&metricsAddr, "listen-address", "127.0.0.1:4205", "The address to listen on for HTTP requests.")
 	flag.StringVar(&newPattern, "regexp-pattern", defaultPattern, "Overwrites the default regexp pattern to match and extract Pod UID and Container ID.")
+	flag.Parse()
 
 	a := &app{
 		kmesgRE: regexp.MustCompile(defaultPattern),
