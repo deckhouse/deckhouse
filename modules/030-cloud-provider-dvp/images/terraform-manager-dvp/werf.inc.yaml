@@ -9,7 +9,7 @@ git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/terraform-versions.yml
   to: /terraform-manager/terraform-versions.yml
 import:
-- image: terraform-provider-kubernetes
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
   add: /terraform-provider-kubernetes
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "kubernetes") }}/{{ .TF.kubernetes.namespace }}/{{ .TF.kubernetes.type }}/{{ .TF.kubernetes.version }}/linux_amd64/terraform-provider-kubernetes
   before: setup
@@ -37,7 +37,7 @@ shell:
   - git apply /patches/*.patch --verbose
   - rm -rf .git manifest/test/
 ---
-image: terraform-provider-kubernetes
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: builder/golang-alpine
 final: false
 mount:
