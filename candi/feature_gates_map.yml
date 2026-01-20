@@ -218,17 +218,13 @@
     - ContainerRestartRules
 "1.35":
   forbidden: []
-  deprecated: []
+  deprecated:
+    - ChangeContainerStatusOnKubeletRestart
   kubelet:
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
-    - ContainerRestartRules
     - ContainerStopSignals
-    - EnvFiles
-    - HostnameOverride
-    - ImageVolume
-    - KubeletEnsureSecretPulledImages
     - MemoryQoS
     - MutatingAdmissionPolicy
     - PodLogsQuerySplitStreams
@@ -239,15 +235,9 @@
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
-    - ContainerRestartRules
     - ContainerStopSignals
     - CrossNamespaceVolumeDataSource
-    - DeploymentReplicaSetTerminatingReplicas
-    - EnvFiles
-    - HPAConfigurableTolerance
     - HPAScaleToZero
-    - ImageVolume
-    - MaxUnavailableStatefulSet
     - MutatingAdmissionPolicy
     - PodLogsQuerySplitStreams
     - ResourceHealthStatus
@@ -257,14 +247,9 @@
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
-    - ContainerRestartRules
     - CrossNamespaceVolumeDataSource
-    - DeploymentReplicaSetTerminatingReplicas
-    - HPAConfigurableTolerance
-    - MaxUnavailableStatefulSet
     - SELinuxMount
   kubeScheduler:
     - ComponentFlagz
     - ComponentStatusz
     - ConcurrentWatchObjectDecode
-    - ContainerRestartRules

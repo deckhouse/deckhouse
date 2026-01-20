@@ -838,25 +838,13 @@ internal:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
 
-				if expectedApiVersion == "v1beta3" {
-					var config ClusterConfigurationV3
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				} else {
-					var config ClusterConfigurationV4
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				}
+				var config ClusterConfigurationV4
+				err = yaml.Unmarshal(kubeadmConfigData, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+				Expect(config.Kind).To(Equal("ClusterConfiguration"))
 			})
 		}
-
-		Context("Kubernetes 1.30", func() {
-			testKubeadmVersion("1.30", "v1beta3")
-		})
 
 		Context("Kubernetes 1.31", func() {
 			testKubeadmVersion("1.31", "v1beta4")
@@ -906,7 +894,7 @@ apiserver:
 
 		const v1beta3TestValues = `
 internal:
-  effectiveKubernetesVersion: "1.30"
+  effectiveKubernetesVersion: "1.31"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
