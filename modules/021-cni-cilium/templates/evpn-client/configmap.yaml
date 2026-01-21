@@ -1,0 +1,39 @@
+{{- if .Values.cniCilium.evpn.enabled }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evpn-client-config
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "evpn-client")) | nindent 2 }}
+data:
+  frr.conf.template: |
+    frr version 10.5
+    frr defaults traditional
+    hostname NODE_NAME_PLACEHOLDER
+    log syslog informational
+    service integrated-vtysh-config
+    service password-encryption
+    no ipv6 forwarding
+    !
+    router bgp {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+      bgp router-id NODE_IP_PLACEHOLDER
+      no bgp default ipv4-unicast
+      bgp bestpath as-path multipath-relax
+      bgp log-neighbor-changes
+      !
+      neighbor EVPN_RR peer-group
+      neighbor EVPN_RR remote-as {{ .Values.cniCilium.evpn.bgpAsn | default 65000 }}
+      neighbor EVPN_RR update-source NODE_IP_PLACEHOLDER
+      neighbor EVPN_RR password PassW0RD
+      RR_SERVERS_PLACEHOLDER
+      !
+      address-family l2vpn evpn
+        neighbor EVPN_RR activate
+        neighbor EVPN_RR route-reflector-client
+        advertise-all-vni
+        advertise-default-gw
+      exit-address-family
+    !
+    end
+{{- end }}
