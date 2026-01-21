@@ -23,4 +23,5 @@ const (
 	KubeSystemNamespace = "kube-system"
 	HeritageLabelKey    = "heritage"
 	DeckhouseLabel      = "deckhouse"
+	SemverAccuracy      = 2
 )
