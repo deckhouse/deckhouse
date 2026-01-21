@@ -1635,7 +1635,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 	if task.IsPatch {
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(mr, metricLabels)
 
-		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, mr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, mr, deployTimeResult.ReleaseApplyTime, metricLabels)
 		if notifyErr != nil {
 			r.log.Warn("send [patch] release notification", log.Err(notifyErr))
 
@@ -1678,7 +1678,7 @@ func (r *reconciler) DeployTimeCalculate(ctx context.Context, mr v1alpha1.Releas
 
 	deployTimeResult = timeChecker.CalculateMinorDeployTime(mr, metricLabels)
 
-	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, mr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+	notifyErr := releaseNotifier.SendMinorReleaseNotification(ctx, mr, deployTimeResult.ReleaseApplyTime, metricLabels)
 	if notifyErr != nil {
 		r.log.Warn("send minor release notification", log.Err(notifyErr))
 
