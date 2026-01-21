@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 9,
+  "version": 10,
   "statements": [
     {
       "vulnerability": {
@@ -66,7 +66,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.15.4"
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.4"
         }
       ],
       "status": "not_affected",
@@ -80,7 +80,7 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/helm.sh/helm/v3@v3.15.4"
+          "@id": "pkg:golang/helm.sh/helm/v3@v3.17.4"
         }
       ],
       "status": "not_affected",
@@ -104,5 +104,5 @@
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2025-10-09T14:31:32Z"
+  "last_updated": "2026-01-20T12:00:00Z"
 }

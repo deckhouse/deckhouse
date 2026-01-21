@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 10,
+  "version": 11,
   "statements": [
     {
       "vulnerability": {
@@ -73,8 +73,148 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-09T14:31:32.069712443Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-25621"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Containerd HTTP/2 CONTINUATION flood vulnerability - Функционал обработки HTTP/2 соединений в библиотеке github.com/containerd/containerd версии 1.7.27 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все сетевые взаимодействия осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Runc seccomp bypass vulnerability - Функционал seccomp фильтрации в библиотеке github.com/opencontainers/runc версии 1.1.14 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все контейнеры запускаются с ограниченными привилегиями, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Runc device cgroup bypass vulnerability - Функционал управления device cgroup в библиотеке github.com/opencontainers/runc версии 1.1.14 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все контейнеры запускаются с ограниченными привилегиями, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Runc overlayfs privilege escalation vulnerability - Функционал overlayfs монтирования в библиотеке github.com/opencontainers/runc версии 1.1.14 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все контейнеры запускаются с ограниченными привилегиями, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux@v1.11.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Selinux overlayfs privilege escalation vulnerability - Функционал SELinux меток в библиотеке github.com/opencontainers/selinux версии 1.11.0 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все контейнеры запускаются с ограниченными привилегиями, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-64329"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Containerd HTTP/2 CONTINUATION flood vulnerability - Функционал обработки HTTP/2 соединений в библиотеке github.com/containerd/containerd версии 1.7.27 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все сетевые взаимодействия осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-9675"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containers/buildah@v1.37.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Buildah container escape vulnerability - Функционал создания и управления контейнерами в библиотеке github.com/containers/buildah версии 1.37.6 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все операции с контейнерами осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-0495"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/buildx@v0.13.0-rc2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Buildx container escape vulnerability - Функционал сборки Docker образов в библиотеке github.com/docker/buildx версии 0.13.0-rc2 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все операции со сборкой осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-22772"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.4.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Fulcio certificate authority bypass vulnerability - Функционал выдачи сертификатов в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Docker daemon privilege escalation vulnerability - Функционал Docker демона в библиотеке github.com/docker/docker версии 25.0.6+incompatible не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все операции с контейнерами осуществляются через промежуточные компоненты, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-20T12:00:00.000000000Z"
     }
   ],
   "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2025-10-09T14:31:32Z"
+  "last_updated": "2026-01-20T12:00:00Z"
 }
