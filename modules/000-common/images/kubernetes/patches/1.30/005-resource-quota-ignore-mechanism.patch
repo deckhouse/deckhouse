@@ -205,13 +205,14 @@ index a201c58383e..f9f54a64aef 100644
  	return qos.GetPodQOS(pod) == corev1.PodQOSBestEffort
  }
 diff --git a/pkg/quota/v1/install/update_filter.go b/pkg/quota/v1/install/update_filter.go
-index 9a4ce799727..cf3211b7d3e 100644
+index eca16ec8fc9..deb05e1d8f2 100644
 --- a/pkg/quota/v1/install/update_filter.go
 +++ b/pkg/quota/v1/install/update_filter.go
-@@ -44,6 +44,11 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
- 				return true
- 			}
-
+@@ -30,6 +30,12 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 		case schema.GroupResource{Resource: "pods"}:
+ 			oldPod := oldObj.(*v1.Pod)
+ 			newPod := newObj.(*v1.Pod)
++
 +			// when resource quota labels changed
 +			if hasResourceQuotaLabelsChanged(oldPod.Labels, newPod.Labels) {
 +				return true
@@ -220,21 +221,23 @@ index 9a4ce799727..cf3211b7d3e 100644
  			return core.QuotaV1Pod(oldPod, clock.RealClock{}) && !core.QuotaV1Pod(newPod, clock.RealClock{})
  		case schema.GroupResource{Resource: "services"}:
  			oldService := oldObj.(*v1.Service)
-@@ -52,6 +57,10 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+@@ -38,9 +44,25 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
  		case schema.GroupResource{Resource: "persistentvolumeclaims"}:
  			oldPVC := oldObj.(*v1.PersistentVolumeClaim)
  			newPVC := newObj.(*v1.PersistentVolumeClaim)
++
 +			// when resource quota labels changed
 +			if hasResourceQuotaLabelsChanged(oldPVC.Labels, newPVC.Labels) {
 +				return true
 +			}
++
  			return core.RequiresQuotaReplenish(newPVC, oldPVC)
  		}
-
-@@ -59,6 +68,16 @@ func DefaultUpdateFilter() func(resource schema.GroupVersionResource, oldObj, ne
+ 
+ 		return false
  	}
  }
-
++
 +// hasResourceQuotaLabelsChanged checks if any resource quota control labels have changed
 +func hasResourceQuotaLabelsChanged(oldLabels, newLabels map[string]string) bool {
 +	for _, label := range v1.ResourceQuotaLabels {
@@ -244,10 +247,6 @@ index 9a4ce799727..cf3211b7d3e 100644
 +	}
 +	return false
 +}
-+
- // hasResourcesChanged function to compare resources in container statuses
- func hasResourcesChanged(oldPod *v1.Pod, newPod *v1.Pod) bool {
- 	for _, oldStatus := range oldPod.Status.ContainerStatuses {
 diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
 index 8c3cb87b82a..46d0768fdc0 100644
 --- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
