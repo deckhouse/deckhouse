@@ -75,11 +75,11 @@ Added kernel verifer statistics in logs and prometeus metric as max bpf program 
 
 ## 015-cleanup-conntrack-endpoints.patch
 
-Add new cleanup for vm pods
+Add new conntrack cleanup logic for vm pods
 
 ## 016-add-import-export-conntrack-http-endpoints.patch
 
-Add import/export conntrack http endpoints
+Add import/export conntrack http endpoints. See usage example here modules/021-cni-cilium/docs/internal/DVP_INTEGRATION.md
 
 ## 017-debug.patch
 
