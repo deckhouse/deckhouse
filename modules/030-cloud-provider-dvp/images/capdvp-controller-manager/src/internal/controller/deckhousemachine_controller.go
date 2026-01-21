@@ -465,9 +465,6 @@ func (r *DeckhouseMachineReconciler) createVM(
 =======
 	var createdAdditionalDisksCount int
 
-	diskLabels := map[string]string{
-		"dvp.deckhouse.io/hostname": dvpMachine.Name,
-	}
 	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
 		r.ClusterUUID,
@@ -482,6 +479,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 				Name: dvpMachine.Spec.BootDiskImageRef.Name,
 			},
 		},
+=======
+		nil,
 	)
 	if err != nil {
 		logger.Info("Boot disk creation failed, cleaning up created resources", "error", err.Error())
@@ -524,6 +523,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 		"dvp.deckhouse.io/hostname": dvpMachine.Name,
 	}
 	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript, secretLabels); err != nil {
+=======
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript, nil); err != nil {
 		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
 		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdAdditionalDisksCount)
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
@@ -535,6 +536,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 	for i, d := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
 		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, r.ClusterUUID, dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
+=======
+		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, addDiskName, d.Size.Value(), d.StorageClass, nil)
 		if err != nil {
 			logger.Info("Additional disk creation failed, cleaning up created resources", "error", err.Error(), "diskName", addDiskName)
 			r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
