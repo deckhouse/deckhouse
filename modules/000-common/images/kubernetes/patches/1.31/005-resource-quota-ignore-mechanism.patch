@@ -265,3 +265,15 @@ index 8c3cb87b82a..1ec408f6772 100644
 +	LabelResourceQuotaDiscountMemory  = "resource-quota-overrides.deckhouse.io/discount-memory"
 +	LabelResourceQuotaCapMemory       = "resource-quota-overrides.deckhouse.io/cap-memory"
  )
++
++// ResourceQuotaLabels is a list of all resource quota labels.
++// This list is used to check if any of these labels have changed on a pod or PVC.
++var ResourceQuotaLabels = []string{
++	LabelResourceQuotaIgnore,
++	LabelResourceQuotaDiscountStorage,
++	LabelResourceQuotaCapStorage,
++	LabelResourceQuotaDiscountCPU,
++	LabelResourceQuotaCapCPU,
++	LabelResourceQuotaDiscountMemory,
++	LabelResourceQuotaCapMemory,
++}
