@@ -20,7 +20,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
+	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/name212/govalue"
@@ -39,6 +42,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
@@ -309,8 +313,23 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 		IsDebug:                    s.params.IsDebug,
 	})
 
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			state, stateErr := phases.ExtractDhctlState(cache.Global())
+			if stateErr != nil {
+				loggerFor.LogWarnLn(stateErr)
+				continue
+			}
+
+			loggerFor.LogWarnLn("STATE KEYS: " + fmt.Sprintf("%v", slices.Collect(maps.Keys(state))))
+		}
+
+	}()
+
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
 	state, stateErr := extractLastState()
+	loggerFor.LogWarnLn("state:" + string(state))
 	err = errors.Join(bootstrapErr, stateErr)
 
 	return &pb.BootstrapResult{State: string(state), Err: util.ErrToString(err)}
