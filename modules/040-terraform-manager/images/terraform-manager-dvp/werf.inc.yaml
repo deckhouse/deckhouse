@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "kubernetes") }}'
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/dvp
+- add: /{{ .ModulePath }}candi/cloud-providers/dvp/*
   to: /deckhouse/candi/cloud-providers/dvp
 import:
 - image: cloud-provider-dvp/terraform-manager-dvp
