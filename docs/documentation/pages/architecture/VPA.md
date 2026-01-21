@@ -11,7 +11,7 @@ VPA can operate in two modes:
 
   - **InPlaceOrRecreate** (the default in Kubernetes starting from version 1.33): VPA attempts to update resources without recreating Pods. If in-place resource updates are not possible, VPA falls back to behavior similar to the **Recreate** mode: the Pod for which the resources cannot be updated is evicted, and the controller creates a new Pod with updated resources.
 
-  > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
+    > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
   
   - **Auto** (the default in Kubernetes versions earlier than 1.33): VPA changes resource requests without recreating Pods but behaves the same as **Recreate** and restarts the Pod when necessary. This is a deprecated operating mode that will no longer be supported in future DKP versions.
 

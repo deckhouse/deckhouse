@@ -13,7 +13,7 @@ VPA может работать в двух режимах:
 
   - **InPlaceOrRecreate** (по умолчанию в Kubernetes, начиная с версии 1.33) — VPA пытается изменить ресурсы без пересоздания подов. Если обновить ресурсы «на месте» (in-place) невозможно, VPA переходит к схеме, аналогичной режиму **Recreate**: под, для которого невозможно обновить ресурсы, вытесняется, и вместо него контроллер создает новый под с обновленными ресурсами.
 
-  > Чтобы использовать режим **InPlaceOrRecreate** в Kubernetes до версии 1.33, включите экспериментальную функцию (feature gate) `InPlacePodVerticalScaling` в [настройках модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
+    > Чтобы использовать режим **InPlaceOrRecreate** в Kubernetes до версии 1.33, включите экспериментальную функцию (feature gate) `InPlacePodVerticalScaling` в [настройках модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
 
   - **Auto** (по умолчанию в Kubernetes до версии 1.33) — VPA изменяет ресурсы без пересоздания подов, но при необходимости действует аналогично режиму **Recreate** и перезапускает под. Это устаревший режим, и его поддержка будет прекращена в будущих версиях DKP.
 
