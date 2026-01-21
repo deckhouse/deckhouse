@@ -20,12 +20,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -33,6 +35,7 @@ import (
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	capi "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/clusterapi"
 	mcmv1alpha1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	d8v1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
@@ -124,6 +127,23 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 		lastUpdated = *machine.Status.LastUpdated
 	}
 
+	var nodeDrainStartTime *metav1.Time
+	if machine.Status.Deletion != nil {
+		nodeDrainStartTime = machine.Status.Deletion.NodeDrainStartTime
+	}
+
+	conditions := capiMachineConditions(&machine)
+	errorInfo := capiMachineErrorInfo(&machine)
+	var lastOperation *mcmv1alpha1.LastOperation
+	if errorInfo != nil {
+		lastOperation = &mcmv1alpha1.LastOperation{
+			Description:    errorInfo.Description,
+			LastUpdateTime: errorInfo.LastUpdateTime,
+			State:          mcmv1alpha1.MachineStateFailed,
+			Type:           mcmv1alpha1.MachineOperationHealthCheck,
+		}
+	}
+
 	return &machineForInstance{
 		APIVersion: machine.APIVersion,
 		Kind:       machine.Kind,
@@ -134,7 +154,12 @@ func instanceClusterAPIMachineFilter(obj *unstructured.Unstructured) (go_hook.Fi
 			Phase:          mcmv1alpha1.MachinePhase(machine.Status.Phase),
 			LastUpdateTime: lastUpdated,
 		},
-		DeletionTimestamp: machine.GetDeletionTimestamp(),
+		IsCAPI:             true,
+		Conditions:         conditions,
+		NodeDrainStartTime: nodeDrainStartTime,
+		LastOperation:      lastOperation,
+		DeletionTimestamp:  machine.GetDeletionTimestamp(),
+		ErrorInfo:          errorInfo,
 	}, nil
 }
 
@@ -146,14 +171,15 @@ var (
 	}
 )
 
-func newDrainingAnnotationPatch() map[string]interface{} {
-	return map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
-				"update.node.deckhouse.io/draining": "instance-deletion",
-			},
-		},
-	}
+var capiMachineConditionPriority = map[capi.ConditionType]int{
+	capi.InfrastructureReadyCondition:             0,
+	capi.BootstrapReadyCondition:                  1,
+	capi.ReadyCondition:                           2,
+	capi.MachineNodeHealthyCondition:              3,
+	capi.DrainingSucceededCondition:               4,
+	capi.VolumeDetachSucceededCondition:           5,
+	capi.PreDrainDeleteHookSucceededCondition:     6,
+	capi.PreTerminateDeleteHookSucceededCondition: 7,
 }
 
 func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -249,23 +275,6 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
-				// Set draining annotation on the node when Instance is being deleted
-				nodeName := machine.NodeName
-				if nodeName == "" {
-					// Try to get node name from Instance status as fallback
-					nodeName = ic.Status.NodeRef.Name
-				}
-				if nodeName != "" {
-					input.Logger.Info("Setting draining annotation on node due to Instance deletion",
-						slog.String("instance", ic.Name),
-						slog.String("node", nodeName))
-					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
-				} else {
-					input.Logger.Warn("Cannot set draining annotation: node name is empty",
-						slog.String("instance", ic.Name),
-						slog.String("machine", machine.Name))
-				}
-
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
 					input.PatchCollector.DeleteInBackground("machine.sapcloud.io/v1alpha1", "Machine", "d8-cloud-instance-manager", machine.Name)
@@ -295,23 +304,6 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
-				// Set draining annotation on the node when Instance is being deleted
-				nodeName := machine.NodeName
-				if nodeName == "" {
-					// Try to get node name from Instance status as fallback
-					nodeName = ic.Status.NodeRef.Name
-				}
-				if nodeName != "" {
-					input.Logger.Info("Setting draining annotation on node due to Instance deletion",
-						slog.String("instance", ic.Name),
-						slog.String("node", nodeName))
-					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
-				} else {
-					input.Logger.Warn("Cannot set draining annotation: node name is empty",
-						slog.String("instance", ic.Name),
-						slog.String("machine", machine.Name))
-				}
-
 				if machine.DeletionTimestamp == nil || machine.DeletionTimestamp.IsZero() {
 					// delete in background, because machine has finalizer
 					input.PatchCollector.DeleteInBackground("cluster.x-k8s.io/v1beta1", "Machine", "d8-cloud-instance-manager", machine.Name)
@@ -334,19 +326,6 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 		_, clusterAPIMachineExists := clusterAPIMachines[ic.Name]
 
 		if !machineExists && !clusterAPIMachineExists {
-			if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
-				nodeName := ic.Status.NodeRef.Name
-				if nodeName != "" {
-					input.Logger.Info("Setting draining annotation on node due to Instance deletion (no machine found)",
-						slog.String("instance", ic.Name),
-						slog.String("node", nodeName))
-					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
-				} else {
-					input.Logger.Warn("Cannot set draining annotation: node name is empty in Instance status",
-						slog.String("instance", ic.Name))
-				}
-			}
-
 			input.PatchCollector.PatchWithMerge(deleteFinalizersPatch, "deckhouse.io/v1alpha1", "Instance", "", ic.Name)
 
 			ds := ic.DeletionTimestamp
@@ -369,6 +348,13 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 			State:          d8v1alpha1.State(machine.LastOperation.State),
 			Type:           d8v1alpha1.OperationType(machine.LastOperation.Type),
 		}
+	}
+
+	phase := d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase)
+	lastUpdateTime := machine.CurrentStatus.LastUpdateTime
+	if machine.ErrorInfo != nil && !isFailurePhase(phase) {
+		phase = d8v1alpha1.InstanceFailed
+		lastUpdateTime = machine.ErrorInfo.LastUpdateTime
 	}
 
 	return &d8v1alpha1.Instance{
@@ -411,8 +397,8 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 				Namespace:  "d8-cloud-instance-manager",
 			},
 			CurrentStatus: d8v1alpha1.CurrentStatus{
-				Phase:          d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase),
-				LastUpdateTime: machine.CurrentStatus.LastUpdateTime,
+				Phase:          phase,
+				LastUpdateTime: lastUpdateTime,
 			},
 			LastOperation: lastOperation,
 		},
@@ -443,10 +429,11 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 		status["bootstrapStatus"] = nil
 	}
 
-	if string(ic.Status.CurrentStatus.Phase) != string(machine.CurrentStatus.Phase) {
+	desiredPhase, desiredPhaseTime := resolveInstancePhase(ic, machine)
+	if string(ic.Status.CurrentStatus.Phase) != string(desiredPhase) {
 		status["currentStatus"] = map[string]interface{}{
-			"phase":          string(machine.CurrentStatus.Phase),
-			"lastUpdateTime": machine.CurrentStatus.LastUpdateTime.Format(time.RFC3339),
+			"phase":          string(desiredPhase),
+			"lastUpdateTime": desiredPhaseTime.Format(time.RFC3339),
 		}
 	}
 
@@ -490,15 +477,228 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 	return status
 }
 
+func resolveInstancePhase(ic *instance, machine *machineForInstance) (d8v1alpha1.InstancePhase, metav1.Time) {
+	phase := d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase)
+	lastUpdateTime := machine.CurrentStatus.LastUpdateTime
+
+	deleting := ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero()
+	if deleting {
+		if machine.IsCAPI {
+			draining, drainTime := isCAPIDraining(machine)
+			if draining {
+				if drainTime != nil {
+					return d8v1alpha1.InstanceDraining, *drainTime
+				}
+				return d8v1alpha1.InstanceDraining, metav1.NewTime(time.Now().UTC())
+			}
+		} else if isMCMDraining(machine) {
+			if machine.LastOperation != nil {
+				return d8v1alpha1.InstanceDraining, machine.LastOperation.LastUpdateTime
+			}
+			return d8v1alpha1.InstanceDraining, metav1.NewTime(time.Now().UTC())
+		}
+		if !isDeletionPhase(phase) {
+			return d8v1alpha1.InstanceTerminating, metav1.NewTime(time.Now().UTC())
+		}
+		return phase, lastUpdateTime
+	}
+
+	if machine.ErrorInfo != nil && !isFailurePhase(phase) {
+		return d8v1alpha1.InstanceFailed, machine.ErrorInfo.LastUpdateTime
+	}
+
+	return phase, lastUpdateTime
+}
+
+func isDeletionPhase(phase d8v1alpha1.InstancePhase) bool {
+	if phase == d8v1alpha1.InstanceTerminating {
+		return true
+	}
+
+	switch string(phase) {
+	case "Deleting", "Deleted":
+		return true
+	default:
+		return false
+	}
+}
+
+func isFailurePhase(phase d8v1alpha1.InstancePhase) bool {
+	return phase == d8v1alpha1.InstanceFailed || phase == d8v1alpha1.InstanceCrashLoopBackOff
+}
+
+func isCAPIDraining(machine *machineForInstance) (bool, *metav1.Time) {
+	if machine == nil || !machine.IsCAPI {
+		return false, nil
+	}
+
+	if found, draining, ts := capiDrainStatusFromCondition(machine.Conditions); found {
+		return draining, ts
+	}
+
+	if cond := findCAPIConditionByPredicate(machine.Conditions, isCAPIConditionDraining); cond != nil {
+		return true, &cond.LastTransitionTime
+	}
+
+	if machine.NodeDrainStartTime != nil {
+		return true, machine.NodeDrainStartTime
+	}
+
+	return false, nil
+}
+
+func isMCMDraining(machine *machineForInstance) bool {
+	// TODO(n-mcm-draining): implement MCM draining detection when requirements are clarified.
+	return false
+}
+
+func capiDrainStatusFromCondition(conditions capi.Conditions) (bool, bool, *metav1.Time) {
+	for i := range conditions {
+		cond := conditions[i]
+		if cond.Type != capi.DrainingSucceededCondition {
+			continue
+		}
+
+		switch cond.Status {
+		case corev1.ConditionTrue:
+			return true, false, &cond.LastTransitionTime
+		case corev1.ConditionFalse, corev1.ConditionUnknown:
+			return true, true, &cond.LastTransitionTime
+		default:
+			return true, true, &cond.LastTransitionTime
+		}
+	}
+
+	return false, false, nil
+}
+
+func findCAPIConditionByPredicate(conditions capi.Conditions, predicate func(capi.Condition) bool) *capi.Condition {
+	for i := range conditions {
+		cond := conditions[i]
+		if predicate(cond) {
+			return &cond
+		}
+	}
+	return nil
+}
+
+func isCAPIConditionDraining(cond capi.Condition) bool {
+	if cond.Reason == capi.DrainingReason || cond.Reason == capi.DrainingFailedReason {
+		return true
+	}
+	if strings.HasPrefix(cond.Reason, capi.DrainingReason) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(cond.Message), "drain")
+}
+
+func capiMachineErrorInfo(machine *clusterapi.Machine) *machineErrorInfo {
+	if machine == nil {
+		return nil
+	}
+
+	if cond := selectCAPIErrorCondition(capiMachineConditions(machine)); cond != nil {
+		return &machineErrorInfo{
+			Description:    formatCAPIConditionDescription(*cond),
+			LastUpdateTime: cond.LastTransitionTime,
+		}
+	}
+
+	description := formatCAPIFailureDescription(machine.Status.FailureReason, machine.Status.FailureMessage)
+	if description == "" {
+		return nil
+	}
+
+	lastUpdateTime := metav1.NewTime(time.Now().UTC())
+	if machine.Status.LastUpdated != nil {
+		lastUpdateTime = *machine.Status.LastUpdated
+	}
+
+	return &machineErrorInfo{
+		Description:    description,
+		LastUpdateTime: lastUpdateTime,
+	}
+}
+
+func capiMachineConditions(machine *clusterapi.Machine) capi.Conditions {
+	if machine == nil {
+		return nil
+	}
+
+	conditions := make(capi.Conditions, 0, len(machine.Status.Conditions))
+	conditions = append(conditions, machine.Status.Conditions...)
+	if machine.Status.Deprecated != nil && machine.Status.Deprecated.V1Beta1 != nil {
+		conditions = append(conditions, machine.Status.Deprecated.V1Beta1.Conditions...)
+	}
+
+	return conditions
+}
+
+func selectCAPIErrorCondition(conditions capi.Conditions) *capi.Condition {
+	var selected *capi.Condition
+	bestPriority := 1000
+
+	for i := range conditions {
+		cond := conditions[i]
+		if cond.Status != corev1.ConditionFalse {
+			continue
+		}
+		if cond.Severity != capi.ConditionSeverityError {
+			continue
+		}
+
+		priority, ok := capiMachineConditionPriority[cond.Type]
+		if !ok {
+			priority = 100
+		}
+		if selected == nil || priority < bestPriority {
+			current := cond
+			selected = &current
+			bestPriority = priority
+		}
+	}
+
+	return selected
+}
+
+func formatCAPIConditionDescription(cond capi.Condition) string {
+	return joinNonEmpty(string(cond.Type), cond.Reason, cond.Message)
+}
+
+func formatCAPIFailureDescription(reason, message *string) string {
+	return joinNonEmpty(derefString(reason), derefString(message))
+}
+
+func joinNonEmpty(parts ...string) string {
+	nonEmpty := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if part != "" {
+			nonEmpty = append(nonEmpty, part)
+		}
+	}
+	return strings.Join(nonEmpty, ": ")
+}
+
+func derefString(value *string) string {
+	if value == nil {
+		return ""
+	}
+	return *value
+}
+
 type machineForInstance struct {
-	APIVersion        string
-	Kind              string
-	NodeGroup         string
-	NodeName          string
-	Name              string
-	CurrentStatus     mcmv1alpha1.CurrentStatus
-	LastOperation     *mcmv1alpha1.LastOperation
-	DeletionTimestamp *metav1.Time
+	APIVersion         string
+	Kind               string
+	NodeGroup          string
+	NodeName           string
+	Name               string
+	CurrentStatus      mcmv1alpha1.CurrentStatus
+	LastOperation      *mcmv1alpha1.LastOperation
+	DeletionTimestamp  *metav1.Time
+	IsCAPI             bool
+	Conditions         capi.Conditions
+	NodeDrainStartTime *metav1.Time
+	ErrorInfo          *machineErrorInfo
 }
 
 type nodeGroupForInstance struct {
@@ -511,4 +711,9 @@ type instance struct {
 	Name              string
 	DeletionTimestamp *metav1.Time
 	Status            d8v1alpha1.InstanceStatus
+}
+
+type machineErrorInfo struct {
+	Description    string
+	LastUpdateTime metav1.Time
 }

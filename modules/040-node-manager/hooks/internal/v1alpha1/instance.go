@@ -135,6 +135,9 @@ const (
 	// InstanceRunning means node is ready and running successfully
 	InstanceRunning InstancePhase = "Running"
 
+	// InstanceDraining means node is being drained before deletion
+	InstanceDraining InstancePhase = "Draining"
+
 	// InstanceTerminating means node is terminating
 	InstanceTerminating InstancePhase = "Terminating"
 

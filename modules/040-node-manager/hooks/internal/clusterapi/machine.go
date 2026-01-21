@@ -19,6 +19,8 @@ package clusterapi
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	capi "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 )
 
 type Machine struct {
@@ -34,6 +36,27 @@ type MachineSpec struct{}
 type MachineStatus struct {
 	NodeRef *corev1.ObjectReference `json:"nodeRef,omitempty"`
 
-	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
-	Phase       string       `json:"phase,omitempty"`
+	LastUpdated *metav1.Time             `json:"lastUpdated,omitempty"`
+	Phase       string                   `json:"phase,omitempty"`
+	Deletion    *MachineDeletionStatus   `json:"deletion,omitempty"`
+	Deprecated  *MachineStatusDeprecated `json:"deprecated,omitempty"`
+	// FailureReason will be set in the event that there is a terminal problem reconciling the Machine.
+	FailureReason *string `json:"failureReason,omitempty"`
+	// FailureMessage will be set in the event that there is a terminal problem reconciling the Machine.
+	FailureMessage *string `json:"failureMessage,omitempty"`
+	// Conditions defines current service state of the Machine.
+	Conditions capi.Conditions `json:"conditions,omitempty"`
+}
+
+type MachineDeletionStatus struct {
+	NodeDrainStartTime               *metav1.Time `json:"nodeDrainStartTime,omitempty"`
+	WaitForNodeVolumeDetachStartTime *metav1.Time `json:"waitForNodeVolumeDetachStartTime,omitempty"`
+}
+
+type MachineStatusDeprecated struct {
+	V1Beta1 *MachineStatusDeprecatedV1Beta1 `json:"v1beta1,omitempty"`
+}
+
+type MachineStatusDeprecatedV1Beta1 struct {
+	Conditions capi.Conditions `json:"conditions,omitempty"`
 }
