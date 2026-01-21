@@ -268,6 +268,8 @@ metallb:
 
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
+   > Metallb балансировщики должны размещаться на тех же узлах, что и ingress-контроллеры. В [типовых сценариях развертывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этого используются frontend-узлы (для развертывания ingress-контроллеров и Metallb балансировщиков на frontend-узлах используйте в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`).
+
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
@@ -278,7 +280,12 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # Cелектор узлов-балансировщиков.
+       node-role.deckhouse.io/frontend: "" # Селектор узлов-балансировщиков.
+     tolerations:
+          - effect: NoExecute
+            key: dedicated.deckhouse.io
+            value: frontend
+            operator: Equal
      type: L2
    ```
 
@@ -297,7 +304,16 @@ metallb:
        annotations:
          # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+     nodeSelector:
+       node-role.deckhouse.io/frontend: ""
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
    ```
+
+   > При создании ingress-контроллера также можно указать определенные IP-адреса из пула, которые будут ему присвоены. Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. При этом также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`). [Пример использования аннотаций](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула) для присвоения сервису определенных адресов из пула.
 
 Платформа создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
 
