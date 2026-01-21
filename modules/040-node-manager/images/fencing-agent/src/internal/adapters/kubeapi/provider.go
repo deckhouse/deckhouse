@@ -140,3 +140,21 @@ func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
 		slog.String("label", key))
 	return nil
 }
+
+
+func (p *Provider) GetCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", nodeName, err)
+	}
+
+	for _, addr := range node.Status.Addresses {
+		if addr.Type == "InternalIP" {
+
+			return addr.Address, nil
+		}
+	}
+	return "", fmt.Errorf("node %s has no InternalIP address", nodeName)
+}
