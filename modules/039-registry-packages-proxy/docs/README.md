@@ -13,7 +13,7 @@ The module deploys a highly-available proxy service that:
 - Listens on port `4219` (HTTPS) on each master node's IP address.
 - Provides a `/package` endpoint for retrieving registry packages by digest.
 - Implements local caching of retrieved packages (up to 1 GB) to reduce network traffic and improve performance.
-- Watches ModuleSource custom resources to obtain registry credentials for different repositories.
+- Watches [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) custom resources to obtain registry credentials for different repositories.
 - Uses `kube-rbac-proxy` to secure access to the proxy and metrics endpoints.
 
 ## Architecture
@@ -23,7 +23,7 @@ The proxy service consists of two containers:
 1. **registry-packages-proxy**: The main proxy application that:
    - Fetches packages from remote registries using digests.
    - Caches packages locally in an ephemeral volume (1 GB max).
-   - Supports authentication to registries via credentials from `ModuleSource` resources.
+   - Supports authentication to registries via credentials from [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resources.
    - Provides health checks and Prometheus metrics.
    - Listens on `127.0.0.1:5080` (HTTP, internal).
 
@@ -41,7 +41,7 @@ When a component requests a package:
 1. The proxy checks its local cache for the requested digest.
 1. If cached, the package is served directly from cache.
 1. If not cached:
-   - The proxy fetches credentials for the specified repository from watched ModuleSource resources.
+   - The proxy fetches credentials for the specified repository from watched [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resources.
    - The package is retrieved from the remote registry.
    - The package is streamed to the client while simultaneously being cached for future requests.
 1. Responses include appropriate HTTP headers for caching (`Cache-Control`, `ETag`, `Content-Length`).
