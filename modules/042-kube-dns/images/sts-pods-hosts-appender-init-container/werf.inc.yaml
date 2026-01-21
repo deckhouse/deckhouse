@@ -27,7 +27,10 @@ shell:
     - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd src/
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go`) | indent 6 }}
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o render-etc-hosts-with-cluster-domain-aliases main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless

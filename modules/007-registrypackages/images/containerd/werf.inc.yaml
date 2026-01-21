@@ -233,7 +233,10 @@ shell:
   - cd /src
   - go mod download
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go`) | indent 4 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-linkmode external -extldflags '-static'" -tags netgo -o /pidumount main.go` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - strip /pidumount
   - chmod 0700 /pidumount
   {{- end }}
