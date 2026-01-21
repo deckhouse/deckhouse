@@ -12,6 +12,11 @@ The internal registry allows for optimizing the downloading and storage of image
 The module can operate in the following modes:
 
 - `Direct` — enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
+
+- `Proxy` - using an internal caching proxy registry, with the registry running on control-plane (master) nodes. This mode reduces the number of requests to the external registry by caching images. Cached data is stored on the control-plane (master) nodes. Access to the internal registry is via the fixed address `registry.d8-system.svc:5001/system/deckhouse`, similar to the `Direct` mode. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
+
+- `Local` - using a local internal registry, with the registry running on control-plane (master) nodes. This mode allows the cluster to operate in an isolated environment. All data is stored on the control-plane (master) nodes. Access to the internal registry is via the fixed address `registry.d8-system.svc:5001/system/deckhouse`, similar to the `Direct` and `Proxy` modes. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic — see the [usage examples](examples.html) for more information.
+
 - `Unmanaged` — operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
   - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
@@ -23,9 +28,8 @@ The `registry` module has a number of limitations and features related to instal
 
 ### Cluster installation limitations
 
-DKP cluster bootstrap is only supported in non-configurable `Unmanaged` mode. Registry settings during bootstrap are specified through [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
+- DKP cluster bootstrap is only supported in the `Direct` and `Unmanaged` modes (`Local` and `Proxy` modes are not supported). Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](../deckhouse/configuration.html#parameters-registry).
+- To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Operating conditions restrictions
 
@@ -33,13 +37,16 @@ The module works under the following conditions:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
+- The `Local` and `Proxy` modes are only supported on static clusters.
 
 ### Mode switching restrictions
 
 Mode switching restrictions are as follows:
 
+- Changing registry parameters and switching modes is only available after the bootstrap phase is fully complete.
 - For the first switch, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](./faq.html) section.
 - Switching to the non-configurable `Unmanaged` mode is only available from the `Unmanaged` mode. For more details, see the [Registry Module: FAQ](./faq.html) section.
+- Switching between `Local` and `Proxy` modes is only possible via the intermediate `Direct` or `Unmanaged` modes. Example switching sequence: `Local` → `Direct` → `Proxy`.
 
 ## Direct Mode Architecture
 
@@ -52,17 +59,30 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 <!--- Source: mermaid code from docs/internal/DIRECT.md --->
 ![direct](images/direct-en.png)
 
-<!-- ### Proxy Mode
-This mode allows the registry to act as an intermediate proxy server between the client and the remote registry, optimizing access to frequently used images and reducing network load.
-The caching proxy registry runs as static pods on control plane nodes. To ensure high availability, a load balancer is deployed on each cluster node.
-Registry access from the CRI is performed through the load balancer, with the corresponding configuration set in containerd.
-For components that access the registry directly, such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others, requests will also go through the caching proxy registry.
--->
+## Proxy Mode Architecture
 
-<!-- ### Local Mode
-This mode enables the creation of a local registry copy inside the cluster. Images from the remote registry are fully replicated to local storage.
-Operation is similar to the caching proxy. The local registry also runs as static pods on control plane nodes. A per-node load balancer is used to ensure availability.
-CRI access to the local registry is set up via the load balancer and configured in containerd.
-Components that access the registry directly, such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others, will go to the local registry.
-Populating the local registry is handled using the d8 tool.
--->
+The `Proxy` mode allows the registry to act as an intermediate proxy server between the client and the remote registry.
+
+The caching proxy registry is launched as static pods on control-plane (master) nodes. Cached data is stored on the control-plane (master) nodes in the `/opt/deckhouse/registry` directory.
+
+To ensure high availability of the caching proxy registry, a load balancer is deployed on each cluster node. Access to the proxy registry from CRI goes through this load balancer. The configuration for accessing the load balancer is set in the `containerd` configuration.
+
+For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go through the caching proxy registry.
+
+<!--- Source: mermaid code from docs/internal/PROXY.md --->
+![direct](images/proxy-en.png)
+
+## Local Mode Architecture
+
+The `Local` mode allows creating a local copy of the registry inside the cluster. Images from the remote registry are fully copied to local storage and synchronized between replicas of the local registry.
+
+The operation of the local registry is identical to that of the caching proxy registry. The local registry is launched as static pods on control-plane (master) nodes. Registry data is stored on the control-plane (master) nodes in the `/opt/deckhouse/registry` directory.
+
+To ensure high availability of the local registry, a load balancer is deployed on each cluster node. Access to the local registry from CRI goes through this load balancer. The configuration for accessing the load balancer is set in the `containerd` configuration.
+
+For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go to the local registry.
+
+The local registry is populated using the `d8` tool with the `d8 mirror push/pull` commands. For more details, see the [«Registry Module: Usage Examples»](examples.html) section.
+
+<!--- Source: mermaid code from docs/internal/LOCAL.md --->
+![direct](images/local-en.png)
