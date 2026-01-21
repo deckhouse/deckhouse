@@ -85,7 +85,6 @@ This approach means:
 
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
-   > Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -97,12 +96,7 @@ This approach means:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       node-role.kubernetes.io/loadbalancer: "" # Load balancer node selector.
      type: L2
    ```
 
@@ -129,7 +123,7 @@ This approach means:
      ```
 
    - By assigning specific IP addresses from the pool to the service:
-     > To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. The annotation `network.deckhouse.io/l2-load-balancer-external-ips-count` must also be present, specifying the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+     > To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
 
      ```yaml
      apiVersion: v1

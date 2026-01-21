@@ -84,7 +84,6 @@ lang: ru
 
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
-   > Metallb балансировщики должны размещаться на тех же узлах, что и ingress-контроллеры. В [типовых сценариях развертывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этого используются frontend-узлы (для развертывания ingress-контроллеров и Metallb балансировщиков на frontend-узлах используйте в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`).
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -96,12 +95,7 @@ lang: ru
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       node-role.kubernetes.io/loadbalancer: "" # Селектор узлов-балансировщиков.
      type: L2
    ```
 
@@ -128,7 +122,7 @@ lang: ru
      ```
 
    - С присвоением сервису определенных IP-адресов из пула:
-     > Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. При этом также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
+     > Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
 
      ```yaml
      apiVersion: v1

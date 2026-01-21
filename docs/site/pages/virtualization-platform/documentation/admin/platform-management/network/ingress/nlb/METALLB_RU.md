@@ -83,8 +83,6 @@ lang: ru
 
 1. Создайте ресурс MetalLoadBalancerClass:
 
-   > Мы рекомендуем размещать Metallb балансировщики на frontend-узлах. Подробнее о типах узлов и сценариях развертывания — в разделе [«Подбор ресурсов для кластера на bare metal»](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания).
-
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
@@ -95,12 +93,7 @@ lang: ru
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       node-role.kubernetes.io/loadbalancer: "" # Селектор узлов-балансировщиков.
      type: L2
    ```
 
@@ -127,7 +120,7 @@ lang: ru
      ```
 
    - С присвоением сервису определенных IP-адресов из пула:
-     > Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию network.deckhouse.io/load-balancer-ips. При этом также должна присутствовать аннотация network.deckhouse.io/l2-load-balancer-external-ips-count, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в network.deckhouse.io/load-balancer-ips).
+     > Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию network.deckhouse.io/load-balancer-ips. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
 
      ```yaml
      apiVersion: v1

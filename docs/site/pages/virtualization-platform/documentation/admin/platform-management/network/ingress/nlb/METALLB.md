@@ -84,7 +84,6 @@ This approach means:
 
 1. Create a MetalLoadBalancerClass resource:
 
-   > We recommend placing Metallb balancers on frontend nodes. For more information about node types and deployment scenarios, see the section [Picking resources for a bare metal cluster](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios).
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -96,12 +95,7 @@ This approach means:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       node-role.kubernetes.io/loadbalancer: "" # Load balancer node selector.
      type: L2
    ```
 
@@ -128,7 +122,7 @@ This approach means:
      ```
 
    - By assigning specific IP addresses from the pool to the service:
-     > To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. The annotation `network.deckhouse.io/l2-load-balancer-external-ips-count` must also be present, specifying the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+     > To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
 
      ```yaml
      apiVersion: v1
