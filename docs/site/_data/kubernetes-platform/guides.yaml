@@ -30,6 +30,7 @@
     ru: Руководство по обновлению Deckhouse Kubernetes Platform в закрытом окружении
     en: A guide for updating Deckhouse Kubernetes Platform in an air-gapped environment
   tags:
+    - private environment
     - baremetal
     - production
 - name:
@@ -51,5 +52,4 @@
     ru: Руководство по установке Deckhouse Kubernetes Platform в закрытом окружении.
     en: A guide to installing the Deckhouse Kubernetes Platform in a closed environment.
   tags:
-    - production
     - private environment
