@@ -34,7 +34,6 @@ func main() {
 		close(sigChan)
 		logger.Info("Got a signal", slog.String("signal", s.String()))
 		cancel()
-		_ = os.Remove(config.GRPCAddress)
 	}()
 
 	application, err := app.NewApplication(ctx, logger, config)

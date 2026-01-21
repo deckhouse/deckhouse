@@ -1,10 +1,14 @@
 package memberlist
 
 import (
-	fencing_config "fencing-agent/internal/config"
+	"context"
+	fencingconfig "fencing-agent/internal/config"
 	"fencing-agent/internal/core/domain"
+	"fencing-agent/internal/lib/logger/sl"
+	"fmt"
 	"log/slog"
 	"sync/atomic"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/hashicorp/memberlist"
@@ -23,7 +27,7 @@ type Provider struct {
 	isAlone      atomic.Bool
 }
 
-func NewProvider(cfg fencing_config.MemberlistConfig, logger *log.Logger, eventHandler EventHandler, nodeIp string, nodeName string) (*Provider, error) {
+func NewProvider(cfg fencingconfig.MemberlistConfig, logger *log.Logger, eventHandler EventHandler, nodeIp string, nodeName string) (*Provider, error) {
 	config := createConfig(cfg, eventHandler, nodeIp, nodeName)
 	list, err := memberlist.Create(config)
 	if err != nil {
@@ -52,6 +56,42 @@ func (p *Provider) Start(peers []string) error {
 	return nil
 }
 
+func (p *Provider) Stop(ctx context.Context) error {
+	if p.isAlone.Load() {
+		p.logger.Debug("node was running alone, no cluster to leave")
+		return nil
+	}
+
+
+	done := make(chan error, 1)
+	go func() {
+		if err := p.list.Leave(3 * time.Second); err != nil {
+			done <- fmt.Errorf("error leaving memberlist: %w", err)
+			return
+		}
+		done <- nil
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			p.logger.Warn("memberlist leave failed, forcing shutdown", sl.Err(err))
+
+			if shutdownErr := p.list.Shutdown(); shutdownErr != nil {
+				return fmt.Errorf("memberlist shutdown failed: %w", shutdownErr)
+			}
+		}
+		p.logger.Info("memberlist leave gracefully")
+		return nil
+	case <-ctx.Done():
+		p.logger.Warn("memberlist leave timeout, forcing shutdown")
+		if err := p.list.Shutdown(); err != nil {
+			return fmt.Errorf("memberlist shutdown failed: %w", err)
+		}
+		return nil
+	}
+}
+
 func (p *Provider) GetMembers() []domain.Node {
 	members := p.list.Members()
 	nodes := make([]domain.Node, 0, len(members))
@@ -75,7 +115,7 @@ func (p *Provider) IsAlone() bool {
 }
 
 func createConfig(
-	cfg fencing_config.MemberlistConfig,
+	cfg fencingconfig.MemberlistConfig,
 	eventHandler EventHandler,
 	nodeIp string,
 	nodeName string) *memberlist.Config {

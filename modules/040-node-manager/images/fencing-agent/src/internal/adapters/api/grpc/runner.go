@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
@@ -20,6 +21,7 @@ type Runner struct {
 	grpcServer *grpc.Server
 	listener   net.Listener
 	socketPath string
+	cleanOnce  sync.Once
 }
 
 func NewRunner(socketPath string, logger *log.Logger, handler *Server, unaryLimiter *rate.Limiter, streamLimiter *rate.Limiter) (*Runner, error) {
@@ -45,6 +47,8 @@ func NewRunner(socketPath string, logger *log.Logger, handler *Server, unaryLimi
 		grpcServer: grpcServer,
 		listener:   listener,
 		socketPath: socketPath,
+		logger:     logger,
+		cleanOnce:  sync.Once{},
 	}, nil
 }
 
@@ -65,9 +69,11 @@ func (r *Runner) Shutdown(ctx context.Context) error {
 
 	select {
 	case <-done:
+		r.logger.Info("gRPC server shutdown complete")
 		return r.cleanSocket()
 
 	case <-ctx.Done():
+		r.logger.Warn("gRPC server shutdown exceeded, forced stop")
 		r.grpcServer.Stop()
 		_ = r.cleanSocket()
 		return fmt.Errorf("gRPC graceful shutdown timeout exceeded, forced stop")
@@ -75,10 +81,13 @@ func (r *Runner) Shutdown(ctx context.Context) error {
 }
 
 func (r *Runner) cleanSocket() error {
-	if err := os.RemoveAll(r.socketPath); err != nil {
-		return fmt.Errorf("failed to remove socket file: %w", err)
-	}
-	return nil
+	var cleanErr error
+	r.cleanOnce.Do(func() {
+		if err := os.RemoveAll(r.socketPath); err != nil {
+			cleanErr = fmt.Errorf("failed to remove socket file: %w", err)
+		}
+	})
+	return cleanErr
 }
 
 func UnaryRateLimiterInterceptor(l *rate.Limiter, logger *log.Logger) grpc.UnaryServerInterceptor {

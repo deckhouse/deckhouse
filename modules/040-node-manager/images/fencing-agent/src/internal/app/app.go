@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fencing-agent/internal/adapters/api/grpc"
+	"fencing-agent/internal/adapters/api/healthz"
 	"fencing-agent/internal/adapters/kubeapi"
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/memberlist/event_handler"
@@ -13,7 +14,6 @@ import (
 	"fencing-agent/internal/core/service"
 	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
-	"net/http"
 	"os"
 	"time"
 
@@ -41,7 +41,7 @@ type Application struct {
 	statusProvider *service.StatusProvider
 
 	grpcRunner    *grpc.Runner
-	healthzServer *http.Server
+	healthzServer *healthz.Server
 }
 
 func NewApplication(
@@ -91,10 +91,8 @@ func NewApplication(
 		return nil, fmt.Errorf("failed to create gRPC runner: %w", err)
 	}
 
-	var healthServer *http.Server
-	if config.HealthProbeBindAddress != "" {
-		healthServer = createHealthzServer(config.HealthProbeBindAddress)
-	}
+	healthServer := healthz.New(logger, config.HealthProbeBindAddress)
+
 	logger.Info("application components initialized")
 
 	return &Application{
@@ -112,10 +110,6 @@ func NewApplication(
 }
 
 func (a *Application) Run(ctx context.Context) error {
-	if a.healthzServer != nil {
-		go a.startHealthzServer()
-	}
-
 	peers, err := a.discoverPeersIps(ctx)
 	if err != nil {
 		return err
@@ -127,16 +121,23 @@ func (a *Application) Run(ctx context.Context) error {
 			if backoff > mx {
 				backoff = mx
 			}
-			a.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()))
-
-			time.Sleep(backoff)
 			select {
 			case <-ctx.Done():
+				a.logger.Debug("memberlist start aborted: context canceled")
 				return
 			default:
-				memberErr = a.membershipProvider.Start(peers)
+				a.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()))
+
+				select {
+				case <-ctx.Done():
+					a.logger.Debug("memberlist start aborted: context canceled")
+					return
+				case <-time.After(backoff):
+					memberErr = a.membershipProvider.Start(peers)
+				}
 			}
 		}
+		a.logger.Info("memberlist started successfully")
 	}()
 
 	go func() {
@@ -153,17 +154,21 @@ func (a *Application) Run(ctx context.Context) error {
 		}
 	}()
 
+	if a.healthzServer != nil {
+		go a.healthzServer.StartHealthzServer()
+	}
+
 	select {
 	case grpcErr := <-grpcErrChan:
 		return fmt.Errorf("gRPC server failed: %w", grpcErr)
 	case <-ctx.Done():
-		a.logger.Debug("context done, starting graceful shutdown")
-		return a.Stop()
+		a.logger.Debug("main context done, starting graceful shutdown")
+		return a.stop()
 	}
 }
 
-func (a *Application) Stop() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+func (a *Application) stop() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	a.logger.Debug("stopping health monitor")
@@ -176,15 +181,15 @@ func (a *Application) Stop() error {
 		a.logger.Error("failed to shutdown gRPC server", sl.Err(err))
 	}
 
-	if a.healthzServer != nil {
-		a.logger.Debug("shutting down healthz server")
-		if err := a.healthzServer.Shutdown(ctx); err != nil {
-			a.logger.Error("failed to shutdown healthz server", sl.Err(err))
-			return err
-		}
+	a.logger.Debug("shutting down healthz server")
+	if err := a.healthzServer.StopHealthzServer(ctx); err != nil {
+		a.logger.Error("failed to shutdown healthz server", sl.Err(err))
 	}
 
-	a.logger.Info("application stopped gracefully")
+	a.logger.Debug("shutting down memberlist")
+	if err := a.membershipProvider.Stop(ctx); err != nil {
+		a.logger.Error("failed to stop memberlist", sl.Err(err))
+	}
 	return nil
 }
 
@@ -207,20 +212,6 @@ func (a *Application) discoverPeersIps(ctx context.Context) ([]string, error) {
 	return peersIps, nil
 }
 
-func (a *Application) startHealthzServer() {
-	a.logger.Info("Stating healthz server", slog.String("bindAddress", a.config.HealthProbeBindAddress))
-
-	if err := a.healthzServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		a.logger.Error("Healthz server failed", sl.Err(err))
-	}
-}
-func createHealthzServer(bindAddress string) *http.Server {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-	return &http.Server{Addr: bindAddress, Handler: mux}
-}
 func getCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
