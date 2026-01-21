@@ -585,7 +585,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -697,7 +697,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1095,7 +1095,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1207,7 +1207,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1605,7 +1605,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -1717,7 +1717,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2115,7 +2115,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2227,7 +2227,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2625,7 +2625,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -2737,7 +2737,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3135,7 +3135,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3247,7 +3247,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3645,7 +3645,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -3757,7 +3757,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4155,7 +4155,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4267,7 +4267,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4665,7 +4665,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -4777,7 +4777,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5175,7 +5175,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5287,7 +5287,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5685,7 +5685,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -5797,7 +5797,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6195,7 +6195,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
@@ -6307,7 +6307,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
           LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
           LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56

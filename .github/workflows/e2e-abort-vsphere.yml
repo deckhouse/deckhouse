@@ -351,7 +351,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -682,7 +682,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1013,7 +1013,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1344,7 +1344,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -1675,7 +1675,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2006,7 +2006,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2337,7 +2337,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2668,7 +2668,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -2999,7 +2999,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3330,7 +3330,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3661,7 +3661,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
@@ -3992,7 +3992,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           SSH_MASTER_CONNECTION_STRING: ${{ github.event.inputs.ssh_master_connection_string }}
         # <template: e2e_run_template>
-          TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
           LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
           LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
           LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
