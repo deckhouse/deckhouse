@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --status-update-interval=5
         - --publish-service=d8-ingress-nginx/test-lbwpp-load-balancer
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
