@@ -1,12 +1,12 @@
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
-index 7c0176f604..9e746ae43c 100644
+index 7c0176f604..33388da9aa 100644
 --- a/bpf/bpf_host.c
 +++ b/bpf/bpf_host.c
 @@ -593,6 +593,75 @@ struct {
  	__uint(max_entries, 1);
  } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
  
-+#if 0
++#if 1
 +static __always_inline 
 +int make_icmp_responce_lb4_h(struct __ctx_buff *ctx,
 +					struct iphdr *ip4) {
@@ -84,45 +84,29 @@ index 7c0176f604..9e746ae43c 100644
  #endif
 -
 +	if(ip4->protocol == IPPROTO_ICMP ) {
-+		//int ret;
++		int ret;
 +		__be32 vip = bpf_htonl(0xc0a8c7c8);
 +		if ((ip4->daddr == vip || ip4->saddr == vip))
-+			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
-+        //ret = make_icmp_responce_lb4_h(ctx, ip4);
-+		//if (ret != CTX_ACT_OK)
-+		//	return ret;
++			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
++        ret = make_icmp_responce_lb4_h(ctx, ip4);
++		if (ret != CTX_ACT_OK)
++			return ret;
 +	}
  #ifdef ENABLE_NODEPORT
 +	
  	if (!from_host) {
  		if (!ctx_skip_nodeport(ctx)) {
  			bool __maybe_unused is_dsr = false;
-@@ -713,7 +791,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
- 
- 	if (!revalidate_data(ctx, &data, &data_end, &ip4))
- 		return DROP_INVALID;
--
-+	if(ip4->protocol == IPPROTO_ICMP ) {
-+		//int ret;
-+		__be32 vip = bpf_htonl(0xc0a8c7c8);
-+		if ((ip4->daddr == vip || ip4->saddr == vip))
-+			printk("MEG:3333 GOT A HANDLE IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
-+        /*ret = make_icmp_responce_lb4_h(ctx, ip4);
-+		if (ret != CTX_ACT_OK)
-+			return ret;*/
-+	}
- #ifdef ENABLE_HOST_FIREWALL
- 	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
- 
-@@ -1178,6 +1264,11 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+@@ -1178,6 +1256,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
  		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
  					      from_host);
  		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
-+		if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++		/*
++		if(ip4->protocol == IPPROTO_ICMP) {
 +			__be32 vip = bpf_htonl(0xc0a8c7c8);
 +			if ((ip4->daddr == vip || ip4->saddr == vip))
-+				printk("MEG:4444 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
-+		}
++				printk("MEG:4444 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
++		}*/
  
  # if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_MASQUERADE_IPV4)
  		if (from_host) {
