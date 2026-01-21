@@ -127,7 +127,7 @@ index 7c0176f604..9e746ae43c 100644
  # if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_MASQUERADE_IPV4)
  		if (from_host) {
 diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
-index 878185780a..8f3862d820 100644
+index 878185780a..ef36307c6d 100644
 --- a/bpf/bpf_lxc.c
 +++ b/bpf/bpf_lxc.c
 @@ -69,6 +69,77 @@
@@ -135,7 +135,7 @@ index 878185780a..8f3862d820 100644
  
  #ifdef ENABLE_IPV4
 +
-+#if 1
++#if 0
 +static __always_inline 
 +int make_icmp_responce_lb4_n(struct __ctx_buff *ctx,
 +					struct iphdr *ip4) {
@@ -208,7 +208,7 @@ index 878185780a..8f3862d820 100644
  static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *ip4,
  						       __s8 *ext_err)
  {
-@@ -81,10 +152,21 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+@@ -81,10 +152,22 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
  	__u32 cluster_id = 0;
  	int l4_off;
  	int ret = 0;
@@ -217,7 +217,7 @@ index 878185780a..8f3862d820 100644
  	has_l4_header = ipv4_has_l4_header(ip4);
  
  	ret = lb4_extract_tuple(ctx, ip4, ETH_HLEN, &l4_off, &tuple);
-+	
++	#if 0
 +	if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
 +		__be32 vip = bpf_htonl(0xc0a8c7c8);
 +		if ((ip4->daddr == vip || ip4->saddr == vip))
@@ -227,6 +227,7 @@ index 878185780a..8f3862d820 100644
 +			return ret;
 +		}
 +	}
++		#endif
 +
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO || ret == DROP_UNKNOWN_L4)
@@ -259,14 +260,14 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..2c5aca288a 100644
+index 0142716855..b8d6c1e195 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,75 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
-+#if 1
++#if 0
 +static __always_inline 
 +int make_icmp_responce_lb4(struct __ctx_buff *ctx,
 +					struct iphdr *ip4) {
@@ -347,7 +348,7 @@ index 0142716855..2c5aca288a 100644
  	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
-@@ -2714,9 +2783,17 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,9 +2783,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -356,12 +357,14 @@ index 0142716855..2c5aca288a 100644
  	svc = lb4_lookup_service(&key, false);
 +	
  	if (svc) {
++		#if 0
 +        if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
 +			__be32 vip = bpf_htonl(0xc0a8c7c8);
 +			if ((ip4->daddr == vip || ip4->saddr == vip))
 +				printk("MEG:2222 GOT A NODEPORT NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
 +        	return make_icmp_responce_lb4(ctx, ip4);
 +        }
++		#endif
 +
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
