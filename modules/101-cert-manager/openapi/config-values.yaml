@@ -176,12 +176,7 @@ properties:
       Settings for the `letsencrypt` ClusterIssuer.
     properties:
       resources:
-        oneOf:
-          - type: object
-          - type: boolean
-            enum:
-              - false          
-        default: false
+        type: object
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
           Set to `false` to avoid specifying resources.
@@ -194,11 +189,13 @@ properties:
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "32Mi"
             description: |
               Resource requests for the `letsencrypt` ClusterIssuer 
           limits:
@@ -209,15 +206,16 @@ properties:
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "50m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "64Mi"
             description: |
               Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).          
         x-examples:
-          - false
           - requests:
               cpu: "100m"
               memory: "128Mi"
@@ -230,12 +228,7 @@ properties:
       Settings for the `letsencrypt-staging` ClusterIssuer.
     properties:
       resources:
-        oneOf:
-          - type: object
-          - type: boolean
-            enum:
-              - false          
-        default: false
+        type: object
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
           Set to `false` to avoid specifying resources.
@@ -248,11 +241,13 @@ properties:
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "32Mi"
             description: |
               Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
           limits:
@@ -263,15 +258,16 @@ properties:
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
                 pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "50m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"          
+                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                default: "64Mi"
         x-examples:
-          - false
           - requests:
-              cpu: "50m"
+              cpu: "100m"
               memory: "64Mi"
             limits:
               cpu: "200m"

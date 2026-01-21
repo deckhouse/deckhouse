@@ -510,15 +510,6 @@ podAntiAffinity:
 			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").Exists()).To(BeFalse())
 
 		})
-		It("should not render resources when letsencrypt.resources is explicitly false", func() {
-			f.ValuesSet("certManager.letsencrypt.resources", false)
-			f.HelmRender()
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
-			Expect(issuer.Exists()).To(BeTrue())
-			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").Exists()).To(BeFalse())
-		})
 		It("should render resources when letsencrypt.resources is set", func() {
 			f.ValuesSetFromYaml("certManager.letsencrypt.resources", letsencryptResourcesValues)
 			f.HelmRender()
@@ -538,16 +529,6 @@ podAntiAffinity:
 			f.ValuesSetFromYaml("certManager", certManager)
 		})
 		It("should not render resources when letsencryptStaging.resources is not set (default)", func() {
-			f.HelmRender()
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
-			Expect(issuer.Exists()).To(BeTrue())
-			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").Exists()).To(BeFalse())
-
-		})
-		It("should not render resources when letsencryptStaging.resources is explicitly false", func() {
-			f.ValuesSet("certManager.letsencryptStaging.resources", false)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
