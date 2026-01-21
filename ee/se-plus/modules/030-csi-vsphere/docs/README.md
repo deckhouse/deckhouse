@@ -34,7 +34,7 @@ The CSI driver consists of components:
 
 ## Compatibility modes
 
-The module supports the following operational modes (the mode is set via the [compatibilityFlag](configuration.html#parameters-storageclass-compatibilityflag) parameter):
+The module supports the following operational modes (the mode is set via the [`compatibilityFlag`](configuration.html#parameters-storageclass-compatibilityflag) parameter):
 
 - **Default mode** (used by default, `compatibilityFlag` not set or empty):
   - uses the current vSphere CSI driver (`csi.vsphere.vmware.com`);

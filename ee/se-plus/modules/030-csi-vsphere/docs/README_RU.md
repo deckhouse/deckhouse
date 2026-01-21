@@ -34,7 +34,7 @@ CSI-драйвер состоит из следующих компонентов
 
 ## Режимы совместимости
 
-Модуль поддерживает следующие режимы работы (режим устанавливается через параметр [compatibilityFlag](configuration.html#parameters-storageclass-compatibilityflag)):
+Модуль поддерживает следующие режимы работы (режим устанавливается через параметр [`compatibilityFlag`](configuration.html#parameters-storageclass-compatibilityflag)):
 
 - **Режим по умолчанию** (используется по умолчанию, `compatibilityFlag` не установлен или пустой):
   - использует текущий CSI-драйвер vSphere (`csi.vsphere.vmware.com`),
@@ -62,7 +62,7 @@ CSI-драйвер состоит из следующих компонентов
 1. **Фильтрует исключенное хранилище** на основе конфигурации [storageClass.exclude](configuration.html#parameters-storageclass-exclude) (поддерживает regex-шаблоны).
 1. **Создает StorageClass'ы** с соответствующими параметрами:
    - `allowVolumeExpansion: true` (только Режим по умолчанию),
-   - `volumeBindingMode: WaitForFirstConsumer` — гарантирует создание томов в той же зоне, в которой создаются поды,
+   - `volumeBindingMode: WaitForFirstConsumer` — гарантирует создание томов в той же зоне, в которой создаются поды;
    - топологические ограничения, соответствующие регионам и зонам vSphere.
 
 ## Жизненный цикл томов

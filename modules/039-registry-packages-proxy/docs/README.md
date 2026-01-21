@@ -13,8 +13,8 @@ The module deploys a highly-available proxy service that:
 - Listens on port `4219` (HTTPS) on each master node's IP address.
 - Provides a `/package` endpoint for retrieving registry packages by digest.
 - Implements local caching of retrieved packages (up to 1 GB) to reduce network traffic and improve performance.
-- Watches `ModuleSource` custom resources to obtain registry credentials for different repositories.
-- Uses kube-rbac-proxy to secure access to the proxy and metrics endpoints.
+- Watches ModuleSource custom resources to obtain registry credentials for different repositories.
+- Uses `kube-rbac-proxy` to secure access to the proxy and metrics endpoints.
 
 ## Architecture
 
@@ -28,9 +28,9 @@ The proxy service consists of two containers:
    - Listens on `127.0.0.1:5080` (HTTP, internal).
 
 1. **kube-rbac-proxy**: Provides RBAC-based access control:
-   - Exposes the service on port `4219` (HTTPS)
-   - Secures `/metrics` endpoint with Kubernetes RBAC authorization
-   - Secures `/package` endpoint requiring appropriate permissions
+   - Exposes the service on port `4219` (HTTPS).
+   - Secures `/metrics` endpoint with Kubernetes RBAC authorization.
+   - Secures `/package` endpoint requiring appropriate permissions.
    - Allows unauthenticated access to `/healthz`
 
 ## Package retrieval flow
@@ -41,7 +41,7 @@ When a component requests a package:
 1. The proxy checks its local cache for the requested digest.
 1. If cached, the package is served directly from cache.
 1. If not cached:
-   - The proxy fetches credentials for the specified repository from watched `ModuleSource` resources.
+   - The proxy fetches credentials for the specified repository from watched ModuleSource resources.
    - The package is retrieved from the remote registry.
    - The package is streamed to the client while simultaneously being cached for future requests.
 1. Responses include appropriate HTTP headers for caching (`Cache-Control`, `ETag`, `Content-Length`).
