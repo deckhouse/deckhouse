@@ -75,13 +75,9 @@ properties:
         masterURI:
           type: string
           description: |
-            If you plan to use a TCP proxy, then you must configure a certificate on the API server's side for the TCP proxy address. Suppose your API servers use three different addresses (`192.168.0.10`, `192.168.0.11`, and `192.168.0.12`) while the client uses a TCP load balancer (say, `192.168.0.15`). In this case, you have to re-generate the API server certificates:
-            * edit `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config` and add `192.168.0.15` to `.apiServer.certSANs`;
-            * save the resulting config: `kubeadm config view > kubeadmconf.yaml`;
-            * delete old API server certificates: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
-            * reissue new certificates: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
-            * restart the API server's container: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * repeat this step for all master nodes.
+            If you plan to use a TCP proxy, you must configure a certificate for the TCP proxy address on the API server side.
+
+            For example, if the API server is available via three addresses (`192.168.0.10`, `192.168.0.11`, and `192.168.0.12`) while the client accesses the API server through a TCP load balancer (for example, `192.168.0.15`), you must add the TCP load balancer address to the [`apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) parameter in the `control-plane-manager` configuration.
         description:
           type: string
           description: |
