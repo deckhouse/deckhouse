@@ -102,6 +102,8 @@ This approach means:
 
 1. Create a Service resource with the annotation and name MetalLoadBalancerClass in one of the following ways:
 
+   > When creating a Service resource, you can omit the annotations `network.deckhouse.io/l2-load-balancer-external-ips-count` and `network.deckhouse.io/load-balancer-ips` from the examples below. In this case, the service will automatically be assigned 1 random address from the pool.
+
    - By assigning a specified number of IP addresses from the pool to the service:
 
      ```yaml

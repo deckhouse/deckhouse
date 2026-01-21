@@ -99,6 +99,8 @@ lang: ru
 
 1. Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass одним из следующих способов:
 
+   > При создании ресурса Service можно вообще не указывать аннотации `network.deckhouse.io/l2-load-balancer-external-ips-count` и `network.deckhouse.io/load-balancer-ips` из примеров ниже. В таком случае сервису автоматически выделится 1 случайный адрес из пула.
+
    - С присвоением сервису заданного количества IP-адресов из пула:
 
      ```yaml
