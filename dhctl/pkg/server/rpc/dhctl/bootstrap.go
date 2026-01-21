@@ -315,7 +315,11 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 
 	go func() {
 		for {
+			if ctx.Err() != nil {
+				return
+			}
 			time.Sleep(5 * time.Second)
+
 			state, stateErr := phases.ExtractDhctlState(cache.Global())
 			if stateErr != nil {
 				loggerFor.LogWarnLn(stateErr)
@@ -324,7 +328,6 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 
 			loggerFor.LogWarnLn("STATE KEYS: " + fmt.Sprintf("%v", slices.Collect(maps.Keys(state))))
 		}
-
 	}()
 
 	bootstrapErr := bootstrapper.Bootstrap(ctx)
