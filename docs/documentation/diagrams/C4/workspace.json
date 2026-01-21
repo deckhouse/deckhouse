@@ -1,0 +1,5348 @@
+{
+  "configuration" : {
+    "scope" : "SoftwareSystem"
+  },
+  "description" : "Description",
+  "documentation" : { },
+  "id" : 1,
+  "lastModifiedAgent" : "structurizr-ui",
+  "lastModifiedDate" : "2026-01-12T17:18:43Z",
+  "model" : {
+    "customElements" : [ {
+      "description" : "SMTP, PagerDuty, Slack, Telegram, Webhook",
+      "id" : "7",
+      "name" : "Получатели алертов",
+      "properties" : {
+        "structurizr.dsl.identifier" : "alert-receivers"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "OIDC, LDAP, GitLab, GitHub",
+      "id" : "8",
+      "name" : "Внешние провайдеры аутентификации",
+      "properties" : {
+        "structurizr.dsl.identifier" : "authn-providers"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "Let’s Encrypt, HashiCorp Vault, Venafi",
+      "id" : "9",
+      "name" : "Публичные удостоверяющие центры",
+      "properties" : {
+        "structurizr.dsl.identifier" : "cert-issuers"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "Публичные и частные облака, системы виртуализации",
+      "id" : "10",
+      "name" : "IaaS",
+      "properties" : {
+        "structurizr.dsl.identifier" : "iaas"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "Elasticsearch, Splunk, Logstash, KUMA",
+      "id" : "11",
+      "name" : "Внешние\nсистемы хранения логов и SIEM-системы",
+      "properties" : {
+        "structurizr.dsl.identifier" : "logging-external"
+      },
+      "tags" : "Element,External"
+    }, {
+      "id" : "12",
+      "name" : "Публичные серверы NTP",
+      "properties" : {
+        "structurizr.dsl.identifier" : "ntp-servers"
+      },
+      "tags" : "Element,External"
+    }, {
+      "id" : "13",
+      "name" : "Внешние\nContainer Registry",
+      "properties" : {
+        "structurizr.dsl.identifier" : "registry-external"
+      },
+      "tags" : "Element,External"
+    }, {
+      "id" : "14",
+      "name" : "Балансировщик нагрузки\n[может отсутствовать]",
+      "properties" : {
+        "structurizr.dsl.identifier" : "network-load-balancer"
+      },
+      "relationships" : [ {
+        "description" : "Балансирует HTTP/HTTPS запросы",
+        "destinationId" : "25",
+        "id" : "301",
+        "sourceId" : "14",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Балансирует HTTP/HTTPS запросы",
+        "destinationId" : "18",
+        "id" : "302",
+        "linkedRelationshipId" : "301",
+        "sourceId" : "14"
+      }, {
+        "description" : "Балансирует HTTP/HTTPS запросы",
+        "destinationId" : "120",
+        "id" : "305",
+        "sourceId" : "14",
+        "tags" : "Relationship"
+      }, {
+        "description" : "2. Балансирует запросы на инстансы controller-nginx [80/443 TCP]",
+        "destinationId" : "127",
+        "id" : "318",
+        "sourceId" : "14",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Трафик в сторону Service CIDR перехватывается сайдкаром Istio [80/443 TCP]",
+        "destinationId" : "130",
+        "id" : "319",
+        "sourceId" : "14",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,External"
+    }, {
+      "description" : "Сетевые маршрутизаторы, коммутаторы",
+      "id" : "15",
+      "name" : "Сетевая инфраструктура",
+      "properties" : {
+        "structurizr.dsl.identifier" : "network-infra"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "СХД HPE, Huawei, NetApp, YADRO TATLIN",
+      "id" : "16",
+      "name" : "Системы хранения",
+      "properties" : {
+        "structurizr.dsl.identifier" : "storage-infra"
+      },
+      "tags" : "Element,External"
+    }, {
+      "description" : "Запущенная в инсталляторе Deckhouse",
+      "id" : "17",
+      "name" : "dhctl CLI",
+      "properties" : {
+        "structurizr.dsl.identifier" : "dhctl"
+      },
+      "relationships" : [ {
+        "description" : "Управляет ресурсами IaaS по требованию",
+        "destinationId" : "10",
+        "id" : "238",
+        "sourceId" : "17",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Читает секрет с состоянием Terraform [6443 TCP]",
+        "destinationId" : "113",
+        "id" : "239",
+        "sourceId" : "17",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Читает секрет с состоянием Terraform [6443 TCP]",
+        "destinationId" : "18",
+        "id" : "240",
+        "linkedRelationshipId" : "239",
+        "sourceId" : "17"
+      } ],
+      "tags" : "Element,External"
+    }, {
+      "id" : "383",
+      "name" : "Система",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-system"
+      },
+      "tags" : "Element,dkp"
+    }, {
+      "id" : "384",
+      "name" : "Подсистема",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-subsystem"
+      },
+      "tags" : "Element,Subsystem"
+    }, {
+      "id" : "385",
+      "name" : "Модуль",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-module"
+      },
+      "tags" : "Element,Module"
+    }, {
+      "id" : "386",
+      "name" : "Контейнер",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-container"
+      },
+      "tags" : "Element,Container"
+    }, {
+      "id" : "387",
+      "name" : "Статический под",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-static-pod"
+      },
+      "tags" : "Element,Container"
+    }, {
+      "id" : "388",
+      "name" : "База данных",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-database"
+      },
+      "tags" : "Element,Database"
+    }, {
+      "id" : "389",
+      "name" : "Файлы на узлах",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-files"
+      },
+      "tags" : "Element,Files"
+    }, {
+      "id" : "390",
+      "name" : "Служба",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-daemon"
+      },
+      "tags" : "Element,Daemon"
+    }, {
+      "id" : "391",
+      "name" : "Внешняя система",
+      "properties" : {
+        "structurizr.dsl.identifier" : "example-external"
+      },
+      "tags" : "Element,External"
+    } ],
+    "people" : [ {
+      "description" : "Конечный пользователь приложений, запущенных на платформе",
+      "id" : "1",
+      "name" : "Пользователь",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user"
+      },
+      "relationships" : [ {
+        "description" : "Использует запущенные приложения",
+        "destinationId" : "18",
+        "id" : "175",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      }, {
+        "description" : "Управляет узлами через утилиту dhctl (bootstrap, converge)",
+        "destinationId" : "17",
+        "id" : "237",
+        "sourceId" : "1",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "Пользователь платформы, устанавливает и тестирует приложения",
+      "id" : "2",
+      "name" : "Разработчик",
+      "properties" : {
+        "structurizr.dsl.identifier" : "developer"
+      },
+      "relationships" : [ {
+        "description" : "Использует платформу",
+        "destinationId" : "18",
+        "id" : "174",
+        "sourceId" : "2",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "Инженер, ответственный за установку и эксплуатацию платформы",
+      "id" : "3",
+      "name" : "Администратор",
+      "properties" : {
+        "structurizr.dsl.identifier" : "admin"
+      },
+      "relationships" : [ {
+        "description" : "Устанавливает и настраивает платформу",
+        "destinationId" : "18",
+        "id" : "173",
+        "sourceId" : "3",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "Инженер, ответственный за информационную безопасность",
+      "id" : "4",
+      "name" : "Инженер безопасности",
+      "properties" : {
+        "structurizr.dsl.identifier" : "security-engineer"
+      },
+      "relationships" : [ {
+        "description" : "Управляет информационной безопасностью",
+        "destinationId" : "18",
+        "id" : "176",
+        "sourceId" : "4",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "description" : "а также разрабочик, администратор и инженер безопасности",
+      "id" : "5",
+      "name" : "Пользователь ",
+      "properties" : {
+        "structurizr.dsl.identifier" : "users"
+      },
+      "relationships" : [ {
+        "description" : "1. Отправляют HTTP/HTTPS запросы",
+        "destinationId" : "14",
+        "id" : "317",
+        "sourceId" : "5",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    }, {
+      "id" : "6",
+      "name" : "Пользователь\n(Static Node) ",
+      "properties" : {
+        "structurizr.dsl.identifier" : "user-static-node"
+      },
+      "relationships" : [ {
+        "description" : "Работает со статическими узлами",
+        "destinationId" : "10",
+        "id" : "242",
+        "sourceId" : "6",
+        "tags" : "Relationship"
+      } ],
+      "tags" : "Element,Person"
+    } ],
+    "properties" : {
+      "structurizr.groupSeparator" : "/"
+    },
+    "softwareSystems" : [ {
+      "containers" : [ {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "19",
+        "name" : "Cluster & Infrastructure",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cluster-and-infrastructure"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "177",
+          "sourceId" : "19",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Синхронизирует время",
+          "destinationId" : "12",
+          "id" : "200",
+          "sourceId" : "19",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Управляет ресурсами IaaS",
+          "destinationId" : "10",
+          "id" : "202",
+          "sourceId" : "19",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "20",
+        "name" : "Deckhouse",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse-subsystem"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "178",
+          "sourceId" : "20",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Скачивает образы",
+          "destinationId" : "13",
+          "id" : "254",
+          "sourceId" : "20",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "21",
+        "name" : "Delivery",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.delivery"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "179",
+          "sourceId" : "21",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "22",
+        "name" : "IAM",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.iam"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "180",
+          "sourceId" : "22",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Выполняет аутентификацию пользователей",
+          "destinationId" : "8",
+          "id" : "261",
+          "sourceId" : "22",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "23",
+        "name" : "Kubernetes & Scheduling",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kubernetes-and-scheduling"
+        },
+        "relationships" : [ {
+          "destinationId" : "20",
+          "id" : "181",
+          "sourceId" : "23",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "25",
+          "id" : "182",
+          "sourceId" : "23",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "24",
+        "name" : "Managed Services",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.managed-services"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "183",
+          "sourceId" : "24",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "25",
+        "name" : "Network",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.network"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "184",
+          "sourceId" : "25",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "20",
+          "id" : "185",
+          "sourceId" : "25",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "22",
+          "id" : "186",
+          "sourceId" : "25",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Анонсирует IP-адреса через BGP",
+          "destinationId" : "15",
+          "id" : "303",
+          "sourceId" : "25",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "26",
+        "name" : "Observability",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.observability-subsystem"
+        },
+        "relationships" : [ {
+          "destinationId" : "19",
+          "id" : "187",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "20",
+          "id" : "188",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "22",
+          "id" : "189",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "23",
+          "id" : "190",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "24",
+          "id" : "191",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "25",
+          "id" : "192",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "27",
+          "id" : "193",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "28",
+          "id" : "194",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "21",
+          "id" : "195",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "29",
+          "id" : "196",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи и события безопасности",
+          "destinationId" : "11",
+          "id" : "342",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет алерты",
+          "destinationId" : "7",
+          "id" : "344",
+          "sourceId" : "26",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "27",
+        "name" : "Security",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.security"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "197",
+          "sourceId" : "27",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Выпускает сертификаты",
+          "destinationId" : "9",
+          "id" : "368",
+          "sourceId" : "27",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "28",
+        "name" : "Storage",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.storage"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "198",
+          "sourceId" : "28",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Управляет томами",
+          "destinationId" : "16",
+          "id" : "377",
+          "sourceId" : "28",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "description" : "Подсистема",
+        "documentation" : { },
+        "id" : "29",
+        "name" : "Virtualization",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.virtualization-subsystem"
+        },
+        "relationships" : [ {
+          "destinationId" : "23",
+          "id" : "199",
+          "sourceId" : "29",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Subsystem"
+      }, {
+        "documentation" : { },
+        "group" : "Пользовательское приложение/user-app [pod]",
+        "id" : "30",
+        "name" : "user-app",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-app"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Пользовательское приложение (с клиентом Dex)/user-app-with-dex-client [pod]",
+        "id" : "31",
+        "name" : "user-app-with-dex-client",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-app-with-dex-client"
+        },
+        "relationships" : [ {
+          "description" : "4. Выполняет аутентификацию [443 TCP]",
+          "destinationId" : "72",
+          "id" : "269",
+          "sourceId" : "31",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "32",
+        "name" : "chrony",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.chrony"
+        },
+        "relationships" : [ {
+          "description" : "Синхронизирует время",
+          "destinationId" : "12",
+          "id" : "204",
+          "sourceId" : "32",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "33",
+        "name" : "node-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.node-manager"
+        },
+        "relationships" : [ {
+          "destinationId" : "38",
+          "id" : "205",
+          "sourceId" : "33",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "206",
+          "sourceId" : "33",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "35",
+          "id" : "207",
+          "sourceId" : "33",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "34",
+        "name" : "registry-packages-proxy",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.registry-packages-proxy"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "35",
+        "name" : "terraform-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-manager"
+        },
+        "relationships" : [ {
+          "description" : "Управляет ресурсами IaaS постоянно (dhctl converge-periodical)",
+          "destinationId" : "10",
+          "id" : "208",
+          "sourceId" : "35",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Читает секрет с состоянием Terraform [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "241",
+          "sourceId" : "35",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "36",
+        "name" : "cloud-providers\n[11 модулей]",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cloud-providers"
+        },
+        "relationships" : [ {
+          "description" : "Управляет ресурсами IaaS",
+          "destinationId" : "10",
+          "id" : "209",
+          "sourceId" : "36",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "37",
+        "name" : "cloud-provider-*",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cloud-provider"
+        },
+        "relationships" : [ {
+          "description" : "Управляет ресурсами IaaS",
+          "destinationId" : "10",
+          "id" : "210",
+          "sourceId" : "37",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Следит за Custom Resources [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "232",
+          "sourceId" : "37",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Служба",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure",
+        "id" : "38",
+        "name" : "bashible",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.bashible"
+        },
+        "relationships" : [ {
+          "description" : "Скачивает секреты и ресурсы bashible со скриптами [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "211",
+          "sourceId" : "38",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Daemon"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль cloud-provider-*",
+        "id" : "39",
+        "name" : "infrastructure-provider",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.infrastructure-provider"
+        },
+        "relationships" : [ {
+          "description" : "Следит за Custom Resources [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "213",
+          "sourceId" : "39",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Управляет виртуальными машинами",
+          "destinationId" : "10",
+          "id" : "243",
+          "sourceId" : "39",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль cloud-provider-*",
+        "id" : "40",
+        "name" : "cloud-controller-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cloud-controller-manager"
+        },
+        "relationships" : [ {
+          "description" : "Управляет балансировщиками и прочими ресурсами IaaS",
+          "destinationId" : "10",
+          "id" : "234",
+          "sourceId" : "40",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Следит за ресурсами Loadbalancer, Node и тд",
+          "destinationId" : "113",
+          "id" : "236",
+          "sourceId" : "40",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль cloud-provider-*",
+        "id" : "41",
+        "name" : "csi-driver",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.csi-driver"
+        },
+        "relationships" : [ {
+          "description" : "Управляет дисками",
+          "destinationId" : "10",
+          "id" : "233",
+          "sourceId" : "41",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Следит за PV",
+          "destinationId" : "113",
+          "id" : "235",
+          "sourceId" : "41",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Application"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/bashible-apiserver [pod]",
+        "id" : "42",
+        "name" : "bashible-apiserver",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.bashible-apiserver"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/capi-controller-manager [pod]",
+        "id" : "43",
+        "name" : "capi-controller-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.capi-controller-manager"
+        },
+        "relationships" : [ {
+          "description" : "Следит за Custom Resources [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "212",
+          "sourceId" : "43",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/capi-controller-manager [pod]",
+        "id" : "44",
+        "name" : "kube-rbac-proxy (capi)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.capi-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "220",
+          "sourceId" : "44",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [4211 TCP]",
+          "destinationId" : "43",
+          "id" : "221",
+          "sourceId" : "44",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/caps-controller-manager [pod]",
+        "id" : "45",
+        "name" : "caps-controller-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.caps-controller-manager"
+        },
+        "relationships" : [ {
+          "description" : "Следит за Custom Resources [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "214",
+          "sourceId" : "45",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Управляет статическими узлами (ограниченно, без заказа узлов)",
+          "destinationId" : "10",
+          "id" : "215",
+          "sourceId" : "45",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/cluster-autoscaler [pod]",
+        "id" : "46",
+        "name" : "cluster-autoscaler",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cluster-autoscaler"
+        },
+        "relationships" : [ {
+          "description" : "Следит за нагрузкой на узлах, выполняет автомасштабирование узлов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "216",
+          "sourceId" : "46",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/cluster-autoscaler [pod]",
+        "id" : "47",
+        "name" : "kube-rbac-proxy (ca)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ca-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "227",
+          "sourceId" : "47",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [8085 TCP]",
+          "destinationId" : "46",
+          "id" : "228",
+          "sourceId" : "47",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/early-oom [pod]",
+        "id" : "48",
+        "name" : "psi-monitor",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.psi-monitor"
+        },
+        "relationships" : [ {
+          "description" : "Читает данные по загрузке процессов на хосте",
+          "destinationId" : "58",
+          "id" : "222",
+          "sourceId" : "48",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/early-oom [pod]",
+        "id" : "49",
+        "name" : "kube-rbac-proxy (oom)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.oom-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "224",
+          "sourceId" : "49",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [8080 TCP]",
+          "destinationId" : "48",
+          "id" : "225",
+          "sourceId" : "49",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/fencing-agent (опционально) [pod]",
+        "id" : "50",
+        "name" : "fencing-agent",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.fencing-agent"
+        },
+        "relationships" : [ {
+          "description" : "Проверяет доступность Kube-API [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "229",
+          "sourceId" : "50",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пишет в устройство на хосте",
+          "destinationId" : "59",
+          "id" : "231",
+          "sourceId" : "50",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/fencing-controller (опционально) [pod]",
+        "id" : "51",
+        "name" : "fencing-controller",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.fencing-controller"
+        },
+        "relationships" : [ {
+          "description" : "Удаляет ресурс Node для недоступного узла [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "230",
+          "sourceId" : "51",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль node-manager/standby-holder (опционально) [pod]",
+        "id" : "52",
+        "name" : "reserve-resources",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.reserve-resources"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль terraform-manager/terraform-auto-converger [pod]",
+        "id" : "53",
+        "name" : "to-tofu-migrator (initContainer)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-auto-converger-to-tofu-migrator"
+        },
+        "relationships" : [ {
+          "description" : "Читает/сохраняет секрет с состоянием Terraform [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "244",
+          "sourceId" : "53",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль terraform-manager/terraform-auto-converger [pod]",
+        "id" : "54",
+        "name" : "converger",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-auto-converger"
+        },
+        "relationships" : [ {
+          "description" : "Читает секрет с состоянием Terraform [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "245",
+          "sourceId" : "54",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Управляет ресурсами IaaS постоянно (dhctl converge-periodical)",
+          "destinationId" : "10",
+          "id" : "253",
+          "sourceId" : "54",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль terraform-manager/terraform-auto-converger [pod]",
+        "id" : "55",
+        "name" : "kube-rbac-proxy (terraform-auto-converger)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-auto-converger-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "247",
+          "sourceId" : "55",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [9101 TCP]",
+          "destinationId" : "54",
+          "id" : "250",
+          "sourceId" : "55",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль terraform-manager/terraform-state-exporter [pod]",
+        "id" : "56",
+        "name" : "exporter",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-state-exporter"
+        },
+        "relationships" : [ {
+          "description" : "Читает секрет с состоянием Terraform [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "246",
+          "sourceId" : "56",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Cluster & Infrastructure/Модуль terraform-manager/terraform-state-exporter [pod]",
+        "id" : "57",
+        "name" : "kube-rbac-proxy (terraform-state-exporter)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.terraform-state-exporter-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "248",
+          "sourceId" : "57",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [9101 TCP]",
+          "destinationId" : "56",
+          "id" : "252",
+          "sourceId" : "57",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Файлы на узлах",
+        "documentation" : { },
+        "id" : "58",
+        "name" : "/proc",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.proc-files"
+        },
+        "tags" : "Element,Container,Files"
+      }, {
+        "description" : "Файлы на узлах",
+        "documentation" : { },
+        "id" : "59",
+        "name" : "/dev/watchdog",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.watchdog-file"
+        },
+        "tags" : "Element,Container,Files"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "60",
+        "name" : "console",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.console"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "256",
+          "sourceId" : "60",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отображает панель Grafana в Web-консоли",
+          "destinationId" : "154",
+          "id" : "367",
+          "sourceId" : "60",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "61",
+        "name" : "dashboard",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dashboard"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "257",
+          "sourceId" : "61",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "62",
+        "name" : "deckhouse",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "258",
+          "sourceId" : "62",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "63",
+        "name" : "deckhouse-tools",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse-tools"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "64",
+        "name" : "documentation",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.documentation"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse",
+        "id" : "65",
+        "name" : "registry",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.registry"
+        },
+        "relationships" : [ {
+          "description" : "Скачивает образы",
+          "destinationId" : "13",
+          "id" : "259",
+          "sourceId" : "65",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Deckhouse/Модуль console/frontend [pod]",
+        "id" : "66",
+        "name" : "frontend",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.frontend"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Delivery",
+        "id" : "67",
+        "name" : "pod-reloader",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.pod-reloader"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "260",
+          "sourceId" : "67",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема IAM",
+        "id" : "68",
+        "name" : "multitenancy-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.multitenancy-manager"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "263",
+          "sourceId" : "68",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема IAM",
+        "id" : "69",
+        "name" : "namespace-configurator",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.namespace-configurator"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "264",
+          "sourceId" : "69",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема IAM",
+        "id" : "70",
+        "name" : "user-authn",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-authn"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет аутентификацию пользователей",
+          "destinationId" : "8",
+          "id" : "265",
+          "sourceId" : "70",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "266",
+          "sourceId" : "70",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема IAM",
+        "id" : "71",
+        "name" : "user-authz",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-authz"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/dex [pod]",
+        "id" : "72",
+        "name" : "dex",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dex"
+        },
+        "relationships" : [ {
+          "description" : "5. Выполняет аутентификацию пользователей",
+          "destinationId" : "8",
+          "id" : "273",
+          "sourceId" : "72",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "164",
+          "id" : "274",
+          "sourceId" : "72",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/dex [pod]",
+        "id" : "73",
+        "name" : "kube-rbac-proxy (dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dex-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов",
+          "destinationId" : "113",
+          "id" : "271",
+          "sourceId" : "73",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [5558 TCP]",
+          "destinationId" : "72",
+          "id" : "272",
+          "sourceId" : "73",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/console-dex-authenticator [pod]",
+        "id" : "74",
+        "name" : "self-signed-generator (console-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.console-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/console-dex-authenticator [pod]",
+        "id" : "75",
+        "name" : "dex-authenticator (console-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.console-dex-authenticator"
+        },
+        "relationships" : [ {
+          "description" : "4. Пересылает запросы на аутентификацию [443 TCP]",
+          "destinationId" : "72",
+          "id" : "267",
+          "sourceId" : "75",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/console-dex-authenticator [pod]",
+        "id" : "76",
+        "name" : "redis (console-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.console-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/dashboard-dex-authenticator [pod]",
+        "id" : "77",
+        "name" : "self-signed-generator (dashboard-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dashboard-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/dashboard-dex-authenticator [pod]",
+        "id" : "78",
+        "name" : "dex-authenticator (dashboard-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dashboard-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/dashboard-dex-authenticator [pod]",
+        "id" : "79",
+        "name" : "redis (dashboard-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.dashboard-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/grafana-dex-authenticator [pod]",
+        "id" : "80",
+        "name" : "self-signed-generator (grafana-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.grafana-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/grafana-dex-authenticator [pod]",
+        "id" : "81",
+        "name" : "dex-authenticator (grafana-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.grafana-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/grafana-dex-authenticator [pod]",
+        "id" : "82",
+        "name" : "redis (grafana-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.grafana-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/deckhouse-tools-dex-authenticator [pod]",
+        "id" : "83",
+        "name" : "self-signed-generator (deckhouse-tools-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse-tools-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/deckhouse-tools-dex-authenticator [pod]",
+        "id" : "84",
+        "name" : "dex-authenticator (deckhouse-tools-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse-tools-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/deckhouse-tools-dex-authenticator [pod]",
+        "id" : "85",
+        "name" : "redis (deckhouse-tools-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.deckhouse-tools-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/documentation-dex-authenticator [pod]",
+        "id" : "86",
+        "name" : "self-signed-generator (documentation-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.documentation-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/documentation-dex-authenticator [pod]",
+        "id" : "87",
+        "name" : "dex-authenticator (documentation-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.documentation-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/documentation-dex-authenticator [pod]",
+        "id" : "88",
+        "name" : "redis (documentation-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.documentation-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/status-dex-authenticator [pod]",
+        "id" : "89",
+        "name" : "self-signed-generator (status-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.status-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/status-dex-authenticator [pod]",
+        "id" : "90",
+        "name" : "dex-authenticator (status-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.status-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/status-dex-authenticator [pod]",
+        "id" : "91",
+        "name" : "redis (status-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.status-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/upmeter-dex-authenticator [pod]",
+        "id" : "92",
+        "name" : "self-signed-generator (upmeter-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.upmeter-dex-self-signed-generator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/upmeter-dex-authenticator [pod]",
+        "id" : "93",
+        "name" : "dex-authenticator (upmeter-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.upmeter-dex-authenticator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/upmeter-dex-authenticator [pod]",
+        "id" : "94",
+        "name" : "redis (upmeter-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.upmeter-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/user-app-dex-authenticator [pod]",
+        "id" : "95",
+        "name" : "self-signed-generator (user-app-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-app-dex-self-signed-generator"
+        },
+        "relationships" : [ {
+          "description" : "Передает сертификаты через EmptyDir том",
+          "destinationId" : "96",
+          "id" : "270",
+          "sourceId" : "95",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/user-app-dex-authenticator [pod]",
+        "id" : "96",
+        "name" : "dex-authenticator (user-app-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-app-dex-authenticator"
+        },
+        "relationships" : [ {
+          "description" : "4. Пересылает запросы на аутентификацию [443 TCP]",
+          "destinationId" : "72",
+          "id" : "268",
+          "sourceId" : "96",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Записывает и читает ID Token",
+          "destinationId" : "97",
+          "id" : "275",
+          "sourceId" : "96",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема IAM/Модуль user-authn/user-app-dex-authenticator [pod]",
+        "id" : "97",
+        "name" : "redis (user-app-dex)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.user-app-dex-redis"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "description" : "Cтатические поды",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "98",
+        "name" : "Сontrol plane Kubernetes-кластера",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cluster-control-plane"
+        },
+        "tags" : "Element,Container,StaticPodGroup"
+      }, {
+        "description" : "Служба",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "99",
+        "name" : "containerd",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.containerd"
+        },
+        "tags" : "Element,Container,Daemon"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "100",
+        "name" : "control-plane-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.control-plane-manager"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "277",
+          "sourceId" : "100",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "101",
+        "name" : "descheduler",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.descheduler"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "278",
+          "sourceId" : "101",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Служба",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "102",
+        "name" : "kubelet",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kubelet"
+        },
+        "relationships" : [ {
+          "destinationId" : "99",
+          "id" : "279",
+          "sourceId" : "102",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "65",
+          "id" : "280",
+          "sourceId" : "102",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Подключается к Kube-API через 127.0.0.1:6445",
+          "destinationId" : "110",
+          "id" : "292",
+          "sourceId" : "102",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Проверяет состояние kubeapi-server [3990 TCP]",
+          "destinationId" : "114",
+          "id" : "293",
+          "sourceId" : "102",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Daemon"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling",
+        "id" : "103",
+        "name" : "vertical-pod-autoscaler",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.vertical-pod-autoscaler"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "281",
+          "sourceId" : "103",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "104",
+        "name" : "control-plane-manager (d8)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cpm-control-plane-manager"
+        },
+        "relationships" : [ {
+          "description" : "Управляет control plane'ом кластера [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "282",
+          "sourceId" : "104",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "105",
+        "name" : "image-holder-etcd",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.image-holder-etcd"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "106",
+        "name" : "image-holder-kube-apiserver",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.image-holder-kube-apiserver"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "107",
+        "name" : "image-holder-kube-apiserver-healthcheck",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.image-holder-kube-apiserver-healthcheck"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "108",
+        "name" : "image-holder-kube-controller-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.image-holder-kube-controller-manager"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-control-plane-manager [pod]",
+        "id" : "109",
+        "name" : "image-holder-kube-scheduler",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.image-holder-kube-scheduler"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/kubernetes-api-proxy [pod]",
+        "id" : "110",
+        "name" : "kubernetes-api-proxy",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kubernetes-api-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Перенаправляет запросы на IP узла [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "286",
+          "sourceId" : "110",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "314",
+          "sourceId" : "110",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/kubernetes-api-proxy [pod]",
+        "id" : "111",
+        "name" : "kubernetes-api-proxy-reloader",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kubernetes-api-proxy-reloader"
+        },
+        "relationships" : [ {
+          "description" : "Перезагружает kubernetes-api-proxy при изменении конфигурации",
+          "destinationId" : "110",
+          "id" : "283",
+          "sourceId" : "111",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Модуль control-plane-manager/d8-etcd-backup [cronjob]",
+        "id" : "112",
+        "name" : "backup (etcd)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.etcd-backup"
+        },
+        "relationships" : [ {
+          "description" : "Подключается для резервного копирования базы данных etcd [2379 TCP]",
+          "destinationId" : "117",
+          "id" : "284",
+          "sourceId" : "112",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Сохраняет backup etcd на узле (HostPath)",
+          "destinationId" : "118",
+          "id" : "285",
+          "sourceId" : "112",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера/kube-apiserver [pod]",
+        "id" : "113",
+        "name" : "kube-apiserver",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-apiserver"
+        },
+        "relationships" : [ {
+          "description" : "Validating/mutating вебхуки на capi-webhook-service [443:4200 TCP]",
+          "destinationId" : "43",
+          "id" : "217",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает запросы на ресурсы bashible через svc [443 TCP]",
+          "destinationId" : "42",
+          "id" : "218",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет запросы в базу данных",
+          "destinationId" : "117",
+          "id" : "290",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Обработка команд kubectl logs, kubectl exec, kubectl port-forward [10250 TCP]",
+          "destinationId" : "102",
+          "id" : "291",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Валидирует Ingress на вебхук svc nginx-admission [443:8443 TCP]",
+          "destinationId" : "134",
+          "id" : "329",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Валидирует объекты API OpenKruize на kruise-webhook-service [443:9876 TCP]",
+          "destinationId" : "131",
+          "id" : "335",
+          "sourceId" : "113",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера/kube-apiserver [pod]",
+        "id" : "114",
+        "name" : "healthcheck (kube-apiserver)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-apiserver-healthcheck"
+        },
+        "relationships" : [ {
+          "description" : "Пересылает healthcheck на kubeapi-server [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "287",
+          "sourceId" : "114",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера/kube-controller-manager [pod]",
+        "id" : "115",
+        "name" : "kube-controller-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-controller-manager"
+        },
+        "relationships" : [ {
+          "description" : "Отправляет запросы в Kube-API [6443]",
+          "destinationId" : "113",
+          "id" : "288",
+          "sourceId" : "115",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера/kube-scheduler [pod]",
+        "id" : "116",
+        "name" : "kube-scheduler",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-scheduler"
+        },
+        "relationships" : [ {
+          "description" : "Отправляет запросы в Kube-API [6443]",
+          "destinationId" : "113",
+          "id" : "289",
+          "sourceId" : "116",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера/etcd [pod]",
+        "id" : "117",
+        "name" : "etcd",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.etcd"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "description" : "Файлы на узлах",
+        "documentation" : { },
+        "id" : "118",
+        "name" : "/var/lib/etcd",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.etcd-backup-files"
+        },
+        "tags" : "Element,Container,Files"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Managed Services",
+        "id" : "119",
+        "name" : "managed-postgres",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.managed-postgres"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "341",
+          "sourceId" : "119",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "120",
+        "name" : "ingress-nginx",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ingress-nginx"
+        },
+        "relationships" : [ {
+          "destinationId" : "60",
+          "id" : "306",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "307",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "70",
+          "id" : "308",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "61",
+          "id" : "309",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "64",
+          "id" : "310",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "63",
+          "id" : "311",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "147",
+          "id" : "312",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "144",
+          "id" : "313",
+          "sourceId" : "120",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "121",
+        "name" : "kube-dns",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-dns"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "122",
+        "name" : "node-local-dns",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.node-local-dns"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "123",
+        "name" : "kube-proxy",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kube-proxy"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "124",
+        "name" : "monitoring-ping",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.monitoring-ping"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "125",
+        "name" : "metallb",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.metallb"
+        },
+        "relationships" : [ {
+          "description" : "Анонсирует IP-адреса через BGP",
+          "destinationId" : "15",
+          "id" : "315",
+          "sourceId" : "125",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "316",
+          "sourceId" : "125",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Network",
+        "id" : "126",
+        "name" : "cni-cilium",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cni-cilium"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/controller-nginx [pod]",
+        "id" : "127",
+        "name" : "controller (nginx)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-controller"
+        },
+        "relationships" : [ {
+          "description" : "Трафик, перехваченный Istio",
+          "destinationId" : "130",
+          "id" : "321",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "3. Отправляет запросы на аутентификацию [443 TCP]",
+          "destinationId" : "75",
+          "id" : "323",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "3. Отправляет запросы на аутентификацию [443 TCP]",
+          "destinationId" : "96",
+          "id" : "324",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "6. Пересылает авторизованный запрос пользователя на просмотр Web-консоли",
+          "destinationId" : "66",
+          "id" : "325",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "6. Пересылает авторизованный запрос пользователя",
+          "destinationId" : "30",
+          "id" : "326",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "3. Пересылает запрос пользователя",
+          "destinationId" : "31",
+          "id" : "327",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Синхронизирует конфигурацию NGINX с ресурсами Ingress",
+          "destinationId" : "113",
+          "id" : "328",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет статистистику Nginx в формате protobuf (TCP)",
+          "destinationId" : "128",
+          "id" : "333",
+          "sourceId" : "127",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/controller-nginx [pod]",
+        "id" : "128",
+        "name" : "protobuf-exporter (nginx)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-protobuf-exporter"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/controller-nginx [pod]",
+        "id" : "129",
+        "name" : "kube-rbac-proxy (nginx)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов",
+          "destinationId" : "113",
+          "id" : "330",
+          "sourceId" : "129",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики и healthcheck [10254 TCP]",
+          "destinationId" : "127",
+          "id" : "331",
+          "sourceId" : "129",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на статистику Nginx [9091 TCP]",
+          "destinationId" : "128",
+          "id" : "332",
+          "sourceId" : "129",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/controller-nginx [pod]",
+        "id" : "130",
+        "name" : "istio-proxy (nginx)\n[опционально]",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-istio-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Трафик, перехваченный Istio",
+          "destinationId" : "127",
+          "id" : "320",
+          "sourceId" : "130",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Трафик, перехваченный Istio",
+          "destinationId" : "30",
+          "id" : "322",
+          "sourceId" : "130",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/kruise-controller-manager [pod]",
+        "id" : "131",
+        "name" : "kruise",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kcm-kruise"
+        },
+        "relationships" : [ {
+          "description" : "Управляет ресурсом Advanced DaemonSet (controller-nginx)",
+          "destinationId" : "113",
+          "id" : "334",
+          "sourceId" : "131",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/kruise-controller-manager [pod]",
+        "id" : "132",
+        "name" : "kube-rbac-proxy (kruise)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kcm-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизация запросов",
+          "destinationId" : "113",
+          "id" : "336",
+          "sourceId" : "132",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики и healthcheck [8082 TCP]",
+          "destinationId" : "133",
+          "id" : "337",
+          "sourceId" : "132",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/kruise-controller-manager [pod]",
+        "id" : "133",
+        "name" : "kruise-state-metrics",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kcm-kruise-state-metrics"
+        },
+        "relationships" : [ {
+          "description" : "Следит за состоянием объектов API OpenKruise",
+          "destinationId" : "113",
+          "id" : "338",
+          "sourceId" : "133",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/validator-nginx [pod]",
+        "id" : "134",
+        "name" : "validator (nginx)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-validator"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Network/Модуль ingress-nginx/failover-cleaner [pod]",
+        "id" : "135",
+        "name" : "NODE_NAME (nginx)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.ing-failover-cleaner"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "136",
+        "name" : "extended-monitoring",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.extended-monitoring"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "137",
+        "name" : "log-shipper",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.log-shipper"
+        },
+        "relationships" : [ {
+          "description" : "Отправляет логи и события безопасности",
+          "destinationId" : "11",
+          "id" : "346",
+          "sourceId" : "137",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "138",
+        "name" : "monitoring-custom",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.monitoring-custom"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "139",
+        "name" : "monitoring-deckhouse",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.monitoring-deckhouse"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "140",
+        "name" : "monitoring-kubernetes",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.monitoring-kubernetes"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "141",
+        "name" : "monitoring-kubernetes-control-plane",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.monitoring-kubernetes-control-plane"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "142",
+        "name" : "observability",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.observability"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "143",
+        "name" : "operator-prometheus",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.operator-prometheus"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "348",
+          "sourceId" : "143",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "144",
+        "name" : "prometheus",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.prometheus"
+        },
+        "relationships" : [ {
+          "description" : "Отправляет алерты",
+          "destinationId" : "7",
+          "id" : "347",
+          "sourceId" : "144",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "349",
+          "sourceId" : "144",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "145",
+        "name" : "prometheus-metrics-adapter",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.prometheus-metrics-adapter"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "146",
+        "name" : "prompp",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.prompp"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Observability",
+        "id" : "147",
+        "name" : "upmeter",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.upmeter"
+        },
+        "tags" : "Element,Container,Module"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль log-shipper/log-shipper-agent [pod]",
+        "id" : "148",
+        "name" : "vector",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.vector"
+        },
+        "relationships" : [ {
+          "description" : "Отправляет логи",
+          "destinationId" : "11",
+          "id" : "350",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Кратковременное хранение логов",
+          "destinationId" : "151",
+          "id" : "351",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи",
+          "destinationId" : "158",
+          "id" : "356",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи",
+          "destinationId" : "159",
+          "id" : "357",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи",
+          "destinationId" : "160",
+          "id" : "358",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи",
+          "destinationId" : "161",
+          "id" : "359",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Отправляет логи",
+          "destinationId" : "162",
+          "id" : "360",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Читает локальные файлы, доступные на узле",
+          "destinationId" : "156",
+          "id" : "361",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает логи с подов",
+          "destinationId" : "157",
+          "id" : "362",
+          "sourceId" : "148",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль log-shipper/log-shipper-agent [pod]",
+        "id" : "149",
+        "name" : "vector-reloader",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.vector-reloader"
+        },
+        "relationships" : [ {
+          "description" : "Перезапускает pod vector при изменении секрета с конфигурацией",
+          "destinationId" : "113",
+          "id" : "352",
+          "sourceId" : "149",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль log-shipper/log-shipper-agent [pod]",
+        "id" : "150",
+        "name" : "kube-rbac-proxy (vector)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.vector-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов",
+          "destinationId" : "113",
+          "id" : "353",
+          "sourceId" : "150",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [9090 TCP]",
+          "destinationId" : "148",
+          "id" : "354",
+          "sourceId" : "150",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "База данных",
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль loki/loki [pod]",
+        "id" : "151",
+        "name" : "loki",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.loki"
+        },
+        "tags" : "Element,Container,Database"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль loki/loki [pod]",
+        "id" : "152",
+        "name" : "kube-rbac-proxy (loki)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.loki-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов",
+          "destinationId" : "113",
+          "id" : "363",
+          "sourceId" : "152",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы [3101 TCP]",
+          "destinationId" : "151",
+          "id" : "364",
+          "sourceId" : "152",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль monitoring-kubernetes-control-plane/control-plane-proxy [pod]",
+        "id" : "153",
+        "name" : "kube-rbac-proxy (control-plane)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cpl-kube-rbac-proxy"
+        },
+        "relationships" : [ {
+          "description" : "Выполняет авторизацию запросов",
+          "destinationId" : "113",
+          "id" : "297",
+          "sourceId" : "153",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [2381 TCP]",
+          "destinationId" : "117",
+          "id" : "298",
+          "sourceId" : "153",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [10257 TCP]",
+          "destinationId" : "115",
+          "id" : "299",
+          "sourceId" : "153",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Пересылает авторизованные запросы на метрики [10259 TCP]",
+          "destinationId" : "116",
+          "id" : "300",
+          "sourceId" : "153",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль prometheus/grafana-v10 [pod]",
+        "id" : "154",
+        "name" : "grafana (v10)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.grafana-v10"
+        },
+        "relationships" : [ {
+          "description" : "Использует Loki в качестве источника данных [3100 TCP]",
+          "destinationId" : "152",
+          "id" : "365",
+          "sourceId" : "154",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "documentation" : { },
+        "group" : "Подсистема Observability/Модуль prometheus/prometheus-main [pod]",
+        "id" : "155",
+        "name" : "prometheus (main)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.prometheus-main"
+        },
+        "relationships" : [ {
+          "description" : "Собирает метрики [4211 TCP]",
+          "destinationId" : "44",
+          "id" : "219",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [8443 TCP]",
+          "destinationId" : "49",
+          "id" : "223",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [8443 TCP]",
+          "destinationId" : "47",
+          "id" : "226",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [9100 TCP]",
+          "destinationId" : "55",
+          "id" : "249",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [9100 TCP]",
+          "destinationId" : "57",
+          "id" : "251",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [5559 TCP]",
+          "destinationId" : "73",
+          "id" : "276",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [6443 TCP]",
+          "destinationId" : "113",
+          "id" : "294",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [10250 TCP]",
+          "destinationId" : "102",
+          "id" : "295",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [4209 TCP]",
+          "destinationId" : "153",
+          "id" : "296",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики и статистику Nginx [4207 TCP]",
+          "destinationId" : "129",
+          "id" : "339",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [10354 TCP]",
+          "destinationId" : "132",
+          "id" : "340",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [10254 TCP]",
+          "destinationId" : "150",
+          "id" : "355",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        }, {
+          "description" : "Собирает метрики [3100 TCP]",
+          "destinationId" : "152",
+          "id" : "366",
+          "sourceId" : "155",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Файлы на узлах",
+        "documentation" : { },
+        "group" : "Источники логов в кластере",
+        "id" : "156",
+        "name" : "Файлы",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.log-files"
+        },
+        "tags" : "Element,Container,Files"
+      }, {
+        "documentation" : { },
+        "group" : "Источники логов в кластере/Приложение в кластере/user-app (log source) [pod]",
+        "id" : "157",
+        "name" : "user-app (log source)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.log-user-app"
+        },
+        "tags" : "Element,Container"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Приемники логов в кластере",
+        "id" : "158",
+        "name" : "Elasticsearch",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.elasticsearch"
+        },
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Приемники логов в кластере",
+        "id" : "159",
+        "name" : "Logstash",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.logstash"
+        },
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Приемники логов в кластере",
+        "id" : "160",
+        "name" : "Kafka",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.kafka"
+        },
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Приемники логов в кластере",
+        "id" : "161",
+        "name" : "Splunk",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.splunk"
+        },
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Приложение",
+        "documentation" : { },
+        "group" : "Приемники логов в кластере",
+        "id" : "162",
+        "name" : "Loki (отдельная инсталляция)",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.loki-custom"
+        },
+        "tags" : "Element,Container,Application"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "163",
+        "name" : "admission-policy-engine",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.admission-policy-engine"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "370",
+          "sourceId" : "163",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "164",
+        "name" : "cert-manager",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.cert-manager"
+        },
+        "relationships" : [ {
+          "description" : "Выпускает сертификаты",
+          "destinationId" : "9",
+          "id" : "371",
+          "sourceId" : "164",
+          "tags" : "Relationship"
+        }, {
+          "destinationId" : "98",
+          "id" : "372",
+          "sourceId" : "164",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "165",
+        "name" : "secrets-store-integration",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.secrets-store-integration"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "376",
+          "sourceId" : "165",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "166",
+        "name" : "secret-copier",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.secret-copier"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "375",
+          "sourceId" : "166",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "167",
+        "name" : "operator-tryvy",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.operator-trivy"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "373",
+          "sourceId" : "167",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Security",
+        "id" : "168",
+        "name" : "runtime-audit-engine",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.runtime-audit-engine"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "374",
+          "sourceId" : "168",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Storage",
+        "id" : "169",
+        "name" : "local-path-provisioner",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.local-path-provisioner"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "379",
+          "sourceId" : "169",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Storage",
+        "id" : "170",
+        "name" : "snapshot-controller",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.snapshot-controller"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "380",
+          "sourceId" : "170",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Storage",
+        "id" : "171",
+        "name" : "CSI\n[8 модулей]",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.csi-modules"
+        },
+        "relationships" : [ {
+          "description" : "Управляет томами",
+          "destinationId" : "16",
+          "id" : "381",
+          "sourceId" : "171",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      }, {
+        "description" : "Модуль",
+        "documentation" : { },
+        "group" : "Подсистема Virtualization",
+        "id" : "172",
+        "name" : "virtualization",
+        "properties" : {
+          "structurizr.dsl.identifier" : "dkp.virtualization"
+        },
+        "relationships" : [ {
+          "destinationId" : "98",
+          "id" : "382",
+          "sourceId" : "172",
+          "tags" : "Relationship"
+        } ],
+        "tags" : "Element,Container,Module"
+      } ],
+      "description" : "Варианты инсталляции для разных типов инфраструктуры ",
+      "documentation" : { },
+      "id" : "18",
+      "name" : "Deckhouse Kubernetes Platform",
+      "properties" : {
+        "structurizr.dsl.identifier" : "dkp"
+      },
+      "relationships" : [ {
+        "description" : "Синхронизирует время",
+        "destinationId" : "12",
+        "id" : "201",
+        "linkedRelationshipId" : "200",
+        "sourceId" : "18"
+      }, {
+        "description" : "Управляет ресурсами IaaS",
+        "destinationId" : "10",
+        "id" : "203",
+        "linkedRelationshipId" : "202",
+        "sourceId" : "18"
+      }, {
+        "description" : "Скачивает образы",
+        "destinationId" : "13",
+        "id" : "255",
+        "linkedRelationshipId" : "254",
+        "sourceId" : "18"
+      }, {
+        "description" : "Выполняет аутентификацию пользователей",
+        "destinationId" : "8",
+        "id" : "262",
+        "linkedRelationshipId" : "261",
+        "sourceId" : "18"
+      }, {
+        "description" : "Анонсирует IP-адреса через BGP",
+        "destinationId" : "15",
+        "id" : "304",
+        "linkedRelationshipId" : "303",
+        "sourceId" : "18"
+      }, {
+        "description" : "Отправляет логи и события безопасности",
+        "destinationId" : "11",
+        "id" : "343",
+        "linkedRelationshipId" : "342",
+        "sourceId" : "18"
+      }, {
+        "description" : "Отправляет алерты",
+        "destinationId" : "7",
+        "id" : "345",
+        "linkedRelationshipId" : "344",
+        "sourceId" : "18"
+      }, {
+        "description" : "Выпускает сертификаты",
+        "destinationId" : "9",
+        "id" : "369",
+        "linkedRelationshipId" : "368",
+        "sourceId" : "18"
+      }, {
+        "description" : "Управляет томами",
+        "destinationId" : "16",
+        "id" : "378",
+        "linkedRelationshipId" : "377",
+        "sourceId" : "18"
+      } ],
+      "tags" : "Element,Software System,dkp"
+    } ]
+  },
+  "name" : "dkp",
+  "properties" : {
+    "structurizr.inspection.info" : "0",
+    "structurizr.inspection.ignore" : "0",
+    "structurizr.inspection.error" : "568",
+    "structurizr.inspection.warning" : "0"
+  },
+  "views" : {
+    "configuration" : {
+      "branding" : { },
+      "lastSavedView" : "L2_module_terraform-manager",
+      "metadataSymbols" : "SquareBrackets",
+      "styles" : {
+        "elements" : [ {
+          "background" : "#d8e4ff",
+          "color" : "#000000",
+          "shape" : "RoundedBox",
+          "stroke" : "#485d8e",
+          "strokeWidth" : 1,
+          "tag" : "Container"
+        }, {
+          "background" : "#efecff",
+          "color" : "#000000",
+          "shape" : "RoundedBox",
+          "stroke" : "#735fe6",
+          "strokeWidth" : 1,
+          "tag" : "Daemon"
+        }, {
+          "background" : "#d8e4ff",
+          "color" : "#000000",
+          "shape" : "Cylinder",
+          "stroke" : "#485d8e",
+          "strokeWidth" : 1,
+          "tag" : "Database"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#004df2",
+          "shape" : "RoundedBox",
+          "stroke" : "#004df2",
+          "strokeWidth" : 1,
+          "tag" : "dkp"
+        }, {
+          "background" : "#ededed",
+          "color" : "#000000",
+          "shape" : "RoundedBox",
+          "stroke" : "#696a6d",
+          "strokeWidth" : 1,
+          "tag" : "External"
+        }, {
+          "background" : "#efecff",
+          "color" : "#3e26ce",
+          "shape" : "Cylinder",
+          "stroke" : "#735fe6",
+          "strokeWidth" : 1,
+          "tag" : "Files"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Источники логов в кластере/Приложение в кластере"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Cluster & Infrastructure"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Cluster & Infrastructure/Модуль cloud-provider-*"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Cluster & Infrastructure/Модуль node-manager"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Cluster & Infrastructure/Модуль terraform-manager"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Deckhouse"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Deckhouse/Модуль console"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Delivery"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема IAM"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема IAM/Модуль user-authn"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Kubernetes & Scheduling"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Kubernetes & Scheduling/Модуль control-plane-manager"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Kubernetes & Scheduling/Сontrol plane Kubernetes-кластера"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Managed Services"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Network"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Network/Модуль ingress-nginx"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Observability"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Observability/Модуль log-shipper"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Observability/Модуль loki"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Observability/Модуль monitoring-kubernetes-control-plane"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Подсистема Observability/Модуль prometheus"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Security"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Storage"
+        }, {
+          "background" : "#e8eff9",
+          "tag" : "Group:Подсистема Virtualization"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Пользовательское приложение"
+        }, {
+          "background" : "#c6d7f1",
+          "tag" : "Group:Пользовательское приложение (с клиентом Dex)"
+        }, {
+          "background" : "#d8e4ff",
+          "color" : "#325ebd",
+          "shape" : "RoundedBox",
+          "stroke" : "#d8e4ff",
+          "strokeWidth" : 1,
+          "tag" : "Module"
+        }, {
+          "background" : "#8f7feb",
+          "color" : "#ffffff",
+          "shape" : "RoundedBox",
+          "stroke" : "#8f7feb",
+          "strokeWidth" : 1,
+          "tag" : "Person"
+        }, {
+          "background" : "#ffffff",
+          "color" : "#000000",
+          "shape" : "RoundedBox",
+          "stroke" : "#ffffff",
+          "strokeWidth" : 1,
+          "tag" : "StaticPodGroup"
+        }, {
+          "background" : "#e8efff",
+          "color" : "#4b6ca0",
+          "shape" : "RoundedBox",
+          "stroke" : "#88a6ff",
+          "strokeWidth" : 1,
+          "tag" : "Subsystem"
+        } ],
+        "relationships" : [ {
+          "color" : "#000000",
+          "routing" : "Direct",
+          "style" : "Solid",
+          "tag" : "Relationship",
+          "thickness" : 1
+        } ]
+      },
+      "terminology" : { },
+      "themes" : [ "https://static.structurizr.com/themes/default/theme.json" ]
+    },
+    "containerViews" : [ {
+      "dimensions" : {
+        "height" : 7016,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 865,
+        "y" : 605
+      }, {
+        "id" : "7",
+        "x" : 2265,
+        "y" : 2895
+      }, {
+        "id" : "8",
+        "x" : 840,
+        "y" : 2290
+      }, {
+        "id" : "9",
+        "x" : 2990,
+        "y" : 2895
+      }, {
+        "id" : "10",
+        "x" : 3710,
+        "y" : 1765
+      }, {
+        "id" : "11",
+        "x" : 1540,
+        "y" : 2895
+      }, {
+        "id" : "12",
+        "x" : 3710,
+        "y" : 1230
+      }, {
+        "id" : "13",
+        "x" : 1530,
+        "y" : 180
+      }, {
+        "id" : "14",
+        "x" : 840,
+        "y" : 1230
+      }, {
+        "id" : "15",
+        "x" : 840,
+        "y" : 1765
+      }, {
+        "id" : "16",
+        "x" : 3710,
+        "y" : 705
+      }, {
+        "id" : "19",
+        "x" : 2990,
+        "y" : 1230
+      }, {
+        "id" : "20",
+        "x" : 1540,
+        "y" : 705
+      }, {
+        "id" : "21",
+        "x" : 2265,
+        "y" : 705
+      }, {
+        "id" : "22",
+        "x" : 1545,
+        "y" : 1765
+      }, {
+        "id" : "23",
+        "x" : 2270,
+        "y" : 1230
+      }, {
+        "id" : "24",
+        "x" : 1550,
+        "y" : 2290
+      }, {
+        "id" : "25",
+        "x" : 1540,
+        "y" : 1230
+      }, {
+        "id" : "26",
+        "x" : 2265,
+        "y" : 2290
+      }, {
+        "id" : "27",
+        "x" : 2990,
+        "y" : 2290
+      }, {
+        "id" : "28",
+        "x" : 2990,
+        "y" : 705
+      }, {
+        "id" : "29",
+        "x" : 2990,
+        "y" : 1765
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_subsystems",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 2,
+      "paperSize" : "A2_Portrait",
+      "relationships" : [ {
+        "id" : "177"
+      }, {
+        "id" : "178",
+        "vertices" : [ {
+          "x" : 2154,
+          "y" : 1136
+        } ]
+      }, {
+        "id" : "179"
+      }, {
+        "id" : "180"
+      }, {
+        "id" : "181",
+        "vertices" : [ {
+          "x" : 2225,
+          "y" : 1005
+        } ]
+      }, {
+        "id" : "182",
+        "vertices" : [ {
+          "x" : 2127,
+          "y" : 1225
+        } ]
+      }, {
+        "id" : "183"
+      }, {
+        "id" : "184",
+        "vertices" : [ {
+          "x" : 2127,
+          "y" : 1525
+        } ]
+      }, {
+        "id" : "185"
+      }, {
+        "id" : "186"
+      }, {
+        "id" : "187"
+      }, {
+        "id" : "188",
+        "vertices" : [ {
+          "x" : 2205,
+          "y" : 1510
+        } ]
+      }, {
+        "id" : "189"
+      }, {
+        "id" : "190"
+      }, {
+        "id" : "191"
+      }, {
+        "id" : "192"
+      }, {
+        "id" : "193"
+      }, {
+        "id" : "194",
+        "vertices" : [ {
+          "x" : 2870,
+          "y" : 1425
+        } ]
+      }, {
+        "id" : "195",
+        "vertices" : [ {
+          "x" : 2845,
+          "y" : 1370
+        } ]
+      }, {
+        "id" : "196"
+      }, {
+        "id" : "197"
+      }, {
+        "id" : "198"
+      }, {
+        "id" : "199"
+      }, {
+        "id" : "200"
+      }, {
+        "id" : "202"
+      }, {
+        "id" : "254"
+      }, {
+        "id" : "261"
+      }, {
+        "id" : "301"
+      }, {
+        "id" : "303"
+      }, {
+        "id" : "317"
+      }, {
+        "id" : "342"
+      }, {
+        "id" : "344"
+      }, {
+        "id" : "368"
+      }, {
+        "id" : "377"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 7016,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 80,
+        "y" : 760
+      }, {
+        "id" : "7",
+        "x" : 4040,
+        "y" : 3615
+      }, {
+        "id" : "8",
+        "x" : 50,
+        "y" : 2450
+      }, {
+        "id" : "9",
+        "x" : 60,
+        "y" : 3235
+      }, {
+        "id" : "10",
+        "x" : 4035,
+        "y" : 2445
+      }, {
+        "id" : "11",
+        "x" : 4035,
+        "y" : 4075
+      }, {
+        "id" : "12",
+        "x" : 4035,
+        "y" : 3165
+      }, {
+        "id" : "13",
+        "x" : 1795,
+        "y" : 70
+      }, {
+        "id" : "14",
+        "x" : 50,
+        "y" : 1315
+      }, {
+        "id" : "15",
+        "x" : 60,
+        "y" : 2025
+      }, {
+        "id" : "16",
+        "x" : 2805,
+        "y" : 70
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "32",
+        "x" : 3305,
+        "y" : 3155
+      }, {
+        "id" : "33",
+        "x" : 2805,
+        "y" : 2450
+      }, {
+        "id" : "34",
+        "x" : 2805,
+        "y" : 2805
+      }, {
+        "id" : "35",
+        "x" : 3305,
+        "y" : 2450
+      }, {
+        "id" : "36",
+        "x" : 3305,
+        "y" : 2805
+      }, {
+        "id" : "39",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "40",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "41",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "58",
+        "x" : 1295,
+        "y" : 3235
+      }, {
+        "id" : "59",
+        "x" : 1295,
+        "y" : 3235
+      }, {
+        "id" : "60",
+        "x" : 800,
+        "y" : 885
+      }, {
+        "id" : "61",
+        "x" : 1295,
+        "y" : 885
+      }, {
+        "id" : "62",
+        "x" : 1790,
+        "y" : 885
+      }, {
+        "id" : "63",
+        "x" : 800,
+        "y" : 545
+      }, {
+        "id" : "64",
+        "x" : 1295,
+        "y" : 545
+      }, {
+        "id" : "65",
+        "x" : 1790,
+        "y" : 545
+      }, {
+        "id" : "67",
+        "x" : 2295,
+        "y" : 545
+      }, {
+        "id" : "68",
+        "x" : 1290,
+        "y" : 2445
+      }, {
+        "id" : "69",
+        "x" : 1290,
+        "y" : 2785
+      }, {
+        "id" : "70",
+        "x" : 800,
+        "y" : 2445
+      }, {
+        "id" : "71",
+        "x" : 800,
+        "y" : 2785
+      }, {
+        "id" : "98",
+        "x" : 2295,
+        "y" : 1670
+      }, {
+        "id" : "100",
+        "x" : 3305,
+        "y" : 1315
+      }, {
+        "id" : "101",
+        "x" : 3305,
+        "y" : 1670
+      }, {
+        "id" : "103",
+        "x" : 3310,
+        "y" : 2025
+      }, {
+        "id" : "118",
+        "x" : 1295,
+        "y" : 3235
+      }, {
+        "id" : "119",
+        "x" : 3305,
+        "y" : 3605
+      }, {
+        "id" : "120",
+        "x" : 800,
+        "y" : 1315
+      }, {
+        "id" : "121",
+        "x" : 1295,
+        "y" : 1670
+      }, {
+        "id" : "122",
+        "x" : 1295,
+        "y" : 2025
+      }, {
+        "id" : "123",
+        "x" : 800,
+        "y" : 1670
+      }, {
+        "id" : "124",
+        "x" : 1290,
+        "y" : 1315
+      }, {
+        "id" : "125",
+        "x" : 805,
+        "y" : 2025
+      }, {
+        "id" : "126",
+        "x" : 1785,
+        "y" : 2025
+      }, {
+        "id" : "136",
+        "x" : 2305,
+        "y" : 4415
+      }, {
+        "id" : "137",
+        "x" : 3305,
+        "y" : 4075
+      }, {
+        "id" : "138",
+        "x" : 2805,
+        "y" : 4415
+      }, {
+        "id" : "139",
+        "x" : 800,
+        "y" : 4415
+      }, {
+        "id" : "140",
+        "x" : 1301,
+        "y" : 4415
+      }, {
+        "id" : "141",
+        "x" : 1802,
+        "y" : 4415
+      }, {
+        "id" : "142",
+        "x" : 1301,
+        "y" : 4075
+      }, {
+        "id" : "143",
+        "x" : 2305,
+        "y" : 4075
+      }, {
+        "id" : "144",
+        "x" : 2805,
+        "y" : 4075
+      }, {
+        "id" : "145",
+        "x" : 3305,
+        "y" : 4415
+      }, {
+        "id" : "146",
+        "x" : 1802,
+        "y" : 4075
+      }, {
+        "id" : "147",
+        "x" : 800,
+        "y" : 4075
+      }, {
+        "id" : "163",
+        "x" : 1295,
+        "y" : 3235
+      }, {
+        "id" : "164",
+        "x" : 800,
+        "y" : 3235
+      }, {
+        "id" : "165",
+        "x" : 800,
+        "y" : 3580
+      }, {
+        "id" : "166",
+        "x" : 1798,
+        "y" : 3235
+      }, {
+        "id" : "167",
+        "x" : 1800,
+        "y" : 3580
+      }, {
+        "id" : "168",
+        "x" : 1297,
+        "y" : 3580
+      }, {
+        "id" : "169",
+        "x" : 3305,
+        "y" : 545
+      }, {
+        "id" : "170",
+        "x" : 3305,
+        "y" : 885
+      }, {
+        "id" : "171",
+        "x" : 2805,
+        "y" : 545
+      }, {
+        "id" : "172",
+        "x" : 2805,
+        "y" : 3605
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_modules",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 3,
+      "paperSize" : "A2_Portrait",
+      "relationships" : [ {
+        "id" : "204"
+      }, {
+        "id" : "206",
+        "vertices" : [ {
+          "x" : 2870,
+          "y" : 2180
+        } ]
+      }, {
+        "id" : "207"
+      }, {
+        "id" : "208"
+      }, {
+        "id" : "209"
+      }, {
+        "id" : "233"
+      }, {
+        "id" : "234"
+      }, {
+        "id" : "238"
+      }, {
+        "id" : "243"
+      }, {
+        "id" : "256",
+        "vertices" : [ {
+          "x" : 1325,
+          "y" : 1240
+        }, {
+          "x" : 1810,
+          "y" : 1245
+        } ]
+      }, {
+        "id" : "257",
+        "vertices" : [ {
+          "x" : 2085,
+          "y" : 1360
+        } ]
+      }, {
+        "id" : "258"
+      }, {
+        "id" : "259"
+      }, {
+        "id" : "260"
+      }, {
+        "id" : "263",
+        "vertices" : [ {
+          "x" : 2130,
+          "y" : 2585
+        } ]
+      }, {
+        "id" : "264",
+        "vertices" : [ {
+          "x" : 2155,
+          "y" : 2800
+        } ]
+      }, {
+        "id" : "265"
+      }, {
+        "id" : "266",
+        "vertices" : [ {
+          "x" : 1285,
+          "y" : 2770
+        }, {
+          "x" : 2110,
+          "y" : 2755
+        } ]
+      }, {
+        "id" : "277"
+      }, {
+        "id" : "278"
+      }, {
+        "id" : "281"
+      }, {
+        "id" : "305"
+      }, {
+        "id" : "306"
+      }, {
+        "id" : "307",
+        "vertices" : [ {
+          "x" : 1280,
+          "y" : 1640
+        }, {
+          "x" : 2200,
+          "y" : 1635
+        } ]
+      }, {
+        "id" : "308",
+        "vertices" : [ {
+          "x" : 1260,
+          "y" : 1670
+        }, {
+          "x" : 1260,
+          "y" : 2395
+        } ]
+      }, {
+        "id" : "309"
+      }, {
+        "id" : "310",
+        "vertices" : [ {
+          "x" : 1270,
+          "y" : 1185
+        }, {
+          "x" : 1270,
+          "y" : 880
+        } ]
+      }, {
+        "id" : "311",
+        "vertices" : [ {
+          "x" : 770,
+          "y" : 1255
+        }, {
+          "x" : 770,
+          "y" : 885
+        } ]
+      }, {
+        "id" : "312",
+        "vertices" : [ {
+          "x" : 770,
+          "y" : 1675
+        }, {
+          "x" : 770,
+          "y" : 3990
+        } ]
+      }, {
+        "id" : "313",
+        "vertices" : [ {
+          "x" : 1280,
+          "y" : 1670
+        }, {
+          "x" : 1275,
+          "y" : 2345
+        }, {
+          "x" : 1670,
+          "y" : 2345
+        } ]
+      }, {
+        "id" : "315"
+      }, {
+        "id" : "316",
+        "vertices" : [ {
+          "x" : 1295,
+          "y" : 2385
+        }, {
+          "x" : 2195,
+          "y" : 2385
+        } ]
+      }, {
+        "id" : "317"
+      }, {
+        "id" : "341",
+        "vertices" : [ {
+          "x" : 2780,
+          "y" : 3285
+        } ]
+      }, {
+        "id" : "346"
+      }, {
+        "id" : "347",
+        "vertices" : [ {
+          "x" : 3280,
+          "y" : 4020
+        }, {
+          "x" : 3910,
+          "y" : 4020
+        } ]
+      }, {
+        "id" : "348"
+      }, {
+        "id" : "349",
+        "vertices" : [ {
+          "x" : 2645,
+          "y" : 4005
+        } ]
+      }, {
+        "id" : "370",
+        "vertices" : [ {
+          "x" : 2240,
+          "y" : 2960
+        } ]
+      }, {
+        "id" : "371"
+      }, {
+        "id" : "372",
+        "vertices" : [ {
+          "x" : 1390,
+          "y" : 3190
+        }, {
+          "x" : 1780,
+          "y" : 3190
+        }, {
+          "x" : 2195,
+          "y" : 2885
+        } ]
+      }, {
+        "id" : "373",
+        "vertices" : [ {
+          "x" : 2305,
+          "y" : 3495
+        } ]
+      }, {
+        "id" : "374",
+        "vertices" : [ {
+          "x" : 1805,
+          "y" : 3985
+        }, {
+          "x" : 2320,
+          "y" : 3985
+        } ]
+      }, {
+        "id" : "375",
+        "vertices" : [ {
+          "x" : 2285,
+          "y" : 3085
+        } ]
+      }, {
+        "id" : "376",
+        "vertices" : [ {
+          "x" : 1345,
+          "y" : 4030
+        }, {
+          "x" : 2415,
+          "y" : 4030
+        } ]
+      }, {
+        "id" : "379",
+        "vertices" : [ {
+          "x" : 2855,
+          "y" : 1110
+        } ]
+      }, {
+        "id" : "380"
+      }, {
+        "id" : "381"
+      }, {
+        "id" : "382",
+        "vertices" : [ {
+          "x" : 2695,
+          "y" : 3435
+        } ]
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "10",
+        "x" : 4470,
+        "y" : 205
+      }, {
+        "id" : "38",
+        "x" : 835,
+        "y" : 180
+      }, {
+        "id" : "39",
+        "x" : 2955,
+        "y" : 755
+      }, {
+        "id" : "40",
+        "x" : 2955,
+        "y" : 410
+      }, {
+        "id" : "41",
+        "x" : 2955,
+        "y" : 70
+      }, {
+        "id" : "42",
+        "x" : 1605,
+        "y" : 1055
+      }, {
+        "id" : "43",
+        "x" : 835,
+        "y" : 565
+      }, {
+        "id" : "44",
+        "x" : 835,
+        "y" : 1045
+      }, {
+        "id" : "46",
+        "x" : 2330,
+        "y" : 2355
+      }, {
+        "id" : "47",
+        "x" : 2330,
+        "y" : 2855
+      }, {
+        "id" : "48",
+        "x" : 835,
+        "y" : 1460
+      }, {
+        "id" : "49",
+        "x" : 835,
+        "y" : 1940
+      }, {
+        "id" : "50",
+        "x" : 835,
+        "y" : 2355
+      }, {
+        "id" : "51",
+        "x" : 835,
+        "y" : 2855
+      }, {
+        "id" : "52",
+        "x" : 1610,
+        "y" : 2855
+      }, {
+        "id" : "58",
+        "x" : 60,
+        "y" : 1475
+      }, {
+        "id" : "59",
+        "x" : 45,
+        "y" : 2355
+      }, {
+        "id" : "113",
+        "x" : 3855,
+        "y" : 1940
+      }, {
+        "id" : "155",
+        "x" : 3855,
+        "y" : 2855
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_node-manager-cloud-ephemeral",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 4,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "211",
+        "vertices" : [ {
+          "x" : 2230,
+          "y" : 520
+        } ]
+      }, {
+        "id" : "212",
+        "vertices" : [ {
+          "x" : 1910,
+          "y" : 885
+        } ]
+      }, {
+        "id" : "213"
+      }, {
+        "id" : "216"
+      }, {
+        "id" : "217",
+        "vertices" : [ {
+          "x" : 2160,
+          "y" : 750
+        } ]
+      }, {
+        "id" : "218"
+      }, {
+        "id" : "219",
+        "vertices" : [ {
+          "x" : 1735,
+          "y" : 1720
+        } ]
+      }, {
+        "id" : "220",
+        "vertices" : [ {
+          "x" : 1760,
+          "y" : 1520
+        } ]
+      }, {
+        "id" : "221"
+      }, {
+        "id" : "222"
+      }, {
+        "id" : "223",
+        "vertices" : [ {
+          "x" : 2895,
+          "y" : 2080
+        } ]
+      }, {
+        "id" : "224",
+        "vertices" : [ {
+          "x" : 2055,
+          "y" : 1770
+        } ]
+      }, {
+        "id" : "225"
+      }, {
+        "id" : "226"
+      }, {
+        "id" : "227",
+        "vertices" : [ {
+          "x" : 3535,
+          "y" : 2800
+        } ]
+      }, {
+        "id" : "228"
+      }, {
+        "id" : "229",
+        "vertices" : [ {
+          "x" : 1915,
+          "y" : 1950
+        } ]
+      }, {
+        "id" : "230",
+        "vertices" : [ {
+          "x" : 1985,
+          "y" : 2320
+        } ]
+      }, {
+        "id" : "231"
+      }, {
+        "id" : "233"
+      }, {
+        "id" : "234"
+      }, {
+        "id" : "235",
+        "vertices" : [ {
+          "x" : 3950,
+          "y" : 750
+        } ]
+      }, {
+        "id" : "236",
+        "vertices" : [ {
+          "x" : 3730,
+          "y" : 815
+        } ]
+      }, {
+        "id" : "243"
+      }, {
+        "id" : "294"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 945,
+        "y" : 20
+      }, {
+        "id" : "10",
+        "x" : 3220,
+        "y" : 15
+      }, {
+        "id" : "17",
+        "x" : 1680,
+        "y" : 20
+      }, {
+        "id" : "35",
+        "x" : 1680,
+        "y" : 395
+      }, {
+        "id" : "38",
+        "x" : 1680,
+        "y" : 710
+      }, {
+        "id" : "40",
+        "x" : 3505,
+        "y" : 710
+      }, {
+        "id" : "41",
+        "x" : 2905,
+        "y" : 710
+      }, {
+        "id" : "42",
+        "x" : 1680,
+        "y" : 1060
+      }, {
+        "id" : "48",
+        "x" : 1680,
+        "y" : 1480
+      }, {
+        "id" : "49",
+        "x" : 1680,
+        "y" : 1990
+      }, {
+        "id" : "50",
+        "x" : 1680,
+        "y" : 2430
+      }, {
+        "id" : "51",
+        "x" : 1680,
+        "y" : 2845
+      }, {
+        "id" : "58",
+        "x" : 910,
+        "y" : 1480
+      }, {
+        "id" : "59",
+        "x" : 910,
+        "y" : 2435
+      }, {
+        "id" : "113",
+        "x" : 3230,
+        "y" : 1475
+      }, {
+        "id" : "155",
+        "x" : 3230,
+        "y" : 2840
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_node-manager-cloud-permanent",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 5,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "208",
+        "vertices" : [ {
+          "x" : 2700,
+          "y" : 545
+        } ]
+      }, {
+        "id" : "211"
+      }, {
+        "id" : "218"
+      }, {
+        "id" : "222"
+      }, {
+        "id" : "223"
+      }, {
+        "id" : "224"
+      }, {
+        "id" : "225"
+      }, {
+        "id" : "229"
+      }, {
+        "id" : "230"
+      }, {
+        "id" : "231"
+      }, {
+        "id" : "233"
+      }, {
+        "id" : "234"
+      }, {
+        "id" : "235"
+      }, {
+        "id" : "236"
+      }, {
+        "id" : "237"
+      }, {
+        "id" : "238"
+      }, {
+        "id" : "239"
+      }, {
+        "id" : "241"
+      }, {
+        "id" : "294"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "6",
+        "x" : 4215,
+        "y" : 1525
+      }, {
+        "id" : "10",
+        "x" : 4160,
+        "y" : 125
+      }, {
+        "id" : "38",
+        "x" : 2695,
+        "y" : 2820
+      }, {
+        "id" : "40",
+        "x" : 2720,
+        "y" : 125
+      }, {
+        "id" : "41",
+        "x" : 2725,
+        "y" : 625
+      }, {
+        "id" : "42",
+        "x" : 1865,
+        "y" : 125
+      }, {
+        "id" : "43",
+        "x" : 1035,
+        "y" : 125
+      }, {
+        "id" : "44",
+        "x" : 1035,
+        "y" : 635
+      }, {
+        "id" : "45",
+        "x" : 1035,
+        "y" : 1090
+      }, {
+        "id" : "48",
+        "x" : 1035,
+        "y" : 1515
+      }, {
+        "id" : "49",
+        "x" : 1035,
+        "y" : 1985
+      }, {
+        "id" : "50",
+        "x" : 1035,
+        "y" : 2400
+      }, {
+        "id" : "51",
+        "x" : 1035,
+        "y" : 2820
+      }, {
+        "id" : "58",
+        "x" : 265,
+        "y" : 1515
+      }, {
+        "id" : "59",
+        "x" : 285,
+        "y" : 2410
+      }, {
+        "id" : "113",
+        "x" : 3455,
+        "y" : 1505
+      }, {
+        "id" : "155",
+        "x" : 3455,
+        "y" : 2820
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_node-manager-cloud-static",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 6,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "211"
+      }, {
+        "id" : "212",
+        "vertices" : [ {
+          "x" : 2425,
+          "y" : 920
+        } ]
+      }, {
+        "id" : "214",
+        "vertices" : [ {
+          "x" : 2035,
+          "y" : 1510
+        } ]
+      }, {
+        "id" : "215",
+        "vertices" : [ {
+          "x" : 4300,
+          "y" : 1280
+        } ]
+      }, {
+        "id" : "217",
+        "vertices" : [ {
+          "x" : 2125,
+          "y" : 1035
+        } ]
+      }, {
+        "id" : "218",
+        "vertices" : [ {
+          "x" : 3325,
+          "y" : 575
+        } ]
+      }, {
+        "id" : "219",
+        "vertices" : [ {
+          "x" : 2275,
+          "y" : 1690
+        } ]
+      }, {
+        "id" : "220",
+        "vertices" : [ {
+          "x" : 2155,
+          "y" : 1345
+        } ]
+      }, {
+        "id" : "221"
+      }, {
+        "id" : "222"
+      }, {
+        "id" : "223"
+      }, {
+        "id" : "224",
+        "vertices" : [ {
+          "x" : 2540,
+          "y" : 1945
+        } ]
+      }, {
+        "id" : "225"
+      }, {
+        "id" : "229",
+        "vertices" : [ {
+          "x" : 2185,
+          "y" : 2210
+        } ]
+      }, {
+        "id" : "230"
+      }, {
+        "id" : "231"
+      }, {
+        "id" : "233",
+        "vertices" : [ {
+          "x" : 3720,
+          "y" : 550
+        } ]
+      }, {
+        "id" : "234"
+      }, {
+        "id" : "235",
+        "vertices" : [ {
+          "x" : 3265,
+          "y" : 815
+        } ]
+      }, {
+        "id" : "236",
+        "vertices" : [ {
+          "x" : 3630,
+          "y" : 615
+        } ]
+      }, {
+        "id" : "242"
+      }, {
+        "id" : "294"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "6",
+        "x" : 3940,
+        "y" : 625
+      }, {
+        "id" : "10",
+        "x" : 3940,
+        "y" : 125
+      }, {
+        "id" : "38",
+        "x" : 2545,
+        "y" : 2765
+      }, {
+        "id" : "42",
+        "x" : 1980,
+        "y" : 125
+      }, {
+        "id" : "43",
+        "x" : 1345,
+        "y" : 125
+      }, {
+        "id" : "44",
+        "x" : 1345,
+        "y" : 625
+      }, {
+        "id" : "45",
+        "x" : 1345,
+        "y" : 1040
+      }, {
+        "id" : "48",
+        "x" : 1345,
+        "y" : 1455
+      }, {
+        "id" : "49",
+        "x" : 1345,
+        "y" : 1930
+      }, {
+        "id" : "50",
+        "x" : 1345,
+        "y" : 2345
+      }, {
+        "id" : "51",
+        "x" : 1345,
+        "y" : 2765
+      }, {
+        "id" : "58",
+        "x" : 570,
+        "y" : 1455
+      }, {
+        "id" : "59",
+        "x" : 570,
+        "y" : 2350
+      }, {
+        "id" : "113",
+        "x" : 3205,
+        "y" : 1455
+      }, {
+        "id" : "155",
+        "x" : 3205,
+        "y" : 2765
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_node-manager-static",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 7,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "211",
+        "vertices" : [ {
+          "x" : 3235,
+          "y" : 2270
+        } ]
+      }, {
+        "id" : "212",
+        "vertices" : [ {
+          "x" : 2630,
+          "y" : 750
+        } ]
+      }, {
+        "id" : "214",
+        "vertices" : [ {
+          "x" : 2520,
+          "y" : 1355
+        } ]
+      }, {
+        "id" : "215",
+        "vertices" : [ {
+          "x" : 2950,
+          "y" : 435
+        } ]
+      }, {
+        "id" : "217",
+        "vertices" : [ {
+          "x" : 2430,
+          "y" : 925
+        } ]
+      }, {
+        "id" : "218",
+        "vertices" : [ {
+          "x" : 3115,
+          "y" : 900
+        } ]
+      }, {
+        "id" : "219",
+        "vertices" : [ {
+          "x" : 2595,
+          "y" : 1580
+        } ]
+      }, {
+        "id" : "220",
+        "vertices" : [ {
+          "x" : 2490,
+          "y" : 1135
+        } ]
+      }, {
+        "id" : "221"
+      }, {
+        "id" : "222"
+      }, {
+        "id" : "223"
+      }, {
+        "id" : "224"
+      }, {
+        "id" : "225"
+      }, {
+        "id" : "229"
+      }, {
+        "id" : "230"
+      }, {
+        "id" : "231"
+      }, {
+        "id" : "242"
+      }, {
+        "id" : "294"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "102",
+        "x" : 2100,
+        "y" : 2740
+      }, {
+        "id" : "104",
+        "x" : 620,
+        "y" : 720
+      }, {
+        "id" : "105",
+        "x" : 620,
+        "y" : 2295
+      }, {
+        "id" : "106",
+        "x" : 620,
+        "y" : 1350
+      }, {
+        "id" : "107",
+        "x" : 620,
+        "y" : 1035
+      }, {
+        "id" : "108",
+        "x" : 620,
+        "y" : 1665
+      }, {
+        "id" : "109",
+        "x" : 620,
+        "y" : 1980
+      }, {
+        "id" : "110",
+        "x" : 1355,
+        "y" : 1980
+      }, {
+        "id" : "111",
+        "x" : 1355,
+        "y" : 1350
+      }, {
+        "id" : "112",
+        "x" : 1355,
+        "y" : 720
+      }, {
+        "id" : "113",
+        "x" : 2100,
+        "y" : 1350
+      }, {
+        "id" : "114",
+        "x" : 2100,
+        "y" : 1980
+      }, {
+        "id" : "115",
+        "x" : 2845,
+        "y" : 720
+      }, {
+        "id" : "116",
+        "x" : 2805,
+        "y" : 1980
+      }, {
+        "id" : "117",
+        "x" : 2100,
+        "y" : 720
+      }, {
+        "id" : "118",
+        "x" : 1355,
+        "y" : 185
+      }, {
+        "id" : "153",
+        "x" : 3670,
+        "y" : 1350
+      }, {
+        "id" : "155",
+        "x" : 3670,
+        "y" : 2100
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_control_plane_manager",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 8,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "282",
+        "vertices" : [ {
+          "x" : 1265,
+          "y" : 1095
+        } ]
+      }, {
+        "id" : "283"
+      }, {
+        "id" : "284"
+      }, {
+        "id" : "285"
+      }, {
+        "id" : "286"
+      }, {
+        "id" : "287"
+      }, {
+        "id" : "288"
+      }, {
+        "id" : "289"
+      }, {
+        "id" : "290"
+      }, {
+        "id" : "291",
+        "vertices" : [ {
+          "x" : 2690,
+          "y" : 2215
+        } ]
+      }, {
+        "id" : "292"
+      }, {
+        "id" : "293"
+      }, {
+        "id" : "294"
+      }, {
+        "id" : "295"
+      }, {
+        "id" : "296"
+      }, {
+        "id" : "297"
+      }, {
+        "id" : "298",
+        "vertices" : [ {
+          "x" : 3205,
+          "y" : 1300
+        } ]
+      }, {
+        "id" : "299",
+        "vertices" : [ {
+          "x" : 3590,
+          "y" : 1185
+        } ]
+      }, {
+        "id" : "300"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 2480
+      },
+      "elements" : [ {
+        "id" : "10",
+        "x" : 1945,
+        "y" : 335
+      }, {
+        "id" : "53",
+        "x" : 155,
+        "y" : 335
+      }, {
+        "id" : "54",
+        "x" : 155,
+        "y" : 725
+      }, {
+        "id" : "55",
+        "x" : 155,
+        "y" : 1255
+      }, {
+        "id" : "56",
+        "x" : 155,
+        "y" : 1680
+      }, {
+        "id" : "57",
+        "x" : 155,
+        "y" : 2200
+      }, {
+        "id" : "113",
+        "x" : 1350,
+        "y" : 1255
+      }, {
+        "id" : "155",
+        "x" : 1350,
+        "y" : 2200
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_terraform-manager",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 9,
+      "paperSize" : "A4_Portrait",
+      "relationships" : [ {
+        "id" : "244"
+      }, {
+        "id" : "245"
+      }, {
+        "id" : "246"
+      }, {
+        "id" : "247"
+      }, {
+        "id" : "248",
+        "vertices" : [ {
+          "x" : 955,
+          "y" : 1755
+        } ]
+      }, {
+        "id" : "249",
+        "vertices" : [ {
+          "x" : 890,
+          "y" : 2020
+        } ]
+      }, {
+        "id" : "250"
+      }, {
+        "id" : "251"
+      }, {
+        "id" : "252"
+      }, {
+        "id" : "253"
+      }, {
+        "id" : "294"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 50,
+        "y" : 265
+      }, {
+        "id" : "8",
+        "x" : 3750,
+        "y" : 5
+      }, {
+        "id" : "14",
+        "x" : 20,
+        "y" : 825
+      }, {
+        "id" : "30",
+        "x" : 4400,
+        "y" : 1625
+      }, {
+        "id" : "66",
+        "x" : 4400,
+        "y" : 890
+      }, {
+        "id" : "72",
+        "x" : 3750,
+        "y" : 600
+      }, {
+        "id" : "75",
+        "x" : 3005,
+        "y" : 400
+      }, {
+        "id" : "96",
+        "x" : 3005,
+        "y" : 810
+      }, {
+        "id" : "113",
+        "x" : 2995,
+        "y" : 1950
+      }, {
+        "id" : "127",
+        "x" : 1480,
+        "y" : 825
+      }, {
+        "id" : "128",
+        "x" : 2210,
+        "y" : 905
+      }, {
+        "id" : "129",
+        "x" : 1480,
+        "y" : 1640
+      }, {
+        "id" : "130",
+        "x" : 2210,
+        "y" : 2405
+      }, {
+        "id" : "131",
+        "x" : 850,
+        "y" : 2080
+      }, {
+        "id" : "132",
+        "x" : 850,
+        "y" : 2430
+      }, {
+        "id" : "133",
+        "x" : 2210,
+        "y" : 2405
+      }, {
+        "id" : "134",
+        "x" : 1480,
+        "y" : 405
+      }, {
+        "id" : "135",
+        "x" : 850,
+        "y" : 2850
+      }, {
+        "id" : "155",
+        "x" : 3005,
+        "y" : 2840
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_ingress-nginx",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 10,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "267"
+      }, {
+        "id" : "268"
+      }, {
+        "id" : "273"
+      }, {
+        "id" : "294"
+      }, {
+        "id" : "317"
+      }, {
+        "id" : "318"
+      }, {
+        "id" : "319"
+      }, {
+        "id" : "320",
+        "vertices" : [ {
+          "x" : 2206,
+          "y" : 1702
+        } ]
+      }, {
+        "id" : "321",
+        "vertices" : [ {
+          "x" : 1933,
+          "y" : 1827
+        } ]
+      }, {
+        "id" : "322"
+      }, {
+        "id" : "323",
+        "vertices" : [ {
+          "x" : 2340,
+          "y" : 550
+        } ]
+      }, {
+        "id" : "324",
+        "vertices" : [ {
+          "x" : 2345,
+          "y" : 715
+        } ]
+      }, {
+        "id" : "325",
+        "vertices" : [ {
+          "x" : 2720,
+          "y" : 1450
+        }, {
+          "x" : 4250,
+          "y" : 1445
+        } ]
+      }, {
+        "id" : "326",
+        "vertices" : [ {
+          "x" : 2870,
+          "y" : 1590
+        } ]
+      }, {
+        "id" : "328",
+        "vertices" : [ {
+          "x" : 2505,
+          "y" : 1540
+        } ]
+      }, {
+        "id" : "329",
+        "vertices" : [ {
+          "x" : 2955,
+          "y" : 1645
+        }, {
+          "x" : 2765,
+          "y" : 720
+        } ]
+      }, {
+        "id" : "330",
+        "vertices" : [ {
+          "x" : 2470,
+          "y" : 1795
+        } ]
+      }, {
+        "id" : "331"
+      }, {
+        "id" : "332"
+      }, {
+        "id" : "333"
+      }, {
+        "id" : "334",
+        "vertices" : [ {
+          "x" : 2500,
+          "y" : 2180
+        } ]
+      }, {
+        "id" : "335",
+        "vertices" : [ {
+          "x" : 2420,
+          "y" : 1855
+        } ]
+      }, {
+        "id" : "336",
+        "vertices" : [ {
+          "x" : 2240,
+          "y" : 2340
+        } ]
+      }, {
+        "id" : "337"
+      }, {
+        "id" : "338",
+        "vertices" : [ {
+          "x" : 2849,
+          "y" : 2310
+        } ]
+      }, {
+        "id" : "339",
+        "vertices" : [ {
+          "x" : 1955,
+          "y" : 2710
+        } ]
+      }, {
+        "id" : "340",
+        "vertices" : [ {
+          "x" : 2230,
+          "y" : 2985
+        } ]
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 490,
+        "y" : 1515
+      }, {
+        "id" : "8",
+        "x" : 2815,
+        "y" : 70
+      }, {
+        "id" : "14",
+        "x" : 450,
+        "y" : 2175
+      }, {
+        "id" : "30",
+        "x" : 3655,
+        "y" : 2165
+      }, {
+        "id" : "72",
+        "x" : 2815,
+        "y" : 590
+      }, {
+        "id" : "73",
+        "x" : 2815,
+        "y" : 1110
+      }, {
+        "id" : "95",
+        "x" : 2065,
+        "y" : 595
+      }, {
+        "id" : "96",
+        "x" : 2065,
+        "y" : 1110
+      }, {
+        "id" : "97",
+        "x" : 2065,
+        "y" : 1625
+      }, {
+        "id" : "113",
+        "x" : 2065,
+        "y" : 2685
+      }, {
+        "id" : "127",
+        "x" : 1270,
+        "y" : 2175
+      }, {
+        "id" : "155",
+        "x" : 2815,
+        "y" : 2685
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_user-authn",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 11,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "268"
+      }, {
+        "id" : "270"
+      }, {
+        "id" : "271"
+      }, {
+        "id" : "272"
+      }, {
+        "id" : "273"
+      }, {
+        "id" : "275"
+      }, {
+        "id" : "276"
+      }, {
+        "id" : "294"
+      }, {
+        "id" : "317"
+      }, {
+        "id" : "318"
+      }, {
+        "id" : "324"
+      }, {
+        "id" : "326"
+      }, {
+        "id" : "328"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 4961
+      },
+      "elements" : [ {
+        "id" : "5",
+        "x" : 55,
+        "y" : 910
+      }, {
+        "id" : "8",
+        "x" : 1630,
+        "y" : 45
+      }, {
+        "id" : "14",
+        "x" : 30,
+        "y" : 1535
+      }, {
+        "id" : "31",
+        "x" : 1630,
+        "y" : 1535
+      }, {
+        "id" : "72",
+        "x" : 1630,
+        "y" : 615
+      }, {
+        "id" : "127",
+        "x" : 850,
+        "y" : 1535
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_user-authn-with-dex-client",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 12,
+      "paperSize" : "A3_Landscape",
+      "relationships" : [ {
+        "id" : "269"
+      }, {
+        "id" : "273"
+      }, {
+        "id" : "317"
+      }, {
+        "id" : "318"
+      }, {
+        "id" : "327"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 2480,
+        "width" : 3508
+      },
+      "elements" : [ {
+        "id" : "11",
+        "x" : 2650,
+        "y" : 110
+      }, {
+        "id" : "113",
+        "x" : 365,
+        "y" : 1530
+      }, {
+        "id" : "148",
+        "x" : 1135,
+        "y" : 500
+      }, {
+        "id" : "149",
+        "x" : 1135,
+        "y" : 1530
+      }, {
+        "id" : "150",
+        "x" : 1135,
+        "y" : 1015
+      }, {
+        "id" : "155",
+        "x" : 1910,
+        "y" : 1530
+      }, {
+        "id" : "156",
+        "x" : 370,
+        "y" : 1030
+      }, {
+        "id" : "157",
+        "x" : 370,
+        "y" : 500
+      }, {
+        "id" : "158",
+        "x" : 2650,
+        "y" : 465
+      }, {
+        "id" : "159",
+        "x" : 2650,
+        "y" : 1105
+      }, {
+        "id" : "160",
+        "x" : 2650,
+        "y" : 785
+      }, {
+        "id" : "161",
+        "x" : 2650,
+        "y" : 1745
+      }, {
+        "id" : "162",
+        "x" : 2650,
+        "y" : 1425
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_log-shipper",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 13,
+      "paperSize" : "A4_Landscape",
+      "relationships" : [ {
+        "id" : "294",
+        "vertices" : [ {
+          "x" : 1355,
+          "y" : 1415
+        } ]
+      }, {
+        "id" : "350"
+      }, {
+        "id" : "352"
+      }, {
+        "id" : "353"
+      }, {
+        "id" : "354"
+      }, {
+        "id" : "355"
+      }, {
+        "id" : "356"
+      }, {
+        "id" : "357"
+      }, {
+        "id" : "358"
+      }, {
+        "id" : "359"
+      }, {
+        "id" : "360"
+      }, {
+        "id" : "361"
+      }, {
+        "id" : "362"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 2480,
+        "width" : 3508
+      },
+      "elements" : [ {
+        "id" : "60",
+        "x" : 2725,
+        "y" : 515
+      }, {
+        "id" : "148",
+        "x" : 420,
+        "y" : 515
+      }, {
+        "id" : "151",
+        "x" : 1188,
+        "y" : 515
+      }, {
+        "id" : "152",
+        "x" : 1190,
+        "y" : 1020
+      }, {
+        "id" : "154",
+        "x" : 1956,
+        "y" : 515
+      }, {
+        "id" : "155",
+        "x" : 1956,
+        "y" : 1020
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "L2_module_loki",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 14,
+      "paperSize" : "A4_Landscape",
+      "relationships" : [ {
+        "id" : "351"
+      }, {
+        "id" : "364"
+      }, {
+        "id" : "365"
+      }, {
+        "id" : "366"
+      }, {
+        "id" : "367"
+      } ],
+      "softwareSystemId" : "18"
+    }, {
+      "dimensions" : {
+        "height" : 1240,
+        "width" : 1748
+      },
+      "elements" : [ {
+        "id" : "383",
+        "x" : 170,
+        "y" : 55
+      }, {
+        "id" : "384",
+        "x" : 645,
+        "y" : 55
+      }, {
+        "id" : "385",
+        "x" : 1120,
+        "y" : 55
+      }, {
+        "id" : "386",
+        "x" : 170,
+        "y" : 380
+      }, {
+        "id" : "387",
+        "x" : 645,
+        "y" : 380
+      }, {
+        "id" : "388",
+        "x" : 1120,
+        "y" : 380
+      }, {
+        "id" : "389",
+        "x" : 645,
+        "y" : 705
+      }, {
+        "id" : "390",
+        "x" : 170,
+        "y" : 705
+      }, {
+        "id" : "391",
+        "x" : 1120,
+        "y" : 705
+      } ],
+      "externalSoftwareSystemBoundariesVisible" : false,
+      "key" : "Legend",
+      "name" : "Container View: Deckhouse Kubernetes Platform",
+      "order" : 15,
+      "paperSize" : "A6_Landscape",
+      "softwareSystemId" : "18"
+    } ],
+    "systemContextViews" : [ {
+      "dimensions" : {
+        "height" : 3508,
+        "width" : 2480
+      },
+      "elements" : [ {
+        "id" : "1",
+        "x" : 240,
+        "y" : 2090
+      }, {
+        "id" : "2",
+        "x" : 240,
+        "y" : 1631
+      }, {
+        "id" : "3",
+        "x" : 240,
+        "y" : 715
+      }, {
+        "id" : "4",
+        "x" : 240,
+        "y" : 1173
+      }, {
+        "id" : "7",
+        "x" : 1251,
+        "y" : 2190
+      }, {
+        "id" : "8",
+        "x" : 1755,
+        "y" : 1102
+      }, {
+        "id" : "9",
+        "x" : 731,
+        "y" : 735
+      }, {
+        "id" : "10",
+        "x" : 1242,
+        "y" : 735
+      }, {
+        "id" : "11",
+        "x" : 1755,
+        "y" : 2190
+      }, {
+        "id" : "12",
+        "x" : 1755,
+        "y" : 735
+      }, {
+        "id" : "13",
+        "x" : 1750,
+        "y" : 1470
+      }, {
+        "id" : "15",
+        "x" : 748,
+        "y" : 2190
+      }, {
+        "id" : "16",
+        "x" : 1755,
+        "y" : 1830
+      }, {
+        "id" : "17",
+        "x" : 0,
+        "y" : 0
+      }, {
+        "id" : "18",
+        "x" : 1000,
+        "y" : 1470
+      } ],
+      "enterpriseBoundaryVisible" : true,
+      "key" : "L1_context",
+      "name" : "System Context View: Deckhouse Kubernetes Platform",
+      "order" : 1,
+      "paperSize" : "A4_Portrait",
+      "relationships" : [ {
+        "id" : "173"
+      }, {
+        "id" : "174"
+      }, {
+        "id" : "175"
+      }, {
+        "id" : "176"
+      }, {
+        "id" : "201"
+      }, {
+        "id" : "203"
+      }, {
+        "id" : "237"
+      }, {
+        "id" : "238"
+      }, {
+        "id" : "240"
+      }, {
+        "id" : "255"
+      }, {
+        "id" : "262"
+      }, {
+        "id" : "304"
+      }, {
+        "id" : "343"
+      }, {
+        "id" : "345"
+      }, {
+        "id" : "369"
+      }, {
+        "id" : "378"
+      } ],
+      "softwareSystemId" : "18"
+    } ]
+  }
+}

@@ -1,0 +1,3 @@
+properties {
+    "structurizr.groupSeparator" "/"
+}
