@@ -10,7 +10,7 @@ properties:
 
       If the parameter is omitted or `false`, it will be determined [automatically](https://deckhouse.io/products/kubernetes-platform/documentation/v1/#advanced-scheduling).
     x-examples:
-    - { "has-gpu": "true" }
+      - { "has-gpu": "true" }
 
   tolerations:
     description: |
@@ -33,7 +33,13 @@ properties:
         value:
           type: string
     x-examples:
-    - [{"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}]
+      - [
+          {
+            "key": "dedicated.deckhouse.io",
+            "operator": "Equal",
+            "value": "cert-manager",
+          },
+        ]
 
   cloudflareAPIToken:
     type: string
@@ -93,7 +99,10 @@ properties:
     description: |
       The Service Account for [Google Cloud](usage.html#issuing-a-dns-wildcard-certificate-using-google)
       for the same project that has the DNS Administrator role.
-    x-examples: ["eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="]
+    x-examples:
+      [
+        "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0=",
+      ]
 
   email:
     type: string
@@ -162,41 +171,57 @@ properties:
           When set to true, only the specified recursive DNS servers will be used to check for the existence of a record in the DNS before starting the domain ownership verification process.
         default: false
   letsencrypt:
-      type: object
-      description: |
-        Settings for the `letsencrypt` ClusterIssuer.
-      properties:
-        resources:
-          oneOf:
-            - type: object
-            - type: boolean
-          default: false
-          description: |
-            Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
-            Set to `false` to avoid specifying resources.
-          properties:
-            requests:
-              type: object
-              additionalProperties:
-                type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
-              description: |
-                Resource requests for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).
-            limits:
-              type: object
-              additionalProperties:
-                type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
-              description: |
-                Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).
-          x-examples:
-            - false
-            - requests:
-                cpu: "100m"
-                memory: "128Mi"
+    type: object
+    description: |
+      Settings for the `letsencrypt` ClusterIssuer.
+    properties:
+      resources:
+        oneOf:
+          - type: object
+            properties:
+              requests:
+                type: object
+                properties:
+                  cpu:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                  memory:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                description: |
+                  Resource requests for the `letsencrypt` ClusterIssuer 
               limits:
-                cpu: "250m"
-                memory: "256Mi"
+                type: object
+                properties:
+                  cpu:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                  memory:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                description: |
+                  Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).
+          - type: boolean
+        default: false
+        description: |
+          Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
+          Set to `false` to avoid specifying resources.
+        x-examples:
+          - false
+          - requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
   letsencryptStaging:
     type: object
     description: |
@@ -205,26 +230,42 @@ properties:
       resources:
         oneOf:
           - type: object
+            properties:
+              requests:
+                type: object
+                properties:
+                  cpu:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                  memory:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                description: |
+                  Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
+              limits:
+                type: object
+                properties:
+                  cpu:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                  memory:
+                    description: |
+                      The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
+                    type: string
+                    pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+            description: |
+              Resource limits for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
           - type: boolean
         default: false
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
           Set to `false` to avoid specifying resources.
-        properties:
-          requests:
-            type: object
-            additionalProperties:
-              type: string
-              pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
-            description: |
-              Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
-          limits:
-            type: object
-            additionalProperties:
-              type: string
-              pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
-            description: |
-              Resource limits for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
         x-examples:
           - false
           - requests:
