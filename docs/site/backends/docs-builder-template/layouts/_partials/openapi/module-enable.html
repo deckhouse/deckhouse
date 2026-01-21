@@ -3,4 +3,15 @@
 
 {{- $content := replace (T "module_enabling_details_content") "<ModuleName>" .ModuleName }}
 
+{{- if and .Page .Page.Params.enablingNote }}
+  {{- $enablingNote := .Page.Params.enablingNote | markdownify }}
+  {{- $enablingNoteHtml := printf `<div class="info alert__wrap">
+  <svg class="alert__icon icon--info">
+    <use xlink:href="/images/sprite.svg#info-icon"></use>
+  </svg>
+  <div>%s</div>
+</div>` $enablingNote }}
+  {{- $content = printf "%s\n\n%s" $enablingNoteHtml $content }}
+{{- end }}
+
 {{- partial "details" (dict "summary" (T "module_enabling_details_title") "content" $content) }}

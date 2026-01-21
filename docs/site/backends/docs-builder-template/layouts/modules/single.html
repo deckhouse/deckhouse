@@ -112,7 +112,7 @@
               {{- else if eq .File.ContentBaseName "CONFIGURATION" }} {{/* Render module configuration JSONschema */}}
                 {{- $type = "configuration" }}
               {{- end }}
-              {{- partial "module-resources" (dict "name" $moduleName "channel" $moduleChannel "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
+              {{- partial "module-resources" (dict "name" $moduleName "channel" $moduleChannel "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang "page" $ )}}
             {{- end }}
           {{- end }}
         {{- end }}
