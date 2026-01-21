@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   annotations:
-    deprecated.daemonset.template.generation: "152"
+    deprecated.daemonset.template.generation: "153"
     meta.helm.sh/release-name: node-local-dns
     meta.helm.sh/release-namespace: d8-system
     werf.io/skip-logs: "true"
@@ -138,7 +138,7 @@ metadata:
     app: node-local-dns
     controller-revision-hash: 5fdd46b49
     k8s-app: node-local-dns
-    pod-template-generation: "151"
+    pod-template-generation: "152"
   name: node-local-dns-5rstp
   namespace: kube-system
   ownerReferences:
@@ -179,7 +179,7 @@ status:
     type: Initialized
   - lastProbeTime: null
     lastTransitionTime: "2025-11-18T14:57:41Z"
-    status: "True"
+    status: "False"
     type: Ready
   - lastProbeTime: null
     lastTransitionTime: "2025-11-18T14:57:41Z"
@@ -203,7 +203,7 @@ data:
 kind: ControllerRevision
 metadata:
   annotations:
-    deprecated.daemonset.template.generation: "152"
+    deprecated.daemonset.template.generation: "153"
     meta.helm.sh/release-name: node-local-dns
     meta.helm.sh/release-namespace: d8-system
     werf.io/skip-logs: "true"
@@ -224,7 +224,7 @@ metadata:
     uid: 8d85883d-f5c1-48d8-8f33-1bcb7a7e2a1d
   resourceVersion: "920392478"
   uid: 533c255d-9488-4597-acf1-1b9864197636
-revision: 152
+revision: 153
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -303,9 +303,9 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 7cd779576d
+    controller-revision-hash: 6dc65d9f6
     module: cni-cilium
-    pod-template-generation: "40"
+    pod-template-generation: "39"
   name: agent-xxlml
   namespace: d8-cni-cilium
   ownerReferences:
@@ -364,7 +364,7 @@ metadata:
     app: agent
     controller-revision-hash: 6dc65d9f6
     module: cni-cilium
-    pod-template-generation: "41"
+    pod-template-generation: "39"
   name: agent-xylml
   namespace: d8-cni-cilium
   ownerReferences:
@@ -406,7 +406,7 @@ data:
 kind: ControllerRevision
 metadata:
   annotations:
-    deprecated.daemonset.template.generation: "41"
+    deprecated.daemonset.template.generation: "40"
     meta.helm.sh/release-name: cni-cilium
     meta.helm.sh/release-namespace: d8-system
     werf.io/skip-logs: "true"
@@ -427,4 +427,4 @@ metadata:
     uid: d9666cfd-e844-4d38-abee-1e25d11858b2
   resourceVersion: "932875950"
   uid: 3a327e49-8d3b-4d6c-b041-af0525822ed9
-revision: 41
+revision: 40
