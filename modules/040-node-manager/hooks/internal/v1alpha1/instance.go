@@ -111,6 +111,9 @@ type LastOperation struct {
 	// Description of the current operation
 	Description string `json:"description,omitempty"`
 
+	// ShortDescription is a short version of Description for list output.
+	ShortDescription string `json:"shortDescription,omitempty"`
+
 	// Last update time of current operation
 	LastUpdateTime metav1.Time `json:"lastUpdateTime,omitempty"`
 

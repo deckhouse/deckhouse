@@ -171,6 +171,16 @@ var (
 	}
 )
 
+func newDrainingAnnotationPatch() map[string]interface{} {
+	return map[string]interface{}{
+		"metadata": map[string]interface{}{
+			"annotations": map[string]interface{}{
+				"update.node.deckhouse.io/draining": "instance-deletion",
+			},
+		},
+	}
+}
+
 var capiMachineConditionPriority = map[capi.ConditionType]int{
 	capi.InfrastructureReadyCondition:             0,
 	capi.BootstrapReadyCondition:                  1,
@@ -269,6 +279,24 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		if ic, ok := instances[name]; ok {
+			desiredPhase, _ := resolveInstancePhase(ic, machine)
+			if desiredPhase == d8v1alpha1.InstanceDraining && ic.Status.CurrentStatus.Phase != d8v1alpha1.InstanceDraining {
+				nodeName := machine.NodeName
+				if nodeName == "" {
+					nodeName = ic.Status.NodeRef.Name
+				}
+				if nodeName != "" {
+					input.Logger.Info("Setting draining annotation on node due to Instance draining",
+						slog.String("instance", ic.Name),
+						slog.String("node", nodeName))
+					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
+				} else {
+					input.Logger.Warn("Cannot set draining annotation: node name is empty",
+						slog.String("instance", ic.Name),
+						slog.String("machine", machine.Name))
+				}
+			}
+
 			statusPatch := getInstanceStatusPatch(ic, machine, ng)
 			if len(statusPatch) > 0 {
 				patch := map[string]interface{}{
@@ -298,6 +326,24 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 		}
 
 		if ic, ok := instances[name]; ok {
+			desiredPhase, _ := resolveInstancePhase(ic, machine)
+			if desiredPhase == d8v1alpha1.InstanceDraining && ic.Status.CurrentStatus.Phase != d8v1alpha1.InstanceDraining {
+				nodeName := machine.NodeName
+				if nodeName == "" {
+					nodeName = ic.Status.NodeRef.Name
+				}
+				if nodeName != "" {
+					input.Logger.Info("Setting draining annotation on node due to Instance draining",
+						slog.String("instance", ic.Name),
+						slog.String("node", nodeName))
+					input.PatchCollector.PatchWithMerge(newDrainingAnnotationPatch(), "v1", "Node", "", nodeName)
+				} else {
+					input.Logger.Warn("Cannot set draining annotation: node name is empty",
+						slog.String("instance", ic.Name),
+						slog.String("machine", machine.Name))
+				}
+			}
+
 			statusPatch := getInstanceStatusPatch(ic, machine, ng)
 			if len(statusPatch) > 0 {
 				patch := map[string]interface{}{
@@ -351,14 +397,13 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 	var lastOperation d8v1alpha1.LastOperation
 	if machine.LastOperation != nil {
 		description := machine.LastOperation.Description
-		if machine.IsCAPI {
-			description = truncateInstanceMessage(description)
-		}
+		shortDescription := truncateInstanceMessage(description)
 		lastOperation = d8v1alpha1.LastOperation{
-			LastUpdateTime: machine.LastOperation.LastUpdateTime,
-			Description:    description,
-			State:          d8v1alpha1.State(machine.LastOperation.State),
-			Type:           d8v1alpha1.OperationType(machine.LastOperation.Type),
+			LastUpdateTime:   machine.LastOperation.LastUpdateTime,
+			Description:      description,
+			ShortDescription: shortDescription,
+			State:            d8v1alpha1.State(machine.LastOperation.State),
+			Type:             d8v1alpha1.OperationType(machine.LastOperation.Type),
 		}
 	} else if machine.IsCAPI {
 		if op := buildCAPILastOperation(machine, phase); op != nil {
@@ -425,7 +470,7 @@ func instanceLastOpMap(s map[string]interface{}) map[string]interface{} {
 }
 
 func isLastOperationEmpty(op d8v1alpha1.LastOperation) bool {
-	return op.Description == "" && op.State == "" && op.Type == "" && op.LastUpdateTime.IsZero()
+	return op.Description == "" && op.ShortDescription == "" && op.State == "" && op.Type == "" && op.LastUpdateTime.IsZero()
 }
 
 func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeGroupForInstance) map[string]interface{} {
@@ -456,6 +501,9 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 			if ic.Status.LastOperation.Description != op.Description {
 				m["description"] = op.Description
 			}
+			if ic.Status.LastOperation.ShortDescription != op.ShortDescription {
+				m["shortDescription"] = op.ShortDescription
+			}
 			if ic.Status.LastOperation.Type != op.Type {
 				m["type"] = string(op.Type)
 			}
@@ -473,9 +521,7 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 	if machine.LastOperation != nil {
 		shouldUpdateLastOp := true
 		description := machine.LastOperation.Description
-		if machine.IsCAPI {
-			description = truncateInstanceMessage(description)
-		}
+		shortDescription := truncateInstanceMessage(description)
 
 		if ic.Status.LastOperation.Description != description {
 			if machine.LastOperation.Description != "Started Machine creation process" {
@@ -485,8 +531,11 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 				shouldUpdateLastOp = false
 			}
 		}
-
 		if shouldUpdateLastOp {
+			if ic.Status.LastOperation.ShortDescription != shortDescription {
+				m := instanceLastOpMap(status)
+				m["shortDescription"] = shortDescription
+			}
 			if string(ic.Status.LastOperation.Type) != string(machine.LastOperation.Type) {
 				m := instanceLastOpMap(status)
 				m["type"] = string(machine.LastOperation.Type)
@@ -608,7 +657,8 @@ func buildCAPILastOperation(machine *machineForInstance, phase d8v1alpha1.Instan
 		return nil
 	}
 
-	description := truncateInstanceMessage(cond.Message)
+	description := cond.Message
+	shortDescription := truncateInstanceMessage(description)
 	operationType := d8v1alpha1.OperationHealthCheck
 	state := d8v1alpha1.StateProcessing
 	if phase == d8v1alpha1.InstanceDraining {
@@ -619,10 +669,11 @@ func buildCAPILastOperation(machine *machineForInstance, phase d8v1alpha1.Instan
 	}
 
 	return &d8v1alpha1.LastOperation{
-		Description:    description,
-		LastUpdateTime: cond.LastTransitionTime,
-		State:          state,
-		Type:           operationType,
+		Description:      description,
+		ShortDescription: shortDescription,
+		LastUpdateTime:   cond.LastTransitionTime,
+		State:            state,
+		Type:             operationType,
 	}
 }
 
@@ -633,10 +684,18 @@ func truncateInstanceMessage(message string) string {
 
 	runes := []rune(message)
 	if len(runes) <= instanceMessageMaxRunes {
-		return message
+		return trimShortMessage(message)
 	}
 
-	return string(runes[:instanceMessageMaxRunes-3]) + "..."
+	return trimShortMessage(string(runes[:instanceMessageMaxRunes-3]) + "...")
+}
+
+func trimShortMessage(message string) string {
+	trimmed := strings.TrimRight(message, " \t\r\n")
+	if strings.HasSuffix(trimmed, "-") || strings.HasSuffix(trimmed, ":") {
+		trimmed = trimmed[:len(trimmed)-1]
+	}
+	return trimmed
 }
 
 func selectCAPIMessageConditionByPriority(conditions capi.Conditions) *capi.Condition {

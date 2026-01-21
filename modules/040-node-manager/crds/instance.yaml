@@ -93,6 +93,9 @@ spec:
                     description:
                       description: Description of the current operation.
                       type: string
+                    shortDescription:
+                      description: Short description of the current operation.
+                      type: string
                     lastUpdateTime:
                       description: Last update time of current operation.
                       format: date-time
@@ -122,7 +125,7 @@ spec:
         - name: LastOperation
           type: string
           description: Short last operation description.
-          jsonPath: .status.lastOperation.description
+          jsonPath: .status.lastOperation.shortDescription
           priority: 1
         - name: Age
           type: date

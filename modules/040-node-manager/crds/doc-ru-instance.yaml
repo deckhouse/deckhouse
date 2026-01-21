@@ -64,6 +64,9 @@ spec:
                   properties:
                     description:
                       description: Описание текущей операции.
+                    shortDescription:
+                      description: Краткое описание текущей операции.
+                      type: string
                     lastUpdateTime:
                       description: Время последней операции.
                     state:
@@ -89,7 +92,7 @@ spec:
         - name: LastOperation
           type: string
           description: Краткое описание последней операции.
-          jsonPath: .status.lastOperation.description
+          jsonPath: .status.lastOperation.shortDescription
           priority: 1
         - name: Age
           type: date
