@@ -3,6 +3,28 @@ title: "VPA"
 permalink: en/architecture/vpa.html
 ---
 
+## VPA operating modes
+
+VPA can operate in two modes:
+
+- Automatic resource adjustment:
+
+  - **InPlaceOrRecreate** (the default in Kubernetes starting from version 1.33): VPA attempts to update resources without recreating Pods. If in-place resource updates are not possible, VPA falls back to behavior similar to the **Recreate** mode: the Pod for which the resources cannot be updated is evicted, and the controller creates a new Pod with updated resources.
+
+  > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
+  
+  - **Auto** (the default in Kubernetes versions earlier than 1.33): VPA changes resource requests without recreating Pods but behaves the same as **Recreate** and restarts the Pod when necessary. This is a deprecated operating mode that will no longer be supported in future DKP versions.
+
+  - **Recreate**: VPA adjusts the resources of running Pods by restarting them. For a single Pod (`replicas: 1`), this will result in service unavailability during the restart. VPA does not restart Pods that were created without a controller.
+
+- Recommendations only, without modifying resources:
+
+  - **Initial**: Pod resources are adjusted only when Pods are created and not during the runtime.
+
+  - **Off**: VPA does not change resources automatically. However, it still provides resource recommendations, which can be viewed using the `d8 k describe vpa` command.
+
+When VPA is enabled and configured, resource requests are set automatically based on Prometheus data. You can also configure the system to only provide recommendations without applying any changes. For details on enabling and configuring the VPA, refer to [Administration](../admin/configuration/app-scaling/vpa.html).
+
 ## VPA limitations
 
 Before using the vertical pod autoscaler (VPA), you need to consider several limitations:
