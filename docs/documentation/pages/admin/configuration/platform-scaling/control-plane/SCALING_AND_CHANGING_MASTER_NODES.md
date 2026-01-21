@@ -202,6 +202,11 @@ After completing these steps, the node will no longer be considered a master nod
    d8 k -n kube-system wait pod --timeout=10m --for=condition=ContainersReady \
      -l app=d8-control-plane-manager --field-selector spec.nodeName=<MASTER-NODE-N-NAME>
    ```
+1. Check the Deckhouse queue and make sure that there are no errors with the command:
+
+   ```shell
+   d8 system queue list
+   ```
 
 1. Proceed to updating the next master node.
 
