@@ -861,10 +861,10 @@ entries:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
-        - title:
-            en: FAQ
-            ru: FAQ
-          url: /admin/faq.html
+        # - title:
+        #     en: FAQ
+        #     ru: FAQ
+        #   url: /admin/faq.html
           #folders:
           #  - title:
           #      en: High load on the API server
@@ -1325,6 +1325,10 @@ entries:
         en: Release notes
         ru: История изменений
       url: /release-notes.html
+    - title:
+        en: FAQ
+        ru: FAQ
+      url: /faq.html
   # ------------- TEST -------------
     - title:
         en: Projects (WIP)

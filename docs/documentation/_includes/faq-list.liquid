@@ -1,4 +1,4 @@
-{%- assign faqs = site.faq | where: "lang", page.lang | where: "section", page.section %}
+{%- assign faqs = site.faq | where: "lang", page.lang %}
 
 {%- assign all_subsystems = "" | split: "" %}
 {%- for faq in faqs %}

@@ -9,7 +9,7 @@ cluster_infrastructure:
   ru: Кластер и инфраструктура
 iam:
   en: IAM
-  ru: Индентификация и доступ
+  ru: Идентификация и доступ
 security:
   en: Security
   ru: Безопасность
