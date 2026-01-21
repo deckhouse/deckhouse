@@ -179,6 +179,8 @@ properties:
         oneOf:
           - type: object
           - type: boolean
+            enum:
+              - false          
         default: false
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
@@ -231,6 +233,8 @@ properties:
         oneOf:
           - type: object
           - type: boolean
+            enum:
+              - false          
         default: false
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
