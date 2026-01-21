@@ -17,9 +17,9 @@ shell:
   install:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
-    - cd /src/promxy
+    - cd /src
     - git apply /patches/*.patch --verbose
-    - rf -rf .git
+    - rm -rf /src/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
