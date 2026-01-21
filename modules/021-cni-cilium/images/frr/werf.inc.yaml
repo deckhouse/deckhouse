@@ -1,0 +1,17 @@
+{{- $frrVersion := "10.5.1" }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+fromImage: common/src-artifact
+final: false
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch frr-{{ $frrVersion }} $(cat /run/secrets/SOURCE_REPO)/FRRouting/frr.git /src/rff && rm -rf /src/frr/.git
+  - cd /src/frr
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: frrouting/frr:v{{ $frrVersion }}
+final: true
+---
