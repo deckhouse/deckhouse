@@ -481,7 +481,16 @@ func resolveInstancePhase(ic *instance, machine *machineForInstance) (d8v1alpha1
 	phase := d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase)
 	lastUpdateTime := machine.CurrentStatus.LastUpdateTime
 
-	deleting := ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero()
+	deleting := false
+	if ic.DeletionTimestamp != nil && !ic.DeletionTimestamp.IsZero() {
+		deleting = true
+	}
+	if machine.DeletionTimestamp != nil && !machine.DeletionTimestamp.IsZero() {
+		deleting = true
+	}
+	if !deleting && isDeletionPhase(phase) {
+		deleting = true
+	}
 	if deleting {
 		if machine.IsCAPI {
 			draining, drainTime := isCAPIDraining(machine)
