@@ -36,7 +36,7 @@ spec:
       initContainers:
       - name: config-renderer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list . "alpine") }}
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
         command:
         - sh
         - -c
@@ -107,7 +107,7 @@ spec:
 {{- end }}
       - name: config-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
-        image: {{ include "helm_lib_module_common_image" (list . "kubectl") }}
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
         command:
         - sh
         - -c
@@ -205,7 +205,7 @@ spec:
             memory: 32Mi
       - name: frr-reloader
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
-        image: {{ .Values.cniCilium.evpn.image | default "frrouting/frr:v10.5.0" }}
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
         command:
         - sh
         - -c

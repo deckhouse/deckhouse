@@ -11,6 +11,26 @@ shell:
   - git clone --depth 1 --branch frr-{{ $frrVersion }} $(cat /run/secrets/SOURCE_REPO)/FRRouting/frr.git /src/rff && rm -rf /src/frr/.git
   - cd /src/frr
 ---
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/alpine-3.22
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+  add: /src
+  to: /src
+  before: install
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - cd /src/frr
+---
+image: {{ .ModuleName }}/alpine
+fromImage: builder/alpine-3.22
+final: true
+---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: quay.io/frrouting/frr:{{ $frrVersion }}
 final: true
