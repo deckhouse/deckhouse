@@ -48,6 +48,9 @@ type InstanceStatus struct {
 	// Current status of the instance object
 	CurrentStatus CurrentStatus `json:"currentStatus,omitempty"`
 
+	// Message is a summary derived from machine conditions.
+	Message string `json:"message,omitempty"`
+
 	// Last operation refers to the status of the last operation performed
 	LastOperation LastOperation `json:"lastOperation,omitempty"`
 
