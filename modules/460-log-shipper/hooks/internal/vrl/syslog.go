@@ -33,14 +33,28 @@ if !exists(.syslog.severity) {
 
 pri = 1 * 8 + .syslog.severity;
 
+structured_data = "-";
+if exists(.syslog.extra_labels) && is_object(.syslog.extra_labels) {
+  params = [];
+  for_each(object!(.syslog.extra_labels)) -> |key, value| {
+    # Escape quotes in key and value for RFC5424
+    escaped_key = replace(to_string(key), r'"', r'\"');
+    escaped_value = replace(to_string(value), r'"', r'\"');
+    params = push(params, escaped_key + "=\"" + escaped_value + "\"");
+  }
+  if length(params) > 0 {
+    structured_data = "[extraLabels " + join!(params, separator: " ") + "]";
+  }
+}
+
 ., err = join([
   "<" + to_string(pri) + ">" + "1",     # <pri>version
   to_string!(.timestamp),
-  to_string!(.kubernetes.pod_name || .hostname || "${VECTOR_SELF_NODE_NAME}"),
-  to_string!(.app || .kubernetes.labels.app || .syslog.app || "-"),
+  to_string!(.pod || .hostname || "${VECTOR_SELF_NODE_NAME}"),
+  to_string!(.app || .pod_labels.app || .syslog.app || "-"),
   "-", # procid
   to_string!(.syslog.message_id || "-"), # msgid
-  "-", # structured-data
+  structured_data,
   decode_base16!("EFBBBF") + to_string!(.message || encode_json(.)) # msg
 ], separator: " ")
 
