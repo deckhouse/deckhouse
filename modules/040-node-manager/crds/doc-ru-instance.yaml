@@ -86,6 +86,11 @@ spec:
           type: string
           description: Текущий статус.
           jsonPath: .status.currentStatus.phase
+        - name: LastOperation
+          type: string
+          description: Краткое описание последней операции.
+          jsonPath: .status.lastOperation.description
+          priority: 1
         - name: Age
           type: date
           description: Время создания объекта.

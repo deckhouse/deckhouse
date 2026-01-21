@@ -183,6 +183,8 @@ var capiMachineConditionPriority = map[capi.ConditionType]int{
 	capi.PreTerminateDeleteHookSucceededCondition: 7,
 }
 
+const instanceMessageMaxRunes = 200
+
 func instanceNodeGroupFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ng d8v1.NodeGroup
 
@@ -340,24 +342,29 @@ func instanceController(_ context.Context, input *go_hook.HookInput) error {
 }
 
 func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alpha1.Instance {
-	var lastOperation d8v1alpha1.LastOperation
-
-	if machine.LastOperation != nil {
-		lastOperation = d8v1alpha1.LastOperation{
-			LastUpdateTime: machine.LastOperation.LastUpdateTime,
-			Description:    machine.LastOperation.Description,
-			State:          d8v1alpha1.State(machine.LastOperation.State),
-			Type:           d8v1alpha1.OperationType(machine.LastOperation.Type),
-		}
-	}
-
 	phase := d8v1alpha1.InstancePhase(machine.CurrentStatus.Phase)
 	lastUpdateTime := machine.CurrentStatus.LastUpdateTime
 	if machine.ErrorInfo != nil && !isFailurePhase(phase) {
 		phase = d8v1alpha1.InstanceFailed
 		lastUpdateTime = machine.ErrorInfo.LastUpdateTime
 	}
-	message := buildMachineMessage(machine)
+	var lastOperation d8v1alpha1.LastOperation
+	if machine.LastOperation != nil {
+		description := machine.LastOperation.Description
+		if machine.IsCAPI {
+			description = truncateInstanceMessage(description)
+		}
+		lastOperation = d8v1alpha1.LastOperation{
+			LastUpdateTime: machine.LastOperation.LastUpdateTime,
+			Description:    description,
+			State:          d8v1alpha1.State(machine.LastOperation.State),
+			Type:           d8v1alpha1.OperationType(machine.LastOperation.Type),
+		}
+	} else if machine.IsCAPI {
+		if op := buildCAPILastOperation(machine, phase); op != nil {
+			lastOperation = *op
+		}
+	}
 
 	return &d8v1alpha1.Instance{
 		TypeMeta: metav1.TypeMeta{
@@ -402,7 +409,6 @@ func newInstance(machine *machineForInstance, ng *nodeGroupForInstance) *d8v1alp
 				Phase:          phase,
 				LastUpdateTime: lastUpdateTime,
 			},
-			Message:       message,
 			LastOperation: lastOperation,
 		},
 	}
@@ -416,6 +422,10 @@ func instanceLastOpMap(s map[string]interface{}) map[string]interface{} {
 	}
 
 	return m.(map[string]interface{})
+}
+
+func isLastOperationEmpty(op d8v1alpha1.LastOperation) bool {
+	return op.Description == "" && op.State == "" && op.Type == "" && op.LastUpdateTime.IsZero()
 }
 
 func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeGroupForInstance) map[string]interface{} {
@@ -440,41 +450,37 @@ func getInstanceStatusPatch(ic *instance, machine *machineForInstance, ng *nodeG
 		}
 	}
 
-	desiredMessage := buildMachineMessage(machine)
-	if ic.Status.Message != desiredMessage {
-		status["message"] = desiredMessage
-	}
-
-	if desiredPhase == d8v1alpha1.InstanceDraining && machine.IsCAPI && machine.LastOperation == nil {
-		message, msgTime := capiDrainingMessage(machine.Conditions)
-		if message != "" {
+	if machine.IsCAPI && machine.LastOperation == nil {
+		if op := buildCAPILastOperation(machine, desiredPhase); op != nil {
 			m := instanceLastOpMap(status)
-			if ic.Status.LastOperation.Description != message {
-				m["description"] = message
+			if ic.Status.LastOperation.Description != op.Description {
+				m["description"] = op.Description
 			}
-			if ic.Status.LastOperation.Type != d8v1alpha1.OperationDelete {
-				m["type"] = string(d8v1alpha1.OperationDelete)
+			if ic.Status.LastOperation.Type != op.Type {
+				m["type"] = string(op.Type)
 			}
-			if ic.Status.LastOperation.State != d8v1alpha1.StateProcessing {
-				m["state"] = string(d8v1alpha1.StateProcessing)
+			if ic.Status.LastOperation.State != op.State {
+				m["state"] = string(op.State)
 			}
-			if msgTime != nil {
-				if !ic.Status.LastOperation.LastUpdateTime.Equal(msgTime) {
-					m["lastUpdateTime"] = msgTime.Format(time.RFC3339)
-				}
-			} else if ic.Status.LastOperation.LastUpdateTime.IsZero() {
-				m["lastUpdateTime"] = metav1.NewTime(time.Now().UTC()).Format(time.RFC3339)
+			if !ic.Status.LastOperation.LastUpdateTime.Equal(&op.LastUpdateTime) {
+				m["lastUpdateTime"] = op.LastUpdateTime.Format(time.RFC3339)
 			}
+		} else if !isLastOperationEmpty(ic.Status.LastOperation) {
+			status["lastOperation"] = nil
 		}
 	}
 
 	if machine.LastOperation != nil {
 		shouldUpdateLastOp := true
+		description := machine.LastOperation.Description
+		if machine.IsCAPI {
+			description = truncateInstanceMessage(description)
+		}
 
-		if ic.Status.LastOperation.Description != machine.LastOperation.Description {
+		if ic.Status.LastOperation.Description != description {
 			if machine.LastOperation.Description != "Started Machine creation process" {
 				m := instanceLastOpMap(status)
-				m["description"] = machine.LastOperation.Description
+				m["description"] = description
 			} else {
 				shouldUpdateLastOp = false
 			}
@@ -592,15 +598,48 @@ func isMCMDraining(machine *machineForInstance) bool {
 	return false
 }
 
-func buildMachineMessage(machine *machineForInstance) string {
+func buildCAPILastOperation(machine *machineForInstance, phase d8v1alpha1.InstancePhase) *d8v1alpha1.LastOperation {
 	if machine == nil || !machine.IsCAPI {
+		return nil
+	}
+
+	cond := selectCAPIMessageConditionByPriority(machine.Conditions)
+	if cond == nil {
+		return nil
+	}
+
+	description := truncateInstanceMessage(cond.Message)
+	operationType := d8v1alpha1.OperationHealthCheck
+	state := d8v1alpha1.StateProcessing
+	if phase == d8v1alpha1.InstanceDraining {
+		operationType = d8v1alpha1.OperationDelete
+	}
+	if phase == d8v1alpha1.InstanceFailed {
+		state = d8v1alpha1.StateFailed
+	}
+
+	return &d8v1alpha1.LastOperation{
+		Description:    description,
+		LastUpdateTime: cond.LastTransitionTime,
+		State:          state,
+		Type:           operationType,
+	}
+}
+
+func truncateInstanceMessage(message string) string {
+	if message == "" {
 		return ""
 	}
 
-	return selectCAPIMessageByPriority(machine.Conditions)
+	runes := []rune(message)
+	if len(runes) <= instanceMessageMaxRunes {
+		return message
+	}
+
+	return string(runes[:instanceMessageMaxRunes-3]) + "..."
 }
 
-func selectCAPIMessageByPriority(conditions capi.Conditions) string {
+func selectCAPIMessageConditionByPriority(conditions capi.Conditions) *capi.Condition {
 	var selected *capi.Condition
 	bestPriority := 1000
 
@@ -617,11 +656,7 @@ func selectCAPIMessageByPriority(conditions capi.Conditions) string {
 		}
 	}
 
-	if selected == nil {
-		return ""
-	}
-
-	return selected.Message
+	return selected
 }
 
 func isPreferableCAPICondition(candidate, current capi.Condition) bool {
@@ -634,60 +669,11 @@ func isPreferableCAPICondition(candidate, current capi.Condition) bool {
 	return candidate.LastTransitionTime.After(current.LastTransitionTime.Time)
 }
 
-func selectCAPIDrainingCondition(conditions capi.Conditions) *capi.Condition {
-	if cond := selectBestCAPICondition(conditions, func(condition capi.Condition) bool {
-		return condition.Type == capi.DrainingSucceededCondition && condition.Status != corev1.ConditionTrue
-	}); cond != nil {
-		return cond
-	}
-
-	if cond := selectBestCAPICondition(conditions, func(condition capi.Condition) bool {
-		return condition.Type == capi.ConditionType("Deleting") && isCAPIConditionDraining(condition)
-	}); cond != nil {
-		return cond
-	}
-
-	return selectBestCAPICondition(conditions, isCAPIConditionDraining)
-}
-
-func selectBestCAPICondition(conditions capi.Conditions, predicate func(capi.Condition) bool) *capi.Condition {
-	var selected *capi.Condition
-	for i := range conditions {
-		cond := conditions[i]
-		if !predicate(cond) {
-			continue
-		}
-		if selected == nil || isPreferableCAPICondition(cond, *selected) {
-			current := cond
-			selected = &current
-		}
-	}
-	return selected
-}
-
 func capiConditionPriority(conditionType capi.ConditionType) int {
 	if priority, ok := capiMachineConditionPriority[conditionType]; ok {
 		return priority
 	}
 	return 100
-}
-
-func capiDrainingMessage(conditions capi.Conditions) (string, *metav1.Time) {
-	if cond := selectCAPIDrainingCondition(conditions); cond != nil {
-		return capiConditionMessage(*cond), &cond.LastTransitionTime
-	}
-
-	return "", nil
-}
-
-func capiConditionMessage(cond capi.Condition) string {
-	if cond.Message != "" {
-		return cond.Message
-	}
-	if cond.Reason != "" {
-		return cond.Reason
-	}
-	return string(cond.Type)
 }
 
 func capiDrainStatusFromCondition(conditions capi.Conditions) (bool, bool, *metav1.Time) {

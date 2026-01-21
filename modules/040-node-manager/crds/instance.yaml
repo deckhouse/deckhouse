@@ -87,9 +87,6 @@ spec:
                     phase:
                       description: InstancePhase is a label for the condition of a instance at the current time.
                       type: string
-                message:
-                  type: string
-                  description: Summary machine message derived from conditions.
                 lastOperation:
                   description: Last operation refers to the status of the last operation performed.
                   properties:
@@ -122,10 +119,10 @@ spec:
           type: string
           description: Current status of the instance.
           jsonPath: .status.currentStatus.phase
-        - name: Message
+        - name: LastOperation
           type: string
-          description: Summary machine message.
-          jsonPath: .status.message
+          description: Short last operation description.
+          jsonPath: .status.lastOperation.description
           priority: 1
         - name: Age
           type: date
