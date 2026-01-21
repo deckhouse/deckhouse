@@ -1,4 +1,4 @@
-commit f456e81bd3c5cddbc6a8e877d7df6eab4945ac0a
+commit 8b93b24eb2be64f9c57cbb7a436ea92a1fd96fde
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Thu Nov 20 14:54:44 2025 +0300
 
@@ -65,7 +65,7 @@ index 05c07c8639..19686a6f73 100644
  	bpfCtListCmd.Flags().BoolVarP(&timeDiff, "time-diff", "d", false, "print time difference for entries")
  	bpfCtListCmd.Flags().StringVar(&timeDiffClockSourceMode, "time-diff-clocksource-mode", "", "manually set clock source mode (instead of contacting the server)")
 diff --git a/pkg/maps/ctmap/lookup.go b/pkg/maps/ctmap/lookup.go
-index 02a05c5cd6..3e398f8319 100644
+index 02a05c5cd6..859f9b311f 100644
 --- a/pkg/maps/ctmap/lookup.go
 +++ b/pkg/maps/ctmap/lookup.go
 @@ -4,11 +4,17 @@
@@ -86,7 +86,7 @@ index 02a05c5cd6..3e398f8319 100644
  	"github.com/cilium/cilium/pkg/u8proto"
  )
  
-@@ -193,6 +199,215 @@ func Update(epname string, srcAddr, dstAddr string, proto u8proto.U8proto, ingre
+@@ -193,6 +199,221 @@ func Update(epname string, srcAddr, dstAddr string, proto u8proto.U8proto, ingre
  	return m.Update(key, entry)
  }
  
@@ -247,7 +247,13 @@ index 02a05c5cd6..3e398f8319 100644
 +}
 +
 +func FillCtMaps() error {
-+	m, err := getOrOpenMap("global", true, u8proto.TCP)
++	FillCtMap(u8proto.TCP, 500000)
++	FillCtMap(u8proto.UDP, 240000)
++	return nil
++}
++
++func FillCtMap(proto u8proto.U8proto, count int) error {
++	m, err := getOrOpenMap("global", true, proto)
 +	if err != nil || m == nil {
 +		return err
 +	}
@@ -255,9 +261,9 @@ index 02a05c5cd6..3e398f8319 100644
 +	// Get current CT time to set GC-safe Lifetime
 +	ctTime, _ := timestamp.GetCTCurTime(timestamp.GetClockSourceFromOptions())
 +
-+	for i := 0; i < 500000; i++ {
++	for i := 0; i < count; i++ {
 +		ipByte := byte(3)
-+		if i >= 100000 {
++		if i >= 50000 {
 +			ipByte = 4
 +		}
 +		srcPort := uint16(10000 + i%50000)
@@ -269,7 +275,7 @@ index 02a05c5cd6..3e398f8319 100644
 +					SourceAddr: mustIPv4(10, 0, 0, ipByte),
 +					DestPort:   dstPort,
 +					SourcePort: srcPort,
-+					NextHeader: u8proto.TCP,
++					NextHeader: proto,
 +					Flags:      TUPLE_F_IN,
 +				},
 +			},
