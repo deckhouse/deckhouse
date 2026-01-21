@@ -59,8 +59,8 @@ type MetricHandler struct {
 
 func (m *MetricHandler) RenderQuery() string {
 	// TODO(nabokihms): use go template
-	query := strings.Replace(m.QueryTemplate, "<<.LabelMatchers>>", m.Selector, -1)
-	query = strings.Replace(query, "<<.GroupBy>>", m.GroupBy, -1)
+	query := strings.ReplaceAll(m.QueryTemplate, "<<.LabelMatchers>>", m.Selector)
+	query = strings.ReplaceAll(query, "<<.GroupBy>>", m.GroupBy)
 
 	return query
 }

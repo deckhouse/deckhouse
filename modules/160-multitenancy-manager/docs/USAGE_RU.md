@@ -146,3 +146,151 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
    ```
 
 {% endraw %}
+
+## Использование label для управления ресурсами
+
+При создании ресурсов в `ProjectTemplate` можно использовать специальные label для управления тем, как `multitenancy-manager` обрабатывает эти ресурсы:
+
+### Пропуск создания label `heritage: multitenancy-manager`
+
+По умолчанию все ресурсы, созданные из `ProjectTemplate`, получает label `heritage: multitenancy-manager`.  
+Данный label запрещают изменение ресурсов пользователями или любым другим контроллером, кроме `multitenancy-manager`.  
+Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу метку `projects.deckhouse.io/skip-heritage-label`.
+
+Пример:
+
+```yaml
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-config
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/skip-heritage-label: "true"
+    app: my-app
+data:
+  key: value
+```
+
+В этом случае ресурс получит label `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но не получит label `heritage: multitenancy-manager`.
+
+### Исключение ресурсов из управления multitenancy-manager
+
+Если необходимо исключить ресурс из управления multitenancy-manager (например, если ресурс должен управляться вручную или другим контроллером), добавьте к ресурсу метку `projects.deckhouse.io/unmanaged`.
+
+Пример:
+
+```yaml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: external-secret
+  namespace: {{ .projectName }}
+  labels:
+    projects.deckhouse.io/unmanaged: "true"
+type: Opaque
+data:
+  token: <base64-encoded-value>
+```
+
+Ресурсы с меткой `projects.deckhouse.io/unmanaged`:
+- Будут созданы **только один раз** при создании проекта;
+- **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
+- Не будут отслеживаться в статусе проекта;
+- Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** label `heritage: multitenancy-manager`.
+
+{% alert level="warning" %}
+После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении `ProjectTemplate`.  
+После создания ресурс становится полностью независимым и должен управляться вручную.
+{% endalert %}
+
+## Реализация валидации изменений объектов с помощью пользовательского label
+
+Модуль multitenancy-manager использует `ValidatingAdmissionPolicy` для защиты ресурсов с меткой `heritage: multitenancy-manager` от ручных изменений.  
+Вы можете реализовать аналогичную валидацию для ресурсов с любым label.
+
+### Как работает валидация в multitenancy-manager
+
+Происходит валидация объектов с label `heritage: multitenancy-manager`.  
+Для этого используются следующие компоненты:
+
+1. `ValidatingAdmissionPolicy` — определяет правила валидации:
+   - Операции: `UPDATE` и `DELETE`
+   - Проверка: разрешены только операции от имени service account контроллера
+   - Применяется ко всем ресурсам и API группам
+
+2. `ValidatingAdmissionPolicyBinding`— определяет на какие объекты распространяется валидация:
+   - Использует `namespaceSelector` и `objectSelector` для выбора ресурсов по метке `heritage: multitenancy-manager`
+
+### Создание собственной валидации
+
+Для реализации валидации для ресурсов с другим label (например, `heritage: my-custom-label`):
+
+1. Создайте файл с `ValidatingAdmissionPolicy` и `ValidatingAdmissionPolicyBinding`:
+
+   ```yaml
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicy
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     failurePolicy: Fail
+     matchConstraints:
+       resourceRules:
+         - apiGroups:   ["*"]
+           apiVersions: ["*"]
+           operations:  ["UPDATE", "DELETE"]
+           resources:   ["*"]
+           scope: "*"
+     validations:
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Replace with your service account
+         reason: Forbidden
+         messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
+           : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
+   ---
+   apiVersion: admissionregistration.k8s.io/v1
+   kind: ValidatingAdmissionPolicyBinding
+   metadata:
+     name: my-custom-label-validation
+   spec:
+     policyName: my-custom-label-validation
+     validationActions: [Deny, Audit]
+     matchResources:
+       namespaceSelector:
+         matchLabels:
+           heritage: my-custom-label
+       objectSelector:
+         matchLabels:
+           heritage: my-custom-label
+   ```
+
+2. Настройте параметры валидации:
+
+   - **`policyName`** — уникальное имя политики (должно совпадать в Policy и Binding)
+   - **`request.userInfo.username`** — имя service account, которому разрешено изменять ресурсы (замените на ваш service account)
+   - **`heritage: my-custom-label`** — значение метки `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`
+   - **`failurePolicy: Fail`** — политика при ошибке валидации:
+     - `Fail` — отклонять запрос при ошибке проверки
+     - `Ignore` — игнорировать ошибки валидации
+   - **`validationActions`** — действия валидации:
+     - `Deny` — отклонять неразрешенные операции
+     - `Audit` — записывать операции в аудит лог
+
+3. Примените политику:
+
+   ```shell
+   kubectl apply -f my-validation-policy.yaml
+   ```
+
+4. Убедитесь, что ваши ресурсы имеют соответствующую метку `heritage`:
+
+   ```yaml
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     name: my-resource
+     labels:
+       heritage: my-custom-label
+   ```

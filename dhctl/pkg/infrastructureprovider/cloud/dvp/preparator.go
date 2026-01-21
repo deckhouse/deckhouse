@@ -31,17 +31,15 @@ import (
 	dhctljson "github.com/deckhouse/deckhouse/dhctl/pkg/util/json"
 )
 
-
-
 type MetaConfigPreparator struct {
 	validateKubeConfig bool
-	validateKubeApi bool
+	validateKubeApi    bool
 	logger             log.Logger
 }
 
 func NewMetaConfigPreparator() *MetaConfigPreparator {
 	return &MetaConfigPreparator{
-		logger:             log.NewSilentLogger(),
+		logger: log.NewSilentLogger(),
 	}
 }
 
@@ -134,7 +132,7 @@ Please note that the kubeconfig from provider.kubeconfigDataBase64 must be attac
 
 	if !strings.HasPrefix(response.Status.UserInfo.Username, "system:serviceaccount:") {
 		return fmt.Errorf(
-			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s",response.Status.UserInfo.Username,
+			"kubeconfig from provider.kubeconfigDataBase64 must be attached to system:serviceaccounts, but got: %s", response.Status.UserInfo.Username,
 		)
 	}
 

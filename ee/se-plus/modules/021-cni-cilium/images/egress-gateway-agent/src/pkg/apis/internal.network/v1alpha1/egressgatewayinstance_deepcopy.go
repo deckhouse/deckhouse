@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
-
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	. "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 )
 
 func (in *SDNInternalEgressGatewayInstance) DeepCopyInto(out *SDNInternalEgressGatewayInstance) {

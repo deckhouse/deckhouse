@@ -91,7 +91,7 @@ func (vv *ValuesValidator) ValidateHelmValues(moduleName string, values string) 
 	var obj map[string]interface{}
 	err := yaml.Unmarshal([]byte(values), &obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	err = vv.ValidateGlobalValues(obj)
@@ -111,7 +111,7 @@ func (vv *ValuesValidator) ValidateJSONValues(moduleName string, values []byte, 
 	obj := map[string]interface{}{}
 	err := json.Unmarshal(values, &obj)
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal: %w", err)
 	}
 
 	err = vv.ValidateGlobalValues(obj)
@@ -134,7 +134,11 @@ func (vv *ValuesValidator) ValidateJSONValues(moduleName string, values []byte, 
 }
 
 func (vv *ValuesValidator) ValidateGlobalValues(obj utils.Values) error {
-	return vv.GlobalSchemaStorage.ValidateValues(utils.GlobalValuesKey, obj)
+	err := vv.GlobalSchemaStorage.ValidateValues(utils.GlobalValuesKey, obj)
+	if err != nil {
+		return fmt.Errorf("validate values: %w", err)
+	}
+	return nil
 }
 
 func (vv *ValuesValidator) ValidateModuleValues(moduleName string, obj utils.Values) error {
@@ -144,7 +148,11 @@ func (vv *ValuesValidator) ValidateModuleValues(moduleName string, obj utils.Val
 		return nil
 	}
 
-	return vv.ModuleSchemaStorages[moduleName].ValidateValues(moduleName, obj)
+	err := vv.ModuleSchemaStorages[moduleName].ValidateValues(moduleName, obj)
+	if err != nil {
+		return fmt.Errorf("validate values: %w", err)
+	}
+	return nil
 }
 
 func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils.Values) error {
@@ -154,7 +162,11 @@ func (vv *ValuesValidator) ValidateModuleHelmValues(moduleName string, obj utils
 		return nil
 	}
 
-	return vv.ModuleSchemaStorages[moduleName].ValidateModuleHelmValues(moduleName, obj)
+	err := vv.ModuleSchemaStorages[moduleName].ValidateModuleHelmValues(moduleName, obj)
+	if err != nil {
+		return fmt.Errorf("validate module helm values: %w", err)
+	}
+	return nil
 }
 
 func (vv *ValuesValidator) ValidateConfigValues(moduleName string, obj utils.Values) error {
@@ -164,5 +176,9 @@ func (vv *ValuesValidator) ValidateConfigValues(moduleName string, obj utils.Val
 		return nil
 	}
 
-	return vv.ModuleSchemaStorages[moduleName].ValidateConfigValues(moduleName, obj)
+	err := vv.ModuleSchemaStorages[moduleName].ValidateConfigValues(moduleName, obj)
+	if err != nil {
+		return fmt.Errorf("validate config values: %w", err)
+	}
+	return nil
 }

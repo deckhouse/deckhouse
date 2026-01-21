@@ -14,11 +14,12 @@ import (
 	"syscall"
 	"time"
 
-	"d8_shutdown_inhibitor/pkg/app"
-	"d8_shutdown_inhibitor/pkg/kubernetes"
+	"k8s.io/apimachinery/pkg/util/wait"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
-	"k8s.io/apimachinery/pkg/util/wait"
+
+	"d8_shutdown_inhibitor/pkg/app"
+	"d8_shutdown_inhibitor/pkg/kubernetes"
 )
 
 func run(cordonEnabled bool) error {

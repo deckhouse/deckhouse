@@ -171,15 +171,18 @@ func NewDeckhouseReleaseController(ctx context.Context, mgr manager.Manager, dc 
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("new: %w", err)
 	}
 
 	r.logger.Info("Controller started")
 
-	return ctrl.NewControllerManagedBy(mgr).
+	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.DeckhouseRelease{}).
 		WithEventFilter(logWrapper{r.logger, newEventFilter()}).
-		Complete(ctr)
+		Complete(ctr); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -206,7 +209,7 @@ func (r *deckhouseReleaseReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 		r.logger.Debug("get release", log.Err(err))
 
-		return res, err
+		return res, fmt.Errorf("get: %w", err)
 	}
 
 	if !release.DeletionTimestamp.IsZero() {
@@ -261,7 +264,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 		dr.Status.Phase = v1alpha1.DeckhouseReleasePhasePending
 		dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		if err := r.client.Status().Update(ctx, dr); err != nil {
-			return res, err
+			return res, fmt.Errorf("update: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil // process to the next phase
@@ -327,7 +330,7 @@ func (r *deckhouseReleaseReconciler) proceedRestoredRelease(ctx context.Context,
 	dr.Status.Message = "Release object was restored"
 
 	if err := r.client.Status().Update(ctx, dr); err != nil {
-		return err
+		return fmt.Errorf("update: %w", err)
 	}
 
 	return nil
@@ -392,7 +395,7 @@ func (r *deckhouseReleaseReconciler) pendingReleaseReconcile(ctx context.Context
 
 	task, err := taskCalculator.CalculatePendingReleaseTask(ctx, dr)
 	if err != nil {
-		return res, err
+		return res, fmt.Errorf("calculate pending release task: %w", err)
 	}
 
 	// Initialize release update info structure for collecting processing information
@@ -1100,7 +1103,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 			return nil
 		})
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("update with retry: %w", err)
 		}
 
 		return res, nil
@@ -1112,7 +1115,7 @@ func (r *deckhouseReleaseReconciler) reconcileDeployedRelease(ctx context.Contex
 			return nil
 		})
 		if err != nil {
-			return res, err
+			return res, fmt.Errorf("update status with retry: %w", err)
 		}
 	}
 
@@ -1133,7 +1136,7 @@ func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr
 		r.metricsUpdater.PurgeReleaseMetric(dr.GetName())
 	}
 
-	return ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
+	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, dr, func() error {
 		if dr.Status.Phase != status.Phase {
 			dr.Status.TransitionTime = metav1.NewTime(r.dc.GetClock().Now().UTC())
 		}
@@ -1143,6 +1146,10 @@ func (r *deckhouseReleaseReconciler) updateReleaseStatus(ctx context.Context, dr
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("update status with retry: %w", err)
+	}
+	return nil
 }
 
 func getDeckhouseContainerIndex(containers []corev1.Container) int {
