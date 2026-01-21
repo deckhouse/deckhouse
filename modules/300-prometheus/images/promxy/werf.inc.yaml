@@ -4,6 +4,12 @@
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
@@ -11,6 +17,9 @@ shell:
   install:
     - git clone --depth 1 --branch {{ $PromxyVersion }} $(cat /run/secrets/SOURCE_REPO)/jacksontj/promxy.git /src
     - rm -rf .git ./vendor/github.com/prometheus/prometheus/web
+    - cd /src/promxy
+    - git apply /patches/*.patch --verbose
+    - rf -rf .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
