@@ -248,10 +248,10 @@ index eca16ec8fc9..f0d556a3c03 100644
 +	return false
 +}
 diff --git a/staging/src/k8s.io/api/core/v1/well_known_labels.go b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-index 8c3cb87b82a..1ec408f6772 100644
+index 8c3cb87b82a..46d0768fdc0 100644
 --- a/staging/src/k8s.io/api/core/v1/well_known_labels.go
 +++ b/staging/src/k8s.io/api/core/v1/well_known_labels.go
-@@ -71,4 +71,13 @@ const (
+@@ -71,4 +71,25 @@ const (
  	LabelNodeExcludeBalancers = "node.kubernetes.io/exclude-from-external-load-balancers"
  	// LabelMetadataName is the label name which, in-tree, is used to automatically label namespaces, so they can be selected easily by tools which require definitive labels
  	LabelMetadataName = "kubernetes.io/metadata.name"
