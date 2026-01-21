@@ -21,8 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"update-observer/constant"
-	"update-observer/manager"
+	"update-observer/common"
 
 	"k8s.io/klog/v2"
 )
@@ -30,7 +29,7 @@ import (
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager, err := manager.NewManager(ctx, false) // TODO pprof flag
+	manager, err := NewManager(ctx, false) // TODO pprof flag
 	if err != nil {
 		klog.Fatalf("Failed to create a manager: %v", err)
 	}
@@ -45,7 +44,7 @@ func main() {
 	for range sigs {
 		klog.Info("Shutdown signal received")
 		cancel()
-		klog.Infof("Bye from %s", constant.ControllerName)
+		klog.Infof("Bye from %s", common.ControllerName)
 		break
 	}
 }

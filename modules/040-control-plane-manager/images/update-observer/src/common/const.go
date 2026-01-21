@@ -14,11 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package constant
+package common
 
 const (
 	ControllerName      = "update-observer"
+	ConfigMapName       = "d8-cluster-kubernetes"
 	SecretName          = "d8-cluster-configuration"
 	KubeSystemNamespace = "kube-system"
-	ConfigMapName       = "d8-cluster-kubernetes"
+	HeritageLabelKey    = "heritage"
+	DeckhouseLabel      = "deckhouse"
 )

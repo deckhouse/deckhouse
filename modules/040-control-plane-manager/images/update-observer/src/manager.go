@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package manager
+package main
 
 import (
 	"context"
 	"fmt"
 	"time"
-	"update-observer/constant"
+	"update-observer/common"
 	"update-observer/controller"
 
 	corev1 "k8s.io/api/core/v1"
@@ -65,7 +65,7 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
 		Scheme:           scheme,
 		LeaderElection:   true,
-		LeaderElectionID: constant.ControllerName,
+		LeaderElectionID: common.ControllerName,
 		BaseContext: func() context.Context {
 			return ctx
 		},
@@ -79,12 +79,12 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 			ReaderFailOnMissingInformer: false,
 			DefaultTransform:            cache.TransformStripManagedFields(),
 			DefaultNamespaces: map[string]cache.Config{
-				"kube-system": {},
+				common.KubeSystemNamespace: {},
 			},
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
-						constant.KubeSystemNamespace: {},
+						common.KubeSystemNamespace: {},
 					},
 				},
 			},

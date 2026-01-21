@@ -1,11 +1,11 @@
 ---
 data:
   spec: |
-    desiredVersion: v1.31.5
+    desiredVersion: v1.31
     updateMode: Manual
   status: |
     controlPlane:
-      currentVersion: v1.31.5
+      currentVersion: v1.31
       desiredCount: 2
       progress: 100%
       state: UpToDate

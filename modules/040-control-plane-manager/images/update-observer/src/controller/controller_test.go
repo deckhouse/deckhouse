@@ -72,12 +72,7 @@ type ControllerTestSuite struct {
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	suite.Run("When cluster is up to date", func() {
-		suite.setupController(suite.fetchTestFileData("up-to-date.yaml"), &fakeVersionGetter{
-			versions: map[string]string{
-				"10.0.0.1": "v1.31.5",
-				"10.0.0.2": "v1.31.5",
-			},
-		})
+		suite.setupController(suite.fetchTestFileData("up-to-date.yaml"))
 
 		_, err := suite.controller.Reconcile(
 			suite.ctx,
@@ -115,7 +110,7 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	}
 }
 
-func (suite *ControllerTestSuite) setupController(yamlDoc string, fakeVersionGetter *fakeVersionGetter) {
+func (suite *ControllerTestSuite) setupController(yamlDoc string) {
 	ctx := context.Background()
 
 	manifests := helmreleaseutil.SplitManifests(yamlDoc)
@@ -131,8 +126,7 @@ func (suite *ControllerTestSuite) setupController(yamlDoc string, fakeVersionGet
 		Build()
 
 	rec := &reconciler{
-		client:                 k8sClient,
-		apiServerVersionGetter: fakeVersionGetter,
+		client: k8sClient,
 	}
 
 	suite.controller = rec
