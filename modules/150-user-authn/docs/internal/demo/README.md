@@ -54,11 +54,108 @@ Prereqs:
 - Dex is reachable at `https://dex.<your-domain>/`.
 - You have SSH access to a node or bastion that can reach the cluster API and nodes (for the `-J` jump).
 
+**Browser setup (required for SPNEGO):**
+
+Chrome on macOS requires explicit policy for Kerberos domains:
+```bash
+# Replace with your actual Dex domain (e.g., *.185.11.73.133.sslip.io)
+defaults write com.google.Chrome AuthServerAllowlist "*.<your-domain>"
+defaults write com.google.Chrome AuthNegotiateDelegateAllowlist "*.<your-domain>"
+# Restart Chrome after setting policies
+```
+
+Firefox: set `network.negotiate-auth.trusted-uris` to your Dex domain in `about:config`.
+
+Safari: usually works without extra config if the domain is in `.local` or Intranet zone.
+
+0) Deploy OpenLDAP in d8-user-authn namespace (if not already present)
+
+The Kerberos demo expects OpenLDAP at `openldap.d8-user-authn.svc:389`. Deploy it first:
+
+```bash
+d8 k -n d8-user-authn apply -f - <<'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openldap
+  namespace: d8-user-authn
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: openldap }
+  template:
+    metadata:
+      labels: { app: openldap }
+    spec:
+      initContainers:
+      - name: copy-ldif
+        image: busybox:1.36
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          cp /config-src/config-ldap.ldif /bootstrap/config-ldap.ldif
+        volumeMounts:
+        - { name: config-src, mountPath: /config-src }
+        - { name: bootstrap, mountPath: /bootstrap }
+      containers:
+      - name: openldap
+        image: osixia/openldap:1.5.0
+        args: ["--copy-service", "--loglevel", "debug"]
+        env:
+        - { name: LDAP_ORGANISATION, value: "Example" }
+        - { name: LDAP_DOMAIN, value: "example.com" }
+        - { name: LDAP_ADMIN_PASSWORD, value: "admin" }
+        - { name: LDAP_TLS_VERIFY_CLIENT, value: "try" }
+        volumeMounts:
+        - name: bootstrap
+          mountPath: /container/service/slapd/assets/config/bootstrap/ldif/custom
+        ports:
+        - { containerPort: 389, name: ldap }
+      volumes:
+      - name: config-src
+        configMap: { name: ldap-bootstrap }
+      - name: bootstrap
+        emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ldap-bootstrap
+  namespace: d8-user-authn
+data:
+  config-ldap.ldif: |
+    dn: ou=users,dc=example,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: users
+
+    dn: ou=groups,dc=example,dc=com
+    objectClass: top
+    objectClass: organizationalUnit
+    ou: groups
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openldap
+  namespace: d8-user-authn
+spec:
+  selector: { app: openldap }
+  ports:
+  - { port: 389, targetPort: 389, name: ldap }
+EOF
+d8 k -n d8-user-authn rollout status deploy/openldap
+```
+
 1) Deploy KDC in the cluster (namespace d8-user-authn)
 
 ```bash
 d8 k -n d8-user-authn apply -f ./kerberos-kdc.yaml
 d8 k -n d8-user-authn rollout status deploy/kdc
+
+# Get assigned NodePorts (will be used later for SSH tunnel)
+d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kdc-tcp")].nodePort}' && echo " # KDC TCP"
+d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kadm")].nodePort}' && echo " # kadmin"
 ```
 
 2) Create SPN and keytab for Dex, and a test user principal
@@ -99,21 +196,11 @@ d8 k -n d8-user-authn rollout restart deploy/dex
 
 ```bash
 # Launch a temporary tools pod
-kubectl -n d8-user-authn run ldap-tools --restart=Never --image=osixia/openldap:1.5.0 -- sleep 3600
-kubectl -n d8-user-authn wait --for=condition=Ready pod/ldap-tools --timeout=60s
+d8 k -n d8-user-authn run ldap-tools --restart=Never --image=osixia/openldap:1.5.0 -- sleep 3600
+d8 k -n d8-user-authn wait --for=condition=Ready pod/ldap-tools --timeout=60s
 
 # Prepare LDIF with john/bar and a devs group (dc=example,dc=com)
-kubectl -n d8-user-authn exec -i ldap-tools -- bash -lc 'cat >/tmp/seed.ldif' <<'LDIF'
-dn: ou=users,dc=example,dc=com
-objectClass: top
-objectClass: organizationalUnit
-ou: users
-
-dn: ou=groups,dc=example,dc=com
-objectClass: top
-objectClass: organizationalUnit
-ou: groups
-
+d8 k -n d8-user-authn exec -i ldap-tools -- bash -lc 'cat >/tmp/seed.ldif' <<'LDIF'
 dn: cn=john,ou=users,dc=example,dc=com
 objectClass: inetOrgPerson
 cn: john
@@ -128,17 +215,17 @@ member: cn=john,ou=users,dc=example,dc=com
 LDIF
 
 # Load entries using the demo OpenLDAP admin
-kubectl -n d8-user-authn exec -it ldap-tools -- \
+d8 k -n d8-user-authn exec -it ldap-tools -- \
   ldapadd -x -H ldap://openldap.d8-user-authn.svc:389 \
   -D "cn=admin,dc=example,dc=com" -w admin -f /tmp/seed.ldif
 
 # Sanity checks
-kubectl -n d8-user-authn exec -it ldap-tools -- \
+d8 k -n d8-user-authn exec -it ldap-tools -- \
   ldapsearch -x -H ldap://openldap.d8-user-authn.svc:389 \
   -D "cn=admin,dc=example,dc=com" -w admin \
   -b "ou=users,dc=example,dc=com" "(cn=john)" dn
 
-kubectl -n d8-user-authn exec -it ldap-tools -- \
+d8 k -n d8-user-authn exec -it ldap-tools -- \
   ldapwhoami -x -H ldap://openldap.d8-user-authn.svc:389 \
   -D "cn=john,ou=users,dc=example,dc=com" -w bar
 ```
@@ -147,7 +234,7 @@ Optional: create an OAuth2 client and grant RBAC for quick curl/browser tests:
 ```bash
 export DEX_FQDN="dex.<your-domain>"
 
-kubectl -n d8-user-authn apply -f - <<EOF
+d8 k -n d8-user-authn apply -f - <<EOF
 apiVersion: dex.coreos.com/v1
 kind: OAuth2Client
 metadata:
@@ -160,7 +247,7 @@ redirectURIs:
 - https://$DEX_FQDN/spnego-test-cb
 EOF
 
-kubectl apply -f - <<'EOF'
+d8 k apply -f - <<'EOF'
 apiVersion: deckhouse.io/v1alpha1
 kind: ClusterAuthorizationRule
 metadata:
@@ -172,9 +259,9 @@ spec:
   accessLevel: SuperAdmin
 EOF
 
-kubectl auth can-i list oauth2clients.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authn:dex
-kubectl -n d8-user-authn rollout restart deploy/dex
-kubectl -n d8-user-authn rollout status deploy/dex
+d8 k auth can-i list oauth2clients.dex.coreos.com -n d8-user-authn --as=system:serviceaccount:d8-user-authn:dex
+d8 k -n d8-user-authn rollout restart deploy/dex
+d8 k -n d8-user-authn rollout status deploy/dex
 ```
 
 Note: Ensure the DexProvider LDAP host matches your OpenLDAP service endpoint. This demo assumes `openldap.d8-user-authn.svc:389`. If you use the `openldap-demo` namespace from the basic LDAP demo, adjust the host accordingly.
@@ -188,35 +275,12 @@ d8 k -n d8-user-authn rollout status deploy/dex
 
 5) macOS client setup and test
 
+First, get the assigned NodePorts from step 1:
 ```bash
-# /etc/krb5.conf
-sudo tee /etc/krb5.conf >/dev/null <<'EOF'
-[libdefaults]
-  default_realm = EXAMPLE.COM
-  rdns = false
-  dns_lookup_kdc = false
-  udp_preference_limit = 1
-[realms]
-  EXAMPLE.COM = {
-    kdc = tcp/127.0.0.1:8888
-    admin_server = 127.0.0.1:8749
-  }
-EOF
-
-# QUICK TEST ONLY: forward KDC NodePorts via bastion jump host (replace placeholders)
-# Note: use this only for quick validation; see alternatives below for proper exposure.
-ssh -f -N -J user@<bastion-host>:<port> \
-  -L 8888:<node-ip>:30089 \
-  -L 8749:<node-ip>:30749 \
-  user@<node-ip>
-
-kdestroy || true
-kinit -V john@EXAMPLE.COM   # password: bar
-klist
-
-# Test via browser: open your protected app (e.g. Console or Kubeconfig Generator)
-# and ensure it signs you in without a password. If you need to fully log out,
-# run `kdestroy` on the client before re-opening the page.
+# Run on a machine with cluster access:
+KDC_PORT=$(d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kdc-tcp")].nodePort}')
+KADM_PORT=$(d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kadm")].nodePort}')
+echo "KDC TCP: $KDC_PORT, kadmin: $KADM_PORT"
 ```
 
 macOS quick path (SSH jump), steps:
@@ -237,11 +301,12 @@ sudo tee /etc/krb5.conf >/dev/null <<'EOF'
 EOF
 ```
 
-2) Start an SSH tunnel to the KDC NodePorts via bastion (replace placeholders):
+2) Start an SSH tunnel to the KDC NodePorts via bastion (replace placeholders with values from step 1):
 ```bash
+# Replace <KDC_PORT> and <KADM_PORT> with values from step 1
 ssh -f -N -o ExitOnForwardFailure=yes -J user@<bastion-host>:<port> \
-  -L 8888:<node-ip>:30089 \
-  -L 8749:<node-ip>:30749 \
+  -L 8888:<node-ip>:<KDC_PORT> \
+  -L 8749:<node-ip>:<KADM_PORT> \
   user@<node-ip>
 
 # Validate local ports:
@@ -255,6 +320,10 @@ kdestroy || true
 kinit -V john@EXAMPLE.COM   # password: bar
 klist                        # ensure krbtgt/EXAMPLE.COM@EXAMPLE.COM is present
 ```
+
+4) Test via browser: open your protected app (e.g. Console or Kubeconfig Generator)
+   and ensure it signs you in without a password. If you need to fully log out,
+   run `kdestroy` on the client before re-opening the page.
 
 Notes:
 - Provider selection screen appears only if you start the flow without `connector_id` and you have multiple providers.
@@ -292,16 +361,20 @@ d8 k -n d8-user-authn create secret generic dex-kerberos-test \
 
 - NodePort + firewall DNAT on bastion (public IP = <public-ip>, KDC Node IP = <node-ip>):
 ```bash
-# TCP 88 -> node:30089, TCP 749 -> node:30749
-sudo iptables -t nat -A PREROUTING -p tcp --dport 88  -j DNAT --to-destination <node-ip>:30089
-sudo iptables -t nat -A PREROUTING -p tcp --dport 749 -j DNAT --to-destination <node-ip>:30749
-sudo iptables -t nat -A POSTROUTING -p tcp -d <node-ip> --dport 30089 -j MASQUERADE
-sudo iptables -t nat -A POSTROUTING -p tcp -d <node-ip> --dport 30749 -j MASQUERADE
+# Get NodePorts first:
+# KDC_PORT=$(d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kdc-tcp")].nodePort}')
+# KADM_PORT=$(d8 k -n d8-user-authn get svc kdc -o jsonpath='{.spec.ports[?(@.name=="kadm")].nodePort}')
+
+# TCP 88 -> node:<KDC_PORT>, TCP 749 -> node:<KADM_PORT>
+sudo iptables -t nat -A PREROUTING -p tcp --dport 88  -j DNAT --to-destination <node-ip>:<KDC_PORT>
+sudo iptables -t nat -A PREROUTING -p tcp --dport 749 -j DNAT --to-destination <node-ip>:<KADM_PORT>
+sudo iptables -t nat -A POSTROUTING -p tcp -d <node-ip> --dport <KDC_PORT> -j MASQUERADE
+sudo iptables -t nat -A POSTROUTING -p tcp -d <node-ip> --dport <KADM_PORT> -j MASQUERADE
 # then on macOS /etc/krb5.conf use:
 #   kdc = tcp/<public-ip>:88
 #   admin_server = <public-ip>:749
 ```
 
-- Cloud LoadBalancer: publish TCP 88 -> node:30089 and TCP 749 -> node:30749, then point clients to the LB address in `/etc/krb5.conf`.
+- Cloud LoadBalancer: publish TCP 88 -> node:<KDC_PORT> and TCP 749 -> node:<KADM_PORT>, then point clients to the LB address in `/etc/krb5.conf`.
 
 - The SSH jump method above is intended only for quick validation; prefer DNAT/LB for more stable testing.
