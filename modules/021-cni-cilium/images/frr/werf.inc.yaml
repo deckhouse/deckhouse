@@ -12,6 +12,6 @@ shell:
   - cd /src/frr
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-from: frrouting/frr:v{{ $frrVersion }}
+from: quay.io/frrouting/frr:{{ $frrVersion }}
 final: true
 ---
