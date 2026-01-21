@@ -52,7 +52,6 @@
       {{- $_ := set $ctx "Images" $Root.Images }}
       {{- $_ := set $ctx "CandiVersionMap" $Root.CandiVersionMap }}
       {{- $_ := set $ctx "TF" $Root.TF }}
-      {{- $_ := set $ctx "OSS_YAML" $Root.OSS_YAML }}
       {{- $_ := set $ctx "SOURCE_REPO" $Root.SOURCE_REPO }}
       {{- $_ := set $ctx "CLOUD_PROVIDERS_SOURCE_REPO" $Root.CLOUD_PROVIDERS_SOURCE_REPO }}
       {{- $_ := set $ctx "OBSERVABILITY_SOURCE_REPO" $Root.OBSERVABILITY_SOURCE_REPO }}
