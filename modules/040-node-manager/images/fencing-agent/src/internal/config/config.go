@@ -8,9 +8,9 @@ import (
 
 type Config struct {
 	WatchdogConfig             WatchdogConfig
-	MemberlistConfig           MemberlistConfig
-	GRPSRateLimit              RateLimit
-	LogLevel                   string        `env:"LOG_LEVEL" env-default:"info"`
+	MemberlistConfig MemberlistConfig
+	RLimit           RateLimit
+	LogLevel         string        `env:"LOG_LEVEL" env-default:"info"`
 	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
 	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`

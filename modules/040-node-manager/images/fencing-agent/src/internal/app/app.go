@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fencing-agent/internal/adapters/api/grpc"
 	"fencing-agent/internal/adapters/api/healthz"
+	"fencing-agent/internal/adapters/infrastructure/kubeclient"
 	"fencing-agent/internal/adapters/kubeapi"
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/memberlist/event_handler"
@@ -14,18 +16,12 @@ import (
 	"fencing-agent/internal/core/service"
 	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
-	"os"
 	"time"
 
 	"log/slog"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 type Application struct {
@@ -49,7 +45,10 @@ func NewApplication(
 	logger *log.Logger,
 	config fencingconfig.Config,
 ) (*Application, error) {
-	kubeClient, err := getClientset(config.KubernetesAPITimeout)
+	unaryRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
+	streamRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.StreamRPS), config.RLimit.StreamBurst)
+
+	kubeClient, err := kubeclient.GetClientset(config.KubernetesAPITimeout, float32(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
 	if err != nil {
 		logger.Fatal("Unable to create a kube-client", sl.Err(err))
 	}
@@ -65,7 +64,7 @@ func NewApplication(
 		config.NodeGroup,
 	)
 
-	nodeIP, err := getCurrentNodeIP(ctx, kubeClient, config.NodeName, config.KubernetesAPITimeout)
+	nodeIP, err := kubeclient.GetCurrentNodeIP(ctx, kubeClient, config.NodeName, config.KubernetesAPITimeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current node IP: %w", err)
 	}
@@ -82,9 +81,6 @@ func NewApplication(
 	statusProvider := service.NewStatusProvider(clusterProvider, memberlistProvider)
 
 	grpcServer := grpc.NewServer(eventBus, statusProvider)
-
-	unaryRateLimit := rate.NewLimiter(rate.Limit(config.GRPSRateLimit.UnaryRPS), config.GRPSRateLimit.UnaryBurst)
-	streamRateLimit := rate.NewLimiter(rate.Limit(config.GRPSRateLimit.StreamRPS), config.GRPSRateLimit.StreamBurst)
 
 	grpcRunner, err := grpc.NewRunner(config.GRPCAddress, logger, grpcServer, unaryRateLimit, streamRateLimit)
 	if err != nil {
@@ -114,31 +110,7 @@ func (a *Application) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	go func() {
-		memberErr := a.membershipProvider.Start(peers)
-		base, mx := time.Second, time.Minute
-		for backoff := base; memberErr != nil; backoff <<= 1 {
-			if backoff > mx {
-				backoff = mx
-			}
-			select {
-			case <-ctx.Done():
-				a.logger.Debug("memberlist start aborted: context canceled")
-				return
-			default:
-				a.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()))
-
-				select {
-				case <-ctx.Done():
-					a.logger.Debug("memberlist start aborted: context canceled")
-					return
-				case <-time.After(backoff):
-					memberErr = a.membershipProvider.Start(peers)
-				}
-			}
-		}
-		a.logger.Info("memberlist started successfully")
-	}()
+	go a.startMemberlistWithBackoff(ctx, peers)
 
 	go func() {
 		a.logger.Debug("Starting Health Monitor")
@@ -171,26 +143,54 @@ func (a *Application) stop() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
+	var stopErr error
+
 	a.logger.Debug("stopping health monitor")
 	if err := a.healthMonitor.Stop(ctx); err != nil {
 		a.logger.Error("failed to stop health monitor", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to stop health monitor: %w", err))
 	}
 
 	a.logger.Debug("shutting down gRPC server")
-	if err := a.grpcRunner.Shutdown(ctx); err != nil {
+	if err := a.grpcRunner.Stop(ctx); err != nil {
 		a.logger.Error("failed to shutdown gRPC server", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to shutdown gRPC server: %w", err))
 	}
 
 	a.logger.Debug("shutting down healthz server")
 	if err := a.healthzServer.StopHealthzServer(ctx); err != nil {
 		a.logger.Error("failed to shutdown healthz server", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to shutdown healthz server: %w", err))
 	}
 
 	a.logger.Debug("shutting down memberlist")
 	if err := a.membershipProvider.Stop(ctx); err != nil {
 		a.logger.Error("failed to stop memberlist", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to stop memberlist: %w", err))
 	}
-	return nil
+	return stopErr
+}
+
+func (a *Application) startMemberlistWithBackoff(ctx context.Context, peers []string) {
+	memberErr := a.membershipProvider.Start(peers)
+	base, mx := time.Second, time.Minute
+	for backoff := base; memberErr != nil; backoff <<= 1 {
+		if backoff > mx {
+			backoff = mx
+		}
+		a.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()))
+
+		timer := time.NewTimer(backoff)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			a.logger.Debug("memberlist start aborted: context canceled")
+			return
+		case <-timer.C:
+			memberErr = a.membershipProvider.Start(peers)
+		}
+	}
+	a.logger.Info("memberlist started successfully")
 }
 
 func (a *Application) discoverPeersIps(ctx context.Context) ([]string, error) {
@@ -210,53 +210,4 @@ func (a *Application) discoverPeersIps(ctx context.Context) ([]string, error) {
 	}
 	a.logger.Debug("Discovered peers", slog.Any("peers", peersIps))
 	return peersIps, nil
-}
-
-func getCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", nodeName, err)
-	}
-
-	for _, addr := range node.Status.Addresses {
-		if addr.Type == "InternalIP" {
-
-			return addr.Address, nil
-		}
-	}
-	return "", fmt.Errorf("node %s has no InternalIP address", nodeName)
-}
-
-// Reimplementation of clientcmd.buildConfig to avoid default warn message
-func buildConfig(kubeconfigPath string) (*rest.Config, error) {
-	if kubeconfigPath == "" {
-		kubeconfig, err := rest.InClusterConfig()
-		if err == nil {
-			return kubeconfig, nil
-		}
-	}
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}}).ClientConfig()
-}
-
-func getClientset(timeout time.Duration) (*kubernetes.Clientset, error) {
-	var restConfig *rest.Config
-	var kubeClient *kubernetes.Clientset
-	var err error
-
-	restConfig, err = buildConfig(os.Getenv("KUBECONFIG"))
-	if err != nil {
-		return nil, err
-	}
-
-	restConfig.Timeout = timeout
-
-	kubeClient, err = kubernetes.NewForConfig(restConfig)
-	if err != nil {
-		return nil, err
-	}
-	return kubeClient, nil
 }

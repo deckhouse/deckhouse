@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fencing-agent/internal/lib/logger/sl"
+	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -35,6 +36,7 @@ type HealthMonitor struct {
 	cluster    ClusterProvider
 	membership MembershipProvider
 	watchdog   WatchDog
+	mu         *sync.Mutex
 	logger     *log.Logger
 }
 
@@ -43,6 +45,7 @@ func NewHealthMonitor(cluster ClusterProvider, membership MembershipProvider, wa
 		cluster:    cluster,
 		membership: membership,
 		watchdog:   watchdog,
+		mu:         &sync.Mutex{},
 		logger:     logger,
 	}
 }
@@ -68,6 +71,8 @@ func (h *HealthMonitor) Stop(ctx context.Context) error {
 }
 
 func (h *HealthMonitor) check(ctx context.Context) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	inMaintenance, err := h.cluster.IsMaintenanceMode(ctx)
 	if err != nil {
 		h.logger.Debug("Cannot check maintenance mode", sl.Err(err))

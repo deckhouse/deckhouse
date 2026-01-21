@@ -59,7 +59,7 @@ func (r *Runner) Run() error {
 	return nil
 }
 
-func (r *Runner) Shutdown(ctx context.Context) error {
+func (r *Runner) Stop(ctx context.Context) error {
 	done := make(chan struct{})
 
 	go func() {
