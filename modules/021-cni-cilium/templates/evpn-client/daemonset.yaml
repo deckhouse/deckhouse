@@ -68,7 +68,7 @@ spec:
       containers:
       - name: frr
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
-        image: {{ .Values.cniCilium.evpn.image | default "frrouting/frr:v10.5.0" }}
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
         command:
         - /usr/lib/frr/frrstart
         env:
