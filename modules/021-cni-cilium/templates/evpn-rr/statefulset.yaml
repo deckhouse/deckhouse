@@ -63,10 +63,10 @@ spec:
               PEER_IP=$(getent hosts ${PEER_HOSTNAME} | awk '{print $1}' | head -n1)
               if [ -n "$PEER_IP" ]; then
                 PEER_NEIGHBORS="${PEER_NEIGHBORS}neighbor ${PEER_IP} peer-group EVPN_RR_PEER
-      neighbor ${PEER_IP} update-source ${POD_IP}
-      "
+                neighbor ${PEER_IP} update-source ${POD_IP}
+                "
                 PEER_ACTIVATE="${PEER_ACTIVATE}neighbor ${PEER_IP} activate
-      "
+                "
               else
                 echo "Warning: Could not resolve ${PEER_HOSTNAME}"
               fi
@@ -153,7 +153,7 @@ spec:
             {{- if .Values.cniCilium.evpn.nodeNetworkCIDRs }}
             {{- range .Values.cniCilium.evpn.nodeNetworkCIDRs }}
             BGP_LISTEN_RANGE="${BGP_LISTEN_RANGE}bgp listen range {{ . }} peer-group EVPN_CLIENTS_NODES
-      "
+            "
             {{- end }}
             {{- end }}
 
@@ -167,10 +167,10 @@ spec:
                 PEER_IP=$(getent hosts ${PEER_HOSTNAME} 2>/dev/null | awk '{print $1}' | head -n1)
                 if [ -n "$PEER_IP" ]; then
                   PEER_NEIGHBORS="${PEER_NEIGHBORS}neighbor ${PEER_IP} peer-group EVPN_RR_PEER
-      neighbor ${PEER_IP} update-source ${POD_IP}
-      "
+                  neighbor ${PEER_IP} update-source ${POD_IP}
+                  "
                   PEER_ACTIVATE="${PEER_ACTIVATE}neighbor ${PEER_IP} activate
-      "
+                  "
                 fi
               fi
             done

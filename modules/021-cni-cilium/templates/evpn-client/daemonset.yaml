@@ -132,7 +132,7 @@ spec:
               RR_IP=$(getent hosts ${RR_HOSTNAME} 2>/dev/null | awk '{print $1}' | head -n1)
               if [ -n "$RR_IP" ]; then
                 RR_NEIGHBORS="${RR_NEIGHBORS}neighbor ${RR_IP} peer-group EVPN_RR
-      "
+                "
               else
                 echo "Warning: Could not resolve ${RR_HOSTNAME}"
               fi
