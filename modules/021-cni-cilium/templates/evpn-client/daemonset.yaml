@@ -3,7 +3,7 @@ cpu: 100m
 memory: 128Mi
 {{- end }}
 
-{{- if .Values.cniCilium.evpn.enabled }}
+{{- if and (.Values.cniCilium.evpn) (.Values.cniCilium.evpn.enabled) }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
