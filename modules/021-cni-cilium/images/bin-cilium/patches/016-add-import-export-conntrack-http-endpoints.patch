@@ -1,4 +1,4 @@
-commit a4d36cbb6321fcfc13d8b5ed655e0edcb3e829a6
+commit 270561ee102e38744db23ca752532b9d6b9f45d4
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Thu Jan 15 16:46:30 2026 +0300
 
@@ -1699,7 +1699,7 @@ index 1f2b41919b..4f26841bae 100644
  	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
  	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
 diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index d42dae075b..9044bc2a6c 100644
+index d42dae075b..e2893fa77b 100644
 --- a/daemon/cmd/status.go
 +++ b/daemon/cmd/status.go
 @@ -4,20 +4,31 @@
@@ -2285,7 +2285,7 @@ index d42dae075b..9044bc2a6c 100644
 +			flags := k.GetFlags()
 +			src, dst := k.SourceAddr, k.DestAddr
 +			isIngress := flags&ctmap.TUPLE_F_IN != 0 || flags&ctmap.TUPLE_F_SERVICE != 0
-+			isEgress := flags == ctmap.TUPLE_F_OUT
++			isEgress := flags == ctmap.TUPLE_F_OUT || flags == ctmap.TUPLE_F_RELATED
 +			if !(isIngress && ip4 == src || isEgress && ip4 == dst) {
 +				continue
 +			}
@@ -2363,10 +2363,10 @@ index b89f1bcb8f..da06180ef6 100644
  // file exists
  func (m *Map) DumpIfExists(hash map[string][]string) error {
 diff --git a/pkg/maps/ctmap/ctmap.go b/pkg/maps/ctmap/ctmap.go
-index 77e1de9b02..55b82b9c8c 100644
+index 7d623acdad..cf7eeb5763 100644
 --- a/pkg/maps/ctmap/ctmap.go
 +++ b/pkg/maps/ctmap/ctmap.go
-@@ -815,6 +815,14 @@ func DeleteIfUpgradeNeeded(e CtEndpoint) {
+@@ -821,6 +821,14 @@ func DeleteIfUpgradeNeeded(e CtEndpoint) {
  	}
  }
  
