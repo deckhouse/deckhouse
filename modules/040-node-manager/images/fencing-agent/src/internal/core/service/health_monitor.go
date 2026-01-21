@@ -27,20 +27,20 @@ type ClusterProvider interface {
 	RemoveNodeLabel(ctx context.Context, key string) error
 }
 
-type MembershipProvider interface {
+type MemberlistProvider interface {
 	NumOtherMembers() int
 	IsAlone() bool
 }
 
 type HealthMonitor struct {
 	cluster    ClusterProvider
-	membership MembershipProvider
+	membership MemberlistProvider
 	watchdog   WatchDog
 	mu         *sync.Mutex
 	logger     *log.Logger
 }
 
-func NewHealthMonitor(cluster ClusterProvider, membership MembershipProvider, watchdog WatchDog, logger *log.Logger) *HealthMonitor {
+func NewHealthMonitor(cluster ClusterProvider, membership MemberlistProvider, watchdog WatchDog, logger *log.Logger) *HealthMonitor {
 	return &HealthMonitor{
 		cluster:    cluster,
 		membership: membership,
