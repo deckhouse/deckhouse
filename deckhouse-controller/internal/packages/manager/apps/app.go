@@ -29,6 +29,7 @@ import (
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
+	kemtypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -123,6 +124,13 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 // addHooks initializes and adds hooks to the application's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
 func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
+	// Extract namespace from application name
+	appParts := strings.Split(a.name, ".")
+	if len(appParts) != 2 {
+		return fmt.Errorf("invalid application name format: %s", a.name)
+	}
+	appNamespace := appParts[0]
+
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -138,6 +146,15 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 				pkg.MetricKeyBinding: kubeCfg.BindingName,
 				pkg.MetricKeyQueue:   kubeCfg.Queue,
 				pkg.MetricKeyKind:    kubeCfg.Monitor.Kind,
+			}
+
+			// Force namespace selector to application's namespace for security reasons.
+			// Applications should only monitor resources in their own namespace.
+			// This overrides any namespaceSelector specified in the hook configuration.
+			kubeCfg.Monitor.NamespaceSelector = &kemtypes.NamespaceSelector{
+				NameSelector: &kemtypes.NameSelector{
+					MatchNames: []string{appNamespace},
+				},
 			}
 		}
 
