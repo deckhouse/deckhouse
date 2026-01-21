@@ -48,7 +48,7 @@ func NewApplication(
 	unaryRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
 	streamRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.StreamRPS), config.RLimit.StreamBurst)
 
-	kubeClient, err := kubeclient.GetClientset(config.KubeConfig, config.KubernetesAPITimeout, float32(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
+	kubeClient, err := kubeclient.GetClientset(config.KubeConfigPath, config.KubernetesAPITimeout, float32(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
 	if err != nil {
 		logger.Fatal("Unable to create a kube-client", sl.Err(err))
 	}

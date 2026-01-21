@@ -10,7 +10,7 @@ type Config struct {
 	WatchdogConfig             WatchdogConfig
 	MemberlistConfig           MemberlistConfig
 	RLimit                     RateLimit
-	KubeConfig                 string        `env:"KUBECONFIG" env-required:"true"`
+	KubeConfigPath             string        `env:"KUBECONFIG" env-required:"true"`
 	LogLevel                   string        `env:"LOG_LEVEL" env-default:"info"`
 	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
