@@ -1,26 +1,30 @@
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
-index 7c0176f604..33388da9aa 100644
+index 7c0176f604..ac57bbcd70 100644
 --- a/bpf/bpf_host.c
 +++ b/bpf/bpf_host.c
-@@ -593,6 +593,75 @@ struct {
+@@ -593,6 +593,83 @@ struct {
  	__uint(max_entries, 1);
  } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
  
 +#if 1
++#ifndef ICMP_PACKET_MAX_SAMPLE_SIZE
++#define ICMP_PACKET_MAX_SAMPLE_SIZE 64
++#endif
 +static __always_inline 
 +int make_icmp_responce_lb4_h(struct __ctx_buff *ctx,
 +					struct iphdr *ip4) {
 +	void *data, *data_end;
-+	struct ethhdr *ethhdr;
++	//struct ethhdr *ethhdr;
 +	struct icmphdr *icmphdr;
 +	union macaddr smac = {};
 +	union macaddr dmac = {};
++	int sample_len;
 +	__be32 tmp_addr;
 +	__wsum csum = 0;
 +	/* changing size invalidates pointers, so we need to re-fetch them. */
 +	data = ctx_data(ctx);
 +	data_end = ctx_data_end(ctx);
-+	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER ENTER!\n");
++	//printk("MEG:1111 HOST GOT A NEW ICMP HANDLER ENTER!\n");
 +
 +	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
 +		sizeof(struct icmphdr) > data_end)
@@ -35,24 +39,28 @@ index 7c0176f604..33388da9aa 100644
 +	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
 +	if (icmphdr->type != ICMP_ECHO) 
 +		return CTX_ACT_OK;
-+
++	
++	/* Resize to ethernet header + 64 bytes or less */
++	sample_len = (int)ctx_full_len(ctx);
++	
++	csum = icmp_wsum_accumulate(data + sizeof(struct ethhdr), data_end, sample_len);
 +	/* Write reversed eth header, ready for egress */
-+	ethhdr = data;
++	/*ethhdr = data;
 +	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
 +	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
-+	ethhdr->h_proto = bpf_htons(ETH_P_IP);
++	ethhdr->h_proto = bpf_htons(ETH_P_IP);*/
 +
 +	/* Write reversed ip header, ready for egress */
 +	//ip4 = data + sizeof(struct ethhdr);
-+	ip4->version = 4;
-+	ip4->ihl = sizeof(struct iphdr) >> 2;
++	//ip4->version = 4;
++	//ip4->ihl = sizeof(struct iphdr) >> 2;
 +	//ip4->tos = tos;
 +	//ip4->tot_len = bpf_htons(sizeof(struct iphdr) + sizeof(struct icmphdr) +
 +	//	       (__u16)sample_len);
-+	ip4->id = 0;
++	//ip4->id = 0;
 +	//ip4->frag_off = 0;
-+	ip4->ttl = IPDEFTTL;
-+	ip4->protocol = IPPROTO_ICMP;
++	//ip4->ttl = IPDEFTTL;
++	//ip4->protocol = IPPROTO_ICMP;
 +	ip4->check = 0;
 +	tmp_addr = ip4->daddr;
 +	ip4->daddr = ip4->saddr;
@@ -78,13 +86,13 @@ index 7c0176f604..33388da9aa 100644
  static __always_inline int
  handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	    __u32 ipcache_srcid __maybe_unused,
-@@ -619,8 +688,17 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+@@ -619,8 +696,17 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	if (ipv4_is_fragment(ip4))
  		return DROP_FRAG_NOSUPPORT;
  #endif
 -
 +	if(ip4->protocol == IPPROTO_ICMP ) {
-+		int ret;
++		int ret = CTX_ACT_OK;
 +		__be32 vip = bpf_htonl(0xc0a8c7c8);
 +		if ((ip4->daddr == vip || ip4->saddr == vip))
 +			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
@@ -97,7 +105,24 @@ index 7c0176f604..33388da9aa 100644
  	if (!from_host) {
  		if (!ctx_skip_nodeport(ctx)) {
  			bool __maybe_unused is_dsr = false;
-@@ -1178,6 +1256,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+@@ -713,7 +799,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
+ 
+ 	if (!revalidate_data(ctx, &data, &data_end, &ip4))
+ 		return DROP_INVALID;
+-
++	if(ip4->protocol == IPPROTO_ICMP ) {
++		//int ret;
++		__be32 vip = bpf_htonl(0xc0a8c7c8);
++		if ((ip4->daddr == vip || ip4->saddr == vip))
++			printk("MEG:3333 GOT A HANDLE IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        /*ret = make_icmp_responce_lb4_h(ctx, ip4);
++		if (ret != CTX_ACT_OK)
++			return ret;*/
++	}
+ #ifdef ENABLE_HOST_FIREWALL
+ 	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
+ 
+@@ -1178,6 +1272,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
  		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
  					      from_host);
  		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
