@@ -94,6 +94,76 @@ d8 system edit cluster-configuration
 After saving the changes, DKP will automatically reconcile the cluster state with the new configuration.
 Depending on the cluster size, this process may take some time.
 
+#### Modifying protected parameters
+
+Some cluster parameters are critical for cluster operation and cannot be changed in a running cluster by default. These parameters include:
+- `podSubnetCIDR` — the Pod network address space
+- `podSubnetNodeCIDRPrefix` — the Pod network prefix size per node
+- `serviceSubnetCIDR` — the Service network address space
+
+Attempts to change these parameters will be blocked by the admission webhook with an error message.
+
+{% alert level="danger" %}
+**Changing these parameters in a running cluster is extremely dangerous** and can lead to:
+- Complete loss of access to the Kubernetes API
+- Invalidation of TLS certificates
+- Necessity to restart all cluster nodes and control plane components
+- Data inconsistency if the process is interrupted
+
+**It is strongly recommended to recreate the cluster** instead of changing these parameters.
+{% endalert %}
+
+If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism.
+
+**Recommended method: Using dhctl**
+
+Use the `dhctl` tool with the `--allow-unsafe-changes` flag:
+
+```shell
+dhctl edit cluster-configuration --allow-unsafe-changes
+```
+
+This command will automatically:
+- Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret
+- Open an editor to modify the configuration
+- Remove the annotation after you save the changes
+
+This is the safest way to modify protected parameters as it properly manages the annotation lifecycle.
+
+{% alert level="warning" %}
+Even with the protection mechanism bypassed, there is **no guarantee** that the cluster will continue to function correctly after changing these parameters. Be prepared for the possibility of complete cluster failure and have a backup plan.
+{% endalert %}
+
+{% offtopic title="Manual method (for emergency situations only)" %}
+
+> **Warning!** This manual method bypasses Deckhouse safety mechanisms and should **only be used when dhctl is unavailable** (e.g., emergency recovery scenarios or when dhctl cannot connect to the cluster). In normal circumstances, always use `dhctl` as described above.
+
+If you need to manually edit the configuration using `kubectl`:
+
+1. Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret:
+
+   ```shell
+   kubectl -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
+   ```
+
+2. Edit the configuration:
+
+   ```shell
+   kubectl -n kube-system edit secret d8-cluster-configuration
+   ```
+
+   Note: The configuration is base64-encoded in the Secret's `cluster-configuration.yaml` data field.
+
+3. **Important:** Remove the annotation after saving the changes:
+
+   ```shell
+   kubectl -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
+   ```
+
+> **Danger!** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, the protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
+
+{% endofftopic %}
+
 ### Viewing current configuration
 
 DKP is managed through global settings, module configurations, and various custom resources.
