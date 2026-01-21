@@ -289,6 +289,18 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
 		})
 
+		It("Should configure user-authz-webhook to use local kube-apiserver endpoint", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+			Expect(ds.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+
+			env := ds.Field("spec.template.spec.containers.0.env").String()
+			Expect(env).To(ContainSubstring("KUBERNETES_SERVICE_HOST"))
+			Expect(env).To(ContainSubstring("127.0.0.1"))
+			Expect(env).To(ContainSubstring("KUBERNETES_SERVICE_PORT"))
+			Expect(env).To(ContainSubstring("6445"))
+		})
+
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
 			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
