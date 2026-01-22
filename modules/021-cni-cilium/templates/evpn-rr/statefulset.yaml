@@ -35,7 +35,7 @@ spec:
       - name: deckhouse-registry
       initContainers:
       - name: config-renderer
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
+        # {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
         imagePullPolicy: IfNotPresent
         command:
@@ -136,7 +136,6 @@ spec:
           value: "true"
         - name: FRR_CONF
           value: /etc/frr/frr.conf
-
         volumeMounts:
         - name: frr-conf
           mountPath: /etc/frr
