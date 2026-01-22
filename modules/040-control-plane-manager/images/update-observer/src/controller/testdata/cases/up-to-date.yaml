@@ -6,12 +6,13 @@ metadata:
   namespace: kube-system
 data:
   cluster-configuration.yaml: |
-    YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IENsdXN0ZXJDb25maWd1cmF0aW9uCmt1YmVybmV0ZXNWZXJzaW9uOiB2MS4zMS41
+    YXBpVmVyc2lvbjogZGVja2hvdXNlLmlvL3YxCmtpbmQ6IENsdXN0ZXJDb25maWd1cmF0aW9uCmt1YmVybmV0ZXNWZXJzaW9uOiBBdXRvbWF0aWM=
+  deckhouseDefaultKubernetesVersion: djEuMzE=
 ---
 apiVersion: v1
 kind: Node
 metadata:
-  name: node-1
+  name: master-1
 status:
   nodeInfo:
     kubeletVersion: v1.31.5
@@ -19,7 +20,7 @@ status:
 apiVersion: v1
 kind: Node
 metadata:
-  name: node-2
+  name: master-2
 status:
   nodeInfo:
     kubeletVersion: v1.31.5
@@ -27,7 +28,7 @@ status:
 apiVersion: v1
 kind: Node
 metadata:
-  name: node-3
+  name: worker-1
 status:
   nodeInfo:
     kubeletVersion: v1.31.5
@@ -35,19 +36,83 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: kube-apiserver-1
+  name: kube-apiserver-master-1
   namespace: kube-system
   labels:
     component: kube-apiserver
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-1
 status:
-  podIP: 10.0.0.1
+  phase: Running
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: kube-apiserver-2
+  name: kube-scheduler-master-1
+  namespace: kube-system
+  labels:
+    component: kube-scheduler
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-1
+status:
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager-master-1
+  namespace: kube-system
+  labels:
+    component: kube-controller-manager
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-1
+status:
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver-master-2
   namespace: kube-system
   labels:
     component: kube-apiserver
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-2
 status:
-  podIP: 10.0.0.2
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-scheduler-master-2
+  namespace: kube-system
+  labels:
+    component: kube-scheduler
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-2
+status:
+  phase: Running
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-controller-manager-master-2
+  namespace: kube-system
+  labels:
+    component: kube-controller-manager
+  annotations:
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.31.5
+spec:
+  nodeName: master-2
+status:
+  phase: Running

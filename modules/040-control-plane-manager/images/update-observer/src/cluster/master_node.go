@@ -18,7 +18,7 @@ package cluster
 
 type MasterNodeState struct {
 	Phase           MasterNodePhase             `json:"phase" yaml:"phase"`
-	ComponentsState ControlPlaneComponentsState `json:",inline" yaml:",inline"`
+	ComponentsState ControlPlaneComponentsState `json:"components" yaml:"components"`
 }
 
 type MasterNodePhase string

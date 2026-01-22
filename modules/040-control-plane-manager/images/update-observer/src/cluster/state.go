@@ -27,6 +27,7 @@ type Spec struct {
 }
 
 type Status struct {
+	CurrentVersion    string            `json:"currentVersion" yaml:"currentVersion"`
 	ControlPlaneState ControlPlaneState `json:"controlPlane" yaml:"controlPlane"`
 	NodesState        NodesState        `json:"nodes" yaml:"nodes"`
 	Phase             Phase             `json:"phase" yaml:"phase"`

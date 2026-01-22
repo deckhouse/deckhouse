@@ -2,14 +2,39 @@
 data:
   spec: |
     desiredVersion: v1.31
-    updateMode: Manual
+    updateMode: Automatic
   status: |
+    currentVersion: v1.31
     controlPlane:
-      currentVersion: v1.31
       desiredCount: 2
-      progress: 100%
-      state: UpToDate
       upToDateCount: 2
+      progress: 100%
+      phase: UpToDate
+      nodes:
+        master-1:
+          phase: UpToDate
+          components:
+            kube-apiserver:
+              version: v1.31
+              phase: Running
+            kube-controller-manager:
+              version: v1.31
+              phase: Running
+            kube-scheduler:
+              version: v1.31
+              phase: Running
+        master-2:
+          phase: UpToDate
+          components:
+            kube-apiserver:
+              version: v1.31
+              phase: Running
+            kube-controller-manager:
+              version: v1.31
+              phase: Running
+            kube-scheduler:
+              version: v1.31
+              phase: Running
     nodes:
       desiredCount: 3
       upToDateCount: 3

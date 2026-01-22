@@ -73,11 +73,12 @@ func (r *reconciler) getNodesState(ctx context.Context, desiredVersion string) (
 			return nil, common.WrapIntoReconcileTolerantError(err, "failed to list nodes")
 		}
 
+		nodes = append(nodes, list.Items...)
+
 		if list.Continue == "" {
 			break
 		}
 		continueToken = list.Continue
-		nodes = append(nodes, list.Items...)
 	}
 
 	return cluster.GetNodesState(nodes, desiredVersion)
@@ -122,6 +123,7 @@ func combine(cfg *cluster.Configuration, nodes *cluster.NodesState, controlPlane
 			UpdateMode:     cfg.UpdateMode,
 		},
 		Status: cluster.Status{
+			CurrentVersion:    nodes.CurrentVersion,
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,
 		},
