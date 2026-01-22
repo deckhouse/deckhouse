@@ -50,7 +50,10 @@ spec:
                 scanInterval:
                   type: string
                   x-doc-default: 3m
-                  description: Interval for registry scan.
+                  description: |
+                    Interval for registry scan.
+                    
+                    Defines the frequency of checking the container registry for new modules and their versions.
                   pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 registry:
                   type: object
