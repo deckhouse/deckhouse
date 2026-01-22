@@ -26,16 +26,9 @@ spec:
   validations:
   {{- if not $moduleEnabled }}
   - expression: >-
-      (
-        has(object.spec.settings.registry) ==
-        has(oldObject.spec.settings.registry)
-      ) &&
-      (
-        !has(object.spec.settings.registry) || 
-        (
-          object.spec.settings.registry ==
-          oldObject.spec.settings.registry
-        )
+      !(
+        object.?spec.?settings.?registry.orValue("") !=
+        oldObject.?spec.?settings.?registry.orValue("")
       )
     message: >-
       "Changing, adding, or removing `spec.settings.registry`
@@ -44,16 +37,9 @@ spec:
   {{- end }}
   {{- if not $clusterBootstraped }}
   - expression: >-
-      (
-        has(object.spec.settings.registry) ==
-        has(oldObject.spec.settings.registry)
-      ) &&
-      (
-        !has(object.spec.settings.registry) || 
-        (
-          object.spec.settings.registry ==
-          oldObject.spec.settings.registry
-        )
+      !(
+        object.?spec.?settings.?registry.orValue("") !=
+        oldObject.?spec.?settings.?registry.orValue("")
       )
     message: >-
       "Changing, adding, or removing `spec.settings.registry`
@@ -63,7 +49,7 @@ spec:
   {{- if not $staticCluster }}
   - expression: >-
       !(
-        has(object.spec.settings.registry.mode) && 
+        has(object.?spec.?settings.?registry.mode) && 
         (
           object.spec.settings.registry.mode == "Proxy" ||
           object.spec.settings.registry.mode == "Local"
