@@ -33,9 +33,9 @@ title: "Cloud provider — OpenStack: настройки"
 | Compute (Nova)                   | v2         |
 | Network (Neutron)                | v2         |
 | Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) &#8432; | v2         |
+| Load Balancing (Octavia) *       | v2         |
 
-&#8432;  Если нужно заказывать Load Balancer.
+\* Если нужно заказывать Load Balancer.
 
 Чтобы интеграция и работа с платформой Deckhouse Kubernetes проходила корректно, присвойте ассоциированному пользователю OpenStack роль `member`. Это обеспечит разрешения на взаимодействие с указанными сервисами и управление ресурсами.
 
