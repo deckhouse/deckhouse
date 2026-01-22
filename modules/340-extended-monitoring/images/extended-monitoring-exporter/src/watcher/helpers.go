@@ -19,10 +19,9 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/client-go/tools/cache"
 
 	met "extended-monitoring/metrics"
-
-	"k8s.io/client-go/tools/cache"
 )
 
 func boolToFloat64(b bool) float64 {

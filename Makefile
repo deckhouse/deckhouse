@@ -168,6 +168,14 @@ tests-controller: ## Run deckhouse-controller unit tests.
 tests-webhooks: bin/yq ## Run python webhooks unit tests.
 	./testing/webhooks/run.sh
 
+.PHONY: test-all
+test-all: go-check
+	$(call iterateAllGoModules,Running go test with race and cover in,go test -cover -race -timeout=${TESTS_TIMEOUT} ./...)
+
+.PHONY: test-draft-all
+test-draft-all: go-check
+	$(call iterateAllGoModules,Running go test in,go test ./...)
+
 .PHONY: validate
 validate: ## Check common patterns through all modules.
 	go test -tags=validation -run Validation -timeout=${TESTS_TIMEOUT} ./testing/...
@@ -182,6 +190,27 @@ lint: golangci-lint ## Run linter.
 
 lint-fix: golangci-lint ## Fix lint violations.
 	golangci-lint run --fix
+
+# Generic function to iterate over all directories with go.mod
+# Usage: $(call iterateAllGoModules,message,command)
+define iterateAllGoModules
+	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
+		echo ""; \
+		echo "============================================================"; \
+		echo "$(1) $$dir"; \
+		echo "============================================================"; \
+		echo ""; \
+		(cd $$dir && $(2)); \
+	done
+endef
+
+.PHONY: lint-all
+lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
+
+.PHONY: lint-fix-all
+lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
+	$(call iterateAllGoModules,Running golangci-lint --fix in,GOFLAGS="-buildvcs=false" golangci-lint run --fix --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: --lint-markdown-header lint-markdown lint-markdown-fix
 --lint-markdown-header:
@@ -453,12 +482,9 @@ go-check:
 go-module-version: go-check
 	@echo "go get $(shell go list ./deckhouse-controller/cmd/deckhouse-controller)@$(shell git rev-parse HEAD)"
 
-.PHONY: all-mod
-all-mod: go-check
-	@for dir in $$(find . -mindepth 2 -name go.mod | sed -r 's/(.*)(go.mod)/\1/g'); do \
-		echo "Running go mod tidy in $${dir}"; \
-		cd $(CURDIR)/$${dir} && go mod tidy && cd $(CURDIR); \
-	done
+.PHONY: tidy-all
+tidy-all: go-check
+	$(call iterateAllGoModules,Running go mod tidy in,go mod tidy)
 
 ##@ Dependencies
 
@@ -481,7 +507,7 @@ YQ = $(LOCALBIN)/yq
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
-GOLANGCI_LINT_VERSION = v2.7.2
+GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.26.3
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10

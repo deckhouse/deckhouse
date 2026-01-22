@@ -121,7 +121,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 
 			l.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))

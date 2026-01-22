@@ -27,13 +27,13 @@ import (
 	"strings"
 	"time"
 
-	"vector/internal"
-
 	"github.com/fsnotify/fsnotify"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
+
+	"vector/internal"
 )
 
 const (

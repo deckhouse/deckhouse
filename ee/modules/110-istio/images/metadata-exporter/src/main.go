@@ -40,7 +40,6 @@ func httpHandlerFederationPrivateJSON(exp *Exporter) http.HandlerFunc {
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 	}
-
 }
 
 func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
@@ -55,7 +54,6 @@ func httpHandlerMulticlusterPrivateJSON(exp *Exporter) http.HandlerFunc {
 		fmt.Fprint(w, privateMetadataJSON)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 	}
-
 }
 
 func httpHandlerSpiffeBundleEndpoint(exp *Exporter) http.HandlerFunc {

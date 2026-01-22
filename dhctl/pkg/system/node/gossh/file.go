@@ -27,10 +27,12 @@ import (
 	"sync"
 
 	"github.com/bramvdbogaerde/go-scp"
+	uuid "gopkg.in/satori/go.uuid.v1"
+
+	ssh "github.com/deckhouse/lib-gossh"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	ssh "github.com/deckhouse/lib-gossh"
-	uuid "gopkg.in/satori/go.uuid.v1"
 )
 
 type SSHFile struct {

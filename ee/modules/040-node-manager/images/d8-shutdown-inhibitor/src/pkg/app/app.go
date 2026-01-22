@@ -11,12 +11,12 @@ import (
 	"log/slog"
 	"time"
 
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
 	"d8_shutdown_inhibitor/pkg/app/tasks"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
 	"d8_shutdown_inhibitor/pkg/systemd"
 	"d8_shutdown_inhibitor/pkg/taskstarter"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type App struct {

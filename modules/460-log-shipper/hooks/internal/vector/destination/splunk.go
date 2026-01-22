@@ -57,7 +57,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
-	indexedFields := []string{
+	indexedFields := []string{ //nolint:prealloc
 		"datetime",
 		"namespace",
 		"container",

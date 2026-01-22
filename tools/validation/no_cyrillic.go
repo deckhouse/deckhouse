@@ -59,13 +59,13 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 
 		msgs := NewMessages()
 
-		//hasErrors := false
+		// hasErrors := false
 		for _, fileInfo := range info.Files {
 			if !fileInfo.HasContent() {
 				continue
 			}
 			// Check only added or modified files
-			if !(fileInfo.IsAdded() || fileInfo.IsModified()) {
+			if !fileInfo.IsAdded() && !fileInfo.IsModified() {
 				continue
 			}
 
@@ -130,7 +130,7 @@ func checkCyrillicLettersInString(line string) (string, bool) {
 	}
 
 	// Replace all tabs with spaces to prevent shifted cursor.
-	line = strings.Replace(line, "\t", "    ", -1)
+	line = strings.ReplaceAll(line, "\t", "    ")
 
 	// Make string with pointers to Cyrillic letters so user can detect hidden letters.
 	cursor := cyrFillerRe.ReplaceAllString(line, "-")

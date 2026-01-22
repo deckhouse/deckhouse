@@ -16,7 +16,6 @@ package server
 
 import (
 	"context"
-	"exporter/internal/yandex"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,6 +25,8 @@ import (
 
 	"github.com/go-chi/chi"
 	log "github.com/sirupsen/logrus"
+
+	"exporter/internal/yandex"
 )
 
 type Server struct {
@@ -194,5 +195,4 @@ func (h *Server) getBatch(w http.ResponseWriter, r *http.Request) {
 	} else {
 		h.logger.Info("End request scrape batch metrics")
 	}
-
 }

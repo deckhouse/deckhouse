@@ -33,7 +33,7 @@ func MergeLabels(labelsMaps ...map[string]string) map[string]string {
 
 // LabelNames returns sorted label keys
 func LabelNames(labels map[string]string) []string {
-	names := make([]string, 0)
+	names := make([]string, 0, len(labels))
 	for labelName := range labels {
 		names = append(names, labelName)
 	}
@@ -42,7 +42,7 @@ func LabelNames(labels map[string]string) []string {
 }
 
 func LabelValues(labels map[string]string, labelNames []string) []string {
-	values := make([]string, 0)
+	values := make([]string, 0, len(labelNames))
 	for _, name := range labelNames {
 		values = append(values, labels[name])
 	}

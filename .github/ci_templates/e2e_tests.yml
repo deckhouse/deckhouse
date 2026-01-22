@@ -89,7 +89,7 @@
   LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
   LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
 {!{- else if eq $provider "openstack" }!}
-  TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
+  TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "static" }!}
   TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
