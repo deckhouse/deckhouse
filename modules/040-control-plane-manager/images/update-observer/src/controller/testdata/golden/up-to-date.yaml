@@ -1,5 +1,8 @@
 ---
 data:
+  spec: |
+    desiredVersion: v1.31
+    updateMode: Automatic
   status: |
     currentVersion: v1.31
     phase: UpToDate

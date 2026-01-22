@@ -143,15 +143,15 @@ func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.Confi
 		configMap.Data = map[string]string{}
 	}
 
-	if configMapData.Status != nil {
-		statusBytes, err := yaml.Marshal(configMapData.Status)
+	if configMapData.Spec != nil {
+		specBytes, err := yaml.Marshal(configMapData.Spec)
 		if err != nil {
-			return fmt.Errorf("failed to marshal Status: %w", err)
+			return fmt.Errorf("failed to marshal Spec: %w", err)
 		}
-		configMap.Data["status"] = string(statusBytes)
+		configMap.Data["spec"] = string(specBytes)
 	}
 
-	if configMapData.Spec != nil {
+	if configMapData.Status != nil {
 		statusBytes, err := yaml.Marshal(configMapData.Status)
 		if err != nil {
 			return fmt.Errorf("failed to marshal Status: %w", err)
