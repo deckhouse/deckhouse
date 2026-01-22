@@ -172,23 +172,22 @@ properties:
         default: false
   letsencrypt:
     type: object
+    default: {}
     description: |
       Settings for the `letsencrypt` ClusterIssuer.
-    default: {}
     properties:
       resources:
         type: object
+        default: {}
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
         properties:
           requests:
             type: object
+            default: {}
             required:
               - cpu
               - memory            
-            default: 
-              cpu: "10m"
-              memory: "32Mi"
             properties:
               cpu:
                 oneOf:
@@ -211,12 +210,10 @@ properties:
               Resource requests and limits (CPU and memory) for pods that create the `letsencrypt` ClusterIssuer for http01 challenges
           limits:
             type: object
+            default: {}
             required:
               - cpu
               - memory            
-            default: 
-              cpu: "50m"
-              memory: "64Mi"
             properties:
               cpu:
                 oneOf:
@@ -244,23 +241,22 @@ properties:
               memory: "256Mi"
   letsencryptStaging:
     type: object
+    default: {}
     description: |
       Settings for the `letsencrypt-staging` ClusterIssuer.
-    default: {}
     properties:
       resources:
         type: object
+        default: {}
         description: |
           Resource requests and limits (CPU and memory) for pods that create the `letsencrypt-staging` ClusterIssuer for http01 challenges.
         properties:
           requests:
             type: object
+            default: {}
             required:
               - cpu
               - memory            
-            default: 
-              cpu: "10m"
-              memory: "32Mi"
             properties:
               cpu:
                 oneOf:
@@ -281,12 +277,10 @@ properties:
                 default: "32Mi"
           limits:
             type: object
+            default: {}
             required:
               - cpu
               - memory            
-            default: 
-              cpu: "50m"
-              memory: "64Mi"
             properties:
               cpu:
                 oneOf:
