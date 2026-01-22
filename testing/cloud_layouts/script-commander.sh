@@ -47,7 +47,9 @@ Provider specific environment variables:
 
   zVirt:
 
-\$SECRETNAME
+\$LAYOUT_ZVIRT_BASE_DOMAIN
+\$LAYOUT_ZVIRT_USERNAME
+\$LAYOUT_ZVIRT_PASSWORD
 
   GCP:
 

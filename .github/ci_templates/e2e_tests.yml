@@ -110,7 +110,7 @@
   TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
   LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
 {!{- else if eq $provider "zvirt" }!}
-  TEMPLATE_ID: "" #TODO to update
+  TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
@@ -313,7 +313,9 @@ run: |
   {!{- else if eq $provider "dvp" }!}
   export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
   {!{- else if eq $provider "zvirt" }!}
-  export secret="" #TODO to update
+  export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
+  export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
+  export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
   {!{- end }!}
   {!{- if eq $provider "static" }!}
   export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
@@ -550,7 +552,9 @@ check_e2e_labels:
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
 {!{- else if eq $provider "zvirt" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "secretname" "secretname" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "password" "LAYOUT_ZVIRT_PASSWORD" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
@@ -962,7 +966,9 @@ check_e2e_labels:
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
 {!{- else if eq $provider "zvirt" }!}
-{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "secretname" "secretname" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "password" "LAYOUT_ZVIRT_PASSWORD" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
