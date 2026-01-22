@@ -429,7 +429,7 @@ properties:
                 description: |
                   Control rules for network traffic to and from workloads running in the Project resource.
                 
-                  * `Isolated`: A restrictive network policy (allowlist) is applied to cluster VM pods. Only explicitly allowed ingress and egress traffic is permitted.
+                  * `Isolated`: Applies a restrictive allowlist NetworkPolicy. It permits only explicitly allowed traffic, including access required for platform components and configured external access (SSH/HTTP(S)/NodePort).
                   * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
                 enum:
