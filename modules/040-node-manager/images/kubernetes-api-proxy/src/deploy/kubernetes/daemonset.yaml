@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: kubernetes-api-proxy
+  namespace: kube-system
+  labels:
+    app: apiserver-proxy-lb
+spec:
+  selector:
+    matchLabels:
+      app: kubernetes-api-proxy
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: kubernetes-api-proxy
+    spec:
+      serviceAccountName: kubernetes-api-proxy
+      priorityClassName: system-cluster-critical
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+        - key: node-role.kubernetes.io/master
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: apiserver-lb
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          image: kubernetes-api-proxy:0.0.1
+          imagePullPolicy: IfNotPresent
+          args:
+            - "--listen-address=0.0.0.0"
+            - "--listen-port=6445"
+            - "--health-listen=:8080"
+            - "--log-level=debug"
+          ports:
+            - name: https
+              containerPort: 6445
+              hostPort: 6445
+              protocol: TCP
+            - name: health
+              containerPort: 8080
+              hostPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: health
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
