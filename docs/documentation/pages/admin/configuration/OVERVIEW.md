@@ -115,7 +115,7 @@ Attempts to change these parameters will be blocked by the admission webhook wit
 
 If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism.
 
-**Recommended method: Using dhctl**
+##### Recommended method: Using dhctl
 
 Use the `dhctl` tool with the `--allow-unsafe-changes` flag:
 
