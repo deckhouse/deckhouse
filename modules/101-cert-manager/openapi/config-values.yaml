@@ -179,7 +179,6 @@ properties:
         type: object
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt` ClusterIssuer.
-          Set to `false` to avoid specifying resources.
         properties:
           requests:
             type: object
@@ -188,13 +187,13 @@ properties:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "32Mi"
             description: |
               Resource requests for the `letsencrypt` ClusterIssuer 
@@ -205,13 +204,13 @@ properties:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "50m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "64Mi"
             description: |
               Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).          
@@ -231,7 +230,6 @@ properties:
         type: object
         description: |
           Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
-          Set to `false` to avoid specifying resources.
         properties:
           requests:
             type: object
@@ -240,13 +238,13 @@ properties:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "32Mi"
             description: |
               Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
@@ -257,13 +255,13 @@ properties:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "50m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
                 type: string
-                pattern: "^[0-9]+(\\.[0-9]+)?(m|Ki|Mi|Gi|Ti|Pi|Ei|k|M|G|T|P|E)?$"
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "64Mi"
         x-examples:
           - requests:

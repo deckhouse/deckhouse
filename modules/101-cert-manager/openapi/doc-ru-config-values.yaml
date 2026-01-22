@@ -91,7 +91,6 @@ properties:
         description: |
           Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt`.
           Структура, аналогичная `spec.containers[].resources` пода Kubernetes.
-          Укажите `false`, если не требуется задавать ресурсы явно.
         properties:
           requests:
             properties:
@@ -121,8 +120,7 @@ properties:
       resources:
         description: |
           Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt-staging`.
-          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.
-          Укажите `false`, если не требуется задавать ресурсы явно.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.  
         properties:
           requests:
             properties:
