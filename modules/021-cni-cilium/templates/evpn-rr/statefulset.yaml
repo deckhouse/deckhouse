@@ -37,6 +37,7 @@ spec:
       - name: config-renderer
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -46,6 +47,9 @@ spec:
           CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+
+          # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
+          cp -rLf /etc/frr-template/* /etc/frr/
 
           # Generate router-id from pod index (e.g., 0.0.0.1, 0.0.0.2)
           ROUTER_ID="0.0.0.$((POD_INDEX + 1))"
@@ -72,18 +76,13 @@ spec:
             fi
           done
 
-          # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
-          cp /etc/frr-template/daemons /etc/frr/daemons
-          cp /etc/frr-template/vtysh.conf /etc/frr/vtysh.conf
-          cp /etc/frr-template/frr.conf /etc/frr/frr.conf
-
-          # Replace placeholders in config template and overwrite /etc/frr/frr.conf
+          # Replace placeholders in config template and overwrite /etc/frr/frr.conf (will be updated by sidecar)
           sed -e "s|POD_NAME_PLACEHOLDER|${POD_NAME}|g" \
               -e "s|ROUTER_ID_PLACEHOLDER|${ROUTER_ID}|g" \
               -e "s|PEER_RR_NEIGHBORS_PLACEHOLDER|${PEER_NEIGHBORS}|g" \
               -e "s|PEER_RR_ACTIVATE_PLACEHOLDER|${PEER_ACTIVATE}|g" \
               -e "s|BGP_LISTEN_RANGE_PLACEHOLDER||g" \
-              /etc/frr-template/frr.conf.template > /etc/frr/frr.conf
+              /etc/frr/frr.conf.template > /etc/frr/frr.conf
         env:
         - name: HOSTNAME
           valueFrom:
@@ -94,19 +93,33 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         volumeMounts:
-        - name: config-template
+        - name: frr-config-template
           mountPath: /etc/frr-template
           readOnly: true
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
         resources:
           requests:
             cpu: 50m
             memory: 32Mi
+      shareProcessNamespace: true
       containers:
       - name: frr
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_ADMIN
+            - NET_BIND_SERVICE
+        # {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        # The command is FRR's default entrypoint & waiting for the log file to appear and tailing it.
+        # If the log file isn't created in 60 seconds the tail fails and the container is restarted.
+        # This workaround is needed to have the frr logs as part of kubectl logs -c frr < frr-podname >.
         command:
         - /bin/sh
         - -c
@@ -119,12 +132,13 @@ spec:
           done
           tail -f /var/log/frr/frr.log
         env:
-        - name: FRR_CONF
-          value: /etc/frr/frr.conf
         - name: TINI_SUBREAPER
           value: "true"
+        - name: FRR_CONF
+          value: /etc/frr/frr.conf
+
         volumeMounts:
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
           readOnly: true
         - name: tmp
@@ -135,6 +149,8 @@ spec:
           mountPath: /var/log/frr
         - name: frr-tmp
           mountPath: /var/tmp/frr
+        - name: frr-lib
+          mountPath: /var/lib/frr
         ports:
         - containerPort: 179
           name: bgp
@@ -148,6 +164,7 @@ spec:
       - name: config-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -256,10 +273,10 @@ spec:
             fieldRef:
               fieldPath: status.podIP
         volumeMounts:
-        - name: config-template
+        - name: frr-config-template
           mountPath: /etc/frr-template
           readOnly: true
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
         - name: tmp
           mountPath: /tmp
@@ -273,8 +290,9 @@ spec:
             cpu: 50m
             memory: 32Mi
       - name: frr-reloader
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
+        # {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -321,7 +339,7 @@ spec:
             sleep 2
           done
         volumeMounts:
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
           readOnly: true
         - name: frr-run
@@ -331,20 +349,21 @@ spec:
           requests:
             cpu: 50m
             memory: 32Mi
-      dnsPolicy: ClusterFirst
-      restartPolicy: Always
+      terminationGracePeriodSeconds: 10
       volumes:
-      - name: config-template
+      - name: frr-config-template
         configMap:
           name: evpn-rr-config
-      - name: config
-        emptyDir: {}
-      - name: tmp
+      - name: frr-conf
         emptyDir: {}
       - name: frr-run
         emptyDir: {}
-      - name: frr-logs
+      - name: frr-lib
         emptyDir: {}
       - name: frr-tmp
+        emptyDir: {}
+      - name: frr-logs
+        emptyDir: {}
+      - name: tmp
         emptyDir: {}
 {{- end }}
