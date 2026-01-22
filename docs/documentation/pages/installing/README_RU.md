@@ -822,9 +822,9 @@ echo "$MYRESULTSTRING"
      * **Docker Bearer Token Realm** должен быть в списке **Active** (справа), а не в **Available** (слева).
      * Если его нет в **Active**:
        1. Найдите в списке **Available**.
-       2. Переместите стрелкой в **Active**.
-       3. Нажмите **Save**.
-       4. **Перезапустите Nexus** (обязательно для применения изменений).
+       1. Переместите стрелкой в **Active**.
+       1. Нажмите **Save**.
+       1. **Перезапустите Nexus** (это обязательно, для применения изменений).
 
      ![Настройка Docker Bearer Token Realm](../images/registry/nexus/nexus-realms.png)
 

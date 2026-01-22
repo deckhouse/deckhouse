@@ -811,9 +811,9 @@ Setup Steps:
      * The **Docker Bearer Token Realm** must be in the **Active** list (on the right), not in **Available** (on the left).
      * If it is not in **Active**:
        1. Find it in the **Available** list.
-       2. Move it to **Active** using the arrow button.
-       3. Click **Save**.
-       4. **Restart Nexus** (required for the changes to take effect).
+       1. Move it to **Active** using the arrow button.
+       1. Click **Save**.
+       1. **Restart Nexus** (it is required for the changes to take effect).
 
      ![Docker Bearer Token Realm Configuration](../images/registry/nexus/nexus-realms.png)
 
