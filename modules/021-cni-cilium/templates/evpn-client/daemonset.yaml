@@ -45,7 +45,12 @@ spec:
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
 
-          # Replace placeholders in config template (initial config, will be updated by sidecar)
+          # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
+          cp /etc/frr-template/daemons /etc/frr/daemons
+          cp /etc/frr-template/vtysh.conf /etc/frr/vtysh.conf
+          cp /etc/frr-template/frr.conf /etc/frr/frr.conf
+
+          # Replace placeholders in config template and overwrite /etc/frr/frr.conf (will be updated by sidecar)
           NODE_NAME=${NODE_NAME:-$(hostname)}
           sed -e "s/NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
               -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
