@@ -12,6 +12,9 @@ spec:
                 releaseChannel:
                   description: Желаемый канал обновлений по умолчанию для модулей данного container registry.
                   x-doc-deprecated: true
+                scanInterval:
+                  description: Интервал для сканирования реестра.
+                  x-doc-default: 3m
                 registry:
                   properties:
                     scheme:
