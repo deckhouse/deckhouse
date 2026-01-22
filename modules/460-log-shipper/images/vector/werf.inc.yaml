@@ -32,7 +32,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v0.44.0 $(cat /run/secrets/SOURCE_REPO)/vectordotdev/vector.git /src/vector
+  - git clone --depth 1 --branch v0.51.1 $(cat /run/secrets/SOURCE_REPO)/vectordotdev/vector.git /src/vector
   - rm -rf /src/vector/website /src/vector/scripts/integration
   - rm -rf /src/vector/.git
 ---
