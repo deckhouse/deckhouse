@@ -35,8 +35,9 @@ spec:
       - name: deckhouse-registry
       initContainers:
       - name: config-renderer
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
+        # {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -46,16 +47,14 @@ spec:
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
 
           # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
-          cp /etc/frr-template/daemons /etc/frr/daemons
-          cp /etc/frr-template/vtysh.conf /etc/frr/vtysh.conf
-          cp /etc/frr-template/frr.conf /etc/frr/frr.conf
+          cp -rLf /etc/frr-template/* /etc/frr/
 
           # Replace placeholders in config template and overwrite /etc/frr/frr.conf (will be updated by sidecar)
           NODE_NAME=${NODE_NAME:-$(hostname)}
           sed -e "s/NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
               -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
               -e "s|RR_SERVERS_PLACEHOLDER||g" \
-              /etc/frr-template/frr.conf.template > /etc/frr/frr.conf
+              /etc/frr/frr.conf.template > /etc/frr/frr.conf
         env:
         - name: NODE_NAME
           valueFrom:
@@ -66,19 +65,33 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         volumeMounts:
-        - name: config-template
+        - name: frr-config-template
           mountPath: /etc/frr-template
           readOnly: true
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
         resources:
           requests:
             cpu: 50m
             memory: 32Mi
+      shareProcessNamespace: true
       containers:
       - name: frr
-        {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_ADMIN
+            - NET_BIND_SERVICE
+        # {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        # The command is FRR's default entrypoint & waiting for the log file to appear and tailing it.
+        # If the log file isn't created in 60 seconds the tail fails and the container is restarted.
+        # This workaround is needed to have the frr logs as part of kubectl logs -c frr < frr-podname >.
         command:
         - /bin/sh
         - -c
@@ -104,7 +117,7 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         volumeMounts:
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
           readOnly: true
         - name: tmp
@@ -118,6 +131,8 @@ spec:
           mountPath: /var/run/frr
         - name: frr-logs
           mountPath: /var/log/frr
+        - name: frr-lib
+          mountPath: /var/lib/frr
         - name: frr-tmp
           mountPath: /var/tmp/frr
         ports:
@@ -133,6 +148,7 @@ spec:
       - name: config-updater
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -221,10 +237,10 @@ spec:
             fieldRef:
               fieldPath: status.hostIP
         volumeMounts:
-        - name: config-template
+        - name: frr-config-template
           mountPath: /etc/frr-template
           readOnly: true
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
         - name: tmp
           mountPath: /tmp
@@ -233,8 +249,9 @@ spec:
             cpu: 50m
             memory: 32Mi
       - name: frr-reloader
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
+        # {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list . (list "KILL")) | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
         command:
         - sh
         - -c
@@ -281,7 +298,7 @@ spec:
             sleep 2
           done
         volumeMounts:
-        - name: config
+        - name: frr-conf
           mountPath: /etc/frr
           readOnly: true
         - name: frr-run
@@ -291,11 +308,21 @@ spec:
           requests:
             cpu: 50m
             memory: 32Mi
+      priorityClassName: system-cluster-critical
+      terminationGracePeriodSeconds: 10
       volumes:
-      - name: config-template
+      - name: frr-config-template
         configMap:
           name: evpn-client-config
-      - name: config
+      - name: frr-conf
+        emptyDir: {}
+      - name: frr-run
+        emptyDir: {}
+      - name: frr-lib
+        emptyDir: {}
+      - name: frr-tmp
+        emptyDir: {}
+      - name: frr-logs
         emptyDir: {}
       - name: tmp
         emptyDir: {}
@@ -305,10 +332,4 @@ spec:
       - name: sys
         hostPath:
           path: /sys
-      - name: frr-run
-        emptyDir: {}
-      - name: frr-logs
-        emptyDir: {}
-      - name: frr-tmp
-        emptyDir: {}
 {{- end }}
