@@ -185,7 +185,9 @@ properties:
             required:
               - cpu
               - memory            
-            default: {}
+            default: 
+              cpu: "10m"
+              memory: "32Mi"
             properties:
               cpu:
                 oneOf:
@@ -211,7 +213,9 @@ properties:
             required:
               - cpu
               - memory            
-            default: {}
+            default: 
+              cpu: "50m"
+              memory: "64Mi"
             properties:
               cpu:
                 oneOf:
@@ -252,7 +256,9 @@ properties:
             required:
               - cpu
               - memory            
-            default: {}
+            default: 
+              cpu: "10m"
+              memory: "32Mi"
             properties:
               cpu:
                 oneOf:
@@ -276,7 +282,9 @@ properties:
             required:
               - cpu
               - memory            
-            default: {}
+            default: 
+              cpu: "50m"
+              memory: "64Mi"
             properties:
               cpu:
                 oneOf:
