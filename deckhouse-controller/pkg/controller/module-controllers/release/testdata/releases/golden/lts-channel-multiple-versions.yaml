@@ -13,6 +13,7 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io
     scheme: HTTPS
+  scanInterval: 0s
 status:
   message: ""
   modules:

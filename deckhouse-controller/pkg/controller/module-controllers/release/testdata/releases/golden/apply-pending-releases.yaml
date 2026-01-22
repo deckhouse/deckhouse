@@ -14,6 +14,7 @@ spec:
     ca: ""
     dockerCfg: ""
     repo: ""
+  scanInterval: 0s
 status:
   message: ""
   modules: null
