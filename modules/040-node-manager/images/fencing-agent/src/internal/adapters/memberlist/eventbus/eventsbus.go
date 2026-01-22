@@ -7,8 +7,6 @@ import (
 	"sync/atomic"
 )
 
-
-
 type EventsBus struct {
 	subscribers map[chan domain.Event]*subscriber
 	mu          sync.RWMutex

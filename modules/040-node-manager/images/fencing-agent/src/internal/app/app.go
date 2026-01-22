@@ -45,10 +45,10 @@ func NewApplication(
 	logger *log.Logger,
 	config fencingconfig.Config,
 ) (*Application, error) {
-	unaryRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
-	streamRateLimit := rate.NewLimiter(rate.Limit(config.RLimit.StreamRPS), config.RLimit.StreamBurst)
+	unaryRateLimit := rate.NewLimiter(rate.Limit(config.GRPC.UnaryRPS), config.GRPC.UnaryBurst)
+	streamRateLimit := rate.NewLimiter(rate.Limit(config.GRPC.StreamRPS), config.GRPC.StreamBurst)
 
-	kubeClient, err := kubeclient.NewClient(config.KubeConfigPath, config.KubernetesAPITimeout, float32(config.RLimit.UnaryRPS), config.RLimit.UnaryBurst)
+	kubeClient, err := kubeclient.NewClient(config.KubeAPI.KubeConfigPath, config.KubeAPI.KubernetesAPITimeout, float32(config.GRPC.UnaryRPS), config.GRPC.UnaryBurst)
 	if err != nil {
 		logger.Fatal("Unable to create a kube-client", sl.Err(err))
 	}
@@ -59,22 +59,21 @@ func NewApplication(
 	clusterProvider := kubeapi.NewProvider(
 		kubeClient,
 		logger,
-		config.KubernetesAPITimeout,
 		config.NodeName,
 		config.NodeGroup,
 	)
 
-	nodeIP, err := clusterProvider.GetCurrentNodeIP(ctx, kubeClient, config.NodeName, config.KubernetesAPITimeout)
+	nodeIP, err := clusterProvider.GetCurrentNodeIP(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get current node IP: %w", err)
 	}
 
-	memberlistProvider, err := memberlist.NewProvider(config.MemberlistConfig, logger, eventHandler, nodeIP, config.NodeName)
+	memberlistProvider, err := memberlist.NewProvider(config.Memberlist, logger, eventHandler, nodeIP, config.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist provider: %w", err)
 	}
 
-	watchdogController := softdog.NewWatchdog(config.WatchdogConfig.WatchdogDevice)
+	watchdogController := softdog.NewWatchdog(config.Watchdog.WatchdogDevice)
 
 	healthMonitor := service.NewHealthMonitor(clusterProvider, memberlistProvider, watchdogController, logger)
 
@@ -82,7 +81,7 @@ func NewApplication(
 
 	grpcServer := grpc.NewServer(eventBus, statusProvider)
 
-	grpcRunner, err := grpc.NewRunner(config.GRPCAddress, logger, grpcServer, unaryRateLimit, streamRateLimit)
+	grpcRunner, err := grpc.NewRunner(config.GRPC.GRPCSocketPath, logger, grpcServer, unaryRateLimit, streamRateLimit)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gRPC runner: %w", err)
 	}
@@ -114,13 +113,13 @@ func (a *Application) Run(ctx context.Context) error {
 
 	go func() {
 		a.logger.Debug("Starting Health Monitor")
-		a.healthMonitor.Run(ctx, a.config.KubernetesAPICheckInterval)
+		a.healthMonitor.Run(ctx, a.config.KubeAPI.KubernetesAPICheckInterval)
 		a.logger.Debug("Health Monitor stopped")
 	}()
 
 	grpcErrChan := make(chan error, 1)
 	go func() {
-		a.logger.Debug("starting gRPC server", slog.String("address", a.config.GRPCAddress))
+		a.logger.Debug("starting gRPC server", slog.String("address", a.config.GRPC.GRPCSocketPath))
 		if grpcErr := a.grpcRunner.Run(); grpcErr != nil {
 			grpcErrChan <- grpcErr
 		}
@@ -194,7 +193,7 @@ func (a *Application) startMemberlistWithBackoff(ctx context.Context, peers []st
 }
 
 func (a *Application) discoverPeersIps(ctx context.Context) ([]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, a.config.KubernetesAPICheckInterval)
+	ctx, cancel := context.WithTimeout(ctx, a.config.KubeAPI.KubernetesAPICheckInterval)
 	defer cancel()
 
 	nodes, err := a.clusterProvider.GetNodes(ctx)

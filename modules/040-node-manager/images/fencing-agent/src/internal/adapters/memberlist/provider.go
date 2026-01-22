@@ -61,7 +61,6 @@ func (p *Provider) Stop(ctx context.Context) error {
 		return nil
 	}
 
-
 	done := make(chan error, 1)
 	go func() {
 		if err := p.list.Leave(3 * time.Second); err != nil {
@@ -121,13 +120,13 @@ func createConfig(
 	config := memberlist.DefaultLANConfig()
 	config.ProbeInterval = cfg.ProbeInterval
 	config.ProbeTimeout = cfg.ProbeTimeout
-	config.SuspicionMult = cfg.SuspicionMult
-	config.IndirectChecks = cfg.IndirectChecks
+	config.SuspicionMult = int(cfg.SuspicionMult)
+	config.IndirectChecks = int(cfg.IndirectChecks)
 	config.GossipInterval = cfg.GossipInterval
-	config.RetransmitMult = cfg.RetransmitMult
+	config.RetransmitMult = int(cfg.RetransmitMult)
 	config.GossipToTheDeadTime = cfg.GossipToTheDeadTime
-	config.BindPort = cfg.MemberListPort
-	config.AdvertisePort = cfg.MemberListPort
+	config.BindPort = int(cfg.MemberListPort)
+	config.AdvertisePort = int(cfg.MemberListPort)
 	config.Name = nodeName
 	config.AdvertiseAddr = nodeIP
 	config.Events = eventHandler

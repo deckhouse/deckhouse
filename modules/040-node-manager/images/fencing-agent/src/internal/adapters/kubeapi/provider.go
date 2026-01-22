@@ -25,20 +25,17 @@ var maintenanceAnnotations = [...]string{
 type Provider struct {
 	client    kubernetes.Interface
 	logger    *log.Logger
-	timeout   time.Duration
 	nodeName  string
 	nodeGroup string
 }
 
 func NewProvider(client kubernetes.Interface,
 	logger *log.Logger,
-	timeout time.Duration,
 	nodeName string,
 	nodeGroup string) *Provider {
 	return &Provider{
 		client:    client,
 		logger:    logger,
-		timeout:   timeout,
 		nodeName:  nodeName,
 		nodeGroup: nodeGroup,
 	}
@@ -71,9 +68,6 @@ func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 }
 
 func (p *Provider) IsAvailable(ctx context.Context) bool {
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
-
 	_, err := p.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{})
 	if err != nil {
 		p.logger.Debug("Kubernetes API is not available", sl.Err(err))
@@ -83,9 +77,6 @@ func (p *Provider) IsAvailable(ctx context.Context) bool {
 }
 
 func (p *Provider) IsMaintenanceMode(ctx context.Context) (bool, error) {
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
-
 	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1meta.GetOptions{})
 	if err != nil {
 		return false, fmt.Errorf("failed to get node %s: %w", p.nodeName, err)
@@ -102,9 +93,6 @@ func (p *Provider) IsMaintenanceMode(ctx context.Context) (bool, error) {
 }
 
 func (p *Provider) SetNodeLabel(ctx context.Context, key, value string) error {
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
-
 	patch := []byte(fmt.Sprintf(
 		`{"metadata":{"labels":{%q:%q}}}`,
 		key, value,
@@ -125,9 +113,6 @@ func (p *Provider) SetNodeLabel(ctx context.Context, key, value string) error {
 }
 
 func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
-	ctx, cancel := context.WithTimeout(ctx, p.timeout)
-	defer cancel()
-
 	patch := []byte(fmt.Sprintf(`{"metadata":{"labels":{%q:null}}}`, key))
 
 	_, err := p.client.CoreV1().Nodes().
@@ -142,12 +127,10 @@ func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
 	return nil
 }
 
-func (p *Provider) GetCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1meta.GetOptions{})
+func (p *Provider) GetCurrentNodeIP(ctx context.Context) (string, error) {
+	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1meta.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", nodeName, err)
+		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", p.nodeName, err)
 	}
 
 	for _, addr := range node.Status.Addresses {
@@ -155,5 +138,5 @@ func (p *Provider) GetCurrentNodeIP(ctx context.Context, kubeClient kubernetes.I
 			return addr.Address, nil
 		}
 	}
-	return "", fmt.Errorf("node %s has no InternalIP address", nodeName)
+	return "", fmt.Errorf("node %s has no InternalIP address", p.nodeName)
 }

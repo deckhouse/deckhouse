@@ -9,7 +9,6 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-
 type StatusQuery interface {
 	GetAllNodes(ctx context.Context) ([]domain.Node, error)
 }
@@ -31,7 +30,6 @@ func NewServer(eventBus EventsBus, statusProvider StatusQuery) *Server {
 	}
 }
 
-
 func (s *Server) GetAll(ctx context.Context, _ *emptypb.Empty) (*pb.AllNodes, error) {
 	nodes, err := s.statusProvider.GetAllNodes(ctx)
 	if err != nil {
@@ -48,7 +46,6 @@ func (s *Server) GetAll(ctx context.Context, _ *emptypb.Empty) (*pb.AllNodes, er
 
 	return &pb.AllNodes{Nodes: pbNodes}, nil
 }
-
 
 func (s *Server) StreamEvents(_ *emptypb.Empty, stream pb.Fencing_StreamEventsServer) error {
 	ctx := stream.Context()

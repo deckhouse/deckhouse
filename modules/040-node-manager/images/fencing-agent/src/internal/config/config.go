@@ -1,55 +1,68 @@
 package fencingconfig
 
 import (
-	"time"
+	"errors"
+	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	WatchdogConfig             WatchdogConfig
-	MemberlistConfig           MemberlistConfig
-	RLimit                     RateLimit
-	KubeConfigPath             string        `env:"KUBECONFIG" env-required:"true"`
-	LogLevel                   string        `env:"LOG_LEVEL" env-default:"info"`
-	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
-	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
-	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
-	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`
-	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
-	NodeName                   string        `env:"NODE_NAME" env-required:"true"`
-	NodeGroup                  string        `env:"NODE_GROUP" env-required:"true"`
-}
-
-// TODO discuss values
-type RateLimit struct {
-	UnaryRPS    int `env:"REQUEST_RPS" env-default:"10"`
-	UnaryBurst  int `env:"REQUEST_BURST" env-default:"100"`
-	StreamRPS   int `env:"STREAM_RPS" env-default:"5"`
-	StreamBurst int `env:"STREAM_BURST" env-default:"100"`
-}
-
-type WatchdogConfig struct {
-	WatchdogDevice       string        `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
-	WatchdogFeedInterval time.Duration `env:"WATCHDOG_FEED_INTERVAL" env-default:"5s"`
-}
-
-type MemberlistConfig struct {
-	MemberListPort       int           `env:"MEMBERLIST_PORT" env-required:"true"`
-	ProbeInterval        time.Duration `env:"PROBE_INTERVAL" env-default:"500ms"`
-	ProbeTimeout         time.Duration `env:"PROBE_TIMEOUT" env-default:"200ms"`
-	SuspicionMult        int           `env:"SUSPICION_MULT" env-default:"2"`
-	IndirectChecks       int           `env:"INDIRECT_CHECKS" env-default:"3"`
-	GossipInterval       time.Duration `env:"GOSSIP_INTERVAL" env-default:"200ms"`
-	RetransmitMult       int           `env:"RETRANSMIT_MULT" env-default:"4"`
-	GossipToTheDeadTime  time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME" env-default:"2s"`
-	MinEventIntervalJoin time.Duration `env:"MIN_EVENT_INTERVAL_JOIN" env-default:"200ms"`
-	MinEventIntervalLeft time.Duration `env:"MIN_EVENT_INTERVAL_LEFT" env-default:"600ms"`
+	Watchdog               WatchdogConfig
+	Memberlist             MemberlistConfig
+	GRPC                   GRPCConfig
+	KubeAPI                KubeConfig
+	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
+	NodeName               string `env:"NODE_NAME" env-required:"true"`
+	NodeGroup              string `env:"NODE_GROUP" env-required:"true"`
+	LogLevel               string `env:"LOG_LEVEL" env-default:"info"`
 }
 
 func (c *Config) MustLoad() {
-	err := cleanenv.ReadEnv(c)
-	if err != nil {
-		panic(err)
+	readErr := cleanenv.ReadEnv(c)
+	if readErr != nil {
+		panic(readErr)
 	}
+
+	valErr := c.validate()
+	if valErr != nil {
+		panic(valErr)
+	}
+}
+
+func (c *Config) validate() error {
+	validators := []func() error{
+		c.validateCommon,
+		c.GRPC.validate,
+		c.Memberlist.validate,
+		c.Watchdog.validate,
+		c.KubeAPI.validate,
+	}
+
+	for _, validator := range validators {
+		if err := validator(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) validateCommon() error {
+	if strings.TrimSpace(c.NodeName) == "" {
+		return errors.New("NODE_NAME is empty")
+	}
+
+	if strings.TrimSpace(c.NodeGroup) == "" {
+		return errors.New("NODE_GROUP is empty")
+	}
+
+	if strings.TrimSpace(c.LogLevel) == "" {
+		return errors.New("LOG_LEVEL is empty")
+	}
+
+	if strings.TrimSpace(c.HealthProbeBindAddress) == "" {
+		return errors.New("HEALTH_PROBE_BIND_ADDRESS is empty")
+	}
+	return nil
 }
