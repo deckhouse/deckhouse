@@ -89,8 +89,8 @@ properties:
     properties:
       resources:
         description: |
-          Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt`.
-          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.
+          Настройки ресурсов (requests/limits по CPU и памяти) для подов, создаваемых ClusterIssuer `letsencrypt` для процесса подтверждения владения доменом методом ACME HTTP-01.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.  
         properties:
           requests:
             properties:
@@ -100,8 +100,6 @@ properties:
               memory:
                 description: |
                   Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.
-            description: |
-              Запрашиваемые ресурсы для `letsencrypt` (например, `cpu`, `memory`).
           limits:
             properties:
               cpu:
@@ -110,8 +108,6 @@ properties:
               memory:
                 description: |
                   Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.          
-            description: |
-              Лимиты ресурсов для `letsencrypt` (например, `cpu`, `memory`).
 
   letsencryptStaging:
     description: |
@@ -119,7 +115,7 @@ properties:
     properties:
       resources:
         description: |
-          Настройки ресурсов (requests/limits по CPU и памяти) для компонентов, использующих ClusterIssuer `letsencrypt-staging`.
+          Настройки ресурсов (requests/limits по CPU и памяти) для подов, создаваемых ClusterIssuer `letsencrypt-staging` для процесса подтверждения владения доменом методом ACME HTTP-01.
           Структура, аналогичная `spec.containers[].resources` пода Kubernetes.  
         properties:
           requests:
@@ -130,15 +126,13 @@ properties:
               memory:
                 description: |
                   Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.          
-            description: |
-              Запрашиваемые ресурсы для `letsencrypt-staging` (например, `cpu`, `memory`).
+
           limits:
             properties:
               cpu:
                 description: |
-                  Аналогично параметру `spec.containers[].resources.requests.cpu` в Kubernetes.
+                  Аналогично параметру `spec.containers[].resources.limits.cpu` в Kubernetes.
               memory:
                 description: |
-                  Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.          
-            description: |
-              Лимиты ресурсов для `letsencrypt-staging` (например, `cpu`, `memory`).
+                  Аналогично параметру `spec.containers[].resources.limits.memory` в Kubernetes.          
+

@@ -182,38 +182,54 @@ properties:
         properties:
           requests:
             type: object
+            required:
+              - cpu
+              - memory            
+            default: {}
             properties:
               cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
                 default: "32Mi"
             description: |
-              Resource requests for the `letsencrypt` ClusterIssuer 
+              Resource requests and limits (CPU and memory) for pods that create the `letsencrypt` ClusterIssuer for http01 challenges
           limits:
             type: object
+            required:
+              - cpu
+              - memory            
+            default: {}
             properties:
               cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
                 description: |
-                  The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                  The same as in the pods' `spec.containers.resources.limits.cpu` parameter in Kubernetes.
                 type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "50m"
               memory:
                 description: |
-                  The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                default: "64Mi"
-            description: |
-              Resource limits for the `letsencrypt` ClusterIssuer (e.g. `cpu`, `memory`).          
+                  The same as in the pods' `spec.containers.resources.limits.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "64Mi"      
         x-examples:
           - requests:
               cpu: "100m"
@@ -229,44 +245,60 @@ properties:
       resources:
         type: object
         description: |
-          Resource requests and limits (CPU and memory) for the workload using the `letsencrypt-staging` ClusterIssuer.
+          Resource requests and limits (CPU and memory) for pods that create the `letsencrypt-staging` ClusterIssuer for http01 challenges.
         properties:
           requests:
             type: object
+            required:
+              - cpu
+              - memory            
+            default: {}
             properties:
               cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
                 type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "10m"
               memory:
                 description: |
                   The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
                 default: "32Mi"
-            description: |
-              Resource requests for the `letsencrypt-staging` ClusterIssuer (e.g. `cpu`, `memory`).
           limits:
             type: object
+            required:
+              - cpu
+              - memory            
+            default: {}
             properties:
               cpu:
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
                 description: |
-                  The same as in the pods' `spec.containers.resources.requests.cpu` parameter in Kubernetes.
+                  The same as in the pods' `spec.containers.resources.limits.cpu` parameter in Kubernetes.
                 type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
                 default: "50m"
               memory:
                 description: |
-                  The same as in the pods' `spec.containers.resources.requests.memory` parameter in Kubernetes.
-                type: string
-                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
-                default: "64Mi"
+                  The same as in the pods' `spec.containers.resources.limits.memory` parameter in Kubernetes.
+                oneOf:
+                  - type: string
+                    pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|k|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+                  - type: number
+                default: "64Mi"    
         x-examples:
           - requests:
               cpu: "100m"
-              memory: "64Mi"
-            limits:
-              cpu: "200m"
               memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
