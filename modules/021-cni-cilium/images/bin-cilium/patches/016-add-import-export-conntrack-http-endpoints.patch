@@ -1,4 +1,4 @@
-commit 270561ee102e38744db23ca752532b9d6b9f45d4
+commit 3236434390cf17ba4471c6d7619e9ec5bf50beb5
 Author: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
 Date:   Thu Jan 15 16:46:30 2026 +0300
 
@@ -1699,10 +1699,10 @@ index 1f2b41919b..4f26841bae 100644
  	out.EndpointDeleteEndpointHandler = wrapAPIHandler(dp, deleteEndpointHandler)
  	out.EndpointGetEndpointHandler = wrapAPIHandler(dp, getEndpointHandler)
 diff --git a/daemon/cmd/status.go b/daemon/cmd/status.go
-index d42dae075b..e2893fa77b 100644
+index d42dae075b..13f8d338c4 100644
 --- a/daemon/cmd/status.go
 +++ b/daemon/cmd/status.go
-@@ -4,20 +4,31 @@
+@@ -4,20 +4,32 @@
  package cmd
  
  import (
@@ -1716,6 +1716,7 @@ index d42dae075b..e2893fa77b 100644
 +	"net/http"
  	"sort"
  	"strings"
++	"sync"
 +	"unsafe"
  
 +	lb "github.com/cilium/cilium/pkg/loadbalancer"
@@ -1734,7 +1735,7 @@ index d42dae075b..e2893fa77b 100644
  	"github.com/cilium/cilium/pkg/controller"
  	"github.com/cilium/cilium/pkg/datapath/linux/probes"
  	datapathOption "github.com/cilium/cilium/pkg/datapath/option"
-@@ -29,6 +40,7 @@ import (
+@@ -29,6 +41,7 @@ import (
  	"github.com/cilium/cilium/pkg/kvstore"
  	"github.com/cilium/cilium/pkg/lock"
  	"github.com/cilium/cilium/pkg/logging/logfields"
@@ -1742,7 +1743,7 @@ index d42dae075b..e2893fa77b 100644
  	ipcachemap "github.com/cilium/cilium/pkg/maps/ipcache"
  	ipmasqmap "github.com/cilium/cilium/pkg/maps/ipmasq"
  	"github.com/cilium/cilium/pkg/maps/lbmap"
-@@ -40,7 +52,10 @@ import (
+@@ -40,7 +53,10 @@ import (
  	"github.com/cilium/cilium/pkg/option"
  	"github.com/cilium/cilium/pkg/status"
  	"github.com/cilium/cilium/pkg/time"
@@ -1753,7 +1754,7 @@ index d42dae075b..e2893fa77b 100644
  )
  
  const (
-@@ -484,6 +499,593 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
+@@ -484,6 +500,613 @@ func getHealthzHandler(d *Daemon, params GetHealthzParams) middleware.Responder
  	return NewGetHealthzOK().WithPayload(&sr)
  }
  
@@ -2251,10 +2252,8 @@ index d42dae075b..e2893fa77b 100644
 +
 +func processCtMap(
 +	m *ctmap.Map,
-+	w http.ResponseWriter,
-+	ctx context.Context,
++	wc *writerContext,
 +	ip4 types.IPv4,
-+	isConnClosed *bool,
 +	currTime uint32,
 +) error {
 +	_, err := ctmap.OpenCTMap(m)
@@ -2271,8 +2270,7 @@ index d42dae075b..e2893fa77b 100644
 +	for {
 +		// Check cancellation early
 +		select {
-+		case <-ctx.Done():
-+			*isConnClosed = true
++		case <-wc.ctx.Done():
 +			return nil
 +		default:
 +		}
@@ -2290,19 +2288,35 @@ index d42dae075b..e2893fa77b 100644
 +				continue
 +			}
 +
-+			if err := writeBinaryConntrack(w, k, v, currTime); err != nil {
-+				*isConnClosed = true
++			if err := wc.WriteBinaryConntrack(k, v, currTime); err != nil {
 +				return err
 +			}
 +		}
 +
 +		if batchErr != nil {
 +			if errors.Is(batchErr, ebpf.ErrKeyNotExist) {
-+				return nil // end of map
++				return nil // finished
 +			}
 +			return batchErr
 +		}
 +	}
++}
++
++type writerContext struct {
++	w   http.ResponseWriter
++	ctx context.Context
++	mu  sync.Mutex
++}
++
++func (wc *writerContext) WriteBinaryConntrack(
++	k *ctmap.CtKey4Global,
++	v *ctmap.CtEntry,
++	currTime uint32,
++) error {
++	wc.mu.Lock()
++	err := writeBinaryConntrack(wc.w, k, v, currTime)
++	wc.mu.Unlock()
++	return err
 +}
 +
 +func getConntrackExportHandler(
@@ -2327,20 +2341,27 @@ index d42dae075b..e2893fa77b 100644
 +		t, _ := timestamp.GetCTCurTime(timestamp.GetClockSourceFromOptions())
 +		currTime := uint32(t)
 +
-+		isConnClosed := false
-+		for _, ctMap := range getCtMaps() {
-+			if err = processCtMap(ctMap, w, ctx, ip4, &isConnClosed, currTime); err != nil {
-+				log.WithFields(logrus.Fields{
-+					"map":   ctMap,
-+					"error": err,
-+				}).Error("Failed process conntrack map")
-+			}
-+
-+			if isConnClosed {
-+				log.Debug("client closed connection")
-+				break
-+			}
++		wc := &writerContext{
++			w:   w,
++			ctx: ctx,
 +		}
++
++		var wg sync.WaitGroup
++		for _, ctMap := range getCtMaps() {
++			wg.Add(1)
++			go func(m *ctmap.Map) {
++				defer wg.Done()
++
++				if err := processCtMap(m, wc, ip4, currTime); err != nil {
++					log.WithFields(logrus.Fields{
++						"map":   m,
++						"error": err,
++					}).Error("Failed process conntrack map")
++				}
++			}(ctMap)
++		}
++
++		wg.Wait()
 +	})
 +}
 +
