@@ -72,7 +72,12 @@ spec:
             fi
           done
 
-          # Replace placeholders in config template
+          # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
+          cp /etc/frr-template/daemons /etc/frr/daemons
+          cp /etc/frr-template/vtysh.conf /etc/frr/vtysh.conf
+          cp /etc/frr-template/frr.conf /etc/frr/frr.conf
+
+          # Replace placeholders in config template and overwrite /etc/frr/frr.conf
           sed -e "s|POD_NAME_PLACEHOLDER|${POD_NAME}|g" \
               -e "s|ROUTER_ID_PLACEHOLDER|${ROUTER_ID}|g" \
               -e "s|PEER_RR_NEIGHBORS_PLACEHOLDER|${PEER_NEIGHBORS}|g" \
@@ -259,6 +264,8 @@ spec:
         - name: frr-run
           mountPath: /var/run/frr
           readOnly: true
+        - name: frr-logs
+          mountPath: /var/log/frr
         resources:
           requests:
             cpu: 50m
