@@ -53,17 +53,18 @@ resource "openstack_networking_router_interface_v2" "router" {
 // bastion and his friends
 
 locals {
-  bastion_instance   = lookup(local.standard, "bastion", {})
-  instance_class     = lookup(local.bastion_instance, "instanceClass", {})
-  name               = join("-", [local.prefix, "bastion"])
-  bastion_image_name = lookup(local.instance_class, "imageName", null) != null ? local.instance_class.imageName : var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
-  flavor_name        = lookup(local.instance_class, "flavorName", null)
-  actual_zones       = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
-  zone               = lookup(local.bastion_instance, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
-  metadata_tags      = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
-  config_drive       = false
-  root_disk_size     = lookup(local.instance_class, "rootDiskSize", "30")
-  volume_type        = lookup(local.bastion_instance, "volumeType", null)
+  bastion_instance    = lookup(local.standard, "bastion", {})
+  instance_class      = lookup(local.bastion_instance, "instanceClass", {})
+  name                = join("-", [local.prefix, "bastion"])
+  bastion_image_name  = lookup(local.instance_class, "imageName", null) != null ? local.instance_class.imageName : var.providerClusterConfiguration.masterNodeGroup.instanceClass.imageName
+  flavor_name         = lookup(local.instance_class, "flavorName", null)
+  actual_zones        = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.openstack_compute_availability_zones_v2.zones.names, var.providerClusterConfiguration.zones)) : data.openstack_compute_availability_zones_v2.zones.names
+  zone                = lookup(local.bastion_instance, "zone", null) != null ? local.bastion_instance.zone : local.actual_zones[0]
+  metadata_tags       = merge(lookup(var.providerClusterConfiguration, "tags", {}), lookup(local.instance_class, "additionalTags", {}))
+  config_drive        = false
+  root_disk_size      = lookup(local.instance_class, "rootDiskSize", "30")
+  volume_type         = lookup(local.bastion_instance, "volumeType", null)
+  external_ip_address = lookup(local.bastion_instance, "externalIPAddress", null)
 }
 
 resource "openstack_networking_port_v2" "bastion" {
@@ -140,14 +141,15 @@ resource "openstack_compute_instance_v2" "bastion" {
   metadata = length(local.metadata_tags) > 0 ? local.metadata_tags : null
 }
 
-resource "openstack_compute_floatingip_v2" "bastion" {
-  count = local.bastion_instance != {} ? 1 : 0
-  pool  = data.openstack_networking_network_v2.external.name
+resource "openstack_networking_floatingip_v2" "bastion" {
+  count   = local.bastion_instance != {} ? 1 : 0
+  pool    = data.openstack_networking_network_v2.external.name
+  address = local.external_ip_address
 }
 
 resource "openstack_compute_floatingip_associate_v2" "bastion" {
   count                 = local.bastion_instance != {} ? 1 : 0
-  floating_ip           = openstack_compute_floatingip_v2.bastion[0].address
+  floating_ip           = openstack_networking_floatingip_v2.bastion[0].address
   instance_id           = openstack_compute_instance_v2.bastion[0].id
   wait_until_associated = true
   lifecycle {
