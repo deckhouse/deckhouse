@@ -124,7 +124,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		klog.Error("Non-tolerant error encountered, marking state as Unknown", err)
 	}
 
-	if err = r.touchConfigMap(ctx, configMap, clusterState); err != nil {
+	if err = r.touchConfigMap(ctx, configMap, renderConfigMapData(clusterState)); err != nil {
 		klog.Error("Failed to touch configMap", err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}

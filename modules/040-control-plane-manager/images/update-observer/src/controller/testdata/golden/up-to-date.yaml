@@ -1,10 +1,8 @@
 ---
 data:
-  spec: |
-    desiredVersion: v1.31
-    updateMode: Automatic
   status: |
     currentVersion: v1.31
+    phase: UpToDate
     controlPlane:
       desiredCount: 2
       upToDateCount: 2
@@ -13,31 +11,18 @@ data:
       master-1:
         phase: UpToDate
         components:
-          kube-apiserver:
-            version: v1.31
-            phase: Running
-          kube-controller-manager:
-            version: v1.31
-            phase: Running
-          kube-scheduler:
-            version: v1.31
-            phase: Running
+          kube-apiserver: v1.31
+          kube-controller-manager: v1.31
+          kube-scheduler: v1.31
       master-2:
         phase: UpToDate
         components:
-          kube-apiserver:
-            version: v1.31
-            phase: Running
-          kube-controller-manager:
-            version: v1.31
-            phase: Running
-          kube-scheduler:
-            version: v1.31
-            phase: Running
+          kube-apiserver: v1.31
+          kube-controller-manager: v1.31
+          kube-scheduler: v1.31
     nodes:
       desiredCount: 3
       upToDateCount: 3
-    phase: UpToDate
 metadata:
   labels:
     heritage: deckhouse
