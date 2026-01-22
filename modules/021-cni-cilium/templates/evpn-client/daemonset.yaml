@@ -96,6 +96,7 @@ spec:
         - /bin/sh
         - -c
         - |
+          ulimit -Sn 100000
           /sbin/tini -- /usr/lib/frr/docker-start &
           attempts=0
           until [[ -f /var/log/frr/frr.log || $attempts -eq 60 ]]; do
