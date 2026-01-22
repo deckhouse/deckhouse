@@ -47,6 +47,9 @@ spec:
                   type: string
                   description: Desirable default release channel for modules in the current source.
                   x-doc-deprecated: true
+                scanInterval:
+                  type: string
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 registry:
                   type: object
                   required:
@@ -59,9 +62,6 @@ spec:
                       enum:
                         - HTTP
                         - HTTPS
-                    scanInterval:
-                      type: string
-                      pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                     repo:
                       type: string
                       description: URL of the container registry.

@@ -299,7 +299,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{}, err
 	}
 
-	scanInterval, _ := time.ParseDuration(source.Spec.Registry.ScanInterval)
+	scanInterval, _ := time.ParseDuration(source.Spec.ScanInterval)
 	if scanInterval == 0 {
 		scanInterval = defaultScanInterval
 	}
