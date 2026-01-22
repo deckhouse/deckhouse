@@ -126,7 +126,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	if err = r.touchConfigMap(ctx, configMap, clusterState); err != nil {
 		klog.Error("Failed to touch configMap", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeueInterval}, err
 	}
 
 	if clusterState.Status.Phase != cluster.ClusterUpToDate {

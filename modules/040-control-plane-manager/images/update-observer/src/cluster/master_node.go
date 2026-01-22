@@ -16,9 +16,13 @@ limitations under the License.
 
 package cluster
 
+import (
+	corev1 "k8s.io/api/core/v1"
+)
+
 type MasterNodeState struct {
-	Phase           MasterNodePhase             `json:"phase" yaml:"phase"`
-	ComponentsState ControlPlaneComponentsState `json:"components" yaml:"components"`
+	Phase           MasterNodePhase                        `json:"phase" yaml:"phase"`
+	ComponentsState map[string]*ControlPlaneComponentState `json:"components" yaml:"components"`
 }
 
 type MasterNodePhase string
@@ -30,4 +34,13 @@ const (
 
 func (n *MasterNodeState) isUpToDate() bool {
 	return n.Phase == MasterNodeUptoDate
+}
+
+type ControlPlaneComponentState struct {
+	Version string          `json:"version" yaml:"version"`
+	Phase   corev1.PodPhase `json:"phase" yaml:"phase"`
+}
+
+func (s *ControlPlaneComponentState) isFullyOperational(desiredVersion string) bool {
+	return s.Version == desiredVersion && s.Phase == corev1.PodRunning
 }

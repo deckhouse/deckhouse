@@ -28,7 +28,7 @@ type ControlPlaneState struct {
 	UpToDateCount int                         `json:"upToDateCount" yaml:"upToDateCount"`
 	Progress      string                      `json:"progress" yaml:"progress"`
 	Phase         ControlPlanePhase           `json:"phase" yaml:"phase"`
-	NodesState    map[string]*MasterNodeState `json:"nodes" yaml:"nodes"`
+	NodesState    map[string]*MasterNodeState `json:",inline" yaml:",inline"`
 }
 
 type ControlPlanePhase string
@@ -65,7 +65,7 @@ func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*Mas
 		if _, exists := nodesState[nodeName]; !exists {
 			nodesState[nodeName] = &MasterNodeState{
 				Phase:           MasterNodeUptoDate,
-				ComponentsState: make(map[ControlPlaneComponentType]*ControlPlaneComponentState),
+				ComponentsState: make(map[string]*ControlPlaneComponentState),
 			}
 		}
 		nodeState = nodesState[nodeName]
@@ -94,7 +94,7 @@ func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*Mas
 			nodeState.Phase = MasterNodeUpdating
 		}
 
-		nodeState.ComponentsState[ControlPlaneComponentType(componentLabel)] = component
+		nodeState.ComponentsState[componentLabel] = component
 	}
 
 	return nodesState, nil
@@ -131,23 +131,4 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 	s.UpToDateCount = upToDateCount
 	s.Progress = common.CalculateProgress(desiredComponentCount, upToDateComponentCount)
 	s.Phase = phase
-}
-
-type ControlPlaneComponentsState map[ControlPlaneComponentType]*ControlPlaneComponentState
-
-type ControlPlaneComponentState struct {
-	Version string          `json:"version" yaml:"version"`
-	Phase   corev1.PodPhase `json:"phase" yaml:"phase"`
-}
-
-type ControlPlaneComponentType string
-
-const (
-	KubeApiServer         ControlPlaneComponentType = "kube-apiserver"
-	KubeScheduler         ControlPlaneComponentType = "kube-scheduler"
-	KubeControllerManager ControlPlaneComponentType = "kube-controller-manager"
-)
-
-func (s *ControlPlaneComponentState) isFullyOperational(desiredVersion string) bool {
-	return s.Version == desiredVersion && s.Phase == corev1.PodRunning
 }

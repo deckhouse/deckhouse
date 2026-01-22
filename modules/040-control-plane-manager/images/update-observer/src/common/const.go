@@ -17,11 +17,14 @@ limitations under the License.
 package common
 
 const (
-	ControllerName      = "update-observer"
-	ConfigMapName       = "d8-cluster-kubernetes"
-	SecretName          = "d8-cluster-configuration"
-	KubeSystemNamespace = "kube-system"
-	HeritageLabelKey    = "heritage"
-	DeckhouseLabel      = "deckhouse"
-	SemverAccuracy      = 2
+	ControllerName        = "update-observer"
+	ConfigMapName         = "d8-cluster-kubernetes"
+	SecretName            = "d8-cluster-configuration"
+	KubeSystemNamespace   = "kube-system"
+	HeritageLabelKey      = "heritage"
+	DeckhouseLabel        = "deckhouse"
+	SemverAccuracy        = 2
+	KubeApiServer         = "kube-apiserver"
+	KubeScheduler         = "kube-scheduler"
+	KubeControllerManager = "kube-controller-manager"
 )

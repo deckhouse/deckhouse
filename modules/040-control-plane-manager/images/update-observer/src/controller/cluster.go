@@ -98,9 +98,9 @@ func (r *reconciler) getControlPlanePods(ctx context.Context) (*corev1.PodList, 
 
 	labelSelector, err := labels.Parse(fmt.Sprintf(
 		"component in (%s,%s,%s)",
-		cluster.KubeApiServer,
-		cluster.KubeScheduler,
-		cluster.KubeControllerManager))
+		common.KubeApiServer,
+		common.KubeScheduler,
+		common.KubeControllerManager))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse components selector: %w", err)
 	}
