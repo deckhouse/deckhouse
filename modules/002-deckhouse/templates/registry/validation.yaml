@@ -24,7 +24,7 @@ spec:
   - name: 'deckhouse-mc'
     expression: 'object.metadata.name == "deckhouse"'
   validations:
-  {{- with $moduleDisabled }}
+  {{- if $moduleDisabled }}
   - expression: |
       (
         has(object.spec.settings.registry) ==
@@ -42,7 +42,7 @@ spec:
       is forbidden when the registry module is disabled.
       Please enable the module to make changes."
   {{- end }}
-  {{- with $clusterNotBootstraped }}
+  {{- if $clusterNotBootstraped }}
   - expression: |
       (
         has(object.spec.settings.registry) ==
@@ -60,7 +60,7 @@ spec:
       is forbidden during cluster bootstrap.
       Please wait until bootstrap is complete."
   {{- end }}
-  {{- with $notStaticCluster }}
+  {{- if $notStaticCluster }}
   - expression: |
       !(
         has(object.spec.settings.registry.mode) && 
