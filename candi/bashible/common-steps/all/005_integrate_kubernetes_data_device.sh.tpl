@@ -12,54 +12,47 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $nodeTypeList := list "CloudEphemeral" "CloudPermanent" "CloudStatic" }}
+{{- $nodeTypeList := list "CloudPermanent" }}
 {{- if has .nodeGroup.nodeType $nodeTypeList }}
   {{- if eq .nodeGroup.name "master" }}
-function get_data_device_secret() {
-  secret="d8-masters-kubernetes-data-device-path"
 
-  if [ -f /var/lib/bashible/bootstrap-token ]; then
-    while true; do
-      for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        if d8-curl -s -f --connect-timeout 10 -X GET "https://$server/api/v1/namespaces/d8-system/secrets/$secret" --header "Authorization: Bearer $(</var/lib/bashible/bootstrap-token)" --cacert "$BOOTSTRAP_DIR/ca.crt"
-        then
-          return 0
-        else
-          >&2 echo "failed to get secret $secret from server $server"
-        fi
-      done
-      sleep 10
-    done
-  else
-    >&2 echo "failed to get secret $secret: can't find bootstrap-token"
-    return 1
+function find_all_unmounted_data_devices() {
+  lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '
+    [
+      .blockdevices[]
+      | select(.path | contains("zram") | not)  # Exclude zram devices
+      | select(.path | contains("fd") | not)   # Exclude floppy devices (fd)
+      | select(.type == "disk" and .mountpoint == null and .children == null)  # Filter disks with no mountpoint or children
+      | .path
+    ] | sort'
+}
+
+function find_path_by_data_device_label() {
+  local device_label="$1"
+
+  local device_path=$(lsblk -o path,type,mountpoint,fstype,label --tree --json | jq -r "
+    [
+      .blockdevices[]
+      | select(.label == \"$device_label\")  # Match the specific device label
+    ] | first | .path
+  ")
+  if [[ "$device_path" != "null" ]]; then
+    echo "$device_path"
   fi
 }
 
-if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
-  exit 0
-fi
-
-if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
-  exit 0
-fi
-
-if [ -f /var/lib/bashible/kubernetes_data_device_path ]; then
-  DATA_DEVICE="$(</var/lib/bashible/kubernetes_data_device_path)"
-else
-  DATA_DEVICE="$(get_data_device_secret | jq -re --arg hostname "$(bb-d8-node-name)" '.data[$hostname] // empty' | base64 -d)"
-  if [ -z "$DATA_DEVICE" ]; then
-    >&2 echo "failed to get data device path"
-    exit 1
+function find_first_unmounted_data_device() {
+  local all_unmounted_data_devices="$(find_all_unmounted_data_devices)"
+  local first_unmounted_data_device=$(echo "$all_unmounted_data_devices" | jq '. | first')
+  if [ "$first_unmounted_data_device" != "null" ] && [ -n "$first_unmounted_data_device" ]; then
+    echo "$first_unmounted_data_device"
+  else
+    echo ""
   fi
-fi
+}
 
 {{- /*
-# Sometimes the `device_path` output from terraform points to a non-existent device.
-# In such situation we want to find an unpartitioned unused disk
-# with no file system, assuming it is the correct one.
-#
-# Example of this situation (lsblk -o path,type,mountpoint,fstype --tree --json):
+# Example (lsblk -o path,type,mountpoint,fstype --tree --json):
 #         {
 #          "path": "/dev/vda",
 #          "type": "disk",
@@ -85,16 +78,71 @@ fi
 #          "fstype": null
 #       }
 */}}
+
+function check_expected_disk_count() {
+  local expected_disks_count=1  # For Kubernetes data
+
+  # If the registry data device exists in terraform output
+  if [ -n "$(bb-get-registry-data-device-from-terraform-output)" ]; then
+    expected_disks_count=$((expected_disks_count + 1))
+  fi
+
+  # Find all unmounted data devices and count them
+  local all_unmounted_data_devices=$(find_all_unmounted_data_devices)
+  local all_unmounted_data_devices_count=$(echo "$all_unmounted_data_devices" | jq '. | length')
+
+  # Compare the count of found devices with the expected count
+  if [ "$all_unmounted_data_devices_count" -ne "$expected_disks_count" ]; then
+    >&2 echo "Received disks: $all_unmounted_data_devices, expected count: $expected_disks_count"
+    exit 1
+  fi
+}
+
+
+# Skip for
+if [[ "$FIRST_BASHIBLE_RUN" != "yes" ]]; then
+  exit 0
+fi
+
+# Skip for
+if [ -f /var/lib/bashible/kubernetes-data-device-installed ]; then
+  exit 0
+fi
+
+# Get Kubernetes data device
+DATA_DEVICE=$(bb-get-kubernetes-data-device-from-file-or-secret)
+if [ -z "$DATA_DEVICE" ]; then
+  >&2 echo "failed to get kubernetes data device path"
+  exit 1
+fi
+
+# For converge
+DATA_DEVICE_BY_LABEL=$(find_path_by_data_device_label "kubernetes-data")
+if [ -n "$DATA_DEVICE_BY_LABEL" ]; then
+  DATA_DEVICE="$DATA_DEVICE_BY_LABEL"
+fi
+
 if ! [ -b "$DATA_DEVICE" ]; then
-  >&2 echo "failed to find $DATA_DEVICE disk. Trying to detect the correct one"
-  DATA_DEVICE=$(lsblk -o path,type,mountpoint,fstype --tree --json | jq -r '.blockdevices[] | select (.path | contains("zram") | not ) | select ( .type == "disk" and .mountpoint == null and .children == null) | .path')
+  >&2 echo "Failed to find $DATA_DEVICE disk. Trying to detect the correct one..."
+
+  {{- /*
+    # Sometimes the device path (`device_path`) returned by Terraform points to a non-existent device.
+    # In such a situation, we want to find an unpartitioned unused device
+    # without a file system, assuming that it is the correct one.
+    # To form the mounting order of devices in Terraform, we specify mounting with the `depends` condition.
+    # Additionally, we define the array of disks in Terraform when creating the instance machine.
+  */}}
+
+  # Wait all disks and then get first unmounted data device
+  check_expected_disk_count
+  DATA_DEVICE=$(find_first_unmounted_data_device)
+  if ! [ -b "$DATA_DEVICE" ]; then
+    >&2 echo "Failed to find a valid disk by lsblk."
+    exit 1
+  fi
 fi
 
-if [ $(wc -l <<< $DATA_DEVICE) -ne 1 ]; then
-  >&2 echo "failed to detect the correct disk: more than one or no matching disks found: $DATA_DEVICE"
-  return 1
-fi
-
+# Mount kubernetes data device steps:
 mkdir -p /mnt/kubernetes-data
 
 # always format the device to ensure it's clean, because etcd will not join the cluster if the device
@@ -128,5 +176,6 @@ if [[ "$(find /var/lib/etcd/ -type f 2>/dev/null | wc -l)" == "0" ]]; then
 fi
 
 touch /var/lib/bashible/kubernetes-data-device-installed
+
   {{- end  }}
 {{- end  }}

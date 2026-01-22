@@ -1,0 +1,17 @@
+diff --git a/remotes/docker/resolver.go b/remotes/docker/resolver.go
+index 3911f11f7..6a827f29a 100644
+--- a/remotes/docker/resolver.go
++++ b/remotes/docker/resolver.go
+@@ -284,6 +284,12 @@ func (r *dockerResolver) Resolve(ctx context.Context, ref string) (string, ocisp
+ 			ctx := log.WithLogger(ctx, log.G(ctx).WithField("host", host.Host))
+ 
+ 			req := base.request(host, http.MethodHead, u...)
++			log.G(ctx).
++				WithField("req.path", req.path).
++				WithField("repository", base.repository).
++				WithField("ref", ref).
++				Warnln("Resolve")
++
+ 			if err := req.addNamespace(base.refspec.Hostname()); err != nil {
+ 				return "", ocispec.Descriptor{}, err
+ 			}

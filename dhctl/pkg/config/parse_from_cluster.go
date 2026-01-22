@@ -64,6 +64,32 @@ func (f *fromClusterMetaConfigFiller) Cloud(ctx context.Context, metaConfig *Met
 
 	metaConfig.ProviderClusterConfig = parsedProviderClusterConfig
 
+	// Read provider secondary devices
+	providerSecondaryDevicesConfig, err := f.kubeCl.CoreV1().Secrets("kube-system").Get(context.TODO(), "d8-provider-secondary-devices-configuration", metav1.GetOptions{})
+	// Continue if not found
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return nil, err
+	}
+
+	// If not found -> generate ProviderSecondaryDevicesConfig with default vars
+	providerSecondaryDevicesConfigData := []byte{}
+	if providerSecondaryDevicesConfig != nil {
+		providerSecondaryDevicesConfigData = providerSecondaryDevicesConfig.Data["cloud-provider-secondary-devices-configuration.yaml"]
+	}
+	if metaConfig.ProviderSecondaryDevicesConfig, err = NewProviderSecondaryDevicesConfigFromData(
+		providerSecondaryDevicesConfigData,
+	); err != nil {
+		return nil, err
+	}
+
+	// Validate provider secondary devices
+	var cloud ClusterConfigCloudSpec
+	if err := json.Unmarshal(metaConfig.ClusterConfig["cloud"], &cloud); err != nil {
+		return nil, fmt.Errorf("unable to unmarshal cloud section from provider cluster configuration: %v", err)
+	}
+	if err := metaConfig.ProviderSecondaryDevicesConfig.ValidateRegistryDataDevice(cloud.Provider); err != nil {
+		return nil, err
+	}
 	return nil, nil
 }
 func (f *fromClusterMetaConfigFiller) Static(ctx context.Context, metaConfig *MetaConfig) (nilType, error) {

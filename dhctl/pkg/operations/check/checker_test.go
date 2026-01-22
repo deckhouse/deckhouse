@@ -78,6 +78,7 @@ layout: WithoutNAT
 masterNodeGroup:
   replicas: 1
   instanceClass:
+    systemRegistryDiskSizeGb: 100
     etcdDiskSizeGb: 10
     platform: standard-v2
     cores: %s

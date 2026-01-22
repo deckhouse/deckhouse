@@ -63,22 +63,30 @@ func RenderTemplatesDir(templatesDir string, data map[string]interface{}, ignore
 			continue
 		}
 
-		tplPath := filepath.Join(templatesDir, tplName)
-
-		// Render template as a chart with one template to use helm functions.
-		tplContent, err := os.ReadFile(tplPath)
+		rendered, err := RenderTemplateFromFile(templatesDir, tplName, data)
 		if err != nil {
-			return nil, fmt.Errorf("read template file '%s': %v", tplPath, err)
-		}
-
-		rendered, err := RenderTemplate(tplName, tplContent, data)
-		if err != nil {
-			return nil, fmt.Errorf("render template file '%s': %v", tplPath, err)
+			return nil, err
 		}
 		renders = append(renders, *rendered)
 	}
 
 	return renders, nil
+}
+
+func RenderTemplateFromFile(templatesDir, tplName string, data map[string]interface{}) (*RenderedTemplate, error) {
+	tplPath := filepath.Join(templatesDir, tplName)
+
+	// Render template as a chart with one template to use helm functions.
+	tplContent, err := os.ReadFile(tplPath)
+	if err != nil {
+		return nil, fmt.Errorf("read template file '%s': %v", tplPath, err)
+	}
+
+	rendered, err := RenderTemplate(tplName, tplContent, data)
+	if err != nil {
+		return nil, fmt.Errorf("render template file '%s': %v", tplPath, err)
+	}
+	return rendered, nil
 }
 
 func RenderTemplate(name string, content []byte, data map[string]interface{}) (*RenderedTemplate, error) {

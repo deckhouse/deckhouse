@@ -15,6 +15,7 @@
 package frontend
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -52,7 +53,7 @@ func (a *Agent) Start() error {
 	}
 
 	log.DebugLn("agent: start ssh-agent")
-	err := a.Agent.Start()
+	err := a.Agent.Start(context.TODO())
 	if err != nil {
 		return fmt.Errorf("Start ssh-agent: %v", err)
 	}

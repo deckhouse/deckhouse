@@ -98,6 +98,23 @@ resource "yandex_compute_disk" "kubernetes_data" {
   }
 }
 
+resource "yandex_compute_disk" "system_registry_data" {
+  count       = var.registryDataDeviceEnable ? 1 : 0
+  name        = join("-", [local.prefix, "system-registry-data", var.nodeIndex])
+  description = "volume for system registry data"
+  size        = local.system_registry_disk_size_gb
+  zone        = local.internal_subnet.zone
+  type        = local.disk_type
+
+  labels = local.additional_labels
+
+  timeouts {
+    create = var.resourceManagementTimeout
+    delete = var.resourceManagementTimeout
+    update = var.resourceManagementTimeout
+  }
+}
+
 resource "yandex_compute_instance" "master" {
   name     = join("-", [local.prefix, "master", var.nodeIndex])
   hostname = join("-", [local.prefix, "master", var.nodeIndex])
@@ -129,6 +146,15 @@ resource "yandex_compute_instance" "master" {
     device_name = "kubernetes-data"
   }
 
+  dynamic "secondary_disk" {
+    for_each = var.registryDataDeviceEnable ? [1] : []
+    content {
+      disk_id     = yandex_compute_disk.system_registry_data[0].id
+      auto_delete = "false"
+      device_name = "system-registry-data"
+    }
+  }
+
   dynamic "network_interface" {
     for_each = local.external_subnet_id != null ? [local.external_subnet_id] : []
     content {
@@ -148,7 +174,7 @@ resource "yandex_compute_instance" "master" {
   lifecycle {
     ignore_changes = [
       metadata,
-      secondary_disk,
+      secondary_disk
     ]
   }
 

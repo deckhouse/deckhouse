@@ -39,6 +39,11 @@ variable "resourceManagementTimeout" {
   default = "10m"
 }
 
+variable "registryDataDeviceEnable" {
+  type = bool
+  default = false
+}
+
 locals {
   prefix = var.clusterConfiguration.cloud.prefix
 

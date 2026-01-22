@@ -38,4 +38,5 @@ type RunnerInterface interface {
 	GetPlanDestructiveChanges() *plan.DestructiveChanges
 	GetLogger() log.Logger
 	HasVMDestruction() bool
+	GetInputVariables() []byte
 }

@@ -66,7 +66,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
+   kind: ModuleConfig
    metadata:
      name: containerd-additional-config-auth.sh
    spec:

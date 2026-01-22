@@ -26,6 +26,7 @@ import (
 type ModeSettings struct {
 	Mode       constant.ModeType
 	RemoteData Data
+	BundlePath string
 }
 
 func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, error) {

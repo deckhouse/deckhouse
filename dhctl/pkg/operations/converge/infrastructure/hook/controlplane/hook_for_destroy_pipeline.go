@@ -122,6 +122,33 @@ func removeControlPlaneRoleFromNode(ctx context.Context, kubeCl *client.Kubernet
 	return nil
 }
 
+func gracefulUnmountRegistryData(ctx context.Context, kubeClient *client.KubernetesClient, nodeName string) error {
+	if err := waitForNoRegistryPodsOnNode(ctx, kubeClient, nodeName); err != nil {
+		return err
+	}
+
+	isExist, err := isRegistryDataDeviceExistOnNode(ctx, kubeClient, nodeName)
+	if err != nil {
+		return err
+	}
+	if isExist {
+		if err := createNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName); err != nil {
+			return err
+		}
+		err := waitDoneNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName)
+		if err != nil {
+			return err
+		}
+	}
+	if err := deleteNgcForUmountingRegistryDataDevice(ctx, kubeClient, nodeName); err != nil {
+		return err
+	}
+	if err := unsetRegistryDataDeviceNodeLabel(ctx, kubeClient, nodeName); err != nil {
+		return err
+	}
+	return nil
+}
+
 func removeLabelsFromNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, labels []string) error {
 	return retry.NewLoop(fmt.Sprintf("Remove labels from node %s", nodeName), 45, 5*time.Second).RunContext(ctx, func() error {
 		node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})

@@ -730,6 +730,7 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     etcdDiskSizeGb: 10
+    systemRegistryDiskSizeGb: 100
     platform: standard-v2
     cores: 4
     memory: 8192

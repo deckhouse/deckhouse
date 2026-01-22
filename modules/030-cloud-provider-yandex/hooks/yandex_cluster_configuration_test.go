@@ -86,6 +86,7 @@ masterNodeGroup:
     imageID: test
     memory: 4096
     platform: standard-v2
+    systemRegistryDiskSizeGb: 40
   replicas: 1
 provider:
   cloudID: test

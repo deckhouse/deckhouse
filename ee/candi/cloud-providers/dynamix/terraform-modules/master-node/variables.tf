@@ -24,25 +24,32 @@ variable "resourceManagementTimeout" {
   default = "10m"
 }
 
+variable "registryDataDeviceEnable" {
+  type    = bool
+  default = false
+}
+
 locals {
-  resource_name_prefix      = var.clusterConfiguration.cloud.prefix
-  master_node_name          = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
-  master_cpus               = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "numCPUs", [])
-  master_ram_mb             = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "memory", [])
-  ssh_pubkey                = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
-  master_root_disk_size     = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)
-  master_etcd_disk_size     = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 15)
-  image_name                = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "imageName", null)
-  resource_group_name       = join("-", [local.resource_name_prefix, "rg"])
-  kubernetes_data_disk_name = join("-", [local.master_node_name, "kubernetes-data"])
-  location                  = lookup(var.providerClusterConfiguration, "location", null)
-  storage_endpoint          = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageEndpoint", null)
-  pool                      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)
-  extnet_name               = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "externalNetwork", null)
-  vins_name                 = join("-", [local.resource_name_prefix, "vins"])
-  driver                    = "KVM_X86"
-  net_type_vins             = "VINS"
-  net_type_extnet           = "EXTNET"
+  resource_name_prefix             = var.clusterConfiguration.cloud.prefix
+  master_node_name                 = join("-", [local.resource_name_prefix, "master", var.nodeIndex])
+  master_cpus                      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "numCPUs", [])
+  master_ram_mb                    = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "memory", [])
+  ssh_pubkey                       = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
+  master_root_disk_size            = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)
+  master_etcd_disk_size            = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 15)
+  master_system_registry_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "systemRegistryDiskSizeGb", 100)
+  image_name                       = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "imageName", null)
+  resource_group_name              = join("-", [local.resource_name_prefix, "rg"])
+  kubernetes_data_disk_name        = join("-", [local.master_node_name, "kubernetes-data"])
+  system_registry_data_disk_name   = join("-", [local.master_node_name, "system-registry-data"])
+  location                         = lookup(var.providerClusterConfiguration, "location", null)
+  storage_endpoint                 = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageEndpoint", null)
+  pool                             = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)
+  extnet_name                      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "externalNetwork", null)
+  vins_name                        = join("-", [local.resource_name_prefix, "vins"])
+  driver                           = "KVM_X86"
+  net_type_vins                    = "VINS"
+  net_type_extnet                  = "EXTNET"
 
   master_cloud_init_script = jsonencode(merge({
     "hostname" : local.master_node_name,
