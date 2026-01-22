@@ -178,7 +178,6 @@ properties:
 
       По умолчанию режим отказоустойчивости определяется автоматически. [Подробнее](/products/kubernetes-platform/documentation/v1/reference/api/global.html#параметры) про режим отказоустойчивости.
   allowExperimentalModules:
-    default: false
     description: |
       Разрешает использование экспериментальных модулей (модули на стадии жизненного цикла `Experimental`).
 
