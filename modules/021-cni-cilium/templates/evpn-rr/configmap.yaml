@@ -11,7 +11,7 @@ data:
     frr version 10.5
     frr defaults traditional
     hostname POD_NAME_PLACEHOLDER
-    log syslog informational
+    log file /var/log/frr/frr.log informational
     service integrated-vtysh-config
     service password-encryption
     no ipv6 forwarding

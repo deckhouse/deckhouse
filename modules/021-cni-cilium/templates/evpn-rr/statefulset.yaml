@@ -43,7 +43,6 @@ spec:
         - |
           POD_NAME=${HOSTNAME}
           POD_INDEX=${POD_NAME##*-}
-          POD_IP=$(cat /etc/podip)
           CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
@@ -85,15 +84,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         volumeMounts:
         - name: config-template
           mountPath: /etc/frr-template
           readOnly: true
         - name: config
           mountPath: /etc/frr
-        - name: podip
-          mountPath: /etc/podip
-          readOnly: true
         resources:
           requests:
             cpu: 50m
@@ -103,10 +103,21 @@ spec:
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
         command:
-        - /usr/lib/frr/frrstart
+        - /bin/sh
+        - -c
+        - |
+          /sbin/tini -- /usr/lib/frr/docker-start &
+          attempts=0
+          until [[ -f /var/log/frr/frr.log || $attempts -eq 60 ]]; do
+            sleep 1
+            attempts=$(( $attempts + 1 ))
+          done
+          tail -f /var/log/frr/frr.log
         env:
         - name: FRR_CONF
           value: /etc/frr/frr.conf
+        - name: TINI_SUBREAPER
+          value: "true"
         volumeMounts:
         - name: config
           mountPath: /etc/frr
@@ -115,6 +126,8 @@ spec:
           mountPath: /tmp
         - name: frr-run
           mountPath: /var/run/frr
+        - name: frr-logs
+          mountPath: /var/log/frr
         ports:
         - containerPort: 179
           name: bgp
@@ -143,7 +156,6 @@ spec:
           generate_config() {
             POD_NAME=${HOSTNAME}
             POD_INDEX=${POD_NAME##*-}
-            POD_IP=$(cat /etc/podip)
 
             # Generate router-id from pod index
             ROUTER_ID="0.0.0.$((POD_INDEX + 1))"
@@ -232,15 +244,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
         volumeMounts:
         - name: config-template
           mountPath: /etc/frr-template
           readOnly: true
         - name: config
           mountPath: /etc/frr
-        - name: podip
-          mountPath: /etc/podip
-          readOnly: true
         - name: tmp
           mountPath: /tmp
         - name: frr-run
@@ -319,10 +332,8 @@ spec:
         emptyDir: {}
       - name: tmp
         emptyDir: {}
-      - name: podip
-        downwardAPI:
-          items:
-          - path: podip
-            fieldRef:
-              fieldPath: status.podIP
+      - name: frr-run
+        emptyDir: {}
+      - name: frr-logs
+        emptyDir: {}
 {{- end }}

@@ -75,8 +75,19 @@ spec:
         {{- include "helm_lib_module_container_security_context_privileged_read_only_root_filesystem" . | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "frr") }}
         command:
-        - /usr/lib/frr/frrstart
+        - /bin/sh
+        - -c
+        - |
+          /sbin/tini -- /usr/lib/frr/docker-start &
+          attempts=0
+          until [[ -f /var/log/frr/frr.log || $attempts -eq 60 ]]; do
+            sleep 1
+            attempts=$(( $attempts + 1 ))
+          done
+          tail -f /var/log/frr/frr.log
         env:
+        - name: TINI_SUBREAPER
+          value: "true"
         - name: FRR_CONF
           value: /etc/frr/frr.conf
         - name: NODE_NAME
@@ -100,6 +111,8 @@ spec:
           mountPath: /sys
         - name: frr-run
           mountPath: /var/run/frr
+        - name: frr-logs
+          mountPath: /var/log/frr
         ports:
         - containerPort: 179
           name: bgp
@@ -286,5 +299,7 @@ spec:
         hostPath:
           path: /sys
       - name: frr-run
+        emptyDir: {}
+      - name: frr-logs
         emptyDir: {}
 {{- end }}
