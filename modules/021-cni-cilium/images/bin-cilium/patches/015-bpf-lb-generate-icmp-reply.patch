@@ -1,8 +1,8 @@
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
-index 7c0176f604..cd8f9bbab1 100644
+index 7c0176f604..608fe14e94 100644
 --- a/bpf/bpf_host.c
 +++ b/bpf/bpf_host.c
-@@ -593,6 +593,88 @@ struct {
+@@ -593,6 +593,92 @@ struct {
  	__uint(max_entries, 1);
  } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
  
@@ -19,9 +19,10 @@ index 7c0176f604..cd8f9bbab1 100644
 +	union macaddr smac = {};
 +	union macaddr dmac = {};
 +	//int sample_len;
-+	__be16 old_flag;
-+	__be16 new_flag;
++	//__be16 old_flag;
++	//__be16 new_flag;
 +	__be32 tmp_addr;
++	//int  data_len;
 +	__wsum csum = 0;
 +	/* changing size invalidates pointers, so we need to re-fetch them. */
 +	data = ctx_data(ctx);
@@ -42,6 +43,9 @@ index 7c0176f604..cd8f9bbab1 100644
 +	if (icmphdr->type != ICMP_ECHO) 
 +		return CTX_ACT_OK;
 +	
++
++	//data_len = data_end - (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++	//	sizeof(struct icmphdr));
 +	/* Resize to ethernet header + 64 bytes or less */
 +	//sample_len = (int)ctx_full_len(ctx);
 +
@@ -75,15 +79,15 @@ index 7c0176f604..cd8f9bbab1 100644
 +	//icmphdr->checksum = 0;
 +	icmphdr->un.gateway = 0;
 +
-+	old_flag = bpf_htons(((__u16) ICMP_ECHO << 8) | 0);
-+	new_flag = bpf_htons(((__u16) ICMP_ECHOREPLY << 8) | 0);
++	//old_flag = bpf_htons(((__u16) ICMP_ECHO << 8) | 0);
++	//new_flag = bpf_htons(((__u16) ICMP_ECHOREPLY << 8) | 0);
 +	/* Add ICMP header checksum to sum of its body */
-+	csum = csum_diff(&old_flag, 2, &new_flag, 2, icmphdr->checksum);
-+	//csum += csum_diff(icmphdr, 0, icmphdr, sizeof(struct icmphdr), 0);
++	//csum = csum_diff(&old_flag, 2, &new_flag, 2, icmphdr->checksum);
++	csum += csum_diff(icmphdr, 0, icmphdr, sizeof(struct icmphdr), 0);
 +	icmphdr->checksum = csum_fold(csum);
 +
 +	/* Redirect ICMP to the interface we received it on. */
-+	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE!\n");
++	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE(datalen=%d, csum=%d)!\n", data_end - data, csum);
 +	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
 +}
 +#endif
@@ -91,7 +95,7 @@ index 7c0176f604..cd8f9bbab1 100644
  static __always_inline int
  handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	    __u32 ipcache_srcid __maybe_unused,
-@@ -619,8 +701,18 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+@@ -619,8 +705,18 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	if (ipv4_is_fragment(ip4))
  		return DROP_FRAG_NOSUPPORT;
  #endif
@@ -111,7 +115,7 @@ index 7c0176f604..cd8f9bbab1 100644
  	if (!from_host) {
  		if (!ctx_skip_nodeport(ctx)) {
  			bool __maybe_unused is_dsr = false;
-@@ -713,7 +805,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
+@@ -713,7 +809,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
  
  	if (!revalidate_data(ctx, &data, &data_end, &ip4))
  		return DROP_INVALID;
@@ -128,7 +132,7 @@ index 7c0176f604..cd8f9bbab1 100644
  #ifdef ENABLE_HOST_FIREWALL
  	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
  
-@@ -1178,6 +1278,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+@@ -1178,6 +1282,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
  		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
  					      from_host);
  		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
