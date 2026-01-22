@@ -45,12 +45,12 @@ spec:
           CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+          NODE_NAME=${NODE_NAME:-$(hostname)}
 
           # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
           cp -rLf /etc/frr-template/* /etc/frr/
 
           # Replace placeholders in config template and overwrite /etc/frr/frr.conf (will be updated by sidecar)
-          NODE_NAME=${NODE_NAME:-$(hostname)}
           sed -e "s/NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
               -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
               -e "s|RR_SERVERS_PLACEHOLDER||g" \
@@ -122,19 +122,19 @@ spec:
           readOnly: true
         - name: tmp
           mountPath: /tmp
+        - name: frr-run
+          mountPath: /var/run/frr
+        - name: frr-logs
+          mountPath: /var/log/frr
+        - name: frr-tmp
+          mountPath: /var/tmp/frr
+        - name: frr-lib
+          mountPath: /var/lib/frr
         - name: lib-modules
           mountPath: /lib/modules
           readOnly: true
         - name: sys
           mountPath: /sys
-        - name: frr-run
-          mountPath: /var/run/frr
-        - name: frr-logs
-          mountPath: /var/log/frr
-        - name: frr-lib
-          mountPath: /var/lib/frr
-        - name: frr-tmp
-          mountPath: /var/tmp/frr
         ports:
         - containerPort: 179
           name: bgp
@@ -186,6 +186,7 @@ spec:
 
           reload_frr() {
             # Signal FRR reloader sidecar to reload configuration
+            # We create a trigger file that the FRR reloader sidecar watches
             touch /etc/frr/.reload-trigger 2>/dev/null || true
             echo "Configuration file updated, trigger file created for FRR reloader"
           }
@@ -308,7 +309,6 @@ spec:
           requests:
             cpu: 50m
             memory: 32Mi
-      priorityClassName: system-cluster-critical
       terminationGracePeriodSeconds: 10
       volumes:
       - name: frr-config-template
