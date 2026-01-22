@@ -1029,6 +1029,10 @@ entries:
                 ru: Обзор
               url: /user/monitoring/
             - title:
+                en: Dashboards
+                ru: Дашборды
+              url: /user/monitoring/dashboards.html
+            - title:
                 en: Configuring application monitoring
                 ru: Настройка мониторинга приложений
               url: /user/monitoring/app.html
