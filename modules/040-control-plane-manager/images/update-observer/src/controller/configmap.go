@@ -77,7 +77,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		for nodeName, nodeState := range m {
 			res[nodeName] = &MasterNode{
 				Phase:      string(nodeState.Phase),
-				Components: make(map[string]string),
+				Components: make(map[string]string, len(nodeState.ComponentsState)),
 			}
 
 			for component, componentState := range nodeState.ComponentsState {
