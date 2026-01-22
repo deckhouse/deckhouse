@@ -50,6 +50,11 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		// Validate version compatibility before proceeding
+		if err := validateDeckhouseVersion(ctx, sshClient, false); err != nil {
+			return err
+		}
+
 		tmpDir := app.TmpDirName
 		logger := log.GetDefaultLogger()
 		isDebug := app.IsDebug
@@ -146,6 +151,11 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 		if govalue.IsNil(sshClient) {
 			sshClient = nil
+		} else {
+			// Validate version compatibility before proceeding
+			if err := validateDeckhouseVersion(ctx, sshClient, false); err != nil {
+				return err
+			}
 		}
 
 		tmpDir := app.TmpDirName

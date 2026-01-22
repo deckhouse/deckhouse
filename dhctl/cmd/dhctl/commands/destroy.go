@@ -75,6 +75,14 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		// Validate version compatibility (with allowAnyError for destroy operations)
+		// This allows destruction even if cluster is partially deleted or version check fails
+		if err := validateDeckhouseVersion(ctx, sshClient, true); err != nil {
+			// For destroy, we log warning but continue
+			log.WarnF("Version check failed during destroy: %v\n", err)
+			log.WarnLn("Continuing with destroy operation...")
+		}
+
 		if err = cache.Init(sshClient.Check().String()); err != nil {
 			return fmt.Errorf(destroyCacheErrorMessage, err)
 		}

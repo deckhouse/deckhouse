@@ -51,6 +51,13 @@ func DefineDeckhouseRemoveDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 			return err
 		}
 
+		// Validate version compatibility before removing deployment
+		// Use allowAnyError=true since we're removing deployment anyway
+		if err := validateDeckhouseVersion(ctx, sshClient, true); err != nil {
+			log.WarnF("Version check failed: %v\n", err)
+			log.WarnLn("Continuing with deployment removal...")
+		}
+
 		err = log.Process("default", "Remove Deckhouse️", func() error {
 			kubeCl := client.NewKubernetesClient().
 				WithNodeInterface(
@@ -113,6 +120,13 @@ func DefineDeckhouseCreateDeployment(cmd *kingpin.CmdClause) *kingpin.CmdClause 
 		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
+		}
+
+		// Validate version compatibility before creating deployment
+		// Only check if cluster already has Deckhouse deployed
+		if err := validateDeckhouseVersion(ctx, sshClient, true); err != nil {
+			log.WarnF("Version check warning: %v\n", err)
+			log.WarnLn("Continuing with deployment creation...")
 		}
 
 		installConfig, err := config.PrepareDeckhouseInstallConfig(metaConfig)

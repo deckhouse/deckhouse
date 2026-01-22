@@ -87,6 +87,20 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		if err != nil {
 			return err
 		}
+		defer func() {
+			if kubeCl.KubeProxy != nil {
+				kubeCl.KubeProxy.StopAll()
+			}
+		}()
+
+		// Validate version compatibility before terraform operations
+		opts := kubernetes.VersionCheckOptions{
+			AllowAnyError:       false,
+			AllowMissingVersion: false,
+		}
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, opts); err != nil {
+			return fmt.Errorf("version check failed: %w", err)
+		}
 
 		metaConfig, err := config.ParseConfigInCluster(
 			ctx,
