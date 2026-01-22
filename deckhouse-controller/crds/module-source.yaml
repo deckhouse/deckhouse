@@ -59,6 +59,9 @@ spec:
                       enum:
                         - HTTP
                         - HTTPS
+                    scanInterval:
+                      type: string
+                      pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                     repo:
                       type: string
                       description: URL of the container registry.

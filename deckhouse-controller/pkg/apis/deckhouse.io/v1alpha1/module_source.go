@@ -79,10 +79,11 @@ type ModuleSourceSpec struct {
 }
 
 type ModuleSourceSpecRegistry struct {
-	Scheme    string `json:"scheme,omitempty"`
-	Repo      string `json:"repo"`
-	DockerCFG string `json:"dockerCfg"`
-	CA        string `json:"ca"`
+	Scheme       string `json:"scheme,omitempty"`
+	ScanInterval string `json:"scanInterval,omitempty"`
+	Repo         string `json:"repo"`
+	DockerCFG    string `json:"dockerCfg"`
+	CA           string `json:"ca"`
 }
 
 type ModuleSourceStatus struct {
