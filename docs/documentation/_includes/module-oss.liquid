@@ -1,5 +1,7 @@
 {%- assign moduleKebabName = page['module-kebab-name'] | default: '<module-name>' %}
-{%- assign ossItems = site.data.oss[moduleKebabName] %}
+{%- assign ossItems = site.data.modules.metadata.modules[moduleKebabName]['oss'] %}
+
+<p style="padding-bottom: 2em;">{{ site.data.i18n.common['ossPageBlock1'][page.lang] }}</p>
 
 {%- if ossItems and ossItems.size > 0 %}
 <div markdown="0">
@@ -15,14 +17,14 @@
         {%- endif %}
         <div class="oss__item-content">
           <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer" class="oss__item-title">
-            {{ item.name }}
+            {{- item.name -}}
           </a>
-          {%- if item.version %}
-          <span class="oss__item-version">v{{ item.version }}</span>
-          {%- endif %}
-          {%- if item.description %}
+          {%- if item.description -%}
           <div class="oss__item-description">
-            {{ item.description }}
+            {%- if item.version -%}
+            <p>Version: {{ item.version }}</p>
+            {%- endif %}
+            {{- item.description -}}
           </div>
           {%- endif %}
           {%- if item.license %}

@@ -6,5 +6,5 @@
 - name: Docker distribution
   link: https://github.com/distribution/distribution
   description: distribution/distribution is an open-source toolkit used to pack, ship, store, and deliver container content, providing a secure and scalable foundation for developing large-scale registry solutions or managing private registries. It supports the OCI Distribution Specification, which is used by major registry operators like Docker Hub and GitHub Container Registry.
-  logo: https://github.com/distribution/distribution/blob/main/distribution-logo.svg
+  logo: /images/logos/docker-distribution.svg
   license: Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)

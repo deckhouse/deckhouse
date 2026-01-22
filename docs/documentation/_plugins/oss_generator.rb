@@ -19,14 +19,16 @@ module OSSGenerator
 
     def generate(site)
       # Check if OSS data exists
-      return unless site.data['oss']
-      
+      return unless site.data['modules']['metadata']['modules']
+
       languages = ['en', 'ru']
-      
+
       # Get all modules that have OSS data
-      site.data['oss'].each do |module_name, oss_items|
+      #site.data['oss'].each do |module_name, oss_items|
+      site.data['modules']['metadata']['modules'].each do |module_name, module_data|
+        oss_items = module_data['oss']
         next unless oss_items && oss_items.size > 0
-        
+
         languages.each do |lang|
           # Generate OSS page for this module and language
           site.pages << OSSPage.new(site, module_name, oss_items, lang)
@@ -47,7 +49,7 @@ module OSSGenerator
       # Pages should be in: en/modules/<module-name>/OSS.html or ru/modules/<module-name>/OSS.html
       @dir = "#{@lang}/modules/#{@module_name}/"
       @name = "OSS.md"
-      
+
       self.process(@name)
 
       # Set page data
@@ -58,6 +60,7 @@ module OSSGenerator
         'sidebar' => 'embedded-modules',
         'module-kebab-name' => @module_name,
         'module-snake-name' => @module_name.gsub(/-[a-z]/) { |m| m.upcase }.gsub(/-/, ''),
+        'permalink' => "#{@dir}oss.html",
         'searchable' => false,
         'sitemap_include' => true
       }

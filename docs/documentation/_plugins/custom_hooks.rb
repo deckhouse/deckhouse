@@ -143,7 +143,6 @@ Jekyll::Hooks.register :site, :pre_render do |site|
   pageAllowedSuffixes = [
     'CONFIGURATION.md', 'CONFIGURATION_RU.md',
     'CR_RU.md', 'CR.md',
-    'OSS.html', 'OSS_RU.html',
     'EXAMPLES_RU.md', 'EXAMPLES.md',
     'USAGE_RU.md', 'USAGE.md',
     'FAQ_RU.md', 'FAQ.md'

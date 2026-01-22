@@ -25,11 +25,6 @@ shell:
         export METADATA_TARGET_FILE=${PWD}/_data/modules/metadata.json
         bash _tools/modules_generate_metadata.sh
 
-        echo "[] Generating OSS data from oss.yaml files..."
-        export OSS_SOURCE_DIR=/src
-        export OSS_OUTPUT_FILE=${PWD}/_data/oss.yaml
-        bash _tools/generate_oss_data.sh
-
         echo '[] Edition - {{ .Edition }}. Merging files of modules for different editions...'
         for dir in {be,se,ee,se-plus,fe}; do if [ -d /src/$dir/modules ];then cp -rf /src/$dir/modules /src >& /dev/null; fi; done
 
@@ -54,13 +49,6 @@ shell:
           sed -i "1apermalink: ${PERMALINK}" "${file}"
           fi
         done
-
-        echo '[] Generating OSS pages for modules...'
-        export OSS_DATA_FILE=${PWD}/_data/oss.yaml
-        export MODULES_DIR=modules_en
-        bash _tools/modules_generate_oss.sh
-        export MODULES_DIR=modules_ru
-        bash _tools/modules_generate_oss.sh
 
         echo '[] Generating configuration schemas...'
         export MODULES_DIR=/src/modules
