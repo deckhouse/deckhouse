@@ -293,6 +293,7 @@ properties:
   allowExperimentalModules:
     type: boolean
     x-examples: [false]
+    default: false
     description: |
       Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
 
