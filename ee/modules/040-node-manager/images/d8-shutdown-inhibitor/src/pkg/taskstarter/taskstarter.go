@@ -7,9 +7,8 @@ package taskstarter
 
 import (
 	"context"
-	"sync"
-
 	"log/slog"
+	"sync"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )

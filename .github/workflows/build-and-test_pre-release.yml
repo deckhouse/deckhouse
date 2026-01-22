@@ -2154,7 +2154,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:0269f022b1acfc847f2ca3a1cdf800da631e72128b66c40d9b5f3208c9c10e90"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/base_images@sha256:8db708aa7ff7043fd02e80dca3f3edb7ce11b3b05b04bdebe103aeaa5f9330b3"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

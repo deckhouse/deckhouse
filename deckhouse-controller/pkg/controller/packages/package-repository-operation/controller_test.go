@@ -39,8 +39,8 @@ import (
 	k8sfake "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/mock"
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"

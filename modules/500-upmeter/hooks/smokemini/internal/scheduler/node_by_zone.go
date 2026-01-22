@@ -97,7 +97,7 @@ func (f *filterByZone) collect(nodes []snapshot.Node, spread func(int, []int) []
 	// The sorting is required to have stable sts distribution ordering. Otherwise, within
 	// similar zones, sts would migrate from time to time because `spread` can have prioritized
 	// direction.
-	zones := make([]*zoneStats, 0)
+	zones := make([]*zoneStats, 0, len(zonesByName))
 	for _, z := range zonesByName {
 		zones = append(zones, z)
 	}

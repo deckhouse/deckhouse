@@ -18,10 +18,10 @@ package dvp
 
 import (
 	"context"
-	"dvp-common/api"
 	"fmt"
 	"strings"
 
+	"dvp-common/api"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
@@ -84,7 +84,7 @@ func (c *Cloud) EnsureLoadBalancerDeleted(
 func defaultLoadBalancerName(service *v1.Service) string {
 	name := "a" + string(service.UID)
 
-	name = strings.Replace(name, "-", "", -1)
+	name = strings.ReplaceAll(name, "-", "")
 
 	if len(name) > 32 {
 		name = name[:32]

@@ -10,18 +10,18 @@ tests:
       - name: allowed
         inventory:
           - ../common/test_samples/ns.yaml
-        object: samples/allowed.yaml
+        object: test_samples/allowed.yaml
         assertions:
           - violations: no
       - name: allowed2
         inventory:
           - ../common/test_samples/ns.yaml
-        object: samples/allowed2.yaml
+        object: test_samples/allowed2.yaml
         assertions:
           - violations: no
       - name: disallowed
         inventory:
           - ../common/test_samples/ns.yaml
-        object: samples/disallowed.yaml
+        object: test_samples/disallowed.yaml
         assertions:
           - violations: yes

@@ -20,13 +20,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"golang.org/x/mod/semver"
 	"os"
 	"os/exec"
 	"regexp"
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/mod/semver"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -234,7 +234,6 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 		currentAgentGeneration,
 	)
 	return currentPod.Name, currentPod.Spec.Containers[0].Image, false, nil
-
 }
 
 func isMigrationSucceeded(kubeClient kubernetes.Interface, nodeName string) bool {
@@ -362,7 +361,6 @@ func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeN
 
 		if len(ciliumAgentPodsOnSameNode.Items) == 1 &&
 			ciliumAgentPodsOnSameNode.Items[0].DeletionTimestamp == nil {
-
 			newPodName = ciliumAgentPodsOnSameNode.Items[0].Name
 			log.Infof(
 				"[SafeAgentUpdater] New pod created with name %s",

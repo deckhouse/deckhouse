@@ -66,7 +66,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					svc.logger.Info("skipping tree", slog.String("headerName", header.Name), slog.String("moduleName", moduleName))
+					svc.logger.Info("skipping tree", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
 

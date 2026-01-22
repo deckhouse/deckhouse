@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-noexecute-exists
+  namespace: default
+spec:
+  tolerations:
+  - operator: Exists
+    effect: NoExecute
+  containers:
+  - name: c
+    image: nginx
+
+

@@ -18,12 +18,12 @@ package dvp
 
 import (
 	"context"
-	"dvp-common/api"
-	"dvp-common/config"
 	"io"
 	"log"
 	"time"
 
+	"dvp-common/api"
+	"dvp-common/config"
 	corev1 "k8s.io/api/core/v1"
 	discv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/labels"

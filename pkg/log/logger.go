@@ -29,13 +29,13 @@ import (
 	"time"
 
 	"github.com/DataDog/gostackparse"
+
 	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
 const KeyComponent = "component"
 
 type logger = slog.Logger
-type handlerOptions = *slog.HandlerOptions
 
 type Handler interface {
 	Enabled(context.Context, slog.Level) bool

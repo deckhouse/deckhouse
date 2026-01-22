@@ -27,8 +27,9 @@ import (
 	"sync"
 	"time"
 
-	ssh "github.com/deckhouse/lib-gossh"
 	"github.com/name212/govalue"
+
+	ssh "github.com/deckhouse/lib-gossh"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"

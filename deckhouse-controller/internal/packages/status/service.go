@@ -23,22 +23,24 @@ import (
 )
 
 const (
-	// ConditionDownloaded indicates package image was successfully downloaded from registry
-	ConditionDownloaded ConditionName = "Downloaded"
-	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
-	ConditionReadyOnFilesystem ConditionName = "ReadyOnFilesystem"
 	// ConditionRequirementsMet indicates package requirements validation passed
-	ConditionRequirementsMet ConditionName = "RequirementsMet"
+	ConditionRequirementsMet ConditionType = "RequirementsMet"
+	// ConditionDownloaded indicates package image was successfully downloaded from registry
+	ConditionDownloaded ConditionType = "Downloaded"
+	// ConditionReadyOnFilesystem indicates package was successfully mounted and accessible
+	ConditionReadyOnFilesystem ConditionType = "ReadyOnFilesystem"
 	// ConditionReadyInRuntime indicates package is fully loaded and operational in runtime
-	ConditionReadyInRuntime ConditionName = "ReadyInRuntime"
+	ConditionReadyInRuntime ConditionType = "ReadyInRuntime"
 	// ConditionHooksProcessed indicates all package hooks executed successfully
-	ConditionHooksProcessed ConditionName = "HooksProcessed"
+	ConditionHooksProcessed ConditionType = "HooksProcessed"
 	// ConditionHelmApplied indicates Helm release was successfully applied
-	ConditionHelmApplied ConditionName = "HelmApplied"
+	ConditionHelmApplied ConditionType = "HelmApplied"
 	// ConditionReadyInCluster checks the resources are ready
-	ConditionReadyInCluster ConditionName = "ReadyInCluster"
+	ConditionReadyInCluster ConditionType = "ReadyInCluster"
 	// ConditionSettingsValid checks the settings passed openAPI validation
-	ConditionSettingsValid ConditionName = "SettingsValid"
+	ConditionSettingsValid ConditionType = "SettingsValid"
+	// ConditionWaitConverge indicates that the package wait converge
+	ConditionWaitConverge ConditionType = "WaitConverge"
 )
 
 // Error wraps an error with associated status conditions
@@ -52,7 +54,7 @@ func (e *Error) Error() string {
 	return e.Err.Error()
 }
 
-type ConditionName string
+type ConditionType string
 
 type ConditionReason string
 
@@ -72,7 +74,7 @@ type Status struct {
 
 // Condition represents a single status condition for a package
 type Condition struct {
-	Name    ConditionName          `json:"name" yaml:"name"`
+	Type    ConditionType          `json:"type" yaml:"type"`
 	Status  metav1.ConditionStatus `json:"status" yaml:"status"` // true = condition met, false = condition failed
 	Reason  ConditionReason        `json:"reason,omitempty" yaml:"reason,omitempty"`
 	Message string                 `json:"message,omitempty" yaml:"message,omitempty"`
@@ -89,14 +91,14 @@ func NewService() *Service {
 func newStatus() *Status {
 	return &Status{
 		Conditions: []Condition{
-			{Name: ConditionDownloaded, Status: metav1.ConditionUnknown},
-			{Name: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
-			{Name: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
-			{Name: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
-			{Name: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
-			{Name: ConditionHelmApplied, Status: metav1.ConditionUnknown},
-			{Name: ConditionReadyInCluster, Status: metav1.ConditionUnknown},
-			{Name: ConditionSettingsValid, Status: metav1.ConditionUnknown},
+			{Type: ConditionDownloaded, Status: metav1.ConditionUnknown},
+			{Type: ConditionReadyOnFilesystem, Status: metav1.ConditionUnknown},
+			{Type: ConditionRequirementsMet, Status: metav1.ConditionUnknown},
+			{Type: ConditionReadyInRuntime, Status: metav1.ConditionUnknown},
+			{Type: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
+			{Type: ConditionHelmApplied, Status: metav1.ConditionUnknown},
+			{Type: ConditionReadyInCluster, Status: metav1.ConditionUnknown},
+			{Type: ConditionSettingsValid, Status: metav1.ConditionUnknown},
 		},
 	}
 }
@@ -150,7 +152,7 @@ func (s *Service) Delete(name string) {
 }
 
 // SetConditionTrue marks a condition as successful and notifies listeners if changed
-func (s *Service) SetConditionTrue(name string, condition ConditionName) {
+func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -159,7 +161,7 @@ func (s *Service) SetConditionTrue(name string, condition ConditionName) {
 	}
 
 	// Notify only if the condition actually changed
-	if s.statuses[name].setCondition(Condition{Name: condition, Status: metav1.ConditionTrue}) {
+	if s.statuses[name].setCondition(Condition{Type: condition, Status: metav1.ConditionTrue}) {
 		s.ch <- name
 	}
 }
@@ -173,7 +175,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 		return
 	}
 
-	runtimeConditions := []ConditionName{
+	runtimeConditions := []ConditionType{
 		ConditionSettingsValid,
 		ConditionHelmApplied,
 		ConditionHooksProcessed,
@@ -182,7 +184,7 @@ func (s *Service) ClearRuntimeConditions(name string) {
 	}
 
 	for idx, condition := range s.statuses[name].Conditions {
-		if !slices.Contains(runtimeConditions, condition.Name) {
+		if !slices.Contains(runtimeConditions, condition.Type) {
 			continue
 		}
 
@@ -235,7 +237,7 @@ func (s *Status) setCondition(condition Condition) bool {
 
 	// Try to find and update existing condition
 	for i := range s.Conditions {
-		if s.Conditions[i].Name != condition.Name {
+		if s.Conditions[i].Type != condition.Type {
 			continue
 		}
 

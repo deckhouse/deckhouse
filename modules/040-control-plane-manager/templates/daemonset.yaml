@@ -137,8 +137,10 @@ kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tp
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
-  {{- if $tpl_context.apiserver.webhookCA }}
-extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- if $tpl_context.apiserver.webhookURL }}
+  {{- $webhookCA := required "controlPlaneManager.apiserver.authz.webhookCA is required when controlPlaneManager.apiserver.authz.webhookURL is set" $tpl_context.apiserver.webhookCA }}
+extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+extra-file-authorization-config.yaml: {{ include "authorizationConfigTemplate" $tpl_context | b64enc }}
   {{- end }}
 
   {{- if $tpl_context.apiserver.auditWebhookURL }}

@@ -30,12 +30,13 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (

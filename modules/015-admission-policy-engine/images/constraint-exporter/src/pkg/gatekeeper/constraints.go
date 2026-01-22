@@ -142,7 +142,6 @@ func GetConstraints(cClient controllerClient.Client, client *kubernetes.Clientse
 				constraints = append(constraints, constraint)
 			}
 		}
-
 	}
 	return constraints, nil
 }

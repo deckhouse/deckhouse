@@ -138,22 +138,29 @@ func (cp *CRDsInstaller) DeleteCRDs(ctx context.Context, crdsToDelete []string) 
 }
 
 func (cp *CRDsInstaller) Run(ctx context.Context) error {
-	return cp.installer.Run(ctx)
+	err := cp.installer.Run(ctx)
+	if err != nil {
+		return fmt.Errorf("run: %w", err)
+	}
+	return nil
 }
 
 //nolint:unused // Will uses later
 func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomResourceDefinition) error {
-	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		existCRD, err := cp.getCRDFromCluster(ctx, crd.GetName())
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				ucrd, err := sdk.ToUnstructured(crd)
 				if err != nil {
-					return err
+					return fmt.Errorf("to unstructured: %w", err)
 				}
 
 				_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Create(ctx, ucrd, apimachineryv1.CreateOptions{})
-				return err
+				if err != nil {
+					return fmt.Errorf("create: %w", err)
+				}
+				return nil
 			}
 
 			return err
@@ -176,24 +183,31 @@ func (cp *CRDsInstaller) updateOrInsertCRD(ctx context.Context, crd *v1.CustomRe
 
 		ucrd, err := sdk.ToUnstructured(existCRD)
 		if err != nil {
-			return err
+			return fmt.Errorf("to unstructured: %w", err)
 		}
 
 		_, err = cp.k8sClient.Dynamic().Resource(crdGVR).Update(ctx, ucrd, apimachineryv1.UpdateOptions{})
-		return err
+		if err != nil {
+			return fmt.Errorf("update: %w", err)
+		}
+		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("retry on conflict: %w", err)
+	}
+	return nil
 }
 func (cp *CRDsInstaller) getCRDFromCluster(ctx context.Context, crdName string) (*v1.CustomResourceDefinition, error) {
 	crd := &v1.CustomResourceDefinition{}
 
 	o, err := cp.k8sClient.Dynamic().Resource(crdGVR).Get(ctx, crdName, apimachineryv1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("get: %w", err)
 	}
 
 	err = sdk.FromUnstructured(o, &crd)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return crd, nil

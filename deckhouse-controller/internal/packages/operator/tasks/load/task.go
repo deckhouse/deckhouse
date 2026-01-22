@@ -39,7 +39,7 @@ type manager interface {
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
 }
@@ -94,8 +94,8 @@ func (t *task) Execute(ctx context.Context) error {
 		Err: errors.New("wait for converge done"),
 		Conditions: []status.Condition{
 			{
-				Name:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
+				Type:    status.ConditionWaitConverge,
+				Status:  metav1.ConditionTrue,
 				Reason:  "WaitConverge",
 				Message: "wait for converge done",
 			},
