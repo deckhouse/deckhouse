@@ -818,6 +818,16 @@ echo "$MYRESULTSTRING"
 
      ![Создание пользователя Nexus](../images/registry/nexus/nexus-user.png)
 
+   * Включите **Docker Bearer Token Realm** («Administration» → «Security» → «Realms»):
+     * **Docker Bearer Token Realm** должен быть в списке **Active** (справа), а не в **Available** (слева).
+     * Если его нет в **Active**:
+       1. Найдите в списке **Available**.
+       2. Переместите стрелкой в **Active**.
+       3. Нажмите **Save**.
+       4. **Перезапустите Nexus** (обязательно для применения изменений).
+
+     ![Настройка Docker Bearer Token Realm](../images/registry/nexus/nexus-realms.png)
+
 В результате образы DKP будут доступны, например, по следующему адресу: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
 ### Особенности настройки Harbor
