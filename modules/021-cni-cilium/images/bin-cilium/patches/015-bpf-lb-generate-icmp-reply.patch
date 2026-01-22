@@ -1,5 +1,5 @@
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
-index 7c0176f604..7fac4ced11 100644
+index 7c0176f604..988bdaac91 100644
 --- a/bpf/bpf_host.c
 +++ b/bpf/bpf_host.c
 @@ -593,6 +593,88 @@ struct {
@@ -91,7 +91,7 @@ index 7c0176f604..7fac4ced11 100644
  static __always_inline int
  handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	    __u32 ipcache_srcid __maybe_unused,
-@@ -619,8 +701,17 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+@@ -619,8 +701,18 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
  	if (ipv4_is_fragment(ip4))
  		return DROP_FRAG_NOSUPPORT;
  #endif
@@ -99,18 +99,19 @@ index 7c0176f604..7fac4ced11 100644
 +	if(ip4->protocol == IPPROTO_ICMP ) {
 +		int ret = CTX_ACT_OK;
 +		__be32 vip = bpf_htonl(0xc0a8c7c8);
-+		if ((ip4->daddr == vip || ip4->saddr == vip))
++		if ((ip4->daddr == vip || ip4->saddr == vip)) {
 +			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
-+        ret = make_icmp_responce_lb4_h(ctx, ip4);
-+		if (ret != CTX_ACT_OK)
-+			return ret;
++        	ret = make_icmp_responce_lb4_h(ctx, ip4);
++			if (ret != CTX_ACT_OK)
++				return ret;
++		}
 +	}
  #ifdef ENABLE_NODEPORT
 +	
  	if (!from_host) {
  		if (!ctx_skip_nodeport(ctx)) {
  			bool __maybe_unused is_dsr = false;
-@@ -713,7 +804,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
+@@ -713,7 +805,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
  
  	if (!revalidate_data(ctx, &data, &data_end, &ip4))
  		return DROP_INVALID;
@@ -127,7 +128,7 @@ index 7c0176f604..7fac4ced11 100644
  #ifdef ENABLE_HOST_FIREWALL
  	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
  
-@@ -1178,6 +1277,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+@@ -1178,6 +1278,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
  		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
  					      from_host);
  		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
