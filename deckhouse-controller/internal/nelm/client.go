@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/werf/nelm/pkg/action"
@@ -48,6 +49,8 @@ var (
 	ErrReleaseNotFound = errors.New("release not found")
 	// ErrLabelNotFound is returned when a requested label is not present in the release
 	ErrLabelNotFound = errors.New("label not found")
+
+	one sync.Once
 )
 
 // Options contains configuration for the nelm client
@@ -108,7 +111,9 @@ type Client struct {
 // It initializes the nelm logger and applies any provided options
 func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
-	nelmlog.Default = newNelmLogger(logger)
+	one.Do(func() {
+		nelmlog.Default = newNelmLogger(logger)
+	})
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
