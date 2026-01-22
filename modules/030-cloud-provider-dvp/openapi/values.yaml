@@ -427,11 +427,14 @@ properties:
               networkPolicy:
                 type: string
                 description: |
-                  NetworkPolicy mode for the Project where the cluster is deployed.
+                  Control rules for network traffic to and from workloads running in the Project resource.
+                
+                  * `Isolated`: A restrictive network policy (allowlist) is applied to cluster VM pods. Only explicitly allowed ingress and egress traffic is permitted.
+                  * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
                 enum:
                   - Isolated
-                  - NotRestricted
+                  - None
                 default: Isolated
             required:
               - kubeconfigDataBase64

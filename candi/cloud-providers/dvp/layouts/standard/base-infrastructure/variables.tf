@@ -86,13 +86,6 @@ locals {
     {
       from = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "bastion" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-openvpn" }
         }
       }]
@@ -130,13 +123,6 @@ locals {
       to = [{
         namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "kube-system" }
-        }
-      }]
-    },
-    {
-      to = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "bastion" }
         }
       }]
     },
