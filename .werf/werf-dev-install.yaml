@@ -16,7 +16,7 @@ import:
 {{ include "installer_prepare_with_shell" (dict "rootContext" . "CI_COMMIT_TAG" .CI_COMMIT_TAG "Env" $.Env) }}
 
 {{ include "controller_and_install_image_labels" . }}
-    user: "0:0"
+    user: "deckhouse:deckhouse"
     cmd: ["/bin/bash"]
 ---
 {{- include "vex mitigation" (list $ "dev/install") }}
