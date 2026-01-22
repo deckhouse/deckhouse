@@ -17,7 +17,6 @@ spec:
                     Интервал для сканирования container registry.
                     
                     Определяет частоту проверки container registry на появление новых модулей и их версий.
-                  x-doc-default: 3m
                 registry:
                   properties:
                     scheme:
