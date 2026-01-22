@@ -5430,11 +5430,7 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-<<<<<<< HEAD
           TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
-=======
-          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
->>>>>>> 290f73c577 (commit render-workflows.sh)
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
@@ -5536,11 +5532,7 @@ jobs:
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-<<<<<<< HEAD
           TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
-=======
-          TEMPLATE_ID: "a958dfd8-d10c-4255-8792-2acd21ff2045"
->>>>>>> 290f73c577 (commit render-workflows.sh)
           LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
