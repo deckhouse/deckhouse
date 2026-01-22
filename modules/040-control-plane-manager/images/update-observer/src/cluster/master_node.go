@@ -21,8 +21,8 @@ import (
 )
 
 type MasterNodeState struct {
-	Phase           MasterNodePhase                        `json:"phase" yaml:"phase"`
-	ComponentsState map[string]*ControlPlaneComponentState `json:"components" yaml:"components"`
+	Phase           MasterNodePhase
+	ComponentsState map[string]*ControlPlaneComponentState
 }
 
 type MasterNodePhase string
@@ -37,8 +37,8 @@ func (n *MasterNodeState) isUpToDate() bool {
 }
 
 type ControlPlaneComponentState struct {
-	Version string          `json:"version" yaml:"version"`
-	Phase   corev1.PodPhase `json:"phase" yaml:"phase"`
+	Version string
+	Phase   corev1.PodPhase
 }
 
 func (s *ControlPlaneComponentState) isFullyOperational(desiredVersion string) bool {

@@ -25,9 +25,9 @@ import (
 )
 
 type NodesState struct {
-	DesiredCount   int    `json:"desiredCount" yaml:"desiredCount"`
-	UpToDateCount  int    `json:"upToDateCount" yaml:"upToDateCount"`
-	CurrentVersion string `json:"-" yaml:"-"`
+	DesiredCount   int
+	UpToDateCount  int
+	CurrentVersion string
 }
 
 func GetNodesState(nodes []corev1.Node, desiredVersion string) (*NodesState, error) {

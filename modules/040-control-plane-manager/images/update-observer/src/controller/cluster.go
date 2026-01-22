@@ -43,7 +43,7 @@ func (r *reconciler) getClusterState(ctx context.Context) (*cluster.State, error
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
 
-	return combine(cfg, nodesState, controlPlaneState), nil
+	return cluster.GetState(cfg, nodesState, controlPlaneState), nil
 }
 
 func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {
@@ -114,53 +114,4 @@ func (r *reconciler) getControlPlanePods(ctx context.Context) (*corev1.PodList, 
 	}
 
 	return res, nil
-}
-
-func combine(cfg *cluster.Configuration, nodes *cluster.NodesState, controlPlane *cluster.ControlPlaneState) *cluster.State {
-	state := &cluster.State{
-		Spec: cluster.Spec{
-			DesiredVersion: cfg.DesiredVersion,
-			UpdateMode:     cfg.UpdateMode,
-		},
-		Status: cluster.Status{
-			CurrentVersion:    nodes.CurrentVersion,
-			ControlPlaneState: *controlPlane,
-			NodesState:        *nodes,
-		},
-	}
-
-	determineStatePhase(state)
-
-	return state
-}
-
-func determineStatePhase(s *cluster.State) {
-	var phase cluster.Phase
-	switch s.ControlPlaneState.Phase {
-	case cluster.ControlPlaneUpdating:
-		phase = cluster.ClusterControlPlaneUpdating
-	case cluster.ControlPlaneVersionDrift:
-		phase = cluster.ClusterControlPlaneVersionDrift
-	case cluster.ControlPlaneInconsistent:
-		phase = cluster.ClusterControlPlaneInconsistent
-	case cluster.ControlPlaneUpToDate:
-		if s.Spec.UpdateMode == cluster.UpdateModeAutomatic && s.NodesState.CurrentVersion > s.Spec.DesiredVersion {
-			phase = cluster.ClusterVersionDrift
-			break
-		}
-		if s.NodesState.UpToDateCount < s.NodesState.DesiredCount {
-			phase = cluster.ClusterNodesUpdating
-			break
-		}
-		if s.NodesState.UpToDateCount == s.NodesState.DesiredCount {
-			phase = cluster.ClusterUpToDate
-			break
-		}
-		if s.NodesState.UpToDateCount > s.NodesState.DesiredCount {
-			phase = cluster.ClusterInconsistent
-			break
-		}
-	}
-
-	s.Phase = phase
 }

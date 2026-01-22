@@ -21,16 +21,65 @@ type State struct {
 	Status
 }
 
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState) *State {
+	state := &State{
+		Spec: Spec{
+			DesiredVersion: cfg.DesiredVersion,
+			UpdateMode:     cfg.UpdateMode,
+		},
+		Status: Status{
+			CurrentVersion:    nodes.CurrentVersion,
+			ControlPlaneState: *controlPlane,
+			NodesState:        *nodes,
+		},
+	}
+
+	determineStatePhase(state)
+
+	return state
+}
+
+func determineStatePhase(s *State) {
+	var phase Phase
+	switch s.ControlPlaneState.Phase {
+	case ControlPlaneUpdating:
+		phase = ClusterControlPlaneUpdating
+	case ControlPlaneVersionDrift:
+		phase = ClusterControlPlaneVersionDrift
+	case ControlPlaneInconsistent:
+		phase = ClusterControlPlaneInconsistent
+	case ControlPlaneUpToDate:
+		if s.Spec.UpdateMode == UpdateModeAutomatic && s.NodesState.CurrentVersion > s.Spec.DesiredVersion {
+			phase = ClusterVersionDrift
+			break
+		}
+		if s.NodesState.UpToDateCount < s.NodesState.DesiredCount {
+			phase = ClusterNodesUpdating
+			break
+		}
+		if s.NodesState.UpToDateCount == s.NodesState.DesiredCount {
+			phase = ClusterUpToDate
+			break
+		}
+		if s.NodesState.UpToDateCount > s.NodesState.DesiredCount {
+			phase = ClusterInconsistent
+			break
+		}
+	}
+
+	s.Phase = phase
+}
+
 type Spec struct {
-	DesiredVersion string     `yaml:"desiredVersion"`
-	UpdateMode     UpdateMode `yaml:"updateMode"`
+	DesiredVersion string
+	UpdateMode     UpdateMode
 }
 
 type Status struct {
-	CurrentVersion    string            `json:"currentVersion" yaml:"currentVersion"`
-	ControlPlaneState ControlPlaneState `json:"controlPlane" yaml:"controlPlane"`
-	NodesState        NodesState        `json:"nodes" yaml:"nodes"`
-	Phase             Phase             `json:"phase" yaml:"phase"`
+	CurrentVersion    string
+	ControlPlaneState ControlPlaneState
+	NodesState        NodesState
+	Phase             Phase
 }
 
 type Phase string

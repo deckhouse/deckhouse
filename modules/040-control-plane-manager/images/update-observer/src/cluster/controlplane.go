@@ -24,11 +24,11 @@ import (
 )
 
 type ControlPlaneState struct {
-	DesiredCount  int                         `json:"desiredCount" yaml:"desiredCount"`
-	UpToDateCount int                         `json:"upToDateCount" yaml:"upToDateCount"`
-	Progress      string                      `json:"progress" yaml:"progress"`
-	Phase         ControlPlanePhase           `json:"phase" yaml:"phase"`
-	NodesState    map[string]*MasterNodeState `json:",inline" yaml:",inline"`
+	DesiredCount  int
+	UpToDateCount int
+	Progress      string
+	Phase         ControlPlanePhase
+	NodesState    map[string]*MasterNodeState
 }
 
 type ControlPlanePhase string
