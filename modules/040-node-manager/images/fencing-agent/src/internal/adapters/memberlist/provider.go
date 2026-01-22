@@ -23,12 +23,11 @@ type Provider struct {
 	logger       *log.Logger
 	list         *memberlist.Memberlist
 	eventHandler EventHandler
-	nodeIp       string
 	isAlone      atomic.Bool
 }
 
-func NewProvider(cfg fencingconfig.MemberlistConfig, logger *log.Logger, eventHandler EventHandler, nodeIp string, nodeName string) (*Provider, error) {
-	config := createConfig(cfg, eventHandler, nodeIp, nodeName)
+func NewProvider(cfg fencingconfig.MemberlistConfig, logger *log.Logger, eventHandler EventHandler, nodeIP string, nodeName string) (*Provider, error) {
+	config := createConfig(cfg, eventHandler, nodeIP, nodeName)
 	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, err // TODO think, logging
@@ -117,7 +116,7 @@ func (p *Provider) IsAlone() bool {
 func createConfig(
 	cfg fencingconfig.MemberlistConfig,
 	eventHandler EventHandler,
-	nodeIp string,
+	nodeIP string,
 	nodeName string) *memberlist.Config {
 	config := memberlist.DefaultLANConfig()
 	config.ProbeInterval = cfg.ProbeInterval
@@ -130,7 +129,7 @@ func createConfig(
 	config.BindPort = cfg.MemberListPort
 	config.AdvertisePort = cfg.MemberListPort
 	config.Name = nodeName
-	config.AdvertiseAddr = nodeIp
+	config.AdvertiseAddr = nodeIP
 	config.Events = eventHandler
 	return config
 }

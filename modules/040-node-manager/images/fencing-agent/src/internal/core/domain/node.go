@@ -20,7 +20,7 @@ type EventType int
 
 const (
 	EventTypeJoin  EventType = 1
-	EventTypeLeave           = 2
+	EventTypeLeave EventType = 2
 )
 
 type ClusterState struct {

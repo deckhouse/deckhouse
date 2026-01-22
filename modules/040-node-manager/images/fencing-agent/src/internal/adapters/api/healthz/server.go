@@ -19,7 +19,7 @@ type Server struct {
 
 func New(logger *log.Logger, bindAddress string) *Server {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 	srv := http.Server{Addr: bindAddress, Handler: mux}

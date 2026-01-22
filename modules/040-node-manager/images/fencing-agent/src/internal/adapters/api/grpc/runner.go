@@ -94,7 +94,7 @@ func UnaryRateLimiterInterceptor(l *rate.Limiter, logger *log.Logger) grpc.Unary
 	return func(
 		ctx context.Context,
 		req any,
-		info *grpc.UnaryServerInfo,
+		_ *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
 	) (any, error) {
 		if !l.Allow() {
@@ -109,7 +109,7 @@ func StreamServerInterceptor(l *rate.Limiter, logger *log.Logger) grpc.StreamSer
 	return func(
 		srv interface{},
 		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
+		_ *grpc.StreamServerInfo,
 		handler grpc.StreamHandler,
 	) error {
 		if !l.Allow() {

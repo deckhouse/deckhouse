@@ -9,9 +9,10 @@ import (
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -46,7 +47,7 @@ func NewProvider(client kubernetes.Interface,
 func (p *Provider) GetNodes(ctx context.Context) ([]domain.Node, error) {
 	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", p.nodeGroup)
 	p.logger.Debug("Get nodes", slog.String("labelSelector", labelSelector))
-	nodes, err := p.client.CoreV1().Nodes().List(ctx, v1.ListOptions{
+	nodes, err := p.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
@@ -73,7 +74,7 @@ func (p *Provider) IsAvailable(ctx context.Context) bool {
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
-	_, err := p.client.CoreV1().Nodes().List(ctx, v1.ListOptions{})
+	_, err := p.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{})
 	if err != nil {
 		p.logger.Debug("Kubernetes API is not available", sl.Err(err))
 		return false
@@ -85,7 +86,7 @@ func (p *Provider) IsMaintenanceMode(ctx context.Context) (bool, error) {
 	ctx, cancel := context.WithTimeout(ctx, p.timeout)
 	defer cancel()
 
-	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1.GetOptions{})
+	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1meta.GetOptions{})
 	if err != nil {
 		return false, fmt.Errorf("failed to get node %s: %w", p.nodeName, err)
 	}
@@ -110,7 +111,7 @@ func (p *Provider) SetNodeLabel(ctx context.Context, key, value string) error {
 	))
 
 	_, err := p.client.CoreV1().Nodes().
-		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1.PatchOptions{})
+		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
 
 	if err != nil {
 		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
@@ -130,7 +131,7 @@ func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
 	patch := []byte(fmt.Sprintf(`{"metadata":{"labels":{%q:null}}}`, key))
 
 	_, err := p.client.CoreV1().Nodes().
-		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1.PatchOptions{})
+		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
 	}
@@ -141,18 +142,16 @@ func (p *Provider) RemoveNodeLabel(ctx context.Context, key string) error {
 	return nil
 }
 
-
 func (p *Provider) GetCurrentNodeIP(ctx context.Context, kubeClient kubernetes.Interface, nodeName string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
-	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1.GetOptions{})
+	node, err := kubeClient.CoreV1().Nodes().Get(ctx, nodeName, v1meta.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", nodeName, err)
 	}
 
 	for _, addr := range node.Status.Addresses {
-		if addr.Type == "InternalIP" {
-
+		if addr.Type == v1.NodeInternalIP {
 			return addr.Address, nil
 		}
 	}

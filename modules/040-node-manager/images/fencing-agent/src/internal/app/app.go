@@ -8,8 +8,8 @@ import (
 	"fencing-agent/internal/adapters/infrastructure/kubeclient"
 	"fencing-agent/internal/adapters/kubeapi"
 	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/adapters/memberlist/event_handler"
 	"fencing-agent/internal/adapters/memberlist/eventbus"
+	"fencing-agent/internal/adapters/memberlist/eventhandler"
 	"fencing-agent/internal/adapters/watchdog/softdog"
 	fencingconfig "fencing-agent/internal/config"
 	"fencing-agent/internal/core/domain"
@@ -54,7 +54,7 @@ func NewApplication(
 	}
 
 	eventBus := eventbus.NewEventsBus()
-	eventHandler := event_handler.NewEventHandler(logger, eventBus)
+	eventHandler := eventhandler.NewEventHandler(logger, eventBus)
 
 	clusterProvider := kubeapi.NewProvider(
 		kubeClient,

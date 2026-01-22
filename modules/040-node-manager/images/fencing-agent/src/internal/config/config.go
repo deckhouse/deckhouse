@@ -1,4 +1,4 @@
-package fencing_config
+package fencingconfig
 
 import (
 	"time"

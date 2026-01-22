@@ -1,4 +1,4 @@
-package event_handler
+package eventhandler
 
 import (
 	"fencing-agent/internal/core/domain"
