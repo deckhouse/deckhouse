@@ -133,6 +133,8 @@ spec:
           mountPath: /var/run/frr
         - name: frr-logs
           mountPath: /var/log/frr
+        - name: frr-tmp
+          mountPath: /var/tmp/frr
         ports:
         - containerPort: 179
           name: bgp
@@ -342,5 +344,7 @@ spec:
       - name: frr-run
         emptyDir: {}
       - name: frr-logs
+        emptyDir: {}
+      - name: frr-tmp
         emptyDir: {}
 {{- end }}
