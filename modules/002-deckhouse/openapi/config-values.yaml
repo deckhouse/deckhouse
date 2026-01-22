@@ -324,7 +324,7 @@ properties:
       Settings for accessing the container registry with Deckhouse images.
 
       This parameter allows configuring how Deckhouse connects to the container registry to pull its own component images.
-      In clusters where this configuration is not supported, the registry connection setup is done manually using the `change-registry` helper script.
+      Settings are processed by the internal registry module. In clusters where this configuration is not supported, the registry connection setup is done manually using the `change-registry` helper script.
     x-examples:
       - mode: Unmanaged
       - mode: Unmanaged
