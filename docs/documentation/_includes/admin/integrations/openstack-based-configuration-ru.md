@@ -437,9 +437,9 @@ spec:
 | Compute (Nova)                   | v2         |
 | Network (Neutron)                | v2         |
 | Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) &#8432; | v2         |
+| Load Balancing (Octavia) *       | v2         |
 
-&#8432;  Если нужно заказывать Load Balancer.
+\* Если нужно заказывать Load Balancer.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
