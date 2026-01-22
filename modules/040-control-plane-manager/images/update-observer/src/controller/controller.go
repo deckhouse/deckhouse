@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"time"
+	"update-observer/cluster"
 	"update-observer/common"
 
 	"golang.org/x/time/rate"
@@ -106,7 +107,7 @@ func getSecretPredicate() predicate.Predicate {
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	klog.Info("Reconcile started", "request", req.NamespacedName)
+	klog.Info("Reconcile started", " request ", req.NamespacedName)
 
 	configMap, err := r.getConfigMap(ctx)
 	if err != nil {
@@ -128,6 +129,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	klog.Info("Reconcile completed successfully")
+	if clusterState.Status.Phase != cluster.ClusterUpToDate {
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
+	}
+
 	return reconcile.Result{}, nil
 }
