@@ -64,6 +64,8 @@ func (h *HealthMonitor) Run(ctx context.Context, interval time.Duration) {
 }
 
 func (h *HealthMonitor) Stop(ctx context.Context) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	if h.watchdog.IsArmed() {
 		return h.stopWatchdog(ctx)
 	}

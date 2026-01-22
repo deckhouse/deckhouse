@@ -30,7 +30,6 @@ type Application struct {
 
 	clusterProvider    *kubeapi.Provider
 	membershipProvider *memberlist.Provider
-	watchDogController *softdog.WatchDog
 	eventBus           *eventbus.EventsBus
 
 	healthMonitor  *service.HealthMonitor
@@ -95,7 +94,6 @@ func NewApplication(
 		logger:             logger,
 		clusterProvider:    clusterProvider,
 		membershipProvider: memberlistProvider,
-		watchDogController: watchdogController,
 		eventBus:           eventBus,
 		healthMonitor:      healthMonitor,
 		statusProvider:     statusProvider,
@@ -144,10 +142,10 @@ func (a *Application) stop() error {
 
 	var stopErr error
 
-	a.logger.Debug("stopping health monitor")
-	if err := a.healthMonitor.Stop(ctx); err != nil {
-		a.logger.Error("failed to stop health monitor", sl.Err(err))
-		stopErr = errors.Join(stopErr, fmt.Errorf("failed to stop health monitor: %w", err))
+	a.logger.Debug("shutting down healthz server")
+	if err := a.healthzServer.StopHealthzServer(ctx); err != nil {
+		a.logger.Error("failed to shutdown healthz server", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to shutdown healthz server: %w", err))
 	}
 
 	a.logger.Debug("shutting down gRPC server")
@@ -156,10 +154,10 @@ func (a *Application) stop() error {
 		stopErr = errors.Join(stopErr, fmt.Errorf("failed to shutdown gRPC server: %w", err))
 	}
 
-	a.logger.Debug("shutting down healthz server")
-	if err := a.healthzServer.StopHealthzServer(ctx); err != nil {
-		a.logger.Error("failed to shutdown healthz server", sl.Err(err))
-		stopErr = errors.Join(stopErr, fmt.Errorf("failed to shutdown healthz server: %w", err))
+	a.logger.Debug("stopping health monitor")
+	if err := a.healthMonitor.Stop(ctx); err != nil {
+		a.logger.Error("failed to stop health monitor", sl.Err(err))
+		stopErr = errors.Join(stopErr, fmt.Errorf("failed to stop health monitor: %w", err))
 	}
 
 	a.logger.Debug("shutting down memberlist")
@@ -167,6 +165,7 @@ func (a *Application) stop() error {
 		a.logger.Error("failed to stop memberlist", sl.Err(err))
 		stopErr = errors.Join(stopErr, fmt.Errorf("failed to stop memberlist: %w", err))
 	}
+
 	return stopErr
 }
 

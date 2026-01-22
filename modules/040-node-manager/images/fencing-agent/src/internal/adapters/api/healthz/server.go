@@ -41,7 +41,7 @@ func (srv *Server) StartHealthzServer() {
 func (srv *Server) StopHealthzServer(ctx context.Context) error {
 	srv.logger.Info("Stopping healthz server", slog.String("bindAddress", srv.bindAddr))
 	if err := srv.srv.Shutdown(ctx); err != nil {
-		srv.logger.Error("Healthz server shutdown failed, force...", sl.Err(err))
+		srv.logger.Error("Healthz server gracefull stop failed, force...", sl.Err(err))
 		err = srv.srv.Close()
 		return fmt.Errorf("failed to force close healthz server: %w", err)
 	}
