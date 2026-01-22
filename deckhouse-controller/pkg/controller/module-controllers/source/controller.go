@@ -221,7 +221,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 	span.SetAttributes(attribute.String("source", source.Name))
 
-	scanInterval, _ := time.ParseDuration(source.Spec.ScanInterval)
+	scanInterval := source.Spec.ScanInterval.Duration
 	if scanInterval == 0 {
 		scanInterval = defaultScanInterval
 	}
