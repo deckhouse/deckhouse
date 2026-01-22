@@ -41,7 +41,6 @@ spec:
         - sh
         - -c
         - |
-          NODE_IP=$(cat /etc/hostip)
           CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
@@ -52,15 +51,21 @@ spec:
               -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
               -e "s|RR_SERVERS_PLACEHOLDER||g" \
               /etc/frr-template/frr.conf.template > /etc/frr/frr.conf
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: config-template
           mountPath: /etc/frr-template
           readOnly: true
         - name: config
           mountPath: /etc/frr
-        - name: hostip
-          mountPath: /etc/hostip
-          readOnly: true
         resources:
           requests:
             cpu: 50m
@@ -113,8 +118,6 @@ spec:
         - -c
         - |
           set -e
-          NODE_IP=$(cat /etc/hostip)
-          NODE_NAME=${NODE_NAME:-$(hostname)}
           CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
           SERVICE_NAME="evpn-rr"
           SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
@@ -188,15 +191,21 @@ spec:
 
             sleep 10
           done
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
         volumeMounts:
         - name: config-template
           mountPath: /etc/frr-template
           readOnly: true
         - name: config
           mountPath: /etc/frr
-        - name: hostip
-          mountPath: /etc/hostip
-          readOnly: true
         - name: tmp
           mountPath: /tmp
         resources:
@@ -276,12 +285,6 @@ spec:
       - name: sys
         hostPath:
           path: /sys
-      - name: hostip
-        downwardAPI:
-          items:
-          - path: hostip
-            fieldRef:
-              fieldPath: status.hostIP
       - name: frr-run
         emptyDir: {}
 {{- end }}
