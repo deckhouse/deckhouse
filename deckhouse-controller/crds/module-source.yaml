@@ -50,6 +50,7 @@ spec:
                 scanInterval:
                   type: string
                   x-doc-default: 3m
+                  x-doc-examples: ['5m', '1h', '6h30m']
                   description: |
                     Interval for registry scan.
                     
