@@ -68,6 +68,12 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 		},
+		{
+			Name:       "metal_load_balancer_classes",
+			ApiVersion: "network.deckhouse.io/v1alpha1",
+			Kind:       "MetalLoadBalancerClass",
+			FilterFunc: applyMetalLoadBalancerClassFilter,
+		},
 	},
 }, handleCloudProviderDiscoveryDataSecret)
 
@@ -89,6 +95,40 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return storageClass, nil
+}
+
+func applyMetalLoadBalancerClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	name := obj.GetName()
+
+	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
+	if err != nil || !found {
+		return nil, fmt.Errorf("failed to get spec from MetalLoadBalancerClass: %v", err)
+	}
+
+	var addressPool []string
+	var interfaces []string
+	var isDefault bool
+
+	if pool, found, _ := unstructured.NestedStringSlice(spec, "addressPool"); found {
+		addressPool = pool
+	}
+
+	if l2, found, _ := unstructured.NestedMap(spec, "l2"); found {
+		if ifaces, found, _ := unstructured.NestedStringSlice(l2, "interfaces"); found {
+			interfaces = ifaces
+		}
+	}
+
+	if def, found, _ := unstructured.NestedBool(spec, "isDefault"); found {
+		isDefault = def
+	}
+
+	return metalLoadBalancerClass{
+		Name:        name,
+		AddressPool: addressPool,
+		Interfaces:  interfaces,
+		IsDefault:   isDefault,
+	}, nil
 }
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
@@ -145,6 +185,11 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 	err = handleDiscoveryDataStorageClasses(input, discoveryData.StorageClassList)
 	if err != nil {
 		return fmt.Errorf("failed to handle discovery data storage classes: %v", err)
+	}
+
+	err = handleDiscoveryDataLoadBalancerClasses(input, discoveryData.LoadBalancerClassList)
+	if err != nil {
+		return fmt.Errorf("failed to handle discovery data load balancer classes: %v", err)
 	}
 
 	return nil
@@ -233,12 +278,81 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageC
 	input.Values.Set("cloudProviderDvp.internal.storageClasses", storageClasses)
 }
 
+func handleDiscoveryDataLoadBalancerClasses(
+	input *go_hook.HookInput,
+	dvpLoadBalancerClassList []cloudDataV1.DVPLoadBalancerClass,
+) error {
+	dvpLoadBalancerClass := make(map[string]cloudDataV1.DVPLoadBalancerClass, len(dvpLoadBalancerClassList))
+
+	for _, lbc := range dvpLoadBalancerClassList {
+		if !lbc.IsEnabled {
+			continue
+		}
+		dvpLoadBalancerClass[lbc.Name] = lbc
+	}
+
+	loadBalancerClasses := make([]metalLoadBalancerClass, 0, len(dvpLoadBalancerClassList))
+
+	mlbcSnapshots := input.Snapshots.Get("metal_load_balancer_classes")
+	for mlbcSnapshot, err := range sdkobjectpatch.SnapshotIter[metalLoadBalancerClass](mlbcSnapshots) {
+		if err != nil {
+			return fmt.Errorf("failed to iterate over 'metal_load_balancer_classes' snapshots: %v", err)
+		}
+
+		if _, ok := dvpLoadBalancerClass[mlbcSnapshot.Name]; !ok {
+			loadBalancerClasses = append(loadBalancerClasses, mlbcSnapshot)
+		}
+	}
+
+	lbcExcludes, ok := input.Values.GetOk("cloudProviderDvp.loadBalancerClass.exclude")
+	if ok {
+		for _, esc := range lbcExcludes.Array() {
+			rg := regexp.MustCompile("^(" + esc.String() + ")$")
+			for class := range dvpLoadBalancerClass {
+				if rg.MatchString(class) {
+					delete(dvpLoadBalancerClass, class)
+				}
+			}
+		}
+	}
+
+	for _, lbc := range dvpLoadBalancerClass {
+		mlbc := metalLoadBalancerClass{
+			Name:        lbc.Name,
+			AddressPool: lbc.AddressPool,
+			Interfaces:  lbc.Interfaces,
+			IsDefault:   lbc.IsDefault,
+		}
+		loadBalancerClasses = append(loadBalancerClasses, mlbc)
+	}
+
+	sort.SliceStable(loadBalancerClasses, func(i, j int) bool {
+		return loadBalancerClasses[i].Name < loadBalancerClasses[j].Name
+	})
+
+	input.Logger.Info("Found DVP load balancer classes: %v", loadBalancerClasses)
+
+	setLoadBalancerClassesValues(input, loadBalancerClasses)
+	return nil
+}
+
+func setLoadBalancerClassesValues(input *go_hook.HookInput, loadBalancerClasses []metalLoadBalancerClass) {
+	input.Values.Set("cloudProviderDvp.internal.loadBalancerClasses", loadBalancerClasses)
+}
+
 type storageClass struct {
 	Name                 string `json:"name"`
 	DVPStorageClass      string `json:"dvpStorageClass"`
 	VolumeBindingMode    string `json:"volumeBindingMode"`
 	ReclaimPolicy        string `json:"reclaimPolicy"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+}
+
+type metalLoadBalancerClass struct {
+	Name        string   `json:"name"`
+	AddressPool []string `json:"addressPool"`
+	Interfaces  []string `json:"interfaces"`
+	IsDefault   bool     `json:"isDefault"`
 }
 
 func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {

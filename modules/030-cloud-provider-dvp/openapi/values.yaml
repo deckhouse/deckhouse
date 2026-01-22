@@ -477,6 +477,27 @@ properties:
                   type: boolean
                 IsDefault:
                   type: boolean
+          loadBalancerClasses:
+            type: array
+            description: |
+              A list of load balancer classes discovered in the cloud.
+            items:
+              type: object
+              properties:
+                name:
+                  type: string
+                addressPool:
+                  type: array
+                  items:
+                    type: string
+                interfaces:
+                  type: array
+                  items:
+                    type: string
+                isEnabled:
+                  type: boolean
+                isDefault:
+                  type: boolean
       storageClasses:
         type: array
         items:
@@ -492,3 +513,20 @@ properties:
               type: boolean
             dvpStorageClass:
               type: string
+      loadBalancerClasses:
+        type: array
+        items:
+          type: object
+          properties:
+            name:
+              type: string
+            addressPool:
+              type: array
+              items:
+                type: string
+            interfaces:
+              type: array
+              items:
+                type: string
+            isDefault:
+              type: boolean
