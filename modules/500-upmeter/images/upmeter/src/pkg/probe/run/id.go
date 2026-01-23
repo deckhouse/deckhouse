@@ -43,12 +43,12 @@ var id string
 
 func ID() string {
 	if id == "" {
-		id = nodeNameHash(os.Getenv("NODE_NAME"))
+		id = NodeNameHash(os.Getenv("NODE_NAME"))
 	}
 	return id
 }
 
-func nodeNameHash(nodeName string) string {
+func NodeNameHash(nodeName string) string {
 	h32 := murmur3.New32WithSeed(seed)
 	_, _ = h32.Write([]byte(nodeName))
 	return strconv.FormatInt(int64(h32.Sum32()), 16)
