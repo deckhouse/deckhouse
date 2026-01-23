@@ -68,12 +68,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				},
 			},
 		},
-		{
-			Name:       "metal_load_balancer_classes",
-			ApiVersion: "network.deckhouse.io/v1alpha1",
-			Kind:       "MetalLoadBalancerClass",
-			FilterFunc: applyMetalLoadBalancerClassFilter,
-		},
 	},
 }, handleCloudProviderDiscoveryDataSecret)
 
@@ -97,39 +91,6 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return storageClass, nil
 }
 
-func applyMetalLoadBalancerClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	name := obj.GetName()
-
-	spec, found, err := unstructured.NestedMap(obj.Object, "spec")
-	if err != nil || !found {
-		return nil, fmt.Errorf("failed to get spec from MetalLoadBalancerClass: %v", err)
-	}
-
-	var addressPool []string
-	var interfaces []string
-	var isDefault bool
-
-	if pool, found, _ := unstructured.NestedStringSlice(spec, "addressPool"); found {
-		addressPool = pool
-	}
-
-	if l2, found, _ := unstructured.NestedMap(spec, "l2"); found {
-		if ifaces, found, _ := unstructured.NestedStringSlice(l2, "interfaces"); found {
-			interfaces = ifaces
-		}
-	}
-
-	if def, found, _ := unstructured.NestedBool(spec, "isDefault"); found {
-		isDefault = def
-	}
-
-	return metalLoadBalancerClass{
-		Name:        name,
-		AddressPool: addressPool,
-		Interfaces:  interfaces,
-		IsDefault:   isDefault,
-	}, nil
-}
 
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
@@ -291,19 +252,6 @@ func handleDiscoveryDataLoadBalancerClasses(
 		dvpLoadBalancerClass[lbc.Name] = lbc
 	}
 
-	loadBalancerClasses := make([]metalLoadBalancerClass, 0, len(dvpLoadBalancerClassList))
-
-	mlbcSnapshots := input.Snapshots.Get("metal_load_balancer_classes")
-	for mlbcSnapshot, err := range sdkobjectpatch.SnapshotIter[metalLoadBalancerClass](mlbcSnapshots) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'metal_load_balancer_classes' snapshots: %v", err)
-		}
-
-		if _, ok := dvpLoadBalancerClass[mlbcSnapshot.Name]; !ok {
-			loadBalancerClasses = append(loadBalancerClasses, mlbcSnapshot)
-		}
-	}
-
 	lbcExcludes, ok := input.Values.GetOk("cloudProviderDvp.loadBalancerClass.exclude")
 	if ok {
 		for _, esc := range lbcExcludes.Array() {
@@ -316,6 +264,7 @@ func handleDiscoveryDataLoadBalancerClasses(
 		}
 	}
 
+	loadBalancerClasses := make([]metalLoadBalancerClass, 0, len(dvpLoadBalancerClass))
 	for _, lbc := range dvpLoadBalancerClass {
 		mlbc := metalLoadBalancerClass{
 			Name:        lbc.Name,
