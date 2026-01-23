@@ -43,7 +43,7 @@ git:
         - '**/templates/*.yaml'
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
@@ -61,6 +61,9 @@ shell:
     - cd /src
     - export CGO_ENABLED=0 GOOS=linux
     - |
-      {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o multitenancy-manager ./cmd/main.go`) | indent 6 }}
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags '-s -w' -o multitenancy-manager ./cmd/main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 multitenancy-manager
     - chmod 0700 multitenancy-manager
