@@ -147,7 +147,7 @@ spec:
             {{- include "evpn_client_resources" . | nindent 12 }}
 {{- end }}
       - name: config-updater
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
+        # {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list . "alpine") }}
         imagePullPolicy: IfNotPresent
         command:
