@@ -73,7 +73,7 @@ spec:
                 - ALL
           imagePullPolicy: IfNotPresent
           env:
-            - name: GRPC_ADDRESS
+            - name: GRPC_SOCKET_PATH
               value: "/tmp/fencing-agent.sock"
             - name: PROBE_INTERVAL
               value: "200ms"

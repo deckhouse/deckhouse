@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fencing-agent/internal/lib/logger/sl"
+	"fmt"
 	"sync"
 	"time"
 
@@ -67,8 +68,11 @@ func (h *HealthMonitor) Stop(ctx context.Context) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.watchdog.IsArmed() {
-		return h.stopWatchdog(ctx)
+		if err := h.stopWatchdog(ctx); err != nil {
+			return fmt.Errorf("unable to disarm watchdog: %w", err)
+		}
 	}
+	h.logger.Info("health monitor stopped successfully")
 	return nil
 }
 
@@ -77,7 +81,7 @@ func (h *HealthMonitor) check(ctx context.Context) {
 	defer h.mu.Unlock()
 	inMaintenance, err := h.cluster.IsMaintenanceMode(ctx)
 	if err != nil {
-		h.logger.Debug("Cannot check maintenance mode", sl.Err(err))
+		h.logger.Debug("cannot check maintenance mode", sl.Err(err))
 		inMaintenance = false
 	}
 	if inMaintenance {
@@ -86,24 +90,24 @@ func (h *HealthMonitor) check(ctx context.Context) {
 				h.logger.Error("Unable to disarm watchdog", sl.Err(err))
 			}
 		}
-		h.logger.Info("Maintenance mode is on, so not feeding the watchdog")
+		h.logger.Info("maintenance mode is on, so not feeding the watchdog")
 		return
 	}
 	if !h.watchdog.IsArmed() {
-		h.logger.Info("Arming watchdog")
+		h.logger.Info("arming watchdog")
 		if err := h.startWatchdog(ctx); err != nil {
-			h.logger.Error("Unable to arm watchdog", sl.Err(err))
+			h.logger.Error("unable to arm watchdog, health check doesn't working, try again...", sl.Err(err))
 			return
 		}
 	}
 	shouldFeed := h.shouldFeedWatchDog(ctx)
 	if shouldFeed {
-		h.logger.Debug("Feeding the watchdog")
+		h.logger.Debug("feeding the watchdog")
 		if err := h.watchdog.Feed(); err != nil {
 			h.logger.Error("Unable to feed watchdog", sl.Err(err))
 		}
 	} else {
-		h.logger.Warn("Not feeding the watchdog, will reboot soon")
+		h.logger.Warn("not feeding the watchdog, will reboot soon")
 	}
 }
 

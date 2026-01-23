@@ -10,7 +10,7 @@ import (
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/memberlist/eventbus"
 	"fencing-agent/internal/adapters/memberlist/eventhandler"
-	"fencing-agent/internal/adapters/watchdog/softdog"
+	"fencing-agent/internal/adapters/watchdog/fakedog"
 	fencingconfig "fencing-agent/internal/config"
 	"fencing-agent/internal/core/domain"
 	"fencing-agent/internal/core/service"
@@ -52,9 +52,6 @@ func NewApplication(
 		logger.Fatal("Unable to create a kube-client", sl.Err(err))
 	}
 
-	eventBus := eventbus.NewEventsBus()
-	eventHandler := eventhandler.NewEventHandler(logger, eventBus)
-
 	clusterProvider := kubeapi.NewProvider(
 		kubeClient,
 		logger,
@@ -67,14 +64,19 @@ func NewApplication(
 		return nil, fmt.Errorf("failed to get current node IP: %w", err)
 	}
 
+	eventBus := eventbus.NewEventsBus()
+	eventHandler := eventhandler.NewEventHandler(logger, eventBus)
+
 	memberlistProvider, err := memberlist.NewProvider(config.Memberlist, logger, eventHandler, nodeIP, config.NodeName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create memberlist provider: %w", err)
 	}
 
-	watchdogController := softdog.NewWatchdog(config.Watchdog.WatchdogDevice)
+	//watchdogController := softdog.NewWatchdog(config.Watchdog.WatchdogDevice)
+	var dogSig []byte
+	fakeDog := fakedog.NewWatchdog(&dogSig)
 
-	healthMonitor := service.NewHealthMonitor(clusterProvider, memberlistProvider, watchdogController, logger)
+	healthMonitor := service.NewHealthMonitor(clusterProvider, memberlistProvider, fakeDog, logger)
 
 	statusProvider := service.NewStatusProvider(clusterProvider, memberlistProvider)
 
@@ -112,7 +114,6 @@ func (a *Application) Run(ctx context.Context) error {
 	go func() {
 		a.logger.Debug("Starting Health Monitor")
 		a.healthMonitor.Run(ctx, a.config.KubeAPI.KubernetesAPICheckInterval)
-		a.logger.Debug("Health Monitor stopped")
 	}()
 
 	grpcErrChan := make(chan error, 1)

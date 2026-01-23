@@ -40,8 +40,9 @@ func NewProvider(cfg fencingconfig.MemberlistConfig, logger *log.Logger, eventHa
 }
 
 func (p *Provider) Start(peers []string) error {
+	const op = "memberlist.Provider.Start"
 	if len(peers) == 0 {
-		p.logger.Info("No other peers in node group, starting as a single node")
+		p.logger.Info("No other peers in node group, starting as a single node", slog.String("op", op))
 		p.isAlone.Store(true)
 		return nil
 	}
@@ -50,7 +51,7 @@ func (p *Provider) Start(peers []string) error {
 	if err != nil {
 		return err
 	}
-	p.logger.Info("Joined to memberlist cluster", slog.Int("numJoined", numJoined))
+	p.logger.Info("Joined to memberlist cluster", slog.Int("numJoined", numJoined), slog.String("op", op))
 	p.isAlone.Store(false)
 	return nil
 }
