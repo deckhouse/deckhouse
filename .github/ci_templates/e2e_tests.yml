@@ -65,7 +65,7 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
