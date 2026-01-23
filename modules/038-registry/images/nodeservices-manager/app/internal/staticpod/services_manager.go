@@ -121,13 +121,19 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	hash = hex.EncodeToString(hashBytes)
 
 	images := staticPodImagesModel{
-		Auth:         manager.settings.ImageAuth,
-		Distribution: manager.settings.ImageDistribution,
-		Mirrorer:     manager.settings.ImageMirrorer,
+		Auth:         manager.settings.Images.Auth,
+		Distribution: manager.settings.Images.Distribution,
+		Mirrorer:     manager.settings.Images.Mirrorer,
+	}
+
+	proxyEnvs := staticPodProxyEnvsModel{
+		HTTP:    manager.settings.ProxyEnvs.HTTP,
+		HTTPS:   manager.settings.ProxyEnvs.HTTPS,
+		NoProxy: manager.settings.ProxyEnvs.NoProxy,
 	}
 
 	if changes.Pod, _, err = processTemplate(
-		config.toStaticPodConfig(images, hash, hasMirrorer, hasAuth),
+		config.toStaticPodConfig(images, proxyEnvs, hash, hasMirrorer, hasAuth),
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)

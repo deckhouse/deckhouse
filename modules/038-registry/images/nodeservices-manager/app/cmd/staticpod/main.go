@@ -48,9 +48,19 @@ func main() {
 	settings.PodNamespace = getEnvOrExit("POD_NAMESPACE")
 	log = log.With("pod.namespace", settings.PodNamespace)
 
-	settings.ImageAuth = getEnvOrExit("IMAGE_AUTH")
-	settings.ImageDistribution = getEnvOrExit("IMAGE_DISTRIBUTION")
-	settings.ImageMirrorer = getEnvOrExit("IMAGE_MIRRORER")
+	// Images
+	settings.Images = staticpod.ImagesSettings{
+		Auth:         getEnvOrExit("IMAGE_AUTH"),
+		Distribution: getEnvOrExit("IMAGE_DISTRIBUTION"),
+		Mirrorer:     getEnvOrExit("IMAGE_MIRRORER"),
+	}
+
+	// Proxy envs
+	settings.ProxyEnvs = staticpod.ProxyEnvsSettings{
+		HTTP:    os.Getenv("HTTP_PROXY"),
+		HTTPS:   os.Getenv("HTTPS_PROXY"),
+		NoProxy: os.Getenv("NO_PROXY"),
+	}
 
 	// Load Kubernetes configuration
 	cfg, err := rest.InClusterConfig()

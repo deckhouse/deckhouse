@@ -20,6 +20,10 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+var (
+	_ validation.Validatable = LocalMode{}
+)
+
 type LocalMode struct {
 	UserRW     User     `json:"user_rw"`
 	UserPuller User     `json:"user_puller"`

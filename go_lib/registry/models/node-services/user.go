@@ -20,6 +20,10 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+var (
+	_ validation.Validatable = User{}
+)
+
 // User represents a user with a name and a password hash
 type User struct {
 	Name         string `json:"name"`

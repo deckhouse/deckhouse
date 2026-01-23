@@ -43,9 +43,20 @@ type AppSettings struct {
 	PodName      string
 	PodNamespace string
 
-	ImageAuth         string
-	ImageDistribution string
-	ImageMirrorer     string
+	Images    ImagesSettings
+	ProxyEnvs ProxyEnvsSettings
+}
+
+type ImagesSettings struct {
+	Auth         string
+	Distribution string
+	Mirrorer     string
+}
+
+type ProxyEnvsSettings struct {
+	HTTP    string
+	HTTPS   string
+	NoProxy string
 }
 
 func Run(ctx context.Context, cfg *rest.Config, settings AppSettings) error {

@@ -71,9 +71,9 @@ func TestStaticPodManifest(t *testing.T) {
 	testRender(t, model)
 }
 
-func TestStaticPodManifestWithProxy(t *testing.T) {
+func TestStaticPodManifestWithProxyEnvs(t *testing.T) {
 	model := staticPodConfigModel{
-		Proxy: &staticPodProxyModel{},
+		ProxyEnvs: staticPodProxyEnvsModel{},
 	}
 
 	testRender(t, model)

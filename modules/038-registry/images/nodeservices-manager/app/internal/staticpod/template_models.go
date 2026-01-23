@@ -167,10 +167,10 @@ type staticPodConfigModel struct {
 	Images      staticPodImagesModel
 	HasMirrorer bool
 	HasAuth     bool
-	Proxy       *staticPodProxyModel
+	ProxyEnvs   staticPodProxyEnvsModel
 }
 
-type staticPodProxyModel struct {
+type staticPodProxyEnvsModel struct {
 	HTTP    string
 	HTTPS   string
 	NoProxy string
@@ -186,25 +186,14 @@ func (model staticPodConfigModel) Render() ([]byte, error) {
 	return renderTemplate("templates/static_pods/registry-nodeservices.yaml.tpl", model)
 }
 
-func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, hash string, hasMirrorer bool, hasAuth bool) staticPodConfigModel {
-	config := value.Config
-
+func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, proxyEnvs staticPodProxyEnvsModel, hash string, hasMirrorer bool, hasAuth bool) staticPodConfigModel {
 	model := staticPodConfigModel{
 		Hash:        hash,
 		Version:     value.Version,
 		Images:      images,
+		ProxyEnvs:   proxyEnvs,
 		HasMirrorer: hasMirrorer,
 		HasAuth:     hasAuth,
 	}
-
-	proxy := config.ProxyConfig
-	if proxy != nil {
-		model.Proxy = &staticPodProxyModel{
-			HTTP:    proxy.HTTP,
-			HTTPS:   proxy.HTTPS,
-			NoProxy: proxy.NoProxy,
-		}
-	}
-
 	return model
 }

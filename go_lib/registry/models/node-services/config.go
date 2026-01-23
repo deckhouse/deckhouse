@@ -25,6 +25,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
+var (
+	_ validation.Validatable = Config{}
+)
+
 // Config represents the configuration
 type Config struct {
 	CACert           string `json:"ca,omitempty"`
@@ -40,8 +44,6 @@ type Config struct {
 
 	LocalMode *LocalMode `json:"local_mode,omitempty"`
 	ProxyMode *ProxyMode `json:"proxy_mode,omitempty"`
-
-	ProxyConfig *ProxyConfig `json:"proxy_config,omitempty"`
 }
 
 func (config Config) Validate() error {
@@ -56,8 +58,6 @@ func (config Config) Validate() error {
 
 		validation.Field(&config.HTTPSecret, validation.Required),
 		validation.Field(&config.UserRO, validation.Required),
-
-		validation.Field(&config.ProxyConfig),
 
 		validation.Field(&config.LocalMode),
 		validation.Field(&config.ProxyMode),

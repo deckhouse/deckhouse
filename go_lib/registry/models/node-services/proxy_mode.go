@@ -20,6 +20,10 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 )
 
+var (
+	_ validation.Validatable = ProxyMode{}
+)
+
 type ProxyMode struct {
 	Upstream UpstreamRegistry `json:"upstream"`
 

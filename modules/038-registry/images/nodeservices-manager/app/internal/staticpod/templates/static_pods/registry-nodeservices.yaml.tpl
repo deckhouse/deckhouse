@@ -30,7 +30,7 @@ spec:
     args:
       - serve
       - /config/config.yaml
-{{- with .Proxy }}
+{{- with .ProxyEnvs }}
     env:
       {{- if .HTTP }}
       - name: HTTP_PROXY
