@@ -323,7 +323,7 @@ properties:
     description: |
       Settings for accessing the container registry with Deckhouse images.
 
-      This parameter allows configuring how Deckhouse connects to the container registry to pull its own component images.
+      This parameter allows configuring how DKP connects to the container registry to pull its own component images.
       Settings are processed by the internal registry module. In clusters where this configuration is not supported, the registry connection setup is done manually using the `change-registry` helper script.
     x-examples:
       - mode: Unmanaged
@@ -347,10 +347,10 @@ properties:
         description: |
           The mode for accessing the container registry with Deckhouse images.
 
-          - `Unmanaged` — the default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important:** changing the registry in Unmanaged mode will result in a full restart of all Deckhouse components.
-          - `Direct` — a mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important:** the first switch from `Unmanaged` to `Direct` mode will result in a full restart of all Deckhouse components.
-          - `Proxy` — a proxy mode for the registry. It launches static pods with a caching proxy registry. This mode helps reduce the number of requests to the external registry. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to Direct mode. **Important:** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all Deckhouse components.
-          - `Local` — a local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to Direct mode. **Important:** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all Deckhouse components.
+          - `Unmanaged`: The default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important.** Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
+          - `Direct`: A mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important.** The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
+          - `Proxy`: A proxy mode for the registry. It launches static pods with a caching proxy registry. This mode helps reduce the number of requests to the external registry. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
+          - `Local`: A local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
         enum: [Unmanaged, Direct, Proxy, Local]
         default: Unmanaged
       direct:
