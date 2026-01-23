@@ -221,6 +221,11 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 	span.SetAttributes(attribute.String("source", source.Name))
 
+	scanInterval := source.Spec.ScanInterval.Duration
+	if scanInterval == 0 {
+		scanInterval = defaultScanInterval
+	}
+
 	// generate options for connecting to the registry
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
@@ -268,7 +273,7 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 			return ctrl.Result{}, uerr
 		}
 
-		return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+		return ctrl.Result{RequeueAfter: scanInterval}, nil
 	}
 
 	span.AddEvent("successfully fetched the tags for the registry",
@@ -299,10 +304,10 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		return ctrl.Result{}, err
 	}
 
-	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name))
+	r.logger.Debug("module source reconciled", slog.String("source_name", source.Name), slog.String("interval", scanInterval.String()))
 
 	// everything is ok, check source on the other iterations
-	return ctrl.Result{RequeueAfter: defaultScanInterval}, nil
+	return ctrl.Result{RequeueAfter: scanInterval}, nil
 }
 
 func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.ModuleSource, opts []cr.Option, pulledModules []string) error {

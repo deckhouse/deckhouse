@@ -75,7 +75,8 @@ type ModuleSource struct {
 }
 
 type ModuleSourceSpec struct {
-	Registry ModuleSourceSpecRegistry `json:"registry"`
+	ScanInterval metav1.Duration          `json:"scanInterval"`
+	Registry     ModuleSourceSpecRegistry `json:"registry"`
 }
 
 type ModuleSourceSpecRegistry struct {
