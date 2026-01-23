@@ -42,6 +42,7 @@
 {{- define "user_authz_common_rules" }}
   {{- $context := index . 0 -}}
   {{- $role := index . 1 -}}
+  {{- $useAccessibleNamespaces := and (ne $context.Values.global.deckhouseEdition "CE") ($context.Values.userAuthz.enableMultiTenancy | default false) -}}
   {{- $mode := "" }}
   {{- if or (eq $role "User") (eq $role "PrivilegedUser") }}
     {{- $mode = "r" }}
@@ -79,18 +80,18 @@
   - resourcequotas
   verbs:
   {{- include "user_authz_verbs" "r" }}
-{{- if eq $context.Values.global.deckhouseEdition "CE" }}
-- apiGroups:
-  - ""
-  resources:
-  - namespaces
-  verbs:
-  {{- include "user_authz_verbs" "r" }}
-{{- else }}
+{{- if $useAccessibleNamespaces }}
 - apiGroups:
   - authorization.deckhouse.io
   resources:
   - accessiblenamespaces
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+{{- else }}
+- apiGroups:
+  - ""
+  resources:
+  - namespaces
   verbs:
   {{- include "user_authz_verbs" "r" }}
 {{- end }}
