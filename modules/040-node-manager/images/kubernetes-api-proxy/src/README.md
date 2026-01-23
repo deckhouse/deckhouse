@@ -290,8 +290,10 @@ kubectl apply -f deploy/daemonset.yaml
 │   ├── loadbalancer/       # Load balancer implementation
 │   └── upstream/           # Upstream server handling
 ├── pkg/                    # Public packages
-│   └── kubernetes/         # Kubernetes client utilities
+│   ├── kubernetes/         # Kubernetes client utilities
+│   └── utils/              # Some utils for slices
 ├── deploy/                 # Deployment manifests
+│   └── hack/               # Bash script for CR creation (with certificates)
 ├── Dockerfile              # Docker build configuration
 └── README.md               # This file
 ```
