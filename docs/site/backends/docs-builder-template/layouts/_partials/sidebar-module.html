@@ -1,5 +1,6 @@
 {{ $pages := (where .Site.RegularPages "File.Dir" .File.Dir).ByWeight }}
 
+  <!--noindex-->
   <div class="sidebar__wrapper-inner">
     <nav class="sidebar__container">
       <ul class="sidebar" id="mysidebar">
@@ -14,6 +15,7 @@
       </ul>
     </nav>
   </div>
+  <!--/noindex-->
 
 {{/* --- moduleSidebarPage --- */}}
 {{- define "moduleSidebarPage" }}

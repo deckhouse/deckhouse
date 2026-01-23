@@ -5,11 +5,13 @@
       <li class="breadcrumbs__item">{{ T "modules_documentation" | humanize }}</li>
     </ol>
   </div>
+  <!--noindex-->
   <div class="breadcrumbs__right">
     <ol class="breadcrumbs">
       {{- partial "breadcrumbs" . }}
     </ol>
   </div>
+  <!--/noindex-->
 
   <!--start search-->
   {{- $cachingTime := "60" }}
@@ -214,7 +216,9 @@
       $navigationContainer.css("top", headerHeight);
     </script>
     {{- if ne site.Params.mode "module" }}
-     {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
+      <!--noindex-->
+      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}
+      <!--/noindex-->
     {{- end }}
 
   </div>

@@ -12,7 +12,9 @@ layout: default
       {{ content }}
     {% unless site.mode == 'module' %}
       {%- if page.feedback != false %}
+      <!--noindex-->
       <!--#include virtual="/includes/feedback.html" -->
+      <!--/noindex-->
       {%- endif %}
     {% endunless %}
     </div>
