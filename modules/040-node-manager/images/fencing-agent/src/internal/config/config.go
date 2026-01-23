@@ -1,47 +1,68 @@
-package fencing_config
+package fencingconfig
 
 import (
-	"time"
+	"errors"
+	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {
-	WatchdogConfig   WatchdogConfig
-	MemberlistConfig MemberlistConfig
-	// TODO decide: create structures for kube-api and node
-	GRPCAddress                string        `env:"GRPC_ADDRESS" env-default:"/var/run/fencing-agent.sock"`
-	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
-	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
-	APIIsAvailableMsgInterval  time.Duration `env:"API_IS_AVAILABLE_MSG_INTERVAL" env-default:"90s"`
-	HealthProbeBindAddress     string        `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
-	NodeName                   string        `env:"NODE_NAME"`
-	NodeGroup                  string        `env:"NODE_GROUP"`
+	Watchdog               WatchdogConfig
+	Memberlist             MemberlistConfig
+	GRPC                   GRPCConfig
+	KubeAPI                KubeConfig
+	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
+	NodeName               string `env:"NODE_NAME" env-required:"true"`
+	NodeGroup              string `env:"NODE_GROUP" env-required:"true"`
+	LogLevel               string `env:"LOG_LEVEL" env-default:"info"`
 }
 
-type WatchdogConfig struct {
-	WatchdogDevice       string        `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
-	WatchdogFeedInterval time.Duration `env:"WATCHDOG_FEED_INTERVAL" env-default:"5s"`
+func (c *Config) MustLoad() {
+	readErr := cleanenv.ReadEnv(c)
+	if readErr != nil {
+		panic(readErr)
+	}
+
+	valErr := c.validate()
+	if valErr != nil {
+		panic(valErr)
+	}
 }
 
-type MemberlistConfig struct {
-	MemberlistBootstrapDelay time.Duration `env:"MEMBERLIST_BOOTSTRAP_DELAY"`
-	MemberListPort           int           `env:"MEMBERLIST_PORT"`
-	ProbeInterval            time.Duration `env:"PROBE_INTERVAL"`
-	ProbeTimeout             time.Duration `env:"PROBE_TIMEOUT"`
-	SuspicionMult            int           `env:"SUSPICION_MULT"`
-	IndirectChecks           int           `env:"INDIRECT_CHECKS"`
-	GossipInterval           time.Duration `env:"GOSSIP_INTERVAL"`
-	RetransmitMult           int           `env:"RETRANSMIT_MULT"`
-	GossipToTheDeadTime      time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME"`
-	MinEventIntervalJoin     time.Duration `env:"MIN_EVENT_INTERVAL_JOIN"`
-	MinEventIntervalLeft     time.Duration `env:"MIN_EVENT_INTERVAL_LEFT"`
+func (c *Config) validate() error {
+	validators := []func() error{
+		c.validateCommon,
+		c.GRPC.validate,
+		c.Memberlist.validate,
+		c.Watchdog.validate,
+		c.KubeAPI.validate,
+	}
+
+	for _, validator := range validators {
+		if err := validator(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
-func (c *Config) Load() error {
-	err := cleanenv.ReadEnv(c)
-	if err != nil {
-		return err
+func (c *Config) validateCommon() error {
+	if strings.TrimSpace(c.NodeName) == "" {
+		return errors.New("NODE_NAME is empty")
+	}
+
+	if strings.TrimSpace(c.NodeGroup) == "" {
+		return errors.New("NODE_GROUP is empty")
+	}
+
+	if strings.TrimSpace(c.LogLevel) == "" {
+		return errors.New("LOG_LEVEL is empty")
+	}
+
+	if strings.TrimSpace(c.HealthProbeBindAddress) == "" {
+		return errors.New("HEALTH_PROBE_BIND_ADDRESS is empty")
 	}
 	return nil
 }

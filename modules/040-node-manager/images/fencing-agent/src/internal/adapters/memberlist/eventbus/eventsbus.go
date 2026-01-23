@@ -7,11 +7,6 @@ import (
 	"sync/atomic"
 )
 
-
-const (
-	eventBuffSize = 10
-)
-
 type EventsBus struct {
 	subscribers map[chan domain.Event]*subscriber
 	mu          sync.RWMutex
@@ -40,7 +35,6 @@ func (e *EventsBus) Publish(event domain.Event) {
 		select {
 		case <-sb.ctx.Done():
 		case sb.ch <- event:
-		default:
 		}
 	}
 }
@@ -49,7 +43,7 @@ func (e *EventsBus) Subscribe(ctx context.Context) <-chan domain.Event {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
-	ch := make(chan domain.Event, eventBuffSize)
+	ch := make(chan domain.Event)
 	sub := &subscriber{
 		ch:  ch,
 		ctx: ctx,

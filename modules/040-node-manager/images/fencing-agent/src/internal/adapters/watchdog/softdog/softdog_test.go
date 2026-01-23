@@ -488,9 +488,13 @@ func TestWatchDog_ErrorMessages(t *testing.T) {
 			setup: func() *WatchDog {
 				tmpDir := t.TempDir()
 				devicePath := filepath.Join(tmpDir, "watchdog")
-				os.WriteFile(devicePath, []byte{}, 0644)
+				if err := os.WriteFile(devicePath, []byte{}, 0644); err != nil {
+					t.Fatalf("Failed to create file for test: %v", err)
+				}
 				wd := NewWatchdog(devicePath)
-				wd.Start()
+				if err := wd.Start(); err != nil {
+					t.Fatalf("Failed to start watchdog: %v", err)
+				}
 				return wd
 			},
 			operation:     func(wd *WatchDog) error { return wd.Start() },
