@@ -16,7 +16,7 @@
   <span title='{{ replace  (T "version_of_module" ) "###" $module }}'>{{ $version }}</span>
 {{- else if $moduleChannelsData }}
 <a data-proofer-ignore="" href="#" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
-<!--noindex-->
+{{ "<!--noindex-->" | safeHTML }}
 <div class="submenu-container">
     <ul class="submenu">
 
@@ -37,7 +37,7 @@
 {{- end }}
     </ul>
 </div>
-<!--/noindex-->
+{{ "<!--/noindex-->" | safeHTML }}
 <script>
   // Fix version menu item URLs for cases where the URL lacks a channel (e.g., /modules/MODULE/).
   const currentUrl = window.location.pathname;

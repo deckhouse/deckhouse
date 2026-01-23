@@ -1,5 +1,5 @@
 {{ if .Params.relatedLinks -}}
-  <!--noindex-->
+  {{ "<!--noindex-->" | safeHTML }}
   <h2>{{ T "related_additional_resources" }}</h2>
   <ul>
     {{- $module := T "module" | humanize | title}}
@@ -34,5 +34,5 @@
       {{ end }}
     {{ end }}
   </ul>
-  <!--noindex-->
+  {{ "<!--/noindex-->" | safeHTML }}
 {{- end }}
