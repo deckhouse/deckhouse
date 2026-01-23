@@ -796,7 +796,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
                         >
@@ -812,7 +812,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
                       x-doc-examples: [443]
@@ -885,7 +885,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
                         >
@@ -901,7 +901,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
                       x-doc-examples: [443]
@@ -960,7 +960,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** ACME HTTP-01 challenges (e.g. Let's Encrypt via cert-manager) require the Ingress controller to be reachable on TCP port `80`. If you set `httpsPort` without `httpPort`, or set `httpPort` to a value other than `80`, certificate issuance/renewal may stop working unless you use DNS-01 or forward port `80` to the controller externally.
                         >
@@ -976,7 +976,7 @@ spec:
                         If neither `httpPort` nor `httpsPort` is set, the service exposes the standard ports `80` and `443`.
                         If at least one of these parameters is specified, the service will listen only to explicitly specified ports for the corresponding connection type. For connection types for which no parameter is specified, nothing changes: the standard port is listened to.
 
-                        > **Caution.** Changing service ports may require recreating the service depending on the cloud provider; test it before using it in production.
+                        > **Caution.** Changing service ports may trigger provider-specific side effects (for example, recreating the LoadBalancer or changing its public IP address). Such behavior depends on the cloud implementation; test it before using it in production.
                         >
                         > **Caution.** Many applications (including some Deckhouse module components) form absolute URLs and redirects without an explicit port (assuming standard ports `80`/`443`). If you set `httpsPort` to a non-standard value, users may be redirected to TCP port `443` and links may be generated incorrectly; prefer using standard ports externally or configure external port forwarding/proxying.
                       x-doc-examples: [443]
