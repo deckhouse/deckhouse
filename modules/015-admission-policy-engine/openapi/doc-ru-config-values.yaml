@@ -30,28 +30,30 @@ properties:
 
   denyVulnerableImages:
     description: |
-      Настройки trivy-провайдера.
+      Настройки Trivy-провайдера.
 
-      Trivy-провайдер запрещает создание `Pod`/`Deployment`/`StatefulSet`/`DaemonSet` с образами, которые имеют уязвимости в пространствах имен с лейблом `security.deckhouse.io/trivy-provider: ""`.
+      Trivy-провайдер запрещает создание ресурсов Pod, Deployment, StatefulSet и DaemonSet с образами, содержащими уязвимости, в неймспейсах с лейблом `security.deckhouse.io/trivy-provider: ""`.
     properties:
       allowedSeverityLevels:
         description: |-
-          Образы контейнеров, содержащие только уязвимости указанных уровней критичности, не будут запрещены.
+          Список допустимых уровней критичности уязвимости.
+
+          Образы контейнеров, содержащие только уязвимости указанных уровней, не будут запрещены.
       storageClass:
         description: |-
-          Имя StorageClass для использования `trivy_provider`.
+          Имя StorageClass, который используется Trivy-провайдером.
 
-          Если значение не указано, то будет использоваться StorageClass, согласно настройке [глобального параметра storageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+          Если значение не задано, будет использоваться StorageClass, заданный в [глобальном параметре `settings.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
 
-          Настройка глобального параметра `storageClass` учитывается только при включении модуля. Изменение глобального параметра `storageClass` при включенном модуле не приведет к перезаказу диска.
+          Глобальный параметр `settings.modules.storageClass` применяется только при включении модуля. Изменение глобального параметра при включенном модуле не приведет к перезаказу диска.
 
-          **Внимание.** Если указать значение, отличное от текущего (используемого в существующей PVC), диск будет перезаказан, и все данные удалятся.
+          > **Внимание.** Если указать значение, отличное от текущего StorageClass, используемого существующим PersistentVolumeClaim, диск будет перезаказан, и все данные удалятся.
 
-          Если указать `false`, будет принудительно использоваться `emptyDir`.
+          Если указать `false`, вместо PVC будет принудительно использоваться `emptyDir`.
       enabled:
-        description: "Включить trivy-провайдер."
+        description: Включить Trivy-провайдер.
       registrySecrets:
         description: |
-          Список дополнительных секретов приватных регистри.
+          Список дополнительных секретов для доступа к приватным registry.
 
           По умолчанию для загрузки образов для сканирования используется секрет `deckhouse-registry`.
