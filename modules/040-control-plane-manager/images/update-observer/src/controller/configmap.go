@@ -39,28 +39,22 @@ type Spec struct {
 }
 
 type Status struct {
-	CurrentVersion string       `json:"currentVersion" yaml:"currentVersion"`
-	Phase          string       `json:"phase" yaml:"phase"`
-	ControlPlane   ControlPlane `json:"controlPlane" yaml:"controlPlane"`
-	Nodes          Nodes        `json:"nodes" yaml:"nodes"`
+	CurrentVersion string             `yaml:"currentVersion"`
+	Phase          string             `yaml:"phase"`
+	Progress       string             `yaml:"progress"`
+	ControlPlane   []ControlPlaneNode `yaml:"controlPlane"`
+	Nodes          Nodes              `yaml:"nodes"`
 }
 
-type ControlPlane struct {
-	DesiredCount  int                    `json:"desiredCount" yaml:"desiredCount"`
-	UpToDateCount int                    `json:"upToDateCount" yaml:"upToDateCount"`
-	Progress      string                 `json:"progress" yaml:"progress"`
-	Phase         string                 `json:"phase" yaml:"phase"`
-	Nodes         map[string]*MasterNode `json:",inline" yaml:",inline"`
-}
-
-type MasterNode struct {
-	Phase      string            `json:"phase" yaml:"phase"`
-	Components map[string]string `json:"components" yaml:"components"`
+type ControlPlaneNode struct {
+	Name       string            `yaml:"name"`
+	Phase      string            `yaml:"phase"`
+	Components map[string]string `yaml:"components"`
 }
 
 type Nodes struct {
-	DesiredCount  int `json:"desiredCount" yaml:"desiredCount"`
-	UpToDateCount int `json:"upToDateCount" yaml:"upToDateCount"`
+	DesiredCount  int `yaml:"desiredCount"`
+	UpToDateCount int `yaml:"upToDateCount"`
 }
 
 func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
@@ -72,20 +66,23 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		}
 	}
 
-	buildMasterNodes := func(m map[string]*cluster.MasterNodeState) map[string]*MasterNode {
-		res := make(map[string]*MasterNode, len(m))
-		for nodeName, nodeState := range m {
-			res[nodeName] = &MasterNode{
+	renderControlPlanes := func(m map[string]*cluster.MasterNodeState) []ControlPlaneNode {
+		controlPlanes := make([]ControlPlaneNode, 0, len(m))
+		for name, nodeState := range m {
+			controlPlaneNode := ControlPlaneNode{
+				Name:       name,
 				Phase:      string(nodeState.Phase),
 				Components: make(map[string]string, len(nodeState.ComponentsState)),
 			}
 
 			for component, componentState := range nodeState.ComponentsState {
-				res[nodeName].Components[component] = componentState.Version
+				controlPlaneNode.Components[component] = componentState.Version
 			}
+
+			controlPlanes = append(controlPlanes, controlPlaneNode)
 		}
 
-		return res
+		return controlPlanes
 	}
 
 	return ConfigMapData{
@@ -96,13 +93,8 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		Status: &Status{
 			CurrentVersion: clusterState.Status.CurrentVersion,
 			Phase:          string(clusterState.Status.Phase),
-			ControlPlane: ControlPlane{
-				DesiredCount:  clusterState.Status.ControlPlaneState.DesiredCount,
-				UpToDateCount: clusterState.Status.ControlPlaneState.UpToDateCount,
-				Progress:      clusterState.Status.ControlPlaneState.Progress,
-				Phase:         string(clusterState.Status.ControlPlaneState.Phase),
-				Nodes:         buildMasterNodes(clusterState.Status.ControlPlaneState.NodesState),
-			},
+			Progress:       clusterState.Progress,
+			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.NodesState),
 			Nodes: Nodes{
 				DesiredCount:  clusterState.NodesState.DesiredCount,
 				UpToDateCount: clusterState.NodesState.UpToDateCount,

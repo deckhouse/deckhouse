@@ -30,17 +30,18 @@ type MasterNodePhase string
 const (
 	MasterNodeUptoDate MasterNodePhase = "UpToDate"
 	MasterNodeUpdating MasterNodePhase = "Updating"
+	MasterNodeFailed   MasterNodePhase = "Failed"
 )
-
-func (n *MasterNodeState) isUpToDate() bool {
-	return n.Phase == MasterNodeUptoDate
-}
 
 type ControlPlaneComponentState struct {
 	Version string
 	Phase   corev1.PodPhase
 }
 
-func (s *ControlPlaneComponentState) isFullyOperational(desiredVersion string) bool {
-	return s.Version == desiredVersion && s.Phase == corev1.PodRunning
+func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
+	return s.Version == desiredVersion
+}
+
+func (s *ControlPlaneComponentState) isRunning() bool {
+	return s.Phase == corev1.PodRunning
 }

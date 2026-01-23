@@ -6,23 +6,20 @@ data:
   status: |
     currentVersion: v1.31
     phase: UpToDate
+    progress: 100%
     controlPlane:
-      desiredCount: 2
-      upToDateCount: 2
-      progress: 100%
+    - name: master-1
       phase: UpToDate
-      master-1:
-        phase: UpToDate
-        components:
-          kube-apiserver: v1.31
-          kube-controller-manager: v1.31
-          kube-scheduler: v1.31
-      master-2:
-        phase: UpToDate
-        components:
-          kube-apiserver: v1.31
-          kube-controller-manager: v1.31
-          kube-scheduler: v1.31
+      components:
+        kube-apiserver: v1.31
+        kube-controller-manager: v1.31
+        kube-scheduler: v1.31
+    - name: master-2
+      phase: UpToDate
+      components:
+        kube-apiserver: v1.31
+        kube-controller-manager: v1.31
+        kube-scheduler: v1.31
     nodes:
       desiredCount: 3
       upToDateCount: 3

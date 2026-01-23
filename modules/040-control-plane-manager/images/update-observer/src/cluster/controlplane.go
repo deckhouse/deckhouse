@@ -24,11 +24,10 @@ import (
 )
 
 type ControlPlaneState struct {
-	DesiredCount  int
-	UpToDateCount int
-	Progress      string
-	Phase         ControlPlanePhase
-	NodesState    map[string]*MasterNodeState
+	DesiredCount           int
+	UpToDateCount          int
+	Phase                  ControlPlanePhase
+	NodesState             map[string]*MasterNodeState
 }
 
 type ControlPlanePhase string
@@ -41,14 +40,14 @@ const (
 )
 
 func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion string) (*ControlPlaneState, error) {
-	nodesStatus, err := getNodesState(controlPlanePods, desiredVersion)
+	componentsByNode, err := getComponentsStateByNode(controlPlanePods)
 	if err != nil {
-		return nil, fmt.Errorf("failed to build nodes status: %w", err)
+		return nil, fmt.Errorf("failed to get components state: %w", err)
 	}
 
 	res := &ControlPlaneState{
-		DesiredCount: len(nodesStatus),
-		NodesState:   nodesStatus,
+		DesiredCount: len(componentsByNode),
+		NodesState:   componentsByNode,
 	}
 
 	res.aggregateNodesState(desiredVersion)
@@ -56,7 +55,7 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 	return res, nil
 }
 
-func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*MasterNodeState, error) {
+func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState, error) {
 	nodesState := make(map[string]*MasterNodeState)
 
 	for _, pod := range pods.Items {
@@ -64,7 +63,6 @@ func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*Mas
 		var nodeState *MasterNodeState
 		if _, exists := nodesState[nodeName]; !exists {
 			nodesState[nodeName] = &MasterNodeState{
-				Phase:           MasterNodeUptoDate,
 				ComponentsState: make(map[string]*ControlPlaneComponentState),
 			}
 		}
@@ -90,10 +88,6 @@ func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*Mas
 			Phase:   pod.Status.Phase,
 		}
 
-		if nodeState.Phase != MasterNodeUpdating && !component.isFullyOperational(desiredVersion) {
-			nodeState.Phase = MasterNodeUpdating
-		}
-
 		nodeState.ComponentsState[componentLabel] = component
 	}
 
@@ -101,21 +95,37 @@ func getNodesState(pods *corev1.PodList, desiredVersion string) (map[string]*Mas
 }
 
 func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
-	var desiredCount, desiredComponentCount, upToDateCount, upToDateComponentCount int
+	var desiredCount, upToDateCount int
 	var phase ControlPlanePhase
 
 	for _, nodeState := range s.NodesState {
-		desiredCount++
-		if nodeState.isUpToDate() {
-			upToDateCount++
-		}
+		var hasComponentUpdating, hasComponentFailed bool
 
+		desiredCount++
 		for _, componentState := range nodeState.ComponentsState {
-			desiredComponentCount++
-			if componentState.isFullyOperational(desiredVersion) {
-				upToDateComponentCount++
+			if !componentState.isRunning() {
+				hasComponentFailed = true
+				continue
+			}
+
+			if !componentState.isUpdated(desiredVersion) {
+				hasComponentUpdating = true
+				continue
 			}
 		}
+
+		if hasComponentFailed {
+			nodeState.Phase = MasterNodeFailed
+			continue
+		}
+
+		if hasComponentUpdating {
+			nodeState.Phase = MasterNodeUpdating
+			continue
+		}
+
+		nodeState.Phase = MasterNodeUptoDate
+		upToDateCount++
 	}
 
 	switch {
@@ -129,6 +139,5 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 	s.DesiredCount = desiredCount
 	s.UpToDateCount = upToDateCount
-	s.Progress = common.CalculateProgress(desiredComponentCount, upToDateComponentCount)
 	s.Phase = phase
 }

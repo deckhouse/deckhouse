@@ -16,6 +16,8 @@ limitations under the License.
 
 package cluster
 
+import "update-observer/common"
+
 type State struct {
 	Spec
 	Status
@@ -34,12 +36,13 @@ func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneS
 		},
 	}
 
-	determineStatePhase(state)
+	state.determineStatePhase()
+	state.calculateProgress()
 
 	return state
 }
 
-func determineStatePhase(s *State) {
+func (s *State) determineStatePhase() {
 	var phase Phase
 	switch s.ControlPlaneState.Phase {
 	case ControlPlaneUpdating:
@@ -70,6 +73,12 @@ func determineStatePhase(s *State) {
 	s.Phase = phase
 }
 
+func (s *State) calculateProgress() {
+	s.Progress = common.CalculateProgress(
+		s.ControlPlaneState.UpToDateCount+s.NodesState.UpToDateCount,
+		s.ControlPlaneState.DesiredCount+s.NodesState.DesiredCount)
+}
+
 type Spec struct {
 	DesiredVersion string
 	UpdateMode     UpdateMode
@@ -80,6 +89,7 @@ type Status struct {
 	ControlPlaneState ControlPlaneState
 	NodesState        NodesState
 	Phase             Phase
+	Progress          string
 }
 
 type Phase string
