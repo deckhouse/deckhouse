@@ -1,5 +1,5 @@
 diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
-index 7c0176f604..a2d82a87b0 100644
+index 7c0176f604..841b070cdb 100644
 --- a/bpf/bpf_host.c
 +++ b/bpf/bpf_host.c
 @@ -593,6 +593,117 @@ struct {
@@ -112,7 +112,7 @@ index 7c0176f604..a2d82a87b0 100644
 +	//icmphdr->checksum = csum_fold(csum);
 +
 +	/* Redirect ICMP to the interface we received it on. */
-+	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE(datalen=%d, csum=%d)!\n", icmp_len, csum);
++	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE(datalen=%d, csum=%x)!\n", 0, ccsum);
 +	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
 +}
 +#endif
