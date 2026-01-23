@@ -124,6 +124,22 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	BeforeEach(func() {
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
+
+		// Minimal defaults to avoid nil-pointer panics in EE templates when rendering without explicitly
+		// setting all userAuthz.internal.* values in a particular test context.
+		// - webhook/configmap.yaml iterates over .Values.userAuthz.internal.clusterAuthRuleCrds even when enableMultiTenancy=false
+		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
+		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
+		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
+		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
+
+		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
+		f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.ca", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.crt", "test")
+		f.ValuesSet("userAuthz.internal.apiserverCertificate.key", "test")
 	})
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
