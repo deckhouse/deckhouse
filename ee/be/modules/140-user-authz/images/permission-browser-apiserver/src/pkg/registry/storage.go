@@ -20,12 +20,22 @@ import (
 	"k8s.io/klog/v2"
 
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
+	"permission-browser-apiserver/pkg/resolver"
 )
 
-// GetStorage returns the storage map for the authorization API group
+// GetStorage returns the storage map for the authorization API group (legacy, without namespace resolver)
 func GetStorage(auth authorizer.Authorizer) map[string]rest.Storage {
 	return map[string]rest.Storage{
 		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
+	}
+}
+
+// GetStorageWithResolver returns the storage map including the AccessibleNamespace resource.
+// This requires a NamespaceResolver for resolving user-accessible namespaces.
+func GetStorageWithResolver(auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) map[string]rest.Storage {
+	return map[string]rest.Storage{
+		"bulksubjectaccessreviews": NewBulkSARStorage(auth),
+		"accessiblenamespaces":     NewAccessibleNamespaceStorage(nsResolver),
 	}
 }
 

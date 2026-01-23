@@ -1,12 +1,72 @@
 # Permission Browser API Server
 
-An aggregated extension API server for the `BulkSubjectAccessReview` resource in the Deckhouse `user-authz` module.
+An aggregated extension API server for authorization-related resources in the Deckhouse `user-authz` module.
 
 ## Overview
 
-This server enables checking **multiple** authorization requests in a **single HTTP call**, dramatically reducing the number of network hops compared to individual `SubjectAccessReview` calls. It's designed to support frontend applications (like the Deckhouse UI) that need to check 60-80+ permissions when rendering a page.
+This server provides:
+
+1. **BulkSubjectAccessReview**: Checking multiple authorization requests in a single HTTP call, dramatically reducing the number of network hops compared to individual `SubjectAccessReview` calls.
+
+2. **AccessibleNamespace**: A computed, ACL-filtered list of namespaces accessible to the requesting user. This is similar to OpenShift's Project API concept - it allows UI applications to show users only the namespaces they have access to, without requiring cluster-wide `list namespaces` permission.
 
 ## API
+
+### Resource: `AccessibleNamespace`
+
+- **Group**: `authorization.deckhouse.io`
+- **Version**: `v1alpha1`
+- **Kind**: `AccessibleNamespace` / `AccessibleNamespaceList`
+- **Endpoints**:
+  - `GET /apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces` - List accessible namespaces
+  - `GET /apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces/{name}` - Get specific namespace if accessible
+
+#### Response Schema
+
+```yaml
+apiVersion: authorization.deckhouse.io/v1alpha1
+kind: AccessibleNamespaceList
+metadata:
+  resourceVersion: ""  # Always empty - watch not supported
+items:
+  - metadata:
+      name: default
+  - metadata:
+      name: my-app-namespace
+```
+
+#### How It Works
+
+A namespace is considered "accessible" if BOTH conditions are met:
+1. **Multi-tenancy allows access**: The user's `ClusterAuthorizationRule` doesn't deny the namespace (via `limitNamespaces`, `namespaceSelector`, or system namespace restrictions)
+2. **RBAC grants any namespaced permission**: The user has at least one RoleBinding or ClusterRoleBinding that grants ANY verb on ANY namespaced resource in that namespace
+
+#### Limitations
+
+- **Watch NOT supported**: Clients must poll for updates. The `resourceVersion` is always empty.
+- **Computed at request time**: The list is calculated based on current RBAC and multi-tenancy rules. Changes propagate after informer cache sync (up to 30 minutes).
+- **Best-effort resource scope detection**: If a resource's scope can't be determined via discovery (transient errors / unavailable APIService), we treat it as namespaced.
+
+#### Security
+
+- **No existence disclosure**: GET requests for inaccessible namespaces return 404 (not 403)
+- **No reason strings in responses**: Denial reasons are logged server-side only
+
+#### Example Usage
+
+```bash
+# List all accessible namespaces
+kubectl get accessiblenamespaces
+
+# Check if specific namespace is accessible
+kubectl get accessiblenamespace my-app-ns
+```
+
+```bash
+# Using curl
+curl -k -H "Authorization: Bearer $TOKEN" \
+  https://kubernetes/apis/authorization.deckhouse.io/v1alpha1/accessiblenamespaces
+```
 
 ### Resource: `BulkSubjectAccessReview`
 
@@ -128,7 +188,15 @@ make test
 
 ## Limitations (v1alpha1)
 
+### BulkSubjectAccessReview
 - No support for `fieldSelector`/`labelSelector` in `ResourceAttributes` (planned for future versions)
+
+### AccessibleNamespace
+- **Watch NOT supported**: The `resourceVersion` is always empty (`""`). Clients must poll.
+- **Computed resource**: The list is calculated at request time, not stored. There's no etcd persistence.
+- **Best-effort discovery**: If the API discovery cannot determine whether a resource is namespaced, it assumes namespaced for safety.
+
+### General
 - The server caches RBAC rules and namespace information; changes may take up to 30 minutes to propagate
 - Multi-tenancy config is reloaded every second from the mounted ConfigMap
 

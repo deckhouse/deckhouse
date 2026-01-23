@@ -27,6 +27,7 @@ import (
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
 	"permission-browser-apiserver/pkg/registry"
+	"permission-browser-apiserver/pkg/resolver"
 )
 
 var (
@@ -172,14 +173,18 @@ func startInformers(ctx context.Context, informerFactory informers.SharedInforme
 }
 
 // registerAPIGroup registers the authorization API group with the server.
-func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer) error {
+func registerAPIGroup(server *genericapiserver.GenericAPIServer, auth authorizer.Authorizer, nsResolver *resolver.NamespaceResolver) error {
 	apiGroupInfo := genericapiserver.NewDefaultAPIGroupInfo(
 		authorization.GroupName,
 		Scheme,
 		metav1.ParameterCodec,
 		Codecs,
 	)
+
 	apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorage(auth)
+	if nsResolver != nil {
+		apiGroupInfo.VersionedResourcesStorageMap["v1alpha1"] = registry.GetStorageWithResolver(auth, nsResolver)
+	}
 
 	return server.InstallAPIGroup(&apiGroupInfo)
 }
@@ -226,8 +231,24 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		go mtEngine.StartRenewConfigLoop(ctx.Done())
 	}
 
+	// Create namespace resolver for AccessibleNamespace API
+	var nsResolver *resolver.NamespaceResolver
+	if initRes.informerFactory != nil {
+		rbacInformers := initRes.informerFactory.Rbac().V1()
+		nsResolver = resolver.NewNamespaceResolver(
+			initRes.informerFactory.Core().V1().Namespaces().Lister(),
+			rbacInformers.Roles().Lister(),
+			rbacInformers.RoleBindings().Lister(),
+			rbacInformers.ClusterRoles().Lister(),
+			rbacInformers.ClusterRoleBindings().Lister(),
+			initRes.clientset.Discovery(),
+			mtEngine,
+		)
+		klog.Info("Namespace resolver initialized for AccessibleNamespace API")
+	}
+
 	// Register API group
-	if err := registerAPIGroup(genericServer, compositeAuth); err != nil {
+	if err := registerAPIGroup(genericServer, compositeAuth, nsResolver); err != nil {
 		cancel()
 		return nil, err
 	}
