@@ -205,7 +205,7 @@ data:
 - Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}
-После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate. 
+После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate.
 После создания ресурс становится полностью независимым и должен управляться вручную.
 {% endalert %}
 
