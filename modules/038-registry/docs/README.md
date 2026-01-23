@@ -17,7 +17,7 @@ The module can operate in the following modes:
 
 - `Unmanaged`: Operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
-  - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switch is performed automatically (see [usage examples](examples.html) for details).
+  - Configurable: A mode managed via the `registry` module. Switching between modes and registries is handled through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switch is performed automatically (see [usage examples](examples.html) for details).
   - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) using the (deprecated) `helper change registry` command.
 
 ## Restrictions and features of using the module
