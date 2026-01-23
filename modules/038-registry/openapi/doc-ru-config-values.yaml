@@ -1,7 +1,7 @@
 type: object
 properties:
   whitelistSourceRanges:
-    description: "Список адресов в формате CIDR, которым разрешено подключение к registry. Если не указано, то разрешено подключение с любых адресов"
+    description: "Список адресов в формате CIDR, которым разрешено подключение к registry. Если не указано, то разрешено подключение с любых адресов."
   ingressClass:
     description: |
       Класс Ingress-контроллера, который используется для registry.
@@ -16,10 +16,10 @@ properties:
       mode:
         description: |
           Режим работы HTTPS:
-          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer'у, заданному в параметре `certManager.clusterIssuerName`.
+          - `CertManager` — доступ по HTTPS с заказом сертификата согласно ClusterIssuer, заданному в параметре `certManager.clusterIssuerName`.
           - `CustomCertificate` — доступ по HTTPS с использованием сертификата из пространства имен `d8-system`.
           - `Disabled` — доступ только по HTTP.
-          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед ingress-ом стоит внешний HTTPS-балансер, который терминирует HTTPS. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
+          - `OnlyInURI` — доступ по HTTP, подразумевая, что перед ingress-контроллером находится внешний HTTPS-балансировщик, который терминирует HTTPS-трафик. Балансировщик должен обеспечивать перенаправление с HTTP на HTTPS.
       certManager:
         description: "Настройки для certmanager."
         properties:
@@ -31,6 +31,6 @@ properties:
         properties:
           secretName:
             description: |
-              Имя Secret'а в пространстве имен `d8-system`, который будет использоваться для ingress-а registry.
+              Имя секрета в пространстве имен `d8-system`, который будет использовать ingress registry.
 
-              Secret должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).
+              Секрет должен быть в формате [kubernetes.io/tls](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets).

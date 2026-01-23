@@ -36,10 +36,10 @@ properties:
         default: "CertManager"
         description: |
           The HTTPS usage mode:
-          - `CertManager` — the registry ingress is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
-          - `CustomCertificate` — the registry ingress is accessed over HTTPS using a certificate from the `d8-system` namespace.
-          - `Disabled` — in this mode, the registry ingress can only be accessed over HTTP.
-          - `OnlyInURI` — the registry ingress will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). Load balancer should provide a redirect from HTTP to HTTPS.
+          - `CertManager`: The registry ingress is accessed over HTTPS using a certificate obtained from a clusterIssuer specified in the `certManager.clusterIssuerName` parameter.
+          - `CustomCertificate`: The registry ingress is accessed over HTTPS using a certificate from the `d8-system` namespace.
+          - `Disabled`: In this mode, the registry ingress can only be accessed over HTTP.
+          - `OnlyInURI`: The registry ingress will work over HTTP (thinking that there is an external HTTPS load balancer in front of it that terminates HTTPS traffic). Load balancer should provide a redirect from HTTP to HTTPS.
         enum:
           - "Disabled"
           - "CertManager"
