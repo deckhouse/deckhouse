@@ -36,8 +36,6 @@ type LoadBalancer struct {
 	lb                 loadbalancer.Balancer
 	healthCheckOptions []upstream.ListOption
 
-	done chan struct{}
-
 	endpoint string
 }
 
@@ -152,8 +150,6 @@ func (lb *LoadBalancer) Shutdown() error {
 	if err := lb.lb.Close(); err != nil {
 		return err
 	}
-
-	close(lb.done)
 
 	lb.lb.Wait() //nolint:errcheck
 
