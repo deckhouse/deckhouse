@@ -125,6 +125,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{}`)
 
+		// Ensure the root userAuthz object exists (some EE templates access .Values.userAuthz.* directly).
+		f.ValuesSet("userAuthz.enableMultiTenancy", false)
+
 		// Minimal defaults to avoid nil-pointer panics in EE templates when rendering without explicitly
 		// setting all userAuthz.internal.* values in a particular test context.
 		// - webhook/configmap.yaml iterates over .Values.userAuthz.internal.clusterAuthRuleCrds even when enableMultiTenancy=false
@@ -140,6 +143,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		f.ValuesSet("userAuthz.internal.apiserverCertificate.ca", "test")
 		f.ValuesSet("userAuthz.internal.apiserverCertificate.crt", "test")
 		f.ValuesSet("userAuthz.internal.apiserverCertificate.key", "test")
+
+		// Some EE templates access this field unconditionally and will panic if the object is absent.
+		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 	})
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
