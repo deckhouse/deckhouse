@@ -347,3 +347,12 @@ properties:
         default: "0.0.0.1"
         description: |
           BGP Router ID for EVPN Route Reflector servers.
+      nodeNetworkCIDRs:
+        type: array
+        items:
+          type: string
+          format: cidr
+        default: []
+        description: |
+          List of node network CIDRs for automatic BGP session setup with RR clients.
+          Example: ["192.168.1.0/24", "10.0.0.0/16"]
