@@ -157,7 +157,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 По умолчанию все ресурсы, созданные из `ProjectTemplate`, получают лейбл `heritage: multitenancy-manager`.  
 Он запрещают изменение ресурсов пользователями или любым контроллером, кроме `multitenancy-manager`.  
-Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу метку `projects.deckhouse.io/skip-heritage-label`.
+Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу лейбл `projects.deckhouse.io/skip-heritage-label`.
 
 Пример:
 
@@ -179,7 +179,7 @@ data:
 
 ### Исключение ресурсов из управления multitenancy-manager
 
-Если необходимо исключить ресурс из управления `multitenancy-manager` (например, если он должен управляться вручную или другим контроллером), добавьте к ресурсу метку `projects.deckhouse.io/unmanaged`.
+Если необходимо исключить ресурс из управления `multitenancy-manager` (например, если он должен управляться вручную или другим контроллером), добавьте к ресурсу лейбл `projects.deckhouse.io/unmanaged`.
 
 Пример:
 
@@ -197,7 +197,7 @@ data:
   token: <base64-encoded-value>
 ```
 
-Ресурсы с меткой `projects.deckhouse.io/unmanaged`:
+Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
 
 - Будут созданы **только один раз** при создании проекта;
 - **Не будут обновляться** при последующих изменениях шаблона или обновлениях;
@@ -205,7 +205,7 @@ data:
 - Получат метки `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но **не получат** лейбл `heritage: multitenancy-manager`.
 
 {% alert level="warning" %}
-После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении `ProjectTemplate`.  
+После того как ресурс помечен как `unmanaged`, он будет создан при первой установке, но не будет обновляться при изменении ProjectTemplate. 
 После создания ресурс становится полностью независимым и должен управляться вручную.
 {% endalert %}
 
@@ -217,15 +217,15 @@ data:
 ### Как работает валидация в multitenancy-manager
 
 Происходит валидация объектов с лейблом `heritage: multitenancy-manager`.  
-Для этого используются следующие компоненты:
+Для этого используются следующие ресурсы:
 
-1. `ValidatingAdmissionPolicy` — определяет правила валидации:
+1. ValidatingAdmissionPolicy — определяет правила валидации:
    - Операции: `UPDATE` и `DELETE`;
    - Проверка: разрешены только операции от имени service account контроллера;
    - Применяется ко всем ресурсам и API группам.
 
-1. `ValidatingAdmissionPolicyBinding`— определяет на какие объекты распространяется валидация:
-   - Использует `namespaceSelector` и `objectSelector` для выбора ресурсов по метке `heritage: multitenancy-manager`.
+1. ValidatingAdmissionPolicyBinding — определяет на какие объекты распространяется валидация:
+   - Использует `namespaceSelector` и `objectSelector` для выбора ресурсов по лейблу `heritage: multitenancy-manager`.
 
 ### Создание собственной валидации
 
@@ -248,7 +248,7 @@ data:
            resources:   ["*"]
            scope: "*"
      validations:
-       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Замените на ваш service account
+       - expression: 'request.userInfo.username == "system:serviceaccount:my-namespace:my-service-account"' # Замените на ваш service account.
          reason: Forbidden
          messageExpression: 'object.kind == ''Namespace'' ? ''This resource is managed by '' + object.metadata.name + '' system. Manual modification is forbidden.''
            : ''This resource is managed by '' + object.metadata.namespace + '' system. Manual modification is forbidden.'''
@@ -273,7 +273,7 @@ data:
 
    - `policyName` — уникальное имя политики (должно совпадать с `Policy` и `Binding`);
    - `request.userInfo.username` — имя service account, которому разрешено изменять ресурсы (замените на ваш service account);
-   - `heritage: my-custom-label` — значение метки `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`;
+   - `heritage: my-custom-label` — значение лейбла `heritage` для ваших ресурсов (замените на ваше значение). Запрещено использование значение `multitenancy-manager`, `deckhouse`;
    - `failurePolicy: Fail` — политика при ошибке валидации:
      - `Fail` — отклонять запрос при ошибке проверки,
      - `Ignore` — игнорировать ошибки валидации.
@@ -287,7 +287,7 @@ data:
    d8 k apply -f my-validation-policy.yaml
    ```
 
-1. Убедитесь, что ваши ресурсы имеют соответствующую метку `heritage`:
+1. Убедитесь, что ваши ресурсы имеют соответствующий лейбл `heritage`:
 
    ```yaml
    apiVersion: v1

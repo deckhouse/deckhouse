@@ -8,23 +8,23 @@ title: "The multitenancy-manager module: usage examples"
 The following project templates are included in the Deckhouse Kubernetes Platform:
 
 - `default` — a template that covers basic project use cases:
-  - resource limitation;
-  - network isolation;
-  - automatic alerts and log collection;
-  - choice of security profile;
-  - project administrators setup.
+  - resource limitation
+  - network isolation
+  - automatic alerts and log collection
+  - choice of security profile
+  - project administrators setup
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
 - `secure` — includes all the capabilities of the `default` template and additional features:
-  - setting up permissible UID/GID for the project;
-  - audit rules for project users' access to the Linux kernel;
-  - scanning of launched container images for CVE presence.
+  - setting up permissible UID/GID for the project
+  - audit rules for project users' access to the Linux kernel
+  - scanning of launched container images for CVE presence
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
 
 - `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
-  - defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically;
+  - defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically.
   - defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
@@ -221,8 +221,8 @@ Validation occurs for objects labeled `heritage: multitenancy-manager`.
 The following components are used for this:
 
 1. `ValidatingAdmissionPolicy`: Defines validation rules:
-   - Operations: `UPDATE` and `DELETE`;
-   - Check: only operations on behalf of the controller's service account are allowed;
+   - Operations: `UPDATE` and `DELETE`.
+   - Check: only operations on behalf of the controller's service account are allowed.
    - Applies to all resources and API groups.
 1. `ValidatingAdmissionPolicyBinding`: Defines which objects the validation applies to:
    - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
@@ -271,14 +271,14 @@ To implement validation for resources with a different label (for example, `heri
 
 1. Configure the validation parameters:
 
-   - `policyName`: Unique policy name (must match in Policy and Binding);
-   - `request.userInfo.username`: The name of the service account allowed to change resources (replace with your service account);
-   - `heritage: my-custom-label`: The value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited;
-   - `failurePolicy: Fail`: Policy on validation failure:
-     - `Fail`: Reject the request on validation failure;
+   - `policyName`: Unique policy name (must match in Policy and Binding).
+   - `request.userInfo.username`: The name of the service account allowed to change resources (replace with your service account).
+   - `heritage: my-custom-label`: The value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited.
+   - `failurePolicy: Fail`: Policy on validation failure.
+     - `Fail`: Reject the request on validation failure.
      - `Ignore`: Ignore validation errors.
    - `validationActions`: Validation actions:
-     - `Deny`: Deny unauthorized operations;
+     - `Deny`: Deny unauthorized operations.
      - `Audit`: Record operations in the audit log.
 1. Apply the policy:
 
