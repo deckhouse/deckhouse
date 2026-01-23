@@ -27,6 +27,28 @@ bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - < EOF
 {{ toJson $list }}
 EOF
 
+{{ /* TODO: Does we can run it only on Normal execution? */ }}
+{{ if eq .runType "Normal" }}
+if [! -f /etc/kubernetes/kubernetes-api-proxy/ca.crt ]; then
+  bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - < EOF
+  {{- /* TODO: We need to put ca to BashibleContext, and here we can push it to file */ -}}
+  EOF
+fi
+
+if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.crt ]; then
+  bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.crt - < EOF
+  {{- /* TODO: We need to put crt to BashibleContext, and here we can push it to file */ -}}
+  EOF
+fi
+
+if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.key ]; then
+  bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.key - < EOF
+  {{- /* TODO: We need to put key to BashibleContext, and here we can push it to file */ -}}
+  EOF
+fi
+
+{{- end }}
+
 chown -R 0:64535 /etc/kubernetes/kubernetes-api-proxy
 chmod g+s /etc/kubernetes/kubernetes-api-proxy
 chmod 750 /etc/kubernetes/kubernetes-api-proxy
