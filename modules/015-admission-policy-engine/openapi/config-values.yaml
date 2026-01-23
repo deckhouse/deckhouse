@@ -83,7 +83,7 @@ properties:
 
           The global `settings.modules.storageClass` parameter is only applied when the module is enabled. Changing the global parameter while the module is enabled will not trigger disk re-provisioning.
 
-          > **Important.** If you specify a value different from the current StorageClass used in the existing PersistentVolumeClaim, the disk will be re-provisioned, and all data will be deleted.
+          > **Warning.** If you specify a value different from the current StorageClass used in the existing PersistentVolumeClaim, the disk will be re-provisioned, and all data will be deleted.
 
           If you set it to `false`, `emptyDir` will be forcibly used instead of a PVC.
       enabled:
