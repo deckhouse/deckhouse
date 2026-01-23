@@ -7,7 +7,7 @@ git:
   to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: alpine:3.19
+fromImage: builder/golang-alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -25,7 +25,7 @@ shell:
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download -x
   setup:
   - cd /src
-  - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -race -ldflags="-s -w" -o fencing-agent ./cmd/main.go
+  - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o fencing-agent ./cmd/main.go
   - chown 64535:64535 /src/fencing-agent
   - chmod 0700 /src/fencing-agent
 ---
