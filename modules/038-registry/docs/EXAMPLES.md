@@ -8,7 +8,7 @@ description: "Examples for switching between registry modes in Deckhouse Kuberne
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-When changing the registry mode or registry parameters, Deckhouse will be restarted.
+The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
@@ -65,7 +65,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    - no tasks to handle.
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-direct). If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -108,7 +108,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
 To switch an already running cluster to `Proxy` mode, follow these steps:
 
 {% alert level="danger" %}
-- When changing the registry mode or registry parameters, DKP will be restarted.
+- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
 - Switching from `Local` mode to `Proxy` mode is not available. To switch from `Local` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -209,7 +209,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
 To switch an already running cluster to `Local` mode, follow these steps:
 
 {% alert level="danger" %}
-- When changing the registry mode or registry parameters, DKP will be restarted.
+- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
 - Switching from `Proxy` mode to `Local` mode is not available. To switch from `Proxy` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -383,7 +383,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
 To switch an already running cluster to `Unmanaged` mode, follow these steps:
 
 {% alert level="danger" %}
-Changing the registry mode or its parameters will cause Deckhouse to restart.
+Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
@@ -416,7 +416,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    - no tasks to handle.
    ```
 
-1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Unmanaged` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged). If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
