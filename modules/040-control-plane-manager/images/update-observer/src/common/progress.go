@@ -22,7 +22,7 @@ func CalculateProgress(current, total int) string {
 	if current == 0 {
 		return "0%"
 	}
-	p := (total * 100) / current
+	p := (current * 100) / total
 
 	return fmt.Sprint(min(p, 100), "%")
 }

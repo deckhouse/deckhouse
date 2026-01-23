@@ -24,10 +24,12 @@ import (
 )
 
 type ControlPlaneState struct {
-	DesiredCount           int
-	UpToDateCount          int
-	Phase                  ControlPlanePhase
-	NodesState             map[string]*MasterNodeState
+	DesiredCount   int
+	UpToDateCount  int
+	DesiredComponentCount int
+	UpToDateComponentCount int
+	Phase          ControlPlanePhase
+	NodesState     map[string]*MasterNodeState
 }
 
 type ControlPlanePhase string
@@ -95,7 +97,7 @@ func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState
 }
 
 func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
-	var desiredCount, upToDateCount int
+	var desiredCount, upToDateCount, desiredComponentCount, upToDateComponentCount int
 	var phase ControlPlanePhase
 
 	for _, nodeState := range s.NodesState {
@@ -103,6 +105,8 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 		desiredCount++
 		for _, componentState := range nodeState.ComponentsState {
+			desiredComponentCount++
+
 			if !componentState.isRunning() {
 				hasComponentFailed = true
 				continue
@@ -112,6 +116,8 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 				hasComponentUpdating = true
 				continue
 			}
+
+			upToDateComponentCount++
 		}
 
 		if hasComponentFailed {
@@ -139,5 +145,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 	s.DesiredCount = desiredCount
 	s.UpToDateCount = upToDateCount
+	s.DesiredComponentCount = desiredComponentCount
+	s.UpToDateComponentCount = upToDateComponentCount
 	s.Phase = phase
 }

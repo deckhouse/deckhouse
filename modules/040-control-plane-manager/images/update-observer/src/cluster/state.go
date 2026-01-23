@@ -75,8 +75,8 @@ func (s *State) determineStatePhase() {
 
 func (s *State) calculateProgress() {
 	s.Progress = common.CalculateProgress(
-		s.ControlPlaneState.UpToDateCount+s.NodesState.UpToDateCount,
-		s.ControlPlaneState.DesiredCount+s.NodesState.DesiredCount)
+		s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
+		s.ControlPlaneState.DesiredComponentCount+s.NodesState.DesiredCount)
 }
 
 type Spec struct {
