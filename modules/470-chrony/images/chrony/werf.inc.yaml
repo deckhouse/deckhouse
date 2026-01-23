@@ -71,8 +71,8 @@ import:
 - image: {{ .ModuleName }}/build-chrony-static-artifact
   add: /opt/chrony-static
   before: setup
-- image: common/tini-artifact
-  add: /tini/tini-static
+- image: tools/tini
+  add: /usr/bin/tini
   to: /tini
   before: setup
 - image: {{ .ModuleName }}/build-entrypoint-artifact
