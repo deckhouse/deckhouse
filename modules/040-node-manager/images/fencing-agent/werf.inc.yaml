@@ -35,7 +35,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/fencing-agent
   to: /fencing-agent
-  before: setup
+  after: install
 imageSpec:
   config:
     entrypoint: ["/fencing-agent"]
