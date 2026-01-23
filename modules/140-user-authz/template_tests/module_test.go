@@ -384,6 +384,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		Context("EE edition (non-CE)", func() {
 			BeforeEach(func() {
 				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
 				f.HelmRender()
 			})
 
@@ -417,6 +418,27 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rules).To(ContainSubstring(`"namespaces"`))
 				Expect(rules).To(ContainSubstring(`"create"`))
 				Expect(rules).To(ContainSubstring(`"delete"`))
+			})
+		})
+
+		Context("EE edition (non-CE) with MultiTenancy disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.deckhouseEdition", "EE")
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+			})
+
+			It("Should render without errors", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+			})
+
+			It("user-authz:user should keep namespaces access (fallback)", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+
+				rules := cr.Field("rules").String()
+				Expect(rules).To(ContainSubstring(`"namespaces"`))
+				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
 			})
 		})
 

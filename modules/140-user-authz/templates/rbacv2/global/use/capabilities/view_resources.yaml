@@ -152,20 +152,21 @@ rules:
       - selfsubjectreviews
     verbs:
       - create
-{{- if eq $.Values.global.deckhouseEdition "CE" }}
+{{- $useAccessibleNamespaces := and (ne $.Values.global.deckhouseEdition "CE") ($.Values.userAuthz.enableMultiTenancy | default false) -}}
+{{- if $useAccessibleNamespaces }}
   - apiGroups:
-      - ""
+      - authorization.deckhouse.io
     resources:
-      - namespaces
+      - accessiblenamespaces
     verbs:
       - get
       - list
       - watch
 {{- else }}
   - apiGroups:
-      - authorization.deckhouse.io
+      - ""
     resources:
-      - accessiblenamespaces
+      - namespaces
     verbs:
       - get
       - list
