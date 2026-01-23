@@ -149,9 +149,9 @@ createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
-    sizingPolicy: *!CHANGE_SIZING_POLICY*
+    sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
     mainNetworkIPAddresses:
       - 192.168.199.2
 ---
