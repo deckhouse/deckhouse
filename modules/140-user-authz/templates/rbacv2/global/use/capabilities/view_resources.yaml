@@ -152,3 +152,22 @@ rules:
       - selfsubjectreviews
     verbs:
       - create
+{{- if eq $.Values.global.deckhouseEdition "CE" }}
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- else }}
+  - apiGroups:
+      - authorization.deckhouse.io
+    resources:
+      - accessiblenamespaces
+    verbs:
+      - get
+      - list
+      - watch
+{{- end }}
