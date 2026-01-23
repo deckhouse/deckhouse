@@ -42,3 +42,24 @@ apiVersions:
                 type: boolean
               isDefault:
                 type: boolean
+        loadBalancerClasses:
+          type: array
+          description: |
+            A list of load balancer classes in the cloud.
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              addressPool:
+                type: array
+                items:
+                  type: string
+              interfaces:
+                type: array
+                items:
+                  type: string
+              isEnabled:
+                type: boolean
+              isDefault:
+                type: boolean
