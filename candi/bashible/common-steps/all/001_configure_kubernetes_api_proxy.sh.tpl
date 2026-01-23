@@ -15,47 +15,20 @@
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
 
-bb-sync-file /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf - << EOF
-user deckhouse;
-
-error_log stderr notice;
-
-pid /tmp/kubernetes-api-proxy.pid;
-
-worker_processes 2;
-worker_rlimit_nofile 130048;
-worker_shutdown_timeout 10s;
-
-events {
-  multi_accept on;
-  use epoll;
-  worker_connections 16384;
-}
-
-stream {
-  upstream kubernetes {
-    least_conn;
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams_new.json - << EOF
+{{- $list := list }}
 {{- if eq .runType "Normal" }}
-  {{- range $key,$value := .normal.apiserverEndpoints }}
-    server {{ $value }};
+  {{- range $key, $value := .normal.apiserverEndpoints }}
+    {{- $list = append $list $value }}
   {{- end }}
 {{- else if eq .runType "ClusterBootstrap" }}
-    server $(bb-d8-node-ip):6443;
+    {{- $list = append $list "$(bb-d8-node-ip):6443" }}
 {{- end }}
-  }
-  server {
-    listen 127.0.0.1:6445;
-    proxy_pass kubernetes;
-    # Configurator uses 24h proxy_timeout in case of long running jobs like kubectl exec or kubectl logs
-    # After time out, nginx will force a client to reconnect
-    proxy_timeout 24h;
-    proxy_connect_timeout 1s;
-  }
-}
+{{ toJson $list }}
 EOF
 
-if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/nginx.conf ]]; then
-  cp /etc/kubernetes/kubernetes-api-proxy/nginx_new.conf /etc/kubernetes/kubernetes-api-proxy/nginx.conf
+if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/upstreams.json ]]; then
+  cp /etc/kubernetes/kubernetes-api-proxy/upstreams_new.json /etc/kubernetes/kubernetes-api-proxy/upstreams.json
 fi
 
 chown -R 0:64535 /etc/kubernetes/kubernetes-api-proxy
