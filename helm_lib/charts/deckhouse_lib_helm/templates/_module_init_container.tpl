@@ -93,7 +93,7 @@
     requests:
       {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 6 }}
   {{- if not ( $context.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-    cpu: 10m
-    memory: 10Mi
+      cpu: 10m
+      memory: 10Mi
   {{- end }}
 {{- end }}
