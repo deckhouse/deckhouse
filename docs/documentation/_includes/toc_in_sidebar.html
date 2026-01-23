@@ -12,9 +12,9 @@
         $sidebar.css("top", headerHeight);
         const $navigationContainer = $('.navigation__container');
         $navigationContainer.css("top", headerHeight);
-        
+
         const $toc = $('#toc-sidebar');
-        
+
         $toc.toc({
             minimumHeaders: 2,
             title: '',
@@ -72,7 +72,7 @@
 
         $(window).on('load', function() {
             const hash = window.location.hash;
-            
+
             if(hash) {
                 const hashParts = hash.split('-');
                 const navItem = $(`li a[href='${hashParts[0]}']`);
@@ -83,7 +83,7 @@
                         navItem.addClass('active');
                     }
                 }
-                
+
                 const target = decodeURIComponent(hash);
                 const targetElement = $(target);
 
@@ -100,6 +100,8 @@
 
 </script>
 
+<!--noindex-->
 <div class="sidebar__wrapper-inner">
   <div id="toc-sidebar"></div>
 </div>
+<!--/noindex-->

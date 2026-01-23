@@ -25,11 +25,13 @@
       {{- end }}
     </div>
   </div>
+  {{ "<!--noindex-->" | safeHTML }}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {{- partial "breadcrumbs" . }}
     </ol>
   </div>
+  {{ "<!--/noindex-->" | safeHTML }}
 
   <!--start search-->
   {{- $cachingTime := "60" }}

@@ -1,7 +1,7 @@
 {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
-
 <script type="text/javascript" src="/assets/js/codeblock.js?v={{ assetHash }}"></script>
 
+<!--noindex-->
 {% include gdpr.html %}
 {% include form_in_modal.html mode="request_access" %}
 {% include form_in_modal.html mode="request_callback" %}
@@ -82,4 +82,4 @@
 
     </div>
 </footer>
-
+<!--/noindex-->

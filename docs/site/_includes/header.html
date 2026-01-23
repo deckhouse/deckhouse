@@ -1,5 +1,5 @@
 {% assign topnav = site.data[page.topnav].topnav[page.lang] %}
-
+<!--noindex-->
 <div class="header-container">
   <header class="header {%- if page.lang == 'ru' %} header_float{%- endif %}">
     <div class="header__content container">
@@ -284,3 +284,4 @@
     {%- endunless %}
   </header>
 </div>
+<!--/noindex-->
