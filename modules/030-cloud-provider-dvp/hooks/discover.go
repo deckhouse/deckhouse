@@ -91,7 +91,6 @@ func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return storageClass, nil
 }
 
-
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
 	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
@@ -148,10 +147,7 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to handle discovery data storage classes: %v", err)
 	}
 
-	err = handleDiscoveryDataLoadBalancerClasses(input, discoveryData.LoadBalancerClassList)
-	if err != nil {
-		return fmt.Errorf("failed to handle discovery data load balancer classes: %v", err)
-	}
+	handleDiscoveryDataLoadBalancerClasses(input, discoveryData.LoadBalancerClassList)
 
 	return nil
 }
@@ -242,7 +238,7 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageC
 func handleDiscoveryDataLoadBalancerClasses(
 	input *go_hook.HookInput,
 	dvpLoadBalancerClassList []cloudDataV1.DVPLoadBalancerClass,
-) error {
+) {
 	dvpLoadBalancerClass := make(map[string]cloudDataV1.DVPLoadBalancerClass, len(dvpLoadBalancerClassList))
 
 	for _, lbc := range dvpLoadBalancerClassList {
@@ -282,7 +278,6 @@ func handleDiscoveryDataLoadBalancerClasses(
 	input.Logger.Info("Found DVP load balancer classes: %v", loadBalancerClasses)
 
 	setLoadBalancerClassesValues(input, loadBalancerClasses)
-	return nil
 }
 
 func setLoadBalancerClassesValues(input *go_hook.HookInput, loadBalancerClasses []metalLoadBalancerClass) {
