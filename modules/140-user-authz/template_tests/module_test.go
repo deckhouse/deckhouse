@@ -294,11 +294,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(ds.Exists()).To(BeTrue())
 			Expect(ds.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 
-			env := ds.Field("spec.template.spec.containers.0.env").String()
-			Expect(env).To(ContainSubstring("KUBERNETES_SERVICE_HOST"))
-			Expect(env).To(ContainSubstring("127.0.0.1"))
-			Expect(env).To(ContainSubstring("KUBERNETES_SERVICE_PORT"))
-			Expect(env).To(ContainSubstring("6445"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
