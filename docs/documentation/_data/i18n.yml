@@ -412,6 +412,16 @@ common:
   requirements_version_above:
     en: above
     ru: выше
+  ossListPageBlock1:
+    en: |
+      List of third-party software used in the Deckhouse Kubernetes Platform.
+    ru: |
+      Список стороннего программного обеспечения, используемого в Deckhouse Kubernetes Platform (информация представлена только на английском языке).
+  ossPageBlock1:
+    en: |
+      List of third-party software used in the module.
+    ru: |
+      Список стороннего программного обеспечения, используемого в модуле (информация представлена только на английском языке).
 
 comparison:
   except_parameters:
