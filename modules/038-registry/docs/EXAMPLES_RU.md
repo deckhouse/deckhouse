@@ -166,7 +166,7 @@ description: "Пошаговые примеры переключения меж�
    - no tasks to handle.
    ```
 
-1. Установите настройки режима `Proxy` в ModuleConfig `deckhouse`. Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
+1. Установите настройки режима `Proxy` в [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-proxy). Если используется registry, отличный от `registry.deckhouse.ru`, ознакомьтесь с конфигурацией модуля [`deckhouse`](/modules/deckhouse/) для корректной настройки.
 
    Пример конфигурации:
 
@@ -277,7 +277,7 @@ description: "Пошаговые примеры переключения меж�
      --license='<LICENSE_KEY>' /home/user/d8-bundle
    ```
 
-1. Установите настройки режима `Local` в ModuleConfig `deckhouse`.
+1. Установите настройки режима `Local` в [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-mode).
 
    Пример конфигурации:
 
