@@ -426,7 +426,7 @@ properties:
             description: |
               Mode for checking the container registry:
 
-              - `Default — checks for the presence of all critical components in the container registry.
+              - `Default` — checks for the presence of all critical components in the container registry.
               - `Relax` — checks only for the presence of the Deckhouse image tag in the container registry (used for switching between Deckhouse editions).
             enum: [Default, Relax]
             default: Default
