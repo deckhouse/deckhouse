@@ -25,7 +25,7 @@ spec:
     expression: 'object.metadata.name == "deckhouse"'
   validations:
   {{- if not $moduleEnabled }}
-  - expression: >-
+  - expression: |
       !(
         object.?spec.?settings.?registry.orValue("") !=
         oldObject.?spec.?settings.?registry.orValue("")
@@ -36,7 +36,7 @@ spec:
       Please enable the module to make changes."
   {{- end }}
   {{- if not $clusterBootstraped }}
-  - expression: >-
+  - expression: |
       !(
         object.?spec.?settings.?registry.orValue("") !=
         oldObject.?spec.?settings.?registry.orValue("")
@@ -47,7 +47,7 @@ spec:
       Please wait until bootstrap is complete."
   {{- end }}
   {{- if not $staticCluster }}
-  - expression: >-
+  - expression: |
       !(
         has(object.?spec.?settings.?registry.mode) && 
         (
