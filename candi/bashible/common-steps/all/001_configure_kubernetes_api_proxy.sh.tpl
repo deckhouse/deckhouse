@@ -15,7 +15,7 @@
 mkdir -p /etc/kubernetes/kubernetes-api-proxy
 # Read previously discovered IP
 
-bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams_new.json - << EOF
+bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams.json - < EOF
 {{- $list := list }}
 {{- if eq .runType "Normal" }}
   {{- range $key, $value := .normal.apiserverEndpoints }}
@@ -26,10 +26,6 @@ bb-sync-file /etc/kubernetes/kubernetes-api-proxy/upstreams_new.json - << EOF
 {{- end }}
 {{ toJson $list }}
 EOF
-
-if [[ ! -f /etc/kubernetes/kubernetes-api-proxy/upstreams.json ]]; then
-  cp /etc/kubernetes/kubernetes-api-proxy/upstreams_new.json /etc/kubernetes/kubernetes-api-proxy/upstreams.json
-fi
 
 chown -R 0:64535 /etc/kubernetes/kubernetes-api-proxy
 chmod g+s /etc/kubernetes/kubernetes-api-proxy
