@@ -1,0 +1,40 @@
+metadata:
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleDocumentation
+              metadata:
+                name: module-1
+              spec:
+                version: v1.0.0
+                checksum: abc123
+                path: /path/to/module
+          description: |
+            Defines the rendering configuration of the Deckhouse module documentation.
+
+            **Deckhouse creates ModuleDocumentation resources by itself.**
+          properties:
+            spec:
+              properties:
+                version:
+                  x-doc-examples:
+                    - 'v1.0.0'
+                checksum:
+                  x-doc-examples:
+                    - abc123
+                path:
+                  x-doc-examples:
+                    - /path/to/module
+            status:
+              properties:
+                conditions:
+                  x-kubernetes-patch-strategy: "retainKeys"
