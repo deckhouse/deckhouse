@@ -26,9 +26,9 @@ import (
 )
 
 const (
-	caFile   = "/var/run/kubernetes.io/kap/ca.crt"
-	certFile = "/var/run/kubernetes.io/kap/cl.crt"
-	keyFile  = "/var/run/kubernetes.io/kap/cl.key"
+	caFile   = "/var/run/kubernetes.io/kubernetes-api-proxy/ca.crt"
+	certFile = "/var/run/kubernetes.io/kubernetes-api-proxy/cl.crt"
+	keyFile  = "/var/run/kubernetes.io/kubernetes-api-proxy/cl.key"
 )
 
 type ClusterConfigGetter func() (*rest.Config, error)

@@ -16,7 +16,7 @@ mkdir -p /etc/kubernetes/manifests
 
 bb-set-proxy
 
-{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.controlPlaneManager "kubernetesApiProxy" ) }}
+{{- $kubernetes_api_proxy_image := printf "%s@%s" .registry.imagesBase ( index .images.nodeManager "kubernetesApiProxy" ) }}
 
 {{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
@@ -32,76 +32,88 @@ metadata:
   name: kubernetes-api-proxy
   namespace: kube-system
 spec:
-  dnsPolicy: ClusterFirstWithHostNet
-  hostNetwork: true
-  securityContext:
-    fsGroup: 64535
-  shareProcessNamespace: true
-  containers:
-  - name: kubernetes-api-proxy
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-        - ALL
-        add:
-        - DAC_OVERRIDE
-        - SETGID
-        - SETUID
-      readOnlyRootFilesystem: true
-      runAsGroup: 0
-      runAsNonRoot: false
-      runAsUser: 0
-      seccompProfile:
-        type: RuntimeDefault
-    image: {{ $kubernetes_api_proxy_image }}
-    imagePullPolicy: IfNotPresent
-    command: ["/opt/nginx-static/sbin/nginx", "-c", "/etc/nginx/config/nginx.conf", "-g", "daemon off;"]
-    env:
-    - name: PATH
-      value: /opt/nginx-static/sbin
-    volumeMounts:
-    - mountPath: /etc/nginx/config
-      name: kubernetes-api-proxy-conf
-      readOnly: true
-    - mountPath: /tmp
-      name: tmp
-  - name: kubernetes-api-proxy-reloader
-    image: {{ $kubernetes_api_proxy_image }}
-    imagePullPolicy: IfNotPresent
-    command: ["/kubernetes-api-proxy-reloader"]
-    securityContext:
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-        - ALL
-        add:
-        - DAC_OVERRIDE
-        - SETGID
-        - SETUID
-      readOnlyRootFilesystem: true
-      runAsGroup: 0
-      runAsNonRoot: false
-      runAsUser: 0
-      seccompProfile:
-        type: RuntimeDefault
-    env:
-    - name: PATH
-      value: /opt/nginx-static/sbin
-    volumeMounts:
-    - mountPath: /etc/nginx/config
-      name: kubernetes-api-proxy-conf
-    - mountPath: /tmp
-      name: tmp
   priorityClassName: system-node-critical
   priority: 2000001000
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet
   volumes:
-  - hostPath:
-      path: /etc/kubernetes/kubernetes-api-proxy
-      type: DirectoryOrCreate
-    name: kubernetes-api-proxy-conf
-  - name: tmp
-    emptyDir: {}
+    - name: ca-cert
+      hostPath:
+        path: /etc/kubernetes/pki/ca.crt
+        type: File
+    - name: cl-cert
+      hostPath:
+        path: /etc/kubernetes/kubernetes-api-proxy/apl.crt
+        type: File
+    - name: cl-key
+      hostPath:
+        path: /etc/kubernetes/kubernetes-api-proxy/apl.key
+        type: File
+    - name: upstreams
+      hostPath:
+        path: /etc/kubernetes/kubernetes-api-proxy/upstreams.json
+        type: FileOrCreate
+  containers:
+    - name: kubernetes-api-proxy
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop:
+            - ALL
+        readOnlyRootFilesystem: true
+        runAsGroup: 0
+        runAsNonRoot: false
+        runAsUser: 0
+        seccompProfile:
+          type: RuntimeDefault
+      image: kubernetes-api-proxy:0.0.1
+      imagePullPolicy: IfNotPresent
+      args:
+        - "--listen-address=0.0.0.0"
+        - "--listen-port=6445"
+        - "--health-listen=:6480"
+        - "--log-level=debug"
+        - "--as-static-pod=true"
+        - "--fallback-file=/var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json"
+      ports:
+        - name: https
+          containerPort: 6445
+          hostPort: 6445
+          protocol: TCP
+        - name: health
+          containerPort: 6480
+          protocol: TCP
+      readinessProbe:
+        httpGet:
+          path: /readyz
+          port: health
+        initialDelaySeconds: 2
+        periodSeconds: 5
+      livenessProbe:
+        httpGet:
+          path: /healthz
+          port: health
+        initialDelaySeconds: 2
+        periodSeconds: 10
+      resources:
+        requests:
+          cpu: 50m
+          memory: 64Mi
+        limits:
+          cpu: 500m
+          memory: 256Mi
+      volumeMounts:
+        - name: cl-cert
+          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/cl.crt
+          readOnly: true
+        - name: cl-key
+          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/cl.key
+          readOnly: true
+        - name: ca-cert
+          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/ca.crt
+          readOnly: true
+        - name: upstreams
+          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json
 EOF
 
 bb-unset-proxy
