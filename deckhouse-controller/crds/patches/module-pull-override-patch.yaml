@@ -1,0 +1,51 @@
+metadata:
+  labels:
+    heritage: deckhouse
+    app.kubernetes.io/name: deckhouse
+    app.kubernetes.io/part-of: deckhouse
+spec:
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          properties:
+            spec:
+              properties:
+                source:
+                  x-doc-examples:
+                    - deckhouse-registry
+                imageTag:
+                  x-doc-examples:
+                    - v1.2.3
+                scanInterval:
+                  x-doc-examples:
+                    - 15s
+                rollback:
+                  x-doc-examples:
+                    - false
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha2
+              kind: ModulePullOverride
+              metadata:
+                name: my-module
+              spec:
+                imageTag: v1.2.3
+                scanInterval: 15s
+                rollback: false
+          properties:
+            spec:
+              properties:
+                imageTag:
+                  x-doc-examples:
+                    - v1.2.3
+                scanInterval:
+                  x-doc-examples:
+                    - 15s
+                rollback:
+                  x-doc-examples:
+                    - false

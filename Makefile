@@ -555,6 +555,7 @@ manifests: controller-gen yq ## Generate WebhookConfiguration, ClusterRole and C
 	@cp bin/crd/bases/deckhouse.io_applicationpackages.yaml deckhouse-controller/crds/applicationpackage.yaml
 	@cp bin/crd/bases/deckhouse.io_moduleconfigs.yaml deckhouse-controller/crds/module-config.yaml
 	@cp bin/crd/bases/deckhouse.io_moduledocumentations.yaml deckhouse-controller/crds/module-documentation.yaml
+	@cp bin/crd/bases/deckhouse.io_modulepulloverrides.yaml deckhouse-controller/crds/module-pull-override.yaml
 	@echo "Applying patches to CRDs..."
 	@for crd in deckhouse-controller/crds/*.yaml; do \
 		case "$$(basename $$crd)" in \
