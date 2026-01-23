@@ -7,7 +7,7 @@ git:
   to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-alpine
+fromImage: alpine:3.19
 final: false
 import:
 - image: {{ .ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -35,7 +35,7 @@ import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-artifact
   add: /src/fencing-agent
   to: /fencing-agent
-  after: install
+  before: setup
 imageSpec:
   config:
     entrypoint: ["/fencing-agent"]
