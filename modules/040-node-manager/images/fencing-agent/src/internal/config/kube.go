@@ -8,7 +8,7 @@ import (
 type KubeConfig struct {
 	KubeAPIRPS                 int           `env:"KUBERNETES_API_RPS" env-default:"10"`
 	KubeAPIBurst               int           `env:"KUBERNETES_API_BURST" env-default:"100"`
-	KubeConfigPath             string        `env:"KUBECONFIG" env-required:"false"`
+	KubeConfigPath             string        `env:"KUBECONFIG" env-default:""` // equal to not set
 	KubernetesAPICheckInterval time.Duration `env:"KUBERNETES_API_CHECK_INTERVAL" env-default:"5s"`
 	KubernetesAPITimeout       time.Duration `env:"KUBERNETES_API_TIMEOUT" env-default:"10s"`
 }
