@@ -1,6 +1,6 @@
 ---
 title: "Registry Module: FAQ"
-description: "Frequently asked questions about the Deckhouse Kubernets Platform registry module including migration procedures, mode switching, containerd configuration, and troubleshooting registry issues."
+description: "Frequently asked questions about the Deckhouse Kubernets Platform registry module including migration procedures, containerd configuration, and troubleshooting registry issues."
 ---
 
 ## How to Migrate to the registry module?
