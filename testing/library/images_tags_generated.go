@@ -409,6 +409,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"d8ShutdownInhibitor":             "imageHash-nodeManager-d8ShutdownInhibitor",
 		"earlyOom":                        "imageHash-nodeManager-earlyOom",
 		"fencingAgent":                    "imageHash-nodeManager-fencingAgent",
+		"kubernetesApiProxy":              "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager":        "imageHash-nodeManager-machineControllerManager",
 		"nodeFeatureDiscovery":            "imageHash-nodeManager-nodeFeatureDiscovery",
 		"nvidiaDcgm":                      "imageHash-nodeManager-nvidiaDcgm",
