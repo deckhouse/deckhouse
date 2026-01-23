@@ -19,6 +19,6 @@
         or
           (kube_persistentvolume_info - 1)
       ) * on(persistentvolume) group_left(namespace) max by (namespace, persistentvolume) (
-        label_replace(kube_persistentvolumeclaim_info, "persistentvolume", "$1", "volumename", "(.+)")
+        label_replace(kube_persistentvolumeclaim_info{volumename!=""}, "persistentvolume", "$1", "volumename", "(.+)")
       )
     record: kube_persistentvolume_is_local
