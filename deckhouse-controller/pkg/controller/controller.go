@@ -83,6 +83,7 @@ const (
 	kubernetesNamespace = "kube-system"
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
+	defaultModuleVersion    = "v2.0.0"
 )
 
 type DeckhouseController struct {
@@ -330,7 +331,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
 	}
 
-	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	packageOperator, err := packageoperator.New(getModuleVersion(runtimeManager), operator.ModuleManager, dc, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -473,5 +474,26 @@ func (c *DeckhouseController) syncDeckhouseSettings() {
 		}
 
 		c.embeddedPolicy.Set(settings)
+	}
+}
+
+// getModuleVersion returns the module version received from the API controller-runtime
+func getModuleVersion(runtimeManager manager.Manager) func(ctx context.Context, moduleName string) (string, error) {
+	return func(ctx context.Context, moduleName string) (string, error) {
+		module := new(v1alpha1.Module)
+		err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
+		})
+
+		if err != nil {
+			return "", fmt.Errorf("failed to get module %q version from cluster: %w", moduleName, err)
+		}
+
+		// set a default version for modules overridden by ModulePullOverride (MPOS)
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+			return defaultModuleVersion, nil
+		}
+
+		return module.GetVersion(), nil
 	}
 }

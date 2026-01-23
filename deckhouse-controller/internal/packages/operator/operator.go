@@ -28,6 +28,8 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/utils/ptr"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
@@ -40,6 +42,7 @@ import (
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/run"
 	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/startup"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	checkerdependency "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -76,9 +79,13 @@ type Operator struct {
 	logger *log.Logger
 }
 
+//go:generate mockgen -source=$GOFILE -package=operator_mock -destination=./mock/operator_mock.go
 type moduleManager interface {
 	GetGlobal() *modules.GlobalModule
+	IsModuleEnabled(moduleName string) bool
 }
+
+type clusterObjectVersion func(ctx context.Context, moduleName string) (string, error)
 
 // New creates and initializes a new Operator instance with all subsystems.
 //
@@ -96,7 +103,7 @@ type moduleManager interface {
 //   - NELM monitor: Tuned QPS for Helm resource monitoring
 //
 // The event handler starts immediately to begin processing events.
-func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
+func New(versionInfo clusterObjectVersion, moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
 	o.packages = make(map[string]*lifecyclePackage)
@@ -109,7 +116,7 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 	o.status = status.NewService()
 
 	// Initialize scheduler with enabling/disabling callbacks
-	o.buildScheduler(moduleManager)
+	o.buildScheduler(versionInfo, moduleManager)
 
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := o.buildNelmService(); err != nil {
@@ -348,7 +355,7 @@ func (o *Operator) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (o *Operator) buildScheduler(moduleManager moduleManager) {
+func (o *Operator) buildScheduler(versionInfo clusterObjectVersion, moduleManager moduleManager) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
 		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
@@ -402,6 +409,28 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 		return bootstrapped
 	}
 
+	moduleDependencyGetter := func(moduleName string) (*checkerdependency.ModuleInfo, error) {
+		version, err := versionInfo(context.Background(), moduleName)
+		notFound := apierrors.IsNotFound(err)
+		if err != nil && !notFound { // any other error except NotFound
+			return nil, fmt.Errorf("error receiving module information from the cluster: %w", err)
+		}
+
+		if notFound {
+			return &checkerdependency.ModuleInfo{}, nil
+		}
+
+		ver, err := semver.NewVersion(version)
+		if err != nil {
+			o.logger.Warn("failed to parse module version", "version", version, "error", err)
+		}
+
+		return &checkerdependency.ModuleInfo{
+			Version:         ver,
+			IsModuleEnabled: ptr.To(moduleManager.IsModuleEnabled(moduleName)),
+		}, nil
+	}
+
 	// onEnable transitions package from Loaded to Running by executing startup hooks
 	onEnable := func(name string) {
 		o.mu.Lock()
@@ -429,10 +458,11 @@ func (o *Operator) buildScheduler(moduleManager moduleManager) {
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger), queue.WithUnique())
 	}
 
-	o.scheduler = schedule.NewScheduler(
+	o.scheduler = schedule.NewScheduler(o.logger.Named("scheduler"),
 		schedule.WithBootstrapCondition(bootstrapCondition),
 		schedule.WithDeckhouseVersionGetter(deckhouseVersionGetter),
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter),
+		schedule.WithDependencyGetter(moduleDependencyGetter),
 		schedule.WithOnEnable(onEnable),
 		schedule.WithOnDisable(onDisable))
 }
