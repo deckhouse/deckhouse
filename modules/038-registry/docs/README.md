@@ -7,8 +7,6 @@ description: "Configuration management of DKP component registry."
 
 The module manages the registry settings for DKP components.
 
-The internal registry allows for optimizing the downloading and storage of images, as well as helping to ensure availability and fault tolerance for Deckhouse Kubernetes Platform.
-
 The module can operate in the following modes:
 
 - `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents Deckhouse images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic — see the [usage examples](examples.html) for more information.
@@ -19,7 +17,7 @@ The module can operate in the following modes:
 
 - `Unmanaged`: Operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
-  - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (see [usage examples](examples.html) for details).
+  - Configurable — a mode managed via the `registry` module. Switching between modes and registries is handled through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switch is performed automatically (see [usage examples](examples.html) for details).
   - Non-configurable (deprecated) — the default mode. Configuration parameters are set during [cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) using the (deprecated) `helper change registry` command.
 
 ## Restrictions and features of using the module
@@ -29,13 +27,13 @@ The `registry` module has a number of limitations and features related to instal
 ### Cluster installation limitations
 
 - DKP cluster bootstrap is only supported in the `Direct` and `Unmanaged` modes (`Local` and `Proxy` modes are not supported). Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
-- To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
+- To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
 ### Operating conditions restrictions
 
 The module works under the following conditions:
 
-- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
+- If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
 - The `Local` and `Proxy` modes are only supported on static clusters.
 
@@ -82,7 +80,7 @@ To ensure high availability of the local registry, a load balancer is deployed o
 
 For components such as `operator-trivy`, `image-availability-exporter`, `deckhouse-controller`, and others that access the registry directly, requests will go to the local registry.
 
-The local registry is populated using the `d8` tool with the `d8 mirror push/pull` commands. For more details, see the [«Registry Module: Usage Examples»](examples.html) section.
+The local registry is populated using the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) tool with the `d8 mirror push/pull` commands. For more details, see the [«Registry Module: Usage Examples»](examples.html) section.
 
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
 ![direct](images/local-en.png)
