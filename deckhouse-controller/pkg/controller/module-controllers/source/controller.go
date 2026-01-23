@@ -221,9 +221,9 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 
 	span.SetAttributes(attribute.String("source", source.Name))
 
-	scanInterval := source.Spec.ScanInterval.Duration
-	if scanInterval == 0 {
-		scanInterval = defaultScanInterval
+	scanInterval := defaultScanInterval
+	if interval := source.Spec.ScanInterval; interval != nil && interval.Duration > defaultScanInterval {
+		scanInterval = interval.Duration
 	}
 
 	// generate options for connecting to the registry

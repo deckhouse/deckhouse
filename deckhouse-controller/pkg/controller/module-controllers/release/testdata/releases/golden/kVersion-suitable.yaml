@@ -15,7 +15,6 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/team/foxtrot/modules
     scheme: HTTPS
-  scanInterval: 0s
 status:
   message: ""
   modules:
