@@ -44,7 +44,7 @@ spec:
   volumes:
     - name: ca-cert
       hostPath:
-        path: /etc/kubernetes/pki/ca.crt
+        path: /etc/kubernetes/kubernetes-api-proxy/ca.crt
         type: File
     - name: cl-cert
       hostPath:
