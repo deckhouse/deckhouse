@@ -22,10 +22,12 @@ bb-set-proxy
   {{- $kubernetes_api_proxy_image = "deckhouse.local/images:kubernetes-api-proxy" }}
 {{- end }}
 
-{{- /* TODO: Probably, we can add it only on .runType "Normal", 'cause we don't have certificates already, it will always fail down */ }}
-{{- /* TODO: Or we need some tests behavior in scenarios, when no certs is loaded */ }}
-{{- /* TODO: Probably, we need to add ability for watch certs in runTime for changing them after time is come */ }}
-{{- /* TODO: Also, we don't need in KAP before "Normal", 'cause Kubelet settings for KAP-addressing applies only after switch to .runType "Normal" */ }}
+{{- /*
+  TODO: Probably, we can add it only on .runType "Normal", 'cause we don't have certificates already, it will always fail down
+  TODO: Or we need some tests behavior in scenarios, when no certs is loaded
+  TODO: Probably, we need to add ability for watch certs in runTime for changing them after time is come
+  TODO: Also, we don't need in KAP before "Normal", 'cause Kubelet settings for KAP-addressing applies only after switch to .runType "Normal"
+*/}}
 
 bb-sync-file /etc/kubernetes/manifests/kubernetes-api-proxy.yaml - << EOF
 apiVersion: v1
