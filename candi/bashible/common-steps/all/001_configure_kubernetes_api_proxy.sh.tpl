@@ -31,19 +31,19 @@ EOF
 if [! -f /etc/kubernetes/kubernetes-api-proxy/ca.crt ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - << EOF
 {{ .normal.apiserverProxyCerts.ca }}
-  EOF
+EOF
 fi
 
 if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.crt ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.crt - << EOF
 {{ .normal.apiserverProxyCerts.crt }}
-  EOF
+EOF
 fi
 
 if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.key ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.key - << EOF
 {{ .normal.apiserverProxyCerts.key }}
-  EOF
+EOF
 fi
 
 {{- end }}
