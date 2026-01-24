@@ -97,15 +97,15 @@ func New(conf Config, logger *log.Logger) *Manager {
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
-func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
+func (m *Manager) LoadPackage(ctx context.Context, repo registry.Repository, namespace, name string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
-	span.SetAttributes(attribute.String("registry", registry.Name))
+	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	app, err := m.loader.Load(ctx, registry, name)
+	app, err := m.loader.Load(ctx, repo, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)

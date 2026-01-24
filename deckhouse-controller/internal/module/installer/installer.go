@@ -94,7 +94,7 @@ func (i *Installer) GetInstalled() (map[string]struct{}, error) {
 }
 
 func (i *Installer) GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
-	return i.registry.GetImageDigest(ctx, registry.BuildRegistryBySource(source), moduleName, version)
+	return i.registry.GetImageDigest(ctx, registry.BuildRepository(source), moduleName, version)
 }
 
 func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error) {
@@ -103,7 +103,7 @@ func (i *Installer) Download(ctx context.Context, source *v1alpha1.ModuleSource,
 		return "", fmt.Errorf("create tmp directory: %w", err)
 	}
 
-	if err = i.registry.Download(ctx, registry.BuildRegistryBySource(source), tmp, moduleName, version); err != nil {
+	if err = i.registry.Download(ctx, registry.BuildRepository(source), tmp, moduleName, version); err != nil {
 		return "", err
 	}
 

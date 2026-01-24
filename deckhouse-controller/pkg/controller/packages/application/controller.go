@@ -71,7 +71,7 @@ type moduleManager interface {
 }
 
 type packageOperator interface {
-	Update(reg registry.Registry, inst packageoperator.Instance)
+	Update(repo registry.Repository, inst packageoperator.Instance)
 	Remove(namespace, name string)
 	Status() *packagestatus.Service
 }
@@ -339,9 +339,7 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		}
 	}
 
-	reg := registry.BuildRegistryByRepository(repo)
-
-	r.operator.Update(reg, packageoperator.Instance{
+	r.operator.Update(registry.BuildRepository(repo), packageoperator.Instance{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{

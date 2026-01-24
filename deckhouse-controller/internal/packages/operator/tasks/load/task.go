@@ -34,7 +34,7 @@ const (
 )
 
 type manager interface {
-	LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error)
+	LoadPackage(ctx context.Context, registry registry.Repository, namespace, name string) (string, error)
 	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
@@ -47,7 +47,7 @@ type statusService interface {
 type task struct {
 	packageName string
 	namespace   string
-	registry    registry.Registry
+	repository  registry.Repository
 	settings    addonutils.Values
 
 	manager manager
@@ -56,11 +56,11 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(reg registry.Registry, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
+func NewTask(repo registry.Repository, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		namespace:   namespace,
-		registry:    reg,
+		repository:  repo,
 		settings:    settings,
 		manager:     manager,
 		status:      status,
@@ -75,7 +75,7 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
 	t.logger.Debug("load package", slog.String("name", t.packageName))
-	version, err := t.manager.LoadPackage(ctx, t.registry, t.namespace, t.packageName)
+	version, err := t.manager.LoadPackage(ctx, t.repository, t.namespace, t.packageName)
 	if err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("load package: %w", err)

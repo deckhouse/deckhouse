@@ -66,7 +66,7 @@ func (s *Service) SetClusterUUID(id string) {
 // GetImageReader downloads the package image and extracts it.
 // IMPORTANT do not forget to close reader
 // <registry>/<packageName>:<tag>
-func (s *Service) GetImageReader(ctx context.Context, cred Registry, packageName, tag string) (io.ReadCloser, error) {
+func (s *Service) GetImageReader(ctx context.Context, cred Repository, packageName, tag string) (io.ReadCloser, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageReader")
 	defer span.End()
 
@@ -112,7 +112,7 @@ func (s *Service) GetImageReader(ctx context.Context, cred Registry, packageName
 
 // GetImageDigest downloads package image and returns its digest
 // <registry>/<package>:<tag>
-func (s *Service) GetImageDigest(ctx context.Context, cred Registry, packageName, tag string) (string, error) {
+func (s *Service) GetImageDigest(ctx context.Context, cred Repository, packageName, tag string) (string, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageDigest")
 	defer span.End()
 
@@ -145,7 +145,7 @@ func (s *Service) GetImageDigest(ctx context.Context, cred Registry, packageName
 
 // GetImageRootHash downloads package manifest to parse rootHash from manifest annotations
 // <registry>/<package>:<tag>
-func (s *Service) GetImageRootHash(ctx context.Context, cred Registry, packageName, tag string) (string, error) {
+func (s *Service) GetImageRootHash(ctx context.Context, cred Repository, packageName, tag string) (string, error) {
 	_, span := otel.Tracer(tracerName).Start(ctx, "GetImageRootHash")
 	defer span.End()
 
@@ -183,7 +183,7 @@ func (s *Service) GetImageRootHash(ctx context.Context, cred Registry, packageNa
 
 // Download downloads package on temp fs and returns path to it
 // <registry>/<package>:<tag>
-func (s *Service) Download(ctx context.Context, cred Registry, out, packageName, tag string) error {
+func (s *Service) Download(ctx context.Context, cred Repository, out, packageName, tag string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
@@ -310,35 +310,38 @@ func isRel(candidate, target string) bool {
 	return err == nil && !strings.HasPrefix(filepath.Clean(relpath), "..")
 }
 
-type Registry struct {
+type Repository struct {
 	Name         string `json:"name" yaml:"name"`
-	Repository   string `json:"repository" yaml:"repository"`
+	Registry     string `json:"registry" yaml:"registry"`
 	DockerConfig string `json:"dockercfg" yaml:"dockercfg"`
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca" yaml:"ca"`
 }
 
-func BuildRegistryBySource(source *v1alpha1.ModuleSource) Registry {
-	return Registry{
-		Name:         source.Name,
-		Repository:   source.Spec.Registry.Repo,
-		DockerConfig: source.Spec.Registry.DockerCFG,
-		CA:           source.Spec.Registry.CA,
-		Scheme:       source.Spec.Registry.Scheme,
+func BuildRepository[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) Repository {
+	switch v := any(reg).(type) {
+	case *v1alpha1.ModuleSource:
+		return Repository{
+			Name:         v.Name,
+			Registry:     v.Spec.Registry.Repo,
+			DockerConfig: v.Spec.Registry.DockerCFG,
+			CA:           v.Spec.Registry.CA,
+			Scheme:       v.Spec.Registry.Scheme,
+		}
+	case *v1alpha1.PackageRepository:
+		return Repository{
+			Name:         v.Name,
+			Registry:     v.Spec.Registry.Repo,
+			DockerConfig: v.Spec.Registry.DockerCFG,
+			CA:           v.Spec.Registry.CA,
+			Scheme:       v.Spec.Registry.Scheme,
+		}
 	}
+
+	return Repository{}
 }
 
-func BuildRegistryByRepository(repo *v1alpha1.PackageRepository) Registry {
-	return Registry{
-		Name:         repo.Name,
-		Repository:   repo.Spec.Registry.Repo,
-		DockerConfig: repo.Spec.Registry.DockerCFG,
-		CA:           repo.Spec.Registry.CA,
-		Scheme:       repo.Spec.Registry.Scheme,
-	}
-}
-
-func (s *Service) buildRegistryClient(cred Registry, segment string) (cr.Client, error) {
+func (s *Service) buildRegistryClient(cred Repository, segment string) (cr.Client, error) {
 	opts := []cr.Option{
 		cr.WithAuth(cred.DockerConfig),
 		cr.WithUserAgent(s.clusterUUID),
@@ -346,7 +349,7 @@ func (s *Service) buildRegistryClient(cred Registry, segment string) (cr.Client,
 		cr.WithInsecureSchema(strings.ToLower(cred.Scheme) == "http"),
 	}
 
-	cli, err := s.dc.GetRegistryClient(filepath.Join(cred.Repository, segment), opts...)
+	cli, err := s.dc.GetRegistryClient(filepath.Join(cred.Registry, segment), opts...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
 	}

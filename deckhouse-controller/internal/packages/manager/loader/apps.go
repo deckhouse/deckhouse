@@ -74,8 +74,7 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //  5. Creates and returns an Application instance
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
-// Returns ErrVersionNotFound if version directory doesn't exist.
-func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, name string) (*apps.Application, error) {
+func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Repository, name string) (*apps.Application, error) {
 	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
 
@@ -138,8 +137,8 @@ func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, nam
 	conf := apps.ApplicationConfig{
 		Definition: appDef,
 
-		Digests:  digests,
-		Registry: reg,
+		Digests:    digests,
+		Repository: repo,
 
 		StaticValues: static,
 		ConfigSchema: config,

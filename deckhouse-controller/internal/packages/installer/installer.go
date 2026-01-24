@@ -30,7 +30,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -39,138 +38,84 @@ const (
 	tracerName = "installer"
 )
 
+// Installer handles package lifecycle using erofs images with dm-verity integrity.
+// Operations are serialized via mutex to prevent concurrent mount/unmount conflicts.
 type Installer struct {
-	mtx sync.Mutex
-	// /deckhouse/downloaded
-	downloaded string
-	// /deckhouse/downloaded/apps/deployed
-	mount string
-
+	mtx      sync.Mutex
 	registry *registry.Service
-
-	logger *log.Logger
+	logger   *log.Logger
 }
 
 func New(dc dependency.Container, logger *log.Logger) *Installer {
-	downloaded := d8env.GetDownloadedModulesDir()
-
 	return &Installer{
-		downloaded: downloaded,
-		mount:      filepath.Join(downloaded, "apps", "deployed"),
-		registry:   registry.NewService(dc, logger),
-		logger:     logger.Named("application-installer"),
+		registry: registry.NewService(dc, logger),
+		logger:   logger.Named("package-installer"),
 	}
 }
 
-// packageDir returns /deckhouse/downloaded/apps/<registry>/<package>
-func (i *Installer) packageDir(registry, packageName string) string {
-	return filepath.Join(i.downloaded, "apps", registry, packageName)
-}
-
-// Uninstall umount the erofs image
-func (i *Installer) Uninstall(ctx context.Context, app string) error {
-	ctx, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
-	defer span.End()
-
-	span.SetAttributes(attribute.String("app", app))
-
-	logger := i.logger.With(slog.String("name", app))
-
-	logger.Debug("uninstall app")
-
-	// /deckhouse/downloaded/apps/deployed/<app>
-	mountPath := filepath.Join(i.mount, app)
-	if _, err := os.Stat(mountPath); err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("check mount path '%s': %w", mountPath, err)
-	}
-
-	// mounts should not be executed simultaneously
-	i.mtx.Lock()
-	defer i.mtx.Unlock()
-
-	logger.Debug("unmount erofs image", slog.String("path", mountPath))
-	if err := verity.Unmount(ctx, mountPath); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("unmount erofs image '%s': %w", mountPath, err)
-	}
-
-	logger.Debug("close device mapper")
-	if err := verity.CloseMapper(ctx, app); err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("close device mapper: %w", err)
-	}
-
-	logger.Debug("app uninstalled")
-
-	return nil
-}
-
-// Download ensures the package image is present, verified, and mounted.
-func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, version string) error {
+// Download fetches a package image from the registry and creates an erofs image.
+// If the image already exists and passes verification, download is skipped.
+func (i *Installer) Download(ctx context.Context, repo registry.Repository, downloaded, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Download")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("version", version))
-	span.SetAttributes(attribute.String("registry", reg.Name))
-	span.SetAttributes(attribute.String("repository", reg.Repository))
+	span.SetAttributes(attribute.String("downloaded", downloaded))
+	span.SetAttributes(attribute.String("repository", repo.Name))
+	span.SetAttributes(attribute.String("registry", repo.Registry))
 
 	logger := i.logger.With(
 		slog.String("name", name),
 		slog.String("version", version),
-		slog.String("registry", reg.Name),
-		slog.String("repository", reg.Repository))
+		slog.String("downloaded", downloaded),
+		slog.String("repository", repo.Name),
+		slog.String("registry", repo.Registry))
 
 	logger.Debug("download package")
 
 	select {
 	case <-ctx.Done():
 		span.SetStatus(codes.Error, "context canceled")
-		return nil
+		return ctx.Err()
 	default:
 	}
 
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
-	// /deckhouse/downloaded/apps/<registry>/<package>
-	packagePath := i.packageDir(reg.Name, name)
-	if err := os.MkdirAll(packagePath, 0755); err != nil {
+	// <downloaded>/<version>.erofs
+	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
+	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreatePackageDirErr(err)
 	}
 
-	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
-	imagePath := filepath.Join(packagePath, fmt.Sprintf("%s.erofs", version))
-
-	rootHash, err := i.registry.GetImageRootHash(ctx, reg, name, version)
+	rootHash, err := i.registry.GetImageRootHash(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newGetRootHashErr(err)
 	}
 
-	logger.Debug("verify package")
-	if err = i.verifyPackage(ctx, reg.Name, name, version, rootHash); err == nil {
-		logger.Debug("package verified")
+	// skip download if image exists and passes integrity check
+	logger.Debug("verify package image")
+	if err = i.verifyImage(ctx, imagePath, rootHash); err == nil {
+		logger.Debug("package image verified")
 
 		return nil
 	}
 
-	logger.Warn("verify package failed", log.Err(err))
+	// verification failed - fetch fresh image from registry
+	logger.Warn("verify package image failed", log.Err(err))
 
-	img, err := i.registry.GetImageReader(ctx, reg, name, version)
+	img, err := i.registry.GetImageReader(ctx, repo, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return newGetImageReaderErr(err)
+		return newGetRootHashErr(err)
 	}
 	defer img.Close()
 
-	logger.Debug("create erofs image from package image", slog.String("path", imagePath))
+	logger.Debug("create erofs image by package image", slog.String("path", imagePath))
 	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newImageByTarErr(err)
@@ -179,34 +124,41 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	return nil
 }
 
-// Install creates device mapper for application and mounts it
-func (i *Installer) Install(ctx context.Context, registry, name, packageName, version string) error {
+// Install mounts an erofs image using dm-verity for integrity verification.
+// Flow: unmount old → close mapper → compute hash → create mapper → mount new.
+func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, version string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "Install")
 	defer span.End()
 
+	span.SetAttributes(attribute.String("downloaded", downloaded))
+	span.SetAttributes(attribute.String("deployed", deployed))
 	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("package", packageName))
 	span.SetAttributes(attribute.String("version", version))
-	span.SetAttributes(attribute.String("registry", registry))
 
-	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
-	logger.Debug("install application")
+	logger := i.logger.With(
+		slog.String("downloaded", downloaded),
+		slog.String("deployed", deployed),
+		slog.String("name", name),
+		slog.String("version", version))
+
+	logger.Debug("install package")
 
 	select {
 	case <-ctx.Done():
 		span.SetStatus(codes.Error, "context canceled")
-		return nil
+		return ctx.Err()
 	default:
 	}
 
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
-	// /deckhouse/downloaded/apps/deployed/<app>
-	mountPoint := filepath.Join(i.mount, name)
+	// <downloaded>/<version>.erofs
+	imagePath := filepath.Join(downloaded, fmt.Sprintf("%s.erofs", version))
 
-	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
-	if err := verity.Unmount(ctx, mountPoint); err != nil {
+	// cleanup any existing mount before installing new version
+	logger.Debug("unmount old erofs image", slog.String("path", deployed))
+	if err := verity.Unmount(ctx, deployed); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newUnmountErr(err)
 	}
@@ -217,11 +169,7 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 		return newCloseDeviceMapperErr(err)
 	}
 
-	// /deckhouse/downloaded/apps/<registry>/<package>
-	packagePath := i.packageDir(registry, packageName)
-	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
-	imagePath := filepath.Join(packagePath, fmt.Sprintf("%s.erofs", version))
-
+	// compute dm-verity root hash for integrity verification during reads
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
@@ -229,14 +177,15 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 		return newComputeHashErr(err)
 	}
 
-	logger.Debug("create device mapper", slog.String("path", imagePath))
+	// setup dm-verity device mapper with root hash for runtime integrity checks
+	logger.Debug("create device mapper", slog.String("path", deployed))
 	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreateDeviceMapperErr(err)
 	}
 
-	logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
-	if err = verity.Mount(ctx, name, mountPoint); err != nil {
+	logger.Debug("mount erofs image mapper", slog.String("path", deployed))
+	if err = verity.Mount(ctx, name, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newMountErr(err)
 	}
@@ -244,17 +193,67 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 	return nil
 }
 
-// verifyPackage checks that the image and hash exist and verified
-func (i *Installer) verifyPackage(_ context.Context, registry, pack, version, _ string) error {
-	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
-	imagePath := filepath.Join(i.packageDir(registry, pack), fmt.Sprintf("%s.erofs", version))
+// Uninstall unmounts the erofs image and closes the dm-verity mapper.
+// If keep=false, the downloaded image files are also deleted.
+func (i *Installer) Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "Uninstall")
+	defer span.End()
 
+	span.SetAttributes(attribute.String("name", name))
+
+	logger := i.logger.With(slog.String("name", name))
+
+	logger.Debug("uninstall package")
+
+	if _, err := os.Stat(deployed); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("check mount path '%s': %w", deployed, err)
+	}
+
+	// clear package dir
+	defer func() {
+		if keep {
+			return
+		}
+
+		logger.Info("delete package dir", slog.String("path", downloaded))
+		if err := os.RemoveAll(downloaded); err != nil {
+			logger.Warn("failed to remove downloaded images", slog.String("path", downloaded))
+		}
+	}()
+
+	// mounts should not be executed simultaneously
+	i.mtx.Lock()
+	defer i.mtx.Unlock()
+
+	logger.Debug("unmount erofs image", slog.String("path", deployed))
+	if err := verity.Unmount(ctx, deployed); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("unmount erofs image '%s': %w", deployed, err)
+	}
+
+	logger.Debug("close device mapper")
+	if err := verity.CloseMapper(ctx, name); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return fmt.Errorf("close device mapper: %w", err)
+	}
+
+	logger.Debug("package uninstalled")
+
+	return nil
+}
+
+// verifyImage checks that the image and hash exist and verified
+func (i *Installer) verifyImage(_ context.Context, imagePath, _ string) error {
 	if _, err := os.Stat(imagePath); err != nil {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
 
-	// TODO(ipaqsa): wait for all apps have root hash
-	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs.verity
+	// TODO(ipaqsa): wait until all package have root hash
 	// hashPath := fmt.Sprintf("%s.verity", imagePath)
 	// if _, err := os.Stat(hashPath); err != nil {
 	// 	return fmt.Errorf("stat verity hash file '%s': %w", hashPath, err)
