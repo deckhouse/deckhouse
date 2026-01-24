@@ -4,17 +4,4 @@
 
 {::options parse_block_html="false" /}
 
-<div markdown="1">
-## Все установлено, настроено и работает!
-
-Ваш кластер готов к работе! Вы успешно настроили:
-
-- master-узел с развернутой Deckhouse Virtualization Platform;
-- worker-узел для запуска рабочих нагрузок;
-- NFS-хранилище для данных;
-- модуль виртуализации для создания виртуальных машин.
-
-Рассмотрим дальнейшие возможности Deckhouse Virtualization Platform, открывающиеся сразу после установки:
-</div>
-
 {% include getting_started/dvp/global/partials/FINISH_CARDS_RU.md %}
