@@ -59,9 +59,9 @@ installTypes:
         template: getting_started/dvp/global/STEP_INSTALL.md
       step5:
         name:
-          en: Finishing installation
-          ru: Завершение установки
-        template: getting_started/dvp/global/STEP_FINALIZE.md
+          en: Deploying a test application
+          ru: Развёртывание тестового приложения
+        template: getting_started/dvp/global/STEP_TESTAPP.md
       step6:
         name:
           en: What can I do next?
