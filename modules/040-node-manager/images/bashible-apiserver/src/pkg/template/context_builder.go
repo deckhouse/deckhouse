@@ -464,7 +464,7 @@ type normal struct {
 	ClusterDNSAddress       string                 `json:"clusterDNSAddress" yaml:"clusterDNSAddress"`
 	BootstrapTokens         map[string]string      `json:"bootstrapTokens" yaml:"bootstrapTokens"`
 	APIServerEndpoints      []string               `json:"apiserverEndpoints" yaml:"apiserverEndpoints"`
-	APIServerProxyCerts     map[string]interface{} `json:"apiServerProxyCerts" yaml:"apiServerProxyCerts"`
+	APIServerProxyCerts     map[string]interface{} `json:"apiserverProxyCerts" yaml:"apiserverProxyCerts"`
 	KubernetesCA            string                 `json:"kubernetesCA" yaml:"kubernetesCA"`
 	ModuleSourcesCA         map[string]string      `json:"moduleSourcesCA" yaml:"moduleSourcesCA"`
 }

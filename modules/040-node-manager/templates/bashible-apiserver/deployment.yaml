@@ -144,11 +144,11 @@ spec:
     {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
     apiserverProxyCerts:
       ca: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.ca | nindent 6 }}
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.ca | nindent 8 }}
       crt: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 6 }}
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 8 }}
       key: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | nindent 6 }}
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | nindent 8 }}
     {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
