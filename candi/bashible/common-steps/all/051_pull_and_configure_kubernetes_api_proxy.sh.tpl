@@ -60,12 +60,9 @@ spec:
           drop:
             - ALL
         readOnlyRootFilesystem: true
-        runAsGroup: 0
-        runAsNonRoot: false
-        runAsUser: 0
         seccompProfile:
           type: RuntimeDefault
-      image: kubernetes-api-proxy:0.0.1
+      image: {{ $kubernetes_api_proxy_image }}
       imagePullPolicy: IfNotPresent
       args:
         - "--listen-address=0.0.0.0"
