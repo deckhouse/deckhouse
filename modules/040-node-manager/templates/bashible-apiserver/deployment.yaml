@@ -141,11 +141,11 @@ spec:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
-    {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscovery" }}
+    {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
     apiserverProxyCerts:
-      ca: {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscovery.ca }}
-      crt: {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscovery.crt }}
-      key: {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscovery.key }}
+      ca: {{ $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.ca | b64enc | quote }}
+      crt: {{ $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | b64enc | quote }}
+      key: {{ $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | b64enc | quote }}
     {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:

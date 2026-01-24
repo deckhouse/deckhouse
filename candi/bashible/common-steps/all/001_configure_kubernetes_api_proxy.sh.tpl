@@ -30,19 +30,19 @@ EOF
 {{ if eq .runType "Normal" }}
 if [! -f /etc/kubernetes/kubernetes-api-proxy/ca.crt ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - << EOF
-{{ .normal.apiserverProxyCerts.ca }}
+{{ .normal.apiserverProxyCerts.ca | b64dec }}
   EOF
 fi
 
 if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.crt ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.crt - << EOF
-{{ .normal.apiserverProxyCerts.crt }}
+{{ .normal.apiserverProxyCerts.crt | b64dec }}
   EOF
 fi
 
 if [! -f /etc/kubernetes/kubernetes-api-proxy/cl.key ]; then
   bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.key - << EOF
-{{ .normal.apiserverProxyCerts.key }}
+{{ .normal.apiserverProxyCerts.key | b64dec }}
   EOF
 fi
 

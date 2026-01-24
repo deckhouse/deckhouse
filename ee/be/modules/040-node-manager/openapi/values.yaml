@@ -89,6 +89,24 @@ properties:
         description: |
           kubernetes.ca content
 
+      kubernetesAPIProxyDiscoveryCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
       standbyNodeGroups:
         type: array
         description: |

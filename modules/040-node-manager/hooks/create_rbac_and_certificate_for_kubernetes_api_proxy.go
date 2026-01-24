@@ -39,7 +39,7 @@ var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLS
 	Namespace:     "kube-system", // TODO: Do we need save it here? Or we need move this tls somewhere else?
 	TLSSecretName: "kubernetes-api-proxy-discovery-tls",
 
-	FullValuesPathPrefix: "nodeManager.internal.kubernetesAPIProxyDiscovery",
+	FullValuesPathPrefix: "nodeManager.internal.kubernetesAPIProxyDiscoveryCert",
 	Usages: []certificatesv1.KeyUsage{
 		certificatesv1.UsageClientAuth,
 	},

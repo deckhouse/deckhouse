@@ -89,25 +89,23 @@ properties:
         description: |
           kubernetes.ca content
 
-      kubernetesAPIProxyDiscovery:
+      kubernetesAPIProxyDiscoveryCert:
         type: object
         default: {}
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
         properties:
-          ca:
-            description: Kubernetes CA for kubernetes-apiserver-proxy
-            type: string
-            x-examples:
-              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
-          key:
-            description: Private certificate key for kubernetes-apiserver-proxy with ability to login to authentification on kubernetes-api
-            type: string
-            x-examples:
-              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
           crt:
-            description: Public certificate for kubernetes-apiserver-proxy with ability to login to authentification on kubernetes-api
             type: string
-            x-examples:
-              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
       standbyNodeGroups:
         type: array
