@@ -44,18 +44,10 @@ spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
   volumes:
-    - name: ca-cert
+    - name: certs
       hostPath:
-        path: /etc/kubernetes/kubernetes-api-proxy/ca.crt
-        type: File
-    - name: cl-cert
-      hostPath:
-        path: /etc/kubernetes/kubernetes-api-proxy/apl.crt
-        type: File
-    - name: cl-key
-      hostPath:
-        path: /etc/kubernetes/kubernetes-api-proxy/apl.key
-        type: File
+        path: /etc/kubernetes/kubernetes-api-proxy
+        type: Directory
     - name: upstreams
       hostPath:
         path: /etc/kubernetes/kubernetes-api-proxy/upstreams.json
@@ -110,17 +102,12 @@ spec:
           cpu: 500m
           memory: 256Mi
       volumeMounts:
-        - name: cl-cert
-          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/cl.crt
-          readOnly: true
-        - name: cl-key
-          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/cl.key
-          readOnly: true
-        - name: ca-cert
-          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/ca.crt
+        - name: certs
+          mountPath: /var/run/kubernetes.io/kubernetes-api-proxy
           readOnly: true
         - name: upstreams
           mountPath: /var/run/kubernetes.io/kubernetes-api-proxy/upstreams.json
+          readOnly: false
 EOF
 
 bb-unset-proxy

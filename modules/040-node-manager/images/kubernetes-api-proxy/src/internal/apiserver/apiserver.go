@@ -140,6 +140,10 @@ func (lb *LoadBalancer) Healthy() (bool, error) {
 	return ok, err
 }
 
+func (lb *LoadBalancer) Nodes() ([]upstream.ExportNode, error) {
+	return lb.lb.MainUpstreamList.ExportNodes()
+}
+
 func (lb *LoadBalancer) Start() error {
 	return lb.lb.Start()
 }

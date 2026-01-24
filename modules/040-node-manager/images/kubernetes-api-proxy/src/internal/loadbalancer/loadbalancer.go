@@ -63,6 +63,14 @@ func (b *Balancer) IsHealthy() (bool, error) {
 	return true, nil
 }
 
+func (b *Balancer) ExportNodes() ([]upstream.ExportNode, error) {
+	if b.MainUpstreamList == nil {
+		return nil, errors.New("main upstream list is empty")
+	}
+
+	return b.MainUpstreamList.ExportNodes()
+}
+
 // ServeRoute installs a load balancer route from the listening ip:port to the
 // provided upstream addresses.
 //

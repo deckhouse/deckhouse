@@ -17,11 +17,15 @@ limitations under the License.
 package app
 
 import (
+	"encoding/json"
 	"net/http"
+
+	"kubernetes-api-proxy/internal/upstream"
 )
 
 type healthChecker interface {
 	Healthy() (bool, error)
+	Nodes() ([]upstream.ExportNode, error)
 }
 
 // NewHealthServer constructs an HTTP server exposing /healthz (always OK) and
@@ -33,12 +37,19 @@ func NewHealthServer(addr string, lb healthChecker) *http.Server {
 		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		if ok, _ := lb.Healthy(); ok {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("ok"))
-			return
-		}
-		http.Error(w, "not ready", http.StatusServiceUnavailable)
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+	mux.HandleFunc("/upstreams", func(w http.ResponseWriter, _ *http.Request) {
+		isHealthy, _ := lb.Healthy()
+		nodes, _ := lb.Nodes()
+
+		var statusMap = make(map[string]interface{})
+		statusMap["isHealthy"] = isHealthy
+		statusMap["nodes"] = nodes
+
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(statusMap)
 	})
 
 	return &http.Server{Addr: addr, Handler: mux}

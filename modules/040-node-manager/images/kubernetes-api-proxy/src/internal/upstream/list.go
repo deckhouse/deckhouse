@@ -364,6 +364,24 @@ func (list *List) ListFullAddresses() []string {
 	return nodes
 }
 
+func (list *List) ExportNodes() ([]ExportNode, error) {
+	list.mu.Lock()
+	defer list.mu.Unlock()
+
+	nodes := list.nodes
+
+	exportNodes := make([]ExportNode, 0, len(nodes))
+	for _, node := range nodes {
+		exportNodes = append(exportNodes, ExportNode{
+			Upstream: node.backend.Addr,
+			Score:    node.score,
+			Tier:     node.tier,
+		})
+	}
+
+	return exportNodes, nil
+}
+
 func (list *List) healthcheck(ctx context.Context) {
 	defer list.healthWg.Done()
 

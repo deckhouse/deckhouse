@@ -21,3 +21,9 @@ type node struct {
 	score   float64
 	tier    Tier
 }
+
+type ExportNode struct {
+	Upstream string  `json:"upstream"`
+	Score    float64 `json:"score"`
+	Tier     Tier    `json:"tier"`
+}
