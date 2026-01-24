@@ -39,7 +39,7 @@ func DefineHelperCommands(kpApp *kingpin.Application, logger *log.Logger) {
 
 	{
 		changeRegistryCommand := helpersCommand.Command("change-registry", "Change registry for deckhouse images.")
-		newRegistry := changeRegistryCommand.Arg("new-registry", "Registry that will be used for deckhouse images (example: registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need http - provide '--scheme' flag with http value").Required().String()
+		newRegistry := changeRegistryCommand.Arg("new-registry", "Repository that will be used for deckhouse images (example: registry.deckhouse.io/deckhouse/ce). By default, https will be used, if you need http - provide '--scheme' flag with http value").Required().String()
 
 		user := changeRegistryCommand.Flag("user", "User with pull access to registry.").String()
 		password := changeRegistryCommand.Flag("password", "Password/token for registry user.").String()

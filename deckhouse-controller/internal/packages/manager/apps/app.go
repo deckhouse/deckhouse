@@ -57,9 +57,9 @@ type Application struct {
 	namespace string // Application instance namespace
 	path      string // path to the package dir on fs
 
-	definition Definition          // Application definition
-	digests    map[string]string   // Package digests
-	repository registry.Repository // Application repository
+	definition Definition        // Application definition
+	digests    map[string]string // Package digests
+	repository registry.Remote   // Application repository
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
@@ -72,8 +72,8 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
-	Digests    map[string]string   // Package images digests(images_digests.json)
-	Repository registry.Repository // Package repository
+	Digests    map[string]string // Package images digests(images_digests.json)
+	Repository registry.Remote   // Package repository options
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)

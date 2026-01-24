@@ -32,6 +32,8 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
+	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
+	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
@@ -42,6 +44,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -105,8 +109,19 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 	o.logger = logger.Named(operatorTracer)
 	o.scheduleManager = cron.NewManager(o.logger)
 	o.queueService = queue.NewService(o.logger)
-	o.installer = installer.New(dc, o.logger)
 	o.status = status.NewService()
+
+	reg := registry.NewService(dc, logger)
+	// Default to symlink backend (works everywhere, including MacOS)
+	var backend installer.Backend = symlinkinstaller.NewInstaller(reg, logger)
+
+	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
+	if verity.IsSupported() {
+		logger.Info("erofs supported")
+		backend = erofsinstaller.NewInstaller(reg, logger)
+	}
+
+	o.installer = installer.NewWithBackend(backend)
 
 	// Initialize scheduler with enabling/disabling callbacks
 	o.buildScheduler(moduleManager)

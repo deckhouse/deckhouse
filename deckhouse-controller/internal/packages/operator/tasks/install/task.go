@@ -53,7 +53,7 @@ type task struct {
 	name       string
 	version    string
 
-	repository registry.Repository
+	repository registry.Remote
 
 	installer installer
 	status    statusService
@@ -61,7 +61,7 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewModuleTask(name, version string, repo registry.Repository, status statusService, installer installer, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
 		downloaded: filepath.Join(modulesDownloadedDir, name),
 		deployed:   filepath.Join(modulesDeployedDir, name),
@@ -74,7 +74,7 @@ func NewModuleTask(name, version string, repo registry.Repository, status status
 	}
 }
 
-func NewAppTask(instance, name, version string, repo registry.Repository, status statusService, installer installer, logger *log.Logger) queue.Task {
+func NewAppTask(instance, name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
 		downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
 		deployed:   filepath.Join(appsDeployedDir, instance),

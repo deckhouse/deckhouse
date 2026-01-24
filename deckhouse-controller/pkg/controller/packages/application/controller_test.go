@@ -376,7 +376,7 @@ func (m *moduleManagerStub) AreModulesInited() bool {
 type operatorStub struct {
 }
 
-func (o *operatorStub) Update(_ registry.Repository, _ packageoperator.Instance) {
+func (o *operatorStub) Update(_ registry.Remote, _ packageoperator.Instance) {
 	return
 }
 

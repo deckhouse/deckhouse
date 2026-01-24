@@ -34,7 +34,7 @@ const (
 )
 
 type manager interface {
-	LoadPackage(ctx context.Context, registry registry.Repository, namespace, name string) (string, error)
+	LoadPackage(ctx context.Context, registry registry.Remote, namespace, name string) (string, error)
 	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
@@ -47,7 +47,7 @@ type statusService interface {
 type task struct {
 	packageName string
 	namespace   string
-	repository  registry.Repository
+	repository  registry.Remote
 	settings    addonutils.Values
 
 	manager manager
@@ -56,7 +56,7 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(repo registry.Repository, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
+func NewTask(repo registry.Remote, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		namespace:   namespace,

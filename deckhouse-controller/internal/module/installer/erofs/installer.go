@@ -229,7 +229,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 	// /deckhouse/downloaded/<module>/<version>.erofs
 	imagePath := filepath.Join(modulePath, image)
 
-	rootHash, err := i.registry.GetImageRootHash(ctx, registry.BuildRepository(ms), module, version)
+	rootHash, err := i.registry.GetImageRootHash(ctx, registry.BuildRemote(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("get image root hash: %w", err)
@@ -263,7 +263,7 @@ func (i *Installer) Restore(ctx context.Context, ms *v1alpha1.ModuleSource, modu
 
 	logger.Warn("verify module failed", log.Err(err))
 
-	img, err := i.registry.GetImageReader(ctx, registry.BuildRepository(ms), module, version)
+	img, err := i.registry.GetImageReader(ctx, registry.BuildRemote(ms), module, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("download module image: %w", err)
