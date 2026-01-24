@@ -89,6 +89,26 @@ properties:
         description: |
           kubernetes.ca content
 
+      kubernetesAPIProxyDiscovery:
+        type: object
+        default: {}
+        properties:
+          ca:
+            description: Kubernetes CA for kubernetes-apiserver-proxy
+            type: string
+            x-examples:
+              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+          key:
+            description: Private certificate key for kubernetes-apiserver-proxy with ability to login to authentification on kubernetes-api
+            type: string
+            x-examples:
+              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+          crt:
+            description: Public certificate for kubernetes-apiserver-proxy with ability to login to authentification on kubernetes-api
+            type: string
+            x-examples:
+              - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
+
       standbyNodeGroups:
         type: array
         description: |
