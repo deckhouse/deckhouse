@@ -60,7 +60,7 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 
 	input.PatchCollector.CreateIfNotExists(&rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
+			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "Role",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -80,7 +80,7 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 
 	input.PatchCollector.CreateIfNotExists(&rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
+			APIVersion: "rbac.authorization.k8s.io/v1",
 			Kind:       "RoleBinding",
 		},
 		ObjectMeta: metav1.ObjectMeta{
