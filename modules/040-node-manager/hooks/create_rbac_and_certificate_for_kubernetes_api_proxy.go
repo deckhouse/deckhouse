@@ -75,10 +75,9 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups:     []string{"discovery.k8s.io"},
-				Resources:     []string{"endpointslices"},
-				ResourceNames: []string{"kubernetes"},
-				Verbs:         []string{"get", "list", "watch"},
+				APIGroups: []string{"discovery.k8s.io"},
+				Resources: []string{"endpointslices"},
+				Verbs:     []string{"get", "list", "watch"},
 			},
 		},
 	})
