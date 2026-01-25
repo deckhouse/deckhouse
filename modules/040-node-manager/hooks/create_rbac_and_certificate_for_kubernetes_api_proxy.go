@@ -32,7 +32,7 @@ import (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnAfterHelm: &go_hook.OrderedConfig{Order: 10}, // TODO: Change order to valid!
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5}, // TODO: Change order to valid!
 	// TODO: May be need some selectors for some cases?
 }, dependency.WithExternalDependencies(createRBACForKubeAPIServerProxy))
 
