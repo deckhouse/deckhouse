@@ -143,8 +143,6 @@ spec:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
     {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
     apiserverProxyCerts:
-      ca: |
-        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.ca | nindent 8 }}
       crt: |
         {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 8 }}
       key: |

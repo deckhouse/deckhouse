@@ -29,7 +29,7 @@ EOF
 
 {{ if eq .runType "Normal" }}
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/ca.crt - << EOF
-{{ .normal.apiserverProxyCerts.ca }}
+{{ .normal.kubernetesCA }}
 EOF
 
 bb-sync-file /etc/kubernetes/kubernetes-api-proxy/cl.crt - << EOF

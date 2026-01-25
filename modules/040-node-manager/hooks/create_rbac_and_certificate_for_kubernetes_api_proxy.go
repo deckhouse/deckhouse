@@ -18,45 +18,50 @@ package hooks
 
 import (
 	"context"
+	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/pkg/errors"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
-
-const (
-	kapUserName = "system:kubernetes-api-proxy"
-)
-
-var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
-	SANs: tls_certificate.DefaultSANs([]string{}),
-	CN:   kapUserName,
-
-	Namespace:     "kube-system", // TODO: Do we need save it here? Or we need move this tls somewhere else?
-	TLSSecretName: "kubernetes-api-proxy-discovery-tls",
-
-	FullValuesPathPrefix: "nodeManager.internal.kubernetesAPIProxyDiscoveryCert",
-	Usages: []certificatesv1.KeyUsage{
-		certificatesv1.UsageClientAuth,
-	},
-})
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnAfterHelm: &go_hook.OrderedConfig{Order: 10}, // TODO: Change order to valid!
 	// TODO: May be need some selectors for some cases?
-}, createRBACForKubeAPIServerProxy)
+}, dependency.WithExternalDependencies(createRBACForKubeAPIServerProxy))
 
-func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput) error {
+func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const (
 		roleName        = "system:kubernetes-api-proxy-discovery"
 		roleBindingName = "system:kube-apiserver-proxy-discovery"
 		ns              = "default"
-		userName        = kapUserName
+		userName        = "system:kubernetes-api-proxy"
 	)
+
+	certExpirationSeconds := int32((time.Hour * 24 * 365 * 10).Seconds()) // 10 years
+
+	cert, err := tls_certificate.IssueCertificate(input, dc, tls_certificate.OrderCertificateRequest{
+		CommonName: userName,
+		Groups: []string{
+			roleName,
+		},
+		Usages: []certificatesv1.KeyUsage{
+			certificatesv1.UsageClientAuth,
+		},
+		ExpirationSeconds: &certExpirationSeconds,
+	})
+	if err != nil {
+		return errors.Wrap(err, "failed to issue certificate")
+	}
+
+	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt", cert.Certificate)
+	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key", cert.Key)
 
 	input.PatchCollector.CreateIfNotExists(&rbacv1.Role{
 		TypeMeta: metav1.TypeMeta{
