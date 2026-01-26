@@ -1,9 +1,0 @@
-stash@{0}: WIP on main: 1f129e4660 [cloud-provider-azure] changed versions in version map, deleted patches (#16839)
-stash@{1}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: 8cf5400dfa preflight to check staticinstances with sshcredentinals
-stash@{2}: WIP on dhctl-converge-panic-fix: 8b13f655df [admission-policy-engine] fix op/security policy empty fields (#17343)
-stash@{3}: WIP on main: c77fd5c1f7 [ingress-controller] add node affinity based on architecure labels (#16939)
-stash@{4}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: b4043cc684 preflight to check staticinstances with sshcredentinals
-stash@{5}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: e94147e487 preflight to check staticinstances with sshcredentinals
-stash@{6}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: 6d2194b9e2 preflight to check staticinstances with sshcredentinals
-stash@{7}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: 72c19899fb preflight to check staticinstances with sshcredentinals
-stash@{8}: WIP on dhctl-preflight-check-staticinstance-by-ssh-credentials: cc8877625f preflight to check staticinstances with sshcredentinals
