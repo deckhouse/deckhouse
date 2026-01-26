@@ -410,6 +410,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"earlyOom":                        "imageHash-nodeManager-earlyOom",
 		"fencingAgent":                    "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager":        "imageHash-nodeManager-machineControllerManager",
+		"nodeController":                  "imageHash-nodeManager-nodeController",
 		"nodeFeatureDiscovery":            "imageHash-nodeManager-nodeFeatureDiscovery",
 		"nodeGroupExporter":               "imageHash-nodeManager-nodeGroupExporter",
 		"nvidiaDcgm":                      "imageHash-nodeManager-nvidiaDcgm",
