@@ -124,7 +124,7 @@ func (p *Preflight) checksForPhase(phase Phase) []Check {
 			continue
 		}
 		for _, check := range suite.Checks() {
-			if phase != "" && check.Phase != phase {
+			if check.Phase != phase {
 				continue
 			}
 			checks = append(checks, check)
