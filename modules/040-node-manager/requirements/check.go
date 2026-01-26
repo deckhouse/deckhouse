@@ -33,6 +33,8 @@ const (
 	requirementsDebianKey               = "nodesMinimalOSVersionDebian"
 	unmetCloudConditionsKey             = "nodeManager:unmetCloudConditions"
 	unmetCloudConditionsRequirementsKey = "unmetCloudConditions"
+	cgroupV2SupportValuesKey            = "nodeManager:cgroupV2Support"
+	cgroupV2SupportRequirementsKey      = "cgroupV2Support"
 )
 
 // normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
@@ -93,9 +95,38 @@ func init() {
 		return true, nil
 	}
 
+	checkCgroupV2SupportFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "" {
+			return true, nil
+		}
+
+		minVersionRequiringCgroupV2, err := semver.NewVersion(requirementValue)
+		if err != nil {
+			return false, fmt.Errorf("invalid requirement version: %w", err)
+		}
+
+		cgroupV2Supported, exists := getter.Get(cgroupV2SupportValuesKey)
+		if !exists {
+			return true, nil
+		}
+
+		supported, ok := cgroupV2Supported.(bool)
+		if !ok {
+			return false, fmt.Errorf("invalid cgroupV2Support value type")
+		}
+
+		if !supported {
+			return false, fmt.Errorf("upgrading to version %s requires CGroup V2 support on all nodes, but some nodes have label node.deckhouse.io/containerd-v2-unsupported", minVersionRequiringCgroupV2.String())
+		}
+
+		return true, nil
+	}
+
 	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
+	requirements.RegisterCheck(cgroupV2SupportRequirementsKey, checkCgroupV2SupportFunc)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
