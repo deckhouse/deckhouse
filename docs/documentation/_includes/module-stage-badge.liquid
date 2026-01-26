@@ -1,4 +1,4 @@
-{%- assign stage = include.stage %}
+{% comment %} {%- assign stage = include.stage %}
 {%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
 {%- if stage and site.data.i18n.features[stage_long][page.lang] %}
   {%- capture alert_content %}
@@ -17,4 +17,4 @@
 {{ alert_content }}
 {% endalert %}
   {%- endif %}
-{%- endif %}
+{%- endif %} {% endcomment %}
