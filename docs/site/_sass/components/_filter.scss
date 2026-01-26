@@ -261,7 +261,7 @@
                     background-color: #002cca;
                 }
 
-                &:not(:disabled):not(:checked) + label:hover {
+                &:not(:disabled) + label:hover {
                     border-radius: 2px;
                     background-color: #E1F0FF;
                 }
