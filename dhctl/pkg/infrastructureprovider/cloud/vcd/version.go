@@ -70,7 +70,7 @@ func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) 
 		insecure,
 	)
 
-	vcdClient.Client.APIVCDMaxVersionIs("")
+	// vcdClient.Client.APIVCDMaxVersionIs("")
 	vcdClient.Client.MaxRetryTimeout = 10 // seconds
 
 	return &vcdCloudClient{client: vcdClient}, nil

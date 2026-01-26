@@ -112,12 +112,14 @@ spec:
             path: /healthz
             scheme: HTTP
             port: 9101
+          initialDelaySeconds: 120
         readinessProbe:
           httpGet:
             path: /healthz
             scheme: HTTP
             port: 9101
           timeoutSeconds: 5
+          initialDelaySeconds: 120
         volumeMounts:
           - mountPath: /tmp
             name: tmp
