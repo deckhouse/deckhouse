@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 package checks
 
 import (
@@ -35,6 +34,8 @@ import (
 )
 
 var ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master node")
+
+const ProxyTunnelPort = "22323"
 
 type CloudAPICheck struct {
 	MetaConfig *config.MetaConfig
@@ -109,19 +110,6 @@ func (c CloudAPICheck) check(ctx context.Context, cloudAPIConfig *cca.CloudApiCo
 		return ErrCloudAPIUnreachable
 	}
 	return nil
-}
-
-const ProxyTunnelPort = "22323"
-
-func buildHTTPClientWithLocalhostProxy(proxyUrl *url.URL) *http.Client {
-	localhostProxy := proxyUrl
-	localhostProxy.Host = net.JoinHostPort("localhost", ProxyTunnelPort)
-	return &http.Client{
-		Transport: &http.Transport{
-			Proxy:             http.ProxyURL(localhostProxy),
-			DisableKeepAlives: true,
-		},
-	}
 }
 
 func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
