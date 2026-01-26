@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 30
+resourceRefs:
+  - apiVersion: deckhouse.io/v1alpha1
+    kind: DeckhouseRelease
+    name: v1.66.0
+    ref: release
+  - apiVersion: test.deckhouse.io/v1alpha1
+    kind: WebhookRequest
+    name: d-release
+    namespace: e2e-deckhouse-release
+    ref: webhookrequest
+assertAll:
+  - celExpr: "release.status.phase == 'Pending'"
+  - celExpr: "release.metadata.annotations['release.deckhouse.io/notified'] == 'true'"
+  - celExpr: "release.metadata.annotations['release.deckhouse.io/notification-time-shift'] == 'true'"
+  - celExpr: "webhookrequest.body.subject == 'Deckhouse'"
+  - celExpr: "webhookrequest.body.version == '1.66.0'"
+  - celExpr: "webhookrequest.body.message.startsWith('New Deckhouse Release 1.66.0 is available. Release will be applied at:')"

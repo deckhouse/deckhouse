@@ -1,0 +1,14 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  settings:
+    releaseChannel: Stable
+    update:
+      mode: Auto
+      notification:
+        webhook: "http://webhook.e2e-deckhouse-release.svc.cluster.local/webhook/d-release"
+        minimalNotificationTime: "10h"
+  version: 1
