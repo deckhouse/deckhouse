@@ -4,7 +4,6 @@ kind: ModuleSource
 metadata:
   name: test-source-1
 spec:
-  scanInterval: 6h30m
   registry:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
