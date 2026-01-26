@@ -3,4 +3,7 @@ kind: DeckhouseCluster
 metadata:
   name: "dvp"
   namespace: d8-cloud-instance-manager
-  {{- include "helm_lib_module_labels" (list . (dict "app" "capdvp-controller-manager")) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict
+      "app" "capdvp-controller-manager"
+      "dvp.deckhouse.io/cluster-prefix" .Values.global.prefix
+  )) | nindent 2 }}
