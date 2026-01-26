@@ -117,7 +117,7 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
 	}
 
-	configMap.SetAnnotations(map[string]string{"seen": time.Now().String(), "cause": string(reconcileTrigger)})
+	configMap.SetAnnotations(map[string]string{"seen": time.Now().Format(time.RFC3339), "cause": string(reconcileTrigger)})
 
 	return configMap, nil
 }
