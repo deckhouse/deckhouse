@@ -25,17 +25,25 @@ import (
 )
 
 func ConfigHash(paths []string) string {
-	expanded := fs.RevealWildcardPaths(paths)
-	sort.Strings(expanded)
+	const hashLen = 8
+
+	resolvedPaths := fs.RevealWildcardPaths(paths)
+	sort.Strings(resolvedPaths)
 
 	h := sha256.New()
-	for _, path := range expanded {
+	for _, path := range resolvedPaths {
 		data, err := os.ReadFile(path)
 		if err != nil {
 			log.WarnF("cannot read config file %s for preflight cache hash: %v\n", path, err)
 			continue
 		}
-		_, _ = h.Write(data)
+		if _, err := h.Write(data); err != nil {
+			log.WarnF("cannot hash config file %s for preflight cache hash: %v\n", path, err)
+		}
 	}
-	return hex.EncodeToString(h.Sum(nil))
+	hash := hex.EncodeToString(h.Sum(nil))
+	if len(hash) > hashLen {
+		return hash[:hashLen]
+	}
+	return hash
 }
