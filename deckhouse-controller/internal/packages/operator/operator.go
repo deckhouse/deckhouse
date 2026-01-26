@@ -198,27 +198,7 @@ func (o *Operator) handlePackageRender(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o.mu.Lock()
-	pkg, exists := o.packages[packageName]
-	o.mu.Unlock()
-
-	if !exists {
-		http.Error(w, fmt.Sprintf("package %s not found", packageName), http.StatusNotFound)
-		return
-	}
-
-	app := o.manager.GetApp(packageName)
-	if app == nil {
-		http.Error(w, fmt.Sprintf("package %s not loaded", packageName), http.StatusNotFound)
-		return
-	}
-
-	ctx := pkg.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	renderedManifests, err := o.nelmService.Render(ctx, app)
+	rendered, err := o.manager.Render(r.Context(), packageName)
 	if err != nil {
 		if errors.Is(err, nelm.ErrPackageNotHelm) {
 			http.Error(w, fmt.Sprintf("package %s is not a Helm chart", packageName), http.StatusBadRequest)
@@ -228,9 +208,9 @@ func (o *Operator) handlePackageRender(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Type", "application/yaml")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(renderedManifests)) //nolint:errcheck
+	w.Write([]byte(rendered)) //nolint:errcheck
 }
 
 // Status returns the status service

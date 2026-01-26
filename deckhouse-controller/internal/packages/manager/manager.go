@@ -383,9 +383,16 @@ func (m *Manager) GetAppInfo(name string) apps.Info {
 	return app.GetInfo()
 }
 
-func (m *Manager) GetApp(name string) *apps.Application {
+// Render renders manifests for a loaded package.
+// Returns ErrPackageNotFound if the package isn't loaded.
+func (m *Manager) Render(ctx context.Context, name string) (string, error) {
 	m.mu.Lock()
-	defer m.mu.Unlock()
+	app := m.apps[name]
+	m.mu.Unlock()
 
-	return m.apps[name]
+	if app == nil {
+		return "", fmt.Errorf("package %s not loaded", name)
+	}
+
+	return m.nelm.Render(ctx, app)
 }

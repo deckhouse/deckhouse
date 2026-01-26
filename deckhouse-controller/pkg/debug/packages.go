@@ -83,7 +83,7 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 
 func definePackagesDebugSocketFlag(cmd *kingpin.CmdClause) {
 	cmd.Flag("debug-unix-socket", "Path to Unix socket for packages debug endpoint.").
-		Envar("DEBUG_UNIX_SOCKET").
+		Envar("PACKAGES_DEBUG_UNIX_SOCKET").
 		Default(packagesDebugSocket).
 		StringVar(&packagesDebugSocket)
 }
