@@ -18,6 +18,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -400,4 +401,53 @@ func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *core
 		}
 	}
 	return healthy, nil
+}
+
+type MetalLoadBalancerClass struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec MetalLoadBalancerClassSpec `json:"spec,omitempty"`
+}
+
+type MetalLoadBalancerClassSpec struct {
+	L2        L2Type `json:"l2,omitempty"`
+	IsDefault bool   `json:"isDefault,omitempty"`
+}
+
+type L2Type struct {
+	AddressPool []string `json:"addressPool,omitempty"`
+	Interfaces  []string `json:"interfaces,omitempty"`
+}
+
+func (lb *LoadBalancerService) GetMetalLoadBalancerClassList(ctx context.Context) ([]MetalLoadBalancerClass, error) {
+	groupVersion := "network.deckhouse.io/v1alpha1"
+	_, err := lb.clientset.Discovery().ServerResourcesForGroupVersion(groupVersion)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return []MetalLoadBalancerClass{}, nil
+		}
+		return nil, fmt.Errorf("failed to check MetalLoadBalancerClass CRD: %v", err)
+	}
+
+	data, err := lb.clientset.RESTClient().
+		Get().
+		AbsPath("/apis/network.deckhouse.io/v1alpha1/metalloadbalancerclasses").
+		DoRaw(ctx)
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return []MetalLoadBalancerClass{}, nil
+		}
+		return nil, fmt.Errorf("failed to list MetalLoadBalancerClass: %v", err)
+	}
+
+	var mlbcList struct {
+		Items []MetalLoadBalancerClass `json:"items"`
+	}
+
+	if err := json.Unmarshal(data, &mlbcList); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal MetalLoadBalancerClass list: %v", err)
+	}
+
+	return mlbcList.Items, nil
 }
