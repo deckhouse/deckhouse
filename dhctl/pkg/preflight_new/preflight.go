@@ -80,35 +80,34 @@ func (p *Preflight) Run(ctx context.Context, phase Phase) error {
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
-	for _, c := range checks {
-		description := c.Description
-		if _, ok := p.disabled[c.Name]; ok {
-			log.InfoF("✓ %s: %s (skipped)\n", c.Name, description)
+	for _, check := range checks {
+		if _, ok := p.disabled[check.Name]; ok {
+			log.InfoF("✓ %s: %s (skipped)\n", check.Name, check.Description)
 			continue
 		}
-		if c.Enabled != nil && !c.Enabled() {
+		if check.Enabled != nil && !check.Enabled() {
 			continue
 		}
-		if err := p.runCheck(ctx, c, description); err != nil {
+		if err := p.runCheck(ctx, check); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *Preflight) runCheck(ctx context.Context, check Check, description string) error {
+func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	if p.cache != nil {
 		key := p.cacheKey(check.Name)
 		if ok, err := p.cache.InCache(key); err == nil && ok {
-			log.InfoF("✓ %s: %s (cached)\n", check.Name, description)
+			log.InfoF("✓ %s: %s (cached)\n", check.Name, check.Description)
 			return nil
 		}
 	}
 
-	if err := p.retry(ctx, check.Name, description, check.Run, check.Retry); err != nil {
+	if err := p.retry(ctx, check); err != nil {
 		return fmt.Errorf("preflight check %q failed.\nreason: %w", check.Name, err)
 	}
-	log.InfoF("✓ %s: %s\n", check.Name, description)
+	log.InfoF("✓ %s: %s\n", check.Name, check.Description)
 
 	if p.cache != nil {
 		if err := p.cache.Save(p.cacheKey(check.Name), []byte("yes")); err != nil {
@@ -134,22 +133,22 @@ func (p *Preflight) checksForPhase(phase Phase) []Check {
 	return checks
 }
 
-func (p *Preflight) retry(ctx context.Context, name CheckName, description string, run func(context.Context) error, policy RetryPolicy) error {
-	attempts := policy.Attempts
+func (p *Preflight) retry(ctx context.Context, check Check) error {
+	attempts := check.Retry.Attempts
 	if attempts <= 0 {
 		attempts = 1
 	}
-	var bo backoff.BackOff = backoff.NewExponentialBackOff(policy.Options...)
+	var bo backoff.BackOff = backoff.NewExponentialBackOff(check.Retry.Options...)
 	bo = backoff.WithMaxRetries(bo, uint64(attempts-1))
 	bo = backoff.WithContext(bo, ctx)
 	attempt := 0
 	printedHeader := false
 	return backoff.RetryNotify(
-		func() error { attempt++; return run(ctx) },
+		func() error { attempt++; return check.Run(ctx) },
 		bo,
 		func(err error, next time.Duration) {
 			if !printedHeader {
-				log.WarnF("%s: %s\n\n", name, description)
+				log.WarnF("%s: %s\n\n", check.Name, check.Description)
 				printedHeader = true
 			}
 			log.InfoF("retry %d/%d in %s\nreason: %v\n", attempt, attempts, next, err)
