@@ -167,13 +167,29 @@ type staticPodConfigModel struct {
 	Images      staticPodImagesModel
 	HasMirrorer bool
 	HasAuth     bool
-	ProxyEnvs   staticPodProxyEnvsModel
+	ProxyEnvs   *staticPodProxyEnvsModel
 }
 
 type staticPodProxyEnvsModel struct {
 	HTTP    string
 	HTTPS   string
 	NoProxy string
+}
+
+func (m *staticPodProxyEnvsModel) hasAny() bool {
+	if m.HTTP != "" {
+		return true
+	}
+
+	if m.HTTPS != "" {
+		return true
+	}
+
+	if m.NoProxy != "" {
+		return true
+	}
+
+	return false
 }
 
 type staticPodImagesModel struct {
@@ -191,9 +207,12 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 		Hash:        hash,
 		Version:     value.Version,
 		Images:      images,
-		ProxyEnvs:   proxyEnvs,
 		HasMirrorer: hasMirrorer,
 		HasAuth:     hasAuth,
+	}
+
+	if proxyEnvs.hasAny() {
+		model.ProxyEnvs = &proxyEnvs
 	}
 	return model
 }
