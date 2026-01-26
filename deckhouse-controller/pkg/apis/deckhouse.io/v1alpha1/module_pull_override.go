@@ -115,7 +115,7 @@ type ModulePullOverrideStatus struct {
 
 	// Module weight.
 	// +optional
-	Weight int `json:"weight,omitempty"`
+	Weight uint16 `json:"weight,omitempty"`
 }
 
 // GetModuleSource returns the module source of the related module

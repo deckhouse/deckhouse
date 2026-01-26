@@ -64,6 +64,10 @@ var _ runtime.Object = (*ModuleConfig)(nil)
 // +kubebuilder:printcolumn:name="Version",type=string,JSONPath=.status.version,description="Version of settings schema in use"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=.metadata.creationTimestamp,description="CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC. Populated by the system. Read-only. Null for lists. More info: https://git.k8s.io/community/contributors/devel/api-conventions.md#metadata"
 // +kubebuilder:printcolumn:name="Message",type=string,JSONPath=.status.message,description="Additional information"
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +kubebuilder:metadata:labels="backup.deckhouse.io/cluster-config=true"
 
 // ModuleConfig defines the configuration of the Deckhouse Kubernetes Platform module (module parameters).
 // The name of the ModuleConfig resource must match the name of the module (for example, `control-plane-manager` for the `control-plane-manager` module).

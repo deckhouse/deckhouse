@@ -4,12 +4,12 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
-  name: moduleconfigs.deckhouse.io
   labels:
-    heritage: deckhouse
     app.kubernetes.io/name: deckhouse
     app.kubernetes.io/part-of: deckhouse
     backup.deckhouse.io/cluster-config: "true"
+    heritage: deckhouse
+  name: moduleconfigs.deckhouse.io
 spec:
   group: deckhouse.io
   names:

@@ -1,9 +1,3 @@
-metadata:
-  labels:
-    heritage: deckhouse
-    app.kubernetes.io/name: deckhouse
-    app.kubernetes.io/part-of: deckhouse
-    backup.deckhouse.io/cluster-config: "true"
 spec:
   preserveUnknownFields: false
   versions:
