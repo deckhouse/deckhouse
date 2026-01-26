@@ -14,22 +14,14 @@
 
 {!{- $workflowName              := "Svace analyze" -}!}
 {!{- $enableWorkflowOnTestRepos := true -}!}
-{!{- $svaceCron := "0 0 * * sun" -}!}
-
 
 {!{- $ctx := . }!}
 
 name: '{!{ $workflowName }!}'
 on:
   schedule:
-    - cron: '{!{ $svaceCron }!}'
+    - cron: '0 0 * * sun'
   workflow_dispatch:
-    inputs:
-      svace_enabled:
-        description: 'Enable svace build and analyze'
-        type: boolean
-        required: true
-        default: true
 
 permissions:
   contents: read
@@ -51,7 +43,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-      SVACE_ENABLED: ${{ github.event.inputs.svace_enabled == 'true' || github.event.schedule == '{!{ $svaceCron }!}' }}
+      SVACE_ENABLED: True
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
 {!{ tmpl.Exec "build_template" (slice $ctx "main") | strings.Indent 4 }!}
@@ -59,7 +51,6 @@ jobs:
 
 
   analyze_deckhouse:
-    if: ${{ github.event.inputs.svace_enabled == 'true' || github.event.schedule == '{!{ $svaceCron }!}' }}
     name: Deckhouse static analysis
     needs:
       - build_fe
