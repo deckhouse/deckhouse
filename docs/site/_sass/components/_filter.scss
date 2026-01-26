@@ -94,14 +94,21 @@
 
             &.filter-selected {
                 &::after {
-                    content: '';
+                    content: attr(data-selected-count);
+                    display: inline-flex;
+                    justify-content: center;
+                    align-items: center;
                     position: absolute;
                     top: 4px;
-                    width: 100%;
-                    height: 100%;
+                    width: 25px;
+                    height: 20px;
                     margin-left: 6px;
+                    padding-left: 4px;
                     background-image: url(/images/number-of-filters.svg);
                     background-repeat: no-repeat;
+                    color: #fff;
+                    font-size: 12px;
+                    font-weight: 600;
                     transition: transform .3s ease-in-out;
                 }
             }
@@ -199,7 +206,6 @@
         .filter__checkboxes {
             display: flex;
             flex-direction: column;
-            gap: 16px;
             margin-bottom: 40px;
             font-weight: 400;
             font-size: 14px;
@@ -214,6 +220,7 @@
             label {
                 display: inline-flex;
                 gap: 17px;
+                padding: 8px;
                 align-items: center;
                 text-align: left;
                 user-select: none;
@@ -254,9 +261,25 @@
                     background-color: #002cca;
                 }
 
-                &:not(:disabled):not(:checked) + label:hover::before {
-                    border-color: #222a5e;
-                    background-color: #f5f5fb;
+                &:not(:disabled):not(:checked) + label:hover {
+                    border-radius: 2px;
+                    background-color: #E1F0FF;
+                }
+
+                &:disabled + label,
+                &.checkbox-disabled + label,
+                + label.checkbox-disabled {
+                    opacity: 0.5;
+                    cursor: not-allowed;
+                    pointer-events: none;
+                }
+
+                &:disabled + label::before,
+                &.checkbox-disabled + label::before,
+                + label.checkbox-disabled::before {
+                    border-color: #C4CAD4;
+                    background-color: #F5F5FB;
+                    background-image: none;
                 }
             }
         }
