@@ -105,12 +105,12 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 		var hasComponentUpdating, hasComponentFailed bool
 
 		desiredCount++
-		for _, componentState := range nodeState.ComponentsState {
+		for componentName, componentState := range nodeState.ComponentsState {
 			desiredComponentCount++
 
 			if !componentState.isRunning() {
 				hasComponentFailed = true
-				klog.Errorf("component is not running, but: %+v, controlplanestate: %+v", componentState.Phase,s)
+				klog.Errorf("component '%s' is not running, but: %+v, controlplanestate: %+v", componentName, componentState.Phase, s)
 				continue
 			}
 

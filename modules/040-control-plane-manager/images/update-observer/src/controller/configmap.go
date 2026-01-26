@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 	"update-observer/cluster"
 	"update-observer/common"
 
@@ -105,14 +106,15 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 
 	switch reconcileTrigger {
 	case Init:
-		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
 	case UpgradeK8s:
 		fallthrough
 	case DowngradeK8s:
 		if clusterState.Phase == cluster.ClusterUpToDate {
-			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
 		}
 	case Cron:
+		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
 	}
 
 	return configMap, nil
