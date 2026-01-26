@@ -23,6 +23,7 @@ import (
 	"update-observer/cluster"
 	"update-observer/common"
 
+	"golang.org/x/mod/semver"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -43,7 +44,17 @@ const (
 	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 3 * time.Minute
+	cronRequeueInterval     = 30 * time.Minute
 	nodeListPageSize        = 50
+)
+
+type ReconcileTrigger int
+
+const (
+	UpgradeK8s ReconcileTrigger = iota
+	DowngradeK8s
+	Init
+	Cron
 )
 
 type reconciler struct {
@@ -106,8 +117,11 @@ func getSecretPredicate() predicate.Predicate {
 	}
 }
 
+// add label k8sVersion: v1.32
+// check label from start, decide up or down
+// update label after stat.UpToDate
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
-	klog.Info("Reconcile started", " request ", req.NamespacedName)
+	klog.Info("Reconcile started")
 
 	configMap, err := r.getConfigMap(ctx)
 	if err != nil {
@@ -115,23 +129,56 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{}, err
 	}
 
-	clusterState, err := r.getClusterState(ctx)
+	clusterCfg, err := r.getClusterConfiguration(ctx)
 	if err != nil {
-		if errors.Is(err, &common.ReconcileTolerantError{}) {
-			klog.Info("Tolerant error encountered, will requeue", err)
-			return reconcile.Result{RequeueAfter: requeueInterval}, nil
-		}
-		klog.Error("Non-tolerant error encountered, marking state as Unknown", err)
+		klog.Info("Error occured while getting cluster configuration", err)
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	if err = r.touchConfigMap(ctx, configMap, renderConfigMapData(clusterState)); err != nil {
+	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
+
+	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == DowngradeK8s)
+	if err != nil {
+		if errors.Is(err, &common.ReconcileTolerantError{}) {
+			klog.Info("Tolerant error encountered while getting cluster state, will requeue", err)
+			return reconcile.Result{RequeueAfter: requeueInterval}, nil
+		}
+		klog.Error("Non-tolerant error encountered while getting cluster state, marking state as Unknown", err)
+	}
+
+	configMap, err = fillConfigMap(configMap, clusterState, reconcileTrigger)
+	if err != nil {
+		klog.Error("Failed to fill configMap", err)
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
+	}
+
+	if err = r.touchConfigMap(ctx, configMap); err != nil {
 		klog.Error("Failed to touch configMap", err)
-		return reconcile.Result{RequeueAfter: requeueInterval}, err
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	if clusterState.Status.Phase != cluster.ClusterUpToDate {
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: cronRequeueInterval}, nil
+}
+
+func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
+	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
+
+	if configMap.ResourceVersion == "" || !exists {
+		return Init
+	}
+
+	switch semver.Compare(previousVersion, clusterCfg.DesiredVersion) {
+	case 1:
+		return DowngradeK8s
+	case 0:
+		return Cron
+	case -1:
+		return UpgradeK8s
+	}
+
+	return Init
 }

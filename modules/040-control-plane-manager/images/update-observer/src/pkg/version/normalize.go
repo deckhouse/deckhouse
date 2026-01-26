@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package version
 
 import (
 	"fmt"
@@ -23,7 +23,11 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-func NormalizeVersion(version string) (string, error) {
+const (
+	SemverMajorMinorAccuracy = 2
+)
+
+func NormalizeAndTrimPatch(version string) (string, error) {
 	if version == "" {
 		return "", nil
 	}
@@ -38,7 +42,7 @@ func NormalizeVersion(version string) (string, error) {
 	}
 
 	parts := strings.Split(normalized, ".")
-	if len(parts) < SemverAccuracy {
+	if len(parts) < SemverMajorMinorAccuracy {
 		return "", fmt.Errorf("version must have at least MAJOR.MINOR: %s", version)
 	}
 

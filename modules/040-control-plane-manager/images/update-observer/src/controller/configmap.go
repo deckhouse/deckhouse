@@ -57,6 +57,67 @@ type Nodes struct {
 	UpToDateCount int `yaml:"upToDateCount"`
 }
 
+func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(ctx, client.ObjectKey{
+		Name:      common.ConfigMapName,
+		Namespace: common.KubeSystemNamespace,
+	}, cm)
+
+	if client.IgnoreNotFound(err) != nil {
+		return nil, err
+	}
+
+	if err != nil {
+		cm = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      common.ConfigMapName,
+				Namespace: common.KubeSystemNamespace,
+				Labels: map[string]string{
+					common.HeritageLabelKey: common.DeckhouseLabel,
+				},
+			},
+		}
+	}
+
+	return cm, nil
+}
+
+func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, reconcileTrigger ReconcileTrigger) (*corev1.ConfigMap, error) {
+	configMapData := renderConfigMapData(clusterState)
+	configMap.Data = map[string]string{}
+
+	if configMapData.Spec != nil {
+		specBytes, err := yaml.Marshal(configMapData.Spec)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Spec: %w", err)
+		}
+		configMap.Data["spec"] = string(specBytes)
+	}
+
+	if configMapData.Status != nil {
+		statusBytes, err := yaml.Marshal(configMapData.Status)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal Status: %w", err)
+		}
+		configMap.Data["status"] = string(statusBytes)
+	}
+
+	switch reconcileTrigger {
+	case Init:
+		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+	case UpgradeK8s:
+		fallthrough
+	case DowngradeK8s:
+		if clusterState.Phase == cluster.ClusterUpToDate {
+			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+		}
+	case Cron:
+	}
+
+	return configMap, nil
+}
+
 func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	if clusterState == nil {
 		return ConfigMapData{
@@ -91,7 +152,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 			UpdateMode:     string(clusterState.Spec.UpdateMode),
 		},
 		Status: &Status{
-			CurrentVersion: clusterState.Status.CurrentVersion,
+			CurrentVersion: clusterState.CurrentVersion,
 			Phase:          string(clusterState.Status.Phase),
 			Progress:       clusterState.Progress,
 			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.NodesState),
@@ -103,54 +164,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 	}
 }
 
-func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
-	cm := &corev1.ConfigMap{}
-	err := r.client.Get(ctx, client.ObjectKey{
-		Name:      common.ConfigMapName,
-		Namespace: common.KubeSystemNamespace,
-	}, cm)
-
-	if client.IgnoreNotFound(err) != nil {
-		return nil, err
-	}
-
-	if err != nil {
-		cm = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.ConfigMapName,
-				Namespace: common.KubeSystemNamespace,
-				Labels: map[string]string{
-					common.HeritageLabelKey: common.DeckhouseLabel,
-				},
-			},
-			Data: map[string]string{},
-		}
-	}
-
-	return cm, nil
-}
-
-func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap, configMapData ConfigMapData) error {
-	if configMap.Data == nil {
-		configMap.Data = map[string]string{}
-	}
-
-	if configMapData.Spec != nil {
-		specBytes, err := yaml.Marshal(configMapData.Spec)
-		if err != nil {
-			return fmt.Errorf("failed to marshal Spec: %w", err)
-		}
-		configMap.Data["spec"] = string(specBytes)
-	}
-
-	if configMapData.Status != nil {
-		statusBytes, err := yaml.Marshal(configMapData.Status)
-		if err != nil {
-			return fmt.Errorf("failed to marshal Status: %w", err)
-		}
-		configMap.Data["status"] = string(statusBytes)
-	}
-
+func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
 	if configMap.ResourceVersion == "" {
 		if err := r.client.Create(ctx, configMap); err != nil {
 			return fmt.Errorf("failed to create configMap: %w", err)

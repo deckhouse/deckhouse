@@ -16,21 +16,24 @@ limitations under the License.
 
 package cluster
 
-import "update-observer/common"
+import (
+	"update-observer/common"
+	"update-observer/pkg/version"
+)
 
 type State struct {
 	Spec
 	Status
 }
 
-func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState) *State {
+func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneState, downgradeInProgress bool) *State {
 	state := &State{
 		Spec: Spec{
 			DesiredVersion: cfg.DesiredVersion,
 			UpdateMode:     cfg.UpdateMode,
 		},
 		Status: Status{
-			CurrentVersion:    nodes.CurrentVersion,
+			CurrentVersion:    determineCurrentVersion(nodes.versions, downgradeInProgress),
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,
 		},
@@ -52,7 +55,7 @@ func (s *State) determineStatePhase() {
 	case ControlPlaneInconsistent:
 		phase = ClusterControlPlaneInconsistent
 	case ControlPlaneUpToDate:
-		if s.Spec.UpdateMode == UpdateModeAutomatic && s.NodesState.CurrentVersion > s.Spec.DesiredVersion {
+		if s.Spec.UpdateMode == UpdateModeAutomatic && s.CurrentVersion > s.Spec.DesiredVersion {
 			phase = ClusterVersionDrift
 			break
 		}
@@ -77,6 +80,13 @@ func (s *State) calculateProgress() {
 	s.Progress = common.CalculateProgress(
 		s.ControlPlaneState.UpToDateComponentCount+s.NodesState.UpToDateCount,
 		s.ControlPlaneState.DesiredComponentCount+s.NodesState.DesiredCount)
+}
+
+func determineCurrentVersion(versions *version.UniqueAggregator, downgradeInProgress bool) string {
+	if downgradeInProgress {
+		return versions.GetMax()
+	}
+	return versions.GetMin()
 }
 
 type Spec struct {

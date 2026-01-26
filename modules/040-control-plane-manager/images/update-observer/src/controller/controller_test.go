@@ -81,6 +81,16 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 
 		require.NoError(suite.T(), err)
 	})
+	suite.Run("When control plane component was failed", func() {
+		suite.setupController(suite.fetchTestFileData("component-failed.yaml"))
+
+		_, err := suite.controller.Reconcile(
+			suite.ctx,
+			reconcile.Request{},
+		)
+
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) TearDownSubTest() {

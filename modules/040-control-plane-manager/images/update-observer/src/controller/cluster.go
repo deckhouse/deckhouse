@@ -27,12 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func (r *reconciler) getClusterState(ctx context.Context) (*cluster.State, error) {
-	cfg, err := r.getClusterConfiguration(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get cluster configuration: %w", err)
-	}
-
+func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, downgradeInProgress bool) (*cluster.State, error) {
 	nodesState, err := r.getNodesState(ctx, cfg.DesiredVersion)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get nodes state: %w", err)
@@ -43,7 +38,7 @@ func (r *reconciler) getClusterState(ctx context.Context) (*cluster.State, error
 		return nil, fmt.Errorf("failed to get control plane state: %w", err)
 	}
 
-	return cluster.GetState(cfg, nodesState, controlPlaneState), nil
+	return cluster.GetState(cfg, nodesState, controlPlaneState, downgradeInProgress), nil
 }
 
 func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Configuration, error) {

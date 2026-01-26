@@ -19,7 +19,7 @@ package cluster
 import (
 	"fmt"
 	"strings"
-	"update-observer/common"
+	"update-observer/pkg/version"
 
 	"github.com/stretchr/testify/assert/yaml"
 	corev1 "k8s.io/api/core/v1"
@@ -63,13 +63,13 @@ func GetConfiguration(secret *corev1.Secret) (*Configuration, error) {
 			return nil, fmt.Errorf("'%s' is empty", defaultKubernetesVersion)
 		}
 
-		cfg.DesiredVersion, err = common.NormalizeVersion(desiredVersion)
+		cfg.DesiredVersion, err = version.NormalizeAndTrimPatch(desiredVersion)
 		if err != nil {
 			return nil, fmt.Errorf("'%s' is not valid: %w", defaultKubernetesVersion, err)
 		}
 	} else {
 		cfg.UpdateMode = UpdateModeManual
-		cfg.DesiredVersion, err = common.NormalizeVersion(cfg.KubernetesVersion)
+		cfg.DesiredVersion, err = version.NormalizeAndTrimPatch(cfg.KubernetesVersion)
 		if err != nil {
 			return nil, fmt.Errorf("kubernetesVersion is not valid: %w", err)
 		}

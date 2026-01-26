@@ -18,18 +18,18 @@ package cluster
 
 import (
 	"fmt"
-	"update-observer/common"
+	"update-observer/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
 type ControlPlaneState struct {
-	DesiredCount   int
-	UpToDateCount  int
-	DesiredComponentCount int
+	DesiredCount           int
+	UpToDateCount          int
+	DesiredComponentCount  int
 	UpToDateComponentCount int
-	Phase          ControlPlanePhase
-	NodesState     map[string]*MasterNodeState
+	Phase                  ControlPlanePhase
+	NodesState             map[string]*MasterNodeState
 }
 
 type ControlPlanePhase string
@@ -80,7 +80,7 @@ func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState
 			return nil, fmt.Errorf("%s annotation are missing", kubeVersionAnnotation)
 		}
 
-		version, err := common.NormalizeVersion(kubeVersion)
+		version, err := version.NormalizeAndTrimPatch(kubeVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
 		}
