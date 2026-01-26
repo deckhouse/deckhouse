@@ -97,25 +97,31 @@ Depending on the cluster size, this process may take some time.
 #### Modifying protected parameters
 
 Some cluster parameters are critical for cluster operation and cannot be changed in a running cluster by default. These parameters include:
-- `podSubnetCIDR` — the Pod network address space
-- `podSubnetNodeCIDRPrefix` — the Pod network prefix size per node
-- `serviceSubnetCIDR` — the Service network address space
+
+- `podSubnetCIDR`: The Pod network address space.
+- `podSubnetNodeCIDRPrefix`: The Pod network prefix size per node.
+- `serviceSubnetCIDR`: the Service network address space.
 
 Attempts to change these parameters will be blocked by the admission webhook with an error message.
 
 {% alert level="danger" %}
-**Changing these parameters in a running cluster is extremely dangerous** and can lead to:
-- Complete loss of access to the Kubernetes API
-- Invalidation of TLS certificates
-- Necessity to restart all cluster nodes and control plane components
-- Data inconsistency if the process is interrupted
+**Changing these parameters in a running cluster is dangerous** and can lead to:
 
-**It is strongly recommended to recreate the cluster** instead of changing these parameters.
+- Complete loss of access to the Kubernetes API.
+- Invalidation of TLS certificates.
+- Necessity to restart all cluster nodes and control plane components.
+- Data inconsistency if the process is interrupted.
+
+**It is recommended to recreate the cluster** instead of changing these parameters.
 {% endalert %}
 
 If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism.
 
 ##### Recommended method: Using dhctl
+
+{% alert level="warning" %}
+Even with the protection mechanism bypassed, there is **no guarantee** that the cluster will continue to function correctly after changing these parameters. Be prepared for the possibility of complete cluster failure and have a backup plan.
+{% endalert %}
 
 Use the `dhctl` tool with the `--allow-unsafe-changes` flag:
 
@@ -124,45 +130,45 @@ dhctl edit cluster-configuration --allow-unsafe-changes
 ```
 
 This command will automatically:
-- Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret
-- Open an editor to modify the configuration
-- Remove the annotation after you save the changes
+
+- Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret.
+- Open an editor to modify the configuration.
+- Remove the annotation after you save the changes.
 
 This is the safest way to modify protected parameters as it properly manages the annotation lifecycle.
 
+#### Manual method (for emergency situations only)
+
 {% alert level="warning" %}
-Even with the protection mechanism bypassed, there is **no guarantee** that the cluster will continue to function correctly after changing these parameters. Be prepared for the possibility of complete cluster failure and have a backup plan.
+This method bypasses DKP safety mechanisms and should **only be used when `dhctl` is unavailable** (e.g., emergency recovery scenarios or when `dhctl` cannot connect to the cluster). In normal circumstances, always use `dhctl` as described above.
 {% endalert %}
 
-{% offtopic title="Manual method (for emergency situations only)" %}
-
-> **Warning!** This manual method bypasses Deckhouse safety mechanisms and should **only be used when dhctl is unavailable** (e.g., emergency recovery scenarios or when dhctl cannot connect to the cluster). In normal circumstances, always use `dhctl` as described above.
-
-If you need to manually edit the configuration using `kubectl`:
+To edit the configuration, use [Deckhouse CLI tool](../../cli/d8/) (d8):
 
 1. Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret:
 
    ```shell
-   kubectl -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
+   d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
 
-2. Edit the configuration:
+1. Edit the configuration:
 
    ```shell
-   kubectl -n kube-system edit secret d8-cluster-configuration
+   d8 k -n kube-system edit secret d8-cluster-configuration
    ```
 
-   Note: The configuration is base64-encoded in the Secret's `cluster-configuration.yaml` data field.
+   **Caution.** The configuration is Base64-encoded in the Secret's `cluster-configuration.yaml` data field.
 
-3. **Important:** Remove the annotation after saving the changes:
+1. **Important.** Remove the annotation after saving the changes:
 
    ```shell
-   kubectl -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
+   d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
 
-> **Danger!** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, the protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
+{% alert level="danger" %}
+If you forget to remove the `deckhouse.io/allow-unsafe` annotation, the protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
+{% endalert %}
 
-{% endofftopic %}
 
 ### Viewing current configuration
 
