@@ -367,6 +367,27 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: CronJobImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
+
+        ```bash
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
+      summary: |
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
     - name: CronJobPodsNotCreated
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
@@ -429,27 +450,6 @@ alerts:
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       severity: "6"
-      markupFormat: markdown
-    - name: CronJobImageAvailabilityUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The CronJob `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-
-        Review the image-availability-exporter logs to see the detailed error information:
-
-        ```bash
-        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
-        ```
-      summary: |
-        An unknown error occurred with the {{ $labels.image }} image availability check.
-      severity: "7"
       markupFormat: markdown
     - name: CustomPodMonitorFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
@@ -3665,23 +3665,6 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
-    - name: DaemonSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
-
-        To resolve this issue, investigate the possible causes in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The DaemonSet `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-      summary: |
-        The container registry is not available for the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
     - name: DaemonSetImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -3701,6 +3684,23 @@ alerts:
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
+    - name: DaemonSetRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeadMansSwitch
@@ -4056,23 +4056,6 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
-    - name: DeploymentRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
-
-        To resolve this issue, investigate the possible causes in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The Deployment `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-      summary: |
-        The container registry is not available for the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
     - name: DeploymentImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -4092,6 +4075,23 @@ alerts:
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
+    - name: DeploymentRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeprecatedGeoIPVersion
@@ -6777,23 +6777,6 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
-    - name: StatefulSetRegistryUnavailable
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
-
-        To resolve this issue, investigate the possible causes in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The StatefulSet `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-      summary: |
-        The container registry is not available for the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
     - name: StatefulSetImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -6813,6 +6796,23 @@ alerts:
         ```
       summary: |
         An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
+    - name: StatefulSetRegistryUnavailable
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected that the container registry is not available for the `{{ $labels.image }}` image.
+
+        To resolve this issue, investigate the possible causes in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+      summary: |
+        The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual
