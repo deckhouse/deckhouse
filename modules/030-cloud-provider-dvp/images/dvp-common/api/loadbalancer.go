@@ -44,6 +44,14 @@ const (
 	DeckhouseNetworkLoadBalancerClassType = "network.deckhouse.io/load-balancer-class"
 	LBCreationPollInterval                = 5 * time.Second
 	LBCreationPollTimeout                 = 5 * time.Minute
+
+	deckhouseServiceTypeLabelKey   = "deckhouse-service-type"
+	deckhouseServiceTypeLabelValue = "provider-managed"
+
+	DVPPublicLoadBalancerClass = "dvp-public"
+	DVPSystemLoadBalancerClass = "dvp-system"
+
+	DVPExternalLBClassAnnotation = "dvp.deckhouse.io/external-load-balancer-class"
 )
 
 type LoadBalancerService struct {
@@ -152,9 +160,9 @@ func (lb *LoadBalancerService) updateLoadBalancerService(
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
 	}
-	if service.Spec.LoadBalancerClass != nil {
-		svc.Spec.LoadBalancerClass = ptr.To(*service.Spec.LoadBalancerClass)
-	}
+
+	svc.Spec.LoadBalancerClass = ptr.To(ChooseLoadBalancerClass(service))
+
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
 	}
@@ -213,12 +221,13 @@ func (lb *LoadBalancerService) createLoadBalancerService(
 			Selector:              map[string]string{lbKey: "loadbalancer"},
 		},
 	}
+
 	if len(service.Spec.ExternalIPs) > 0 {
 		svc.Spec.ExternalIPs = service.Spec.ExternalIPs
 	}
-	if service.Spec.LoadBalancerClass != nil {
-		svc.Spec.LoadBalancerClass = ptr.To(*service.Spec.LoadBalancerClass)
-	}
+
+	svc.Spec.LoadBalancerClass = ptr.To(ChooseLoadBalancerClass(service))
+
 	if service.Spec.LoadBalancerIP != "" {
 		svc.Spec.LoadBalancerIP = service.Spec.LoadBalancerIP
 	}
@@ -400,4 +409,19 @@ func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *core
 		}
 	}
 	return healthy, nil
+}
+
+func ChooseLoadBalancerClass(internal *corev1.Service) string {
+	if internal == nil {
+		klog.Error("chooseLoadBalancerClass: internal service is nil, fallback to dvp-public")
+		return DVPPublicLoadBalancerClass
+	}
+
+	if v, ok := internal.Labels[deckhouseServiceTypeLabelKey]; ok {
+		if v == deckhouseServiceTypeLabelValue {
+			return DVPSystemLoadBalancerClass
+		}
+	}
+
+	return DVPPublicLoadBalancerClass
 }
