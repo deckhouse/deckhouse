@@ -73,6 +73,10 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 
 	/// encoding transforms go last to prevent mutating fields that have to be deleted
 	if dest.Spec.Type == v1alpha1.DestSocket && dest.Spec.Socket.Encoding.Codec == v1alpha1.EncodingCodecSyslog {
+		transforms = append(transforms, SyslogK8sLabelsTransform())
+		if len(dest.Spec.ExtraLabels) > 0 {
+			transforms = append(transforms, SyslogExtraLabelsTransform(dest.Spec.ExtraLabels))
+		}
 		transforms = append(transforms, SyslogEncoding())
 	}
 

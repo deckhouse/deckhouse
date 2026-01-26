@@ -38,6 +38,8 @@ pri = 1 * 8 + .syslog.severity;
   to_string!(.timestamp),
   to_string!(.kubernetes.pod_name || .hostname || "${VECTOR_SELF_NODE_NAME}"),
   to_string!(.app || .kubernetes.labels.app || .syslog.app || "-"),
+  to_string!(.k8s_labels || ""),
+  to_string!(.extra_labels || ""),
   "-", # procid
   to_string!(.syslog.message_id || "-"), # msgid
   "-", # structured-data
@@ -46,5 +48,41 @@ pri = 1 * 8 + .syslog.severity;
 
 if err != null {
   log("Unable to construct syslog message for event:" + err + ". Dropping invalid event: " + encode_json(.), level: "error", rate_limit_secs: 10)
+}
+`
+
+// SyslogK8sLabelsRule generates VRL rule to create structured-data from k8s labels
+const SyslogK8sLabelsRule Rule = `
+sd_params = []
+{{ range $label := $.k8sLabels }}
+if exists(.{{$label}}) && !is_null(.{{$label}}) {
+  sd_params = append(sd_params, [{{$label | printf "%q"}} + "=\"" + to_string!(.{{$label}}) + "\""])
+}
+{{- end }}
+# Handle pod_labels_* expansion
+if exists(.pod_labels) && !is_null(.pod_labels) && is_object(.pod_labels) {
+  pod_labels_obj = object!(.pod_labels)
+  pod_labels_keys = keys(pod_labels_obj)
+  for pod_labels_keys -> |key| {
+    if exists(pod_labels_obj[key]) && !is_null(pod_labels_obj[key]) {
+      sd_params = append(sd_params, ["pod_labels_" + to_string!(key) + "=\"" + to_string!(pod_labels_obj[key]) + "\""])
+    }
+  }
+}
+.k8s_labels = if length(sd_params) > 0 {
+  join!(sd_params, separator: " ")
+}
+`
+
+// SyslogExtraLabelsRule generates VRL rule to create structured-data from extraLabels
+const SyslogExtraLabelsRule Rule = `
+sd_params = []
+{{ range $key, $value := $.extraLabels }}
+if exists({{$value}}) && !is_null({{$value}}) {
+  sd_params = append(sd_params, [{{$key | printf "%q"}} + "=\"" + to_string!({{$value}}) + "\""])
+}
+{{- end }}
+.extra_labels = if length(sd_params) > 0 {
+  join!(sd_params, separator: " ")
 }
 `
