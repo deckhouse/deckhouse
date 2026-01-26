@@ -36,6 +36,71 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterSearch = document.getElementById('search-filter');
   let fullResetHandler = null;
 
+  function updateContainerTitleState(container) {
+    if (!container) return null;
+    const title = container.querySelector('.filter__container--title');
+    if (!title) return;
+
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    const checkedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
+
+    title.classList.toggle('filter-selected', checkedCount > 0);
+    if (checkedCount > 0) {
+      title.dataset.selectedCount = String(checkedCount);
+    } else {
+      delete title.dataset.selectedCount;
+    }
+  }
+
+  function markEmptyCheckboxes() {
+    const availableTags = new Set();
+    const availableStatuses = new Set();
+    let commercialEditionsAvailable = false;
+
+    Array.from(articles).forEach(article => {
+      article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
+        availableTags.add(tag.textContent);
+      });
+
+      article.querySelectorAll('[class*="button-tile__stage-"]').forEach(el => {
+        el.classList.forEach(cls => {
+          if (cls.startsWith('button-tile__stage-')) {
+            availableStatuses.add(cls.replace('button-tile__stage-', ''));
+          }
+        });
+      });
+
+      // if (article.dataset.commercialEditions === 'true') {
+      //   commercialEditionsAvailable = true;
+      // }
+    });
+
+    document.querySelectorAll('.filter__container input[type="checkbox"]').forEach(checkbox => {
+
+      const label = checkbox.nextElementSibling ? checkbox.nextElementSibling : document.querySelector(`label[for="${checkbox.id}"]`);
+
+      const container = checkbox.closest('.filter__container');
+      let isAvailable = true;
+
+      if (container?.classList.contains('filter__container--tags')) {
+        isAvailable = availableTags.has(checkbox.value);
+      } else if (container?.classList.contains('filter__container--statuses')) {
+        isAvailable = availableStatuses.has(checkbox.value);
+      }
+      // } else if (container?.classList.contains('filter__container--editorial')) {
+      //   if (checkbox.value === 'commercialEditions') {
+      //     isAvailable = commercialEditionsAvailable;
+      //   }
+      // }
+
+      if (!isAvailable) {
+        checkbox.disabled = true;
+        checkbox.classList.add('checkbox-disabled');
+        if (label) label.classList.add('checkbox-disabled');
+      }
+    });
+  }
+
   function hideAllItems() {
     articles.forEach(article => article.style.display = 'none');
   }
@@ -112,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.querySelectorAll('.filter__container--title').forEach(title => {
       title.classList.remove('filter-selected');
+      delete title.dataset.selectedCount;
     });
     
     filterArticles();
@@ -126,14 +192,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const query = filterSearch ? filterSearch.value.trim() : '';
 
     if (selectedFiltersList) {
-      checkedCheckboxes.forEach(checkbox => {
+      const groupedFilters = new Map();
+
+      Array.from(checkedCheckboxes).forEach(checkbox => {
         const filterContainer = checkbox.closest('.filter__container');
-        const filterName = filterContainer?.querySelector('.filter__container--title.closing-title')?.textContent || '';
-        const checkboxValue = checkbox.value;
-        const checkboxText = `${filterName}: ${checkboxValue}`;
+        const filterName = filterContainer?.querySelector('.filter__container--title').textContent?.trim() || '';
+        if (!filterName) return;
+
+        const entry = groupedFilters.get(filterName) || { checkboxes: [], values: new Set() };
+        entry.checkboxes.push(checkbox);
+        entry.values.add(checkbox.value);
+        groupedFilters.set(filterName, entry);
+      });
+
+      groupedFilters.forEach((entry, filterName) => {
+        const valuesText = Array.from(entry.values).join(', ');
+        const checkboxText = `${filterName}: ${valuesText}`;
 
         const selectedElement = createSelectedFilterElement(checkboxText, () => {
-          checkbox.checked = false;
+          entry.checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+          });
           filterArticles();
         });
 
@@ -215,6 +294,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     initializeArticleFilter(filtered);
+    document.querySelectorAll('.filter__container').forEach(container => {
+      updateContainerTitleState(container);
+    });
   }
 
   document.querySelectorAll('.closing-title').forEach(title => {
@@ -235,12 +317,19 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.filter__container').forEach(container => {
     const checkboxes = container.querySelectorAll('input[type="checkbox"]');
     const title = container.querySelector('.filter__container--title');
+
     checkboxes.forEach(checkbox => {
       checkbox.addEventListener('change', function() {
-        const check = Array.from(checkboxes).some(checkbox => checkbox.checked);
-        title.classList.toggle('filter-selected', check);
+        const checkedCount = Array.from(checkboxes).filter(checkbox => checkbox.checked).length;
+        title.classList.toggle('filter-selected', checkedCount > 0);
+        if (checkedCount > 0) {
+          title.dataset.selectedCount = String(checkedCount);
+        } else {
+          delete title.dataset.selectedCount;
+        }
       })
     })
+
   })
 
   const checkboxes = document.querySelectorAll('.filter__container input[type="checkbox"]');
@@ -249,6 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   initializeArticleFilter(Array.from(articles));
+  document.querySelectorAll('.filter__container').forEach(container => {
+    updateContainerTitleState(container);
+  });
+  markEmptyCheckboxes();
 
   function createTooltipContent(titleText, descriptionText) {
     const container = document.createElement('div');
@@ -271,16 +364,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const elements = document.querySelectorAll(selector);
     if (elements.length === 0) return;
 
-    tippy(elements, {
-      allowHTML: true,
-      content: () => createTooltipContent(titleText, descriptionText),
-      arrow: true,
-      appendTo: 'parent',
-      hideOnClick: false,
-      delay: [300, 50],
-      offset: [0, 10],
-      duration: [300],
-    });
+    elements.forEach(element => {
+      tippy(element, {
+        allowHTML: true,
+        content: () => createTooltipContent(titleText, descriptionText),
+        arrow: true,
+        appendTo: 'parent',
+        hideOnClick: false,
+        delay: [300, 50],
+        offset: [0, 10],
+        duration: [300],
+      });
+    })
   }
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
