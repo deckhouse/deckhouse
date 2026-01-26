@@ -110,7 +110,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 			if !componentState.isRunning() {
 				hasComponentFailed = true
-				klog.Errorf("component is not running, but: %v, controlplanestate: %v", componentState.Phase,s)
+				klog.Errorf("component is not running, but: %+v, controlplanestate: %+v", componentState.Phase,s)
 				continue
 			}
 
