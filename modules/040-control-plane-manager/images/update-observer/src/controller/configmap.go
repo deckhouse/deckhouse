@@ -106,16 +106,18 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 
 	switch reconcileTrigger {
 	case Init:
-		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
+		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
 	case UpgradeK8s:
 		fallthrough
 	case DowngradeK8s:
 		if clusterState.Phase == cluster.ClusterUpToDate {
-			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
+			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
 		}
 	case Cron:
-		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion, "seen": time.Now().String()})
+		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
 	}
+
+	configMap.SetAnnotations(map[string]string{"seen": time.Now().String(), "cause": string(reconcileTrigger)})
 
 	return configMap, nil
 }

@@ -48,13 +48,13 @@ const (
 	nodeListPageSize        = 50
 )
 
-type ReconcileTrigger int
+type ReconcileTrigger string
 
 const (
-	UpgradeK8s ReconcileTrigger = iota
-	DowngradeK8s
-	Init
-	Cron
+	UpgradeK8s   ReconcileTrigger = "upgradeK8s"
+	DowngradeK8s ReconcileTrigger = "downgradeK8s"
+	Init         ReconcileTrigger = "init"
+	Cron         ReconcileTrigger = "cron"
 )
 
 type reconciler struct {
