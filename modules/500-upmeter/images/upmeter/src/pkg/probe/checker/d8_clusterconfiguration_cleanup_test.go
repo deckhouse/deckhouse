@@ -33,7 +33,7 @@ import (
 	"d8.io/upmeter/pkg/probe/run"
 )
 
-func TestCleanupExtraHookProbesChecker(t *testing.T) {
+func TestCleanupExtraHookProbesChecker_DeletesWhenHashNotFromAgentPods(t *testing.T) {
 	ctx := context.TODO()
 	fakeClient := kube.NewFake(nil)
 	access := NewFake(fakeClient)
@@ -53,7 +53,6 @@ func TestCleanupExtraHookProbesChecker(t *testing.T) {
 	}
 
 	oldTime := time.Now().Add(-10 * time.Minute)
-	newTime := time.Now().Add(-2 * time.Minute)
 
 	expected := []string{
 		run.NodeNameHash("master-1"),
@@ -65,14 +64,9 @@ func TestCleanupExtraHookProbesChecker(t *testing.T) {
 		}
 	}
 
-	staleExtra := run.NodeNameHash("old-master")
-	if err := createHookProbe(ctx, dynamicClient, staleExtra, oldTime); err != nil {
-		t.Fatalf("create stale hook probe: %v", err)
-	}
-
-	recentExtra := run.NodeNameHash("new-master")
-	if err := createHookProbe(ctx, dynamicClient, recentExtra, newTime); err != nil {
-		t.Fatalf("create recent hook probe: %v", err)
+	extraName := run.NodeNameHash("master-3")
+	if err := createHookProbe(ctx, dynamicClient, extraName, oldTime); err != nil {
+		t.Fatalf("create extra hook probe: %v", err)
 	}
 
 	logger := logrus.New()
@@ -102,11 +96,8 @@ func TestCleanupExtraHookProbesChecker(t *testing.T) {
 			t.Fatalf("expected hook probe %q to remain", name)
 		}
 	}
-	if _, ok := got[recentExtra]; !ok {
-		t.Fatalf("expected recent hook probe %q to remain", recentExtra)
-	}
-	if _, ok := got[staleExtra]; ok {
-		t.Fatalf("expected stale hook probe %q to be deleted", staleExtra)
+	if _, ok := got[extraName]; ok {
+		t.Fatalf("expected extra hook probe %q to be deleted", extraName)
 	}
 }
 
