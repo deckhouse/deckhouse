@@ -20,7 +20,7 @@ name: 'Svace analyze'
 on:
   schedule:
     - cron: '0 0 * * sun'
-    - cron: '30 13 * * mon'
+    - cron: '15 14 * * mon'
   workflow_dispatch:
 
 permissions:
