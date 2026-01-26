@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function markEmptyCheckboxes() {
     const availableTags = new Set();
     const availableStatuses = new Set();
-    let commercialEditionsAvailable = false;
+    const availableEditorial = new Set();
 
     Array.from(articles).forEach(article => {
       article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
@@ -70,9 +70,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
-      // if (article.dataset.commercialEditions === 'true') {
-      //   commercialEditionsAvailable = true;
-      // }
+      const editorial = (article.dataset.editorial || '').trim().toLowerCase();
+      if (editorial) {
+        availableEditorial.add(editorial);
+      }
     });
 
     document.querySelectorAll('.filter__container input[type="checkbox"]').forEach(checkbox => {
@@ -84,14 +85,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (container?.classList.contains('filter__container--tags')) {
         isAvailable = availableTags.has(checkbox.value);
+      } else if (container?.classList.contains('filter__container--editorial')) {
+        isAvailable = availableEditorial.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--statuses')) {
         isAvailable = availableStatuses.has(checkbox.value);
       }
-      // } else if (container?.classList.contains('filter__container--editorial')) {
-      //   if (checkbox.value === 'commercialEditions') {
-      //     isAvailable = commercialEditionsAvailable;
-      //   }
-      // }
 
       if (!isAvailable) {
         checkbox.disabled = true;
@@ -260,13 +258,11 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if(selectedEditorial.length > 0) {
-        const hasEditorial = selectedEditorial.every(editorial => {
-          if(editorial === 'commercialEditions') {
-            return article.dataset.commercialEditions === 'true';
-          }
-          return false;
+        const articleEditorial = (article.dataset.editorial || '').trim().toLowerCase();
+        const matchesEditorial = selectedEditorial.some(editorial => {
+          return (editorial || '').trim().toLowerCase() === articleEditorial;
         });
-        if(!hasEditorial) {
+        if(!matchesEditorial) {
           return false;
         }
       }
