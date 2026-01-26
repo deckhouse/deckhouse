@@ -275,6 +275,8 @@ func handleDiscoveryDataLoadBalancerClasses(
 		return loadBalancerClasses[i].Name < loadBalancerClasses[j].Name
 	})
 
+	ensureSingleDefaultLoadBalancerClass(loadBalancerClasses)
+
 	input.Logger.Info("Found DVP load balancer classes: %v", loadBalancerClasses)
 
 	setLoadBalancerClassesValues(input, loadBalancerClasses)
@@ -282,6 +284,27 @@ func handleDiscoveryDataLoadBalancerClasses(
 
 func setLoadBalancerClassesValues(input *go_hook.HookInput, loadBalancerClasses []metalLoadBalancerClass) {
 	input.Values.Set("cloudProviderDvp.internal.loadBalancerClasses", loadBalancerClasses)
+}
+
+func ensureSingleDefaultLoadBalancerClass(classes []metalLoadBalancerClass) {
+	if len(classes) == 0 {
+		return
+	}
+
+	defaultClassIndex := -1
+	for i := range classes {
+		if classes[i].IsDefault {
+			if defaultClassIndex == -1 {
+				defaultClassIndex = i
+			} else {
+				classes[i].IsDefault = false
+			}
+		}
+	}
+
+	if defaultClassIndex == -1 {
+		classes[0].IsDefault = true
+	}
 }
 
 type storageClass struct {

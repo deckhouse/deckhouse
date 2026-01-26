@@ -98,6 +98,13 @@ func (d *Discoverer) DiscoveryData(
 
 	discoveryData.StorageClassList = mergeStorageDomains(discoveryData.StorageClassList, sd)
 
+	lbc, err := d.getMetalLoadBalancerClasses(ctx, dvpClient)
+	if err != nil {
+		d.logger.Debug("failed to get MetalLoadBalancerClass, skipping", "error", err)
+	} else {
+		discoveryData.LoadBalancerClassList = lbc
+	}
+
 	discoveryDataJSON, err := json.Marshal(discoveryData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal discovery data: %v", err)
@@ -178,4 +185,54 @@ func mergeStorageDomains(
 		result[0].IsDefault = true
 	}
 	return result
+}
+
+func (d *Discoverer) getMetalLoadBalancerClasses(
+	ctx context.Context,
+	dvpClient *api.DVPCloudAPI,
+) ([]cloudDataV1.DVPLoadBalancerClass, error) {
+	mlbcList, err := dvpClient.LoadBalancerService.GetMetalLoadBalancerClassList(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]cloudDataV1.DVPLoadBalancerClass, 0, len(mlbcList))
+	for _, mlbc := range mlbcList {
+		result = append(result, cloudDataV1.DVPLoadBalancerClass{
+			Name:        mlbc.Name,
+			AddressPool: mlbc.Spec.L2.AddressPool,
+			Interfaces:  mlbc.Spec.L2.Interfaces,
+			IsEnabled:   true,
+			IsDefault:   mlbc.Spec.IsDefault,
+		})
+	}
+
+	return selectDefaultLoadBalancerClass(result), nil
+}
+
+func selectDefaultLoadBalancerClass(classes []cloudDataV1.DVPLoadBalancerClass) []cloudDataV1.DVPLoadBalancerClass {
+	if len(classes) == 0 {
+		return classes
+	}
+
+	sort.SliceStable(classes, func(i, j int) bool {
+		return classes[i].Name < classes[j].Name
+	})
+
+	defaultClassIndex := -1
+	for i, lbc := range classes {
+		if lbc.IsDefault {
+			if defaultClassIndex == -1 {
+				defaultClassIndex = i
+			} else {
+				classes[i].IsDefault = false
+			}
+		}
+	}
+
+	if defaultClassIndex == -1 {
+		classes[0].IsDefault = true
+	}
+
+	return classes
 }
