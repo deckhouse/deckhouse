@@ -31,6 +31,10 @@ on:
         required: true
         default: true
 
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: read
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
