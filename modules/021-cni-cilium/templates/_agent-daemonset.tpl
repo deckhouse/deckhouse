@@ -259,7 +259,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       initContainers:
       - name: cni-migration-init-checker
-        image: {{ include "helm_lib_module_image" (list $context "cniSwitchInitChecker" "common") }}
+        image: {{ include "helm_lib_module_image" (list $context "cniMigrationInitChecker" "common") }}
         {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
           readOnlyRootFilesystem: true
         env:

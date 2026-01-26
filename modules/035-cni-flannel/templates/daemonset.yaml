@@ -66,7 +66,7 @@ spec:
       serviceAccountName: {{ .Chart.Name }}
       initContainers:
       - name: cni-migration-init-checker
-        image: {{ include "helm_lib_module_image" (list $ "cniSwitchInitChecker" "common") }}
+        image: {{ include "helm_lib_module_image" (list $ "cniMigrationInitChecker" "common") }}
         {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
           readOnlyRootFilesystem: true
         env:
