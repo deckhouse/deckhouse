@@ -57,6 +57,24 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       serviceAccountName: {{ .Chart.Name }}
       initContainers:
+      - name: cni-migration-init-checker
+        image: {{ include "helm_lib_module_image" (list $ "cniMigrationInitChecker" "common") }}
+        {{- include "helm_lib_module_container_security_context_run_as_user_deckhouse_pss_restricted" . | nindent 8 }}
+          readOnlyRootFilesystem: true
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: CNI_NAME
+          value: "simple-bridge"
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
       {{ include "helm_lib_module_init_container_iptables_wrapper" . | nindent 6 }}
       containers:
       - name: simple-bridge
