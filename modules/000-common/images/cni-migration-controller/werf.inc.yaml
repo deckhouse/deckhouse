@@ -52,8 +52,8 @@ shell:
     - |
       cd /relocate/sbin
       for mode in legacy nft; do
-        for base-cmd in iptables ip6tables; do
-        for cmd in ${base-cmd}-${mode} ${base-cmd}-${mode}-save ${base-cmd}-${mode}-restore; do
+        for base_cmd in iptables ip6tables; do
+          for cmd in ${base_cmd}-${mode} ${base_cmd}-${mode}-save ${base_cmd}-${mode}-restore; do
             ln -sf xtables-${mode}-multi "${cmd}"
           done
         done
