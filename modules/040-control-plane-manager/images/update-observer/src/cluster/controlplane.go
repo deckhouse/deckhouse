@@ -21,6 +21,7 @@ import (
 	"update-observer/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 type ControlPlaneState struct {
@@ -109,6 +110,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 			if !componentState.isRunning() {
 				hasComponentFailed = true
+				klog.Errorf("component is not running, but: %v, controlplanestate: %v", componentState.Phase,s)
 				continue
 			}
 
