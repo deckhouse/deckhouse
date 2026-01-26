@@ -272,9 +272,23 @@ description: "Пошаговые примеры переключения меж�
    Пример:
 
    ```bash
+   TAG=$(
+    d8 k -n d8-system get deployment/deckhouse -o yaml \
+    | yq -r '.spec.template.spec.containers[] | select(.name == "deckhouse").image | split(":")[-1]'
+   ) && echo "TAG: $TAG"
+
+   EDITION=$(
+    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller global values -o yaml \
+    | yq .deckhouseEdition
+   ) && echo "EDITION: $EDITION"
+   ```
+
+   ```bash
    d8 mirror pull \
-     --source='registry.deckhouse.io/deckhouse/<EDITION>' \
-     --license='<LICENSE_KEY>' /home/user/d8-bundle
+   --license="<LICENSE_KEY>" \
+   --source="registry.deckhouse.ru/deckhouse/$EDITION" \
+   --deckhouse-tag="$TAG" \
+   /home/user/d8-bundle
    ```
 
 1. Установите настройки режима `Local` в [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-mode).
@@ -336,10 +350,10 @@ description: "Пошаговые примеры переключения меж�
 
    ```bash
    d8 mirror push \
-     --registry-login="rw" \
-     --registry-password="KFVxXZGuqKkkumPz" \
-     /home/user/d8-bundle \
-     registry.${PUBLIC_DOMAIN}/system/deckhouse
+   --registry-login="rw" \
+   --registry-password="KFVxXZGuqKkkumPz" \
+   /home/user/d8-bundle \
+   registry.${PUBLIC_DOMAIN}/system/deckhouse
    ```
 
 1. Проверьте статус переключения registry в секрете `registry-state`, используя [инструкцию](faq.html#как-посмотреть-статус-переключения-режима-registry). После загрузки образов статус `RegistryContainsRequiredImages` должен быть в состоянии `Ready`

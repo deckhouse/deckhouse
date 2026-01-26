@@ -272,9 +272,23 @@ To switch an already running cluster to `Local` mode, follow these steps:
    Example:
 
    ```bash
+   TAG=$(
+    d8 k -n d8-system get deployment/deckhouse -o yaml \
+    | yq -r '.spec.template.spec.containers[] | select(.name == "deckhouse").image | split(":")[-1]'
+   ) && echo "TAG: $TAG"
+
+   EDITION=$(
+    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller global values -o yaml \
+    | yq .deckhouseEdition
+   ) && echo "EDITION: $EDITION"
+   ```
+
+   ```bash
    d8 mirror pull \
-     --source='registry.deckhouse.io/deckhouse/<EDITION>' \
-     --license='<LICENSE_KEY>' /home/user/d8-bundle
+   --license="<LICENSE_KEY>" \
+   --source="registry.deckhouse.io/deckhouse/$EDITION" \
+   --deckhouse-tag="$TAG" \
+   /home/user/d8-bundle
    ```
 
 1. Set the `Local` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-mode).
@@ -336,10 +350,10 @@ To switch an already running cluster to `Local` mode, follow these steps:
 
    ```bash
    d8 mirror push \
-     --registry-login="rw" \
-     --registry-password="KFVxXZGuqKkkumPz" \
-     /home/user/d8-bundle \
-     registry.${PUBLIC_DOMAIN}/system/deckhouse
+   --registry-login="rw" \
+   --registry-password="KFVxXZGuqKkkumPz" \
+   /home/user/d8-bundle \
+   registry.${PUBLIC_DOMAIN}/system/deckhouse
    ```
 
 1. Check the registry switch status in the `registry-state` secret using [this guide](faq.html#how-to-check-the-registry-mode-switch-status). After uploading the images, the `RegistryContainsRequiredImages` status should be in the `Ready` state.
