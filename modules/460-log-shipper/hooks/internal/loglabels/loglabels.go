@@ -64,8 +64,9 @@ var K8sLabelsWithPodLabels = func() map[string]string {
 
 // FilesLabels contains default file labels for log destinations.
 var FilesLabels = map[string]string{
-	"host": "{{ host }}",
-	"file": "{{ file }}",
+	"host":    "{{ host }}",
+	"host_ip": "{{ host_ip }}",
+	"file":    "{{ file }}",
 }
 
 // SortedExtraLabelsKeys returns sorted keys from extraLabels map.

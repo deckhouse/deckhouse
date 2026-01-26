@@ -62,7 +62,7 @@ func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceTy
 
 	return &Logstash{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "socket",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

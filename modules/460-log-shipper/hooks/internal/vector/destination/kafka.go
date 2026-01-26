@@ -116,7 +116,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType 
 
 	return &Kafka{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "kafka",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

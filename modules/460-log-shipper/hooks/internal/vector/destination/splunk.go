@@ -81,7 +81,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 
 	return &Splunk{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "splunk_hec_logs",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

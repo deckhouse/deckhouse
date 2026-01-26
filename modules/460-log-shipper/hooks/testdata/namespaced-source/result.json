@@ -139,7 +139,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/loki-storage": {
+    "destination/cluster/loki-storage/KubernetesPods": {
       "type": "loki",
       "inputs": [
         "transform/destination/loki-storage/01_del_parsed_data"
@@ -175,7 +175,7 @@
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"
     },
-    "destination/cluster/test-es-dest": {
+    "destination/cluster/test-es-dest/KubernetesPods": {
       "type": "elasticsearch",
       "inputs": [
         "transform/destination/test-es-dest/02_del_parsed_data"

@@ -60,7 +60,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 
 	return &Vector{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "vector",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

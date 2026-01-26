@@ -110,7 +110,7 @@ func NewElasticsearch(name string, cspec v1alpha1.ClusterLogDestinationSpec, sou
 	return &Elasticsearch{
 		APIVersion: apiVersion,
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "elasticsearch",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),
