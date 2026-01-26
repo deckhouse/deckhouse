@@ -3,7 +3,7 @@
 
 {{- $moduleEnabled := .Values.global.enabledModules | has "registry" }}
 {{- $clusterBootstraped := .Values.global.clusterIsBootstrapped | default false }}
-{{- $staticCluster := and .Values.global.clusterConfiguration (eq .Values.global.clusterConfiguration.clusterType "Static") }}
+{{- $staticCluster := eq (((.Values.global).clusterConfiguration).clusterType | default "" ) "Static" }}
 
 {{- if or (not $moduleEnabled) (not $clusterBootstraped) (not $staticCluster) }}
 ---
