@@ -28,7 +28,7 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
 {{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
-{{- if semverCompare ">=1.32 <1.35" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
 {{- $runtimeConfig := join "," $runtimeConfig -}}
