@@ -21,10 +21,7 @@ import (
 )
 
 func RunSuite(ctx context.Context, suite Suite, phase Phase) error {
-	if suite == nil {
-		return nil
-	}
-	if len(suite.Checks()) == 0 {
+	if suite == nil || len(suite.Checks()) == 0 {
 		return nil
 	}
 	preflight := New(suite)
