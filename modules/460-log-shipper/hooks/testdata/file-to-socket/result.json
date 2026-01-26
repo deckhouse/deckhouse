@@ -155,15 +155,9 @@
           "severity": "cef.severity",
           "version": "V1",
           "extensions": {
-            "container": "container",
+            "file": "file",
             "host": "host",
-            "image": "image",
             "message": "message",
-            "namespace": "namespace",
-            "node": "node",
-            "pod": "pod",
-            "podip": "pod_ip",
-            "podowner": "pod_owner",
             "timestamp": "timestamp"
           }
         }

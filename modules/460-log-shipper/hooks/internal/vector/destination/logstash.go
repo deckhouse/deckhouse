@@ -39,7 +39,7 @@ type LogstashKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Logstash {
+func NewLogstash(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Logstash {
 	spec := cspec.Logstash
 
 	tls := CommonTLS{

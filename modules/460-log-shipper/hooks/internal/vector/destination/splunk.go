@@ -19,6 +19,7 @@ package destination
 import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Splunk struct {
@@ -39,7 +40,7 @@ type Splunk struct {
 	TLS CommonTLS `json:"tls"`
 }
 
-func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
+func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Splunk {
 	spec := cspec.Splunk
 
 	tls := CommonTLS{
@@ -59,20 +60,22 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 
 	indexedFields := []string{
 		"datetime",
-		"namespace",
-		"container",
-		"image",
-		"pod",
-		"node",
-		"pod_ip",
-		"stream",
-		"pod_owner",
-		"host",
-		// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
 	}
+	// Add labels based on source type
+	switch sourceType {
+	case v1alpha1.SourceFile:
+		for k := range loglabels.FilesLabels {
+			indexedFields = append(indexedFields, k)
+		}
+	case v1alpha1.SourceKubernetesPods:
+		for k := range loglabels.K8sLabels {
+			indexedFields = append(indexedFields, k)
+		}
+	}
+	// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
 
-	// Send extra labels as indexed fields
-	for k := range cspec.ExtraLabels {
+	// Send extra labels as indexed fields (sorted for consistency)
+	for _, k := range loglabels.SortedExtraLabelsKeys(cspec.ExtraLabels) {
 		indexedFields = append(indexedFields, k)
 	}
 

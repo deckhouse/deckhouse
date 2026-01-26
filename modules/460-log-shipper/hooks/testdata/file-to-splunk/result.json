@@ -71,15 +71,8 @@
       "index": "{{ test }}",
       "indexed_fields": [
         "datetime",
-        "namespace",
-        "container",
-        "image",
-        "pod",
-        "node",
-        "pod_ip",
-        "stream",
-        "pod_owner",
         "host",
+        "file",
         "app"
       ],
       "tls": {

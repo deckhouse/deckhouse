@@ -19,10 +19,10 @@ package transform
 import (
 	"fmt"
 	"regexp"
-	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
@@ -44,7 +44,8 @@ const (
 //	  label_name: {{ values.app }} -> .label_name = .values.app
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	tmpFields := make([]string, 0)
-	keys := mapKeys(extraFields)
+	// Use sorted keys for consistent ordering
+	keys := loglabels.SortedExtraLabelsKeys(extraFields)
 
 	for _, k := range keys {
 		tmpFields = append(tmpFields, processExtraFieldKey(k, extraFields[k]))
@@ -63,17 +64,6 @@ func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
 	}
 
 	return &extraFieldsTransform
-}
-
-// mapKeys returns sorted keys of map
-func mapKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for key := range m {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	return keys
 }
 
 // processExtraFieldKey processes key-value pairs to valid vrls

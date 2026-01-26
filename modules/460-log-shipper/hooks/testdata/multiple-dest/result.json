@@ -307,7 +307,6 @@
         "app": "{{ app }}",
         "container": "{{ container }}",
         "foo": "{{ foo }}",
-        "host": "{{ host }}",
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",

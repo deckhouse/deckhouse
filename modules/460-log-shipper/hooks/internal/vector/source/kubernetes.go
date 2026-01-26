@@ -24,6 +24,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 const defaultGlobCooldownMs = 1000
@@ -142,17 +143,17 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 		labelSelector:          labelsSelector.String(),
 		namespaceLabelSelector: namespaceLabelsSelector.String(),
 		annotationFields: KubernetesAnnotationFields{
-			PodName:        "pod",
-			PodLabels:      "pod_labels",
-			PodIP:          "pod_ip",
-			PodNamespace:   "namespace",
-			ContainerImage: "image",
-			ContainerName:  "container",
-			PodNodeName:    "node",
-			PodOwner:       "pod_owner",
+			PodName:        loglabels.K8sLabelPod,
+			PodLabels:      loglabels.K8sLabelPodLabels,
+			PodIP:          loglabels.K8sLabelPodIP,
+			PodNamespace:   loglabels.K8sLabelNamespace,
+			ContainerImage: loglabels.K8sLabelImage,
+			ContainerName:  loglabels.K8sLabelContainer,
+			PodNodeName:    loglabels.K8sLabelNode,
+			PodOwner:       loglabels.K8sLabelPodOwner,
 		},
 		nodeAnnotationFields: NodeAnnotationFields{
-			NodeLabels: "node_labels",
+			NodeLabels: loglabels.K8sLabelNodeLabels,
 		},
 		globCooldownMs:            defaultGlobCooldownMs,
 		keepDeletedFilesOpenedFor: spec.KeepDeletedFilesOpenedFor.Duration,

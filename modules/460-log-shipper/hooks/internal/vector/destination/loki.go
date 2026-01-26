@@ -17,12 +17,11 @@ limitations under the License.
 package destination
 
 import (
-	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Loki struct {
@@ -52,41 +51,15 @@ type LokiAuth struct {
 	User     string `json:"user,omitempty"`
 }
 
-func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Loki {
+func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Loki {
 	spec := cspec.Loki
 
 	// default labels
 	//
 	// Asterisk is required here to expand all pod labels
 	// See https://github.com/vectordotdev/vector/pull/12041
-	labels := map[string]string{
-		// Kubernetes logs labels
-		"namespace":    "{{ namespace }}",
-		"container":    "{{ container }}",
-		"image":        "{{ image }}",
-		"pod":          "{{ pod }}",
-		"node":         "{{ node }}",
-		"pod_ip":       "{{ pod_ip }}",
-		"stream":       "{{ stream }}",
-		"pod_labels_*": "{{ pod_labels }}",
-		"node_group":   "{{ node_group }}",
-		"pod_owner":    "{{ pod_owner }}",
-		// File labels
-		// TODO(nabokihms): think about removing this label and always use the `node` labels.
-		//   If we do this right now, it will break already working setups.
-		"host": "{{ host }}",
-		// "file": "{{ file }}", The file label is excluded due to potential cardinality bomb
-	}
-
-	keys := make([]string, 0, len(cspec.ExtraLabels))
-	for key := range cspec.ExtraLabels {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-	for _, k := range keys {
-		labels[k] = fmt.Sprintf("{{ %s }}", k)
-	}
+	// Labels are selected based on source type: File -> FilesLabels, KubernetesPods -> K8sLabels
+	labels := loglabels.MergeLabelsForSource(sourceType, cspec.ExtraLabels)
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),
