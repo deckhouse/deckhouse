@@ -36,6 +36,7 @@ const (
 type ControlPlaneComponentState struct {
 	Version string
 	Phase   corev1.PodPhase
+	Reason  string
 }
 
 func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {

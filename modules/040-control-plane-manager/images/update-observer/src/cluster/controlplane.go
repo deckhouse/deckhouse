@@ -89,6 +89,7 @@ func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState
 		component := &ControlPlaneComponentState{
 			Version: version,
 			Phase:   pod.Status.Phase,
+			Reason:  pod.Status.Reason,
 		}
 
 		nodeState.ComponentsState[componentLabel] = component
@@ -110,7 +111,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 			if !componentState.isRunning() {
 				hasComponentFailed = true
-				klog.Errorf("component '%s' is not running, but: %+v, controlplanestate: %+v", componentName, componentState.Phase, s)
+				klog.Errorf("component '%s' is not running, but: %+v, reason: %s", componentName, componentState.Phase, componentState.Reason)
 				continue
 			}
 
