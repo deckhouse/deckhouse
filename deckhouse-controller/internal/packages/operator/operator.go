@@ -19,6 +19,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/Masterminds/semver/v3"
@@ -35,6 +38,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/eventhandler"
@@ -44,6 +49,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -198,24 +205,36 @@ func (o *Operator) handlePackageRender(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var app *apps.Application
+	var ctx context.Context
+
 	o.mu.Lock()
 	pkg, exists := o.packages[packageName]
 	o.mu.Unlock()
 
-	if !exists {
-		http.Error(w, fmt.Sprintf("package %s not found", packageName), http.StatusNotFound)
-		return
-	}
+	if exists {
+		app = o.manager.GetApp(packageName)
+		if app == nil {
+			http.Error(w, fmt.Sprintf("package %s not loaded", packageName), http.StatusNotFound)
+			return
+		}
+		ctx = pkg.ctx
+		if ctx == nil {
+			ctx = context.Background()
+		}
+	} else {
+		if !o.isPackageInstalled(packageName) {
+			http.Error(w, fmt.Sprintf("package %s not found (not loaded and not installed)", packageName), http.StatusNotFound)
+			return
+		}
 
-	app := o.manager.GetApp(packageName)
-	if app == nil {
-		http.Error(w, fmt.Sprintf("package %s not loaded", packageName), http.StatusNotFound)
-		return
-	}
-
-	ctx := pkg.ctx
-	if ctx == nil {
 		ctx = context.Background()
+		var err error
+		app, err = o.loadPackageForRender(ctx, packageName)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("failed to load package: %v", err), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	renderedManifests, err := o.nelmService.Render(ctx, app)
@@ -228,9 +247,39 @@ func (o *Operator) handlePackageRender(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/x-yaml")
+	w.Header().Set("Content-Type", "application/yaml")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(renderedManifests)) //nolint:errcheck
+}
+
+// isPackageInstalled checks if package is mounted at filesystem
+func (o *Operator) isPackageInstalled(name string) bool {
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
+	packagePath := filepath.Join(appsPath, name)
+	_, err := os.Stat(packagePath)
+	return err == nil
+}
+
+// loadPackageForRender loads a package from filesystem for rendering only
+func (o *Operator) loadPackageForRender(ctx context.Context, name string) (*apps.Application, error) {
+	parts := strings.SplitN(name, ".", 2)
+	if len(parts) != 2 {
+		return nil, fmt.Errorf("invalid package name format: %s", name)
+	}
+
+	minimalRegistry := registry.Registry{
+		Name: "render-only",
+	}
+
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
+	appLoader := loader.NewApplicationLoader(appsPath, o.logger)
+
+	app, err := appLoader.Load(ctx, minimalRegistry, name)
+	if err != nil {
+		return nil, fmt.Errorf("load package from filesystem: %w", err)
+	}
+
+	return app, nil
 }
 
 // Status returns the status service
