@@ -2,15 +2,15 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/multitenancy-manager
     to: /multitenancy-manager
     before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src/templates
     to: /templates
     before: setup
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src/helmlib
     to: /helmlib
     before: setup
@@ -20,7 +20,7 @@ imageSpec:
   config:
     entrypoint: [ "/multitenancy-manager" ]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
@@ -42,11 +42,11 @@ git:
         - '**/helmlib/*.tpl'
         - '**/templates/*.yaml'
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-multitenancy-manager-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-multitenancy-manager-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
