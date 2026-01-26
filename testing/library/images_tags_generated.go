@@ -366,10 +366,10 @@ var DefaultImagesDigests = map[string]interface{}{
 		"metallbSpeaker":    "imageHash-metallb-metallbSpeaker",
 	},
 	"monitoringKubernetes": map[string]interface{}{
-		"ebpfExporter":                      "imageHash-monitoringKubernetes-ebpfExporter",
 		"kubeStateMetrics":                  "imageHash-monitoringKubernetes-kubeStateMetrics",
 		"kubeletEvictionThresholdsExporter": "imageHash-monitoringKubernetes-kubeletEvictionThresholdsExporter",
 		"nodeExporter":                      "imageHash-monitoringKubernetes-nodeExporter",
+		"oomKillsExporter":                  "imageHash-monitoringKubernetes-oomKillsExporter",
 	},
 	"monitoringPing": map[string]interface{}{
 		"monitoringPing": "imageHash-monitoringPing-monitoringPing",

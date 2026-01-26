@@ -1347,7 +1347,7 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "sum by (container) (increase(oom_kills:normalized{namespace=\"$namespace\", pod=\"$pod\"}[$__rate_interval]))",
+          "expr": "sum by (container_name) (increase(klog_pod_oomkill{namespace=\"$namespace\", pod_name=\"$pod\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ container }}",
