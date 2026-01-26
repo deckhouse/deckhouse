@@ -1,0 +1,112 @@
+{{- if .Values.global.internal.cniMigrationEnabled }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: cni-migration-agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-agent")) | nindent 2 }}
+spec:
+  selector:
+    matchLabels:
+      app: cni-migration-agent
+  template:
+    metadata:
+      labels:
+        app: cni-migration-agent
+    spec:
+      serviceAccountName: cni-migration-agent
+      hostNetwork: true
+      hostPID: true
+      hostIPC: true
+      terminationGracePeriodSeconds: 5
+      priorityClassName: system-node-critical
+      tolerations:
+      - operator: Exists
+      containers:
+      - name: agent
+        image: {{ include "helm_lib_module_common_image" (list . "cniMigrationController") }}
+        args:
+        - "--mode=agent"
+        - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
+        - "--metrics-bind-address=:42284"
+        - "--health-probe-bind-address=:42281"
+        ports:
+        - name: healthz
+          containerPort: 42281
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: healthz
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: healthz
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        securityContext:
+          privileged: true
+          runAsUser: 0
+          runAsGroup: 0
+        volumeMounts:
+        - name: host-proc
+          mountPath: /host/proc
+          readOnly: true
+        - name: host-sys
+          mountPath: /host/sys
+          readOnly: true
+        - name: cni-net-d
+          mountPath: /etc/cni/net.d
+        - name: cni-bin
+          mountPath: /opt/cni/bin
+        - name: host-run
+          mountPath: /run
+        - name: host-bpf
+          mountPath: /sys/fs/bpf
+          mountPropagation: Bidirectional
+        - name: host-lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: host-var-lib-cni
+          mountPath: /var/lib/cni
+      volumes:
+      - name: host-proc
+        hostPath:
+          path: /proc
+      - name: host-sys
+        hostPath:
+          path: /sys
+      - name: cni-net-d
+        hostPath:
+          path: /etc/cni/net.d
+      - name: cni-bin
+        hostPath:
+          path: /opt/cni/bin
+      - name: host-run
+        hostPath:
+          path: /run
+      - name: host-bpf
+        hostPath:
+          path: /sys/fs/bpf
+          type: DirectoryOrCreate
+      - name: host-lib-modules
+        hostPath:
+          path: /lib/modules
+          type: Directory
+      - name: host-var-lib-cni
+        hostPath:
+          path: /var/lib/cni
+          type: DirectoryOrCreate
+{{- end }}

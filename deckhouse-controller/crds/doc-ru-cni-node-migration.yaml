@@ -1,0 +1,21 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет конфигурацию для миграции CNI на конкретном узле.
+          properties:
+            spec:
+              description: |
+                Определяет желаемое состояние миграции CNI на узле (пустой объект, конфигурация берется из глобального ресурса).
+            status:
+              description: |
+                Определяет наблюдаемое состояние миграции CNI на узле.
+              properties:
+                phase:
+                  description: |
+                    Текущая фаза миграции на узле (например, Preparing, Cleaning).
+                conditions:
+                  description: |
+                    Список условий, отражающих шаги, выполненные на узле (PodsAnnotated, CleanupDone, PodsRestarted).
