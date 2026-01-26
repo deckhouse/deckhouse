@@ -19,8 +19,7 @@
 name: 'Svace analyze'
 on:
   schedule:
-    - cron: '0 0 * * sun'
-    - cron: '15 14 * * mon'
+    - cron: '0 0 * * 1'
   workflow_dispatch:
 
 permissions:
@@ -137,7 +136,7 @@ jobs:
       - git_info
     env:
       WERF_ENV: "FE"
-      SVACE_ENABLED: True
+      SVACE_ENABLED: "true"
       SVACE_ANALYZE_HOST: "${{ secrets.SVACE_ANALYZE_HOST }}"
       SVACE_ANALYZE_SSH_USER: "${{ secrets.SVACE_ANALYZE_SSH_USER }}"
     # <template: build_template>
