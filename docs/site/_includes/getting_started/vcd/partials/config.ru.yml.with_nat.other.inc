@@ -136,8 +136,8 @@ bastion:
   instanceClass:
     rootDiskSizeGb: 30
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
-    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddress: 192.168.199.10
 edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
@@ -149,8 +149,8 @@ masterNodeGroup:
   replicas: 1
   instanceClass:
     sizingPolicy: *!CHANGE_SIZING_POLICY*
-    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddresses:
       - 192.168.199.2
 ---
