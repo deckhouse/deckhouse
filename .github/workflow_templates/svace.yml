@@ -28,7 +28,9 @@ on:
       svace_enabled:
         description: 'Enable svace build and analyze'
         type: boolean
-        required: false
+        required: true
+        default: true
+
 
 env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}

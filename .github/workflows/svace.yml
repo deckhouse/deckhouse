@@ -24,9 +24,10 @@ on:
     inputs:
       svace_enabled:
         description: 'Enable svace build and analyze'
-        type: choice
+        type: boolean
         required: true
         default: true
+
 
 env:
 
