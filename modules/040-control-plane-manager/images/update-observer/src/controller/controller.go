@@ -117,9 +117,6 @@ func getSecretPredicate() predicate.Predicate {
 	}
 }
 
-// add label k8sVersion: v1.32
-// check label from start, decide up or down
-// update label after stat.UpToDate
 func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	klog.Info("Reconcile started")
 

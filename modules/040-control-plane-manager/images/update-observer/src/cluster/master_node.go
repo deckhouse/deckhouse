@@ -34,15 +34,20 @@ const (
 )
 
 type ControlPlaneComponentState struct {
-	Version string
-	Phase   corev1.PodPhase
-	Reason  string
+	Version   string
+	PodStatus corev1.PodStatus
 }
 
 func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
 	return s.Version == desiredVersion
 }
 
-func (s *ControlPlaneComponentState) isRunning() bool {
-	return s.Phase == corev1.PodRunning
+func (s *ControlPlaneComponentState) isRunningAndReady() bool {
+	for _, containerStatus := range s.PodStatus.ContainerStatuses {
+		if containerStatus.State.Running == nil || !containerStatus.Ready {
+			return false
+		}
+	}
+
+	return true
 }
