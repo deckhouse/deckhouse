@@ -105,13 +105,14 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 	for _, nodeState := range s.NodesState {
 		var hasComponentUpdating, hasComponentFailed bool
 
+		// phase: "Running", reason: "" => all its ok;
 		desiredCount++
 		for componentName, componentState := range nodeState.ComponentsState {
 			desiredComponentCount++
+			klog.Infof("%s phase: '%s', reason: %s", componentName, componentState.Phase, componentState.Reason)
 
 			if !componentState.isRunning() {
 				hasComponentFailed = true
-				klog.Errorf("component '%s' is not running, but: %+v, reason: %s", componentName, componentState.Phase, componentState.Reason)
 				continue
 			}
 
