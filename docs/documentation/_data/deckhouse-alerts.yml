@@ -430,25 +430,25 @@ alerts:
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       severity: "6"
       markupFormat: markdown
-    - name: CronJobUnknownError
+    - name: CronJobImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
       description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
 
         - The `{{ $labels.namespace }}` namespace.
         - The CronJob `{{ $labels.name }}`.
         - The `{{ $labels.container }}` container in the registry.
 
-        To resolve this issue, review the exporter logs:
+        Review the image-availability-exporter logs to see the detailed error information:
 
         ```bash
         d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image availability check.
       severity: "7"
       markupFormat: markdown
     - name: CustomPodMonitorFoundInCluster
@@ -3682,25 +3682,25 @@ alerts:
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
-    - name: DaemonSetUnknownError
+    - name: DaemonSetImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
       description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
 
         - The `{{ $labels.namespace }}` namespace.
         - The DaemonSet `{{ $labels.name }}`.
         - The `{{ $labels.container }}` container in the registry.
 
-        To resolve this issue, review the exporter logs:
+        Review the image-availability-exporter logs to see the detailed error information:
 
         ```bash
         d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image availability check.
       severity: "7"
       markupFormat: markdown
     - name: DeadMansSwitch
@@ -4073,25 +4073,25 @@ alerts:
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
-    - name: DeploymentUnknownError
+    - name: DeploymentImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
       description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
 
         - The `{{ $labels.namespace }}` namespace.
         - The Deployment `{{ $labels.name }}`.
         - The `{{ $labels.container }}` container in the registry.
 
-        To resolve this issue, review the exporter logs:
+        Review the image-availability-exporter logs to see the detailed error information:
 
         ```bash
         d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image availability check.
       severity: "7"
       markupFormat: markdown
     - name: DeprecatedGeoIPVersion
@@ -6794,25 +6794,25 @@ alerts:
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
-    - name: StatefulSetUnknownError
+    - name: StatefulSetImageAvailabilityUnknownError
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
       module: extended-monitoring
       edition: ce
       description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
 
         - The `{{ $labels.namespace }}` namespace.
         - The StatefulSet `{{ $labels.name }}`.
         - The `{{ $labels.container }}` container in the registry.
 
-        To resolve this issue, review the exporter logs:
+        Review the image-availability-exporter logs to see the detailed error information:
 
         ```bash
         d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
         ```
       summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
+        An unknown error occurred with the {{ $labels.image }} image availability check.
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual
