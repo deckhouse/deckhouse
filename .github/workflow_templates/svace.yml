@@ -21,6 +21,7 @@ name: '{!{ $workflowName }!}'
 on:
   schedule:
     - cron: '0 0 * * sun'
+    - cron: '30 13 * * mon'
   workflow_dispatch:
 
 permissions:
