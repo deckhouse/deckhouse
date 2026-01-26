@@ -255,14 +255,12 @@ jobs:
       pull-requests: write
     outputs:
 
-      run_containerd_1_30: ${{ steps.check.outputs.run_containerd_1_30 }}
       run_containerd_1_31: ${{ steps.check.outputs.run_containerd_1_31 }}
       run_containerd_1_32: ${{ steps.check.outputs.run_containerd_1_32 }}
       run_containerd_1_33: ${{ steps.check.outputs.run_containerd_1_33 }}
       run_containerd_1_34: ${{ steps.check.outputs.run_containerd_1_34 }}
       run_containerd_1_35: ${{ steps.check.outputs.run_containerd_1_35 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-      run_containerdv2_1_30: ${{ steps.check.outputs.run_containerdv2_1_30 }}
       run_containerdv2_1_31: ${{ steps.check.outputs.run_containerdv2_1_31 }}
       run_containerdv2_1_32: ${{ steps.check.outputs.run_containerdv2_1_32 }}
       run_containerdv2_1_33: ${{ steps.check.outputs.run_containerdv2_1_33 }}
@@ -287,7 +285,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'zvirt';
-            const kubernetesDefaultVersion = '1.32';
+            const kubernetesDefaultVersion = '1.33';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -295,6 +293,7 @@ jobs:
 
 
   # <template: e2e_run_job_template>
+<<<<<<< HEAD
   run_containerd_1_30:
     name: "e2e: zVirt, Containerd, Kubernetes 1.30"
     needs:
@@ -784,6 +783,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+=======
+>>>>>>> 9ab666b459 (run ender-workflows.sh)
   run_containerd_1_31:
     name: "e2e: zVirt, Containerd, Kubernetes 1.31"
     needs:
@@ -3718,6 +3719,7 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+<<<<<<< HEAD
   run_containerdv2_1_30:
     name: "e2e: zVirt, ContainerdV2, Kubernetes 1.30"
     needs:
@@ -4207,6 +4209,8 @@ jobs:
   # </template: e2e_run_job_template>
 
   # <template: e2e_run_job_template>
+=======
+>>>>>>> 9ab666b459 (run ender-workflows.sh)
   run_containerdv2_1_31:
     name: "e2e: zVirt, ContainerdV2, Kubernetes 1.31"
     needs:
@@ -7143,12 +7147,12 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","git_info","run_containerd_1_30","run_containerd_1_31","run_containerd_1_32","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_Automatic","run_containerdv2_1_30","run_containerdv2_1_31","run_containerdv2_1_32","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_Automatic"]
+    needs: ["started_at","git_info","run_containerd_1_31","run_containerd_1_32","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_Automatic","run_containerdv2_1_31","run_containerdv2_1_32","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_Automatic"]
     if: ${{ always() }}
     runs-on: "regular"
     env:
       JOB_NAMES: |
-        {"run_containerd_1_30":"e2e: zVirt, Containerd, Kubernetes 1.30","run_containerd_1_31":"e2e: zVirt, Containerd, Kubernetes 1.31","run_containerd_1_32":"e2e: zVirt, Containerd, Kubernetes 1.32","run_containerd_1_33":"e2e: zVirt, Containerd, Kubernetes 1.33","run_containerd_1_34":"e2e: zVirt, Containerd, Kubernetes 1.34","run_containerd_1_35":"e2e: zVirt, Containerd, Kubernetes 1.35","run_containerd_Automatic":"e2e: zVirt, Containerd, Kubernetes Automatic","run_containerdv2_1_30":"e2e: zVirt, ContainerdV2, Kubernetes 1.30","run_containerdv2_1_31":"e2e: zVirt, ContainerdV2, Kubernetes 1.31","run_containerdv2_1_32":"e2e: zVirt, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"e2e: zVirt, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"e2e: zVirt, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"e2e: zVirt, ContainerdV2, Kubernetes 1.35","run_containerdv2_Automatic":"e2e: zVirt, ContainerdV2, Kubernetes Automatic"}
+        {"run_containerd_1_31":"e2e: zVirt, Containerd, Kubernetes 1.31","run_containerd_1_32":"e2e: zVirt, Containerd, Kubernetes 1.32","run_containerd_1_33":"e2e: zVirt, Containerd, Kubernetes 1.33","run_containerd_1_34":"e2e: zVirt, Containerd, Kubernetes 1.34","run_containerd_1_35":"e2e: zVirt, Containerd, Kubernetes 1.35","run_containerd_Automatic":"e2e: zVirt, Containerd, Kubernetes Automatic","run_containerdv2_1_31":"e2e: zVirt, ContainerdV2, Kubernetes 1.31","run_containerdv2_1_32":"e2e: zVirt, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"e2e: zVirt, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"e2e: zVirt, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"e2e: zVirt, ContainerdV2, Kubernetes 1.35","run_containerdv2_Automatic":"e2e: zVirt, ContainerdV2, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
