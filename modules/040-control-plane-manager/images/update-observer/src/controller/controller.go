@@ -43,7 +43,7 @@ import (
 const (
 	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
-	requeueInterval         = 3 * time.Minute
+	requeueInterval         = 1 * time.Minute
 	cronRequeueInterval     = 30 * time.Minute
 	nodeListPageSize        = 50
 )
