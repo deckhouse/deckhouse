@@ -1090,7 +1090,9 @@ egressgateway
 elasticsearch
 emptyDir
 enableMultiTenancy
+enablement
 endofftopic
+entrypoint
 enum
 env
 erlier
@@ -1228,6 +1230,7 @@ istiod
 jaeger
 jammy
 javascript
+jq
 js
 json
 jsonData
@@ -1480,6 +1483,7 @@ rulefiles
 sVersion
 schedulable
 schemas
+scp
 scrapeInterval
 scrapeIntervals
 screenshot
@@ -1561,6 +1565,7 @@ tenantId
 tenantName
 terminationGracePeriodSeconds
 terraform
+terraforming
 testEnum
 timeframe
 timeslot
@@ -1591,6 +1596,7 @@ vCPUs
 vCenter
 vCloud
 vSphere
+vSphereClusterConfiguration
 vSphereEE
 vSwitch
 validator
@@ -1704,10 +1710,13 @@ zoneTagCategory
 ФСТЭК
 Флант
 Фланта
+Форкер
 Фронтенд
 Хабре
 Хеш
 Хеширование
+Хэш
+Хэширование
 ЦОД
 ЦОДах
 ЦОДов
