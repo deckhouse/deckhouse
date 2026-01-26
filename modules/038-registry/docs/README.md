@@ -44,7 +44,7 @@ Mode switching restrictions are as follows:
 - Changing registry parameters and switching modes is only available after the bootstrap phase is fully complete.
 - For the first switch, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](./faq.html) section.
 - Switching to the non-configurable `Unmanaged` mode is only available from the `Unmanaged` mode. For more details, see the [Registry Module: FAQ](./faq.html) section.
-- Switching between `Local` and `Proxy` modes is only possible via the intermediate `Direct` or `Unmanaged` modes. Example switching sequence: `Local` → `Direct` → `Proxy`.
+- Switching between `Local` and `Proxy` modes is only possible via the intermediate `Direct` or `Unmanaged` modes. Example switching sequence: `Local`/`Proxy` → `Direct` → `Proxy`/`Local`.
 
 ## Direct Mode Architecture
 
