@@ -1,0 +1,91 @@
+{{- $iptables_version := "1.8.9" }}
+{{- $iptables_image_version := $iptables_version | replace "." "-" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+fromImage: builder/src
+final: false
+git:
+  - add: /{{ $.ModulePath }}modules/{{ .ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+    to: /src
+    stageDependencies:
+      install:
+        - '**/*'
+shell:
+  install:
+    - cd /src
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+    add: /src
+    to: /src
+    before: install
+  - image: registrypackages/iptables-artifact-{{ $iptables_image_version }}
+    add: /
+    to: /relocate/sbin
+    includePaths:
+      - xtables-legacy-multi
+      - xtables-nft-multi
+    before: install
+  - image: common/iptables-wrapper
+    add: /iptables-wrapper
+    to: /relocate/sbin/iptables-wrapper
+    before: install
+  - image: tools/iproute2
+    add: /sbin/ip
+    to: /relocate/sbin/ip
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+  - id: GOPROXY
+    value: {{ .GOPROXY }}
+shell:
+  beforeSetup:
+    - |
+      cd /relocate/sbin
+      for cmd in iptables iptables-save iptables-restore ip6tables ip6tables-save ip6tables-restore; do
+        ln -fs iptables-wrapper "${cmd}"
+      done
+    - |
+      cd /relocate/sbin
+      for mode in legacy nft; do
+        for base_cmd in iptables ip6tables; do
+          for cmd in ${base_cmd}-${mode} ${base_cmd}-${mode}-save ${base_cmd}-${mode}-restore; do
+            ln -sf xtables-${mode}-multi "${cmd}"
+          done
+        done
+      done
+  install:
+    - cd /src
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+  setup:
+    - cd /src
+    - export GO_VERSION=${GOLANG_VERSION} CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - go build -ldflags="-s -w" -o /cni-migration-controller ./cmd/main.go
+    - chmod 0755 /cni-migration-controller
+    - chown 64535:64535 /cni-migration-controller
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+fromImage: base/distroless
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /cni-migration-controller
+    to: /cni-migration-controller
+    before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+    add: /relocate/sbin
+    to: /sbin
+    before: setup
+  - image: cni-cilium/agent-distroless
+    add: /usr/bin/cilium-dbg
+    to: /sbin/cilium-dbg
+    before: setup
+imageSpec:
+  config:
+    workingDir: /
+    env:
+      "PATH": "/sbin"
+    entrypoint: ["/cni-migration-controller"]
