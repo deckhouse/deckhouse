@@ -139,12 +139,17 @@
         {{- end }}
         <a class="button-tile" data-editorial="{{- $moduleStage }}" href="{{ .url }}">
 
-          {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-            <!-- <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'> -->
-            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}'>
-              <img src="/images/{{lower $moduleStage }}.svg" alt="{{- $moduleStage }}">
-            </span>
+        {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
+          {{- $stageKey := lower $moduleStage }}
+          {{- $stageIcon := $stageKey }}
+          {{- if eq $moduleStage "General Availability" }}
+            {{- $stageKey = "generalAvailability" }}
+            {{- $stageIcon = "general_availability" }}
           {{- end }}
+          <span class='button-tile__stage button-tile__stage-{{ $stageKey }}'>
+            <img src="/images/{{ $stageIcon }}.svg" alt="{{- $moduleStage }}">
+          </span>
+        {{- end }}
         <h2 class="button-tile__title">{{ .module }}</h2>
 
           <p class="button-tile__descr">
