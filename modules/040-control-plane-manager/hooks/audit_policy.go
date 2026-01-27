@@ -402,7 +402,7 @@ func appendBasicPolicyRules(policy *audit.Policy, extraData []ConfigMapInfo) {
 					Resources: []string{"pods/exec", "pods/attach", "pods/ephemeralcontainers"},
 				},
 			},
-			Verbs: []string{"get", "patch", "create"},
+			Verbs: []string{"get", "patch"},
 			OmitStages: []audit.Stage{
 				audit.StageRequestReceived,
 			},
