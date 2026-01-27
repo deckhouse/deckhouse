@@ -116,18 +116,16 @@ Attempts to change these parameters will be blocked by the admission webhook wit
 {% endalert %}
 
 If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism.
+If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism:
 
 ##### Recommended method: Using dhctl
 
 {% alert level="warning" %}
 Even with the protection mechanism bypassed, there is **no guarantee** that the cluster will continue to function correctly after changing these parameters. Be prepared for the possibility of complete cluster failure and have a backup plan.
 {% endalert %}
+##### Using dhctl
 
-Use the `dhctl` tool with the `--allow-unsafe-changes` flag:
-
-```shell
-dhctl edit cluster-configuration --allow-unsafe-changes
-```
+Use the `dhctl` tool from the DKP installer container with the `--yes-i-am-sane-and-i-understand-what-i-am-doing` flag.
 
 This command will automatically:
 
@@ -137,37 +135,92 @@ This command will automatically:
 
 This is the safest way to modify protected parameters as it properly manages the annotation lifecycle.
 
-#### Manual method (for emergency situations only)
+**Steps:**
+
+1. Get the current DKP version and edition from your cluster:
+
+   ```shell
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
+   ```
+
+2. Run the DKP installer container (adjust the registry address if needed):
+
+   ```shell
+   docker run --pull=always -it [<MOUNT_OPTIONS>] \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+   Where `<MOUNT_OPTIONS>` — mounting parameters for files in the installer container, such as:
+    - SSH access keys;
+    - Configuration file;
+    - Resources file, etc.
+
+3. Inside the container, run the following command to edit the cluster configuration:
+
+   ```shell
+   dhctl config edit cluster-configuration \
+     --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> \
+     --ssh-host=<MASTER-NODE-HOST> \
+     --yes-i-am-sane-and-i-understand-what-i-am-doing
+   ```
+
+   Where:
+   - `<SSH_KEY_FILENAME>` — your SSH private key filename
+   - `<USERNAME>` — SSH user with sudo privileges
+   - `<MASTER-NODE-HOST>` — master node IP address or hostname
+
+4. Edit the configuration in the opened editor, save, and exit.
 
 {% alert level="warning" %}
 This method bypasses DKP safety mechanisms and should **only be used when `dhctl` is unavailable** (e.g., emergency recovery scenarios or when `dhctl` cannot connect to the cluster). In normal circumstances, always use `dhctl` as described above.
 {% endalert %}
 
-To edit the configuration, use [Deckhouse CLI tool](../../cli/d8/) (d8):
+{% offtopic title="Edit manually" %}
+
+If you need to manually edit the configuration:
 
 1. Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
+   d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
 
-1. Edit the configuration:
+2. Get the current configuration, decode it, and save to a file:
 
    ```shell
-   d8 k -n kube-system edit secret d8-cluster-configuration
+   d8 k -n kube-system get secret d8-cluster-configuration \
+     -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
 
-   **Caution.** The configuration is Base64-encoded in the Secret's `cluster-configuration.yaml` data field.
+3. Edit the `cluster-config.yaml` file with your preferred editor:
 
-1. **Important.** Remove the annotation after saving the changes:
+   ```shell
+   vi cluster-config.yaml
+   ```
+
+4. Encode the edited configuration and update the Secret:
+
+   ```shell
+   d8 k -n kube-system patch secret d8-cluster-configuration \
+     --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
+   ```
+
+5. Remove the annotation after applying the changes:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
 
-{% alert level="danger" %}
-If you forget to remove the `deckhouse.io/allow-unsafe` annotation, the protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
-{% endalert %}
+6. Clean up the temporary file:
+
+   ```shell
+   rm cluster-config.yaml
+   ```
+
+> **Important:** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
 
 
 ### Viewing current configuration
