@@ -48,7 +48,7 @@ env:
   # </template: werf_envs>
 
 concurrency:
-  group: svace-analyze
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
