@@ -8,9 +8,6 @@ spec:
     kinds:
       - apiGroups: ["rbac.authorization.k8s.io"]
         kinds: ["RoleBinding"]
-    namespaceSelector:
-      matchLabels:
-        enforce: deny-all
     scope: Namespaced
   parameters:
     allowedClusterRoles:

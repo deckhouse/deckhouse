@@ -1,5 +1,5 @@
 ---
-title: "Конфигурация"
+title: "Настройка"
 permalink: ru/stronghold/documentation/admin/standalone/configuration.html
 lang: ru
 ---
@@ -100,6 +100,8 @@ systemctl restart stronghold
   ```console
   LimitMEMLOCK=infinity
   ```
+
+* `disable_sealwrap` — отключает двойное шифрование с помощтю `seal` для всех объектов, кроме root-ключа. Если изменить этот параметр, то перешифровка хранилица будет происходить постепенно, в процессе записи новых версий объектов.
 
 * `plugin_directory` — необязательный строковый параметр. Указывает каталог, из которого Stronghold может загружать плагины.  
   Для корректной работы Stronghold должен иметь права на чтение файлов в этой директории.  

@@ -136,8 +136,8 @@ bastion:
   instanceClass:
     rootDiskSizeGb: 30
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
-    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     # Должен быть адрес из internalNetworkCIDR
     mainNetworkIPAddress: 192.168.199.10
 edgeGateway:
@@ -149,8 +149,8 @@ createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
     sizingPolicy: *!CHANGE_SIZING_POLICY*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddresses:
       - 192.168.199.2
@@ -188,9 +188,9 @@ spec:
     minPerZone: 1
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController

@@ -20,6 +20,7 @@ import (
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -29,7 +30,12 @@ const (
 )
 
 type manager interface {
-	ApplySettings(name string, settings addonutils.Values) error
+	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
+}
+
+type statusService interface {
+	SetConditionTrue(name string, cond status.ConditionType)
+	HandleError(name string, err error)
 }
 
 type task struct {
@@ -37,15 +43,17 @@ type task struct {
 	settings    addonutils.Values
 
 	manager manager
+	status  statusService
 
 	logger *log.Logger
 }
 
-func NewTask(name string, settings addonutils.Values, manager manager, logger *log.Logger) queue.Task {
+func NewTask(name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		settings:    settings,
 		manager:     manager,
+		status:      status,
 		logger:      logger.Named(taskTracer),
 	}
 }
@@ -54,10 +62,13 @@ func (t *task) String() string {
 	return "ApplySettings"
 }
 
-func (t *task) Execute(_ context.Context) error {
-	if err := t.manager.ApplySettings(t.packageName, t.settings); err != nil {
+func (t *task) Execute(ctx context.Context) error {
+	if err := t.manager.ApplySettings(ctx, t.packageName, t.settings); err != nil {
+		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply settings: %w", err)
 	}
+
+	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 
 	return nil
 }

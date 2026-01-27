@@ -34,7 +34,10 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o check-wg-kernel-compat .`) | indent 4 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o check-wg-kernel-compat .` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown 64535:64535 /src/check-wg-kernel-compat
   - chmod 0755 /src/check-wg-kernel-compat
 ---

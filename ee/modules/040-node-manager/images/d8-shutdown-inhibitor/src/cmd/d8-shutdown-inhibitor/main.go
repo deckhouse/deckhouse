@@ -12,11 +12,14 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
+
+	"k8s.io/apimachinery/pkg/util/wait"
+
+	dlog "github.com/deckhouse/deckhouse/pkg/log"
 
 	"d8_shutdown_inhibitor/pkg/app"
 	"d8_shutdown_inhibitor/pkg/kubernetes"
-
-	dlog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func run(cordonEnabled bool) error {
@@ -25,11 +28,40 @@ func run(cordonEnabled bool) error {
 		dlog.Fatal("failed to get hostname", dlog.Err(err))
 	}
 
-	// Start application.
-	kubeClient, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
-	if err != nil {
-		dlog.Fatal("failed to create kubernetes client", dlog.Err(err))
+	// Wait for kube-apiserver to be available before creating client
+	var kubeClient *kubernetes.Klient
+	dlog.Info("waiting for kube-apiserver to be available")
+
+	backoff := wait.Backoff{
+		Duration: 1 * time.Second,
+		Factor:   1.5,
+		Jitter:   0.1,
+		Steps:    20, // ~5 minutes total
 	}
+
+	err = wait.ExponentialBackoff(backoff, func() (bool, error) {
+		client, err := kubernetes.NewClientFromKubeconfig(kubernetes.KubeConfigPath)
+		if err != nil {
+			dlog.Warn("failed to create kubernetes client, retrying", dlog.Err(err))
+			return false, nil
+		}
+
+		// Test connectivity by making a simple API call
+		_, err = client.Clientset().Discovery().ServerVersion()
+		if err != nil {
+			dlog.Warn("kube-apiserver not ready, retrying", dlog.Err(err))
+			return false, nil
+		}
+
+		kubeClient = client
+		return true, nil
+	})
+
+	if err != nil {
+		dlog.Fatal("failed to connect to kube-apiserver after retries", dlog.Err(err))
+	}
+
+	dlog.Info("successfully connected to kube-apiserver")
 	a := app.NewApp(app.AppConfig{
 		PodLabel:              app.InhibitNodeShutdownLabel,
 		InhibitDelayMax:       app.InhibitDelayMaxSec,

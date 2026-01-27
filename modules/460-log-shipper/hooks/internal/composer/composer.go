@@ -36,6 +36,8 @@ type Composer struct {
 	Dest   []v1alpha1.ClusterLogDestination
 }
 
+// FromInput collects ClusterLoggingConfig sources from snapshots and combines them with provided destinations.
+// Also records telemetry metrics for each custom resource found.
 func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) (*Composer, error) {
 	sourceSnap := input.Snapshots.Get("cluster_log_source")
 	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
@@ -78,6 +80,7 @@ func customResourceMetric(input *go_hook.HookInput, kind, name, namespace, _type
 	})
 }
 
+// Do composes the Vector configuration file from all sources and destinations.
 func (c *Composer) Do() ([]byte, error) {
 	file := NewVectorFile()
 
@@ -136,6 +139,7 @@ func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDes
 	return nil
 }
 
+// composeDestinations resolves destination references, creates destination instances, and applies transforms.
 func (c *Composer) composeDestinations(destinationRefs []string, sourceType string) ([]PipelineDestination, error) {
 	var destinations []PipelineDestination
 
@@ -165,6 +169,7 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 	return destinations, nil
 }
 
+// newLogDest creates a log destination instance based on the destination type.
 func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec, sourceType string) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:

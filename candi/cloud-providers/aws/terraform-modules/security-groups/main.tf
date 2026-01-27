@@ -56,7 +56,7 @@ resource "aws_security_group_rule" "to-node-icmp" {
   from_port         = -1
   to_port           = -1
   protocol          = "icmp"
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.public_network_allow_list
   security_group_id = aws_security_group.node[0].id
 }
 
@@ -74,7 +74,7 @@ resource "aws_security_group_rule" "allow-all-incoming-traffic-to-loadbalancer" 
   from_port         = 0
   to_port           = 65535
   security_group_id = aws_security_group.loadbalancer[0].id
-  cidr_blocks       = ["0.0.0.0/0"]
+  cidr_blocks       = var.public_network_allow_list
 }
 
 resource "aws_security_group_rule" "allow-all-outgoing-traffic-to-nodes" {

@@ -6,6 +6,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
+{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
+{{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
@@ -64,10 +67,12 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $audiences = $audiences | uniq -}}
 {{- $audiences = without $audiences $defaultAud -}}
 {{- $audiences = append $audiences $defaultAud -}}
+{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
+{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 {{- /* ClusterConfiguration */ -}}
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
+kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) ($k8sPatch | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki
 certificateValidityPeriod: 8760h0m0s
@@ -159,11 +164,9 @@ apiServer:
       value: {{ $apiserverFeatureGatesStr | quote }}
     - name: runtime-config
       value: {{ $runtimeConfig }}
-    {{ if .apiserver.webhookURL }}
-    - name: authorization-mode
-      value: Node,Webhook,RBAC
-    - name: authorization-webhook-config-file
-      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- if .apiserver.webhookURL }}
+    - name: authorization-config
+      value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
     {{- end -}}
     {{ if .apiserver.authnWebhookURL }}
     - name: authentication-token-webhook-config-file

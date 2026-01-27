@@ -258,6 +258,30 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
   </li>
 </ul>
+{% alert type="info" %}
+{% offtopic title="Добавление двух и более worker-узлов..." %}
+**Bootstrap-скрипт**:  
+Используйте тот же ресурс NodeGroup `worker` и тот же bootstrap-скрипт, которые вы использовали при добавлении первого узла. 
+Для каждого дополнительного узла:
+
+1. Подготовьте чистую виртуальную машину.
+1. На этой ВМ выполните команду с тем же Base64-кодом скрипта, который вы использовали при добавлении первого узла:
+
+   ```shell
+   echo <Base64-КОД-СКРИПТА> | base64 -d | bash
+   ```
+
+**CAPS**:  
+Если вы используете CAPS и хотите добавить статические узлы в NodeGroup `worker`:
+
+1. Увеличьте значение <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> в ресурсе NodeGroup `worker` до нужного количества узлов.  
+1. Создайте по одному ресурсу StaticInstance для каждого нового узла, указав:  
+   - лейбл `role: worker`;
+   - IP-адрес этого узла в поле <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>;
+   - ссылку на <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> в <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
+{%- endofftopic %}
+{% endalert %}
+
 </div>
 
 <p>Запуск всех компонентов Deckhouse после завершения установки может занять какое-то время.</p>

@@ -6,6 +6,14 @@ title: "Cloud provider — OpenStack: настройки"
 
 {% include module-alerts.liquid %}
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
+{% include module-conversion.liquid %}
+
 Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](../../modules/node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup).  Инстанс-класс для cloud-провайдера OpenStack — это custom resource [`OpenStackInstanceClass`](cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
 Настройки модуля устанавливаются автоматически на основании выбранной схемы размещения. В большинстве случаев нет необходимости в ручной конфигурации модуля.
@@ -25,9 +33,9 @@ title: "Cloud provider — OpenStack: настройки"
 | Compute (Nova)                   | v2         |
 | Network (Neutron)                | v2         |
 | Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) &#8432; | v2         |
+| Load Balancing (Octavia) *       | v2         |
 
-&#8432;  Если нужно заказывать Load Balancer.
+\* Если нужно заказывать Load Balancer.
 
 Чтобы интеграция и работа с платформой Deckhouse Kubernetes проходила корректно, присвойте ассоциированному пользователю OpenStack роль `member`. Это обеспечит разрешения на взаимодействие с указанными сервисами и управление ресурсами.
 

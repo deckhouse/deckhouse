@@ -1,9 +1,0 @@
-dirs:
- - /var/lib/etcd
- - /var/lib/kubelet
- - /var/lib/kube-scheduler
- - /var/lib/kube-controller-manager
- - /etc/systemd
- - /lib/systemd
- - /etc/kubernetes
- - /etc/cni/net.d

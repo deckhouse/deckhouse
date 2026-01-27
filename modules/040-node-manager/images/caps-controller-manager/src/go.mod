@@ -1,6 +1,6 @@
 module caps-controller-manager
 
-go 1.23.0
+go 1.23.1
 
 toolchain go1.24.4
 

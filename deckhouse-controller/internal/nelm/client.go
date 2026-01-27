@@ -22,6 +22,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/werf/nelm/pkg/action"
@@ -30,7 +31,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -48,6 +49,8 @@ var (
 	ErrReleaseNotFound = errors.New("release not found")
 	// ErrLabelNotFound is returned when a requested label is not present in the release
 	ErrLabelNotFound = errors.New("label not found")
+
+	one sync.Once
 )
 
 // Options contains configuration for the nelm client
@@ -108,7 +111,9 @@ type Client struct {
 // It initializes the nelm logger and applies any provided options
 func New(logger *log.Logger, opts ...Option) *Client {
 	// Set the default nelm logger to our custom adapter
-	nelmlog.Default = newNelmLogger(logger)
+	one.Do(func() {
+		nelmlog.Default = newNelmLogger(logger)
+	})
 
 	// Set default options with history limit of 10 revisions
 	defaultOpts := &Options{
@@ -121,9 +126,6 @@ func New(logger *log.Logger, opts ...Option) *Client {
 	for _, opt := range opts {
 		opt(defaultOpts)
 	}
-
-	defaultOpts.Annotations["werf.io/skip-logs"] = "true"
-	defaultOpts.Annotations["werf.io/track-termination-mode"] = "NonBlocking"
 
 	return &Client{
 		opts: defaultOpts,
@@ -280,7 +282,7 @@ func (c *Client) Render(ctx context.Context, namespace, releaseName string, opts
 	// Combine all resources into a single YAML document with separators
 	var result strings.Builder
 	for _, resource := range res.Resources {
-		marshalled, err := yaml.Marshal(resource)
+		marshalled, err := yaml.Marshal(resource.Unstruct)
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return "", fmt.Errorf("marshal resource: %w", err)

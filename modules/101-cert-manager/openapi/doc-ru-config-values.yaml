@@ -82,3 +82,57 @@ properties:
       useOnlyRecursive:
         description: |
           Если значение true, для проверки существования записи в DNS перед запуском процесса подтверждения владения доменом будут использоваться только указанные рекурсивные DNS-серверы.
+  letsencrypt:
+    type: object
+    description: |
+      Настройки для ClusterIssuer `letsencrypt`.
+    properties:
+      resources:
+        description: |
+          Настройки ресурсов (requests/limits по CPU и памяти) для подов, создаваемых ClusterIssuer `letsencrypt` для процесса подтверждения владения доменом методом ACME HTTP-01.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.  
+        properties:
+          requests:
+            properties:
+              cpu:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.cpu` в Kubernetes.
+              memory:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.
+          limits:
+            properties:
+              cpu:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.cpu` в Kubernetes.
+              memory:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.          
+
+  letsencryptStaging:
+    description: |
+      Настройки для ClusterIssuer `letsencrypt-staging`.
+    properties:
+      resources:
+        description: |
+          Настройки ресурсов (requests/limits по CPU и памяти) для подов, создаваемых ClusterIssuer `letsencrypt-staging` для процесса подтверждения владения доменом методом ACME HTTP-01.
+          Структура, аналогичная `spec.containers[].resources` пода Kubernetes.  
+        properties:
+          requests:
+            properties:
+              cpu:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.cpu` в Kubernetes.
+              memory:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.requests.memory` в Kubernetes.          
+
+          limits:
+            properties:
+              cpu:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.limits.cpu` в Kubernetes.
+              memory:
+                description: |
+                  Аналогично параметру `spec.containers[].resources.limits.memory` в Kubernetes.          
+

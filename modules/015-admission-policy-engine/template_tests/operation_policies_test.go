@@ -17,8 +17,11 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -28,7 +31,7 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.30"}},admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
+	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.30"}},admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 {
 	"metadata":{"name":"genpolicy"},
 	"spec":{
@@ -97,6 +100,27 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
+		})
+
+		It("All operation policy constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			// Dynamically extract constraint names from template files
+			operationConstraints := getOperationConstraintNames()
+			Expect(operationConstraints).NotTo(BeEmpty(), "No operation constraints found in templates")
+
+			for _, constraintKind := range operationConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
 		})
 	})
 })

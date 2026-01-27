@@ -25,10 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/cache"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const HighUsagePercent = 80
@@ -102,14 +102,13 @@ func (c *Cache) Get(digest string) (int64, io.ReadCloser, error) {
 }
 
 func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
-
 	if digest == "" {
 		c.logger.Warn("digest is empty, skipping", slog.String("digest", digest))
 		return nil
 	}
 
 	if layerDigest == "" {
-		c.logger.Warn("layer digest is empty, skipping", slog.String("layerDigest", layerDigest))
+		c.logger.Warn("layer digest is empty, skipping", slog.String("layer_digest", layerDigest))
 		return nil
 	}
 
@@ -233,11 +232,11 @@ func (c *Cache) applyRetentionPolicy() {
 	for {
 		usagePercent := int(float64(c.calculateCacheSize()) / float64(c.retentionSize) * 100)
 		if usagePercent < HighUsagePercent {
-			c.logger.Info("current cache usage low, compaction is not needed", slog.Int("usagePercent", usagePercent), slog.Int("HighUsagePercent", HighUsagePercent))
+			c.logger.Info("current cache usage low, compaction is not needed", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
 			return
 		}
 
-		c.logger.Info("need to compact cache, current usage is high", slog.Int("usagePercent", usagePercent), slog.Int("HighUsagePercent", HighUsagePercent))
+		c.logger.Info("need to compact cache, current usage is high", slog.Int("usage_percent", usagePercent), slog.Int("high_usage_percent", HighUsagePercent))
 
 		// sort descending by last access time
 		var oldestDigest string
@@ -309,7 +308,7 @@ func (c *Cache) storageGetOK(digest string) (*CacheEntry, bool) {
 
 func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	path := c.layerDigestToPath(layerDigest)
-	c.logger.Info("checking hash sum of file in the cache", slog.String("layerDigest", layerDigest), slog.String("path", path))
+	c.logger.Info("checking hash sum of file in the cache", slog.String("layer_digest", layerDigest), slog.String("path", path))
 	file, err := os.Open(path)
 	defer file.Close()
 	if err != nil {

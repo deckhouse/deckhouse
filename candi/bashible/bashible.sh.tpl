@@ -43,6 +43,12 @@ bb-discover-node-name() {
   fi
 }
 
+bb-kube-apiserver-healthy() {
+  local kubeconfig="$1"
+  local server="$2"
+  kubectl get --raw='/healthz' --kubeconfig="$kubeconfig" --request-timeout 3s --server="$server" >/dev/null 2>&1
+}
+
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local args=""
@@ -50,15 +56,13 @@ bb-kubectl-exec() {
   local kube_server
   kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
   if [[ -n "$kube_server" ]]; then
-    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
-    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z -w 3 "$host" "$port" 2>/dev/null; then
+    if bb-kube-apiserver-healthy "$kubeconfig" "$kube_server"; then
+      args="--server=$kube_server"
+    else
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        host=$(echo "$server" | cut -d: -f1)
-        port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z -w 3 "$host" "$port" 2>/dev/null; then
+        if bb-kube-apiserver-healthy "$kubeconfig" "https://$server"; then
           args="--server=https://$server"
           break
         fi
@@ -90,6 +94,7 @@ bb-label-node-bashible-first-run-finished() {
 
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-kube-apiserver-healthy
 export -f bb-label-node-bashible-first-run-finished
 
 bb-indent-text() {
@@ -262,6 +267,15 @@ function get_bundle() {
   fi
 }
 
+log_configuration_checksum() {
+  local kind="$1"
+  local objName="$2"
+  local payload="$3"
+  local checksum
+  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
+  echo "Got $kind/$objName configuration checksum: $checksum" >&2
+}
+
 function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
@@ -305,7 +319,9 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
+    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -352,7 +368,9 @@ function main() {
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(get_bundle nodegroupbundle "${NODE_GROUP}" | jq -rc '.data')"
+    nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
+    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"

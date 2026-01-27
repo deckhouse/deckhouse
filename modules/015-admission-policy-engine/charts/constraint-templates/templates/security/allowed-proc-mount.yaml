@@ -49,9 +49,91 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_containers[_]
                 not allowed_by_any_procMount(c)
-                msg := sprintf("ProcMount type is not allowed, container: %v. Allowed procMount types: %v", [c.name, get_allowed_proc_mount(input)])
+                allowed_by_policy := sprintf("Allowed procMount types: %v", [get_allowed_proc_mount(input)])
+                actual_value := get_actual_proc_mount(c)
+                exception_allowed := get_exception_allowed_proc_mount(c)
+                msg := build_proc_mount_message(c.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_proc_mount(c) := out if {
+                has_field(c, "securityContext")
+                has_field(c.securityContext, "procMount")
+                out := sprintf("Actual procMount: %v", [c.securityContext.procMount])
+              }
+
+              get_actual_proc_mount(c) := "Actual procMount: not set (defaults to Default)" if {
+                not has_field(c, "securityContext")
+              }
+
+              get_actual_proc_mount(c) := "Actual procMount: not set (defaults to Default)" if {
+                has_field(c, "securityContext")
+                not has_field(c.securityContext, "procMount")
+              }
+
+              get_exception_allowed_proc_mount(c) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "procMount")
+                has_field(exception.spec.securityContext.procMount, "allowedValues")
+                allowed_procMount := exception.spec.securityContext.procMount.allowedValues
+                out := sprintf("SecurityPolicyException allowed procMount types: %v", [allowed_procMount])
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "procMount")
+              }
+
+              get_exception_allowed_proc_mount(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "procMount")
+                not has_field(exception.spec.securityContext.procMount, "allowedValues")
+              }
+
+              build_proc_mount_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("ProcMount type is not allowed, container: %v.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_proc_mount_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("ProcMount type is not allowed, container: %v.\n%v\n%v", [name, actual_value, allowed_by_policy])
+              }
+
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
 
               allowed_by_any_procMount(c) if {
@@ -66,6 +148,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "procMount")
+                has_field(exception.spec.securityContext.procMount, "allowedValues")
                 allowed_procMount := exception.spec.securityContext.procMount.allowedValues
                 lower(c.securityContext.procMount) in {pm | pm := lower(allowed_procMount[_])}
               }

@@ -8,7 +8,6 @@ package agent
 import (
 	"context"
 	"reflect"
-	"service-with-healthchecks/internal/kubernetes"
 	"sort"
 	"strings"
 	"sync"
@@ -32,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (
@@ -120,7 +120,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		r.servicesWithHealthchecks.Store(req.NamespacedName, serviceWithHC.Spec)
 	}
 
-	// sync internal probes targets with exsiting pods
+	// sync internal probes targets with existing pods
 	r.syncResultsMapWithPodList(serviceWithHC, podList)
 
 	// update endpointslices unless ClusterIP is None
@@ -334,7 +334,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 			if target.targetHost == result.host {
 				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].lastCheck = time.Now()
 				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].probeResultDetails = result.probeDetails
-				//generate event for watcher
+				// generate event for watcher
 				r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.swhName.Name, Namespace: result.swhName.Namespace}}}
 			}
 		}

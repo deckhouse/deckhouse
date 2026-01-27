@@ -430,7 +430,6 @@ func (e *executor) executeEdition(editionName string) {
 			writeSettingStageDeps.Dir = "modules"
 			writeSettingStageDeps.StageDependencies = stageDependencies
 			writeSettingStageDeps.ExcludePaths = nothingButGoHooksExcludes
-
 		}
 
 		writeSections(writeSettingsModules)

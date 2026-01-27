@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: alerts-receiver
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: alerts-receiver

@@ -131,11 +131,14 @@ func (q *queue) Enqueue(ctx context.Context, task Task, opts ...EnqueueOption) {
 	}
 
 	wrapper := &taskWrapper{
-		ctx:        ctx,
-		wg:         opt.wg,
-		id:         uuid.New().String(),
-		task:       task,
-		backoff:    backoff.NewExponentialBackOff(backoff.WithMaxElapsedTime(0)),
+		ctx:  ctx,
+		wg:   opt.wg,
+		id:   uuid.New().String(),
+		task: task,
+		backoff: backoff.NewExponentialBackOff(
+			backoff.WithMaxElapsedTime(0),
+			backoff.WithMaxInterval(time.Minute),
+			backoff.WithInitialInterval(15*time.Second)),
 		nextRetry:  time.Now(),
 		enqueuedAt: time.Now(),
 		onDone:     opt.onDone,
@@ -224,17 +227,12 @@ func (q *queue) processOne() bool {
 		return false
 	}
 
-	if time.Now().Before(t.nextRetry) {
-		q.mu.Unlock()
-		return false // Task not ready for retry
-	}
-
 	q.mu.Unlock()
 
 	// Check for parent context cancellation
 	select {
 	case <-t.ctx.Done():
-		q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
+		q.logger.Debug("task context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
 		if t.wg != nil {
 			t.wg.Done()
 		}
@@ -246,6 +244,10 @@ func (q *queue) processOne() bool {
 
 		return true // Task was processed (canceled)
 	default:
+	}
+
+	if time.Now().Before(t.nextRetry) {
+		return false // Task not ready for retry
 	}
 
 	q.logger.Debug("process task", slog.String("id", t.id), slog.String("name", t.task.String()))
@@ -277,13 +279,20 @@ func (q *queue) processOne() bool {
 			t.err = err
 			t.nextRetry = time.Now().Add(delay)
 
-			// Schedule retry signal after delay
-			time.AfterFunc(delay, func() {
+			// Schedule retry signal after delay with context-aware waiting
+			go func(tw *taskWrapper, d time.Duration) {
+				select {
+				case <-time.After(d):
+					// Backoff completed normally
+				case <-tw.ctx.Done():
+					// Context canceled during backoff - signal immediately for cleanup
+				}
+				// Signal queue to process (either retry or cleanup canceled task)
 				select {
 				case q.signal <- struct{}{}:
 				default:
 				}
-			})
+			}(t, delay)
 
 			return true // Task was processed (will retry later)
 		}

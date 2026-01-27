@@ -7,7 +7,7 @@ lang: ru
 
 ## Включение модуля
 
-Включите модуль можно выполнив команду:
+Включите модуль, выполнив команду:
 
 ```shell
 d8 system module enable stronghold
@@ -18,7 +18,7 @@ d8 system module enable stronghold
 
 ## Как выключить модуль
 
-Выключить модуль можно выполнив команду:
+Выключить модуль, выполнив команду:
 
 ```shell
 d8 system module disable stronghold

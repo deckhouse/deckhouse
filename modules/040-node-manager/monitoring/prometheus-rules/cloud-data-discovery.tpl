@@ -17,7 +17,7 @@
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer
+        d8 k -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer
         ```
 
   - alert: D8CloudDataDiscovererSaveError
@@ -37,7 +37,7 @@
         Refer to the cloud data discoverer's logs for details:
 
         ```shell
-        kubectl -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer
+        d8 k -n {{`{{ $labels.namespace }}`}} logs deploy/cloud-data-discoverer
         ```
 
   - alert: ClusterHasOrphanedDisks
@@ -55,7 +55,7 @@
       plk_grouped_by__main: "ClusterHasCloudDataDiscovererAlerts,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       description: |
         The cloud data discoverer has found disks in the cloud that do not have a corresponding PersistentVolume in the cluster.
-        
+
         You can safely delete these disks manually from your cloud provider:
 
         ID: {{`{{ $labels.id }}`}}, Name: {{`{{ $labels.name }}`}}

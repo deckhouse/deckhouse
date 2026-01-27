@@ -848,6 +848,34 @@ spec:
                             - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
 
                             Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                    memorySwap:
+                      description: |
+                        Конфигурация использования swap-памяти для kubelet.
+                      properties:
+                        swapBehavior:
+                          description: |
+                            Определяет, как используется swap-память на узле:
+                            
+                            * `NoSwap` — swap отключен. Это традиционное поведение Kubernetes.
+                            * `LimitedSwap` — kubelet может использовать swap-память в пределах, заданных в `limitedSwap.size`.
+                            
+                            Подробнее об использовании swap-памяти на узлах можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
+                        swappiness:
+                          description: |
+                            Определяет склонность ядра к использованию swap.
+                            
+                            * `0` — минимальное использование (только для предотвращения OOM).
+                            * `60` — сбалансированное поведение по умолчанию.
+                            * `100` — агрессивное использование.
+                            
+                            Значение устанавливается через параметр sysctl `vm.swappiness`.
+                        limitedSwap:
+                          description: |
+                            Настройки режима ограниченного использования swap. Требуются, если для `swapBehavior` указано значение `LimitedSwap`.
+                          properties:
+                            size:
+                              description: |
+                                Размер создаваемого swap-файла в ГБ (например, "2G", "4G").
                 update:
                   properties:
                     maxConcurrent:

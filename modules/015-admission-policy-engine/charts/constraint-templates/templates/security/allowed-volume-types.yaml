@@ -41,6 +41,7 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                  not input.review.operation == "DELETE"
                   volume_fields := {x | input.review.object.spec.volumes[_][x]; x != "name"}
                   field := volume_fields[_]
                   not allowed_by_any(field)
@@ -59,6 +60,9 @@ spec:
                   label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                   namespace := input.review.object.metadata.namespace
                   exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                  has_field(exception.spec, "volumes")
+                  has_field(exception.spec.volumes, "types")
+                  has_field(exception.spec.volumes.types, "allowedValues")
                   exception_params := exception.spec.volumes.types.allowedValues
                   field in exception_params
               }
@@ -74,4 +78,13 @@ spec:
 
               input_volume_type_allowed(field) if {
                   field == input.parameters.volumes[_]
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                  object[field]
+              }
+
+              has_field(object, field) := false if {
+                  not object[field]
               }

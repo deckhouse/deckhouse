@@ -42,6 +42,8 @@ kind: Secret
 metadata:
   name: d8-tls-cert
   namespace: d8-system
+  labels:
+    owner: deckhouse
 type: kubernetes.io/tls
 `
 	)
@@ -107,8 +109,8 @@ tls.key: <none>
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("common.internal.customCertificateData").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("common.internal.customCertificateData").String()).To(MatchYAML(`
-tls.crt: Q1JUQ1JUQ1JUCg==
-tls.key: S0VZS0VZS0VZCg==
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
 `))
 
 		})

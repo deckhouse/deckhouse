@@ -25,9 +25,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -58,6 +58,7 @@ type KubernetesInitParams struct {
 	KubeConfigContext string
 
 	KubeConfigInCluster bool
+	RestConfig          *rest.Config
 }
 
 func NewKubernetesClient() *KubernetesClient {
@@ -111,6 +112,8 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 	case params.KubeConfig != "":
 		kubeClient.WithContextName(params.KubeConfigContext)
 		kubeClient.WithConfigPath(params.KubeConfig)
+	case params.RestConfig != nil:
+		kubeClient.WithRestConfig(params.RestConfig)
 	case isLocalRun:
 		_, err := k.StartKubernetesProxy(ctx)
 		if err != nil {

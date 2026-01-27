@@ -1,6 +1,7 @@
 @use "components/common/_variables.scss";
 @use "components/common/_mixins";
 @use 'components/common/_breakpoints.scss';
+
 .button {
     cursor: pointer;
     display: inline-block;
@@ -20,15 +21,29 @@
     }
 
     &-request {
-        margin-top: 37px;
+        margin-top: 12px;
         width: 100%;
+        font-size: 14px;
         font-weight: 500;
         text-transform: uppercase;
+
+        @include breakpoints.min-w(m) {
+            font-size: 16px;
+        }
 
         &-access {
             margin-top: 16px;
         }
-        &:hover {
+
+        &:disabled {
+            cursor: not-allowed;
+            background-color: variables.$ntrl-300;
+            border: 2px solid variables.$ntrl-300;
+            opacity: .6;
+            pointer-events: none;
+        }
+        
+        &:not(:disabled):hover {
             border: 2px solid #002cca;
             background: #002cca;
         }
@@ -39,7 +54,7 @@
         background: variables.$color-inverse;
         border: 2px solid variables.$color-inverse;
     }
-    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-form):hover {
+    &:not(.button_disabled):not(.button_card):not(.button--primary):not(.gdpr__button):not(.button--outline):not(.button--contact):not(.button-form):not(:disabled):hover {
         color: variables.$color-inverse !important;
         background: variables.$color-main;
         border: 2px solid variables.$color-main;

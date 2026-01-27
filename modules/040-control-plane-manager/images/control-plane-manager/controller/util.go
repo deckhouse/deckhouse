@@ -27,10 +27,11 @@ import (
 	"sort"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const kubeconfigPath = "/etc/kubernetes/admin.conf"
@@ -122,6 +123,10 @@ func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	}
 
 	return nil
+}
+
+func cleanupEtcdFolder() error {
+	return os.RemoveAll(filepath.Join("/var/lib/etcd/member"))
 }
 
 func backupFile(src string) error {
@@ -261,7 +266,7 @@ func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Con
 		if err == nil {
 			return true, nil
 		}
-		log.Err(err)
+		log.Error(err.Error())
 		if errors.Is(err, ErrNonRetryable) {
 			return false, err
 		}

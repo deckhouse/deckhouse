@@ -45,6 +45,12 @@ Provider specific environment variables:
 
 \$LAYOUT_DVP_KUBECONFIGDATABASE64
 
+  zVirt:
+
+\$LAYOUT_ZVIRT_BASE_DOMAIN
+\$LAYOUT_ZVIRT_USERNAME
+\$LAYOUT_ZVIRT_PASSWORD
+
   GCP:
 
 \$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
@@ -260,6 +266,35 @@ function prepare_environment() {
     }"
     ;;
 
+  "zVirt")
+    ZVIRT_BASE_DOMAIN="${LAYOUT_ZVIRT_BASE_DOMAIN}"
+    ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
+    ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
+    ssh_user="altlinux"
+    bastion_host="31.184.210.185"
+    bastion_user="e2e-user"
+    bastion_port="8022"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"zVirtUsername\": \"${ZVIRT_USERNAME}\",
+      \"zVirtPassword\": \"${ZVIRT_PASSWORD}\",
+      \"zVirtBaseDomain\": \"${ZVIRT_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
   "GCP")
     ssh_user="user"
     values="{
@@ -313,7 +348,7 @@ function prepare_environment() {
     ;;
 
   "OpenStack")
-    ssh_user="redos"
+    ssh_user="astra"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -536,7 +571,10 @@ function bootstrap_static() {
   ssh_bastion="-J $ssh_user@$bastion_ip"
 
   if [[ ${PROVIDER} == "Static" ]]; then
-
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      echo "Release branch ${DEV_BRANCH} on ${PROVIDER} provider detected"
+      DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
+    fi
     D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
     D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
     D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
@@ -605,7 +643,7 @@ d8 mirror pull d8-modules \
   --include-module commander-agent --include-module commander --include-module prompp  --include-module pod-reloader  --include-module runtime-audit-engine --no-platform  --no-security-db
 
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+  --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 d8 mirror push d8-modules "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
@@ -1005,21 +1043,32 @@ function wait_upmeter_green() {
 }
 
 function check_resources_state_results() {
+  local testRunAttempts=20
   echo "Check applied resource status..."
-  response=$(get_cluster_status)
-  errors=$(jq -c '
-    .resources_state_results[]
-    | select(.errors)
-    | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
-    | select(.errors | length > 0)
-    | .errors
-  ' <<< "$response")
-  if [ -n "$errors" ]; then
-    echo "  Errors found:"
-    echo "${errors}"
-    return 1
-  fi
-  echo "Check applied resource status... Passed"
+  for ((i=1; i<=testRunAttempts; i++)); do
+    response=$(get_cluster_status)
+    errors=$(jq -c '
+      .resources_state_results[]
+      | select(.errors)
+      | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
+      | select(.errors | length > 0)
+      | .errors
+    ' <<< "$response")
+    if [ -n "$errors" ]; then
+      if [[ $i -lt $testRunAttempts ]]; then
+        echo "  Errors found. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+        sleep 30
+        continue
+      else
+        echo "  Attempt $i/$testRunAttempts failed."
+        echo "${errors}"
+        return 1
+      fi
+    else
+      echo "Check applied resource status... Passed"
+      return 0
+    fi
+  done
 }
 
 function change_deckhouse_image() {
@@ -1036,6 +1085,45 @@ ENDSSH
   fi
 }
 
+function check_publish_api() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
+  if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
+    HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+    IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
+    "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api")
+    if echo "$RESPONSE" | jq -e '.kind' >/dev/null 2>&1; then
+      exit 0
+    else
+      echo "PublishAPI is enabled, ingress kubernetes-api found, but API is not available. Response: $RESPONSE"
+      exit 1
+    fi
+  else
+    echo "PublishAPI is enabled, but ingress kubernetes-api not found"
+    exit 1
+  fi
+else
+  echo "PublishAPI is not enabled"
+  exit 1
+fi
+END_SCRIPT
+)
+
+  testRunAttempts=10
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    else
+      >&2 echo "Publish API test failed. Attempt $i/$testRunAttempts. Sleep for 10 seconds..."
+      sleep 10
+    fi
+  done
+  return 1
+}
 
 # update_release_channel changes the release-channel image to given tag
 function update_release_channel() {
@@ -1121,7 +1209,17 @@ export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bi
 export LANG=C
 set -Eeuo pipefail
 kubectl get pods -l app=prom-rules-mutating
-[[ "$(kubectl get pods -l app=prom-rules-mutating -o 'jsonpath={..status.conditions[?(@.type=="Ready")].status}{..status.phase}')" ==  "TrueRunning" ]]
+
+RS_NAME=$(kubectl get rs -l app=prom-rules-mutating \
+  --sort-by='{.metadata.creationTimestamp}' \
+  -o jsonpath='{.items[-1:].metadata.name}')
+
+WORKING_POD=$(kubectl get pods -l app=prom-rules-mutating \
+  --selector=pod-template-hash=${RS_NAME##*-} \
+  --field-selector=status.phase=Running \
+  --no-headers | awk '$2 == "1/1" {print $1; exit}')
+
+[[ "$WORKING_POD" == prom-rules-mutating* ]]
 END_SCRIPT
 )
 
@@ -1273,6 +1371,7 @@ function run-test() {
   for (( j=1; j<=5; j++ )); do
     sleep "$sleep_second"
     sleep_second=5
+    echo "Trying to connect to Commander"
 
     response=$(curl -s -X POST  \
       "https://${COMMANDER_HOST}/api/v1/clusters" \
@@ -1361,6 +1460,11 @@ function run-test() {
   wait_alerts_resolve || return $?
 
   set_common_ssh_parameters
+
+  if [[ $PROVIDER == "Yandex.Cloud" ]]; then
+    check_publish_api || return $?
+  fi
+
   if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
     wait_prom_rules_mutating_ready || return $?
   else

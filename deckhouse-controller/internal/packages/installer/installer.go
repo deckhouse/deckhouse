@@ -43,7 +43,7 @@ type Installer struct {
 	mtx sync.Mutex
 	// /deckhouse/downloaded
 	downloaded string
-	// /deckhouse/downloaded/apps
+	// /deckhouse/downloaded/apps/deployed
 	mount string
 
 	registry *registry.Service
@@ -56,10 +56,15 @@ func New(dc dependency.Container, logger *log.Logger) *Installer {
 
 	return &Installer{
 		downloaded: downloaded,
-		mount:      filepath.Join(downloaded, "apps"),
+		mount:      filepath.Join(downloaded, "apps", "deployed"),
 		registry:   registry.NewService(dc, logger),
 		logger:     logger.Named("application-installer"),
 	}
+}
+
+// packageDir returns /deckhouse/downloaded/apps/<registry>/<package>
+func (i *Installer) packageDir(registry, packageName string) string {
+	return filepath.Join(i.downloaded, "apps", registry, packageName)
 }
 
 // Uninstall umount the erofs image
@@ -73,7 +78,7 @@ func (i *Installer) Uninstall(ctx context.Context, app string) error {
 
 	logger.Debug("uninstall app")
 
-	// /deckhouse/downloaded/app/<app>
+	// /deckhouse/downloaded/apps/deployed/<app>
 	mountPath := filepath.Join(i.mount, app)
 	if _, err := os.Stat(mountPath); err != nil {
 		if os.IsNotExist(err) {
@@ -123,29 +128,34 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 
 	logger.Debug("download package")
 
+	select {
+	case <-ctx.Done():
+		span.SetStatus(codes.Error, "context canceled")
+		return nil
+	default:
+	}
+
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
-	// /deckhouse/downloaded/<registry>/<package>
-	packagePath := filepath.Join(i.downloaded, reg.Name, name)
+	// /deckhouse/downloaded/apps/<registry>/<package>
+	packagePath := i.packageDir(reg.Name, name)
 	if err := os.MkdirAll(packagePath, 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create package dir '%s': %w", packagePath, err)
+		return newCreatePackageDirErr(err)
 	}
 
-	// <version>.erofs
-	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<registry>/<package>/<version>.erofs
-	imagePath := filepath.Join(packagePath, image)
+	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
+	imagePath := filepath.Join(packagePath, fmt.Sprintf("%s.erofs", version))
 
 	rootHash, err := i.registry.GetImageRootHash(ctx, reg, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("get image root hash: %w", err)
+		return newGetRootHashErr(err)
 	}
 
 	logger.Debug("verify package")
-	if err = i.verifyPackage(ctx, name, version, rootHash); err == nil {
+	if err = i.verifyPackage(ctx, reg.Name, name, version, rootHash); err == nil {
 		logger.Debug("package verified")
 
 		return nil
@@ -156,14 +166,14 @@ func (i *Installer) Download(ctx context.Context, reg registry.Registry, name, v
 	img, err := i.registry.GetImageReader(ctx, reg, name, version)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("download package image: %w", err)
+		return newGetImageReaderErr(err)
 	}
 	defer img.Close()
 
 	logger.Debug("create erofs image from package image", slog.String("path", imagePath))
 	if err = verity.CreateImageByTar(ctx, img, imagePath); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("extract package image to erofs: %w", err)
+		return newImageByTarErr(err)
 	}
 
 	return nil
@@ -182,69 +192,69 @@ func (i *Installer) Install(ctx context.Context, registry, name, packageName, ve
 	logger := i.logger.With(slog.String("name", name), slog.String("version", version))
 	logger.Debug("install application")
 
+	select {
+	case <-ctx.Done():
+		span.SetStatus(codes.Error, "context canceled")
+		return nil
+	default:
+	}
+
 	i.mtx.Lock()
 	defer i.mtx.Unlock()
 
-	// /deckhouse/downloaded/apps/<app>
+	// /deckhouse/downloaded/apps/deployed/<app>
 	mountPoint := filepath.Join(i.mount, name)
 
 	logger.Debug("unmount old erofs image", slog.String("path", mountPoint))
 	if err := verity.Unmount(ctx, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("unmount old erofs image '%s': %w", mountPoint, err)
+		return newUnmountErr(err)
 	}
 
 	logger.Debug("close old device mapper")
 	if err := verity.CloseMapper(ctx, name); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("close app mapper: %w", err)
+		return newCloseDeviceMapperErr(err)
 	}
 
-	// /deckhouse/downloaded/<registry>/<package>
-	packagePath := filepath.Join(i.downloaded, registry, packageName)
-	// <version>.erofs
-	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<package>/<registry>/<version>.erofs
-	imagePath := filepath.Join(packagePath, image)
+	// /deckhouse/downloaded/apps/<registry>/<package>
+	packagePath := i.packageDir(registry, packageName)
+	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
+	imagePath := filepath.Join(packagePath, fmt.Sprintf("%s.erofs", version))
 
 	logger.Debug("compute erofs image hash", slog.String("path", imagePath))
 	rootHash, err := verity.CreateImageHash(ctx, imagePath)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create image hash: %w", err)
+		return newComputeHashErr(err)
 	}
 
 	logger.Debug("create device mapper", slog.String("path", imagePath))
 	if err = verity.CreateMapper(ctx, name, imagePath, rootHash); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create device mapper: %w", err)
+		return newCreateDeviceMapperErr(err)
 	}
 
 	logger.Debug("mount erofs image mapper", slog.String("path", imagePath))
 	if err = verity.Mount(ctx, name, mountPoint); err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("mount erofs image: %w", err)
+		return newMountErr(err)
 	}
 
 	return nil
 }
 
 // verifyPackage checks that the image and hash exist and verified
-func (i *Installer) verifyPackage(_ context.Context, pack, version, _ string) error {
-	// /deckhouse/downloaded/<package>
-	packagePath := filepath.Join(i.downloaded, pack)
-	// <version>.erofs
-	image := fmt.Sprintf("%s.erofs", version)
-	// /deckhouse/downloaded/<package>/<version>.erofs
-	imagePath := filepath.Join(packagePath, image)
+func (i *Installer) verifyPackage(_ context.Context, registry, pack, version, _ string) error {
+	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs
+	imagePath := filepath.Join(i.packageDir(registry, pack), fmt.Sprintf("%s.erofs", version))
 
-	// /deckhouse/downloaded/<package>/<version>.erofs
 	if _, err := os.Stat(imagePath); err != nil {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
 
 	// TODO(ipaqsa): wait for all apps have root hash
-	// /deckhouse/downloaded/<package>/<version>.erofs.verity
+	// /deckhouse/downloaded/apps/<registry>/<package>/<version>.erofs.verity
 	// hashPath := fmt.Sprintf("%s.verity", imagePath)
 	// if _, err := os.Stat(hashPath); err != nil {
 	// 	return fmt.Errorf("stat verity hash file '%s': %w", hashPath, err)

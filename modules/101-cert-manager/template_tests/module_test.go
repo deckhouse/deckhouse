@@ -106,6 +106,15 @@ const cloudDNS = `
 cloudDNSServiceAccount: ewogICJ0eXBlIjogInNlcnZpY2VfYWNjb3VudCIsCiAgInByb2plY3RfaWQiOiAicHJvamVjdC0yMDkzMTciLAogICJwcml2YXRlX2tleV9pZCI6ICJwcml2YXRlX2lkIiwKICAicHJpdmF0ZV9rZXkiOiAicHJpdmF0ZV9rZXkiLAogICJjbGllbnRfZW1haWwiOiAiZG5zMDEtc29sdmVyQHByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIiwKICAiY2xpZW50X2lkIjogIjExNzM1MzAzMzgzOTQ2NTUzNjY3MiIsCiAgImF1dGhfdXJpIjogImh0dHBzOi8vYWNjb3VudHMuZ29vZ2xlLmNvbS9vL29hdXRoMi9hdXRoIiwKICAidG9rZW5fdXJpIjogImh0dHBzOi8vb2F1dGgyLmdvb2dsZWFwaXMuY29tL3Rva2VuIiwKICAiYXV0aF9wcm92aWRlcl94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL29hdXRoMi92MS9jZXJ0cyIsCiAgImNsaWVudF94NTA5X2NlcnRfdXJsIjogImh0dHBzOi8vd3d3Lmdvb2dsZWFwaXMuY29tL3JvYm90L3YxL21ldGFkYXRhL3g1MDkvZG5zMDEtc29sdmVyJXByb2plY3QtMjA5MzE3LmlhbS5nc2VydmljZWFjY291bnQuY29tIgp9Cg==
 `
 
+const letsencryptResourcesValues = `
+requests:
+  cpu: "100m"
+  memory: "128Mi"
+limits:
+  cpu: "200m"
+  memory: "256Mi"
+`
+
 var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -134,6 +143,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -204,6 +214,7 @@ var _ = Describe("Module :: cert-manager :: helm template ::", func() {
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -297,6 +308,7 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -367,6 +379,7 @@ podAntiAffinity:
 			Expect(cainjector.Field("spec.template.spec.tolerations").String()).To(MatchYAML(`
 - key: node-role.kubernetes.io/master
 - key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
 - key: dedicated.deckhouse.io
   operator: Exists
 - key: dedicated
@@ -481,5 +494,61 @@ podAntiAffinity:
 			clusterIssuerStaging := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
 			Expect(clusterIssuerStaging.Exists()).To(BeFalse())
 		})
+	})
+	Context("<Letsencrypt resources>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+		})
+
+		It("should not render resources when letsencrypt.resources is not set (default)", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(issuer.Exists()).To(BeTrue())
+			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").Exists()).To(BeFalse())
+
+		})
+		It("should render resources when letsencrypt.resources is set", func() {
+			f.ValuesSetFromYaml("certManager.letsencrypt.resources", letsencryptResourcesValues)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt")
+			Expect(issuer.Exists()).To(BeTrue())
+			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").String()).
+				To(MatchYAML(letsencryptResourcesValues))
+
+		})
+	})
+	Context("<LetsencryptStaging resources>", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValuesManagedHa)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("certManager", certManager)
+		})
+		It("should not render resources when letsencryptStaging.resources is not set (default)", func() {
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
+			Expect(issuer.Exists()).To(BeTrue())
+			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").Exists()).To(BeFalse())
+
+		})
+		It("should render resources when letsencryptStaging.resources is set", func() {
+			f.ValuesSetFromYaml("certManager.letsencryptStaging.resources", letsencryptResourcesValues)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			issuer := f.KubernetesGlobalResource("ClusterIssuer", "letsencrypt-staging")
+			Expect(issuer.Exists()).To(BeTrue())
+			// print object in yaml format
+			Expect(issuer.Field("spec.acme.solvers.0.http01.ingress.podTemplate.spec.resources").String()).
+				To(MatchYAML(letsencryptResourcesValues))
+
+		})
+
 	})
 })

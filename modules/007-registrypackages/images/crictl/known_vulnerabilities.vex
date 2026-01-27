@@ -31,7 +31,21 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "В CVE-2025-5187 описана уязвимость в NodeRestriction admission controller, позволяющая через патч объекта с OwnerReference удалить объект Node. В crictl не используется код admission controller-а",
       "timestamp": "2025-10-09T10:21:53.069107Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-13281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Уязвимость CVE-2025-13281 затрагивает серверный компонент kube-controller-manager при работе с Portworx StorageClass. Сrictl не содержит активного кода, выполняющего уязвимые операции управления хранилищами в control plane.",
+      "timestamp": "2026-01-21T10:25:02Z"
     }
   ],
-  "timestamp": "2025-10-09T10:25:02Z"
+  "timestamp": "2026-01-21T10:25:02Z"
 }

@@ -61,6 +61,14 @@ In Amazon AWS, Ubuntu distributions with a custom kernel without `erofs` are use
 {%- endif %}
 {% endalert %}
 
+{% alert level="info" %}
+{%- if page.lang == "ru" %}
+Deckhouse Kubernetes Platform, начиная с версии 1.74, имеет механизм контроля целостности модулей, который защищает их от подмены и изменения. Этот механизм включается автоматически при поддержке операционной системой на узлах, где установлен Deckhouse, модуля ядра `erofs`. При отсутствии этого модуля ядра Deckhouse продолжит работу без механизма контроля целостности модулей, при этом появится алерт о неработоспособности этой функциональности.
+{%- else %}
+Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+{%- endif %}
+{% endalert %}
+
 {% alert level="warning" %}
 {%- if page.lang == "ru" %}
 На виртуальных машинах должен быть установлен пакет `cloud-init`.

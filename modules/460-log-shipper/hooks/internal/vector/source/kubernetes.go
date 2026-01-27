@@ -124,7 +124,7 @@ func NewKubernetes(name string, spec v1alpha1.KubernetesPodsSpec, namespaced boo
 
 	// Do not collect self logs because in case of en error vector starts overloading itself
 	// by attempting to send error logs.
-	fields := []string{"metadata.name!=$VECTOR_SELF_POD_NAME"}
+	fields := []string{"metadata.name!=$VECTOR_SELF_POD_NAME"} //nolint:prealloc
 
 	for _, ns := range spec.NamespaceSelector.ExcludeNames {
 		fields = append(fields, "metadata.namespace!="+ns)

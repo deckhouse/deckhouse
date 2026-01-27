@@ -1,7 +1,10 @@
 name: cni-flannel
-stage: "General Availability"
+stage: General Availability
 critical: true
 weight: 35
 subsystems:
   - networking
 namespace: d8-cni-flannel
+descriptions:
+  en: Provides a network between multiple nodes in a cluster using the flannel module.
+  ru: Обеспечивает работу сети в кластере с помощью модуля flannel.

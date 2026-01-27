@@ -25,6 +25,7 @@ package eventhandler
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"sync"
 
@@ -35,6 +36,7 @@ import (
 
 	packagemanager "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	taskhookrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/tasks/hookrun"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -44,6 +46,7 @@ type Config struct {
 	ScheduleManager   schedulemanager.ScheduleManager
 	PackageManager    *packagemanager.Manager
 	QueueService      *queue.Service
+	StatusService     *status.Service
 }
 
 // Handler manages the event processing loop for Kubernetes and schedule events.
@@ -72,6 +75,7 @@ type Handler struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	packageManager    *packagemanager.Manager
 	queueService      *queue.Service
+	status            *status.Service
 
 	logger *log.Logger
 }
@@ -93,6 +97,7 @@ func New(conf Config, logger *log.Logger) *Handler {
 		scheduleManager:   conf.ScheduleManager,
 		kubeEventsManager: conf.KubeEventsManager,
 		packageManager:    conf.PackageManager,
+		status:            conf.StatusService,
 
 		logger: logger.Named("kube-event-handler"),
 	}
@@ -188,12 +193,10 @@ func (h *Handler) kubeTaskBuilder(ctx context.Context, kubeEvent kemtypes.KubeEv
 			slog.String("name", name),
 			slog.String("event", kubeEvent.String()))
 
-		queueName := info.QueueName
-		if queueName == "main" {
-			queueName = name
-		}
+		// queue = <name>/<queue>
+		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
-		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.status, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildKubeTasks(ctx, kubeEvent, builder)
@@ -209,12 +212,10 @@ func (h *Handler) scheduleTaskBuilder(ctx context.Context, crontab string) map[s
 			slog.String("name", name),
 			slog.String("event", crontab))
 
-		queueName := info.QueueName
-		if queueName == "main" {
-			queueName = name
-		}
+		// queue = <name>/<queue>
+		queueName := fmt.Sprintf("%s/%s", name, info.QueueName)
 
-		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.packageManager, h.logger)
+		return queueName, taskhookrun.NewTask(name, hook, info.BindingContext, h.status, h.packageManager, h.logger)
 	}
 
 	return h.packageManager.BuildScheduleTasks(ctx, crontab, builder)

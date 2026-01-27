@@ -40,7 +40,6 @@ var (
 )
 
 func main() {
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -112,5 +111,4 @@ func main() {
 			}
 		}
 	}
-
 }

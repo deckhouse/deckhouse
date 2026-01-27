@@ -40,9 +40,10 @@ _bb_detect_os_context() {
 {{- range $familyName, $family := $families }}
   {{- $pkg := $family.packageManager }}
   {{- range $distribution := $family.distributions }}
+    {{- $bundle := default $distribution.name $distribution.bundle }}
     {{ join "|" $distribution.ids }})
       BB_DETECTED_FAMILY="{{ $familyName }}"
-      BB_DETECTED_BUNDLE="{{ $distribution.name }}"
+      BB_DETECTED_BUNDLE="{{ $bundle }}"
       BB_DETECTED_PKG_MGR="{{ $pkg }}"
       return 0
       ;;

@@ -45,6 +45,8 @@ type Interface interface {
 	ModuleSources() ModuleSourceInformer
 	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
+	// ObjectKeepers returns a ObjectKeeperInformer.
+	ObjectKeepers() ObjectKeeperInformer
 	// PackageRepositories returns a PackageRepositoryInformer.
 	PackageRepositories() PackageRepositoryInformer
 	// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
@@ -120,6 +122,11 @@ func (v *version) ModuleSources() ModuleSourceInformer {
 // ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
 	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ObjectKeepers returns a ObjectKeeperInformer.
+func (v *version) ObjectKeepers() ObjectKeeperInformer {
+	return &objectKeeperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // PackageRepositories returns a PackageRepositoryInformer.

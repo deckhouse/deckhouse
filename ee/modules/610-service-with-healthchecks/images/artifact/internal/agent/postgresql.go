@@ -72,7 +72,7 @@ func (pt PostgreSQLProbeTarget) GetID() string {
 	sb.WriteString("#")
 	sb.WriteString(fmt.Sprintf("%d", pt.targetPort))
 	sb.WriteString("#")
-	sb.WriteString(fmt.Sprintf("%s", pt.dbName))
+	sb.WriteString(pt.dbName)
 	return sb.String()
 }
 

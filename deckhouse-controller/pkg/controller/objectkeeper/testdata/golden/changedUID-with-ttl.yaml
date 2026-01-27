@@ -1,0 +1,26 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ObjectKeeper
+metadata:
+  creationTimestamp: null
+  name: changed-uid-with-ttl
+  resourceVersion: "1000"
+spec:
+  followObjectRef:
+    apiVersion: v1
+    kind: Pod
+    name: my-pod
+    namespace: default
+    uid: befc4950-0348-494d-af5e-94d65ad0d03e
+  mode: FollowObjectWithTTL
+  ttl: 1h0m0s
+status:
+  conditions:
+  - lastTransitionTime: "2024-01-01T15:00:00Z"
+    message: TTL expires at 2099-01-01T20:00:00
+    reason: MissingFollowObjectRef
+    status: "False"
+    type: TTLActive
+  lostAt: "2024-01-01T15:00:00Z"
+  message: FollowObject UID mismatch - will delete ObjectKeeper after TTL expiration
+  phase: Expiring

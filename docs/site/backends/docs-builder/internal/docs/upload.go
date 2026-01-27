@@ -66,7 +66,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					svc.logger.Info("skipping tree", slog.String("headerName", header.Name), slog.String("moduleName", moduleName))
+					svc.logger.Info("skipping tree", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
 
@@ -156,6 +156,10 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		fileName == "openapi/conversions" ||
 		fileName == "openapi/config-values.yaml" ||
 		docConfValuesRegexp.MatchString(fileName) {
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+	}
+
+	if fileName == "module.yaml" || fileName == "oss.yaml" {
 		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 

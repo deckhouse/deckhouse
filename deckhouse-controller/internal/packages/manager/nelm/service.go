@@ -132,17 +132,22 @@ func (s *Service) Render(ctx context.Context, app *apps.Application) (string, er
 	}
 	defer os.Remove(valuesPath)
 
-	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
+	runtimeValues := app.GetRuntimeValues()
+	instanceJSON, err := json.Marshal(runtimeValues.Instance)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return "", fmt.Errorf("marshal metadata values: %w", err)
+		return "", fmt.Errorf("marshal instance values: %w", err)
+	}
+	packageJSON, err := json.Marshal(runtimeValues.Package)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", fmt.Errorf("marshal package values: %w", err)
 	}
 
 	return s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON),
 	})
 }
 
@@ -194,7 +199,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	isHelm, err := s.isHelmChart(app.GetPath())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("check helm chart: %w", err)
+		return newCheckChartError(err)
 	}
 
 	if !isHelm {
@@ -204,26 +209,33 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	valuesPath, err := s.createTmpValuesFile(app.GetName(), app.GetValues())
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("create values file: %w", err)
+		return newCreateValuesError(err)
 	}
 	defer os.Remove(valuesPath) // Clean up temp file
 
-	runtimeValues, err := json.Marshal(app.GetRuntimeValues())
+	runtimeValues := app.GetRuntimeValues()
+	instanceJSON, err := json.Marshal(runtimeValues.Instance)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("marshal metadata values: %w", err)
+		return newMarshalRuntimeValuesError(err)
 	}
+	packageJSON, err := json.Marshal(runtimeValues.Package)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newMarshalRuntimeValuesError(err)
+	}
+
+	extraValues := fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 
 	// Render chart to get manifests for checksum calculation
 	renderedManifests, err := s.client.Render(ctx, app.GetNamespace(), app.GetName(), nelm.InstallOptions{
 		Path:        app.GetPath(),
 		ValuesPaths: []string{valuesPath},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: extraValues,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("render nelm chart: %w", err)
+		return newRenderError(err)
 	}
 
 	// Calculate checksum to detect changes in rendered manifests
@@ -233,7 +245,7 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 	shouldUpgrade, err := s.shouldRunHelmUpgrade(ctx, app.GetNamespace(), app.GetName(), checksum)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return err
+		return newCheckReleaseError(err)
 	}
 
 	if !shouldUpgrade {
@@ -250,12 +262,11 @@ func (s *Service) Upgrade(ctx context.Context, app *apps.Application) error {
 		ReleaseLabels: map[string]string{
 			nelm.LabelPackageChecksum: checksum,
 		},
-		// Format as "Instance=<json>"
-		ExtraValues: fmt.Sprintf("Instance=%s", runtimeValues),
+		ExtraValues: extraValues,
 	})
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return fmt.Errorf("install nelm release: %w", err)
+		return newInstallChartError(err)
 	}
 
 	s.monitorManager.AddMonitor(app.GetNamespace(), app.GetName(), renderedManifests)
