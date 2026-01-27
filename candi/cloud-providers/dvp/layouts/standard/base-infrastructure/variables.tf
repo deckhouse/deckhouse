@@ -38,31 +38,20 @@ locals {
 locals {
   template_ingress = [
     {
-      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
-      ports = [{ port = 22, protocol = "TCP" }]
+      from = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
+        }
+      }]
     },
     {
-      from = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
-      ports = [
-        { port = 80, protocol = "TCP" },
-        { port = 443, protocol = "TCP" },
-        { port = 30000, endPort = 32767, protocol = "TCP" }
-      ]
+      from  = [{ ipBlock = { cidr = "0.0.0.0/0" } }]
+      ports = [{ port = 22, protocol = "TCP" }]
     },
     {
       from = [{
         namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-monitoring" }
-        }
-        podSelector = {
-          matchLabels = { app = "prometheus" }
         }
       }]
     },
@@ -79,20 +68,6 @@ locals {
     {
       from = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-commander" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-openvpn" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-metallb" }
         }
       }]
@@ -100,6 +75,13 @@ locals {
   ]
 
   template_egress = [
+    {
+      to = [{
+        namespaceSelector = {
+          matchLabels = { "kubernetes.io/metadata.name" = local.project_namespace }
+        }
+      }]
+    },
     { to = [{ ipBlock = { cidr = "0.0.0.0/0" } }] },
     {
       to = [{
@@ -123,13 +105,6 @@ locals {
       to = [{
         namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "kube-system" }
-        }
-      }]
-    },
-    {
-      to = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-openvpn" }
         }
       }]
     },
