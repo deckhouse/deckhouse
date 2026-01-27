@@ -94,6 +94,11 @@ func New(conf Config, logger *log.Logger) *Manager {
 	}
 }
 
+// isValidApp checks if an application is valid (not nil and not being deleted).
+func isValidApp(app *apps.Application) bool {
+	return app != nil && !app.IsDeleting()
+}
+
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
@@ -119,37 +124,42 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	return app.GetVersion(), nil
 }
 
-// ValidateSettings validates settings against openAPI and setting check
+// ValidateSettings validates settings against openAPI and setting check.
+// Lock is held only for map access and validity check, not for validation which can be slow.
 func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ValidateSettings")
 	defer span.End()
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	app, ok := m.apps[name]
-	if !ok {
+	valid := ok && isValidApp(app)
+	m.mu.Unlock()
+
+	if !valid {
 		return settingscheck.Result{Valid: true}, nil
 	}
 
 	return app.ValidateSettings(ctx, settings)
 }
 
-// ApplySettings validates and applies settings to application
+// ApplySettings validates and applies settings to application.
+// Lock is held only for map access and validity check, not for validation which can be slow.
 func (m *Manager) ApplySettings(ctx context.Context, name string, settings addonutils.Values) error {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ApplySettings")
 	defer span.End()
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	app := m.apps[name]
-	if app == nil {
+	valid := isValidApp(app)
+	m.mu.Unlock()
+
+	if !valid {
 		return nil
 	}
 
 	m.logger.Debug("apply settings", slog.String("name", name))
 
+	// Validation can be slow (JSON schema parsing), execute without lock
 	res, err := app.ValidateSettings(ctx, settings)
 	if err != nil {
 		return newApplySettingsErr(err)
@@ -159,6 +169,7 @@ func (m *Manager) ApplySettings(ctx context.Context, name string, settings addon
 		return newApplySettingsErr(errors.New(res.Message))
 	}
 
+	// Apply settings without lock (app reference is stable)
 	if err = app.ApplySettings(settings); err != nil {
 		return newApplySettingsErr(err)
 	}
@@ -176,9 +187,10 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	m.mu.Lock()
 	app := m.apps[name]
+	valid := isValidApp(app)
 	m.mu.Unlock()
-	if app == nil {
-		// package can be disabled and removed before
+
+	if !valid {
 		return nil
 	}
 
@@ -209,9 +221,10 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	m.mu.Lock()
 	app := m.apps[name]
+	valid := isValidApp(app)
 	m.mu.Unlock()
-	if app == nil {
-		// package can be disabled and removed before
+
+	if !valid {
 		return nil
 	}
 
@@ -274,33 +287,32 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	m.logger.Debug("disable package", slog.String("name", name))
 
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	app := m.apps[name]
-	if app == nil {
+	markedForDeletion := app != nil && app.TryMarkDeleting()
+	m.mu.Unlock()
+
+	if !markedForDeletion {
 		return nil
 	}
 
-	// app should not get absent events
 	m.nelm.RemoveMonitor(name)
 
 	if !keep {
 		m.logger.Debug("delete nelm release", slog.String("name", name))
-		// Delete package release
 		if err := m.nelm.Delete(ctx, app); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
 
 		m.logger.Debug("run after delete helm hooks", slog.String("name", name))
-
-		// Run after delete helm hooks
 		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run after delete helm hooks: %w", err)
 		}
 
+		m.mu.Lock()
 		delete(m.apps, name)
+		m.mu.Unlock()
 	}
 
 	// Disable all schedule-based hooks
@@ -332,7 +344,7 @@ func (m *Manager) UnlockKubernetesMonitors(name, hook string, monitors ...string
 	defer m.mu.Unlock()
 
 	app := m.apps[name]
-	if app == nil {
+	if !isValidApp(app) {
 		return
 	}
 
@@ -349,7 +361,7 @@ func (m *Manager) GetPackageQueues(name string) []string {
 	defer m.mu.Unlock()
 
 	app := m.apps[name]
-	if app == nil {
+	if !isValidApp(app) {
 		return nil
 	}
 
@@ -376,7 +388,7 @@ func (m *Manager) GetAppInfo(name string) apps.Info {
 	defer m.mu.Unlock()
 
 	app := m.apps[name]
-	if app == nil {
+	if !isValidApp(app) {
 		return apps.Info{}
 	}
 
