@@ -76,6 +76,8 @@ func (op *Detacher) Detach(ctx context.Context) error {
 	_, _ = op.PhasedExecutionContext.StartPhase(phases.CommanderDetachCheckPhase, false, stateCache)
 
 	err := log.Process("commander/detach", "Check cluster", func() error {
+		op.Checker.SetExternalPhasedContext(op.PhasedExecutionContext)
+
 		checkRes, cleanup, err := op.Checker.Check(ctx)
 		providerCleanup = cleanup
 		if err != nil {

@@ -378,7 +378,10 @@ func (i *Attacher) check(
 			TmpDir:                i.Params.TmpDir,
 			IsDebug:               i.Params.IsDebug,
 			Logger:                i.Params.Logger,
+			Embedded:              true,
 		})
+
+		checker.SetExternalPhasedContext(i.PhasedExecutionContext)
 
 		// provider will cleanup in Attach
 		res, _, err = checker.Check(ctx)

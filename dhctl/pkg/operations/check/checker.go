@@ -39,6 +39,10 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
+type externalPhasedContext interface {
+	CompleteSubPhase(completedSubPhase phases.OperationSubPhase)
+}
+
 type Params struct {
 	SSHClient      node.SSHClient
 	StateCache     dhctlstate.Cache
@@ -47,6 +51,10 @@ type Params struct {
 	CommanderMode  bool
 	CommanderUUID  uuid.UUID
 	*commander.CommanderModeParams
+
+	// if check runs in embedded mode, it uses external PhasedExecutionContext
+	// Checker is embedded in CommanderAttach and CommanderDetach operations
+	Embedded bool
 
 	InfrastructureContext *infrastructure.Context
 
@@ -62,6 +70,7 @@ type Cleaner func() error
 type Checker struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	ExternalPhasedContext  externalPhasedContext
 
 	logger log.Logger
 }
@@ -94,6 +103,10 @@ func NewChecker(params *Params) *Checker {
 	}
 }
 
+func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
+	c.ExternalPhasedContext = pec
+}
+
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	cleaner := func() error {
 		return nil
@@ -109,10 +122,12 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
 	}
 
-	if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
-		return nil, cleaner, err
+	if !c.Embedded {
+		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+			return nil, cleaner, err
+		}
+		defer c.PhasedExecutionContext.Finalize(c.StateCache)
 	}
-	defer c.PhasedExecutionContext.Finalize(c.StateCache)
 
 	if c.InfrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
@@ -151,8 +166,6 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	hasTerraformState := false
 
 	if metaConfig.ClusterType == config.CloudClusterType {
-		_, _ = c.PhasedExecutionContext.StartPhase(phases.CheckInfra, false, c.StateCache)
-
 		resInfra, err := c.checkInfra(ctx, kubeCl, metaConfig, c.InfrastructureContext)
 		if err != nil {
 			return nil, cleaner, fmt.Errorf("unable to check infra state: %w", err)
@@ -170,8 +183,6 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		res.StatusDetails.Statistics = *resInfra.Statistics
 		res.StatusDetails.OpentofuMigrationStatus = resInfra.MigrationOpentofuStatus
 	}
-
-	_, _ = c.PhasedExecutionContext.SwitchPhase(phases.CheckConfiguration, false, c.StateCache, nil)
 
 	configurationStatus, err := c.checkConfiguration(ctx, kubeCl, metaConfig)
 	if err != nil {
@@ -193,6 +204,8 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		commanderSource = "commander"
 		inClusterSource = "in-cluster"
 	)
+
+	defer c.switchPhase(phases.CheckConfiguration)()
 
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
@@ -247,6 +260,8 @@ type InfraResult struct {
 }
 
 func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
+	defer c.switchPhase(phases.CheckInfra)()
+
 	stat, hasTerraformState, err := CheckState(
 		ctx, kubeCl, metaConfig, infrastructureContext,
 		CheckStateOptions{
@@ -329,6 +344,19 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}
 	return kubeCl, nil
+}
+
+func (c *Checker) switchPhase(s phases.OperationPhase) func() {
+	if !c.Embedded {
+		_, _ = c.PhasedExecutionContext.SwitchPhase(s, false, c.StateCache, nil)
+		return func() {}
+	}
+
+	return func() {
+		if c.ExternalPhasedContext != nil {
+			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(s))
+		}
+	}
 }
 
 type configTypeForCompare map[string]any
