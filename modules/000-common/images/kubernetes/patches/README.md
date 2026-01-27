@@ -51,3 +51,7 @@ The kube-apiserver authorization filter bypasses the initial 403 for these reque
 The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
 
 If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
+
+### set-usage-GOPROXY.patch
+
+Removes GOPROXY=off from the build so that our value is used when building the image.
