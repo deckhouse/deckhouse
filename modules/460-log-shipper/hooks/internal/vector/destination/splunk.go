@@ -75,9 +75,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 	// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
 
 	// Send extra labels as indexed fields (sorted for consistency)
-	for _, k := range loglabels.SortedExtraLabelsKeys(cspec.ExtraLabels) {
-		indexedFields = append(indexedFields, k)
-	}
+	indexedFields = append(indexedFields, loglabels.SortedExtraLabelsKeys(cspec.ExtraLabels)...)
 
 	return &Splunk{
 		CommonSettings: CommonSettings{
