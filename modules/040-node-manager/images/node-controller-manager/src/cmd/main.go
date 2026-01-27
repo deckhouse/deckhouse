@@ -37,6 +37,7 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller"
 	"github.com/deckhouse/node-controller/internal/event"
+	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
 var (
@@ -117,8 +118,8 @@ func main() {
 	}
 
 	// Setup webhooks (validation + defaulting)
-	// All logic from bash/python hooks is now in nodegroup_webhook.go
-	if err = deckhousev1.SetupWebhookWithManager(mgr); err != nil {
+	// All logic from bash/python hooks is now in internal/webhook/
+	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
 		os.Exit(1)
 	}

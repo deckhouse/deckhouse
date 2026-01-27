@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1 contains the NodeGroup webhook implementation.
+// Package webhook contains the NodeGroup webhook implementation.
 // This is a complete reimplementation of two bash/python hooks:
 // - modules/040-node-manager/hooks/node_group (validation)
 // - modules/040-node-manager/hooks/node_group.py (conversion)
-package v1
+package webhook
 
 import (
 	"context"
@@ -35,35 +35,50 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NodeGroupWebhook — единый webhook для валидации и мутации NodeGroup
+// NodeGroupValidator — webhook для валидации NodeGroup
 // Реализует все проверки из bash хука modules/040-node-manager/hooks/node_group
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// NodeGroupWebhook handles validation and defaulting for NodeGroup resources.
+// NodeGroupValidator handles validation for NodeGroup resources.
 // It has access to cluster state via Client.
-type NodeGroupWebhook struct {
+type NodeGroupValidator struct {
 	Client  client.Client
-	Decoder admission.Decoder
+	decoder *admission.Decoder
 }
 
-// SetupWebhookWithManager registers the webhook with the manager.
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
+// NodeGroupDefaulter handles defaulting for NodeGroup resources.
+type NodeGroupDefaulter struct {
+	decoder *admission.Decoder
+}
+
+// SetupWithManager registers the webhooks with the manager.
+func SetupWithManager(mgr ctrl.Manager) error {
 	hookServer := mgr.GetWebhookServer()
 
-	wh := &NodeGroupWebhook{
-		Client: mgr.GetClient(),
-	}
+	// Create decoder
+	decoder := admission.NewDecoder(mgr.GetScheme())
 
 	// Register validating webhook
-	hookServer.Register("/validate-deckhouse-io-v1-nodegroup", &webhook.Admission{Handler: wh})
+	hookServer.Register("/validate-deckhouse-io-v1-nodegroup", &webhook.Admission{
+		Handler: &NodeGroupValidator{
+			Client:  mgr.GetClient(),
+			decoder: decoder,
+		},
+	})
 
 	// Register mutating webhook for defaults
-	hookServer.Register("/mutate-deckhouse-io-v1-nodegroup", &webhook.Admission{Handler: &NodeGroupDefaulter{}})
+	hookServer.Register("/mutate-deckhouse-io-v1-nodegroup", &webhook.Admission{
+		Handler: &NodeGroupDefaulter{
+			decoder: decoder,
+		},
+	})
 
 	return nil
 }
@@ -73,18 +88,18 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 // Handle implements admission.Handler for validation.
-func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) admission.Response {
+func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	webhookLog.Info("validating nodegroup", "name", req.Name, "operation", req.Operation)
 
-	ng := &NodeGroup{}
-	if err := w.Decoder.Decode(req, ng); err != nil {
+	ng := &v1.NodeGroup{}
+	if err := w.decoder.Decode(req, ng); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
-	var oldNG *NodeGroup
+	var oldNG *v1.NodeGroup
 	if req.Operation == "UPDATE" {
-		oldNG = &NodeGroup{}
-		if err := w.Decoder.DecodeRaw(req.OldObject, oldNG); err != nil {
+		oldNG = &v1.NodeGroup{}
+		if err := w.decoder.DecodeRaw(req.OldObject, oldNG); err != nil {
 			return admission.Errored(http.StatusBadRequest, err)
 		}
 	}
@@ -105,11 +120,9 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 2: Cluster prefix + nodeGroup name <= 42 (for Cloud clusters)
 	// From bash: if [[ $(( 63 - clusterPrefixLen - 1 - nodeGroupNameLen - 21 )) -lt 0 ]]
-	// Dynamic node name is <clusterPrefix>-<nodeGroupName>-<hashes>
-	// Label value must be <= 63 characters
 	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "CREATE" && clusterConfig.ClusterType == "Cloud" {
-		maxAllowed := 63 - clusterConfig.ClusterPrefixLen - 1 - 21 // prefix + "-" + hashes
+		maxAllowed := 63 - clusterConfig.ClusterPrefixLen - 1 - 21
 		if len(ng.Name) > maxAllowed {
 			return admission.Denied(fmt.Sprintf(
 				"it is forbidden for this cluster to set (cluster prefix + node group name) longer than 42 symbols; "+
@@ -120,11 +133,11 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 3: nodeType is valid
 	// ═══════════════════════════════════════════════════════════════════════════
-	validNodeTypes := map[NodeType]bool{
-		NodeTypeCloudEphemeral: true,
-		NodeTypeCloudPermanent: true,
-		NodeTypeCloudStatic:    true,
-		NodeTypeStatic:         true,
+	validNodeTypes := map[v1.NodeType]bool{
+		v1.NodeTypeCloudEphemeral: true,
+		v1.NodeTypeCloudPermanent: true,
+		v1.NodeTypeCloudStatic:    true,
+		v1.NodeTypeStatic:         true,
 	}
 	if !validNodeTypes[ng.Spec.NodeType] {
 		return admission.Denied(fmt.Sprintf(
@@ -153,21 +166,21 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 6: CloudEphemeral requires cloudInstances
 	// ═══════════════════════════════════════════════════════════════════════════
-	if ng.Spec.NodeType == NodeTypeCloudEphemeral && ng.Spec.CloudInstances == nil {
+	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral && ng.Spec.CloudInstances == nil {
 		return admission.Denied("cloudInstances is required for nodeType CloudEphemeral")
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 7: Static nodes should not have cloudInstances
 	// ═══════════════════════════════════════════════════════════════════════════
-	if ng.Spec.NodeType == NodeTypeStatic && ng.Spec.CloudInstances != nil {
+	if ng.Spec.NodeType == v1.NodeTypeStatic && ng.Spec.CloudInstances != nil {
 		return admission.Denied("cloudInstances must not be set for nodeType Static")
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 8: classReference required for CloudEphemeral
 	// ═══════════════════════════════════════════════════════════════════════════
-	if ng.Spec.NodeType == NodeTypeCloudEphemeral && ng.Spec.CloudInstances != nil {
+	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral && ng.Spec.CloudInstances != nil {
 		if ng.Spec.CloudInstances.ClassReference.Kind == "" {
 			return admission.Denied("cloudInstances.classReference.kind is required for CloudEphemeral")
 		}
@@ -178,7 +191,6 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 9: maxPods warning for IP exhaustion
-	// From bash: if (( 2 * maxPods > availableIPs )); then warning
 	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil {
 		maxPods := *ng.Spec.Kubelet.MaxPods
@@ -187,7 +199,6 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 			prefix = 24
 		}
 		availableIPs := (1 << (32 - prefix)) - 3
-		// Every pod can use two IPs (one in terminating phase + one in starting phase)
 		if 2*int(maxPods) > availableIPs {
 			warnings = append(warnings, fmt.Sprintf(
 				".spec.kubelet.maxPods (%d) is too high: may lead to IP exhaustion", maxPods))
@@ -212,7 +223,7 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 11: Docker CRI is forbidden
 	// ═══════════════════════════════════════════════════════════════════════════
-	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == CRITypeDocker {
+	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeDocker {
 		return admission.Denied("it is forbidden to set cri type to Docker")
 	}
 
@@ -220,13 +231,13 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// Validation 12: CRI settings must match type
 	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.CRI != nil {
-		if ng.Spec.CRI.Containerd != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != CRITypeContainerd {
+		if ng.Spec.CRI.Containerd != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != v1.CRITypeContainerd {
 			return admission.Denied("it is forbidden to set .spec.cri.containerd without .spec.cri.type=\"Containerd\"")
 		}
-		if ng.Spec.CRI.ContainerdV2 != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != CRITypeContainerdV2 {
+		if ng.Spec.CRI.ContainerdV2 != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != v1.CRITypeContainerdV2 {
 			return admission.Denied("it is forbidden to set .spec.cri.containerdV2 without .spec.cri.type=\"ContainerdV2\"")
 		}
-		if ng.Spec.CRI.Docker != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != CRITypeDocker {
+		if ng.Spec.CRI.Docker != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != v1.CRITypeDocker {
 			return admission.Denied("it is forbidden to set .spec.cri.docker without .spec.cri.type=\"Docker\"")
 		}
 	}
@@ -283,8 +294,8 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 15: RollingUpdate only for CloudEphemeral
 	// ═══════════════════════════════════════════════════════════════════════════
-	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == DisruptionApprovalModeRollingUpdate {
-		if ng.Spec.NodeType != NodeTypeCloudEphemeral {
+	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
+		if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 			return admission.Denied(
 				"it is forbidden to set .spec.disruptions.approvalMode to \"RollingUpdate\" when spec.nodeType is not \"CloudEphemeral\"")
 		}
@@ -315,7 +326,6 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 					".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager.enabled to work")
 			}
 
-			// If mode is Static, cpu must be specified
 			if ng.Spec.Kubelet.ResourceReservation.Mode == "Static" {
 				if ng.Spec.Kubelet.ResourceReservation.Static == nil ||
 					ng.Spec.Kubelet.ResourceReservation.Static.CPU == nil {
@@ -347,7 +357,7 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 	// Validation 19: ContainerdV2 blocked by unsupported nodes
 	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "UPDATE" {
-		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == CRITypeContainerdV2 {
+		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerdV2 {
 			unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 			if len(unsupportedNodes) > 0 {
 				return admission.Denied(fmt.Sprintf(
@@ -394,17 +404,12 @@ func (w *NodeGroupWebhook) Handle(ctx context.Context, req admission.Request) ad
 // Mutating Webhook Handler (Defaulter)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// NodeGroupDefaulter handles defaulting for NodeGroup resources.
-type NodeGroupDefaulter struct {
-	Decoder admission.Decoder
-}
-
 // Handle implements admission.Handler for defaulting.
 func (d *NodeGroupDefaulter) Handle(ctx context.Context, req admission.Request) admission.Response {
 	webhookLog.Info("defaulting nodegroup", "name", req.Name)
 
-	ng := &NodeGroup{}
-	if err := d.Decoder.Decode(req, ng); err != nil {
+	ng := &v1.NodeGroup{}
+	if err := d.decoder.Decode(req, ng); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 
@@ -420,20 +425,20 @@ func (d *NodeGroupDefaulter) Handle(ctx context.Context, req admission.Request) 
 	return admission.PatchResponseFromRaw(req.Object.Raw, marshaledNG)
 }
 
-func (d *NodeGroupDefaulter) setDefaults(ng *NodeGroup) {
+func (d *NodeGroupDefaulter) setDefaults(ng *v1.NodeGroup) {
 	// Default disruption approval mode
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == "" {
-		ng.Spec.Disruptions.ApprovalMode = DisruptionApprovalModeManual
+		ng.Spec.Disruptions.ApprovalMode = v1.DisruptionApprovalModeManual
 	}
 
 	// Default chaos mode
 	if ng.Spec.Chaos != nil && ng.Spec.Chaos.Mode == "" {
-		ng.Spec.Chaos.Mode = ChaosModeDisabled
+		ng.Spec.Chaos.Mode = v1.ChaosModeDisabled
 	}
 
 	// Default CRI type
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == "" {
-		ng.Spec.CRI.Type = CRITypeContainerd
+		ng.Spec.CRI.Type = v1.CRITypeContainerd
 	}
 }
 
@@ -466,14 +471,14 @@ func validateNodeGroupName(name string) error {
 	return nil
 }
 
-func validateDisruptionWindows(d *DisruptionsSpec) error {
+func validateDisruptionWindows(d *v1.DisruptionsSpec) error {
 	timeRegex := regexp.MustCompile(`^(?:\d|[01]\d|2[0-3]):[0-5]\d$`)
 	validDays := map[string]bool{
 		"Mon": true, "Tue": true, "Wed": true, "Thu": true,
 		"Fri": true, "Sat": true, "Sun": true,
 	}
 
-	validateWindows := func(windows []DisruptionWindow, path string) error {
+	validateWindows := func(windows []v1.DisruptionWindow, path string) error {
 		for i, w := range windows {
 			if !timeRegex.MatchString(w.From) {
 				return fmt.Errorf("%s[%d].from: invalid time format %q, expected HH:MM", path, i, w.From)
@@ -505,7 +510,7 @@ func validateDisruptionWindows(d *DisruptionsSpec) error {
 	return nil
 }
 
-func getCRIType(ng *NodeGroup, defaultCRI string) string {
+func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type != "" {
 		return string(ng.Spec.CRI.Type)
 	}
@@ -519,7 +524,7 @@ func getCRIType(ng *NodeGroup, defaultCRI string) string {
 // Cluster state loading functions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-func (w *NodeGroupWebhook) loadClusterConfig(ctx context.Context) *ClusterConfig {
+func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) *ClusterConfig {
 	config := &ClusterConfig{PodSubnetNodeCIDRPrefix: 24}
 
 	secret := &corev1.Secret{}
@@ -560,7 +565,7 @@ func (w *NodeGroupWebhook) loadClusterConfig(ctx context.Context) *ClusterConfig
 	return config
 }
 
-func (w *NodeGroupWebhook) loadProviderClusterConfig(ctx context.Context) *ProviderClusterConfig {
+func (w *NodeGroupValidator) loadProviderClusterConfig(ctx context.Context) *ProviderClusterConfig {
 	config := &ProviderClusterConfig{}
 
 	secret := &corev1.Secret{}
@@ -590,16 +595,12 @@ func (w *NodeGroupWebhook) loadProviderClusterConfig(ctx context.Context) *Provi
 	return config
 }
 
-func (w *NodeGroupWebhook) loadCustomTolerationKeys(ctx context.Context) []string {
-	// Load ModuleConfig "global" to get customTolerationKeys
-	// This is a simplified implementation - in production you'd need to parse ModuleConfig CRD
-
-	// For now, return empty slice (skip this validation if ModuleConfig not available)
+func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) []string {
 	// TODO: Implement ModuleConfig reading when the CRD is available
 	return nil
 }
 
-func (w *NodeGroupWebhook) getKubernetesEndpointsCount(ctx context.Context) int {
+func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) int {
 	endpoints := &corev1.Endpoints{}
 	err := w.Client.Get(ctx, types.NamespacedName{
 		Namespace: "default",
@@ -617,7 +618,7 @@ func (w *NodeGroupWebhook) getKubernetesEndpointsCount(ctx context.Context) int 
 	return count
 }
 
-func (w *NodeGroupWebhook) getNodesWithCustomContainerd(ctx context.Context, nodeGroupName string) []string {
+func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, nodeGroupName string) []string {
 	nodeList := &corev1.NodeList{}
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-config": "custom",
@@ -635,7 +636,7 @@ func (w *NodeGroupWebhook) getNodesWithCustomContainerd(ctx context.Context, nod
 	return names
 }
 
-func (w *NodeGroupWebhook) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) []string {
+func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) []string {
 	nodeList := &corev1.NodeList{}
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
