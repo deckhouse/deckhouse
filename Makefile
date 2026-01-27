@@ -206,7 +206,16 @@ endef
 
 .PHONY: lint-all
 lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
-	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
+	@FAILED=0; \
+	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
+		echo ""; \
+		echo "============================================================"; \
+		echo "Running golangci-lint in $$dir"; \
+		echo "============================================================"; \
+		echo ""; \
+		(cd $$dir && GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100) || FAILED=1; \
+	done; \
+	exit $$FAILED
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
