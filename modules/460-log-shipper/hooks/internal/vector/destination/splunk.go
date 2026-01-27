@@ -39,7 +39,7 @@ type Splunk struct {
 	TLS CommonTLS `json:"tls"`
 }
 
-func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
+func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Splunk {
 	spec := cspec.Splunk
 
 	tls := CommonTLS{
@@ -78,7 +78,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Splunk {
 
 	return &Splunk{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "splunk_hec_logs",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

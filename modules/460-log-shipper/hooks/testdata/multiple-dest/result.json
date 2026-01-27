@@ -197,7 +197,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/test-es-dest": {
+    "destination/cluster/test-es-dest/KubernetesPods": {
       "type": "elasticsearch",
       "inputs": [
         "transform/destination/test-es-dest/02_del_parsed_data"
@@ -239,7 +239,7 @@
       "mode": "bulk",
       "suppress_type_name": true
     },
-    "destination/cluster/test-logstash-dest": {
+    "destination/cluster/test-logstash-dest/KubernetesPods": {
       "type": "socket",
       "inputs": [
         "transform/destination/test-logstash-dest/02_del_parsed_data"
@@ -270,7 +270,7 @@
         "time_secs": 7200
       }
     },
-    "destination/cluster/test-loki-dest": {
+    "destination/cluster/test-loki-dest/KubernetesPods": {
       "type": "loki",
       "inputs": [
         "transform/destination/test-loki-dest/00_parse_json"
@@ -299,7 +299,6 @@
         "app": "{{ parsed_data.ap_p[0].a }}",
         "container": "{{ container }}",
         "foo": "bar",
-        "host": "{{ host }}",
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",

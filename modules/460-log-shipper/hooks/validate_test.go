@@ -49,7 +49,7 @@ func TestValidateConfigWithVector(t *testing.T) {
 			"-t",
 			"-v", "/deckhouse:/deckhouse",
 			"-e", "VECTOR_SELF_POD_NAME=test", // to avoid warnings, this variable is set in the container env section
-			"-e", "VECTOR_SELF_NODE_NAME=test",
+			"-e", "VECTOR_HOSTNAME=test",
 			"-e", "KUBERNETES_SERVICE_HOST=127.0.0.1",
 			"-e", "KUBERNETES_SERVICE_PORT=6443",
 			"--entrypoint", "bash",
