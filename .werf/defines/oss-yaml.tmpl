@@ -2,7 +2,6 @@
   {{- $id := index . 0 -}}
   {{- $ctx := index . 1 -}}
   {{- $version := "" -}}
-  {{- $found := false -}}
 
   {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
     {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
@@ -11,17 +10,13 @@
   {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
   {{- range $raw.data -}}
     {{- if eq .id $id -}}
-      {{- $found = true -}}
-      {{- if .version -}}
-        {{- $version = .version -}}
-      {{- else -}}
-        {{- fail (printf "\n[ERROR] Field 'version' is empty or missing for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
-      {{- end -}}      
+      {{- $version = .version | default "" -}}
+      {{- break -}}
     {{- end -}}
   {{- end -}}
 
-  {{- if not $found -}}
-    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- if eq $version "" -}}
+    {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
   {{- end -}}
 
   {{- $version -}}
