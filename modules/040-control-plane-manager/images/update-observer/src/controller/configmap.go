@@ -105,13 +105,12 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.Data["status"] = string(statusBytes)
 	}
 
-	annotations := make(map[string]string)
-	labels := make(map[string]string)
+	annotations := configMap.GetAnnotations()
+	labels := configMap.GetLabels()
 	now := time.Now().Format(time.RFC3339)
 
 	annotations[common.LastReconcilationTime] = now
 	annotations[common.CauseLabelKey] = string(reconcileTrigger)
-	labels[common.HeritageLabelKey] = common.DeckhouseLabel
 
 	switch reconcileTrigger {
 	case ReconcileTriggerInit:
@@ -124,7 +123,6 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 			labels[common.K8sVersionLabelKey] = clusterState.CurrentVersion
 		}
 	case ReconcileTriggerIdle:
-		labels[common.K8sVersionLabelKey] = clusterState.CurrentVersion
 	}
 
 	configMap.SetAnnotations(annotations)

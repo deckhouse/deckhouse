@@ -118,7 +118,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	// 1) Getting just-created pods that would count as not ready;
 	// 2) Incomplete List results from previous call.
 
-	const retryDelay = 15 * time.Second
+	const retryDelay = 30 * time.Second
 	notReadyPods := 0
 	nodes := make(map[string]struct{})
 	for _, pod := range podList.Items {
