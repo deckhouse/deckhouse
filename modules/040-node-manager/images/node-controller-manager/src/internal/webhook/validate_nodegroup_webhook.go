@@ -41,21 +41,16 @@ import (
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NodeGroupValidator — webhook для валидации NodeGroup
-// Реализует все проверки из bash хука modules/040-node-manager/hooks/node_group
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // NodeGroupValidator handles validation for NodeGroup resources.
 // It has access to cluster state via Client.
 type NodeGroupValidator struct {
 	Client  client.Client
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 // NodeGroupDefaulter handles defaulting for NodeGroup resources.
 type NodeGroupDefaulter struct {
-	decoder *admission.Decoder
+	decoder admission.Decoder
 }
 
 // SetupWithManager registers the webhooks with the manager.
@@ -83,10 +78,6 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	return nil
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Validating Webhook Handler
-// ═══════════════════════════════════════════════════════════════════════════════
-
 // Handle implements admission.Handler for validation.
 func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
 	webhookLog.Info("validating nodegroup", "name", req.Name, "operation", req.Operation)
@@ -110,17 +101,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	var warnings []string
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 1: Name format and length
-	// ═══════════════════════════════════════════════════════════════════════════
 	if err := validateNodeGroupName(ng.Name); err != nil {
 		return admission.Denied(err.Error())
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 2: Cluster prefix + nodeGroup name <= 42 (for Cloud clusters)
-	// From bash: if [[ $(( 63 - clusterPrefixLen - 1 - nodeGroupNameLen - 21 )) -lt 0 ]]
-	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "CREATE" && clusterConfig.ClusterType == "Cloud" {
 		maxAllowed := 63 - clusterConfig.ClusterPrefixLen - 1 - 21
 		if len(ng.Name) > maxAllowed {
@@ -130,9 +114,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 3: nodeType is valid
-	// ═══════════════════════════════════════════════════════════════════════════
 	validNodeTypes := map[v1.NodeType]bool{
 		v1.NodeTypeCloudEphemeral: true,
 		v1.NodeTypeCloudPermanent: true,
@@ -145,41 +126,27 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 			ng.Spec.NodeType))
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 4: nodeType is immutable
-	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "UPDATE" && oldNG != nil {
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 5: maxPerZone >= minPerZone
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.CloudInstances != nil {
 		if ng.Spec.CloudInstances.MaxPerZone < ng.Spec.CloudInstances.MinPerZone {
 			return admission.Denied("it is forbidden to set maxPerZone lower than minPerZone for NodeGroup")
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 6: CloudEphemeral requires cloudInstances
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral && ng.Spec.CloudInstances == nil {
 		return admission.Denied("cloudInstances is required for nodeType CloudEphemeral")
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 7: Static nodes should not have cloudInstances
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.NodeType == v1.NodeTypeStatic && ng.Spec.CloudInstances != nil {
 		return admission.Denied("cloudInstances must not be set for nodeType Static")
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 8: classReference required for CloudEphemeral
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral && ng.Spec.CloudInstances != nil {
 		if ng.Spec.CloudInstances.ClassReference.Kind == "" {
 			return admission.Denied("cloudInstances.classReference.kind is required for CloudEphemeral")
@@ -189,9 +156,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 9: maxPods warning for IP exhaustion
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil {
 		maxPods := *ng.Spec.Kubelet.MaxPods
 		prefix := clusterConfig.PodSubnetNodeCIDRPrefix
@@ -205,9 +169,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 10: Check zones exist in provider
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.CloudInstances != nil && len(providerConfig.Zones) > 0 && len(ng.Spec.CloudInstances.Zones) > 0 {
 		allowedZones := make(map[string]bool)
 		for _, z := range providerConfig.Zones {
@@ -220,16 +181,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 11: Docker CRI is forbidden
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeDocker {
 		return admission.Denied("it is forbidden to set cri type to Docker")
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 12: CRI settings must match type
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.CRI != nil {
 		if ng.Spec.CRI.Containerd != nil && ng.Spec.CRI.Type != "" && ng.Spec.CRI.Type != v1.CRITypeContainerd {
 			return admission.Denied("it is forbidden to set .spec.cri.containerd without .spec.cri.type=\"Containerd\"")
@@ -242,10 +197,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 13: CRI change on master with < 3 endpoints (warning only)
-	// ═══════════════════════════════════════════════════════════════════════════
-	if req.Operation == "UPDATE" && ng.Name == "master" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
 		newCRIType := getCRIType(ng, clusterConfig.DefaultCRI)
 		if oldCRIType != newCRIType {
@@ -257,9 +208,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 14: Taints must be in customTolerationKeys
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.NodeTemplate != nil && len(ng.Spec.NodeTemplate.Taints) > 0 {
 		customKeys := w.loadCustomTolerationKeys(ctx)
 		standardTaints := map[string]bool{
@@ -291,9 +239,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 15: RollingUpdate only for CloudEphemeral
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode == v1.DisruptionApprovalModeRollingUpdate {
 		if ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 			return admission.Denied(
@@ -301,9 +246,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 16: No duplicate taints (same key+effect)
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.NodeTemplate != nil && len(ng.Spec.NodeTemplate.Taints) > 0 {
 		seen := make(map[string]bool)
 		for _, taint := range ng.Spec.NodeTemplate.Taints {
@@ -315,9 +257,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
-	// Validation 17: topologyManager requires resourceReservation
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.TopologyManager != nil {
 		if ng.Spec.Kubelet.TopologyManager.Enabled != nil && *ng.Spec.Kubelet.TopologyManager.Enabled {
 			if ng.Spec.Kubelet.ResourceReservation == nil ||
@@ -337,9 +276,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 18: CRI change blocked by nodes with custom containerd config
-	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "UPDATE" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, "")
 		newCRIType := getCRIType(ng, "")
@@ -353,9 +290,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 19: ContainerdV2 blocked by unsupported nodes
-	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "UPDATE" {
 		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerdV2 {
 			unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
@@ -368,9 +303,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 20: memorySwap requires cgroup v2
-	// ═══════════════════════════════════════════════════════════════════════════
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
 			if ng.Spec.Kubelet.MemorySwap.SwapBehavior == "LimitedSwap" {
@@ -384,9 +317,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// ═══════════════════════════════════════════════════════════════════════════
 	// Validation 21: Disruption windows format
-	// ═══════════════════════════════════════════════════════════════════════════
 	if ng.Spec.Disruptions != nil {
 		if err := validateDisruptionWindows(ng.Spec.Disruptions); err != nil {
 			return admission.Denied(err.Error())
@@ -399,10 +330,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 	return admission.Allowed("")
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Mutating Webhook Handler (Defaulter)
-// ═══════════════════════════════════════════════════════════════════════════════
 
 // Handle implements admission.Handler for defaulting.
 func (d *NodeGroupDefaulter) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -441,10 +368,6 @@ func (d *NodeGroupDefaulter) setDefaults(ng *v1.NodeGroup) {
 		ng.Spec.CRI.Type = v1.CRITypeContainerd
 	}
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Helper types and functions
-// ═══════════════════════════════════════════════════════════════════════════════
 
 // ClusterConfig holds relevant fields from d8-cluster-configuration Secret
 type ClusterConfig struct {
@@ -519,10 +442,6 @@ func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	}
 	return "Containerd"
 }
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Cluster state loading functions
-// ═══════════════════════════════════════════════════════════════════════════════
 
 func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) *ClusterConfig {
 	config := &ClusterConfig{PodSubnetNodeCIDRPrefix: 24}
