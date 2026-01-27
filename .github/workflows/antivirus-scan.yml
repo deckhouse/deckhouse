@@ -149,11 +149,7 @@ jobs:
           jwtGithubAudience: github-access-aud
           secrets: |
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_STAGE_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_STAGE_REGISTRY_PASSWORD ;
 
       # </template: import_secrets>
       - name: Run drweb scan
@@ -173,24 +169,17 @@ jobs:
             SCAN_ID+="-${edition}"
             registry_image_path="/deckhouse/${edition}"
             registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
             echo "registry stage"
             registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
-            registry_user=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_USER }}
-            registry_password=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_PASSWORD }}
           else
             echo "registry dev"
             registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           fi
           CONTAINER_NAME=registry_drweb
           SCAN_ID+="-$CONTAINER_NAME"
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
           docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
 
           mkdir -p scans/${SCAN_ID}
@@ -258,11 +247,7 @@ jobs:
           jwtGithubAudience: github-access-aud
           secrets: |
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_STAGE_REGISTRY_USER ;
-            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_STAGE_REGISTRY_PASSWORD ;
 
       # </template: import_secrets>
       - name: Run kaspersky scan
@@ -282,24 +267,17 @@ jobs:
             SCAN_ID+="-${edition}"
             registry_image_path="/deckhouse/${edition}"
             registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
-            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
-            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
           elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
             echo "registry stage"
             registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
-            registry_user=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_USER }}
-            registry_password=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_PASSWORD }}
           else
             echo "registry dev"
             registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
-            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
-            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
           fi
           CONTAINER_NAME=registry_kaspersky
           SCAN_ID+="-$CONTAINER_NAME"
           echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
           echo $CONTAINER_NAME
-          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
           docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
 
           mkdir -p scans/${SCAN_ID}
