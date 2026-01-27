@@ -147,6 +147,8 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return fmt.Errorf("failed to handle discovery data storage classes: %v", err)
 	}
 
+	handleDiscoveryDataLoadBalancerClasses(input, discoveryData.LoadBalancerClassList)
+
 	return nil
 }
 
@@ -233,12 +235,91 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageC
 	input.Values.Set("cloudProviderDvp.internal.storageClasses", storageClasses)
 }
 
+func handleDiscoveryDataLoadBalancerClasses(
+	input *go_hook.HookInput,
+	dvpLoadBalancerClassList []cloudDataV1.DVPLoadBalancerClass,
+) {
+	dvpLoadBalancerClass := make(map[string]cloudDataV1.DVPLoadBalancerClass, len(dvpLoadBalancerClassList))
+
+	for _, lbc := range dvpLoadBalancerClassList {
+		if !lbc.IsEnabled {
+			continue
+		}
+		dvpLoadBalancerClass[lbc.Name] = lbc
+	}
+
+	lbcExcludes, ok := input.Values.GetOk("cloudProviderDvp.loadBalancerClass.exclude")
+	if ok {
+		for _, esc := range lbcExcludes.Array() {
+			rg := regexp.MustCompile("^(" + esc.String() + ")$")
+			for class := range dvpLoadBalancerClass {
+				if rg.MatchString(class) {
+					delete(dvpLoadBalancerClass, class)
+				}
+			}
+		}
+	}
+
+	loadBalancerClasses := make([]metalLoadBalancerClass, 0, len(dvpLoadBalancerClass))
+	for _, lbc := range dvpLoadBalancerClass {
+		mlbc := metalLoadBalancerClass{
+			Name:        lbc.Name,
+			AddressPool: lbc.AddressPool,
+			Interfaces:  lbc.Interfaces,
+			IsDefault:   lbc.IsDefault,
+		}
+		loadBalancerClasses = append(loadBalancerClasses, mlbc)
+	}
+
+	sort.SliceStable(loadBalancerClasses, func(i, j int) bool {
+		return loadBalancerClasses[i].Name < loadBalancerClasses[j].Name
+	})
+
+	ensureSingleDefaultLoadBalancerClass(loadBalancerClasses)
+
+	input.Logger.Info("Found DVP load balancer classes: %v", loadBalancerClasses)
+
+	setLoadBalancerClassesValues(input, loadBalancerClasses)
+}
+
+func setLoadBalancerClassesValues(input *go_hook.HookInput, loadBalancerClasses []metalLoadBalancerClass) {
+	input.Values.Set("cloudProviderDvp.internal.loadBalancerClasses", loadBalancerClasses)
+}
+
+func ensureSingleDefaultLoadBalancerClass(classes []metalLoadBalancerClass) {
+	if len(classes) == 0 {
+		return
+	}
+
+	defaultClassIndex := -1
+	for i := range classes {
+		if classes[i].IsDefault {
+			if defaultClassIndex == -1 {
+				defaultClassIndex = i
+			} else {
+				classes[i].IsDefault = false
+			}
+		}
+	}
+
+	if defaultClassIndex == -1 {
+		classes[0].IsDefault = true
+	}
+}
+
 type storageClass struct {
 	Name                 string `json:"name"`
 	DVPStorageClass      string `json:"dvpStorageClass"`
 	VolumeBindingMode    string `json:"volumeBindingMode"`
 	ReclaimPolicy        string `json:"reclaimPolicy"`
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
+}
+
+type metalLoadBalancerClass struct {
+	Name        string   `json:"name"`
+	AddressPool []string `json:"addressPool"`
+	Interfaces  []string `json:"interfaces"`
+	IsDefault   bool     `json:"isDefault"`
 }
 
 func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {

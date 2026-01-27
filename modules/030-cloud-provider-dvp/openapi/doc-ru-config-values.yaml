@@ -1,1 +1,10 @@
 properties:
+  loadBalancerClass:
+    description: |
+      Настройки фильтрации LoadBalancerClass ресурсов.
+    properties:
+      exclude:
+        description: |
+          Список регулярных выражений для исключения LoadBalancerClass ресурсов по имени.
+        x-examples:
+          - ["private-.*", "test-.*"]
