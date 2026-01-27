@@ -198,7 +198,7 @@ define iterateAllGoModules
 	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
 		echo ""; \
 		echo "============================================================"; \
-		echo "Running golangci-lint in $$dir"; \
+		echo "$(1) in $$dir"; \
 		echo "============================================================"; \
 		echo ""; \
 		(cd $$dir && $(2)) || FAILED=1; \
