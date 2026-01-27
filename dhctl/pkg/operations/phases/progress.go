@@ -280,22 +280,10 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts Prog
 }
 
 func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, _ ProgressOpts) Progress {
-	progress := Progress{
-		Operation:         p.Operation,
-		Phases:            p.Phases,
-		Progress:          max(float64(0), p.Progress),
-		CompletedPhase:    p.CompletedPhase,
-		CurrentPhase:      p.CurrentPhase,
-		NextPhase:         p.NextPhase,
-		CompletedSubPhase: completedSubPhase,
-		CurrentSubPhase:   "",
-		NextSubPhase:      "",
-	}
-
 	// return progress as is if there is no known phases for given operation
 	phases, ok := operationPhases(p.Operation)
 	if !ok {
-		return progress
+		return p
 	}
 
 	var currentPhase PhaseWithSubPhases
@@ -309,9 +297,20 @@ func calculateSubPhaseProgress(p Progress, completedSubPhase OperationSubPhase, 
 
 	completedSubPhaseIndex := slices.Index(currentPhase.SubPhases, completedSubPhase)
 	if completedSubPhaseIndex == -1 {
-		return progress
+		// return progress as is if there is no known completedSubPhase for given operation
+		return p
 	}
 	currentSubPhaseIndex := completedSubPhaseIndex + 1
+
+	progress := Progress{
+		Operation:         p.Operation,
+		Phases:            p.Phases,
+		Progress:          max(float64(0), p.Progress),
+		CompletedPhase:    p.CompletedPhase,
+		CurrentPhase:      p.CurrentPhase,
+		NextPhase:         p.NextPhase,
+		CompletedSubPhase: completedSubPhase,
+	}
 
 	progress.CurrentSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex)
 	progress.NextSubPhase = nOrEmpty(currentPhase.SubPhases, currentSubPhaseIndex+1)

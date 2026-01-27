@@ -275,6 +275,7 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		TmpDir:                s.params.TmpDir,
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
+		Embedded:              true,
 	})
 
 	detacher := detach.NewDetacher(checker, sshClient, &detach.Params{

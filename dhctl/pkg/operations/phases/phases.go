@@ -88,6 +88,7 @@ const (
 	CommanderAttachCheckPhase   OperationPhase = "Check"
 )
 
+// commander detach phases
 const (
 	CommanderDetachCheckPhase  OperationPhase = "Check"
 	CommanderDetachDetachPhase OperationPhase = "Detach"
@@ -153,13 +154,25 @@ func CommanderAttachPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
 		{Phase: CommanderAttachScanPhase},
 		{Phase: CommanderAttachCapturePhase},
-		{Phase: CommanderAttachCheckPhase},
+		{
+			Phase: CommanderAttachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
 	}
 }
 
 func CommanderDetachPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: CommanderDetachCheckPhase},
+		{
+			Phase: CommanderDetachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
 		{Phase: CommanderDetachDetachPhase},
 	}
 }
