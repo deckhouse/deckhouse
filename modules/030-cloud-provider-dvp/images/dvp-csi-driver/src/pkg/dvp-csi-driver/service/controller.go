@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	dvpapi "dvp-common/api"
+
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -283,15 +284,15 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	if _, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname); err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
 			klog.Infof(
-				"VM %v not found in parent DVP cluster, assuming disk %v is already detached",
+				"VM %v not found in parent DVP cluster, will try to cleanup disk %v attachment anyway",
 				vmHostname, diskName,
 			)
-			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		} else {
+			return nil, fmt.Errorf(
+				"error from parent DVP cluster while finding VM: %v: %v",
+				vmHostname, err,
+			)
 		}
-		return nil, fmt.Errorf(
-			"error from parent DVP cluster while finding VM: %v: %v",
-			vmHostname, err,
-		)
 	}
 
 	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
@@ -316,6 +317,14 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	}
 
 	if err := c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname); err != nil {
+		if errors.Is(err, dvpapi.ErrNotFound) {
+			klog.Infof(
+				"disk attachment %v for VM %v already detached (not found), OK",
+				diskName, vmHostname,
+			)
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
+
 		msg := fmt.Errorf(
 			"error from parent DVP cluster while removing disk %v from VM %v: %v",
 			diskName, vmHostname, err,
