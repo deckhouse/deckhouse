@@ -136,7 +136,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == ReconcileTriggerDowngradeK8s)
 	if err != nil {
-		if errors.Is(err, &common.ReconcileTolerantError{}) {
+		if errors.Is(err, &common.ReconcileTolerantError{}) { // TODO: common.ApiServerConnectivityError
 			klog.Info("Tolerant error encountered while getting cluster state, will requeue", err)
 			return reconcile.Result{RequeueAfter: requeueInterval}, nil
 		}

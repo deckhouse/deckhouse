@@ -26,8 +26,9 @@ data:
 metadata:
   annotations:
     cause: init
-    lastReconcilationTime: "2026-01-27T17:51:29+03:00"
+    lastReconcilationTime: "2026-01-27T18:43:02+03:00"
   labels:
     heritage: deckhouse
+    k8s-version: v1.31
   name: d8-cluster-kubernetes
   namespace: kube-system

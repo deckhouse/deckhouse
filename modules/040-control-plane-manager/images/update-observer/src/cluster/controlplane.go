@@ -21,7 +21,6 @@ import (
 	"update-observer/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
 )
 
 type ControlPlaneState struct {
@@ -87,8 +86,8 @@ func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState
 		}
 
 		component := &ControlPlaneComponentState{
-			Version:   version,
-			PodStatus: pod.Status,
+			Version: version,
+			Pod:     pod,
 		}
 
 		nodeState.ComponentsState[componentLabel] = component
@@ -105,14 +104,10 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 		var hasComponentUpdating, hasComponentFailed bool
 
 		desiredCount++
-		for component, componentState := range nodeState.ComponentsState {
+		for _, componentState := range nodeState.ComponentsState {
 			desiredComponentCount++
 
 			if !componentState.isRunningAndReady() {
-				klog.Warningf("Insufficient component state: \n\tName: %s\n\tPodPhase: %s",
-					component,
-					componentState.PodStatus.Phase,
-				)
 				hasComponentFailed = true
 				continue
 			}

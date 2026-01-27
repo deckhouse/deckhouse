@@ -35,8 +35,8 @@ const (
 )
 
 type ControlPlaneComponentState struct {
-	Version   string
-	PodStatus corev1.PodStatus
+	Version string
+	Pod     corev1.Pod
 }
 
 func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
@@ -44,11 +44,14 @@ func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
 }
 
 func (s *ControlPlaneComponentState) isRunningAndReady() bool {
-	if s.PodStatus.Phase != corev1.PodRunning {
+	if s.Pod.Status.Phase != corev1.PodRunning {
+		klog.Warningf("Insufficient component state: \n\tName: %s\n\tPodPhase: %s",
+			s.Pod.Name,
+			s.Pod.Status.Phase)
 		return false
 	}
 
-	for _, containerStatus := range s.PodStatus.ContainerStatuses {
+	for _, containerStatus := range s.Pod.Status.ContainerStatuses {
 		if containerStatus.State.Running == nil || !containerStatus.Ready {
 			klog.Warningf("Insufficient container state: \n\tName: %s\n\tRunning: %t\n\tReady: %t",
 				containerStatus.Name,
