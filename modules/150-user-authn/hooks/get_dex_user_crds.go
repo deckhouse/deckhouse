@@ -160,6 +160,15 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 	users := make([]DexUserInternalValues, 0, len(input.Snapshots.Get("users")))
 	mapOfUsersToGroups := map[string]map[string]bool{}
 
+	// Build a username -> Password map once.
+	userNameToPassword := make(map[string]Password)
+	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
+		if err != nil {
+			return fmt.Errorf("cannot iterate over 'passwords' snapshot: %v", err)
+		}
+		userNameToPassword[password.Username] = password
+	}
+
 	groupsSnap := input.Snapshots.Get("groups")
 	for group, err := range sdkobjectpatch.SnapshotIter[DexGroup](groupsSnap) {
 		if err != nil {
@@ -177,15 +186,6 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("cannot convert user to dex user: cannot iterate over 'users' snapshot: %v", err)
 		}
 
-		userNameToPassword := make(map[string]Password)
-		for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
-			if err != nil {
-				return fmt.Errorf("cannot convert user to password: cannot iterate over 'passwords' snapshot: %v", err)
-			}
-
-			userNameToPassword[password.Username] = password
-		}
-
 		var groups []string
 		for g := range mapOfUsersToGroups[dexUser.Name] {
 			groups = append(groups, g)
@@ -195,6 +195,19 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		dexUser.Spec.Groups = groups
 
 		dexUser.Spec.UserID = dexUser.Name
+
+		// IMPORTANT:
+		// Dex updates Password objects when a user changes password in the UI.
+		// Deckhouse renders Password objects from dexUsersCRDs values on every reconcile.
+		// If we always take the hash from User.spec.password, we may overwrite the real updated password
+		// back to the old one (e.g. after logout/login).
+		//
+		// To keep password changes persistent, prefer the current Password.hash as the render source
+		// when a Password object already exists for the user. User.spec.password is used only for
+		// the initial Password creation.
+		if p, ok := userNameToPassword[dexUser.Name]; ok && p.Hash != "" {
+			dexUser.Spec.Password = p.Hash
+		}
 
 		var expireAt string
 
