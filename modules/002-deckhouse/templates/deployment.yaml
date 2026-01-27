@@ -77,9 +77,6 @@ spec:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
         kubectl.kubernetes.io/default-container: deckhouse
-{{- if .Values.deckhouse.internal.chrootMode }}
-        container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
-{{- end }}
     spec:
       affinity:
         podAntiAffinity:
