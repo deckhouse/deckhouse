@@ -324,7 +324,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 
 		groups := make([]string, 0, len(mk.APIGroups))
 		resources := make([]string, 0, len(mk.Kinds))
-		operations := make([]string, 0)
+		operations := make([]string, 0, len(uniqOperations))
 
 		for k := range uniqGroups {
 			groups = append(groups, k)

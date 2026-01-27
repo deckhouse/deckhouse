@@ -82,9 +82,7 @@ func NewCommandStartPermissionBrowserServer(defaults *PermissionBrowserServerOpt
 
 // Validate validates PermissionBrowserServerOptions
 func (o PermissionBrowserServerOptions) Validate(args []string) error {
-	errors := make([]error, 0)
-	errors = append(errors, o.RecommendedOptions.Validate()...)
-	return utilerrors.NewAggregate(errors)
+	return utilerrors.NewAggregate(o.RecommendedOptions.Validate())
 }
 
 // Complete fills in fields required to have valid data and applies defaults.
@@ -165,5 +163,5 @@ func (o PermissionBrowserServerOptions) RunPermissionBrowserServer(stopCh <-chan
 		cancel()
 	}()
 
-	return server.GenericAPIServer.PrepareRun().Run(ctx.Done())
+	return server.GenericAPIServer.PrepareRun().RunWithContext(ctx)
 }
