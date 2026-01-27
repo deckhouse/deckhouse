@@ -5,6 +5,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromImage: common/src-artifact
+fromCacheVersion: "2026-01-28"
 final: false
 git:
 - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
@@ -92,6 +93,7 @@ shell:
 # dumb-init
 image: {{ $.ModuleName }}/{{ $.ImageName }}-dumb-init-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -109,6 +111,7 @@ shell:
 # luarocks
 image: {{ $.ModuleName }}/{{ $.ImageName }}-lua-rocks-artifact
 fromImage: common/alt-p11-artifact
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -133,6 +136,7 @@ shell:
 # opentelemetry
 image: {{ $.ModuleName }}/{{ $.ImageName }}-opentelemetry-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -156,6 +160,7 @@ shell:
 # Controller artifact
 image: {{ $.ModuleName }}/{{ $.ImageName }}-controller-artifact
 fromImage: builder/golang-alpine
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -189,6 +194,7 @@ shell:
 # NGINX PCRE
 image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -221,6 +227,7 @@ shell:
 # chroot
 image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
 from: {{ $.Images.BASE_ALT_DEV }}
+fromCacheVersion: "2026-01-28"
 final: false
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-nginx-artifact
@@ -381,6 +388,7 @@ shell:
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/alt-p11
+fromCacheVersion: "2026-01-28"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-chroot-artifact
   add: /chroot

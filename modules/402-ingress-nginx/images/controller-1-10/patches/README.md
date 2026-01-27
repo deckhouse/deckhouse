@@ -113,7 +113,7 @@ Disabling log messages such as "Error obtaining Endpoints for Service...".
 
 ### 019-maxmind-alerts.patch
 
-The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
+The metric `geoip_download_error` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
 
 ### 020-fix-sorting.patch
 

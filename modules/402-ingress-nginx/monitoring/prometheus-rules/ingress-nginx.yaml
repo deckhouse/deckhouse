@@ -229,7 +229,7 @@
 
 
   - alert: GeoIPDownloadErrorDetected
-    expr: sum by (controller, reason) (max_over_time(geoip_errors_total{type="download"}[1m])) > 0
+    expr: max_over_time(geoip_download_error{type="download"}[1m]) == 1
     for: 1m
     labels:
       severity_level: "4"
@@ -246,6 +246,7 @@
         **Type:** `{{ $labels.type }}`
 
         If this issue persists, investigate network connectivity or database availability.
+
 
   - alert: GeoIPDownloadErrorDetectedFromMaxMind
     expr: sum by (job, namespace, pod, reason, type) (max_over_time(geoip_errors_download_total{type="download"}[1m])) > 0
