@@ -32,7 +32,7 @@ env:
 {!{ tmpl.Exec "werf_envs" | strings.Indent 2 }!}
 
 concurrency:
-  group: svace-analyze
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
