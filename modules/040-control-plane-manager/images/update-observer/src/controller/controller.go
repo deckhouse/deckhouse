@@ -51,10 +51,10 @@ const (
 type ReconcileTrigger string
 
 const (
-	UpgradeK8s   ReconcileTrigger = "upgradeK8s"
-	DowngradeK8s ReconcileTrigger = "downgradeK8s"
-	Init         ReconcileTrigger = "init"
-	Cron         ReconcileTrigger = "cron"
+	ReconcileTriggerInit         ReconcileTrigger = "init"
+	ReconcileTriggerUpgradeK8s   ReconcileTrigger = "upgradeK8s"
+	ReconcileTriggerDowngradeK8s ReconcileTrigger = "downgradeK8s"
+	ReconcileTriggerIdle         ReconcileTrigger = "idle"
 )
 
 type reconciler struct {
@@ -134,7 +134,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	reconcileTrigger := determineReconcileTrigger(configMap, clusterCfg)
 
-	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == DowngradeK8s)
+	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == ReconcileTriggerDowngradeK8s)
 	if err != nil {
 		if errors.Is(err, &common.ReconcileTolerantError{}) {
 			klog.Info("Tolerant error encountered while getting cluster state, will requeue", err)
@@ -165,17 +165,17 @@ func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
 	if configMap.ResourceVersion == "" || !exists {
-		return Init
+		return ReconcileTriggerInit
 	}
 
 	switch semver.Compare(previousVersion, clusterCfg.DesiredVersion) {
 	case 1:
-		return DowngradeK8s
+		return ReconcileTriggerDowngradeK8s
 	case 0:
-		return Cron
+		return ReconcileTriggerIdle
 	case -1:
-		return UpgradeK8s
+		return ReconcileTriggerUpgradeK8s
 	}
 
-	return Init
+	return ReconcileTriggerInit
 }

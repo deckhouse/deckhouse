@@ -44,15 +44,17 @@ func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
 }
 
 func (s *ControlPlaneComponentState) isRunningAndReady() bool {
+	if s.PodStatus.Phase != corev1.PodRunning {
+		return false
+	}
+
 	for _, containerStatus := range s.PodStatus.ContainerStatuses {
 		if containerStatus.State.Running == nil || !containerStatus.Ready {
-			klog.Infof(
-				"container: %s running - %t, ready - '%t' | pod: phase - %s, reason - %s",
+			klog.Warningf("Insufficient container state: \n\tName: %s\n\tRunning: %t\n\tReady: %t",
 				containerStatus.Name,
 				containerStatus.State.Running != nil,
 				containerStatus.Ready,
-				string(s.PodStatus.Phase),
-				s.PodStatus.Reason)
+			)
 			return false
 		}
 	}

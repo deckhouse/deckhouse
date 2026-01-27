@@ -72,7 +72,7 @@ type ControllerTestSuite struct {
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 	suite.Run("When cluster is up to date", func() {
-		suite.setupController(suite.fetchTestFileData("up-to-date.yaml"))
+		suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
 
 		_, err := suite.controller.Reconcile(
 			suite.ctx,
@@ -82,7 +82,7 @@ func (suite *ControllerTestSuite) TestConfigMapIsValid() {
 		require.NoError(suite.T(), err)
 	})
 	suite.Run("When control plane component was failed", func() {
-		suite.setupController(suite.fetchTestFileData("component-failed.yaml"))
+		suite.setupController(suite.fetchTestFileData("init-component-failed.yaml"))
 
 		_, err := suite.controller.Reconcile(
 			suite.ctx,

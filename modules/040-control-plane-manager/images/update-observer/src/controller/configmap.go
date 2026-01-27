@@ -42,7 +42,7 @@ type Spec struct {
 type Status struct {
 	CurrentVersion string             `yaml:"currentVersion"`
 	Phase          string             `yaml:"phase"`
-	Progress       string             `yaml:"progress"`
+	Progress       string             `yaml:"progress,omitempty"`
 	ControlPlane   []ControlPlaneNode `yaml:"controlPlane"`
 	Nodes          Nodes              `yaml:"nodes"`
 }
@@ -72,8 +72,9 @@ func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error
 	if err != nil {
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      common.ConfigMapName,
-				Namespace: common.KubeSystemNamespace,
+				Name:        common.ConfigMapName,
+				Namespace:   common.KubeSystemNamespace,
+				Annotations: map[string]string{},
 				Labels: map[string]string{
 					common.HeritageLabelKey: common.DeckhouseLabel,
 				},
@@ -104,20 +105,26 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.Data["status"] = string(statusBytes)
 	}
 
+	annotations := configMap.GetAnnotations()
+	labels := configMap.GetLabels()
+	now := time.Now().Format(time.RFC3339)
+
 	switch reconcileTrigger {
-	case Init:
-		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
-	case UpgradeK8s:
+	case ReconcileTriggerInit:
+	case ReconcileTriggerUpgradeK8s:
 		fallthrough
-	case DowngradeK8s:
+	case ReconcileTriggerDowngradeK8s:
 		if clusterState.Phase == cluster.ClusterUpToDate {
-			configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+			annotations[common.LastUpToDateTime] = now
+			labels[common.K8sVersionLabelKey] = clusterState.CurrentVersion
 		}
-	case Cron:
-		configMap.SetLabels(map[string]string{common.HeritageLabelKey: common.DeckhouseLabel, common.K8sVersionLabelKey: clusterState.CurrentVersion})
+	case ReconcileTriggerIdle:
 	}
 
-	configMap.SetAnnotations(map[string]string{common.SeenLabelKey: time.Now().Format(time.RFC3339), common.CauseLabelKey: string(reconcileTrigger)})
+	annotations[common.LastReconcilationTime] = now
+	annotations[common.CauseLabelKey] = string(reconcileTrigger)
+	configMap.SetAnnotations(annotations)
+	configMap.SetLabels(labels)
 
 	return configMap, nil
 }
@@ -150,6 +157,13 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		return controlPlanes
 	}
 
+	renderProgress := func(progress string) string {
+		if progress == "100%" {
+			return ""
+		}
+		return progress
+	}
+
 	return ConfigMapData{
 		Spec: &Spec{
 			DesiredVersion: clusterState.Spec.DesiredVersion,
@@ -158,7 +172,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		Status: &Status{
 			CurrentVersion: clusterState.CurrentVersion,
 			Phase:          string(clusterState.Status.Phase),
-			Progress:       clusterState.Progress,
+			Progress:       renderProgress(clusterState.Progress),
 			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.NodesState),
 			Nodes: Nodes{
 				DesiredCount:  clusterState.NodesState.DesiredCount,

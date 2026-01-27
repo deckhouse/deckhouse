@@ -6,15 +6,14 @@ data:
   status: |
     currentVersion: v1.31
     phase: UpToDate
-    progress: 100%
     controlPlane:
-    - name: master-1
+    - name: master-2
       phase: UpToDate
       components:
         kube-apiserver: v1.31
         kube-controller-manager: v1.31
         kube-scheduler: v1.31
-    - name: master-2
+    - name: master-1
       phase: UpToDate
       components:
         kube-apiserver: v1.31
@@ -24,8 +23,10 @@ data:
       desiredCount: 3
       upToDateCount: 3
 metadata:
+  annotations:
+    cause: init
+    lastReconcilationTime: "2026-01-27T17:51:24+03:00"
   labels:
     heritage: deckhouse
-    k8s-version: v1.31
   name: d8-cluster-kubernetes
   namespace: kube-system
