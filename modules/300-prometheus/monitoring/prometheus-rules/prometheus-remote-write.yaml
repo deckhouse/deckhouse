@@ -2,7 +2,11 @@
   rules:
   - alert: PrometheusRemoteStorageUnavailable
     expr: |
-      group by(namespace, pod, service, url) (increase(prometheus_remote_storage_samples_failed_total{job="prometheus"}[1h]) > 0)
+      group by(namespace, pod, service, url) (
+        prometheus_remote_storage_samples_pending{job="prometheus"} > 0
+          or
+        increase(prometheus_remote_storage_samples_failed_total{job="prometheus"}[1h]) > 0
+      )
     labels:
       tier: cluster
       severity_level: "7"
