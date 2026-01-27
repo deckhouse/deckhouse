@@ -1,14 +1,24 @@
 {{- define "get_oss_version_by_id" -}}
   {{- $id := index . 0 -}}
-  {{- $context := index . 1 -}}
-  {{- $oss_path := $context.OssYamlPath  -}}
+  {{- $ctx := index . 1 -}}
   {{- $version := "" -}}
-  
-  {{- $raw := printf "data:\n%s" ($context.Files.Get $oss_path) | fromYaml -}}
+  {{- $found := false -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
   {{- range $raw.data -}}
     {{- if eq .id $id -}}
       {{- $version = .version -}}
+      {{- $found = true -}}
     {{- end -}}
   {{- end -}}
+
+  {{- if not $found -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
   {{- $version -}}
 {{- end -}}
