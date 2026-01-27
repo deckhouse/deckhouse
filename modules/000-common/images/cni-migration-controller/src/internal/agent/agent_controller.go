@@ -97,6 +97,9 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
+	// Create a patch helper
+	originalNodeMigration := nodeMigration.DeepCopy()
+
 	// Fetch parent CNIMigration to know the TargetCNI and current state
 	cniMigration := &cnimigrationv1alpha1.CNIMigration{}
 	if err := r.Get(ctx, types.NamespacedName{Name: r.MigrationName}, cniMigration); err != nil {
@@ -109,7 +112,7 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	if !r.hasParentCondition(cniMigration, cnimigrationv1alpha1.ConditionCurrentCNIDisabled) {
 		if nodeMigration.Status.Phase != cnimigrationv1alpha1.NodePhasePreparing {
 			nodeMigration.Status.Phase = cnimigrationv1alpha1.NodePhasePreparing
-			if err := r.Status().Update(ctx, nodeMigration); err != nil {
+			if err := r.Status().Patch(ctx, nodeMigration, client.MergeFrom(originalNodeMigration)); err != nil {
 				return ctrl.Result{}, err
 			}
 			// Requeue after status update
@@ -145,7 +148,7 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if r.hasParentCondition(cniMigration, cnimigrationv1alpha1.ConditionCurrentCNIDisabled) {
 			if nodeMigration.Status.Phase != cnimigrationv1alpha1.NodePhaseCleaning {
 				nodeMigration.Status.Phase = cnimigrationv1alpha1.NodePhaseCleaning
-				if err := r.Status().Update(ctx, nodeMigration); err != nil {
+				if err := r.Status().Patch(ctx, nodeMigration, client.MergeFrom(originalNodeMigration)); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{Requeue: true}, nil
@@ -184,7 +187,7 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		if !r.hasNodeCondition(nodeMigration, cnimigrationv1alpha1.NodeConditionPodsRestarted) {
 			if nodeMigration.Status.Phase != cnimigrationv1alpha1.NodePhaseRestarting {
 				nodeMigration.Status.Phase = cnimigrationv1alpha1.NodePhaseRestarting
-				if err := r.Status().Update(ctx, nodeMigration); err != nil {
+				if err := r.Status().Patch(ctx, nodeMigration, client.MergeFrom(originalNodeMigration)); err != nil {
 					return ctrl.Result{}, err
 				}
 				return ctrl.Result{Requeue: true}, nil
@@ -232,7 +235,7 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 			// Final phase: Completed
 			nodeMigration.Status.Phase = cnimigrationv1alpha1.NodePhaseCompleted
-			if err := r.Status().Update(ctx, nodeMigration); err != nil {
+			if err := r.Status().Patch(ctx, nodeMigration, client.MergeFrom(originalNodeMigration)); err != nil {
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil
@@ -302,6 +305,9 @@ func (r *CNIAgentReconciler) setNodeCondition(
 	status metav1.ConditionStatus,
 	reason, message string,
 ) error {
+	// Create a local snapshot for patching
+	original := m.DeepCopy()
+
 	newCond := metav1.Condition{
 		Type:               condType,
 		Status:             status,
@@ -328,7 +334,7 @@ func (r *CNIAgentReconciler) setNodeCondition(
 		m.Status.Conditions = append(m.Status.Conditions, newCond)
 	}
 
-	return r.Status().Update(ctx, m)
+	return r.Status().Patch(ctx, m, client.MergeFrom(original))
 }
 
 // SetupWithManager sets up the controller with the Manager.

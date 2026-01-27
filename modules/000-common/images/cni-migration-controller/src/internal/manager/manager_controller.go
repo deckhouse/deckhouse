@@ -70,6 +70,9 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
+	// Create a patch helper
+	originalCNIMigration := cniMigration.DeepCopy()
+
 	// Detect Current CNI if not set
 	if cniMigration.Status.CurrentCNI == "" {
 		currentCNI, err := r.detectCurrentCNI(ctx)
@@ -84,7 +87,7 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			)
 		}
 		cniMigration.Status.CurrentCNI = currentCNI
-		if err := r.Status().Update(ctx, cniMigration); err != nil {
+		if err := r.Status().Patch(ctx, cniMigration, client.MergeFrom(originalCNIMigration)); err != nil {
 			return ctrl.Result{}, err
 		}
 		// Requeue to process with updated status
@@ -99,7 +102,7 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// If statistics changed, update status immediately to reflect progress/errors
 	if r.isNodeStatisticsChanged(oldStatus, &cniMigration.Status) {
-		if err := r.Status().Update(ctx, cniMigration); err != nil {
+		if err := r.Status().Patch(ctx, cniMigration, client.MergeFrom(originalCNIMigration)); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -168,7 +171,7 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		// Update Phase to current step
 		if cniMigration.Status.Phase != step.phase {
 			cniMigration.Status.Phase = step.phase
-			if err := r.Status().Update(ctx, cniMigration); err != nil {
+			if err := r.Status().Patch(ctx, cniMigration, client.MergeFrom(originalCNIMigration)); err != nil {
 				return ctrl.Result{}, err
 			}
 			// Requeue to process with new Phase
@@ -290,7 +293,16 @@ func (r *CNIMigrationReconciler) hasCondition(m *cnimigrationv1alpha1.CNIMigrati
 	return false
 }
 
-func (r *CNIMigrationReconciler) setCondition(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration, condType string, status metav1.ConditionStatus, reason, message string) error {
+func (r *CNIMigrationReconciler) setCondition(
+	ctx context.Context,
+	m *cnimigrationv1alpha1.CNIMigration,
+	condType string,
+	status metav1.ConditionStatus,
+	reason, message string,
+) error {
+	// Create a local snapshot for patching
+	original := m.DeepCopy()
+
 	newCond := metav1.Condition{
 		Type:               condType,
 		Status:             status,
@@ -319,7 +331,7 @@ func (r *CNIMigrationReconciler) setCondition(ctx context.Context, m *cnimigrati
 		m.Status.Conditions = append(m.Status.Conditions, newCond)
 	}
 
-	return r.Status().Update(ctx, m)
+	return r.Status().Patch(ctx, m, client.MergeFrom(original))
 }
 
 func (r *CNIMigrationReconciler) detectCurrentCNI(ctx context.Context) (string, error) {
