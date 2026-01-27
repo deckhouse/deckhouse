@@ -41,7 +41,7 @@ imageSpec:
     entrypoint: ["/usr/bin/etcd"]
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
@@ -60,7 +60,10 @@ shell:
     - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
     - cd server
     - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /etcd .`) | indent 8 }}
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o /etcd .` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - cd ..
     - cd etcdctl && go build -ldflags="-s -w" -o /etcdctl . && cd ..
     - cd etcdutl && go build -ldflags="-s -w" -o /etcdutl . && cd ..

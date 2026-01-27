@@ -45,6 +45,12 @@ Provider specific environment variables:
 
 \$LAYOUT_DVP_KUBECONFIGDATABASE64
 
+  zVirt:
+
+\$LAYOUT_ZVIRT_BASE_DOMAIN
+\$LAYOUT_ZVIRT_USERNAME
+\$LAYOUT_ZVIRT_PASSWORD
+
   GCP:
 
 \$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
@@ -255,6 +261,35 @@ function prepare_environment() {
       \"sshUser\": \"${ssh_user}\",
       \"sshBastionHost\": \"${bastion_host}\",
       \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
+  "zVirt")
+    ZVIRT_BASE_DOMAIN="${LAYOUT_ZVIRT_BASE_DOMAIN}"
+    ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
+    ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
+    ssh_user="altlinux"
+    bastion_host="31.184.210.185"
+    bastion_user="e2e-user"
+    bastion_port="8022"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"zVirtUsername\": \"${ZVIRT_USERNAME}\",
+      \"zVirtPassword\": \"${ZVIRT_PASSWORD}\",
+      \"zVirtBaseDomain\": \"${ZVIRT_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
       \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
       \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
     }"

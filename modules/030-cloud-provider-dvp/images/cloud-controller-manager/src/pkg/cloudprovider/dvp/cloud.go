@@ -92,9 +92,7 @@ func (c *Cloud) Initialize(
 		UpdateFunc: func(_, newObj any) {
 			c.onEndpointSliceEvent(newObj, serviceInformer.Lister(), nodeInformer.Lister())
 		},
-		DeleteFunc: func(obj any) {
-			c.onEndpointSliceEvent(obj, serviceInformer.Lister(), nodeInformer.Lister())
-		},
+		DeleteFunc: func(obj any) {},
 	})
 
 	go serviceInformer.Informer().Run(stop)
@@ -189,6 +187,12 @@ func (c *Cloud) onEndpointSliceEvent(
 	nodes, err := nodeLister.List(labels.Everything())
 	if err != nil || len(nodes) == 0 {
 		klog.V(4).InfoS("onEndpointSliceEvent: no nodes to process", "namespace", es.Namespace, "service", svc.Name, "err", err)
+		return
+	}
+
+	if svc.DeletionTimestamp != nil {
+		klog.V(3).InfoS("onEndpointSliceEvent: service is deleting, skip ensureLB",
+			"namespace", svc.Namespace, "service", svc.Name, "slice", es.Name)
 		return
 	}
 

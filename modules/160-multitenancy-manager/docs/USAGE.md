@@ -8,24 +8,24 @@ title: "The multitenancy-manager module: usage examples"
 The following project templates are included in the Deckhouse Kubernetes Platform:
 
 - `default` — a template that covers basic project use cases:
-  * resource limitation;
-  * network isolation;
-  * automatic alerts and log collection;
-  * choice of security profile;
-  * project administrators setup.
+  - resource limitation
+  - network isolation
+  - automatic alerts and log collection
+  - choice of security profile
+  - project administrators setup
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/default.yaml).
 
 - `secure` — includes all the capabilities of the `default` template and additional features:
-  * setting up permissible UID/GID for the project;
-  * audit rules for project users' access to the Linux kernel;
-  * scanning of launched container images for CVE presence.
+  - setting up permissible UID/GID for the project
+  - audit rules for project users' access to the Linux kernel
+  - scanning of launched container images for CVE presence
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure.yaml).
 
 - `secure-with-dedicated-nodes` — includes all the capabilities of the `secure` template and additional features:
-  * defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically;
-  * defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
+  - defining the node selector for all the pods in the project: if a pod is created, the node selector pod will be **substituted** with the project's node selector automatically.
+  - defining the default toleration for all the pods in the project: if a pod is created, the default toleration will be **added** to the pod automatically.
 
   Template description on [GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/templates/secure-with-dedicated-nodes.yaml).
 
@@ -38,7 +38,7 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
 ## Creating a project
 
 1. To create a project, create the [Project](cr.html#project) resource by specifying the name of the project template in [.spec.projectTemplateName](cr.html#project-v1alpha2-spec-projecttemplatename) field.
-2. In the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) field of the `Project` resource, specify the parameter values suitable for the `ProjectTemplate` [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
+1. In the [.spec.parameters](cr.html#project-v1alpha2-spec-parameters) field of the Project resource, specify the parameter values suitable for the ProjectTemplate [.spec.parametersSchema.openAPIV3Schema](cr.html#projecttemplate-v1alpha1-spec-parametersschema-openapiv3schema).
 
    Example of creating a project using the [Project](cr.html#project) resource from the `default` [ProjectTemplate](cr.html#projecttemplate):
 
@@ -67,7 +67,7 @@ d8 k get projecttemplates <PROJECT_TEMPLATE_NAME> -o jsonpath='{.spec.parameters
          name: k8s-admins
    ```
 
-3. To check the status of the project, execute the command:
+1. To check the status of the project, execute the command:
 
    ```shell
    d8 k get projects my-project
@@ -121,27 +121,28 @@ Note that changing the template may cause a resource conflict. If the template c
 Default templates cover basic project use cases and serve as a good example of template capabilities.
 
 To create your own template:
+
 1. Take one of the default templates as a basis, for example, `default`.
-2. Copy it to a separate file, for example, `my-project-template.yaml` using the command:
+1. Copy it to a separate file, for example, `my-project-template.yaml` using the command:
 
    ```shell
    d8 k get projecttemplates default -o yaml > my-project-template.yaml
    ```
 
-3. Edit the `my-project-template.yaml` file, make the necessary changes.
+1. Edit the `my-project-template.yaml` file, make the necessary changes.
 
    > It is necessary to change not only the template, but also the scheme of input parameters for it.
    >
    > Project templates support all [Helm templating functions](https://helm.sh/docs/chart_template_guide/function_list/).
 
-4. Change the template name in the `.metadata.name` field.
-5. Apply your new template with the command:
+1. Change the template name in the `.metadata.name` field.
+1. Apply your new template with the command:
 
    ```shell
    d8 k apply -f my-project-template.yaml
    ```
 
-6. Check the availability of the new template with the command:
+1. Check the availability of the new template with the command:
 
    ```shell
    d8 k get projecttemplates <NEW_TEMPLATE_NAME>
@@ -198,6 +199,7 @@ data:
 ```
 
 Resources with the label `projects.deckhouse.io/unmanaged`:
+
 - Will be created **only once** when the project is created;
 - **Will not be updated** with subsequent template changes or updates;
 - Will not be monitored in the project's status;
@@ -217,17 +219,19 @@ You can implement similar validation for resources with any label.
 
 Validation occurs for objects labeled `heritage: multitenancy-manager`.  
 The following components are used for this:
-1. `ValidatingAdmissionPolicy` — defines validation rules:
-   - Operations: `UPDATE` and `DELETE`
-   - Check: only operations on behalf of the controller's service account are allowed
-   - Applies to all resources and API groups
-2. `ValidatingAdmissionPolicyBinding`— defines which objects the validation applies to:
-   - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`
+
+1. `ValidatingAdmissionPolicy`: Defines validation rules:
+   - Operations: `UPDATE` and `DELETE`.
+   - Check: only operations on behalf of the controller's service account are allowed.
+   - Applies to all resources and API groups.
+1. `ValidatingAdmissionPolicyBinding`: Defines which objects the validation applies to:
+   - Uses `namespaceSelector` and `objectSelector` to select resources by the label `heritage: multitenancy-manager`.
 
 ### Creating your own validation
 
 To implement validation for resources with a different label (for example, `heritage: my-custom-label`):
-1. Create a file with `ValidatingAdmissionPolicy` and `ValidatingAdmissionPolicyBinding`:
+
+1. Create a file with the ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding resource manifests:
 
    ```yaml
    apiVersion: admissionregistration.k8s.io/v1
@@ -265,23 +269,24 @@ To implement validation for resources with a different label (for example, `heri
            heritage: my-custom-label
    ```
 
-2. Configure the validation parameters:
-   - **`policyName`** — unique policy name (must match in Policy and Binding)
-   - **`request.userInfo.username`** — the name of the service account allowed to change resources (replace with your service account)
-   - **`heritage: my-custom-label`** — the value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited
-   - **`failurePolicy: Fail`** — policy on validation failure:
-     - `Fail` — reject the request on validation failure
-     - `Ignore` — ignore validation errors
-   - **`validationActions`** — validation actions:
-     - `Deny` — deny unauthorized operations
-     - `Audit` — record operations in the audit log
-3. Apply the policy:
+1. Configure the validation parameters:
+
+   - `policyName`: Unique policy name (must match in Policy and Binding).
+   - `request.userInfo.username`: The name of the service account allowed to change resources (replace with your service account).
+   - `heritage: my-custom-label`: The value of the `heritage` label for your resources (replace with your value). The use of the values `multitenancy-manager`, `deckhouse` is prohibited.
+   - `failurePolicy: Fail`: Policy on validation failure.
+     - `Fail`: Reject the request on validation failure.
+     - `Ignore`: Ignore validation errors.
+   - `validationActions`: Validation actions:
+     - `Deny`: Deny unauthorized operations.
+     - `Audit`: Record operations in the audit log.
+1. Apply the policy:
 
    ```shell
-   kubectl apply -f my-validation-policy.yaml
+   d8 k apply -f my-validation-policy.yaml
    ```
 
-4. Ensure your resources have the corresponding `heritage` label:
+1. Ensure your resources have the corresponding `heritage` label:
 
    ```yaml
    apiVersion: v1

@@ -629,7 +629,7 @@ func (r *deckhouseReleaseReconciler) DeployTimeCalculate(ctx context.Context, dr
 	if task.IsPatch {
 		deployTimeResult = timeChecker.CalculatePatchDeployTime(dr, metricLabels)
 
-		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyAfterTime, metricLabels)
+		notifyErr := releaseNotifier.SendPatchReleaseNotification(ctx, dr, deployTimeResult.ReleaseApplyTime, metricLabels)
 		if notifyErr != nil {
 			r.logger.Warn("send [patch] release notification", log.Err(notifyErr))
 

@@ -43,6 +43,12 @@ bb-discover-node-name() {
   fi
 }
 
+bb-kube-apiserver-healthy() {
+  local kubeconfig="$1"
+  local server="$2"
+  kubectl get --raw='/healthz' --kubeconfig="$kubeconfig" --request-timeout 3s --server="$server" >/dev/null 2>&1
+}
+
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
   local args=""
@@ -50,15 +56,13 @@ bb-kubectl-exec() {
   local kube_server
   kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
   if [[ -n "$kube_server" ]]; then
-    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
-    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z -w 3 "$host" "$port" 2>/dev/null; then
+    if bb-kube-apiserver-healthy "$kubeconfig" "$kube_server"; then
+      args="--server=$kube_server"
+    else
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        host=$(echo "$server" | cut -d: -f1)
-        port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z -w 3 "$host" "$port" 2>/dev/null; then
+        if bb-kube-apiserver-healthy "$kubeconfig" "https://$server"; then
           args="--server=https://$server"
           break
         fi
@@ -90,6 +94,7 @@ bb-label-node-bashible-first-run-finished() {
 
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-kube-apiserver-healthy
 export -f bb-label-node-bashible-first-run-finished
 
 bb-indent-text() {

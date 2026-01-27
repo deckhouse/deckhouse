@@ -23,9 +23,6 @@ status:
       en: Test package
       ru: Ru Test package
     stage: Preview
-  packageName: test-package
-  packageRepositoryName: deckhouse
-  packageVersion: 1.0.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

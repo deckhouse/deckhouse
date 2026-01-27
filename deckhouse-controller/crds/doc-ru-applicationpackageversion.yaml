@@ -148,15 +148,6 @@ spec:
                             to:
                               description: |
                                 Конечный диапазон версий для совместимости.
-                packageName:
-                  description: |
-                    Название пакета приложения.
-                packageRepositoryName:
-                  description: |
-                    Название репозитория, содержащего пакет.
-                packageVersion:
-                  description: |
-                    Версия пакета приложения.
                 usedBy:
                   description: |
                     Информация о приложениях, которые используют эту версию пакета.
