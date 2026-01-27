@@ -304,7 +304,16 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		patch := client.MergeFrom(ap.DeepCopy())
 
-		ap = ap.AddInstalledApp(app.Namespace, app.Name)
+		ap = ap.AddInstalledApp(app.Namespace, app.Name, app.Spec.PackageVersion)
+		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
+			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
+		}
+	} else if ap.GetAppVersion(app.Namespace, app.Name) != app.Spec.PackageVersion {
+		logger.Debug("application version changed, updating ApplicationPackage", slog.String("package", ap.Name), slog.String("new_version", app.Spec.PackageVersion))
+
+		patch := client.MergeFrom(ap.DeepCopy())
+
+		ap.UpdateAppVersion(app.Namespace, app.Name, app.Spec.PackageVersion)
 		if err := r.client.Status().Patch(ctx, ap, patch); err != nil {
 			return fmt.Errorf("patch application package status '%s': %w", ap.Name, err)
 		}

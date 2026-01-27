@@ -44,15 +44,16 @@ metadata:
   labels:
     heritage: deckhouse
   name: test
-  resourceVersion: "1"
+  resourceVersion: "2"
   uid: ap-uid
 status:
   availableRepositories:
   - deckhouse
-  installed:
-    foobar:
-    - name: test-app
-  installedOverall: 1
+  usedBy:
+  - name: test-app
+    namespace: foobar
+    version: v1.0.2
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

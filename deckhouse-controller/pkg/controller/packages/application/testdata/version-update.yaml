@@ -37,10 +37,11 @@ metadata:
 status:
   availableRepositories:
     - deckhouse
-  installed:
-    foobar:
+  usedBy:
     - name: test-app
-  installedOverall: 1
+      namespace: foobar
+      version: v1.0.1
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

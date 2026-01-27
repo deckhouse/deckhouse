@@ -407,6 +407,16 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		}
 		assert.Equal(suite.T(), 1, apvRefCount, "App should have exactly 1 APV owner reference")
 		assert.Equal(suite.T(), "deckhouse-test-v1.0.2", apvRefName, "App should reference new APV")
+
+		// Verify ApplicationPackage usedBy version is updated
+		ap := new(v1alpha1.ApplicationPackage)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "test"}, ap)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 1, ap.Status.UsedByCount, "AP should have usedByCount=1")
+		require.Len(suite.T(), ap.Status.UsedBy, 1, "AP should have 1 app in usedBy")
+		assert.Equal(suite.T(), "test-app", ap.Status.UsedBy[0].Name)
+		assert.Equal(suite.T(), "foobar", ap.Status.UsedBy[0].Namespace)
+		assert.Equal(suite.T(), "v1.0.2", ap.Status.UsedBy[0].Version, "AP usedBy version should be updated to new version")
 	})
 }
 
