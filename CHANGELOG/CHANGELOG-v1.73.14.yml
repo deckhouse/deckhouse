@@ -1,0 +1,21 @@
+admission-policy-engine:
+  fixes:
+    - summary: deny_vulnerable_images webhook must use module status instead of moduleconfig
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17450
+control-plane-manager:
+  fixes:
+    - summary: Fixed vulnerabilities.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17413
+dashboard:
+  fixes:
+    - summary: Fixed CVE-2025-22868, CVE-2025-22870, CVE-2025-22872, CVE-2025-47914, CVE-2025-58181
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17243
+documentation:
+  fixes:
+    - summary: Fixed HTTP/404 error when opening modules documentation from the Web interface.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17480
+node-local-dns:
+  fixes:
+    - summary: Fixed CVEs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17471
+
