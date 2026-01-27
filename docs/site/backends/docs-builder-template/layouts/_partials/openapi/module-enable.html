@@ -1,17 +1,12 @@
 {{- $moduleName := .ModuleName }}
 {{- $configVersion := .configVersion}}
+{{- $pageParams := .pageParams }}
 
 {{- $content := replace (T "module_enabling_details_content") "<ModuleName>" .ModuleName }}
 
-{{- if and .Page .Page.Params.enablingNote }}
-  {{- $enablingNote := .Page.Params.enablingNote | markdownify }}
-  {{- $enablingNoteHtml := printf `<div class="info alert__wrap">
-  <svg class="alert__icon icon--info">
-    <use xlink:href="/images/sprite.svg#info-icon"></use>
-  </svg>
-  <div><p>%s</p></div>
-</div>` $enablingNote }}
-  {{- $content = printf "%s\n\n%s" $enablingNoteHtml $content }}
+{{- if and $pageParams $pageParams.enablingNote }}
+  {{- $enablingNote := $pageParams.enablingNote | markdownify }}
+  {{- $content = printf "%s%s" (partial "alert" ( dict "level" "info" "content" $enablingNote )) $content }}
 {{- end }}
 
 {{- partial "details" (dict "summary" (T "module_enabling_details_title") "content" $content) }}
