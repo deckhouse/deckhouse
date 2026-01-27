@@ -72,7 +72,7 @@ func main() {
 	setupLog.Info("Kubernetes connection details", "Host", config.Host)
 
 	if mode == "manager" {
-		setupLog.Info("Starting in manager mode (controller)")
+		setupLog.Info("Starting in MANAGER mode")
 
 		mgr, err := ctrl.NewManager(config, ctrl.Options{
 			Scheme:                 scheme,
@@ -111,7 +111,7 @@ func main() {
 	}
 
 	if mode == "agent" {
-		setupLog.Info("Starting in agent mode")
+		setupLog.Info("Starting in AGENT mode")
 
 		nodeName := os.Getenv("NODE_NAME")
 		if nodeName == "" {

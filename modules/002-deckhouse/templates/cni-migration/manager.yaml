@@ -8,6 +8,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-manager")) | nindent 2 }}
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: cni-migration-manager
