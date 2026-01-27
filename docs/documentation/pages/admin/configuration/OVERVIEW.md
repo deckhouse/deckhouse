@@ -105,7 +105,7 @@ Some cluster parameters are critical for cluster operation and cannot be changed
 Attempts to change these parameters will be blocked by the admission webhook with an error message.
 
 {% alert level="danger" %}
-**Changing these parameters in a running cluster is dangerous** and can lead to:
+**Changing these parameters in a running cluster can lead to:**
 
 - Complete loss of access to the Kubernetes API.
 - Invalidation of TLS certificates.
@@ -116,14 +116,12 @@ Attempts to change these parameters will be blocked by the admission webhook wit
 {% endalert %}
 
 If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism.
-If you absolutely must change these parameters (e.g., for testing or in exceptional circumstances), you can bypass the protection mechanism:
-
-##### Recommended method: Using dhctl
 
 {% alert level="warning" %}
 Even with the protection mechanism bypassed, there is **no guarantee** that the cluster will continue to function correctly after changing these parameters. Be prepared for the possibility of complete cluster failure and have a backup plan.
 {% endalert %}
-##### Using dhctl
+
+##### Change using dhctl
 
 Use the `dhctl` tool from the DKP installer container with the `--yes-i-am-sane-and-i-understand-what-i-am-doing` flag.
 
@@ -132,8 +130,6 @@ This command will automatically:
 - Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret.
 - Open an editor to modify the configuration.
 - Remove the annotation after you save the changes.
-
-This is the safest way to modify protected parameters as it properly manages the annotation lifecycle.
 
 **Steps:**
 
@@ -173,18 +169,14 @@ This is the safest way to modify protected parameters as it properly manages the
 
 4. Edit the configuration in the opened editor, save, and exit.
 
-{% alert level="warning" %}
-This method bypasses DKP safety mechanisms and should **only be used when `dhctl` is unavailable** (e.g., emergency recovery scenarios or when `dhctl` cannot connect to the cluster). In normal circumstances, always use `dhctl` as described above.
-{% endalert %}
 
 {% offtopic title="Edit manually" %}
 
-If you need to manually edit the configuration:
+Manually edit the configuration:
 
 1. Add the `deckhouse.io/allow-unsafe` annotation to the `d8-cluster-configuration` Secret:
 
    ```shell
-   d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
 
@@ -222,6 +214,7 @@ If you need to manually edit the configuration:
 
 > **Important:** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
 
+{% endofftopic %}
 
 ### Viewing current configuration
 
