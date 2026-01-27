@@ -39,11 +39,11 @@ import (
 
 const (
 	ns                    = "default"
-	selector              = "kubernetes.io/service-name=kubernetes"
+	es                    = "kubernetes"
 	fallbackReconcileIter = 61
 )
 
-// StartDiscovery runs a loop that periodically fetches a Kubernetes Endpoints
+// StartDiscovery runs a loop that periodically fetches a Kubernetes Endpoint Slice
 // object and sends the derived list of upstream addresses to the provided
 // list. It performs a simple diff to avoid spamming identical updates and
 // applies backpressure handling to always keep the most recent update.
@@ -67,10 +67,12 @@ func StartDiscovery(
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			fallbackListReconcileCounter++
 			if err := discovery(ctx, logger, kutils.BuildGetter(cfg, fallbackList), mainList); err != nil {
 				logger.Error("discovery failed", slog.String("error", err.Error()))
+			} else {
+				fallbackListReconcileCounter++
 			}
+
 			if fallbackListReconcileCounter >= fallbackReconcileIter {
 				fallbackListReconcileCounter = 0
 
@@ -103,13 +105,12 @@ func discovery(
 
 	logger.Debug("discovery: run")
 
-	// Query EndpointSlices for the default/kubernetes service
-	slices, err := cs.DiscoveryV1().EndpointSlices(ns).List(ctx, metav1.ListOptions{LabelSelector: selector})
+	slice, err := cs.DiscoveryV1().EndpointSlices(ns).Get(ctx, es, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list endpoint slices: %w", err)
 	}
 
-	addrs := endpointSlicesToUpstreams(slices)
+	addrs := endpointSliceToUpstreams(slice)
 	logger.Debug("discovery: endpointslices fetched",
 		slog.Int("derived_upstreams", len(addrs)),
 	)
@@ -137,48 +138,51 @@ func discovery(
 	return nil
 }
 
-// endpointSlicesToUpstreams converts EndpointSlices for the default/kubernetes
+// endpointSliceToUpstreams converts EndpointSlices for the default/kubernetes
 // service into a list of host:port addresses. Prefer port named "https",
 // then the first defined, defaulting to 6443 if none.
-func endpointSlicesToUpstreams(slices *discoveryv1.EndpointSliceList) []string {
-	if slices == nil {
+func endpointSliceToUpstreams(es *discoveryv1.EndpointSlice) []string {
+	if es == nil {
 		return nil
 	}
 	result := make([]string, 0)
-	for _, es := range slices.Items {
-		var port int32
+
+	var port int32
+	for _, p := range es.Ports {
+		if p.Name != nil && *p.Name == "https" && p.Port != nil && *p.Port > 0 {
+			port = *p.Port
+			break
+		}
+	}
+
+	if port == 0 {
 		for _, p := range es.Ports {
-			if p.Name != nil && *p.Name == "https" && p.Port != nil && *p.Port > 0 {
+			if p.Port != nil && *p.Port > 0 {
 				port = *p.Port
 				break
 			}
 		}
-		if port == 0 {
-			for _, p := range es.Ports {
-				if p.Port != nil && *p.Port > 0 {
-					port = *p.Port
-					break
-				}
-			}
+	}
+
+	if port == 0 {
+		port = 6443
+	}
+
+	for _, ep := range es.Endpoints {
+		ready := true
+		if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
+			ready = false
 		}
-		if port == 0 {
-			port = 6443
+		if !ready {
+			continue
 		}
-		for _, ep := range es.Endpoints {
-			ready := true
-			if ep.Conditions.Ready != nil && !*ep.Conditions.Ready {
-				ready = false
-			}
-			if !ready {
-				continue
-			}
-			for _, addr := range ep.Addresses {
-				if addr != "" {
-					result = append(result, net.JoinHostPort(addr, strconv.Itoa(int(port))))
-				}
+		for _, addr := range ep.Addresses {
+			if addr != "" {
+				result = append(result, net.JoinHostPort(addr, strconv.Itoa(int(port))))
 			}
 		}
 	}
+
 	return result
 }
 

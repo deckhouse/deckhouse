@@ -18,33 +18,87 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"time"
 
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	"github.com/pkg/errors"
 	certificatesv1 "k8s.io/api/certificates/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	"github.com/deckhouse/deckhouse/go_lib/certificate"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 )
 
+type AuthCertificate struct {
+	Cert string `json:"crt"`
+	Key  string `json:"key"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5}, // TODO: Change order to valid!
-	// TODO: May be need some selectors for some cases?
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
+	Kubernetes: []go_hook.KubernetesConfig{
+		{
+			Name:       "kubernetes-api-proxy-discovery-cert",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"kube-system"},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{"kubernetes-api-proxy-discovery-cert"},
+			},
+			FilterFunc: apiserverProxyCertFilter,
+		},
+	},
+	Schedule: []go_hook.ScheduleConfig{
+		{
+			Name:    "certificateCheck",
+			Crontab: "42 4 * * *",
+		},
+	},
 }, dependency.WithExternalDependencies(createRBACForKubeAPIServerProxy))
 
 func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	const (
-		roleName        = "system:kubernetes-api-proxy-discovery"
-		roleBindingName = "system:kube-apiserver-proxy-discovery"
-		ns              = "default"
-		userName        = "system:kubernetes-api-proxy"
+		roleName             = "system:kubernetes-api-proxy-discovery"
+		userName             = "system:kubernetes-api-proxy"
+		certOutdatedDuration = (24 * time.Hour) * 365 / 2
 	)
 
-	certExpirationSeconds := int32((time.Hour * 24 * 365 * 10).Seconds()) // 10 years
+	var (
+		certExpirationSec = int32((time.Hour * 24 * 365 * 10).Seconds()) // 10 years
+	)
+
+	certs, err := sdkobjectpatch.UnmarshalToStruct[AuthCertificate](input.Snapshots, "kubernetes-api-proxy-discovery-cert")
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal kubernetes-api-proxy-discovery-cert from snapshots: %v", err)
+	}
+
+	var needToGenerate = false
+	if len(certs) == 0 {
+		needToGenerate = true
+	} else {
+		cert, err := certificate.ParseCertificate(certs[0].Cert)
+		if err != nil {
+			return fmt.Errorf("cannot parse kubernetes-api-proxy-discovery-cert from snapshots: %v", err)
+		}
+
+		if time.Until(cert.NotAfter) < certOutdatedDuration {
+			needToGenerate = true
+		}
+	}
+
+	if !needToGenerate {
+		return nil
+	}
 
 	cert, err := tls_certificate.IssueCertificate(input, dc, tls_certificate.OrderCertificateRequest{
 		CommonName: userName,
@@ -54,7 +108,7 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 		Usages: []certificatesv1.KeyUsage{
 			certificatesv1.UsageClientAuth,
 		},
-		ExpirationSeconds: &certExpirationSeconds,
+		ExpirationSeconds: &certExpirationSec,
 	})
 	if err != nil {
 		return errors.Wrap(err, "failed to issue certificate")
@@ -63,47 +117,18 @@ func createRBACForKubeAPIServerProxy(_ context.Context, input *go_hook.HookInput
 	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt", cert.Certificate)
 	input.Values.Set("nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key", cert.Key)
 
-	input.PatchCollector.CreateIfNotExists(&rbacv1.Role{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "Role",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleName,
-			Namespace: ns,
-			Labels:    map[string]string{"heritage": "deckhouse"},
-		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"discovery.k8s.io"},
-				Resources: []string{"endpointslices"},
-				Verbs:     []string{"get", "list", "watch"},
-			},
-		},
-	})
-
-	input.PatchCollector.CreateIfNotExists(&rbacv1.RoleBinding{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "RoleBinding",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      roleBindingName,
-			Namespace: ns,
-			Labels:    map[string]string{"heritage": "deckhouse"},
-		},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: "rbac.authorization.k8s.io",
-			Kind:     "Role",
-			Name:     roleName,
-		},
-		Subjects: []rbacv1.Subject{
-			{
-				Kind: "User",
-				Name: userName,
-			},
-		},
-	})
-
 	return nil
+}
+
+func apiserverProxyCertFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+	secret := &v1.Secret{}
+
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, err
+	}
+
+	return AuthCertificate{
+		Cert: string(secret.Data["crt"]),
+		Key:  string(secret.Data["key"]),
+	}, nil
 }
