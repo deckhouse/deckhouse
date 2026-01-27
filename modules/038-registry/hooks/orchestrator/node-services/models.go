@@ -162,7 +162,7 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 			}
 		}
 
-		nodesIP := make([]string, 0, len(nodesIPSet))
+		nodesIP = make([]string, 0, len(nodesIPSet))
 		for ip := range nodesIPSet {
 			nodesIP = append(nodesIP, ip)
 		}
