@@ -85,10 +85,18 @@ DKP использует `cloud-init` для настройки виртуаль
        vmware_cust_file_max_wait: 10
    ```
 
-1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`:
+1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`, используя следующие команды:
+
+      ```shell
+   truncate -s 0 /etc/machine-id
+   ```
 
    ```shell
-   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   rm /var/lib/dbus/machine-id
+   ```
+
+   ```shell
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
 
 1. Очистите логи событий `cloud-init`:
