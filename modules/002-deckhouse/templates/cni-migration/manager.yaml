@@ -16,6 +16,12 @@ spec:
       labels:
         app: cni-migration-manager
     spec:
+      hostNetwork: true
+      priorityClassName: system-cluster-critical
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - operator: Exists
       serviceAccountName: cni-migration-manager
       containers:
       - name: manager
@@ -25,6 +31,11 @@ spec:
         - "--migration-name={{ .Values.global.internal.cniMigrationName }}"
         - "--metrics-bind-address=:42285"
         - "--health-probe-bind-address=:42282"
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
         ports:
         - name: healthz
           containerPort: 42282

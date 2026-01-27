@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	EffectiveCNIAnnotation = "effective-cni.network.deckhouse.io"
+	effectiveCNIAnnotation = "effective-cni.network.deckhouse.io"
 )
 
 // CNIAgentReconciler reconciles a CNINodeMigration object on a specific node
@@ -198,7 +198,7 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 			podsDeleted := 0
 			for _, pod := range podList.Items {
-				if pod.Annotations[EffectiveCNIAnnotation] == cniMigration.Status.CurrentCNI {
+				if pod.Annotations[effectiveCNIAnnotation] == cniMigration.Status.CurrentCNI {
 					if pod.DeletionTimestamp != nil {
 						continue
 					}
@@ -257,7 +257,7 @@ func (r *CNIAgentReconciler) ensurePodsAnnotated(ctx context.Context, nodeName, 
 			continue
 		}
 
-		if pod.Annotations[EffectiveCNIAnnotation] == currentCNI {
+		if pod.Annotations[effectiveCNIAnnotation] == currentCNI {
 			continue
 		}
 
@@ -265,7 +265,7 @@ func (r *CNIAgentReconciler) ensurePodsAnnotated(ctx context.Context, nodeName, 
 		if patchedPod.Annotations == nil {
 			patchedPod.Annotations = make(map[string]string)
 		}
-		patchedPod.Annotations[EffectiveCNIAnnotation] = currentCNI
+		patchedPod.Annotations[effectiveCNIAnnotation] = currentCNI
 
 		if err := r.Patch(ctx, patchedPod, client.MergeFrom(&pod)); err != nil {
 			if errors.IsNotFound(err) {
@@ -381,7 +381,7 @@ func (r *CNIAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if e.ObjectNew == nil {
 				return false
 			}
-			_, hasAnnotation := e.ObjectNew.GetAnnotations()[EffectiveCNIAnnotation]
+			_, hasAnnotation := e.ObjectNew.GetAnnotations()[effectiveCNIAnnotation]
 			return !hasAnnotation
 		},
 		GenericFunc: func(e event.GenericEvent) bool {

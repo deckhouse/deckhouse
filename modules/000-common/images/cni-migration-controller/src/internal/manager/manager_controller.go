@@ -36,6 +36,10 @@ import (
 	cnimigrationv1alpha1 "deckhouse.io/cni-migration/api/v1alpha1"
 )
 
+const (
+	cniMigrationPhasePause = "cni-migration.network.deckhouse.io/pause-before-phase"
+)
+
 // CNIDaemonSetMap maps short CNI names to their DaemonSet names.
 var CNIDaemonSetMap = map[string]string{
 	cnimigrationv1alpha1.CNINameCilium:       "agent",
@@ -97,6 +101,14 @@ func (r *CNIMigrationReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if r.isNodeStatisticsChanged(oldStatus, &cniMigration.Status) {
 		if err := r.Status().Update(ctx, cniMigration); err != nil {
 			return ctrl.Result{}, err
+		}
+	}
+
+	// Check for pause annotation
+	if val, ok := cniMigration.Annotations[cniMigrationPhasePause]; ok {
+		if val == cniMigration.Status.Phase {
+			ctrl.Log.Info("Migration paused by annotation", "phase", cniMigration.Status.Phase)
+			return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 		}
 	}
 
@@ -379,11 +391,16 @@ func (r *CNIMigrationReconciler) ensureAgentsReady(ctx context.Context, m *cnimi
 
 	readyAgents := 0
 	for _, nm := range nodeMigrations.Items {
+		isReady := false
 		for _, cond := range nm.Status.Conditions {
 			if cond.Type == cnimigrationv1alpha1.NodeConditionPodsAnnotated && cond.Status == metav1.ConditionTrue {
 				readyAgents++
+				isReady = true
 				break
 			}
+		}
+		if !isReady {
+			ctrl.Log.Info("Agent not ready (pods not annotated)", "node", nm.Name, "conditions", nm.Status.Conditions)
 		}
 	}
 
@@ -472,11 +489,16 @@ func (r *CNIMigrationReconciler) ensureNodesCleaned(ctx context.Context, m *cnim
 
 	cleanedNodes := 0
 	for _, nm := range nodeMigrations.Items {
+		isCleaned := false
 		for _, cond := range nm.Status.Conditions {
 			if cond.Type == cnimigrationv1alpha1.NodeConditionCleanupDone && cond.Status == metav1.ConditionTrue {
 				cleanedNodes++
+				isCleaned = true
 				break
 			}
+		}
+		if !isCleaned {
+			ctrl.Log.Info("Node not cleaned yet", "node", nm.Name, "conditions", nm.Status.Conditions)
 		}
 	}
 
@@ -536,11 +558,16 @@ func (r *CNIMigrationReconciler) ensurePodsRestarted(ctx context.Context, _ *cni
 
 	restartedNodes := 0
 	for _, nm := range nodeMigrations.Items {
+		isRestarted := false
 		for _, cond := range nm.Status.Conditions {
 			if cond.Type == cnimigrationv1alpha1.NodeConditionPodsRestarted && cond.Status == metav1.ConditionTrue {
 				restartedNodes++
+				isRestarted = true
 				break
 			}
+		}
+		if !isRestarted {
+			ctrl.Log.Info("Node pods restart pending", "node", nm.Name, "conditions", nm.Status.Conditions)
 		}
 	}
 

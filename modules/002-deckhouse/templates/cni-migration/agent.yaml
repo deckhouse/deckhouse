@@ -1,4 +1,4 @@
-{{- if .Values.global.internal.cniMigrationValidationIgnore }}
+{{- if .Values.global.internal.cniMigrationEnabled }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -48,6 +48,10 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 10
         env:
+        - name: KUBERNETES_SERVICE_HOST
+          value: "127.0.0.1"
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6445"
         - name: NODE_NAME
           valueFrom:
             fieldRef:
