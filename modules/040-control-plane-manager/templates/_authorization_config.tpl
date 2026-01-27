@@ -1,6 +1,6 @@
 {{- define "authorizationConfigTemplate" -}}
-{{- if semverCompare "<1.30" .clusterConfiguration.kubernetesVersion }}
-apiVersion: apiserver.config.k8s.io/v1alpha1
+{{- if semverCompare ">=1.32" .clusterConfiguration.kubernetesVersion }}
+apiVersion: apiserver.config.k8s.io/v1
 {{- else }}
 apiVersion: apiserver.config.k8s.io/v1beta1
 {{- end }}
