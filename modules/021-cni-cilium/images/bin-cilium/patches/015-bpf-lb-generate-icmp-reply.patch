@@ -322,7 +322,7 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..7dd1badd9b 100644
+index 0142716855..30d799cd3c 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -444,7 +444,7 @@ index 0142716855..7dd1badd9b 100644
  					src_sec_identity, punt_to_stack, ext_err);
  	} else {
 +		if(ip4->protocol == IPPROTO_ICMP) {
-+			key.dport = 8000;
++			key.dport = bpf_htons(8000);
 +			//key.proto = 0;
 +			svc = lb4_lookup_service(&key, false);
 +			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP");
