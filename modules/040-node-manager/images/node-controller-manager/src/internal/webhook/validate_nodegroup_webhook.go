@@ -197,6 +197,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
+	if req.Operation == "UPDATE" && ng.Name == "master" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
 		newCRIType := getCRIType(ng, clusterConfig.DefaultCRI)
 		if oldCRIType != newCRIType {
@@ -258,25 +259,22 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.TopologyManager != nil {
-		if ng.Spec.Kubelet.TopologyManager.Enabled != nil && *ng.Spec.Kubelet.TopologyManager.Enabled {
-			if ng.Spec.Kubelet.ResourceReservation == nil ||
-				ng.Spec.Kubelet.ResourceReservation.Mode == "Off" {
-				return admission.Denied(
-					".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager.enabled to work")
-			}
+		if ng.Spec.Kubelet.ResourceReservation == nil ||
+			ng.Spec.Kubelet.ResourceReservation.Mode == "Off" {
+			return admission.Denied(
+				".spec.kubelet.resourceReservation must be enabled for .spec.kubelet.topologyManager to work")
+		}
 
-			if ng.Spec.Kubelet.ResourceReservation.Mode == "Static" {
-				if ng.Spec.Kubelet.ResourceReservation.Static == nil ||
-					ng.Spec.Kubelet.ResourceReservation.Static.CPU == nil {
-					return admission.Denied(
-						"for .spec.kubelet.topologyManager.enabled and .spec.kubelet.resourceReservation.mode == \"Static\", " +
-							".spec.kubelet.resourceReservation.static.cpu must be specified")
-				}
+		if ng.Spec.Kubelet.ResourceReservation.Mode == "Static" {
+			if ng.Spec.Kubelet.ResourceReservation.Static == nil ||
+				ng.Spec.Kubelet.ResourceReservation.Static.CPU == nil {
+				return admission.Denied(
+					"for .spec.kubelet.topologyManager and .spec.kubelet.resourceReservation.mode == \"Static\", " +
+						".spec.kubelet.resourceReservation.static.cpu must be specified")
 			}
 		}
 	}
 
-	// Validation 18: CRI change blocked by nodes with custom containerd config
 	if req.Operation == "UPDATE" && oldNG != nil {
 		oldCRIType := getCRIType(oldNG, "")
 		newCRIType := getCRIType(ng, "")
@@ -290,7 +288,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// Validation 19: ContainerdV2 blocked by unsupported nodes
 	if req.Operation == "UPDATE" {
 		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerdV2 {
 			unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
@@ -303,10 +300,9 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// Validation 20: memorySwap requires cgroup v2
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
-			if ng.Spec.Kubelet.MemorySwap.SwapBehavior == "LimitedSwap" {
+			if ng.Spec.Kubelet.MemorySwap.Behavior == "LimitedSwap" {
 				unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 				if len(unsupportedNodes) > 0 {
 					return admission.Denied(fmt.Sprintf(
@@ -317,7 +313,6 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// Validation 21: Disruption windows format
 	if ng.Spec.Disruptions != nil {
 		if err := validateDisruptionWindows(ng.Spec.Disruptions); err != nil {
 			return admission.Denied(err.Error())

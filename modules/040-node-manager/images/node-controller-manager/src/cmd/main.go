@@ -30,7 +30,10 @@ import (
 	_ "k8s.io/component-base/logs/json/register"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
@@ -88,16 +91,22 @@ func main() {
 	}
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Scheme: scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: metricsAddr,
+		},
+		WebhookServer: ctrlwebhook.NewServer(ctrlwebhook.Options{
+			Port: 9443,
+		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "controller-leader-election-node-controller",
 		LeaseDuration:          &leaderElectionLeaseDuration,
 		RenewDeadline:          &leaderElectionRenewDeadline,
 		RetryPeriod:            &leaderElectionRetryPeriod,
-		SyncPeriod:             &syncPeriod,
+		Cache: cache.Options{
+			SyncPeriod: &syncPeriod,
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
