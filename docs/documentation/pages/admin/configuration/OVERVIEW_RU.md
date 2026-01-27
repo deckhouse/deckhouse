@@ -153,7 +153,7 @@ dhctl edit cluster-configuration --allow-unsafe-changes
 1. Отредактируйте конфигурацию:
 
    ```shell
-   kubectl -n kube-system edit secret d8-cluster-configuration
+   d8 k -n kube-system edit secret d8-cluster-configuration
    ```
 
    **Внимание.** Конфигурация закодирована в Base64 в поле `cluster-configuration.yaml` данных секрета.
