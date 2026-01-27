@@ -1,0 +1,50 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: node-controller
+rules:
+  # NodeGroups
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroups"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroups/status"]
+    verbs: ["get", "update", "patch"]
+  - apiGroups: ["deckhouse.io"]
+    resources: ["nodegroups/finalizers"]
+    verbs: ["update"]
+  # Nodes
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["create", "patch"]
+  # Leader election
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: node-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: node-controller
+subjects:
+  - kind: ServiceAccount
+    name: node-controller
+    namespace: d8-cloud-instance-manager

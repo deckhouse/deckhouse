@@ -1,0 +1,46 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: node-controller-validating
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/node-controller-webhook-cert
+webhooks:
+  - name: vnodegroup.deckhouse.io
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: node-controller
+        namespace: d8-cloud-instance-manager
+        path: /validate-deckhouse-io-v1-nodegroup
+    failurePolicy: Fail
+    rules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["v1", "v1alpha1", "v1alpha2"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
+        resources: ["nodegroups"]
+    sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: node-controller-mutating
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-instance-manager/node-controller-webhook-cert
+webhooks:
+  - name: mnodegroup.deckhouse.io
+    admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: node-controller
+        namespace: d8-cloud-instance-manager
+        path: /mutate-deckhouse-io-v1-nodegroup
+    failurePolicy: Fail
+    rules:
+      - apiGroups: ["deckhouse.io"]
+        apiVersions: ["v1", "v1alpha1", "v1alpha2"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["nodegroups"]
+    sideEffects: None

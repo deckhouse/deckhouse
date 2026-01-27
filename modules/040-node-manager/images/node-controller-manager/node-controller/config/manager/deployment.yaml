@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: node-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: node-controller
+  template:
+    metadata:
+      labels:
+        app: node-controller
+    spec:
+      serviceAccountName: node-controller
+      terminationGracePeriodSeconds: 10
+      containers:
+        - name: controller
+          image: registry.deckhouse.io/deckhouse/node-controller:latest
+          imagePullPolicy: Always
+          args:
+            - --leader-elect=true
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+            - --logging-format=json
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+            - name: health
+              containerPort: 8081
+              protocol: TCP
+            - name: webhook
+              containerPort: 9443
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            runAsNonRoot: true
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: cert
+              mountPath: /tmp/k8s-webhook-server/serving-certs
+              readOnly: true
+      volumes:
+        - name: cert
+          secret:
+            secretName: node-controller-webhook-cert
+            defaultMode: 420
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: node-controller
+spec:
+  selector:
+    app: node-controller
+  ports:
+    - name: webhook
+      port: 443
+      targetPort: webhook
+    - name: metrics
+      port: 8080
+      targetPort: metrics
