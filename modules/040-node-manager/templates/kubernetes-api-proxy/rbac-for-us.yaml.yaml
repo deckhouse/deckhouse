@@ -3,6 +3,7 @@ kind: Role
 metadata:
   name: system:kubernetes-api-proxy-discovery
   namespace: default
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-api-proxy")) | nindent 2 }}
 rules:
   - apiGroups: ["discovery.k8s.io"]
     resources: ["endpointslices"]
@@ -14,6 +15,7 @@ kind: RoleBinding
 metadata:
   name: system:kubernetes-api-proxy-discovery
   namespace: default
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kubernetes-api-proxy")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
