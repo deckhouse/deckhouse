@@ -26,4 +26,3 @@ C **kubelet** взаимодействуют:
    * переадресация портов (обработка команды `kubectl port-forward`).  
 
 2. **prometheus-main** - сбор метрик **kubelet**.
-
