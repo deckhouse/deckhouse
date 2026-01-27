@@ -461,7 +461,7 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //
 // Administrative Operations:
 //   - Reload Requests: Triggered by 'reload=true' annotation, forces module re-deployment
-//   - Repository Updates: Handles changes to registry configuration requiring OpenAPI schema refresh
+//   - Registry Updates: Handles changes to registry configuration requiring OpenAPI schema refresh
 //   - Both operations trigger immediate Deckhouse restart for module activation
 //
 // Resource Ownership and Protection:
@@ -487,9 +487,9 @@ func (r *reconciler) patchManualRelease(ctx context.Context, release *v1alpha1.M
 //	Flow: Reload Detection→Module Re-deployment→Restart Trigger
 //	Result: RequeueAfter 0s, modulesChangedReason set
 //
-//	Scenario 3 - Repository Update Handling:
+//	Scenario 3 - Registry Update Handling:
 //	Input: Deployed v1.68.0 with registrySpecChanged annotation
-//	Flow: Repository Detection→OpenAPI Update→Annotation Cleanup→Update
+//	Flow: Registry Detection→OpenAPI Update→Annotation Cleanup→Update
 //	Result: RequeueAfter via requeue=true, registry changes applied
 //
 //	Scenario 4 - Override Bypass:

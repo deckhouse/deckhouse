@@ -61,7 +61,7 @@ var _ runtime.Object = (*Application)(nil)
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.version
-// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepository,priority=1
+// +kubebuilder:printcolumn:name=Registry,type=string,JSONPath=.spec.packageRepository,priority=1
 // +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
 // +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
 // +kubebuilder:printcolumn:name="Processed",type="string",JSONPath=".status.resourceConditions[?(@.type=='Processed')].status"
