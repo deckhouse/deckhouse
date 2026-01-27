@@ -1,5 +1,10 @@
 # Changelog v1.72
 
+## [MALFORMED]
+
+
+ - #14806 unknown section "operator-trivy"
+
 ## Know before update
 
 
