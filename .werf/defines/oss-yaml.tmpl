@@ -11,8 +11,12 @@
   {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
   {{- range $raw.data -}}
     {{- if eq .id $id -}}
-      {{- $version = .version -}}
       {{- $found = true -}}
+      {{- if .version -}}
+        {{- $version = .version -}}
+      {{- else -}}
+        {{- fail (printf "\n[ERROR] Field 'version' is empty or missing for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}      
     {{- end -}}
   {{- end -}}
 
