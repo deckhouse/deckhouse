@@ -57,7 +57,8 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 
 				isReady := false
 				for _, cond := range node.Status.Conditions {
-					if cond.Type == "Ready" && cond.Status == "True" {
+					if cond.Type == v1core.NodeReady &&
+						cond.Status == v1core.ConditionTrue {
 						isReady = true
 						break
 					}
@@ -68,7 +69,7 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 				}
 
 				for _, addr := range node.Status.Addresses {
-					if addr.Type == "InternalIP" {
+					if addr.Type == v1core.NodeInternalIP {
 						nodeObject.IP = addr.Address
 						break
 					}

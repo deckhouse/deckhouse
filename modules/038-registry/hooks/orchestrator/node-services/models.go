@@ -157,7 +157,9 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 	if params.Local != nil {
 		nodesIPSet := make(map[string]struct{})
 		for _, node := range inputs.Nodes {
-			nodesIPSet[node.IP] = struct{}{}
+			if node.IP != "" {
+				nodesIPSet[node.IP] = struct{}{}
+			}
 		}
 
 		nodesIP := make([]string, 0, len(nodesIPSet))
