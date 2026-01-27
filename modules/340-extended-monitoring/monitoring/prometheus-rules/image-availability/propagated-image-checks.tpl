@@ -138,7 +138,7 @@
       - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
       - The `{{`{{ $labels.container }}`}}` container in the registry.
 
-- alert: {{ $controllerKind }}UnknownError
+- alert: {{ $controllerKind }}ImageAvailabilityUnknownError
   expr: |
     max by (namespace, name, container, image) (
       k8s_image_availability_exporter_unknown_error{kind={{ $controllerKind | lower | quote }}} == 1
@@ -155,15 +155,15 @@
     plk_markup_format: "markdown"
     plk_create_group_if_not_exists__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
     plk_grouped_by__unavailable_images_in_namespace: "UnavailableImagesInNamespace,namespace={{`{{ $labels.namespace }}`}},prometheus=deckhouse,kubernetes=~kubernetes"
-    summary: An unknown error occurred with the `{{`{{ $labels.image }}`}}` image.
+    summary: An unknown error occurred with the `{{`{{ $labels.image }}`}}` image availability check.
     description: |
-      Deckhouse has detected an unknown error with the `{{`{{ $labels.image }}`}}` image in the following sources:
+      Deckhouse has detected an unknown error while checking `{{`{{ $labels.image }}`}}` image availability in the following sources:
 
       - The `{{`{{ $labels.namespace }}`}}` namespace.
       - The {{ $controllerKind }} `{{`{{ $labels.name }}`}}`.
       - The `{{`{{ $labels.container }}`}}` container in the registry.
 
-      To resolve this issue, review the exporter logs:
+      Review the image-availability-exporter logs to see the detailed error information:
 
       ```bash
       d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
