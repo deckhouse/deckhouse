@@ -18,6 +18,7 @@ package cluster
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/klog/v2"
 )
 
 type MasterNodeState struct {
@@ -45,6 +46,13 @@ func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
 func (s *ControlPlaneComponentState) isRunningAndReady() bool {
 	for _, containerStatus := range s.PodStatus.ContainerStatuses {
 		if containerStatus.State.Running == nil || !containerStatus.Ready {
+			klog.Infof(
+				"container: %s running - %t, ready - '%t' | pod: phase - %s, reason - %s",
+				containerStatus.Name,
+				containerStatus.State.Running != nil,
+				containerStatus.Ready,
+				string(s.PodStatus.Phase),
+				s.PodStatus.Reason)
 			return false
 		}
 	}
