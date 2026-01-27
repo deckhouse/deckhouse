@@ -58,9 +58,9 @@ func Combine(r1, r2 Rule) Rule {
 	return Rule(strings.TrimSpace(string(r1)) + "\n\n" + strings.TrimSpace(string(r2)))
 }
 
-// FileSourceHostRule sets the host label from the VECTOR_HOSTNAME environment variable for File sources.
+// FileSourceHostRule sets the host label from the VECTOR_SELF_NODE_NAME environment variable for File sources.
 const FileSourceHostRule Rule = `
-."host" = "${VECTOR_HOSTNAME}"
+."host" = "${VECTOR_SELF_NODE_NAME}"
 `
 
 // FileSourceHostIPRule sets the host_ip label from the VECTOR_HOST_IP environment variable for File sources.

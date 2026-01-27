@@ -29,7 +29,7 @@
       "inputs": [
         "cluster_logging_config/test-source"
       ],
-      "source": ".\"host\" = \"${VECTOR_HOSTNAME}\"\n\n.\"host_ip\" = \"${VECTOR_HOST_IP}\"",
+      "source": ".\"host\" = \"${VECTOR_SELF_NODE_NAME}\"\n\n.\"host_ip\" = \"${VECTOR_HOST_IP}\"",
       "type": "remap"
     },
     "transform/source/test-source/01_local_timezone": {

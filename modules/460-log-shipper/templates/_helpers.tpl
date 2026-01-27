@@ -17,7 +17,7 @@
   valueFrom:
     fieldRef:
       fieldPath: status.hostIP
-- name: VECTOR_HOSTNAME
+- name: VECTOR_SELF_NODE_NAME
   valueFrom:
     fieldRef:
       fieldPath: spec.nodeName
