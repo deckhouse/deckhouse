@@ -26,9 +26,9 @@ Prepare the application to publish:
 d8 k create deploy nginx --image=nginx
 ```
 
-Deploy the MetalLoadBalancerClass resource:
+Create the MetalLoadBalancerClass resource:
 
-  ```yaml
+```yaml
 apiVersion: network.deckhouse.io/v1alpha1
 kind: MetalLoadBalancerClass
 metadata:
@@ -42,7 +42,7 @@ spec:
   type: L2
 ```
 
-Deploy standard resource Service with special annotation and MetalLoadBalancerClass name:
+Create standard resource Service with special annotation and MetalLoadBalancerClass name:
 
 ```yaml
 apiVersion: v1
@@ -66,9 +66,16 @@ As a result, the created Service with the type `LoadBalancer` will be assigned t
 
 ```shell
 d8 k get svc
+```
+
+Output example:
+
+```shell
 NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
 nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30544/TCP   11s
 ```
+
+> When creating a service, you can also [specify certain IP addresses from the pool](#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) that will be assigned to it.
 
 The resulting EXTERNAL-IP are ready to use in application DNS-domain:
 
@@ -123,6 +130,46 @@ Configure BGP peering on the network equipment.
 
 {% raw %}
 
+### Creating a service and assigning it specific IP addresses from the pool
+
+> To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deployment
+  annotations:
+    # The number of addresses that will be allocated from the pool declared in MetalLoadBalancerClass.
+    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+    # A list of addresses from the pool declared in MetalLoadBalancerClass that will be allocated to the service.
+    network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: ingress # MetalLoadBalancerClass name
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+```
+
+As a result, the created Service with the type `LoadBalancer` will be assigned the specified number of addresses:
+
+```shell
+d8 k get svc
+```
+
+Output example:
+
+```shell
+NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)        AGE
+nginx-deployment       LoadBalancer   10.222.130.11   192.168.2.102,192.168.2.103,192.168.2.104   80:30544/TCP   11s
+```
+
+### Creating a service with a single, forcibly selected address
+
 To create a Service with a forcibly selected address, you need to add the annotation `network.deckhouse.io/load-balancer-ips`:
 
 ```yaml
@@ -140,6 +187,8 @@ spec:
     app: nginx
   type: LoadBalancer
 ```
+
+### Creating services with shared IP addresses
 
 To create a Services with shared IP addresses, you need to add the annotation `network.deckhouse.io/load-balancer-shared-ip-key`. The value of the annotation is a "sharing key". Services can share an IP address under the following conditions:
 
@@ -187,7 +236,9 @@ spec:
     app: dns
 ```
 
-Creating a Service and assigning it _IPAddressPools_ is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
+### Creating a service and assigning IPAddressPools to it when using mettalb in BGP LoadBalancer mode
+
+Creating a Service and assigning it IPAddressPools is possible in BGP LoadBalancer mode using the annotation `metallb.universe.tf`. For L2 LoadBalancer mode, you need to use the MetalLoadBalancerClass settings (see above).
 
 ```yaml
 apiVersion: v1
