@@ -200,6 +200,7 @@ func (state *State) Process(log go_hook.Logger, params Params, inputs Inputs) (P
 	}
 
 	state.Run = true
+	log.Debug("node_service_process", "nodes_ip", nodesIP, "state", state)
 	return result, nil
 }
 
