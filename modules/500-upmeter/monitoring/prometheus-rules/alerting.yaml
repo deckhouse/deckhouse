@@ -439,39 +439,6 @@
              d8 k -n d8-upmeter delete ns -l heritage=upmeter
              ```
 
-    - alert: D8UpmeterTooManyHookProbeObjects
-      expr: |
-        (
-          sum (d8_upmeter_upmeterhookprobe_count)
-          /
-          count (kube_pod_labels{namespace="d8-upmeter", label_app="upmeter-agent"})
-        ) > 1
-      for: 10m
-      labels:
-        severity_level: "9"
-        tier: cluster
-        d8_module: upmeter
-        d8_component: upmeter-agent
-      annotations:
-        plk_protocol_version: "1"
-        plk_markup_format: "markdown"
-        plk_create_group_if_not_exists__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_grouped_by__d8_upmeter_resources_garbage: "D8UpmeterProbeGarbage,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-        plk_labels_as_annotations: "upmeterhookprobe"
-        summary: Too many UpmeterHookProbe objects in the cluster.
-        description: |
-          The average number of `UpmeterHookProbe` objects per `upmeter-agent` Pod is {{ $value }}, but it should always be exactly 1 per agent.
-
-          This likely happened because older `upmeter-agent` Pods left behind their `UpmeterHookProbe` objects during an Upmeter update or downscale.
-
-          Once the cause has been investigated, remove outdated objects and leave only the ones corresponding to currently running `upmeter-agent` Pods.
-
-          To view all `UpmeterHookProbe` objects, run the following command:
-
-          ```shell
-          d8 k get upmeterhookprobes.deckhouse.io
-          ```
-
     - alert: D8UpmeterSmokeMiniMoreThanOnePVxPVC
       expr: |
         count(
