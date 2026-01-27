@@ -194,18 +194,6 @@ lint-fix: golangci-lint ## Fix lint violations.
 # Generic function to iterate over all directories with go.mod
 # Usage: $(call iterateAllGoModules,message,command)
 define iterateAllGoModules
-	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
-		echo ""; \
-		echo "============================================================"; \
-		echo "$(1) $$dir"; \
-		echo "============================================================"; \
-		echo ""; \
-		(cd $$dir && $(2)); \
-	done
-endef
-
-.PHONY: lint-all
-lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 	@FAILED=0; \
 	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
 		echo ""; \
@@ -213,9 +201,14 @@ lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
 		echo "Running golangci-lint in $$dir"; \
 		echo "============================================================"; \
 		echo ""; \
-		(cd $$dir && GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100) || FAILED=1; \
+		(cd $$dir && $(2)) || FAILED=1; \
 	done; \
 	exit $$FAILED
+endef
+
+.PHONY: lint-all
+lint-all: golangci-lint ## Run golangci-lint run in all directories with go.mod
+	$(call iterateAllGoModules,Running golangci-lint in,GOFLAGS="-buildvcs=false" golangci-lint run --max-issues-per-linter 100 --max-same-issues 100)
 
 .PHONY: lint-fix-all
 lint-fix-all: golangci-lint ## Run golangci-lint run --fix in all directories with go.mod
