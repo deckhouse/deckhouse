@@ -861,7 +861,6 @@ entries:
             en: Platform uninstalling
             ru: Удаление платформы
           url: /uninstalling/
-
 # ------------- Using -------------
     - title:
         en: Using
@@ -1280,6 +1279,10 @@ entries:
             en: Reference
             ru: Справка
           url: /cli/d8/reference/
+    - title:
+        en: FAQ
+        ru: FAQ
+      url: /faq.html
     - title:
         en: Release notes
         ru: История изменений

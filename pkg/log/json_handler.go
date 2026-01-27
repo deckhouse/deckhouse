@@ -29,9 +29,9 @@ import (
 	logContext "github.com/deckhouse/deckhouse/pkg/log/context"
 )
 
-var _ slog.Handler = (*SlogJsonHandler)(nil)
+var _ slog.Handler = (*SlogJSONHandler)(nil)
 
-type SlogJsonHandler struct {
+type SlogJSONHandler struct {
 	slog.Handler
 
 	// output
@@ -47,13 +47,13 @@ type SlogJsonHandler struct {
 	timeFn func(t time.Time) time.Time
 }
 
-func NewSlogHandler(handler slog.Handler) *SlogJsonHandler {
-	return &SlogJsonHandler{
+func NewSlogHandler(handler slog.Handler) *SlogJSONHandler {
+	return &SlogJSONHandler{
 		Handler: handler,
 	}
 }
 
-func (h *SlogJsonHandler) Handle(ctx context.Context, r slog.Record) error {
+func (h *SlogJSONHandler) Handle(ctx context.Context, r slog.Record) error {
 	h.m.Lock()
 
 	defer func() {
@@ -122,7 +122,7 @@ func (h *SlogJsonHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-func (h *SlogJsonHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+func (h *SlogJSONHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	if len(attrs) < 1 {
 		return h
 	}
@@ -133,14 +133,14 @@ func (h *SlogJsonHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &h2
 }
 
-func (h *SlogJsonHandler) WithGroup(name string) slog.Handler {
+func (h *SlogJSONHandler) WithGroup(name string) slog.Handler {
 	h2 := *h
 	h2.Handler = h.Handler.WithGroup(name)
 
 	return &h2
 }
 
-func (h *SlogJsonHandler) Named(name string) slog.Handler {
+func (h *SlogJSONHandler) Named(name string) slog.Handler {
 	currName := name
 	if h.name != "" {
 		currName = fmt.Sprintf("%s.%s", h.name, name)
@@ -152,14 +152,14 @@ func (h *SlogJsonHandler) Named(name string) slog.Handler {
 	return &h2
 }
 
-func (h *SlogJsonHandler) SetOutput(w io.Writer) {
+func (h *SlogJSONHandler) SetOutput(w io.Writer) {
 	h.w = w
 }
 
-func NewJSONHandler(out io.Writer, opts *slog.HandlerOptions, timeFn func(t time.Time) time.Time) *SlogJsonHandler {
+func NewJSONHandler(out io.Writer, opts *slog.HandlerOptions, timeFn func(t time.Time) time.Time) *SlogJSONHandler {
 	b := new(bytes.Buffer)
 
-	return &SlogJsonHandler{
+	return &SlogJSONHandler{
 		Handler: slog.NewJSONHandler(b, opts),
 		b:       b,
 		m:       &sync.Mutex{},

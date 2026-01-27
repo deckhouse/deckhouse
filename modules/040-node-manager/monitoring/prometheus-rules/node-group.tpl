@@ -18,28 +18,27 @@
 
            Look for errors in the `.status.lastMachineFailures` field.
 
-        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine
+           d8 k get instances
            ```
 
-        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
            ```
 
-        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
 
-           ```json
-           {
-             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-             "tcpEndpoint": "192.168.199.158"
-           }
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
            ```
 
-          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
 {{- end }}
 
 - name: d8.node-group

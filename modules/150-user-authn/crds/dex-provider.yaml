@@ -506,7 +506,8 @@ spec:
                         fallbackToPassword:
                           type: boolean
                           default: false
-                          description: If true, render password form when SPNEGO header is missing/invalid.
+                          description: |
+                            If `true`, in the absence of/incorrect `Authorization: Negotiate` header, a login/password form will be displayed instead of a 401 response with `WWW-Authenticate: Negotiate`.
                         keytabSecretName:
                           type: string
                           description: Name of Secret containing key 'krb5.keytab' to mount for Dex.

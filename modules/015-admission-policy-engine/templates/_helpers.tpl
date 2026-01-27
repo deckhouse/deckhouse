@@ -138,13 +138,13 @@ spec:
       matchExpressions:
     {{- if eq $standard "baseline" }}
       {{- if ne $defaultPolicy "privileged" }}
-      - { key: heritage, operator: In, values: [ deckhouse ] }
-      - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
+        - { key: heritage, operator: In, values: [ deckhouse ] }
+        - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
       {{- end }}
     {{- else if eq $standard "restricted" }}
       {{- if ne $defaultPolicy "restricted" }}
-      - { key: heritage, operator: In, values: [ deckhouse ] }
-      - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
+        - { key: heritage, operator: In, values: [ deckhouse ] }
+        - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
       {{- end }}
     {{- end }}
       # matches default enforcement action

@@ -17,12 +17,13 @@ limitations under the License.
 package main
 
 import (
-	"basic-auth-proxy/pkg/proxy"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"basic-auth-proxy/pkg/proxy"
 )
 
 func main() {

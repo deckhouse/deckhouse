@@ -161,4 +161,3 @@ func TestBulkSARStorage_ConcurrentCreateWithDifferentUsers(t *testing.T) {
 
 	wg.Wait()
 }
-

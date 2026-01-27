@@ -7,7 +7,7 @@
 </h3>
 
 <div class="form form--inline">
-  <div class="form__row" style="max-width: 383px;">
+  <div class="form__row">
     <label class="label">
       DKP license key
     </label>

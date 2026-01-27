@@ -1948,6 +1948,23 @@ alerts:
         The log-shipper-agent pods can't collect logs to {{ $labels.component_id }} on the {{ $labels.node }} node.
       severity: "4"
       markupFormat: markdown
+    - name: D8LogShipperConfigInvalid
+      sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
+      moduleUrl: 460-log-shipper
+      module: log-shipper
+      edition: ce
+      description: |
+        At least one Vector DaemonSet Pod is reporting an invalid configuration.
+
+        To resolve this, check the container logs or follow advanced instructions:
+
+        ```bash
+        d8 k -n d8-log-shipper logs {{ $labels.host }} -c vector-reloader
+        ```
+      summary: |
+        Vector configuration is invalid in the cluster.
+      severity: "4"
+      markupFormat: markdown
     - name: D8LogShipperDestinationErrors
       sourceFile: modules/460-log-shipper/monitoring/prometheus-rules/log-shipper-agent.yaml
       moduleUrl: 460-log-shipper
@@ -2660,6 +2677,34 @@ alerts:
       summary: |
         Node {{ $labels.node }} cannot begin the update.
       severity: "8"
+      markupFormat: markdown
+    - name: D8PrometheusConfigReloadFailed
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/base.tpl
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |-
+        The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
+
+        This usually happens when:
+        - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
+        - Invalid RemoteWrite configuration.
+
+        Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
+        Troubleshooting steps:
+
+        1. Check the Prometheus container logs for configuration errors:
+
+           ```shell
+           d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
+           ```
+
+        2. If using remote write, verify the remote write configuration.
+
+        Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.
+      summary: |
+        Prometheus configuration reload failed.
+      severity: "5"
       markupFormat: markdown
     - name: D8PrometheusLongtermFederationTargetDown
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/longterm-target-down.yaml
@@ -5815,28 +5860,27 @@ alerts:
 
            Look for errors in the `.status.lastMachineFailures` field.
 
-        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine
+           d8 k get instances
            ```
 
-        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
            ```
 
-        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
 
-           ```json
-           {
-             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-             "tcpEndpoint": "192.168.199.158"
-           }
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
            ```
 
-          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
         NodeGroup {{ $labels.node_group }} has no available instances.
       severity: "7"
@@ -5868,28 +5912,27 @@ alerts:
 
            Look for errors in the `.status.lastMachineFailures` field.
 
-        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine
+           d8 k get instances
            ```
 
-        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
            ```
 
-        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
 
-           ```json
-           {
-             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-             "tcpEndpoint": "192.168.199.158"
-           }
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
            ```
 
-          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
         Too many unavailable instances in the {{ $labels.node_group }} NodeGroup.
       severity: "8"
@@ -5920,28 +5963,27 @@ alerts:
 
            Look for errors in the `.status.lastMachineFailures` field.
 
-        2. If no Machines stay in the Pending state for more than a couple of minutes, it likely means that Machines are being continuously created and deleted due to an error:
+        2. If no Instances stay in the Pending state for more than a couple of minutes, it likely means that Instances are being continuously created and deleted due to an error:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine
+           d8 k get instances
            ```
 
-        3. If logs don’t show errors, and a Machine continues to be Pending, check its bootstrap status:
+        3. If logs don’t show errors, and an Instance continues to be Pending, check its bootstrap status:
 
            ```shell
-           d8 k -n d8-cloud-instance-manager get machine <MACHINE_NAME> -o json | jq .status.bootstrapStatus
+           d8 k get instances <INSTANCE_NAME> -o yaml | grep 'bootstrapStatus' -B0 -A2
            ```
 
-        4. If the output looks like the example below, connect via `nc` to examine bootstrap logs:
+        4. If the output looks like the example below, use the `logsEndpoint` (or the command in `description`) to examine bootstrap logs:
 
-           ```json
-           {
-             "description": "Use 'nc 192.168.199.158 8000' to get bootstrap logs.",
-             "tcpEndpoint": "192.168.199.158"
-           }
+           ```text
+           bootstrapStatus:
+             description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+             logsEndpoint: http://192.168.199.158:8000
            ```
 
-          5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
+        5. If there's no bootstrap log endpoint, `cloudInit` may not be working correctly. This could indicate a misconfigured instance class in the cloud provider.
       summary: |
         NodeGroup {{ $labels.node_group }} has unavailable instances.
       severity: "8"

@@ -345,6 +345,8 @@ spec:
       SecRuleEngine On
 ```
 
+### Adding SecRules
+
 An example of a rule to limit the number of arguments in a request URL. If the number of arguments exceeds 10, the server will reject the request with an error code 400 (Bad Request).
 
 ```yaml
@@ -363,4 +365,20 @@ spec:
 
 A full list and description of the directives can be found in the [official documentation](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
 
-Currently, the OWASP Core Rule Set (CRS) is not available.
+### Enabling OWASP Core Rule Set (CRS)
+
+To enable OWASP Core Rule Set (CRS) add the `config.enable-owasp-modsecurity-crs` in CR IngressNginxController, as in the example below.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    enable-owasp-modsecurity-crs: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+```

@@ -56,8 +56,7 @@ type Exporter struct {
 }
 
 func New(namespace string, labelSelector string) (*Exporter, error) {
-
-	// Get enviroments
+	// Get environments
 
 	inlet := os.Getenv("INLET")
 	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
@@ -117,7 +116,7 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 		"services",
 		metav1.NamespaceAll,
 		func(options *metav1.ListOptions) {
-			options.LabelSelector = fmt.Sprintf("federation.istio.deckhouse.io/public-service=")
+			options.LabelSelector = "federation.istio.deckhouse.io/public-service="
 		},
 	)
 
@@ -171,7 +170,6 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 }
 
 func (exp *Exporter) watchIngressGateways(ctx context.Context) {
-
 	exp.serviceInformer = cache.NewSharedInformer(
 		exp.lwService,
 		&v1.Service{},
@@ -322,7 +320,6 @@ func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeLi
 }
 
 func isNodeActive(node *v1.Node) bool {
-
 	for _, taint := range node.Spec.Taints {
 		if taint.Key == "node.kubernetes.io/unschedulable" {
 			return false
@@ -339,7 +336,6 @@ func isNodeActive(node *v1.Node) bool {
 }
 
 func extractIngressGatewaysFromCM(cm *v1.ConfigMap) ([]IngressGateway, error) {
-
 	data, exists := cm.Data["ingressgateways-array.json"]
 	if !exists {
 		return nil, fmt.Errorf("ConfigMap does not contain ingressgateways-array.json")
@@ -356,7 +352,7 @@ func extractIngressGatewaysFromCM(cm *v1.ConfigMap) ([]IngressGateway, error) {
 // GetIngressGateways Main function to get all ingress gateways
 func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 	inlet := exp.inlet
-	//debug
+	// debug
 	fmt.Printf("INLET=%s\n", inlet)
 
 	items := exp.serviceInformer.GetStore().List()
@@ -385,7 +381,6 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 	}
 
 	switch inlet {
-
 	case "LoadBalancer":
 		ingressGatewaysLoadBalancer, err := extractLoadBalancerInfo(serviceList)
 		if err != nil {
@@ -421,14 +416,14 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract node port info: %w", err)
 		}
-		//debug
+		// debug
 		fmt.Printf("ingressGatewaysNodePort=%+v\n", ingressGatewaysNodePort)
 		ingressGateways = append(ingressGateways, ingressGatewaysNodePort...)
 	default:
 		return nil, fmt.Errorf("unknown inlet type: %s", inlet)
 	}
 
-	//debug
+	// debug
 	fmt.Printf("ingressGateways=%v\n", ingressGateways)
 
 	return ingressGateways, nil
@@ -459,7 +454,6 @@ func (exp *Exporter) GetPublicServices() ([]PublicServices, error) {
 
 // SpiffeBundleJSON create JSON Spiffe Bundle
 func (exp *Exporter) SpiffeBundleJSON() (string, error) {
-
 	// extract root-cert.pem
 	pubPem, err := exp.ExtractRootCaCert()
 	if err != nil {
@@ -514,7 +508,6 @@ func (exp *Exporter) SpiffeBundleJSON() (string, error) {
 
 // ExtractRemotePublicMetadata extract remote-public-metadata.json fom Secret d8-remote-clusters-public-metadata
 func (exp *Exporter) ExtractRemotePublicMetadata() (RemotePublicMetadata, error) {
-
 	items := exp.remoteClustersPublicMetadataInformer.GetStore().List()
 	if len(items) == 0 {
 		return nil, fmt.Errorf("no secrets found in d8-remote-clusters-public-metadata")
@@ -540,7 +533,6 @@ func (exp *Exporter) ExtractRemotePublicMetadata() (RemotePublicMetadata, error)
 
 // ExtractAuthnKeyPub extract pub.pem from secret d8-remote-authn-keypair
 func (exp *Exporter) ExtractAuthnKeyPub() (string, error) {
-
 	items := exp.remoteAuthnKeypair.GetStore().List()
 	if len(items) == 0 {
 		return "", fmt.Errorf("no secrets found in d8-remote-authn-keypair")
@@ -563,7 +555,6 @@ func (exp *Exporter) ExtractAuthnKeyPub() (string, error) {
 
 // ExtractRootCaCert  extract pub.pem from cm istio-ca-root-cert
 func (exp *Exporter) ExtractRootCaCert() (string, error) {
-
 	items := exp.certCAConfigMapInformer.GetStore().List()
 	if len(items) == 0 {
 		return "", fmt.Errorf("no configmaps found in istio-ca-root-cert")

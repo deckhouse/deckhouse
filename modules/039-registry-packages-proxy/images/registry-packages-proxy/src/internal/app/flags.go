@@ -17,17 +17,18 @@ package app
 import (
 	"flag"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 var RppSignCheck = "false"
 
 type Config struct {
-    KubeConfig         string
-    ListenAddress      string
-    DisableCache       bool
-    SignCheck          bool
+	KubeConfig         string
+	ListenAddress      string
+	DisableCache       bool
+	SignCheck          bool
 	CacheDirectory     string
 	CacheRetentionSize resource.Quantity
 	LogLevel           log.Level
@@ -52,13 +53,13 @@ func InitFlags() (*Config, error) {
 		return nil, err
 	}
 	config.LogLevel, err = log.ParseLevel(*v)
-    if err != nil {
-        return nil, err
-    }
+	if err != nil {
+		return nil, err
+	}
 
-    if RppSignCheck == "true" {
-        config.SignCheck = true
-    }
+	if RppSignCheck == "true" {
+		config.SignCheck = true
+	}
 
-    return config, nil
+	return config, nil
 }

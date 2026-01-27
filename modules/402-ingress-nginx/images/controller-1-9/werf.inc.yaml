@@ -77,7 +77,7 @@ shell:
   - patch -p1 < /patches/ingress-nginx/018-geoip-ver-metric.patch
   - patch -p1 < /patches/ingress-nginx/019-skip-tls-verification-maxmind.patch
   - patch -p1 < /patches/ingress-nginx/020-ingress-update-status.patch
-  - patch -p1 < /patches/ingress-nginx/021-use-proxy-real-ip-cidr.patch
+  - patch -p1 < /patches/ingress-nginx/021-use-proxy-real-ip-cidr-v2.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/rootfs/001-balancer-lua.patch
   - patch -p1 < /patches/rootfs/002-nginx-tmpl.patch
@@ -491,8 +491,16 @@ shell:
   # replace pcre with version with jit support
   - echo "jit support"
   - ln -sf libpcre.so.1.2.13 /chroot/lib64/libpcre.so.3
-  # cve bash scripts
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/INSTALL
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/KNOWN_BUGS
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/LICENSE
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/.[^.]*
+  
 imageSpec:
   config:
     workingDir: /

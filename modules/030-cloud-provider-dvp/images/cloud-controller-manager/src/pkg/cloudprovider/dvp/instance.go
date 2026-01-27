@@ -18,14 +18,15 @@ package dvp
 
 import (
 	"context"
-	"dvp-common/api"
 	"errors"
 	"fmt"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+	"dvp-common/api"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 )
 
 func (c *Cloud) NodeAddresses(ctx context.Context, nodeName types.NodeName) ([]v1.NodeAddress, error) {

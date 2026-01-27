@@ -282,6 +282,10 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		controllerutil.AddFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered)
 	}
 
+	if _, set := app.GetAnnotations()[v1alpha1.ApplicationAnnotationRegistrySpecChanged]; set {
+		delete(app.ObjectMeta.Annotations, v1alpha1.ApplicationAnnotationRegistrySpecChanged)
+	}
+
 	app = r.addOwnerReferences(app, apv, ap)
 	if err := r.client.Patch(ctx, app, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application '%s': %w", app.Name, err)

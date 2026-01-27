@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 10,
+  "version": 13,
   "statements": [
     {
       "vulnerability": {
@@ -62,6 +62,20 @@
     },
     {
       "vulnerability": {
+        "name": "CVE-2026-22772"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/fulcio@v1.4.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Fulcio SSRF vulnerability - Функционал функции metaRegex() в библиотеке github.com/sigstore/fulcio версии 1.4.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все взаимодействия с сертификатами проходят через промежуточные компоненты, не предоставляющие доступа к уязвимому коду, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-01-16T12:00:00Z"
+    },
+    {
+      "vulnerability": {
         "name": "CVE-2025-8869"
       },
       "products": [
@@ -73,8 +87,148 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2025-10-09T14:31:32.069712443Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-9675"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containers/buildah@v1.37.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она не может быть эксплуатирована при использовании бекенда Docker, который включён по умолчанию. В этом режиме Docker-демон запрещает произвольное монтирование директорий, исключая возможность эксплуатации. Уязвимость актуальна только при использовании бекенда Buildah, включаемого переменной WERF_BUILDAH_MODE=on.",
+      "timestamp": "2025-10-09T14:21:14.710165495Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-0495"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/buildx@v0.13.0-rc2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. d8 delivery-kit не использует сборочный бекенд Docker BuildKit, где проявляется уязвимость. d8 delivery-kit всегда использует стандартный Docker backend, и уязвимость возможна только при включении DOCKER_BUILDKIT=1.",
+      "timestamp": "2025-10-09T14:21:14.78894747Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-54410"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/docker/docker@v25.0.6+incompatible"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она проявляется только в работе Docker-демона (dockerd), который не входит в состав d8 delivery-kit. Команда использует github.com/docker/docker исключительно как клиентскую библиотеку Docker API и не взаимодействует с Firewalld.",
+      "timestamp": "2025-10-09T14:21:14.86863865Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/selinux@v1.11.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она проявляется в runc при использовании racing containers с shared mounts, что не выполняется операциями d8 delivery-kit. d8 delivery-kit работает с контейнерами только через Docker API и не вызывает runc напрямую.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она проявляется только в runc при эксплуатации racing containers, а d8 delivery-kit не вызывает runc напрямую и использует Docker API.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она проявляется в runc при специфическом bind-mount /dev/pts/$n в /dev/console, что не используется в работе d8 delivery-kit.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc@v1.1.14"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Она появляется в runc при ошибочной проверке bind-mount /dev/null, а d8 delivery-kit не вызывает runc напрямую и использует Docker API.",
+      "timestamp": "2025-11-07T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-8869"
+      },
+      "products": [
+        {
+          "@id": "pkg:pip:25.3"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. d8 delivery-kit не использует функционал извлечения tar-архивов с уязвимым fallback pip. Все используемые версии Python соответствуют требованиям PEP 706.",
+      "timestamp": "2025-10-09T14:31:32.069712443Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-25621"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а не компонентами CRI или runtime, в которых проявляется уязвимость.",
+      "timestamp": "2025-11-13T00:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-64329"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.27"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Эта неэксплуатируемая уязвимость относится к подкоманде d8 delivery-kit. Использование github.com/containerd/containerd ограничено операциями с OCI-образами и манифестами, а не компонентами CRI или runtime, в которых проявляется уязвимость.",
+      "timestamp": "2025-11-13T00:00:00Z"
     }
   ],
-  "timestamp": "2025-10-09T14:31:31Z",
-  "last_updated": "2025-10-09T14:31:32Z"
+  "timestamp": "2026-01-16T12:00:00Z",
+  "last_updated": "2026-01-19T00:00:00Z"
 }

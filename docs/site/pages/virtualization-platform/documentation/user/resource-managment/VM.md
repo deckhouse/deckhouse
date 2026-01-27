@@ -92,7 +92,7 @@ Example of creating a virtual machine with Ubuntu 22.04.
    Create a virtual machine from the following specification:
 
    ```yaml
-   d8 k apply -f - <<EOF
+   d8 k apply -f - <<'EOF'
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualMachine
    metadata:
@@ -241,7 +241,7 @@ The password in the example was generated using the command `mkpasswd --method=S
 Create a virtual machine with the disk created [previously](/products/virtualization-platform/documentation/user/resource-management/disks.html#creating-a-disk-from-an-image):
 
 ```yaml
-d8 k apply -f - <<EOF
+d8 k apply -f - <<'EOF'
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualMachine
 metadata:

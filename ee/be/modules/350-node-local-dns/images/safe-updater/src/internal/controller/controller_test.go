@@ -175,6 +175,24 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err = suite.controller.reconcileDaemonSet(suite.ctx, ds)
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("daemonset-updated-but-not-pods-and-cilium-pods-have-different-controller-revision", func() {
+		err := suite.setupController(suite.fetchTestFileData("daemonset-updated-but-not-pods-and-cilium-pods-have-different-controller-revision.yaml"))
+		require.NoError(suite.T(), err)
+
+		ds := suite.getNodeLocalDNSDaemonSet()
+		_, err = suite.controller.reconcileDaemonSet(suite.ctx, ds)
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("daemonset-updated-but-not-pods-and-cilium-pods-have-different-controller-revision-hash", func() {
+		err := suite.setupController(suite.fetchTestFileData("daemonset-updated-but-not-pods-and-cilium-pods-have-different-controller-revision-hash.yaml"))
+		require.NoError(suite.T(), err)
+
+		ds := suite.getNodeLocalDNSDaemonSet()
+		_, err = suite.controller.reconcileDaemonSet(suite.ctx, ds)
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) setupController(yamlDoc string) error {

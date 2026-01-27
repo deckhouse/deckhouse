@@ -19,13 +19,14 @@ package api
 import (
 	"errors"
 
-	"dvp-common/config"
-
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	"dvp-common/config"
 )
 
 var (

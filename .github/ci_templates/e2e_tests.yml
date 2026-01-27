@@ -65,8 +65,8 @@
 {!{- $script := "script.sh" -}!}
 {!{- $script_eks := "script_eks.sh" -}!}
 {!{- $script_commander := "script-commander.sh" -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if eq $provider "aws" }!}
   TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
   LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
@@ -84,31 +84,33 @@
   LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
   LAYOUT_AZURE_TENANT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_TENANT_ID }}
 {!{- else if eq $provider "yandex-cloud" }!}
-  TEMPLATE_ID: "6bae307a-1a85-4239-9eff-f32bd99bc796"
+  TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
   LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
   LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
   LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
 {!{- else if eq $provider "openstack" }!}
-  TEMPLATE_ID: "3b944ac4-a192-453b-83e7-0be3d9721549"
+  TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "static" }!}
-  TEMPLATE_ID: "ce4a7bff-e7f3-419f-a472-e5b383a9779f"
+  TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
   LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
 {!{- else if eq $provider "vsphere" }!}
-  TEMPLATE_ID: "cab59f93-ae16-4fd1-baed-af7b115e0a2a"
+  TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
   LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
   LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
   LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
 {!{- else if eq $provider "vcd" }!}
-  TEMPLATE_ID: "b352a786-2c95-47b6-8cd0-ed32841611a3"
+  TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
   LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
   LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
   LAYOUT_STATIC_BASTION_IP: 80.249.129.56
   LAYOUT_VCD_SERVER: ${{ steps.secrets.outputs.LAYOUT_VCD_SERVER }}
   LAYOUT_VCD_ORG: ${{ steps.secrets.outputs.LAYOUT_VCD_ORG }}
 {!{- else if eq $provider "dvp" }!}
-  TEMPLATE_ID: "3edcb64e-4d9e-4ace-99b5-b4e9857d1766"
+  TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
   LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+{!{- else if eq $provider "zvirt" }!}
+  TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
 {!{- end }!}
   COMMENT_ID: ${{ inputs.comment_id }}
   GITHUB_API_SERVER: ${{ github.api_url }}
@@ -310,6 +312,10 @@ run: |
   export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
   {!{- else if eq $provider "dvp" }!}
   export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+  {!{- else if eq $provider "zvirt" }!}
+  export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
+  export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
+  export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
   {!{- end }!}
   {!{- if eq $provider "static" }!}
   export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
@@ -443,7 +449,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
 {!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
 {!{-   $runsOnLabel = "regular" -}!}
@@ -545,6 +551,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "zvirt" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "password" "LAYOUT_ZVIRT_PASSWORD" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}
@@ -877,7 +887,7 @@ check_e2e_labels:
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
 {!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
-{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
 {!{-   $runsOnLabel = "regular" -}!}
 {!{- end -}!}
@@ -955,6 +965,10 @@ check_e2e_labels:
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket" "AWS_SECRET_ACCESS_KEY" "S3_E2E_SECRET_ACCESS_KEY" ) $secrets -}!}
 {!{- else if eq $provider "dvp" }!}
 {!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP" "LAYOUT_DVP_KUBECONFIGDATABASE64" "LAYOUT_DVP_KUBECONFIGDATABASE64" ) $secrets -}!}
+{!{- else if eq $provider "zvirt" }!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "base-domain" "LAYOUT_ZVIRT_BASE_DOMAIN" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "login" "LAYOUT_ZVIRT_USERNAME" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt" "password" "LAYOUT_ZVIRT_PASSWORD" ) $secrets -}!}
 {!{- end -}!}
 {!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 4 }!}
 {!{ tmpl.Exec "login_dev_registry_step" . | strings.Indent 4 }!}

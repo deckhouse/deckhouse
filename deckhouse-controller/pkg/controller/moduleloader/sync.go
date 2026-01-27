@@ -121,7 +121,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 
 			l.logger.Info("module not exist, skip restoring module pull override", slog.String("name", mpo.Name))
@@ -291,18 +291,21 @@ func (l *Loader) deleteOrphanModules(ctx context.Context) error {
 
 	l.logger.Debug("found installed modules", slog.Any("installed", installed))
 
-	// remove modules with release
+	// exclude modules with release
 	for _, release := range releases.Items {
 		delete(installed, release.GetModuleName())
 	}
 
 	for module := range installed {
 		mpo := new(v1alpha2.ModulePullOverride)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo); apierrors.IsNotFound(err) {
+		err = l.client.Get(ctx, client.ObjectKey{Name: module}, mpo)
+		if err == nil {
+			// MPO exists - module is managed, don't delete
 			continue
 		}
 
-		if mpo.Status.Message == v1alpha1.ModulePullOverrideMessageReady {
+		if !apierrors.IsNotFound(err) {
+			l.logger.Warn("get module pull override", slog.String("name", module), log.Err(err))
 			continue
 		}
 

@@ -29,6 +29,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
+const (
+	dmTemplate = "/dev/mapper/%s"
+)
+
 // Mount ensures the mount path and mounts the device mapper to it
 func Mount(ctx context.Context, module, mountPath string) error {
 	_, span := otel.Tracer(tracerName).Start(ctx, "Mount")
