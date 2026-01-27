@@ -322,7 +322,7 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..453cd9564b 100644
+index 0142716855..4002da5660 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -420,7 +420,7 @@ index 0142716855..453cd9564b 100644
  	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
-@@ -2714,9 +2793,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,9 +2793,20 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -430,10 +430,11 @@ index 0142716855..453cd9564b 100644
 +	
  	if (svc) {
 +		#if 1
-+        if(ip4->protocol == IPPROTO_ICMP && lb4_svc_is_loadbalancer(svc)) {
++        if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
 +			__be32 vip = bpf_htonl(0xc0a8c7c8);
 +			if ((ip4->daddr == vip || ip4->saddr == vip))
-+				printk("MEG:2222 GOT A NODEPORT NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
++				printk("MEG:2222 GOT A NODEPORT NEW ICMP PACKET ENTER src:%x dst:%x! (svc_is_lb:%d)\n", 
++					ip4->saddr, ip4->daddr, lb4_svc_is_loadbalancer(svc) ? 1 : 0);
 +        	return make_icmp_responce_lb4(ctx, ip4);
 +        }
 +		#endif
