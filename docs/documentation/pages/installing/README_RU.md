@@ -38,7 +38,7 @@ relatedLinks:
 
 - **В поддерживаемом облаке.** Установщик автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DKP. Полный список поддерживаемых облачных провайдеров доступен в разделе [«Интеграция с IaaS»](../admin/integrations/public/overview.html).
 
-- **На серверах bare metal (в том числе гибридные кластеры) или в неподдерживаемых облаках**. Установщик выполняет настройку указанных в конфигурации серверов или виртуальных машин, разворачивает кластер Kubernetes и устанавливает DKP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Kubernetes Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
+- **На серверах bare metal (в том числе гибридные кластеры) или в неподдерживаемых облаках**. Установщик настраивает указанные в конфигурации серверы или виртуальные машины, разворачивает кластер Kubernetes и устанавливает DKP. Пошаговые инструкции по развертыванию на bare metal можно найти в разделе [«Быстрый старт» → «Deckhouse Kubernetes Platform на bare metal»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
 
 - **В существующем кластере Kubernetes.** Установщик разворачивает DKP и интегрирует его с текущей инфраструктурой. Пошаговые инструкции по развертыванию в существующем кластере можно найти в разделе [«Быстрый старт» → «Deckhouse Kubernetes Platform в существующем кластере»]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
@@ -139,7 +139,7 @@ relatedLinks:
 </div>
 
 <div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
-В этом примере настройка доступа к DKP container registry выполняется с помощью ModuleConfig `deckhouse`.
+В этом примере доступ к DKP container registry настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -296,7 +296,7 @@ spec:
 
 <div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
 
-В этом примере настройка доступа к DKP container registry выполняется с помощью InitConfiguration.
+В этом примере доступ к DKP container registry настраивается с помощью InitConfiguration.
 
 ```yaml
 apiVersion: deckhouse.io/v1
