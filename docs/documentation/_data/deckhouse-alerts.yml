@@ -6627,6 +6627,22 @@ alerts:
         Prometheus-main data is rotating earlier than the configured retention period.
       severity: "4"
       markupFormat: markdown
+    - name: PrometheusRemoteStorageUnavailable
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-remote-write.yaml
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |
+        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
+
+        Review the Prometheus logs to see the detailed error information:
+        ```shell
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }} -f
+        ```
+      summary: |
+        Prometheus remote storage is unavailable.
+      severity: "7"
+      markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus

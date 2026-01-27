@@ -1,0 +1,20 @@
+- name: d8.prometheus.remote_storage
+  rules:
+  - alert: PrometheusRemoteStorageUnavailable
+    expr: |
+      group by(namespace, pod, service, url) (increase(prometheus_remote_storage_samples_failed_total{job="prometheus"}[1h]) > 0)
+    labels:
+      tier: cluster
+      severity_level: "7"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Prometheus remote storage is unavailable.
+      description: |
+        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
+
+        Review the Prometheus logs to see the detailed error information:
+        ```shell
+        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }} -f
+        ```
