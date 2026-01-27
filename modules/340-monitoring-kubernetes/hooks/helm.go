@@ -64,38 +64,6 @@ import (
 // objectBatchSize. It means, that kubeClient will list only limited amount of releases to avoid memory explosion
 
 const unsupportedVersionsYAML = `
-"1.22":
-  "admissionregistration.k8s.io/v1beta1": ["ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"]
-  "apiextensions.k8s.io/v1beta1": ["CustomResourceDefinition"]
-  "apiregistration.k8s.io/v1beta1": ["APIService"]
-  "authentication.k8s.io/v1beta1": ["TokenReview"]
-  "authorization.k8s.io/v1beta1": ["SubjectAccessReview", "LocalSubjectAccessReview", "SelfSubjectAccessReview"]
-  "certificates.k8s.io/v1beta1": ["CertificateSigningRequest"]
-  "coordination.k8s.io/v1beta1": ["Lease"]
-  "networking.k8s.io/v1beta1": ["Ingress"]
-  "extensions/v1beta1": ["Ingress"]
-
-"1.24":
-  "snapshot.storage.k8s.io/v1beta1": ["VolumeSnapshot"]
-
-"1.25":
-  "batch/v1beta1": ["CronJob"]
-  "discovery.k8s.io/v1beta1": ["EndpointSlice"]
-  "events.k8s.io/v1beta1": ["Event"]
-  "autoscaling/v2beta1": ["HorizontalPodAutoscaler"]
-  "policy/v1beta1": ["PodDisruptionBudget", "PodSecurityPolicy"]
-  "node.k8s.io/v1beta1": ["RuntimeClass"]
-
-"1.26":
-  "flowcontrol.apiserver.k8s.io/v1beta1": ["FlowSchema", "PriorityLevelConfiguration"]
-  "autoscaling/v2beta2": ["HorizontalPodAutoscaler"]
-
-"1.27":
-  "storage.k8s.io/v1beta1": ["CSIStorageCapacity"]
-
-"1.29":
-  "flowcontrol.apiserver.k8s.io/v1beta2": ["FlowSchema", "PriorityLevelConfiguration"]
-
 "1.32":
   "flowcontrol.apiserver.k8s.io/v1beta3": ["FlowSchema", "PriorityLevelConfiguration"]
   "admissionregistration.k8s.io/v1alpha1": ["ValidatingAdmissionPolicy", "ValidatingAdmissionPolicyBinding"]
