@@ -3,10 +3,12 @@ fromImage: base/distroless
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
+  excludePaths:
+  - '**/terraform-versions.yml'
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/terraform-versions.yml
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform-versions.yml
   to: /terraform-manager/terraform-versions.yml
 import:
 - image: terraform-provider-kubernetes
