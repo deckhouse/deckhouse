@@ -322,7 +322,7 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..30d799cd3c 100644
+index 0142716855..4569bc6b04 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -420,7 +420,7 @@ index 0142716855..30d799cd3c 100644
  	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
-@@ -2714,13 +2793,33 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,13 +2793,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -429,6 +429,8 @@ index 0142716855..30d799cd3c 100644
  	svc = lb4_lookup_service(&key, false);
 +	
  	if (svc) {
++		printk("MEG:22223 GOT A PACKET wit svc, key addr:%x dport:%x! (proto:%d)", 
++					key.address, key.dport, key.proto);
 +		#if 1
 +        if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
 +			__be32 vip = bpf_htonl(0xc0a8c7c8);
@@ -445,7 +447,7 @@ index 0142716855..30d799cd3c 100644
  	} else {
 +		if(ip4->protocol == IPPROTO_ICMP) {
 +			key.dport = bpf_htons(8000);
-+			//key.proto = 0;
++			key.proto = 6;
 +			svc = lb4_lookup_service(&key, false);
 +			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP");
 +			if (svc)
