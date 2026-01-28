@@ -198,7 +198,7 @@ d8 system edit cluster-configuration
      --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
    ```
 
-5. Удалите аннотацию после применения изменений:
+1. Удалите аннотацию после применения изменений:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
