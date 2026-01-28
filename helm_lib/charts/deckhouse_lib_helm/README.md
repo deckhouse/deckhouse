@@ -78,6 +78,7 @@
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
 | [helm_lib_module_init_container_check_linux_kernel](#helm_lib_module_init_container_check_linux_kernel) |
+| [helm_lib_module_init_container_iptables_wrapper](#helm_lib_module_init_container_iptables_wrapper) |
 | **Module Labels** |
 | [helm_lib_module_labels](#helm_lib_module_labels) |
 | **Module Public Domain** |
@@ -899,6 +900,19 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Semver constraint 
+
+
+### helm_lib_module_init_container_iptables_wrapper
+
+ returns initContainer with iptables-wrapper 
+
+#### Usage
+
+`{{ include "helm_lib_module_init_container_iptables_wrapper" . }} `
+
+#### Arguments
+
+-  Template context with .Values, .Chart, etc 
 
 ## Module Labels
 
