@@ -77,8 +77,10 @@ func (d *DiskService) CreateDisk(ctx context.Context, clusterUUID, vmHostname, d
 			Name:      diskName,
 			Namespace: d.namespace,
 			Labels: map[string]string{
-				"deckhouse.io/managed-by": "deckhouse",
-				diskNameLabel:             diskName,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
+				"dvp.deckhouse.io/hostname":     vmHostname,
+				diskNameLabel:                   diskName,
 			},
 		},
 		Spec: v1alpha2.VirtualDiskSpec{
