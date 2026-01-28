@@ -455,7 +455,52 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(ctx context.Context, m *
 		return false, fmt.Sprintf("Waiting for %s pods to be scheduled...", dsName), nil
 	}
 
+	// 3. Verify that pods are actually created and scheduled
+	pods := &corev1.PodList{}
+	if err := r.List(ctx, pods, client.InNamespace(dsNamespace), client.MatchingLabels(ds.Spec.Selector.MatchLabels)); err != nil {
+		return false, "", err
+	}
+
+	if len(pods.Items) < int(ds.Status.DesiredNumberScheduled) {
+		return false, fmt.Sprintf("Waiting for %s pods creation: %d/%d", dsName, len(pods.Items), ds.Status.DesiredNumberScheduled), nil
+	}
+
+	for _, pod := range pods.Items {
+		if pod.Spec.NodeName == "" {
+			return false, fmt.Sprintf("Waiting for pod %s to be scheduled on a node", pod.Name), nil
+		}
+
+		// Check InitContainerStatuses to ensure images are pulling and no early crashes occur.
+		if len(pod.Status.InitContainerStatuses) == 0 {
+			if pod.Status.Phase == corev1.PodPending {
+				return false, fmt.Sprintf("Waiting for pod %s init containers to start...", pod.Name), nil
+			}
+		}
+
+		for _, status := range pod.Status.InitContainerStatuses {
+			// Check for waiting errors
+			if status.State.Waiting != nil {
+				reason := status.State.Waiting.Reason
+				if isCriticalWaitingReason(reason) {
+					return false, "", fmt.Errorf("pod %s init container %s failed: %s", pod.Name, status.Name, reason)
+				}
+			}
+			// Check for terminated errors
+			if status.State.Terminated != nil && status.State.Terminated.ExitCode != 0 {
+				return false, "", fmt.Errorf("pod %s init container %s terminated with error (exit code %d)", pod.Name, status.Name, status.State.Terminated.ExitCode)
+			}
+		}
+	}
+
 	return true, "", nil
+}
+
+func isCriticalWaitingReason(reason string) bool {
+	switch reason {
+	case "ErrImagePull", "ImagePullBackOff", "CrashLoopBackOff", "CreateContainerConfigError", "InvalidImageName":
+		return true
+	}
+	return false
 }
 
 func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, string, error) {
