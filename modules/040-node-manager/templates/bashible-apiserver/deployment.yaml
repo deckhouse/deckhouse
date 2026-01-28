@@ -141,6 +141,13 @@ spec:
       {{- $.Values.nodeManager.internal.bootstrapTokens | toYaml | nindent 6 }}
     apiserverEndpoints:
       {{- $.Values.nodeManager.internal.clusterMasterAddresses | toYaml | nindent 6 }}
+    {{- if hasKey $.Values.nodeManager.internal "kubernetesAPIProxyDiscoveryCert" }}
+    apiserverProxyCerts:
+      crt: |
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.crt | nindent 8 }}
+      key: |
+        {{- $.Values.nodeManager.internal.kubernetesAPIProxyDiscoveryCert.key | nindent 8 }}
+    {{- end }}
     {{- if hasKey $.Values.nodeManager.internal "packagesProxy" }}
     packagesProxy:
       addresses:
