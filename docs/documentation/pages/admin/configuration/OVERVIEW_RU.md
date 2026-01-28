@@ -191,7 +191,7 @@ d8 system edit cluster-configuration
    vi cluster-config.yaml
    ```
 
-4. Закодируйте отредактированную конфигурацию и обновите Secret:
+1. Закодируйте отредактированную конфигурацию и обновите секрет:
 
    ```shell
    d8 k -n kube-system patch secret d8-cluster-configuration \
