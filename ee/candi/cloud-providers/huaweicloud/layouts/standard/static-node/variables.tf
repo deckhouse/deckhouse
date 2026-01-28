@@ -45,7 +45,7 @@ locals {
   server_group          = lookup(local.ng, "serverGroup", {})
   server_group_policy   = lookup(local.server_group, "policy", "")
   security_group_names  = local.network_security ? concat([local.prefix], lookup(local.instance_class, "additionalSecurityGroups", [])) : []
-  volume_type_map       = local.ng["volumeTypeMap"]
+  volume_type_map       = lookup(local.ng, "volumeTypeMap", var.providerClusterConfiguration.masterNodeGroup.volumeTypeMap)
   actual_zones          = lookup(var.providerClusterConfiguration, "zones", null) != null ? tolist(setintersection(data.huaweicloud_availability_zones.zones.names, var.providerClusterConfiguration.zones)) : data.huaweicloud_availability_zones.zones.names
   zone                  = element(tolist(setintersection(keys(local.volume_type_map), local.actual_zones)), var.nodeIndex)
   volume_type           = local.volume_type_map[local.zone]
@@ -53,4 +53,27 @@ locals {
   root_disk_size        = lookup(local.instance_class, "rootDiskSize", 50) # Huaweicloud can have disks predefined within vm flavours, so we do not set any defaults here
   additional_tags       = lookup(local.instance_class, "additionalTags", {})
   enterprise_project_id = lookup(var.providerClusterConfiguration.provider, "enterpriseProjectID", "")
+}
+
+data "huaweicloud_vpc_subnet" "fallback" {
+  name = local.prefix
+}
+
+locals {
+  fallback_primary_subnet_id = data.huaweicloud_vpc_subnet.fallback.id
+
+  # mainNetwork expected as ID; if not set, fallback to layout default (resolved ID)
+  main_network_id = coalesce(
+    lookup(local.instance_class, "mainNetwork", null),
+    local.fallback_primary_subnet_id
+  )
+  additional_network_ids = (
+    can(tolist(local.instance_class.additionalNetworks))
+    ? tolist(local.instance_class.additionalNetworks)
+    : (
+        can(tostring(local.instance_class.additionalNetworks))
+        ? [tostring(local.instance_class.additionalNetworks)]
+        : []
+      )
+  )
 }

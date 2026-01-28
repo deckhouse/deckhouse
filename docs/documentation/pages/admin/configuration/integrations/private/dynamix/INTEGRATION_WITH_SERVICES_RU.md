@@ -1,10 +1,10 @@
 ---
 title: Интеграция с облаком Dynamix
-permalink: ru/admin/integrations/private/dynamix/dynamix-services.html
+permalink: ru/admin/integrations/private/dynamix/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform интегрируется с облачной платформой Dynamix и использует ресурсы DynamixInstanceClass для описания характеристик виртуальных машин, разворачиваемых в кластере.
+Deckhouse Kubernetes Platform интегрируется с облачной платформой Dynamix и использует [ресурсы DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) для описания характеристик виртуальных машин, разворачиваемых в кластере.
 
 ## Основные возможности
 
@@ -14,7 +14,7 @@ Deckhouse Kubernetes Platform интегрируется с облачной п�
 - Подключение к внешним сетям;
 - Использование нескольких групп узлов с индивидуальными параметрами.
 
-Пример описания `DynamixInstanceClass`:
+Пример описания DynamixInstanceClass:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -31,7 +31,7 @@ spec:
   externalNetwork: extnet_vlan_1700
 ```
 
-На ресурс DynamixInstanceClass ссылается `CloudInstanceClass`, используемый модулем управления узлами (`node-manager`).
+ На него ссылается [параметр cloudInstances.classReference](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) NodeGroup.
 
 ## Рекомендации
 

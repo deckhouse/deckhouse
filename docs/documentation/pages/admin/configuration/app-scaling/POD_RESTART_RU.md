@@ -165,7 +165,7 @@ metadata:
 1. Через команду `d8` (в поде `d8-system/deckhouse`):
 
    ```console
-   d8 platform module enable pod-reloader
+   d8 system module enable pod-reloader
    ```
 
 1. Через [веб-интерфейс Deckhouse](/modules/console/):

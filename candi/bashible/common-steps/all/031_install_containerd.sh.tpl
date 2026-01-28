@@ -48,9 +48,9 @@ cntrd_version_change_check() {
 
 command -v containerd &>/dev/null && cntrd_version_change_check
 
-{{- $containerd := "containerd1728"}}
+{{- $containerd := "containerd1730"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd214" }}
+  {{- $containerd = "containerd216" }}
 bb-package-install "erofs:{{ .images.registrypackages.erofs }}" "cryptsetup:{{ .images.registrypackages.cryptsetup }}"
 {{- end }}
 

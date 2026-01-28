@@ -652,9 +652,15 @@ data:
         fi
           echo "Disruption required, asking for approval."
           echo "Annotating Node with annotation 'update.node.deckhouse.io/disruption-required='."
+          # To get approve from update_approvel hook, two conditions must be satisfied:
+          # - update.node.deckhouse.io/approved= annotation exists (needed by approveDisruptions func)
+          # - node checksum must be differemt from nodegroup checksum or empty (to not unset annotations listed above)
+          # and we cannot run it as ngc inside bashible, because this action must be triggered by node labels change, and mig-manager/partition-manager
+          # are not present on the node
           kubectl \
             --resource-version="$(jq -nr --argjson n "$node_data" '$n.resourceVersion')" \
-            annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= || { echo "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
+            annotate node ${NODE_NAME} update.node.deckhouse.io/disruption-required= node.deckhouse.io/configuration-checksum= update.node.deckhouse.io/approved= --overwrite \
+            || { echo "Retry setting update.node.deckhouse.io/disruption-required= annotation on Node in 10 sec..."; sleep 10; }
       done
 
       echo "Disruption required, waiting for approval"
@@ -662,7 +668,7 @@ data:
       attempt=0
       until
         kubectl get node ${NODE_NAME} -o json | \
-        jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
+        jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved") or has("update.node.deckhouse.io/draining") or has("update.node.deckhouse.io/drained")'  >/dev/null
       do
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
@@ -678,32 +684,30 @@ data:
       echo "Disruption approved!"
       # Drain the node after confirming approval
       attempt=0
-      until
-        kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
-      do
-        attempt=$(( attempt + 1 ))
-        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            echo "ERROR: Failed to annotate node ${NODE_NAME}"
-            exit_failed
-        fi
-        echo "Could not annotate node"
-        echo "Retry in 10sec..."
-        sleep 10
-      done
+      while true
+        do
+          attempt=$(( attempt + 1 ))
+          if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+            echo "failed to drain node ${NODE_NAME}"
+            exit 1
+          fi
+          annotations=$(kubectl get no ${NODE_NAME} -o json |jq  -r '.metadata.annotations')
 
-      attempt=0
-      until
-        kubectl get node ${NODE_NAME} -o json | \
-        jq -e '.metadata.annotations | has("update.node.deckhouse.io/drained")' >/dev/null
-      do
-        attempt=$(( attempt + 1 ))
-        if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            echo "ERROR: Failed to get annotation 'update.node.deckhouse.io/drained' from ${NODE_NAME}"
-            exit_failed
+          DRAINING_ANNOTATION=$(jq -rn --argjson data "$annotations" '$data."update.node.deckhouse.io/draining"')
+          DRAINED_ANNOTATION=$(jq -rn --argjson data "$annotations" '$data."update.node.deckhouse.io/drained"')
+          if [[ $DRAINED_ANNOTATION != "null" ]]
+            then
+              echo "node ${NODE_NAME} was drained"
+              break
+            else
+              if [[ $DRAINING_ANNOTATION == "null" ]]
+          then
+            kubectl annotate node "${NODE_NAME}" update.node.deckhouse.io/draining=bashible
         fi
-        echo "Could not get node annotation"
-        echo "Retry in 30sec..."
-        sleep 30
+          fi
+          echo "Could not get node annotation"
+          echo "Retry in 30sec..."
+          sleep 30
       done
     }
 

@@ -1,6 +1,6 @@
 ---
 title: "Registry Module"
-description: ""
+description: "Configuration management of DKP component registry and organization of an internal container registry."
 ---
 
 ## Description
@@ -20,12 +20,6 @@ The module can operate in the following modes:
 ## Restrictions and features of using the module
 
 The `registry` module has a number of limitations and features related to installation, operating conditions, and mode switching.
-
-### Cluster installation limitations
-
-DKP cluster bootstrap is only supported in non-configurable `Unmanaged` mode. Registry settings during bootstrap are specified through [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
 
 ### Operating conditions restrictions
 

@@ -36,7 +36,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	editionavailablextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
@@ -59,15 +58,18 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 	}
 
 	module := new(v1alpha1.Module)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(backoff, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			r.refreshModuleStatus(module)
 			return r.client.Status().Update(ctx, module)
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleConfig refreshes module config in cluster
@@ -79,7 +81,7 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	moduleConfig := new(v1alpha1.ModuleConfig)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: configName}, moduleConfig); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -91,13 +93,13 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 
 			r.refreshModuleConfigStatus(moduleConfig)
 			if err := r.client.Status().Update(ctx, moduleConfig); err != nil {
-				return err
+				return fmt.Errorf("update: %w", err)
 			}
 
 			// skip firing alert for global module
 			if moduleConfig.Name != "global" {
 				// update metrics
-				converter := conversion.Store().Get(moduleConfig.Name)
+				converter := r.conversionsStore.Get(moduleConfig.Name)
 				// fire alert at obsolete version
 				if moduleConfig.Spec.Version > 0 && moduleConfig.Spec.Version < converter.LatestVersion() {
 					r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleConfigObsoleteVersion, 1.0, map[string]string{
@@ -109,7 +111,10 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 			}
 			return nil
 		})
-	})
+	}); err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // refreshModuleStatus refreshes module status by addon-operator
@@ -278,7 +283,7 @@ func (r *reconciler) refreshModuleConfigStatus(config *v1alpha1.ModuleConfig) {
 	// also create warning if version is unknown or outdated.
 	version := ""
 	versionWarning := ""
-	converter := conversion.Store().Get(config.Name)
+	converter := r.conversionsStore.Get(config.Name)
 	if config.Spec.Version == 0 {
 		// use latest version if spec.version is empty.
 		version = strconv.Itoa(converter.LatestVersion())

@@ -28,6 +28,8 @@ import (
 
 const DefaultSSHAgentPrivateKeys = "~/.ssh/id_rsa"
 
+type PrivateKeyFileToPassphrase map[string]string
+
 var (
 	SSHPrivateKeys = make([]string, 0)
 
@@ -50,6 +52,9 @@ var (
 
 	SSHLegacyMode = false
 	SSHModernMode = false
+
+	// todo ugly solution need refact
+	PrivateKeysToPassPhrasesFromConfig = make(PrivateKeyFileToPassphrase)
 )
 
 type connectionConfigParser interface {
@@ -124,11 +129,16 @@ func DefineSSHFlags(cmd *kingpin.CmdClause, parser connectionConfigParser) {
 		return nil
 	})
 
-	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
+	cmd.Action(func(c *kingpin.ParseContext) (err error) {
 		if len(ConnectionConfigPath) == 0 {
 			return nil
 		}
-		return processConnectionConfigFile(sshFlagSetByUser, parser)
+
+		if sshFlagSetByUser {
+			return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
+		}
+
+		return parser.ParseConnectionConfigFromFile()
 	})
 
 	cmd.PreAction(func(c *kingpin.ParseContext) (err error) {
@@ -186,14 +196,6 @@ func DefineBecomeFlags(cmd *kingpin.CmdClause) {
 		Envar(configEnvName("ASK_BECOME_PASS")).
 		Short('K').
 		BoolVar(&AskBecomePass)
-}
-
-func processConnectionConfigFile(sshFlagSetByUser bool, parser connectionConfigParser) error {
-	if sshFlagSetByUser {
-		return fmt.Errorf("'connection-config' cannot be specified with other ssh flags at the same time")
-	}
-
-	return parser.ParseConnectionConfigFromFile()
 }
 
 func processConnectionConfigFlags() error {

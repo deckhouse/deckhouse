@@ -16,15 +16,18 @@
 package v1alpha1
 
 import (
-	"net/http"
+	http "net/http"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
 type DeckhouseV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	ApplicationsGetter
+	ApplicationPackagesGetter
+	ApplicationPackageVersionsGetter
 	DeckhouseReleasesGetter
 	ModulesGetter
 	ModuleConfigsGetter
@@ -34,11 +37,26 @@ type DeckhouseV1alpha1Interface interface {
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
+	ObjectKeepersGetter
+	PackageRepositoriesGetter
+	PackageRepositoryOperationsGetter
 }
 
 // DeckhouseV1alpha1Client is used to interact with features provided by the deckhouse.io group.
 type DeckhouseV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *DeckhouseV1alpha1Client) Applications(namespace string) ApplicationInterface {
+	return newApplications(c, namespace)
+}
+
+func (c *DeckhouseV1alpha1Client) ApplicationPackages() ApplicationPackageInterface {
+	return newApplicationPackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ApplicationPackageVersions() ApplicationPackageVersionInterface {
+	return newApplicationPackageVersions(c)
 }
 
 func (c *DeckhouseV1alpha1Client) DeckhouseReleases() DeckhouseReleaseInterface {
@@ -75,6 +93,18 @@ func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 
 func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
 	return newModuleUpdatePolicies(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ObjectKeepers() ObjectKeeperInterface {
+	return newObjectKeepers(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {
+	return newPackageRepositories(c)
+}
+
+func (c *DeckhouseV1alpha1Client) PackageRepositoryOperations() PackageRepositoryOperationInterface {
+	return newPackageRepositoryOperations(c)
 }
 
 // NewForConfig creates a new DeckhouseV1alpha1Client for the given config.
@@ -122,10 +152,10 @@ func New(c rest.Interface) *DeckhouseV1alpha1Client {
 }
 
 func setConfigDefaults(config *rest.Config) error {
-	gv := v1alpha1.SchemeGroupVersion
+	gv := deckhouseiov1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
-	config.NegotiatedSerializer = scheme.Codecs.WithoutConversion()
+	config.NegotiatedSerializer = rest.CodecFactoryForGeneratedClient(scheme.Scheme, scheme.Codecs).WithoutConversion()
 
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()

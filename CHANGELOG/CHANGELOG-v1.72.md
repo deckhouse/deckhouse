@@ -52,14 +52,18 @@
 ## Fixes
 
 
+ - **[candi]** Switch node hostname in discover_node_ip.sh to locked hostname [#15799](https://github.com/deckhouse/deckhouse/pull/15799)
  - **[candi]** Fixed deletion of NodeUsers. [#13240](https://github.com/deckhouse/deckhouse/pull/13240)
  - **[candi]** Fixed default AWS subnets tags for LB controller autodiscovery. [#10138](https://github.com/deckhouse/deckhouse/pull/10138)
+ - **[cert-manager]** Mark module as critical for cluster [#16078](https://github.com/deckhouse/deckhouse/pull/16078)
+ - **[cloud-provider-aws]** fix ssh access sg creation with disableDefaultSecurityGroup passed [#16081](https://github.com/deckhouse/deckhouse/pull/16081)
  - **[cloud-provider-aws]** Fixed incorrect template id for AWS e2e cluster. [#14605](https://github.com/deckhouse/deckhouse/pull/14605)
  - **[cloud-provider-dvp]** fix single-node LoadBalancer bug and add multi-LB per node support [#14883](https://github.com/deckhouse/deckhouse/pull/14883)
  - **[cloud-provider-dvp]** Fixed logic of work with disks and coreFraction validation. [#14284](https://github.com/deckhouse/deckhouse/pull/14284)
  - **[cloud-provider-huaweicloud]** add rule to d8:cloud-provider-huaweicloud:cloud-controller-manager account for list pods as needed [#15678](https://github.com/deckhouse/deckhouse/pull/15678)
  - **[cloud-provider-openstack]** fix openstack ccm deployment [#15601](https://github.com/deckhouse/deckhouse/pull/15601)
  - **[cloud-provider-openstack]** Loadbalancers in Openstack clouds will be renamed to match cloud prefix if it is set. [#12180](https://github.com/deckhouse/deckhouse/pull/12180)
+ - **[cloud-provider-vsphere]** fix hook logick [#16028](https://github.com/deckhouse/deckhouse/pull/16028)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15775](https://github.com/deckhouse/deckhouse/pull/15775)
  - **[cloud-provider-vsphere]** cloud-data-discoverer fixes [#15507](https://github.com/deckhouse/deckhouse/pull/15507)
  - **[cloud-provider-vsphere]** Moved datastore discovery (via vSphere SDK calls) from hook to cloud-data-discovery. [#14519](https://github.com/deckhouse/deckhouse/pull/14519)
@@ -73,9 +77,15 @@
  - **[cni-cilium]** Enabled vlan-bpf-bypass feature to fix extra vlan interfaces issues. [#14606](https://github.com/deckhouse/deckhouse/pull/14606)
  - **[control-plane-manager]** Promoted etcd member if needed. [#14661](https://github.com/deckhouse/deckhouse/pull/14661)
  - **[control-plane-manager]** Made etcd client ignore HTTPS_PROXY settings. [#14504](https://github.com/deckhouse/deckhouse/pull/14504)
+ - **[deckhouse]** Fixes bug when module`s config values unchanged after enabling. [#15887](https://github.com/deckhouse/deckhouse/pull/15887)
  - **[deckhouse]** Fixed a helm issue with patching arrays in deckhouse deployment. [#14599](https://github.com/deckhouse/deckhouse/pull/14599)
+ - **[deckhouse-controller]** Fix conversions for external modules [#16891](https://github.com/deckhouse/deckhouse/pull/16891)
+ - **[deckhouse-controller]** Fixed verifying migrated modules [#16873](https://github.com/deckhouse/deckhouse/pull/16873)
+ - **[deckhouse-controller]** Fixed a crash during external module updates with conversions that caused ModuleRelease to fail validation due to a forbidden property error. [#16849](https://github.com/deckhouse/deckhouse/pull/16849)
+ - **[deckhouse-controller]** fix deckhouse update accidentally minor skip [#16095](https://github.com/deckhouse/deckhouse/pull/16095)
  - **[deckhouse-controller]** Ensure `afterDeleteHelm` hooks receive Kubernetes snapshots by stopping monitors after hook execution [#15724](https://github.com/deckhouse/deckhouse/pull/15724)
  - **[deckhouse-controller]** Updated CEL rules, add x-deckhouse-validations documentation. [#14428](https://github.com/deckhouse/deckhouse/pull/14428)
+ - **[dhctl]** Change default ssh mode [#15773](https://github.com/deckhouse/deckhouse/pull/15773)
  - **[dhctl]** Fixing bashible steps when it does not respond to the limit on the number of attempts [#15633](https://github.com/deckhouse/deckhouse/pull/15633)
  - **[dhctl]** Fix start and keep-alive behavior, do not change host if any kube-proxies has been started. [#15566](https://github.com/deckhouse/deckhouse/pull/15566)
  - **[dhctl]** Add timeout to ssh client dial and fix stop. [#15539](https://github.com/deckhouse/deckhouse/pull/15539)
@@ -85,11 +95,15 @@
  - **[docs]** Added documentation for the new registry configuration in Containerd. [#14790](https://github.com/deckhouse/deckhouse/pull/14790)
  - **[extended-monitoring]** Exclude PVCs with block volume mode from space and inodes monitoring. [#14859](https://github.com/deckhouse/deckhouse/pull/14859)
     free space monitoring for the PVCs in the Block volumeMode is meaningless and will be disabled
+ - **[ingress-nginx]** Enable ExecuteHookOnEvents on hook set_annotation_validation_suspended.go [#15839](https://github.com/deckhouse/deckhouse/pull/15839)
  - **[ingress-nginx]** Fixed nginx segfaults when opentelemetry is enabled. [#15466](https://github.com/deckhouse/deckhouse/pull/15466)
     The ingress-nginx pods of 1.10 will be restarted.
  - **[ingress-nginx]** Fixed the missing opentelemetry libraries issue. [#14965](https://github.com/deckhouse/deckhouse/pull/14965)
     The pods of Ingress Nginx controllers of 1.10 and 1.12 versions will be restated.
  - **[ingress-nginx]** Re-enabled validation and updated documentation. [#14368](https://github.com/deckhouse/deckhouse/pull/14368)
+ - **[istio]** Fixed AuthorizationPolicy CRD insufficiency for Istio 1.25. [#16605](https://github.com/deckhouse/deckhouse/pull/16605)
+ - **[istio]** Erroneous option in 1.25 control-plane helm template fixed. [#16412](https://github.com/deckhouse/deckhouse/pull/16412)
+ - **[istio]** Reduce RAM for regenerate multicluster JWT token [#15328](https://github.com/deckhouse/deckhouse/pull/15328)
  - **[istio]** The metrics-exporter's template is fixed, it blocked the main queue if  `controlPlane.nodeSelector` setting was configured. [#15236](https://github.com/deckhouse/deckhouse/pull/15236)
  - **[istio]** Added api-proxy support for short-lived ServiceAccount tokens. [#14137](https://github.com/deckhouse/deckhouse/pull/14137)
  - **[loki]** Change stage to Preview [#15553](https://github.com/deckhouse/deckhouse/pull/15553)
@@ -110,6 +124,7 @@
  - **[prometheus]** Suppress Grafana-related alerts when the Grafana is disabled in the ModuleConfig. [#14981](https://github.com/deckhouse/deckhouse/pull/14981)
     default
  - **[prometheus]** Fix remote write dropping valid samples after restart due to missing series from snapshot. [#14849](https://github.com/deckhouse/deckhouse/pull/14849)
+ - **[registrypackages]** Fixed permissions for directory with cni-plugins in PCI-DSS clusters [#16409](https://github.com/deckhouse/deckhouse/pull/16409)
  - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15370](https://github.com/deckhouse/deckhouse/pull/15370)
  - **[user-authn]** Fix critical bug in password connector that caused login failures for LDAP, Crowd, and Keystone connectors. [#15359](https://github.com/deckhouse/deckhouse/pull/15359)
  - **[user-authn]** Fix `ValidatingAdmissionPolicy` for `User` CR to skip password check on create. [#15269](https://github.com/deckhouse/deckhouse/pull/15269)

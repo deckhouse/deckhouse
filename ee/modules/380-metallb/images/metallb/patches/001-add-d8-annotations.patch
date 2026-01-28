@@ -1,33 +1,27 @@
 diff --git a/controller/service.go b/controller/service.go
-index c22a4c88..4db2d8cd 100644
+index f26bad08..13579ca6 100644
 --- a/controller/service.go
 +++ b/controller/service.go
-@@ -244,7 +244,10 @@ func (c *controller) isServiceAllocated(key string) bool {
+@@ -304,8 +304,10 @@ func (c *controller) isServiceAllocated(key string) bool {
  
  func getDesiredLbIPs(svc *v1.Service) ([]net.IP, ipfamily.Family, error) {
  	var desiredLbIPs []net.IP
--	desiredLbIPsStr := svc.Annotations[AnnotationLoadBalancerIPs]
-+	desiredLbIPsStr := svc.Annotations["network.deckhouse.io/load-balancer-ips"]
-+	if desiredLbIPsStr == "" {
-+		desiredLbIPsStr = svc.Annotations[AnnotationLoadBalancerIPs]
+-	desiredLbIPsStr := valueForAnnotation(svc.Annotations, AnnotationLoadBalancerIPs, DeprecatedAnnotationLoadBalancerIPs)
+-
++	desiredLbIPsStr, ok := svc.Annotations["network.deckhouse.io/load-balancer-ips"]
++	if !ok {
++		desiredLbIPsStr = valueForAnnotation(svc.Annotations, AnnotationLoadBalancerIPs, DeprecatedAnnotationLoadBalancerIPs)
 +	}
- 
  	if desiredLbIPsStr == "" && svc.Spec.LoadBalancerIP == "" {
  		return nil, "", nil
-diff --git a/internal/allocator/k8salloc/k8salloc.go b/internal/allocator/k8salloc/k8salloc.go
-index 64712c1b..bb94d227 100644
---- a/internal/allocator/k8salloc/k8salloc.go
-+++ b/internal/allocator/k8salloc/k8salloc.go
-@@ -22,7 +22,11 @@ func Ports(svc *v1.Service) []allocator.Port {
+ 	} else if desiredLbIPsStr != "" && svc.Spec.LoadBalancerIP != "" {
+@@ -350,6 +352,9 @@ func isEqualIPs(ipsA, ipsB []net.IP) bool {
  
  // SharingKey extracts the sharing key for a service.
  func SharingKey(svc *v1.Service) string {
--	return svc.Annotations["metallb.universe.tf/allow-shared-ip"]
-+	sharingKey := svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]
-+	if sharingKey == "" {
-+		sharingKey = svc.Annotations["metallb.universe.tf/allow-shared-ip"]
++	if _, ok := svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]; ok {
++		return svc.Annotations["network.deckhouse.io/load-balancer-shared-ip-key"]
 +	}
-+	return sharingKey
- }
- 
- // BackendKey extracts the backend key for a service.
+ 	if _, ok := svc.Annotations[AnnotationAllowSharedIP]; ok {
+ 		return svc.Annotations[AnnotationAllowSharedIP]
+ 	}

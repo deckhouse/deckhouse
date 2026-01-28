@@ -39,6 +39,10 @@ social_links:
 
 output: web
 
+collections:
+  faq:
+    output: false
+
 exclude:
 - .idea/
 - .gitignore
@@ -92,10 +96,16 @@ defaults:
       multilang: true
       comparable: true
       product_code: kubernetes-platform
-      search_bage_enabled: true
+      searchBageEnabled: true
       lang: en
       showPrevNextButton: true
       feedback: true
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has NO defined relative_links
+      extractedLinksOnlyMax: 6
+      # Maximum number of automatically extracted links in the "Related Links" section to display
+      # if the page has defined relative_links
+      extractedLinksMax: 2
   - scope:
       path: "pages/admin"
     values:
@@ -125,4 +135,14 @@ defaults:
     values:
       lang: ru
       showPrevNextButton: true
+  - scope:
+      path: "_faq/admin"
+      type: faq
+    values:
+      section: admin
+  - scope:
+      path: "_faq/user"
+      type: faq
+    values:
+      section: user
 timezone: Europe/Moscow

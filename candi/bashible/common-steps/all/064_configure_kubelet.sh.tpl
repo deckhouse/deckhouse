@@ -27,7 +27,7 @@ mkdir -p /var/lib/kubelet
 # Check CRI type and set appropriated parameters.
 # cgroup default is `systemd`.
 cgroup_driver="systemd"
-{{- if eq .cri "Containerd" }}
+{{- if or (eq .cri "Containerd") (eq .cri "ContainerdV2") }}
 # Overriding cgroup type from external config file
 if [ -f /var/lib/bashible/cgroup_config ]; then
   cgroup_driver="$(cat /var/lib/bashible/cgroup_config)"
@@ -50,15 +50,7 @@ if [[ -z "${cri_socket_path}" ]]; then
   bb-log-error 'CRI socket is not found, need to manually set "nodeGroup.cri.notManaged.criSocketPath"'
   exit 1
 fi
-
-{{- else if eq .cri "Containerd" }}
-cri_type="Containerd"
 {{- end }}
-
-
-if [[ "${cri_type}" == "Containerd" || "${cri_type}" == "NotManagedContainerd" ]]; then
-  criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
-fi
 
 # Calculate eviction thresholds.
 
@@ -101,7 +93,16 @@ if [ "$(($nodefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdNodefsInodesFree="$(($needInodesFree*2))k"
 fi
 
-imagefsSize=$(df --output=size $criDir | tail -n1)
+{{- if not (eq .cri "NotManaged") }}
+# Get CRI directory for eviction thresholds calculation
+criDir=$(crictl info -o json | jq -r '.config.containerdRootDir')
+# fallback
+if [ -z "$criDir" ] || [ "$criDir" = "null" ]; then
+  criDir="/var/lib/containerd"
+fi
+imagefsSize=$(df --output=size "$criDir" | tail -n1)
+imagefsInodes=$(df --output=itotal "$criDir" | tail -n1)
+
 imagefsSizeGFivePercent=$((imagefsSize/(1000*1000)*5/100))
 if [ "$imagefsSizeGFivePercent" -gt "$maxAvailableReservedSpace" ]; then
   evictionHardThresholdImagefsAvailable="${maxAvailableReservedSpace}G"
@@ -110,7 +111,6 @@ if [ "$(($imagefsSizeGFivePercent*2))" -gt "$(($maxAvailableReservedSpace*2))" ]
   evictionSoftThresholdImagefsAvailable="$(($maxAvailableReservedSpace*2))G"
 fi
 
-imagefsInodes=$(df --output=itotal $criDir | tail -n1)
 imagefsInodesKFivePercent=$((imagefsInodes/1000*5/100))
 if [ "$imagefsInodesKFivePercent" -gt "$needInodesFree" ]; then
   evictionHardThresholdImagefsInodesFree="${needInodesFree}k"
@@ -118,6 +118,10 @@ fi
 if [ "$(($imagefsInodesKFivePercent*2))" -gt "$(($needInodesFree*2))" ]; then
   evictionSoftThresholdImagefsInodesFree="$(($needInodesFree*2))k"
 fi
+{{- else }}
+# For NotManaged CRI, use default percentage-based imagefs thresholds
+# We don't calculate absolute values since CRI is managed externally
+{{- end }}
 
 shutdownGracePeriod="115"
 shutdownGracePeriodCriticalPods="15"
@@ -294,7 +298,14 @@ evictionSoftGracePeriod:
 evictionPressureTransitionPeriod: 4m0s
 evictionMaxPodGracePeriod: 90
 evictionMinimumReclaim: null
+{{- if ((.nodeGroup).kubelet).memorySwap }}
+  {{- $swapBehavior := .nodeGroup.kubelet.memorySwap.swapBehavior | default "NoSwap" }}
+failSwapOn: false
+memorySwap:
+  swapBehavior: {{ $swapBehavior }}
+{{- else }}
 failSwapOn: true
+{{- end }}
 tlsCipherSuites: ["TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256","TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384","TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305","TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_256_GCM_SHA384","TLS_RSA_WITH_AES_128_GCM_SHA256"]
 {{- if ne .runType "ClusterBootstrap" }}
 # serverTLSBootstrap flag should be enable after bootstrap of first master.
@@ -306,12 +317,18 @@ RotateKubeletServerCertificate default is true, but CIS becnhmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
-{{- if semverCompare "< 1.30" .kubernetesVersion }}
-  ValidatingAdmissionPolicy: true
-{{- end }}
   RotateKubeletServerCertificate: true
 {{- if eq $topologyManagerEnabled true }}
   MemoryManager: true
+{{- end }}
+{{- if semverCompare "<=1.32" .kubernetesVersion }}
+  InPlacePodVerticalScaling: true
+{{- end }}
+{{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
+  DynamicResourceAllocation: true
+{{- end }}
+{{- range .allowedKubeletFeatureGates }}
+  {{ . }}: true
 {{- end }}
 fileCheckFrequency: 20s
 imageMinimumGCAge: 2m0s
@@ -322,9 +339,20 @@ kubeAPIQPS: 50
 hairpinMode: promiscuous-bridge
 httpCheckFrequency: 20s
 maxOpenFiles: 1000000
-{{- $max_pods := 110 }}
-{{- if hasKey .nodeGroup "kubelet" }}
-  {{- $max_pods = .nodeGroup.kubelet.maxPods | default $max_pods }}
+{{- $max_pods := 120 }}
+{{- if (((.nodeGroup).kubelet).maxPods) }}
+  {{- $max_pods = .nodeGroup.kubelet.maxPods | int }}
+{{- else }}
+  {{- $prefix := .normal.podSubnetNodeCIDRPrefix | default "24" | int }}
+  {{- if ge $prefix 24 }}
+    {{- $max_pods = 120 }}
+  {{- else if eq $prefix 23 }}
+    {{- $max_pods = 250 }}
+  {{- else if eq $prefix 22 }}
+    {{- $max_pods = 500 }}
+  {{- else if le $prefix 21 }}
+    {{- $max_pods = 1000 }}
+  {{- end }}
 {{- end }}
 maxPods: {{ $max_pods }}
 nodeStatusUpdateFrequency: {{ .nodeStatusUpdateFrequency | default "10" }}s
@@ -365,10 +393,8 @@ volumeStatsAggPeriod: 1m0s
 healthzBindAddress: 127.0.0.1
 healthzPort: 10248
 protectKernelDefaults: true
-{{- if or (eq .cri "Containerd") (eq .cri "NotManaged") }}
 containerLogMaxSize: {{ .nodeGroup.kubelet.containerLogMaxSize | default "50Mi" }}
 containerLogMaxFiles: {{ .nodeGroup.kubelet.containerLogMaxFiles | default 4 }}
-{{- end }}
 allowedUnsafeSysctls:  ["net.*"]
 shutdownGracePeriodByPodPriority:
 - priority: 2000000999

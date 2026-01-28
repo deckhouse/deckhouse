@@ -14,7 +14,7 @@ lang: ru
 
 Чтобы добавить bare-metal сервер в кластер как статический узел, выполните следующие шаги:
 
-1. Используйте существующий или создайте новый Custom Resource [NodeGroup](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup). Параметр [`nodeType`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
+1. Используйте существующий или создайте новый Custom Resource [NodeGroup](/modules/node-manager/cr.html#nodegroup). Параметр [`nodeType`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetype) в Custom Resource NodeGroup для статических узлов должен быть `Static` или `CloudStatic`.
 1. Получите код скрипта в кодировке Base64 для добавления и настройки узла.
 
    Пример получения кода скрипта в кодировке Base64 для добавления узла в NodeGroup `worker`:
@@ -287,7 +287,7 @@ bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-w
 1. Удалите узел из кластера Kubernetes:
 
    ```shell
-   d8 k drain <node> --ignore-daemonsets --delete-local-data
+   d8 k drain <node> --ignore-daemonsets --delete-emptydir-data
    d8 k delete node <node>
    ```
 
@@ -375,11 +375,11 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
 
    # bootstrapStatus:
-   #   description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
+   #   description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
    #   logsEndpoint: 192.168.199.178:8000
    ```
 
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы получить логи `cloud-init` для последующей диагностики.
+1. Выполните полученную команду (в примере выше — `curl -N http://192.168.199.158:8000`), чтобы получить логи `cloud-init` для последующей диагностики.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 
@@ -389,4 +389,4 @@ d8 k label node <node_name> node-role.kubernetes.io/<old_node_group_name>-
 
 Например, перезагрузка узла требуется в Astra Linux при изменении параметра sysctl: `kernel.yama.ptrace_scope` (результат работы команды `astra-ptrace-lock enable/disable`).
 
-Режим перезагрузки определяется полем disruptions в секции параметров [`disruptions`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.
+Режим перезагрузки определяется полем disruptions в секции параметров [`disruptions`](/modules/node-manager/cr.html#nodegroup-v1-spec-disruptions) ресурса NodeGroup.

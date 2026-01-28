@@ -17,46 +17,120 @@ limitations under the License.
 package template_tests
 
 import (
+	"fmt"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security policies", func() {
-	f := SetupHelmConfig(`{admissionPolicyEngine: {denyVulnerableImages: {}, podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "securityPolicies": [
-{
-	"metadata":{"name":"genpolicy"},
-	"spec":{
-		"policies":{
-				"allowHostIPC": true,
-				"allowHostNetwork": false,
-				"allowHostPID": false,
-				"allowPrivilegeEscalation": false,
-				"allowPrivileged": false,
-				"allowedFlexVolumes": [{"driver": "vmware"}],
-				"allowedHostPaths": [{"pathPrefix": "/dev","readOnly": true}],
-				"allowedHostPorts": [{"max": 100,"min": 10}],
-				"allowedUnsafeSysctls": ["*"],
-				"allowRbacWildcards": false,
-				"forbiddenSysctls": ["user/example"],
-				"allowedProcMount": "default",
-				"allowedVolumes": {"volumes": ["csi"]},
-				"requiredDropCapabilities": ["ALL"],
-				"allowedAppArmor": ["unconfined"],
-				"readOnlyRootFilesystem": "true",
-				"automountServiceAccountToken": false,
-				"allowedClusterRoles": ["*"],
-				"runAsUser": {"ranges": [{"max": 500,"min": 300}],"rule": "MustRunAs"},
-				"seLinux": [{"role": "role","user": "user"},{"level": "level","type": "type"}],
-				"seccompProfiles": {"allowedLocalhostFiles": ["*"],"allowedProfiles": ["RuntimeDefault","Localhost"]},
-				"supplementalGroups": {"ranges": [{"max": 1000,"min": 500}],"rule": "MustRunAs"},
-				"verifyImageSignatures": [{"dockerCfg": "zxc=", "reference": "*", "publicKeys": ["someKey1", "someKey2"]}]
-		},
-		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
-		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
-		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
-		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+	f := SetupHelmConfig(`
+admissionPolicyEngine:
+  podSecurityStandards: {}
+  internal:
+    bootstrapped: true
+    ratify:
+      webhook:
+        key: YjY0ZW5jX3N0cmluZwo=
+        crt: YjY0ZW5jX3N0cmluZwo=
+        ca: YjY0ZW5jX3N0cmluZwo=
+    podSecurityStandards:
+      enforcementActions:
+        - deny
+    securityPolicies:
+      - metadata:
+          name: genpolicy
+        spec:
+          policies:
+            allowHostIPC: true
+            allowHostNetwork: false
+            allowHostPID: false
+            allowPrivilegeEscalation: false
+            allowPrivileged: false
+            allowedFlexVolumes:
+              - driver: vmware
+            allowedHostPaths:
+              - pathPrefix: /dev
+                readOnly: true
+            allowedHostPorts:
+              - max: 100
+                min: 10
+            allowedUnsafeSysctls:
+              - "*"
+            allowRbacWildcards: false
+            forbiddenSysctls:
+              - user/example
+            allowedProcMount: default
+            allowedVolumes:
+              volumes:
+                - csi
+            requiredDropCapabilities:
+              - ALL
+            allowedAppArmor:
+              - unconfined
+            readOnlyRootFilesystem: "true"
+            automountServiceAccountToken: false
+            allowedClusterRoles:
+              - "*"
+            runAsUser:
+              ranges:
+                - max: 500
+                  min: 300
+              rule: MustRunAs
+            seLinux:
+              - role: role
+                user: user
+              - level: level
+                type: type
+            seccompProfiles:
+              allowedLocalhostFiles:
+                - "*"
+              allowedProfiles:
+                - RuntimeDefault
+                - Localhost
+            supplementalGroups:
+              ranges:
+                - max: 1000
+                  min: 500
+              rule: MustRunAs
+            verifyImageSignatures:
+              - dockerCfg: zxc=
+                reference: "*"
+                publicKeys:
+                  - someKey1
+                  - someKey2
+          match:
+            namespaceSelector:
+              matchNames:
+                - default
+    trackedConstraintResources:
+      - apiGroups:
+          - ""
+        resources:
+          - pods
+      - apiGroups:
+          - extensions
+          - networking.k8s.io
+        resources:
+          - ingresses
+    trackedMutateResources:
+      - apiGroups:
+          - ""
+        resources:
+          - pods
+      - apiGroups:
+          - extensions
+          - networking.k8s.io
+        resources:
+          - ingresses
+    webhook:
+      ca: YjY0ZW5jX3N0cmluZwo=
+      crt: YjY0ZW5jX3N0cmluZwo=
+      key: YjY0ZW5jX3N0cmluZwo=
+`)
 
 	Context("Cluster with security policies", func() {
 		BeforeEach(func() {
@@ -87,6 +161,45 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: security p
 			Expect(f.KubernetesGlobalResource("D8AppArmor", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8VerifyImageSignatures", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8AllowRbacWildcards", testPolicyName).Exists()).To(BeTrue())
+		})
+
+		It("All security policy constraints must have valid YAML", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			securityConstraints := []string{
+				"D8AllowedCapabilities",
+				"D8AllowedFlexVolumes",
+				"D8AllowedHostPaths",
+				"D8AllowedProcMount",
+				"D8AllowedSeccompProfiles",
+				"D8AllowedSysctls",
+				"D8AllowedUsers",
+				"D8AllowedVolumeTypes",
+				"D8AllowPrivilegeEscalation",
+				"D8HostNetwork",
+				"D8HostProcesses",
+				"D8PrivilegedContainer",
+				"D8ReadOnlyRootFilesystem",
+				"D8AllowedClusterRoles",
+				"D8AutomountServiceAccountTokenPod",
+				"D8SeLinux",
+				"D8AppArmor",
+				"D8VerifyImageSignatures",
+				"D8AllowRbacWildcards",
+			}
+
+			for _, constraintKind := range securityConstraints {
+				constraint := f.KubernetesGlobalResource(constraintKind, testPolicyName)
+				if constraint.Exists() {
+					// Get the resource as a map to validate YAML structure
+					var resourceMap map[string]interface{}
+					err := yaml.Unmarshal([]byte(constraint.ToYaml()), &resourceMap)
+					if err != nil {
+						Fail(fmt.Sprintf("Invalid YAML for resource %s: %v\nYAML content:\n%s", constraintKind, err, constraint.ToYaml()))
+					}
+					validateYAML(resourceMap, constraintKind)
+				}
+			}
 		})
 	})
 })

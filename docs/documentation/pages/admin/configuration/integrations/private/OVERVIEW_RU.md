@@ -10,8 +10,8 @@ Deckhouse Kubernetes Platform (DKP) предоставляет встроенн�
 
 - [VK Private Cloud](./vk/connection-and-authorization.html);
 - [OpenStack](./openstack/connection-and-authorization.html);
-- [Huawei Cloud](./huaweicloud/huawei-authorization.html);
-- [Dynamix](./dynamix/dynamix-authorization.html);
+- [Huawei Cloud](./huaweicloud/authorization.html);
+- [Dynamix](./dynamix/authorization.html);
 - Deckhouse Virtualization Platform (DVP).
 
 В следующих разделах описано, как настроить интеграцию с различными частными облаками.

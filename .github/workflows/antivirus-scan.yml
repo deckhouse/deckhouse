@@ -1,0 +1,391 @@
+#
+# THIS FILE IS GENERATED, PLEASE DO NOT EDIT.
+#
+
+# Copyright 2025 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+name: Antivirus Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * 6' # 00:00 UTC Saturday = 03:00 MSK Sunday
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch or tag to scan'
+        required: true
+        type: string
+        default: main
+
+env:
+  SCAN_RESULTS_DIR: 'scans'
+
+jobs:
+  get-tags:
+    name: Get tags for scanning
+    runs-on: [self-hosted, regular]
+
+    if: github.repository == 'deckhouse/deckhouse'
+    outputs:
+      tags: ${{ steps.set-manual-tag.outputs.tags || steps.get-tags.outputs.tags || steps.set-default.outputs.tags }}
+    steps:
+
+      # <template: checkout_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+
+      # </template: checkout_step>
+      - name: Check event type
+        id: check-event
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ] && [ -n "${{ github.event.inputs.branch }}" ]; then
+            echo "Manual run with branch: ${{ github.event.inputs.branch }}"
+            echo "is_manual=true" >> $GITHUB_OUTPUT
+            echo "branch=${{ github.event.inputs.branch }}" >> $GITHUB_OUTPUT
+          else
+            echo "Scheduled run or manual without specific branch"
+            echo "is_manual=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Get latest tags for scheduled run
+        if: steps.check-event.outputs.is_manual == 'false'
+        id: get-tags
+        run: |
+          TAGS=$(git ls-remote --tags origin | grep -F tags/v | awk -F '/' '{print $3}' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$')
+          TAGS_TO_SCAN=$(echo $TAGS | tr ' ' '\n' | sed 's/^v//' | sort -t. -k1,1n -k2,2n -k3,3n | awk -F. '{
+          if ($2 != prev_minor) {
+            if (prev_minor != "") {
+              print "v" $1 "." prev_minor "." max_patch
+            }
+            prev_minor = $2
+            max_patch = $3
+          } else if ($3 > max_patch) {
+              max_patch = $3
+            }
+          }
+          END { print "v" $1 "." prev_minor "." max_patch }' | tail -3)
+          TAGS=""
+          for edition in fe ee se se-plus be ce
+          do
+            for tag in $TAGS_TO_SCAN
+            do
+              TAGS+=$'\n'"$edition:$tag"
+            done
+          done
+
+          TAGS+=$'\n'"main"
+          echo "Tags to scan: $TAGS"
+          echo "tags=$(echo $TAGS | jq -R -s -c 'split(" ")')" >> $GITHUB_OUTPUT
+
+      - name: Set manual tag
+        if: steps.check-event.outputs.is_manual == 'true'
+        id: set-manual-tag
+        run: |
+          ref=${{ github.event.inputs.branch }}
+          TAGS=""
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            for edition in fe ee se se-plus be ce
+            do
+              TAGS+=$'\n'"$edition:$ref"
+            done
+          else
+            TAGS="${ref}"
+          fi
+          echo "Tags to scan: $TAGS"
+          echo "tags=$(echo $TAGS | jq -R -s -c 'split(" ")')" >> $GITHUB_OUTPUT
+
+      - name: Set default tag (fallback)
+        if: always()
+        id: set-default
+        run: |
+          # Fallback if no tags were set
+          if [ -z "${{ steps.set-manual-tag.outputs.tags }}${{ steps.get-tags.outputs.tags }}" ]; then
+            echo "tags=[\"main\"]" >> $GITHUB_OUTPUT
+          fi
+
+
+
+
+  drweb-scan:
+    name: Dr.Web Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+
+    if: github.repository == 'deckhouse/deckhouse'
+    needs: get-tags
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_STAGE_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_STAGE_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+      - name: Run drweb scan
+        id: scan
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_PASSWORD }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          fi
+          CONTAINER_NAME=registry_drweb
+          SCAN_ID+="-$CONTAINER_NAME"
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
+          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+
+          mkdir -p scans/${SCAN_ID}
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_ID}/scan_results_clean.md ./scans/${SCAN_ID}/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/drweb/scans/${SCAN_ID}/scan_results_threats.md ./scans/${SCAN_ID}/scan_results_threats.md
+
+          if [ -f scans/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:    
+          name: drweb-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: scans/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+
+
+  kaspersky-scan:
+    name: Kaspersky Scan ${{ matrix.branch }}
+    runs-on: [self-hosted, antivirus]
+
+    if: github.repository == 'deckhouse/deckhouse'
+    needs: get-tags
+    strategy:
+      matrix:
+        branch: ${{ fromJson(needs.get-tags.outputs.tags) }}
+      fail-fast: false
+    permissions:
+      id-token: write
+    outputs:
+      scan_id: ${{ steps.scan.outputs.scan_id }}
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_STAGE_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_STAGE_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_STAGE_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+      - name: Run kaspersky scan
+        id: scan
+        run: |
+          registry_image_path=/sys/deckhouse-oss
+          ref=$(echo "${{ matrix.branch }}" | awk -F':' '{ print $2 }' | tr -d '\n')
+          if [ -z "${ref}" ]; then
+            ref=$(echo "${{ matrix.branch }}" | tr -d '\n')
+          fi
+          ref_sanitized=$(echo "${ref}" | sed 's/[.\/]/-/g')
+          SCAN_TIME=$(date '+%s')
+          SCAN_ID="$SCAN_TIME-${{ github.run_id }}-${ref_sanitized}"
+          if [[ "${ref}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+            echo "registry read"
+            edition=$(echo "${{ matrix.branch }}" | tr -d '\n' | awk -F':' '{ print $1 }')
+            SCAN_ID+="-${edition}"
+            registry_image_path="/deckhouse/${edition}"
+            registry_host=${{ secrets.DECKHOUSE_REGISTRY_READ_HOST }}
+            registry_user=${{ secrets.DECKHOUSE_REGISTRY_READ_USER }}
+            registry_password=${{ secrets.DECKHOUSE_REGISTRY_READ_PASSWORD }}
+          elif [[ "${ref}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+            echo "registry stage"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_STAGE_REGISTRY_PASSWORD }}
+          else
+            echo "registry dev"
+            registry_host=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+            registry_user=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+            registry_password=${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          fi
+          CONTAINER_NAME=registry_kaspersky
+          SCAN_ID+="-$CONTAINER_NAME"
+          echo "scan_id=${SCAN_ID}" >> $GITHUB_OUTPUT
+          echo $CONTAINER_NAME
+          docker exec ${CONTAINER_NAME} crane auth login ${registry_host} -u ${registry_user} -p ${registry_password}
+          docker exec ${CONTAINER_NAME} scanner ${ref} ${registry_host}${registry_image_path} ${SCAN_ID}
+
+          mkdir -p scans/${SCAN_ID}
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_ID}/scan_results_clean.md ./scans/${SCAN_ID}/scan_results_clean.md
+          docker cp ${CONTAINER_NAME}:/antivirus/scans/${SCAN_ID}/scan_results_threats.md ./scans/${SCAN_ID}/scan_results_threats.md
+
+          if [ -f scans/${SCAN_ID}/scan_results_threats.md ]; then
+            THREAT_COUNT=$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
+            ERRORS_COUNT=$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' scans/${SCAN_ID}/scan_results_threats.md | head -1)
+            if [ -n "$THREAT_COUNT" ] && [ "$THREAT_COUNT" -gt 0 ]; then
+              echo "❌ THREATS DETECTED: $THREAT_COUNT images contain threats!"
+              exit 1
+            elif [ -n "$ERRORS_COUNT" ] && [ "$ERRORS_COUNT" -gt 0 ]; then
+              echo "❌ ERRORS DETECTED: $ERRORS_COUNT!"
+              exit 1
+            else
+              echo "✅ No threats detected ($THREAT_COUNT)"
+            fi
+          else
+            echo "⚠️ The scan results file was not found"
+            exit 1
+          fi
+
+          echo "✅ ${CONTAINER_NAME} scan completed for ${{ matrix.branch }}"
+
+      - name: Upload scan artifacts
+        if: github.repository == 'deckhouse/deckhouse' && always()
+        uses: actions/upload-artifact@v4.4.0
+        with:    
+          name: kaspersky-scan-results-${{ steps.scan.outputs.scan_id }}
+          path: scans/${{ steps.scan.outputs.scan_id }}
+          retention-days: 5
+
+
+  notify-failure:
+    name: Send failure notification
+    runs-on: [self-hosted, regular]
+    needs: [drweb-scan, kaspersky-scan]
+    if: always() && (needs.drweb-scan.result == 'failure' || needs.kaspersky-scan.result == 'failure')
+    permissions:
+      id-token: write
+    steps:
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/b050f3bd-733f-4746-9640-9df80d484074/n8n_jobs_fails_url N8N_LOOP_NOTIFIER_URL | N8N_LOOP_NOTIFIER_URL ;
+
+      # </template: import_secrets>
+
+      - name: Check which jobs failed
+        id: check-failures
+        run: |
+          FAILED_JOBS=""
+          if [[ "${{ needs.drweb-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Dr.Web Scan\n"
+          fi
+          if [[ "${{ needs.kaspersky-scan.result }}" == "failure" ]]; then
+            FAILED_JOBS="$FAILED_JOBS• Kaspersky Scan\n"
+          fi
+
+          echo "failed_jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+          echo "Failed jobs:"
+          echo "${FAILED_JOBS}"
+
+      - name: Send notification
+        run: |
+          workflow_url="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          MESSAGE="🛑 Github Antivirus Scan Failed!\n\n"
+          MESSAGE+="**Failed jobs:**\n"
+          MESSAGE+="${{ steps.check-failures.outputs.failed_jobs }}\n"
+          MESSAGE+="**Workflow URL:** [View Run]($workflow_url)\n"
+
+          curl -f -L -X POST "${{ steps.secrets.outputs.N8N_LOOP_NOTIFIER_URL }}" \
+            -H "Content-Type: application/json" \
+            --data "{\"type\": \"ci_fail\",\"message\":\"$MESSAGE\"}"

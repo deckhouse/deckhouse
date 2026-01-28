@@ -24,4 +24,4 @@ sudo -i d8 k get nodes
 
 ## Remote Connection to the Platform
 
-To configure remote access to the cluster, follow the [steps in the guide](../../platform-management/access-control/user-management.html) and install the [d8 utility](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI).
+To configure remote access to the cluster, follow the [steps in the guide](../../platform-management/access-control/user-management.html) and install the [d8 utility](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI).

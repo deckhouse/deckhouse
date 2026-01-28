@@ -31,7 +31,7 @@ Using projects helps address these limitations and offers the following benefits
 [Secret copying](/modules/secret-copier/) across all namespaces is incompatible with projects in multitenancy mode.
 
 This mode creates isolated environments for users within their projects,
-while `secret-copier` automatically distributes secrets to all namespaces.
+while [`secret-copier`](/modules/secret-copier/) automatically distributes secrets to all namespaces.
 If sensitive data is present in a user’s private environment,
 it could lead to a data leak and a security model breach.
 {% endalert %}

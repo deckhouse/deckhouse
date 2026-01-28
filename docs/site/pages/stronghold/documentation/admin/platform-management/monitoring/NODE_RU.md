@@ -21,5 +21,5 @@ lang: ru
 - `d8_node_group_min` — минимальное количество инстансов в группе;
 - `d8_node_group_max` — максимальное количество инстансов в группе;
 - `d8_node_group_up_to_date` — количество узлов в группе в состоянии up-to-date;
-- `d8_node_group_standby` — количество резервных узлов (см. параметр [`standby`](/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе);
+- `d8_node_group_standby` — количество резервных узлов (см. параметр [`standby`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-standby) в группе);
 - `d8_node_group_has_errors` — единица, если в группе узлов есть какие-либо ошибки.

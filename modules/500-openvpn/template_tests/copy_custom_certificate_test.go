@@ -71,7 +71,7 @@ var _ = Describe("Module :: openvpn :: helm template :: custom-certificate", fun
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			createdSecret := f.KubernetesResource("Secret", "d8-openvpn", "ingress-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 		})
 
 	})

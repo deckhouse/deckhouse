@@ -5,7 +5,7 @@ description: "Настройка keepalived для высокой доступн
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](../../../../modules/keepalived/).
+В Deckhouse Kubernetes Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](/modules/keepalived/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 
@@ -79,7 +79,7 @@ spec:
 
 ## Ручное переключение keepalived
 
-<!-- перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/keepalived/ -->
+<!-- перенесено из https://deckhouse.ru/modules/keepalived/ -->
 
 1. Зайдите в нужный под:
 

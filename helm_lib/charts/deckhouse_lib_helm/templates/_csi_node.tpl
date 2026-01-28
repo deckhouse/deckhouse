@@ -28,7 +28,7 @@ memory: 25Mi
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
   {{- $setSysAdminCapability := $config.setSysAdminCapability | default false }}
-  {{- $additionalContainers := $config.additionalContainers }} 
+  {{- $additionalContainers := $config.additionalContainers }}
   {{- $initContainers := $config.initContainers }}
   {{- $additionalPullSecrets := $config.additionalPullSecrets }}
   {{- $csiNodeLifecycle := $config.csiNodeLifecycle | default false }}
@@ -36,9 +36,9 @@ memory: 25Mi
   {{- $additionalCsiNodePodAnnotations := $config.additionalCsiNodePodAnnotations | default false }}
   {{- $csiNodeHostNetwork := $config.csiNodeHostNetwork | default "true" }}
   {{- $csiNodeHostPID := $config.csiNodeHostPID | default "false" }}
+  {{- $dnsPolicy := $config.dnsPolicy | default "ClusterFirstWithHostNet" }}
   {{- $kubernetesSemVer := semver $context.Values.global.discovery.kubernetesVersion }}
-  {{- $driverRegistrarImageName := join "" (list "csiNodeDriverRegistrar" $kubernetesSemVer.Major $kubernetesSemVer.Minor) }}
-  {{- $driverRegistrarImage := include "helm_lib_module_common_image_no_fail" (list $context $driverRegistrarImageName) }}
+  {{- $driverRegistrarImage := include "helm_lib_csi_image_with_common_fallback" (list $context "csiNodeDriverRegistrar" $kubernetesSemVer) }}
   {{- if $driverRegistrarImage }}
     {{- if or $forceCsiNodeAndStaticNodesDepoloy (include "_helm_lib_cloud_or_hybrid_cluster" $context) }}
       {{- if ($context.Values.global.enabledModules | has "vertical-pod-autoscaler-crd") }}
@@ -134,11 +134,11 @@ spec:
       hostNetwork: {{ $csiNodeHostNetwork }}
       hostPID: {{ $csiNodeHostPID }}
       {{- if eq $csiNodeHostNetwork "true" }}
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: {{ $dnsPolicy | quote }}
       {{- end }}
       containers:
       - name: node-driver-registrar
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $context | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" (dict "ro" true "seccompProfile" true "uid" "0" "runAsNonRoot" false) | nindent 8 }}
         image: {{ $driverRegistrarImage | quote }}
         args:
         - "--v=5"
@@ -182,6 +182,8 @@ spec:
         securityContext:
           privileged: true
           readOnlyRootFilesystem: true
+          seccompProfile:
+            type: RuntimeDefault
         {{- if $setSysAdminCapability }}
           capabilities:
             add:
@@ -207,7 +209,7 @@ spec:
             port: {{ $livenessProbePort }}
           initialDelaySeconds: 5
           timeoutSeconds: 5
-      {{- end }}      
+      {{- end }}
         volumeMounts:
         - name: kubelet-dir
           mountPath: /var/lib/kubelet

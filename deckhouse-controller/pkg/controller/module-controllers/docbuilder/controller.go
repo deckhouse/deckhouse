@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -81,10 +80,10 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		Reconciler:              r,
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("new: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	err = ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.ModuleDocumentation{}).
 		Watches(&coordv1.Lease{}, handler.EnqueueRequestsFromMapFunc(r.enqueueLeaseMapFunc), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(event event.CreateEvent) bool {
@@ -106,6 +105,10 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		})).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(ctr)
+	if err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 func (r *reconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) []reconcile.Request {
@@ -116,7 +119,7 @@ func (r *reconciler) enqueueLeaseMapFunc(ctx context.Context, _ client.Object) [
 
 		err := r.client.List(ctx, mdl)
 		if err != nil {
-			return err
+			return fmt.Errorf("list: %w", err)
 		}
 
 		requests = make([]reconcile.Request, 0, len(mdl.Items))
@@ -141,7 +144,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	md := new(v1alpha1.ModuleDocumentation)
 
 	if err := r.client.Get(ctx, req.NamespacedName, md); err != nil {
-		return result, client.IgnoreNotFound(err)
+		if client.IgnoreNotFound(err) != nil {
+			return result, fmt.Errorf("get: %w", err)
+		}
+		return result, nil
 	}
 
 	if !md.DeletionTimestamp.IsZero() {
@@ -218,12 +224,15 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 
 	if len(addrs) == 0 {
 		// no endpoints for doc builder
+		r.logger.Warn("No docs-builder addresses found, skipping documentation update", slog.String("module_name", moduleName))
 		return result, nil
 	}
 
+	r.logger.Debug("Found docs-builder addresses", slog.String("module_name", moduleName), slog.Int("addresses_count", len(addrs)), slog.Any("addresses", addrs))
+
 	b := new(bytes.Buffer)
 
-	r.logger.Debug("Getting module's documentation locally", slog.String("moduleName", moduleName))
+	r.logger.Debug("Getting module's documentation locally", slog.String("module_name", moduleName))
 	fetchModuleErr := r.getDocumentationFromModuleDir(md.Spec.Path, b)
 
 	var rendered int
@@ -240,6 +249,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 			cond.Checksum == md.Spec.Checksum &&
 			cond.Type == v1alpha1.TypeRendered {
 			// documentation is rendered for this builder
+			r.logger.Debug("Documentation already rendered for builder, skipping", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("version", md.Spec.Version), slog.String("checksum", md.Spec.Checksum))
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			rendered++
 			continue
@@ -253,17 +263,21 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		}
 
 		if fetchModuleErr != nil {
+			r.logger.Error("Failed to fetch documentation from module directory", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("path", md.Spec.Path), log.Err(fetchModuleErr))
 			cond.Type = v1alpha1.TypeError
 			cond.Message = fmt.Sprintf("Error occurred while fetching the documentation: %s. Please fix the module's docs or restart the Deckhouse to restore the module", fetchModuleErr)
 			mdCopy.Status.Conditions = append(mdCopy.Status.Conditions, cond)
 			continue
 		}
 
+		r.logger.Debug("Sending documentation to builder", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("version", md.Spec.Version), slog.Int("archive_size", b.Len()))
 		err = r.buildDocumentation(ctx, bytes.NewReader(b.Bytes()), addr, moduleName, md.Spec.Version)
 		if err != nil {
+			r.logger.Error("Failed to build documentation", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("version", md.Spec.Version), log.Err(err))
 			cond.Type = v1alpha1.TypeError
 			cond.Message = err.Error()
 		} else {
+			r.logger.Debug("Successfully built documentation", slog.String("module_name", moduleName), slog.String("address", addr), slog.String("version", md.Spec.Version))
 			rendered++
 			cond.Type = v1alpha1.TypeRendered
 			cond.Message = ""
@@ -275,16 +289,19 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 	switch {
 	case rendered == 0:
 		mdCopy.Status.RenderResult = v1alpha1.ResultError
+		r.logger.Warn("No documentation was rendered for any builder", slog.String("module_name", moduleName), slog.Int("total_builders", len(addrs)))
 
 	case rendered == len(addrs):
 		mdCopy.Status.RenderResult = v1alpha1.ResultRendered
+		r.logger.Debug("Documentation rendered successfully for all builders", slog.String("module_name", moduleName), slog.Int("builders_count", len(addrs)))
 
 	default:
 		mdCopy.Status.RenderResult = v1alpha1.ResultPartially
+		r.logger.Warn("Documentation rendered partially", slog.String("module_name", moduleName), slog.Int("rendered", rendered), slog.Int("total_builders", len(addrs)))
 	}
 
 	if err = r.client.Status().Patch(ctx, mdCopy, client.MergeFrom(md)); err != nil {
-		return result, err
+		return result, fmt.Errorf("patch: %w", err)
 	}
 
 	if mdCopy.Status.RenderResult != v1alpha1.ResultRendered {
@@ -296,7 +313,7 @@ func (r *reconciler) createOrUpdateReconcile(ctx context.Context, md *v1alpha1.M
 		if err = r.client.Update(ctx, mdCopy); err != nil {
 			r.logger.Error("update finalizer", log.Err(err))
 
-			return result, err
+			return result, fmt.Errorf("update: %w", err)
 		}
 	}
 
@@ -327,11 +344,14 @@ func (r *reconciler) getDocsBuilderAddresses(ctx context.Context) ([]string, err
 }
 
 func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes.Buffer) error {
-	moduleDir := path.Join(r.downloadedModulesDir, modulePath) + "/"
+	// modulePath is now in format "/modules/<module>" (e.g., "/modules/stronghold")
+	// Remove leading slash and join with downloadedModulesDir to get full path
+	cleanPath := strings.TrimPrefix(modulePath, "/")
+	moduleDir := filepath.Join(r.downloadedModulesDir, cleanPath)
 
 	dir, err := os.Stat(moduleDir)
 	if err != nil {
-		return err
+		return fmt.Errorf("stat: %w", err)
 	}
 
 	if !dir.IsDir() {
@@ -340,6 +360,11 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
+
+	moduleDir, err = filepath.EvalSymlinks(moduleDir)
+	if err != nil {
+		return fmt.Errorf("failed to resolve symlinks: %w", err)
+	}
 
 	err = filepath.Walk(moduleDir, func(file string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -350,19 +375,28 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 			return nil
 		}
 
-		if !module.IsDocsPath(strings.TrimPrefix(file, moduleDir)) {
+		// Get relative path from module directory
+		relPath, err := filepath.Rel(moduleDir, file)
+		if err != nil {
+			return err
+		}
+
+		// Convert to forward slashes for IsDocsPath check (it expects Unix-style paths)
+		relPathUnix := filepath.ToSlash(relPath)
+		if !module.IsDocsPath(relPathUnix) {
 			return nil
 		}
 
 		header, err := tar.FileInfoHeader(info, info.Name())
 		if err != nil {
-			return err
+			return fmt.Errorf("file info header: %w", err)
 		}
 
-		header.Name = strings.TrimPrefix(file, moduleDir)
+		// Use forward slashes in tar header (tar format uses forward slashes)
+		header.Name = relPathUnix
 
 		if err = tw.WriteHeader(header); err != nil {
-			return err
+			return fmt.Errorf("write header: %w", err)
 		}
 
 		if info.IsDir() {
@@ -371,14 +405,14 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 
 		f, err := os.Open(file)
 		if err != nil {
-			return err
+			return fmt.Errorf("open: %w", err)
 		}
 		defer f.Close()
 
 		r.logger.Debug("copy file", slog.String("path", file))
 
 		if _, err = io.Copy(tw, f); err != nil {
-			return err
+			return fmt.Errorf("copy: %w", err)
 		}
 
 		return nil
@@ -391,10 +425,12 @@ func (r *reconciler) getDocumentationFromModuleDir(modulePath string, buf *bytes
 }
 
 func (r *reconciler) buildDocumentation(ctx context.Context, docsArchive io.Reader, baseAddr, moduleName, moduleVersion string) error {
+	r.logger.Debug("Sending documentation archive", slog.String("module_name", moduleName), slog.String("address", baseAddr), slog.String("version", moduleVersion))
 	if err := r.docsBuilder.SendDocumentation(ctx, baseAddr, moduleName, moduleVersion, docsArchive); err != nil {
 		return fmt.Errorf("send documentation: %w", err)
 	}
 
+	r.logger.Debug("Triggering documentation build", slog.String("module_name", moduleName), slog.String("address", baseAddr))
 	if err := r.docsBuilder.BuildDocumentation(ctx, baseAddr); err != nil {
 		return fmt.Errorf("build documentation: %w", err)
 	}

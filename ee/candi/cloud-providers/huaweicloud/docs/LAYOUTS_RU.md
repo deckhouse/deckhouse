@@ -1,6 +1,6 @@
 ---
-title: "Cloud provider — Huawei Cloud: подготовка окружения"
-description: "Настройка окружения Huawei Cloud для работы облачного провайдера Deckhouse."
+title: "Cloud provider — Huawei Cloud: схемы размещения"
+description: "Схемы размещения Huawei Cloud для работы облачного провайдера Deckhouse."
 ---
 
 ## Standard

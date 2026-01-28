@@ -88,7 +88,7 @@ specify the target version in the [`kubernetesVersion`](/products/kubernetes-pla
 For example, `kubernetesVersion: 1.30`.
 
 ```shell
-d8 platform edit cluster-configuration
+d8 system edit cluster-configuration
 ```
 
 This command initiates an upgrade to the default minor Kubernetes version used by DKP at the time.
@@ -100,7 +100,7 @@ d8 k get nodes
 
 ### Process of control plane component updates
 
-1. The `control-plane-manager` module modifies the manifests of core components
+1. The [control-plane-manager](/modules/control-plane-manager/) module modifies the manifests of core components
    (`apiserver`, `controller-manager`, `scheduler`, etc.).
 1. The updated components are deployed on all master nodes.
 

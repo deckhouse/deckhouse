@@ -65,17 +65,26 @@ spec:
 >
 > Важно иметь нечетное количество master-узлов для обеспечения кворума.
 
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+{% endalert %}
+
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать созданию новых master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
@@ -127,17 +136,26 @@ spec:
 Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (master-0). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы master-0 и master-1, оставив master-2.
 {% endalert %}
 
-1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений настоятельно рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+{% endalert %}
+
+1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
-1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
-1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
+1. Убедитесь, что очередь DKP пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду и укажите `1` в параметре `masterNodeGroup.replicas`:
@@ -147,7 +165,7 @@ spec:
      --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
    ```
 
-   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре [masterNodeGroup.instanceClass.externalIPAddresses](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-externalipaddresses) должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
    >
    > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
    >
@@ -156,50 +174,22 @@ spec:
    > - "Auto"
    > ```
 
-1. Снимите следующие лейблы с удаляемых master-узлов:
-   * `node-role.kubernetes.io/control-plane`
-   * `node-role.kubernetes.io/master`
-   * `node.deckhouse.io/group`
-
-   Команда для снятия лейблов:
-
-   ```bash
-   d8 k label node <MASTER-NODE-N-NAME> node-role.kubernetes.io/control-plane- node-role.kubernetes.io/master- node.deckhouse.io/group-
-   ```
-
-1. Убедитесь, что удаляемые master-узлы пропали из списка узлов кластера etcd:
-
-   ```bash
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
-   ```
-
-1. Выполните `drain` для удаляемых узлов:
-
-   ```bash
-   d8 k drain <MASTER-NODE-N-NAME> --ignore-daemonsets --delete-emptydir-data
-   ```
-
-1. Выключите виртуальные машины, соответствующие удаляемым узлам, удалите инстансы соответствующих узлов из облака и подключенные к ним диски (`kubernetes-data-master-<N>`).
-
-1. Удалите в кластере поды, оставшиеся на удаленных узлах:
-
-   ```bash
-   d8 k delete pods --all-namespaces --field-selector spec.nodeName=<MASTER-NODE-N-NAME> --force
-   ```
-
-1. Удалите в кластере объекты `Node` удаленных узлов:
-
-   ```bash
-   d8 k delete node <MASTER-NODE-N-NAME>
-   ```
-
 1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
 
    ```bash
    dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   > Для **OpenStack** и **VKCloud(OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом Openstack.
+   >
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе Openstack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   >
+   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе ETCD.
+
+1. Выполните проверку очереди Deckhouse и убедитесь, что отсутствуют ошибки, с помощью команды:
+
+   ```shell
+   d8 system queue list
    ```
 
 ## Как убрать роль master-узла, сохранив узел?
@@ -207,7 +197,12 @@ spec:
 1. Сделайте [резервную копию etcd](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. Снимите следующие лейблы:
    * `node-role.kubernetes.io/control-plane`
    * `node-role.kubernetes.io/master`
@@ -222,11 +217,14 @@ spec:
 1. Убедитесь, что удаляемый master-узел пропал из списка узлов кластера:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Зайдите на узел и выполните следующие команды:
@@ -248,14 +246,19 @@ spec:
 1. Сделайте [резервную копию `etcd`](faq.html#резервное-копирование-и-восстановление-etcd) и папки `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет [алертов](../prometheus/faq.html#как-получить-информацию-об-алертах-в-кластере), которые могут помешать обновлению master-узлов.
-1. Убедитесь, что [очередь Deckhouse пуста](../../deckhouse-faq.html#как-проверить-очередь-заданий-в-deckhouse).
+1. Убедитесь, что очередь Deckhouse пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
 1. **На локальной машине** запустите контейнер установщика Deckhouse соответствующей редакции и версии (измените адрес container registry при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
    docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
-     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
    ```
 
 1. **В контейнере с инсталлятором** выполните следующую команду, чтобы проверить состояние перед началом работы:
@@ -296,11 +299,14 @@ spec:
 1. Проверьте, что узел etcd отобразился в списке узлов кластера:
 
    ```bash
-   d8 k -n kube-system exec -ti \
-   $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-   etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
-   --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
-   --endpoints https://127.0.0.1:2379/ member list -w table
+   for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+     d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+     --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+     --endpoints https://127.0.0.1:2379/ member list -w table
+     if [ $? -eq 0 ]; then
+       break
+     fi
+   done
    ```
 
 1. Убедитесь, что `control-plane-manager` функционирует на узле.
@@ -322,6 +328,136 @@ spec:
 
 <div id='как-посмотреть-список-memberов-в-etcd'></div>
 
+## Как настроить режим HA c двумя master-узлами и arbiter-узлом?
+
+В Deckhouse Kubernetes Platform возможна настройка режима HA c двумя master-узлами и arbiter-узлом. Такой подход позволяет обеспечить требования по HA в условиях ограниченных ресурсов.
+
+На arbiter-узле размещается только etcd, без остальных компонентов control plane. Этот узел используется для обеспечения кворума etcd.
+
+Требования к arbiter-узлу:
+
+* не менее 2 ядер CPU;
+* не менее 4 ГБ RAM;
+* не менее 8 ГБ дискового пространства под etcd.
+
+Требования к сетевым задержкам для arbiter-узла аналогичны требованиям для master-узлов.
+
+### Настройка в облачном кластере
+
+Пример ниже актуален для облачного кластера с тремя master-узлами.
+Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в облачном кластере, необходимо удалить из кластера один master-узел и добавить один arbiter-узел.
+
+{% alert level="warning" %}
+
+Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (`master-0`). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы `master-0` и `master-1`, оставив `master-2`.
+{% endalert %}
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+{% endalert %}
+
+1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
+1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
+1. Убедитесь, что очередь DKP пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+
+   ```bash
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Измените настройки облачного провайдера:
+
+   * В параметре `masterNodeGroup.replicas` укажите `2`.
+   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+
+     ```yaml
+     nodeGroups:
+       - name: arbiter
+         replicas: 1
+         nodeTemplate:
+           labels:
+             node.deckhouse.io/etcd-arbiter: ""
+           taints:
+             - key: node.deckhouse.io/etcd-arbiter
+               effect: NoSchedule
+         zones:
+           - europe-west3-b
+         instanceClass:
+           machineType: n1-standard-4
+       # ... остальная часть манифеста
+     ```
+
+   * Сохраните изменения.
+
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   >
+   > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
+   ```
+
+   > **Важно**. Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом OpenStack.
+   >
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе OpenStack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   >
+   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе etcd.
+
+1. Проверьте очередь Deckhouse с помощью следующей команды и убедитесь, что отсутствуют ошибки:
+
+   ```shell
+   d8 system queue list
+   ```
+
+### Настройка в статическом кластере
+
+Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в статическом кластере, выполните следующие действия:
+
+1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+     kind: NodeGroup
+     metadata:
+       name: arbiter
+     spec:
+       nodeType: Static
+       nodeTemplate:
+         labels:
+           node.deckhouse.io/etcd-arbiter: ""
+         taints:
+           - key: node.deckhouse.io/etcd-arbiter
+             effect: NoSchedule
+     # ... остальная часть манифеста
+   ```
+
+1. Добавьте [удобным вам способом](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере) в кластер узел, который будет использовать как arbiter-узел.
+1. [Убедитесь](#как-посмотреть-список-узлов-кластера-в-etcd), что добавленный arbiter-узел находится в списке членов кластера etcd.
+1. [Удалите](#как-убрать-роль-master-узла-сохранив-узел) один master-узел из кластера.
+
 ## Как посмотреть список узлов кластера в etcd?
 
 ### Вариант 1
@@ -331,35 +467,33 @@ spec:
 Пример:
 
 ```shell
-d8 k -n kube-system exec -ti \
-$(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o json | jq -r '.items[] | select( .status.conditions[] | select(.type == "ContainersReady" and .status == "True")) | .metadata.name' | head -n1) -- \
-etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
---cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
---endpoints https://127.0.0.1:2379/ member list -w table
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ member list -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
+done
 ```
 
 **Внимание.** Последний параметр в таблице вывода показывает, что узел находится в состоянии [`learner`](https://etcd.io/docs/v3.5/learning/design-learner/), а не в состоянии `leader`.
 
 ### Вариант 2
 
-Используйте команду `etcdctl endpoint status`. Для этой команды, после флага `--endpoints` нужно подставить адрес каждого узла control-plane. В пятом столбце таблицы вывода будет указано значение `true` для лидера.
+Используйте команду `etcdctl endpoint status`. Для лидера в столбце `IS LEADER` будет указано значение `true`.
 
-Пример скрипта, который автоматически передает все адреса узлов control-plane:
+Пример:
 
 ```shell
-MASTER_NODE_IPS=($(d8 k get nodes -l \
-node-role.kubernetes.io/control-plane="" \
--o 'custom-columns=IP:.status.addresses[?(@.type=="InternalIP")].address' \
---no-headers))
-unset ENDPOINTS_STRING
-for master_node_ip in ${MASTER_NODE_IPS[@]}
-do ENDPOINTS_STRING+="--endpoints https://${master_node_ip}:2379 "
+for pod in $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name); do
+  d8 k -n kube-system exec "$pod" -- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
+  --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
+  --endpoints https://127.0.0.1:2379/ endpoint status --cluster -w table
+  if [ $? -eq 0 ]; then
+    break
+  fi
 done
-d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod \
--l component=etcd,tier=control-plane -o name | head -n1) \
--- etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt  --cert /etc/kubernetes/pki/etcd/ca.crt \
---key /etc/kubernetes/pki/etcd/ca.key \
-$(echo -n $ENDPOINTS_STRING) endpoint status -w table
 ```
 
 ## Что делать, если что-то пошло не так?
@@ -423,7 +557,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 Когда объем базы данных etcd достигает лимита, установленного параметром `quota-backend-bytes`, доступ к ней становится "read-only". Это означает, что база данных etcd перестает принимать новые записи, но при этом остается доступной для чтения данных. Вы можете понять, что столкнулись с подобной ситуацией, выполнив команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ endpoint status -w table --cluster
@@ -436,7 +570,7 @@ $(echo -n $ENDPOINTS_STRING) endpoint status -w table
 1. Сбросьте активное предупреждение (alarm) о нехватке места в базе данных. Для этого выполните следующую команду:
 
    ```shell
-   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | head -n1) -- \
+   d8 k -n kube-system exec -ti $(d8 k -n kube-system get pod -l component=etcd,tier=control-plane -o name | sed -n 1p) -- \
    etcdctl --cacert /etc/kubernetes/pki/etcd/ca.crt \
    --cert /etc/kubernetes/pki/etcd/ca.crt --key /etc/kubernetes/pki/etcd/ca.key \
    --endpoints https://127.0.0.1:2379/ alarm disarm
@@ -773,8 +907,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   ```
+
+   Проверьте версию `etcdutl` с помощью команды:
+
+   ```shell
    etcdutl version
    ```
 
@@ -846,7 +985,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 Для корректного восстановления выполните следующие шаги:
 
-1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](../../deckhouse-configure-global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
+1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
 
 1. Переведите кластер в режим с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров, или самостоятельно выведите статические master-узлы из кластера.
 
@@ -863,7 +1002,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 p queue main
+   d8 system queue main
    ```
 
 1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.

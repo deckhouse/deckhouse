@@ -32,12 +32,12 @@ import (
 )
 
 func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -78,7 +78,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:         logger,
 			IsDebug:        isDebug,
 		})
-		_, err = converger.Converge(context.Background())
+		_, err = converger.Converge(ctx)
 
 		return err
 	})
@@ -87,7 +87,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineAutoConvergeFlags(cmd)
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -119,18 +119,19 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:         logger,
 			IsDebug:        isDebug,
 		})
-		return converger.AutoConverge()
+		return converger.AutoConverge(app.AutoConvergeListenAddress, app.ApplyInterval)
 	})
 	return cmd
 }
 
 func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -138,7 +139,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -176,7 +177,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			Logger:                                loggerFor,
 			IsDebug:                               isDebug,
 		})
-		return converger.ConvergeMigration(context.Background())
+		return converger.ConvergeMigration(ctx)
 	})
 	return cmd
 }

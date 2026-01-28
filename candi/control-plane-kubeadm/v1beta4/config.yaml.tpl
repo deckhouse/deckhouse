@@ -2,7 +2,44 @@
 RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be explicitly enabled
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
-{{- $featureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" | join "," -}}
+{{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
+{{- end }}
+{{- $apiserverFeatureGates := $baseFeatureGates -}}
+{{- $controllerManagerFeatureGates := $baseFeatureGates -}}
+{{- $schedulerFeatureGates := $baseFeatureGates -}}
+{{- if hasKey . "allowedFeatureGates" -}}
+  {{- range .allowedFeatureGates.apiserver -}}
+    {{- $apiserverFeatureGates = append $apiserverFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeControllerManager -}}
+    {{- $controllerManagerFeatureGates = append $controllerManagerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+  {{- range .allowedFeatureGates.kubeScheduler -}}
+    {{- $schedulerFeatureGates = append $schedulerFeatureGates (printf "%s=true" .) -}}
+  {{- end -}}
+{{- end -}}
+{{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
+{{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
+{{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}
+{{- $runtimeConfig := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
+{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+  {{- $runtimeConfig = append $runtimeConfig "resource.k8s.io/v1beta1=true" -}}
+{{- end }}
+{{- $runtimeConfig := join "," $runtimeConfig -}}
+{{- $nodesCount := .nodesCount | default 0 | int }}
+{{- $gcThresholdCount := 1000 }}
+{{- if lt $nodesCount 100 }}
+    {{- $gcThresholdCount = 1000 }}
+{{- else if lt $nodesCount 300 }}
+    {{- $gcThresholdCount = 3000 }}
+{{- else }}
+    {{- $gcThresholdCount = 6000 }}
+{{- end }}
 {{- /* admissionPlugins */ -}}
 {{- $admissionPlugins := list "NodeRestriction" "PodNodeSelector" "PodTolerationRestriction" "EventRateLimit" "ExtendedResourceToleration" -}}
 {{- if .apiserver.admissionPlugins -}}
@@ -30,10 +67,12 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $audiences = $audiences | uniq -}}
 {{- $audiences = without $audiences $defaultAud -}}
 {{- $audiences = append $audiences $defaultAud -}}
+{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
+{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 {{- /* ClusterConfiguration */ -}}
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
+kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) ($k8sPatch | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki
 certificateValidityPeriod: 8760h0m0s
@@ -122,16 +161,12 @@ apiServer:
       value: >-
         https://127.0.0.1:2379{{ if .apiserver.etcdServers }},{{ .apiserver.etcdServers | join "," }}{{ end }}
     - name: feature-gates
-      value: {{ $featureGates | quote }}
-    {{- if semverCompare ">= 1.28" .clusterConfiguration.kubernetesVersion }}
+      value: {{ $apiserverFeatureGatesStr | quote }}
     - name: runtime-config
-      value: admissionregistration.k8s.io/v1beta1=true,admissionregistration.k8s.io/v1alpha1=true
-    {{- end }}
-    {{ if .apiserver.webhookURL }}
-    - name: authorization-mode
-      value: Node,Webhook,RBAC
-    - name: authorization-webhook-config-file
-      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+      value: {{ $runtimeConfig }}
+    {{- if .apiserver.webhookURL }}
+    - name: authorization-config
+      value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
     {{- end -}}
     {{ if .apiserver.authnWebhookURL }}
     - name: authentication-token-webhook-config-file
@@ -154,7 +189,7 @@ apiServer:
     - name: request-timeout
       value: 60s
     - name: tls-cipher-suites
-      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256    
+      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
     {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
       value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
@@ -176,9 +211,9 @@ controllerManager:
     - name: profiling
       value: "false"
     - name: terminated-pod-gc-threshold
-      value: "12500"
+      value: {{ $gcThresholdCount | quote }}
     - name: feature-gates
-      value: {{ $featureGates | quote }}
+      value: {{ $controllerManagerFeatureGatesStr | quote }}
     - name: node-cidr-mask-size
       value: {{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
     - name: bind-address
@@ -206,7 +241,7 @@ scheduler:
     - name: profiling
       value: "false"
     - name: feature-gates
-      value: {{ $featureGates | quote }}
+      value: {{ $schedulerFeatureGatesStr | quote }}
     - name: bind-address
       value: "127.0.0.1"
     {{- if ne .runType "ClusterBootstrap" }}
@@ -221,8 +256,14 @@ etcd:
     extraArgs:
       - name: initial-cluster-state
         value: existing
+      {{- /*
+      Kubeadm using --feature-gates=InitialCorruptCheck=true by default since v1.34 k8s and v3.6.0 etcd, experimental-initial-corrupt-check must be removed in v3.7.0 etcd
+      https://github.com/kubernetes/kubernetes/pull/132838/files
+      */ -}}
+      {{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
       - name: experimental-initial-corrupt-check
         value: "true"
+      {{- end }}
       {{- if hasKey .etcd "quotaBackendBytes" }}
       - name: quota-backend-bytes
         value: {{ .etcd.quotaBackendBytes | quote }}

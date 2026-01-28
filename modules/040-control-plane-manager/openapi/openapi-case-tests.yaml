@@ -11,7 +11,7 @@ positive:
           hostPath: "/var/backup/etcd"
   values:
     - internal:
-        effectiveKubernetesVersion: "1.29"
+        effectiveKubernetesVersion: "1.30"
         etcdServers:
         - 1.2.3.4
         - 4.3.2.1

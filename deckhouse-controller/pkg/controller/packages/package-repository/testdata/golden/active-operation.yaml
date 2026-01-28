@@ -1,0 +1,34 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  annotations:
+    packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
+  creationTimestamp: null
+  name: deckhouse
+  resourceVersion: "2"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status:
+  syncTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1234567890
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  phase: Processing

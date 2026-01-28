@@ -1,7 +1,8 @@
 name: keepalived
-stage: "General Availability"
+stage: General Availability
 subsystems:
   - infrastructure
 namespace: d8-keepalived
-requirements:
-  deckhouse: ">= 1.68"
+descriptions:
+  en: Configures keepalived clusters on nodes via custom resources. Does not work with the cilium module.
+  ru: Настраивает keepalived-кластеры на узлах через custom resources. Не работает с модулем cilium.

@@ -1,6 +1,6 @@
 ---
 title: "Модуль registry"
-description: ""
+description: "Управление конфигурацией registry компонентов DKP и организация внутреннего хранилища образов контейнеров (container registry, registry)."
 ---
 
 ## Описание
@@ -20,12 +20,6 @@ description: ""
 ## Ограничения и особенности использования модуля
 
 Модуль `registry` имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
-
-### Ограничения при установке кластера
-
-Bootstrap кластера DKP поддерживается только в неконфигурируемом `Unmanaged` режиме. Настройки registry во время bootstrap задаются через [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
 
 ### Ограничения по условиям работы
 

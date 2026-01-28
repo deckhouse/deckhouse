@@ -21,23 +21,19 @@ import (
 	"os"
 	"time"
 
-	"k8s.io/component-base/logs"
-	v1 "k8s.io/component-base/logs/api/v1"
-	"k8s.io/klog/v2"
-
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
+	// to ensure that exec-entrypoint and run can make use of them.
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/component-base/logs"
+	v1 "k8s.io/component-base/logs/api/v1"
+	_ "k8s.io/component-base/logs/json/register"
+	"k8s.io/klog/v2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-
-	//+kubebuilder:scaffold:imports
 
 	deckhousev1alpha1 "caps-controller-manager/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "caps-controller-manager/api/deckhouse.io/v1alpha2"
@@ -50,7 +46,6 @@ import (
 
 var (
 	scheme     = runtime.NewScheme()
-	setupLog   = ctrl.Log.WithName("setup")
 	logOptions = logs.NewOptions()
 )
 
@@ -86,14 +81,18 @@ func main() {
 
 	flag.DurationVar(&leaderElectionRetryPeriod, "leader-elect-retry-period", 2*time.Second,
 		"Duration the LeaderElector clients should wait between tries of actions (duration string)")
+	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+
+	logs.AddGoFlags(flag.CommandLine)
 
 	flag.Parse()
+	ctrl.SetLogger(klog.Background())
+	setupLog := ctrl.Log.WithName("setup")
 
 	if err := v1.ValidateAndApply(logOptions, nil); err != nil {
 		setupLog.Error(err, "unable to validate and apply log options")
 		os.Exit(1)
 	}
-	ctrl.SetLogger(klog.Background())
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,

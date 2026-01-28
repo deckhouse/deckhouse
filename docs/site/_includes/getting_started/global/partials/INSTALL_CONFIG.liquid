@@ -25,10 +25,41 @@ Installation of {{ page.title_main }} is only possible in the Enterprise Edition
 {%- endif %}
 
 Create the `config.yml` file.
-{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}{{ "other" }}{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
-<div markdown="1">
-{% include_file "{{ includePath }}" syntax="yaml" %}
+
+{% if page.platform_code == 'bm-private' or page.platform_code == 'bm' or page.platform_code == 'red' or page.platform_code == 'spacevm' %}
+
+<div class="tabs">
+  <a id='tab_variant_worker_{{ revision }}'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant_{{ revision }} active"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_worker_{{ revision }}','dhctl-variant','worker');">
+     A cluster of several nodes 
+  </a>
+  <a id='tab_variant_single_{{ revision }}'
+     href="javascript:void(0)"
+     class="tabs__btn tabs__btn_variant_{{ revision }}"
+     onclick="openTabAndSaveStatus(event,'tabs__btn_variant_{{ revision }}','tabs__content_variant_{{ revision }}','block_variant_single_{{ revision }}','dhctl-variant','single');">
+     A cluster of a single node
+  </a>
 </div>
+
+<div id='block_variant_worker_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }} active" markdown="1">
+  {% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+  {% include_file "{{ includePath }}" syntax="yaml" %}
+</div>
+
+<div id='block_variant_single_{{ revision }}' class="tabs__content tabs__content_variant_{{ revision }}" markdown="1">
+  {% capture includePathSingle %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.single.inc{% endcapture %}
+  {% include_file "{{ includePathSingle }}" syntax="yaml" %}
+</div>
+
+{% else %}
+
+{% capture includePath %}_includes/getting_started/{{ page.platform_code }}/partials/config.yml{% if include.layout.size > 0 %}.{{ include.layout }}{% endif %}.{% if revision != "ce" %}other{% else %}{{ revision }}{% endif %}.inc{% endcapture %}
+{% include_file "{{ includePath }}" syntax="yaml" %}
+
+{% endif %}
+
 {%- if page.platform_type == 'existing' %}
 {% offtopic title="About nodeSelector, taints and tolerations..." %}
 You can control which nodes the Deckhouse kernel will run on by using the `spec.setting.nodeSelector` parameter in the ModuleConfig `deckhouse` of the installation configuration.
@@ -69,12 +100,15 @@ Also, you can list the necessary cluster node taints in ModuleConfig `global` in
 
 <script>
   $(document).ready(function() {
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('span').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
-    document.getElementById('block_layout_{{ revision }}').querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(element => {
-      element.textContent = element.textContent.replace('<REVISION>', '{{ revision }}');
-    })
+    var root = document.getElementById('block_layout_{{ revision }}');
+    if (!root) return; // на шаге 2 этого блока нет — выходим тихо
+
+    root.querySelectorAll('span').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
+    root.querySelectorAll('.dimmer-block-content div .snippetcut .snippetcut__raw').forEach(function (el) {
+      el.textContent = el.textContent.replace('<REVISION>', '{{ revision }}');
+    });
   });
 </script>
 

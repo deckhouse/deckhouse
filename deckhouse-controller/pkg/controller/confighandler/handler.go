@@ -17,6 +17,7 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
@@ -37,15 +38,17 @@ var _ backend.ConfigHandler = &Handler{}
 
 type Handler struct {
 	client            client.Client
+	conversionsStore  *conversion.ConversionsStore
 	deckhouseConfigCh chan<- utils.Values
 
 	l             sync.Mutex
 	configEventCh chan<- config.Event
 }
 
-func New(client client.Client, deckhouseConfigCh chan<- utils.Values) *Handler {
+func New(client client.Client, conversionsStore *conversion.ConversionsStore, deckhouseConfigCh chan<- utils.Values) *Handler {
 	return &Handler{
 		client:            client,
+		conversionsStore:  conversionsStore,
 		deckhouseConfigCh: deckhouseConfigCh,
 	}
 }
@@ -82,6 +85,11 @@ func (h *Handler) HandleEvent(moduleConfig *v1alpha1.ModuleConfig, op config.Op)
 			Checksum:     addonOperatorModuleConfig.Checksum(),
 		}
 
+		// it is needed to trigger kube config apply after enabling
+		if moduleConfig.Spec.Enabled != nil && !*moduleConfig.Spec.Enabled {
+			kubeConfig.Modules[moduleConfig.Name].Checksum = ""
+		}
+
 		// update deckhouse settings
 		if moduleConfig.Name == moduleDeckhouse {
 			h.deckhouseConfigCh <- values
@@ -102,7 +110,7 @@ func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
 func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
 	configs := new(v1alpha1.ModuleConfigList)
 	if err := h.client.List(ctx, configs); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
 	kubeConfig := config.NewConfig()
@@ -145,20 +153,22 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 		return utils.Values{}, nil
 	}
 
+	settings := moduleConfig.Spec.Settings.GetMap()
+
 	if moduleConfig.Spec.Version == 0 {
-		return utils.Values(moduleConfig.Spec.Settings), nil
+		return utils.Values(settings), nil
 	}
 
-	converter := conversion.Store().Get(moduleConfig.Name)
-	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, moduleConfig.Spec.Settings)
+	converter := h.conversionsStore.Get(moduleConfig.Name)
+	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, settings)
 	if err != nil {
-		return utils.Values{}, err
+		return utils.Values{}, fmt.Errorf("convert to latest: %w", err)
 	}
 
 	moduleConfig.Spec.Version = newVersion
-	moduleConfig.Spec.Settings = newSettings
+	moduleConfig.Spec.Settings = v1alpha1.MakeMappedFields(newSettings)
 
-	return utils.Values(moduleConfig.Spec.Settings), nil
+	return utils.Values(newSettings), nil
 }
 
 // SaveConfigValues saving patches in ModuleConfigBackend.

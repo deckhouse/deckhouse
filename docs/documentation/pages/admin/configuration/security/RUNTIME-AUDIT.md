@@ -64,7 +64,7 @@ On some systems, eBPF probes may not work.
      enabled: true
    ```
 
-1. (**Optional**) If the cluster control plane is not managed by DKP with `control-plane-manager`,
+1. (**Optional**) If the cluster control plane is not managed by DKP with [`control-plane-manager`](/modules/control-plane-manager/),
    configure the [Kubernetes API audit webhook](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#webhook-backend) manually.
 
 All available security audit parameters are listed in the [`runtime-audit-engine`](/modules/runtime-audit-engine/configuration.html) module documentation.
@@ -72,8 +72,8 @@ All available security audit parameters are listed in the [`runtime-audit-engine
 ### Manually configuring the Kubernetes API audit webhook
 
 {% alert level="info" %}
-Webhook configuration is not required if the `control-plane-manager` module is enabled.
-In this case, when the `runtime-audit-engine` module is enabled,
+Webhook configuration is not required if the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+In this case, when the [`runtime-audit-engine`](/modules/runtime-audit-engine/) module is enabled,
 the settings for collecting Kubernetes API audit events will be applied automatically.
 {% endalert %}
 
@@ -271,7 +271,7 @@ spec:
           Check you events journal for more details.
         summary: Falco detects a critical security incident
       expr: |
-        sum by (node) (rate(falco_events{priority="Critical"}[5m]) > 0)
+        sum by (node) (rate(falcosecurity_falcosidekick_falco_events_total{priority="Critical"}[5m]) > 0)
 ```
 
 {% endraw %}
@@ -307,6 +307,7 @@ kind: ModuleConfig
 metadata:
   name: runtime-audit-engine
 spec:
+  version: 1
   enabled: true
   settings:
     debugLogging: true

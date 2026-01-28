@@ -17,9 +17,10 @@ limitations under the License.
 package config
 
 import (
-	"dvp-common/config"
 	"flag"
 	"fmt"
+
+	"dvp-common/config"
 )
 
 type CSIConfig struct {

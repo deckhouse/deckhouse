@@ -20,9 +20,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/pointer"
 	"sigs.k8s.io/yaml"
 
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -32,7 +39,7 @@ func TestParseConfigFromData(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.29"
+kubernetesVersion: "1.30"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 `
@@ -192,6 +199,98 @@ spec:
         value: system
   nodeType: CloudEphemeral
 `
+	// Registry
+	t.Run("Registry", func(t *testing.T) {
+		t.Run("InitConfiguration -> always unmanaged && legacy", func(t *testing.T) {
+			t.Run("Without CRI (module disable)", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+			t.Run("With CRI (module enable)", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), initConfig+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+		})
+		t.Run("Default -> CE edition registry", func(t *testing.T) {
+			t.Run("Without CRI (module disable) -> unmanaged && legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), "", DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, true, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+			t.Run("With CRI (module enable) -> direct && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), ""+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeDirect, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "", registry.Username)
+				require.Equal(t, "", registry.Password)
+				require.Equal(t, "", registry.CA)
+			})
+		})
+		t.Run("ModuleConfig Deckhouse", func(t *testing.T) {
+			moduleConfigDeckhouse := `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    registry:
+      mode: Unmanaged
+      unmanaged:
+        imagesRepo: r.example.com/test/
+        username: test-user
+        password: test-password
+        scheme: HTTPS
+        ca: "-----BEGIN CERTIFICATE-----"
+  version: 1
+`
+			t.Run("Without CRI (module disable) -> error", func(t *testing.T) {
+				_, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse, DummyPreparatorProvider())
+				require.Error(t, err)
+			})
+			t.Run("With CRI (module enable) -> from moduleConfig && not legacy", func(t *testing.T) {
+				metaConfig, err := ParseConfigFromData(context.TODO(), moduleConfigDeckhouse+clusterConfig, DummyPreparatorProvider())
+				require.NoError(t, err)
+				require.Equal(t, false, metaConfig.Registry.LegacyMode)
+				require.Equal(t, registry_const.ModeUnmanaged, metaConfig.Registry.Settings.Mode)
+				registry := metaConfig.Registry.Settings.RemoteData
+				require.Equal(t, "r.example.com/test", registry.ImagesRepo)
+				require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+				require.Equal(t, "test-user", registry.Username)
+				require.Equal(t, "test-password", registry.Password)
+				require.Equal(t, "-----BEGIN CERTIFICATE-----", registry.CA)
+			})
+		})
+	})
 
 	t.Run("Standard Static", func(t *testing.T) {
 		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig+initConfig, DummyPreparatorProvider())
@@ -207,31 +306,6 @@ spec:
 
 		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
 		require.Equal(t, "Static", metaConfig.ClusterType)
-
-		require.Len(t, metaConfig.ResourcesYAML, 0)
-	})
-
-	t.Run("Without init configuration", func(t *testing.T) {
-		metaConfig, err := ParseConfigFromData(context.TODO(), clusterConfig, DummyPreparatorProvider())
-		require.NoError(t, err)
-
-		parsedStaticConfig, err := metaConfig.StaticClusterConfigYAML()
-		require.NoError(t, err)
-		require.Equal(t, 0, len(parsedStaticConfig))
-
-		parsedProviderConfig, err := metaConfig.ProviderClusterConfigYAML()
-		require.NoError(t, err)
-		require.Equal(t, 0, len(parsedProviderConfig))
-
-		require.Equal(t, "10.111.0.10", metaConfig.ClusterDNSAddress)
-		require.Equal(t, "Static", metaConfig.ClusterType)
-
-		require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
-		require.Equal(t, metaConfig.Registry.Address, "registry.deckhouse.io")
-		require.Equal(t, metaConfig.Registry.Path, "/deckhouse/ce")
-		require.Equal(t, metaConfig.Registry.DockerCfg, "eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0=")
-		require.Equal(t, metaConfig.Registry.Scheme, "https")
-
 		require.Len(t, metaConfig.ResourcesYAML, 0)
 	})
 
@@ -365,7 +439,389 @@ func TestParseConfigFromFiles(t *testing.T) {
 		metaConfig, err := LoadConfigFromFile(context.TODO(), []string{"./mocks/*.yml", "./mocks/3-ModuleConfig.yaml"}, DummyPreparatorProvider())
 		require.NoError(t, err)
 		require.Equal(t, "Static", metaConfig.ClusterType)
-		require.Equal(t, "registry.deckhouse.io", metaConfig.Registry.Address)
+
+		t.Run("Registry CE edition config", func(t *testing.T) {
+			registry := metaConfig.Registry.Settings.RemoteData
+			require.Equal(t, "registry.deckhouse.io/deckhouse/ce", registry.ImagesRepo)
+			require.Equal(t, registry_const.SchemeHTTPS, registry.Scheme)
+			require.Equal(t, "", registry.Username)
+			require.Equal(t, "", registry.Password)
+			require.Equal(t, "", registry.CA)
+		})
+
 		require.Len(t, metaConfig.ModuleConfigs, 3)
 	})
+}
+
+func TestParseConfigFromCluster(t *testing.T) {
+	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider)
+
+		require.NoError(t, err)
+		require.NotNil(t, metaConfig)
+		require.NotEmpty(t, metaConfig.ClusterType)
+		require.Equal(t, metaConfig.ClusterType, tst.clusterType)
+		require.NotEmpty(t, metaConfig.ClusterConfig)
+		cfg, err := metaConfig.ClusterConfigYAML()
+		require.NoError(t, err)
+		require.YAMLEq(t, tst.clusterConfig, string(cfg))
+
+		return metaConfig
+	}
+
+	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
+		metaConfig, err := parseConfigFromCluster(context.TODO(), tst.kubeCl, tst.preparatorProvider)
+
+		require.Error(t, err)
+		require.Nil(t, metaConfig)
+	}
+
+	t.Run("Invalid cluster", func(t *testing.T) {
+		type test struct {
+			name   string
+			params testParseConfigFromClusterParams
+		}
+
+		tests := []test{
+			{
+				name: "no secret",
+				params: testParseConfigFromClusterParams{
+					clusterConfig: "",
+					clusterType:   StaticClusterType,
+				},
+			},
+			{
+				name: "invalid secret",
+				params: testParseConfigFromClusterParams{
+					clusterConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+domain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`,
+					clusterType: StaticClusterType,
+				},
+			},
+			{
+				name: "empty cluster type",
+				params: testParseConfigFromClusterParams{
+					clusterConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: ""
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`,
+					clusterType: StaticClusterType,
+				},
+			},
+			{
+				name: "invalid cluster type",
+				params: testParseConfigFromClusterParams{
+					clusterConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: "invalid"
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`,
+					clusterType: StaticClusterType,
+				},
+			},
+			{
+				name: "invalid yaml",
+				params: testParseConfigFromClusterParams{
+					clusterConfig: `:a""vrgrg`,
+					clusterType:   StaticClusterType,
+				},
+			},
+		}
+
+		for _, tst := range tests {
+			t.Run(tst.name, func(t *testing.T) {
+				tt := createTestParseConfigFromCluster(t, tst.params)
+
+				doParseFromClusterWithError(t, tt)
+			})
+		}
+	})
+
+	t.Run("Static cluster", func(t *testing.T) {
+		clusterGenericConfig := `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`
+		testParams := testParseConfigFromClusterParams{
+			clusterConfig: clusterGenericConfig,
+			clusterType:   StaticClusterType,
+		}
+
+		createStaticConfigSecret := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
+			t.Helper()
+
+			data := make(map[string][]byte)
+			if config != nil {
+				data["static-cluster-configuration.yaml"] = []byte(*config)
+			}
+
+			testCreateKubeSystemSecret(t, tst.kubeCl, "d8-static-cluster-configuration", data)
+		}
+
+		assertStaticConfigEmpty := func(t *testing.T, metaConfig *MetaConfig) {
+			require.Nil(t, metaConfig.StaticClusterConfig)
+			cfg, err := metaConfig.StaticClusterConfigYAML()
+			require.NoError(t, err)
+			require.Empty(t, cfg)
+		}
+
+		createAndAssertStaticConfigEmpty := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
+			createStaticConfigSecret(t, tst, config)
+			metaConfig := doParseFromClusterNoError(t, tst)
+			assertStaticConfigEmpty(t, metaConfig)
+		}
+
+		t.Run("no secret", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			assertStaticConfigEmpty(t, metaConfig)
+		})
+
+		t.Run("empty data", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertStaticConfigEmpty(t, tst, nil)
+		})
+
+		t.Run("empty config", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertStaticConfigEmpty(t, tst, pointer.String(""))
+		})
+
+		t.Run("valid config", func(t *testing.T) {
+			const staticConfig = `
+apiVersion: deckhouse.io/v1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+- 192.168.0.0/24
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createStaticConfigSecret(t, tst, pointer.String(staticConfig))
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			require.NotEmpty(t, metaConfig.StaticClusterConfig)
+
+			staticConfigFromMetaConfig, err := metaConfig.StaticClusterConfigYAML()
+			require.NoError(t, err)
+			require.YAMLEq(t, staticConfig, string(staticConfigFromMetaConfig))
+		})
+
+		t.Run("invalid config", func(t *testing.T) {
+			const staticConfig = `
+apiVersion: deckhouse.io/v1
+kind: StaticClusterConfiguration
+internalNetworkCIDRs:
+  tst: "string"
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createStaticConfigSecret(t, tst, pointer.String(staticConfig))
+			doParseFromClusterWithError(t, tst)
+		})
+
+		t.Run("invalid yaml", func(t *testing.T) {
+			const staticConfig = `: ""aa`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createStaticConfigSecret(t, tst, pointer.String(staticConfig))
+			doParseFromClusterWithError(t, tst)
+		})
+	})
+
+	t.Run("Cloud cluster", func(t *testing.T) {
+		clusterGenericConfig := `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+cloud:
+  provider: Yandex
+  prefix: "test"
+kubernetesVersion: "1.32"
+podSubnetCIDR: 10.222.0.0/16
+serviceSubnetCIDR: 10.111.0.0/16
+encryptionAlgorithm: RSA-2048
+defaultCRI: Containerd
+clusterDomain: cluster.local
+podSubnetNodeCIDRPrefix: "24"
+`
+		testParams := testParseConfigFromClusterParams{
+			clusterConfig: clusterGenericConfig,
+			clusterType:   CloudClusterType,
+		}
+
+		createCloudConfigSecret := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
+			t.Helper()
+
+			data := make(map[string][]byte)
+			if config != nil {
+				data["cloud-provider-cluster-configuration.yaml"] = []byte(*config)
+				data["cloud-provider-discovery-data.json"] = []byte(`{"a": "b"}`)
+			}
+
+			testCreateKubeSystemSecret(t, tst.kubeCl, "d8-provider-cluster-configuration", data)
+		}
+
+		createAndAssertCloudConfigEmptyOrInvalidError := func(t *testing.T, tst *testParseConfigFromCluster, config *string) {
+			createCloudConfigSecret(t, tst, config)
+			doParseFromClusterWithError(t, tst)
+		}
+
+		t.Run("no secret", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			doParseFromClusterWithError(t, tst)
+		})
+
+		t.Run("empty data", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, nil)
+		})
+
+		t.Run("empty config", func(t *testing.T) {
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, pointer.String(""))
+		})
+
+		t.Run("valid config", func(t *testing.T) {
+			const cloudConfig = `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNAT
+masterNodeGroup:
+  replicas: 1
+  instanceClass:
+    etcdDiskSizeGb: 10
+    platform: standard-v2
+    cores: 4
+    memory: 8192
+    imageID: imageId
+    externalIPAddresses:
+      - Auto
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createCloudConfigSecret(t, tst, pointer.String(cloudConfig))
+			metaConfig := doParseFromClusterNoError(t, tst)
+
+			require.NotEmpty(t, metaConfig.ProviderClusterConfig)
+
+			cloudConfigFromMetaConfig, err := metaConfig.ProviderClusterConfigYAML()
+			require.NoError(t, err)
+			require.YAMLEq(t, cloudConfig, string(cloudConfigFromMetaConfig))
+		})
+
+		t.Run("invalid config", func(t *testing.T) {
+			const cloudConfig = `
+apiVersion: deckhouse.io/v1
+kind: YandexClusterConfiguration
+layout: WithoutNATT
+sshPublicKey: ssh-rsa AAAAB3NzaC
+nodeNetworkCIDR: 10.100.0.0/21
+provider:
+  cloudID: cloudId
+  folderID: folderId
+  serviceAccountJSON: "{}"
+`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, pointer.String(cloudConfig))
+		})
+
+		t.Run("invalid yaml", func(t *testing.T) {
+			const cloudConfig = `:a""n`
+			tst := createTestParseConfigFromCluster(t, testParams)
+
+			createAndAssertCloudConfigEmptyOrInvalidError(t, tst, pointer.String(cloudConfig))
+		})
+	})
+
+}
+
+type testParseConfigFromClusterParams struct {
+	clusterConfig string
+	clusterType   string
+}
+
+type testParseConfigFromCluster struct {
+	testParseConfigFromClusterParams
+
+	kubeCl             *client.KubernetesClient
+	preparatorProvider MetaConfigPreparatorProvider
+}
+
+func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromClusterParams) *testParseConfigFromCluster {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	if p.clusterConfig != "" {
+		testCreateKubeSystemSecret(t, kubeCl, "d8-cluster-configuration", map[string][]byte{
+			"cluster-configuration.yaml": []byte(p.clusterConfig),
+		})
+	}
+
+	return &testParseConfigFromCluster{
+		testParseConfigFromClusterParams: p,
+
+		kubeCl:             kubeCl,
+		preparatorProvider: DummyPreparatorProvider(),
+	}
+}
+
+func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string][]byte) {
+	t.Helper()
+
+	secret := &apiv1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: global.ConfigsNS,
+		},
+		Data: data,
+	}
+
+	_, err := kubeCl.CoreV1().Secrets(global.ConfigsNS).Create(context.TODO(), secret, metav1.CreateOptions{})
+	require.NoError(t, err)
 }

@@ -1,4 +1,4 @@
-// Copyright 2024 Flant JSC
+// Copyright 2025 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,136 +15,356 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
-func TestSyncWriter_Write(t *testing.T) {
-	t.Parallel()
+func TestStreamDirectorParams_Validate(t *testing.T) {
+	tests := []struct {
+		name        string
+		params      StreamDirectorParams
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid params",
+			params: StreamDirectorParams{
+				MethodsPrefix: "/dhctl.DHCTL",
+				TmpDir:        "/tmp/dhctl",
+			},
+			expectError: false,
+		},
+		{
+			name: "empty methods prefix is valid",
+			params: StreamDirectorParams{
+				MethodsPrefix: "",
+				TmpDir:        "/tmp/dhctl",
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid tmp dir - empty",
+			params: StreamDirectorParams{
+				MethodsPrefix: "/dhctl.DHCTL",
+				TmpDir:        "",
+			},
+			expectError: true,
+			errorMsg:    "tmpdir is required",
+		},
+		{
+			name: "invalid tmp dir - root",
+			params: StreamDirectorParams{
+				MethodsPrefix: "/dhctl.DHCTL",
+				TmpDir:        "/",
+			},
+			expectError: true,
+			errorMsg:    "tmpdir should not be /",
+		},
+	}
 
-	var (
-		buf bytes.Buffer
-		wg  sync.WaitGroup
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.params.Validate()
 
-	sw := &syncWriter{writer: &buf}
-	numWriters := 100
-	iterations := 100
-
-	for i := range numWriters {
-		wg.Add(1)
-
-		go func(id int) {
-			defer wg.Done()
-
-			for j := range iterations {
-				_, err := sw.Write([]byte(fmt.Sprintf("writer%d_iter%d\t", id, j)))
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errorMsg)
+			} else {
 				require.NoError(t, err)
 			}
-		}(i)
+		})
 	}
-
-	wg.Wait()
-
-	lines := strings.Split(buf.String(), "\t")
-	assert.Equal(t, numWriters*iterations+1, len(lines))
 }
 
-func TestSyncWriter_copyFrom(t *testing.T) {
-	t.Parallel()
-
-	var (
-		buf     bytes.Buffer
-		wg      sync.WaitGroup
-		dataLen atomic.Int64
-	)
-
-	sw := &syncWriter{writer: &buf}
-	numCopiers := 100
-
-	for i := range numCopiers {
-		wg.Add(1)
-
-		go func(id int) {
-			defer wg.Done()
-
-			data := fmt.Sprintf("data from copier %d", id)
-			dataLen.Add(int64(len(data)))
-
-			err := sw.copyFrom(strings.NewReader(data))
-			require.NoError(t, err)
-		}(i)
+func TestNewStreamDirector(t *testing.T) {
+	tests := []struct {
+		name        string
+		params      StreamDirectorParams
+		expectError bool
+		errorMsg    string
+	}{
+		{
+			name: "valid params",
+			params: StreamDirectorParams{
+				MethodsPrefix: "/dhctl.DHCTL",
+				TmpDir:        "/tmp/dhctl",
+			},
+			expectError: false,
+		},
+		{
+			name: "invalid params",
+			params: StreamDirectorParams{
+				MethodsPrefix: "/dhctl.DHCTL",
+				TmpDir:        "",
+			},
+			expectError: true,
+			errorMsg:    "tmpdir is required",
+		},
 	}
 
-	wg.Wait()
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			director, err := NewStreamDirector(tt.params)
 
-	assert.Equal(t, dataLen.Load(), int64(buf.Len()))
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errorMsg)
+				require.Nil(t, director)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, director)
+				require.Equal(t, tt.params, director.params)
+				require.NotNil(t, director.wg)
+				require.NotNil(t, director.syncWriters)
+				require.NotNil(t, director.syncWriters.stdoutWriter)
+				require.NotNil(t, director.syncWriters.stderrWriter)
+			}
+		})
+	}
 }
 
-func TestSyncWriter_copyFrom_LargeData(t *testing.T) {
-	t.Parallel()
+func TestStreamDirector_SocketPath(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
 
-	var buf bytes.Buffer
+	params := StreamDirectorParams{
+		MethodsPrefix: "/dhctl.DHCTL",
+		TmpDir:        tmpDir,
+	}
 
-	sw := &syncWriter{writer: &buf}
-	largeData := strings.Repeat("ABCDE", 1024*1024) // 5MB
-	reader := strings.NewReader(largeData)
+	director, err := NewStreamDirector(params)
+	require.NoError(t, err)
 
-	done := make(chan error, 1)
+	tests := []struct {
+		name         string
+		directorUUID string
+		expected     string
+	}{
+		{
+			name:         "simple UUID",
+			directorUUID: "12345678-1234-1234-1234-123456789abc",
+			expected:     filepath.Join(tmpDir, "12345678-1234-1234-1234-123456789abc.sock"),
+		},
+		{
+			name:         "short UUID",
+			directorUUID: "abc123",
+			expected:     filepath.Join(tmpDir, "abc123.sock"),
+		},
+		{
+			name:         "empty UUID",
+			directorUUID: "",
+			expected:     filepath.Join(tmpDir, ".sock"),
+		},
+		{
+			name:         "UUID with special characters",
+			directorUUID: "test-uuid_123",
+			expected:     filepath.Join(tmpDir, "test-uuid_123.sock"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := director.socketPath(tt.directorUUID)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestStreamDirector_TmpDirPath(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	params := StreamDirectorParams{
+		MethodsPrefix: "/dhctl.DHCTL",
+		TmpDir:        tmpDir,
+	}
+
+	director, err := NewStreamDirector(params)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name         string
+		directorUUID string
+	}{
+		{
+			name:         "simple UUID",
+			directorUUID: "12345678-1234-1234-1234-123456789abc",
+		},
+		{
+			name:         "short UUID",
+			directorUUID: "abc123",
+		},
+		{
+			name:         "empty UUID",
+			directorUUID: "",
+		},
+		{
+			name:         "UUID with special characters",
+			directorUUID: "test-uuid_123",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := director.tmpDirPath(tt.directorUUID)
+
+			// Verify the result is within the expected tmp directory
+			require.True(t, strings.HasPrefix(result, tmpDir))
+
+			// Verify the hash is computed correctly
+			expectedHash := stringsutil.Sha256Encode(tt.directorUUID)
+			expectedFirst10 := fmt.Sprintf("%.10s", expectedHash)
+			expectedPath := filepath.Join(tmpDir, expectedFirst10)
+
+			require.Equal(t, expectedPath, result)
+
+			// Verify the directory name is exactly 10 characters (or less if hash is shorter)
+			dirName := filepath.Base(result)
+			if len(expectedHash) >= 10 {
+				require.Len(t, dirName, 10)
+			} else {
+				require.Len(t, dirName, len(expectedHash))
+			}
+		})
+	}
+}
+
+func TestStreamDirector_TmpDirPathConsistency(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	params := StreamDirectorParams{
+		MethodsPrefix: "/dhctl.DHCTL",
+		TmpDir:        tmpDir,
+	}
+
+	director, err := NewStreamDirector(params)
+	require.NoError(t, err)
+
+	// Test that the same UUID always produces the same path
+	uuid := "12345678-1234-1234-1234-123456789abc"
+
+	path1 := director.tmpDirPath(uuid)
+	path2 := director.tmpDirPath(uuid)
+	path3 := director.tmpDirPath(uuid)
+
+	require.Equal(t, path1, path2)
+	require.Equal(t, path2, path3)
+}
+
+func TestStreamDirector_TmpDirPathUniqueness(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	params := StreamDirectorParams{
+		MethodsPrefix: "/dhctl.DHCTL",
+		TmpDir:        tmpDir,
+	}
+
+	director, err := NewStreamDirector(params)
+	require.NoError(t, err)
+
+	// Test that different UUIDs produce different paths
+	uuid1 := "12345678-1234-1234-1234-123456789abc"
+	uuid2 := "87654321-4321-4321-4321-cba987654321"
+	uuid3 := "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+	path1 := director.tmpDirPath(uuid1)
+	path2 := director.tmpDirPath(uuid2)
+	path3 := director.tmpDirPath(uuid3)
+
+	require.NotEqual(t, path1, path2)
+	require.NotEqual(t, path2, path3)
+	require.NotEqual(t, path1, path3)
+
+	// All paths should be in the same parent directory
+	require.Equal(t, tmpDir, filepath.Dir(path1))
+	require.Equal(t, tmpDir, filepath.Dir(path2))
+	require.Equal(t, tmpDir, filepath.Dir(path3))
+}
+
+func TestStreamDirector_Wait(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
+	require.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+
+	params := StreamDirectorParams{
+		MethodsPrefix: "/dhctl.DHCTL",
+		TmpDir:        tmpDir,
+	}
+
+	director, err := NewStreamDirector(params)
+	require.NoError(t, err)
+
+	// Test that Wait() doesn't block when no goroutines are running
+	done := make(chan bool, 1)
 	go func() {
-		done <- sw.copyFrom(reader)
+		director.Wait()
+		done <- true
 	}()
 
 	select {
-	case err := <-done:
-		require.NoError(t, err)
-	case <-time.After(10 * time.Second):
-		require.Fail(t, "copyFrom timeout")
+	case <-done:
+		// Success - Wait() returned immediately
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Wait() should not block when no goroutines are running")
 	}
-
-	assert.Equal(t, largeData, buf.String())
 }
 
-func TestSyncWriters(t *testing.T) {
-	var (
-		stdoutBuf, stderrBuf bytes.Buffer
-		wg                   sync.WaitGroup
-	)
+func TestSyncWriter(t *testing.T) {
+	// Create a buffer to write to
+	var buf strings.Builder
 
-	writesNum := 100
-	sw := &syncWriters{
-		stdoutWriter: &syncWriter{writer: &stdoutBuf},
-		stderrWriter: &syncWriter{writer: &stderrBuf},
+	sw := &syncWriter{
+		writer: &buf,
 	}
 
-	wg.Add(2)
+	t.Run("single write", func(t *testing.T) {
+		buf.Reset()
 
-	go func() {
-		defer wg.Done()
-		for range writesNum {
-			_, err := sw.stdoutWriter.Write([]byte("stdout"))
-			require.NoError(t, err)
-		}
-	}()
+		data := []byte("test data")
+		n, err := sw.Write(data)
 
-	go func() {
-		defer wg.Done()
-		for range writesNum {
-			_, err := sw.stderrWriter.Write([]byte("stderr"))
-			require.NoError(t, err)
-		}
-	}()
+		require.NoError(t, err)
+		require.Equal(t, len(data), n)
+		require.Equal(t, "test data", buf.String())
+	})
 
-	wg.Wait()
+	t.Run("multiple writes", func(t *testing.T) {
+		buf.Reset()
 
-	assert.Equal(t, strings.Repeat("stdout", writesNum), stdoutBuf.String())
-	assert.Equal(t, strings.Repeat("stderr", writesNum), stderrBuf.String())
+		data1 := []byte("first ")
+		data2 := []byte("second")
+
+		n1, err1 := sw.Write(data1)
+		n2, err2 := sw.Write(data2)
+
+		require.NoError(t, err1)
+		require.NoError(t, err2)
+		require.Equal(t, len(data1), n1)
+		require.Equal(t, len(data2), n2)
+		require.Equal(t, "first second", buf.String())
+	})
+
+	t.Run("copy from reader", func(t *testing.T) {
+		buf.Reset()
+
+		reader := strings.NewReader("data from reader")
+		err := sw.copyFrom(reader)
+
+		require.NoError(t, err)
+		require.Equal(t, "data from reader", buf.String())
+	})
 }

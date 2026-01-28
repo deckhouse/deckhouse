@@ -46,4 +46,4 @@ spec:
     regex: my_cool_app_metrics_with_sensitive_data
 ```
 
-С полным описанием полей кастомного ресурса можно ознакомиться [в документации модуля `prometheus`](/products/kubernetes-platform/documentation/v1/modules/prometheus/cr.html#prometheusremotewrite).
+С полным описанием полей кастомного ресурса можно ознакомиться [в документации модуля `prometheus`](/modules/prometheus/cr.html#prometheusremotewrite).

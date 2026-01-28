@@ -5,6 +5,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 
 package main
 
+import v1 "k8s.io/api/core/v1"
+
 type ClusterDebugInfo struct {
 	ID         string `json:"id"`
 	SecretName string `json:"secretName"`
@@ -12,6 +14,7 @@ type ClusterDebugInfo struct {
 }
 
 type IstioPodInfo struct {
-	Name string
-	IP   string
+	Name   string
+	IP     string
+	Status v1.PodPhase
 }

@@ -76,6 +76,7 @@ spec:
         app: controller
         ingress.deckhouse.io/block-deleting: "true"
         name: solid
+        network.deckhouse.io/ingress-nginx-class: solid
     spec:
       automountServiceAccountToken: true
       containers:
@@ -93,6 +94,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid
         env:
         - name: POD_NAME
           valueFrom:
@@ -174,6 +176,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          privileged: false
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true
@@ -392,6 +395,7 @@ spec:
       labels:
         app: controller
         name: solid-failover
+        network.deckhouse.io/ingress-nginx-class: solid
     spec:
       automountServiceAccountToken: true
       containers:
@@ -409,6 +413,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/solid
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid
         env:
         - name: POD_NAME
           valueFrom:
@@ -487,6 +492,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          privileged: false
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true

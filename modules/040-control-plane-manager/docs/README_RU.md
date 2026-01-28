@@ -64,11 +64,23 @@ description: Deckhouse управляет компонентами control plane
 При масштабировании узлов с 2 до 1 требуются [ручные действия](./faq.html#что-делать-если-кластер-etcd-развалился) с `etcd`. В остальных случаях все необходимые действия происходят автоматически. Обратите внимание, что при масштабировании с любого количества master-узлов до 1 рано или поздно на последнем шаге возникнет ситуация масштабирования узлов с 2 до 1.
 {% endalert %}
 
+### Динамическое пороговое значение удаления выселенных подов
+
+Автоматически настраивает оптимальное значение `--terminated-pod-gc-threshold` в зависимости от размера кластера:
+
+- **Малые кластеры** (менее 100 узлов): 1000 завершенных подов.
+- **Средние кластеры** (от 100 до 300 узлов): 3000 завершенных подов.  
+- **Крупные кластеры** (от 300 узлов): 6000 завершенных подов.
+
+{% alert level="info" %}
+Эта функция применяется только в средах, где параметр `--terminated-pod-gc-threshold` можно настраивать. В управляемых Kubernetes-кластерах, таких как EKS, GKE, AKS, это значение контролируется провайдером.
+{% endalert %}
+
 ## Управление версиями
 
-Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.29.13` на `1.29.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
+Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.30.13` на `1.30.14`) происходит автоматически вместе с обновлением версии Deckhouse. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.29.*` на `1.30.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.30.*` на `1.31.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
@@ -77,9 +89,9 @@ description: Deckhouse управляет компонентами control plane
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
 - При upgrade:
-  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.29 -> 1.30, 1.30 -> 1.31, 1.31 -> 1.32.
+  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.30 -> 1.31, 1.31 -> 1.32, 1.32 -> 1.33.
   - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.  
-- При downgrade:
+- При downgrade (не поддерживается для редакций CSE):
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
   - Сначала на узлах кластера выполняется понижение версии kubelet, после чего производится понижение версии компонентов control plane.
 
@@ -95,4 +107,41 @@ description: Deckhouse управляет компонентами control plane
 
 Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
+При настройке OIDC-аутентификации в аудит-логах дополнительно включается информация о пользователе в поле `user.extra`:
+- `user-authn.deckhouse.io/name` — отображаемое имя пользователя
+- `user-authn.deckhouse.io/preferred_username` — предпочитаемое имя пользователя
+- `user-authn.deckhouse.io/dex-provider` — идентификатор провайдера Dex (требует scope `federated:id`)
+
 Настройка политик аудита подробнее рассмотрена в [одноименной секции FAQ](faq.html#как-настроить-дополнительные-политики-аудита).
+
+## Feature Gates
+
+Управление feature gates осуществляется с помощью параметра [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) ModuleConfig `control-plane-manager`.
+
+Изменение списка feature gates вызывает перезапуск соответствующего компонента (например, `kube-apiserver`, `kube-scheduler`, `kube-controller-manager`, `kubelet`).
+
+Пример включения feature gates `ComponentFlagz` и `ComponentStatusz`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 2
+  enabled: true
+  settings:
+    enabledFeatureGates:
+      - ComponentFlagz
+      - ComponentStatusz
+```
+
+Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
+
+{% alert level="warning" %}
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
+{% endalert %}
+
+Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
+
+{% include feature_gates.liquid %}

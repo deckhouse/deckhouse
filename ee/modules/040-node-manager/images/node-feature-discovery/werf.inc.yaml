@@ -3,13 +3,21 @@
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
+git:
+- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
 secrets:
 - id: SOURCE_REPO
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/node-feature-discovery.git /src
-  - rm -rf /src/.git
+  - git clone --depth 1 --branch v{{ $version}} $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/node-feature-discovery.git /src/node-feature-discovery
+  - cd /src/node-feature-discovery
+  - git apply /patches/*.patch --verbose
+  - rm -rf .git docs test
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-build-artifact
 final: false
@@ -26,7 +34,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-  - cd /src
+  - cd /src/node-feature-discovery
 {{- range tuple "nfd-master" "nfd-worker" "nfd-gc" }}
   -  GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -v -tags osusergo,netgo -ldflags "-s -w -extldflags=-static -X sigs.k8s.io/node-feature-discovery/pkg/version.version={{ $version }}" -o /{{ . }} ./cmd/{{ . }}
 {{- end }}

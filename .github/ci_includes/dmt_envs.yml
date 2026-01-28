@@ -1,6 +1,0 @@
-{!{ define "dmt_envs" }!}
-# <template: dmt_envs>
-DMT_METRICS_URL: "${{ secrets.DMT_METRICS_URL }}"
-DMT_METRICS_TOKEN: "${{ secrets.DMT_METRICS_TOKEN }}"
-# </template: dmt_envs>
-{!{- end -}!}

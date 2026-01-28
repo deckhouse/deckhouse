@@ -21,14 +21,41 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
+// todo it is ugly solution because we validate some filds in providers only in bootstrap
+// need migration in cloud-provider-yandex in withNat layout
+type DhctlPhase string
+
+const (
+	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
+)
+
+type PreflightChecks struct {
+	DVPValidateKubeApi bool
+}
+
 type PreparatorProviderParams struct {
-	logger log.Logger
+	logger          log.Logger
+	phase           DhctlPhase
+	PreflightChecks PreflightChecks
+}
+
+func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
+	p.phase = phase
+}
+
+func (p *PreparatorProviderParams) WithPhaseBootstrap() {
+	p.WithPhase(DhctlPhaseBootstrap)
+}
+
+func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
+	p.PreflightChecks = checks
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -57,12 +84,22 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 		case "":
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
-			return yandex.NewMetaConfigPreparator(true)
+			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
+			if params.phase == DhctlPhaseBootstrap {
+				yandexPreparator.EnableValidateWithNATLayout()
+			}
+			return yandexPreparator
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
 			}, logger)
+		case dvp.ProviderName:
+			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
+			if params.phase != DhctlPhaseBootstrap {
+				return prep
+			}
+			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeApi)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}

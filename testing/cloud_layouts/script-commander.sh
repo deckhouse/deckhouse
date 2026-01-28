@@ -41,6 +41,16 @@ Provider specific environment variables:
 \$LAYOUT_YANDEX_FOLDER_ID
 \$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
 
+  DVP:
+
+\$LAYOUT_DVP_KUBECONFIGDATABASE64
+
+  zVirt:
+
+\$LAYOUT_ZVIRT_BASE_DOMAIN
+\$LAYOUT_ZVIRT_USERNAME
+\$LAYOUT_ZVIRT_PASSWORD
+
   GCP:
 
 \$LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON
@@ -63,7 +73,9 @@ Provider specific environment variables:
 
   vSphere:
 
+\$LAYOUT_VSPHERE_USERNAME
 \$LAYOUT_VSPHERE_PASSWORD
+\$LAYOUT_VSPHERE_BASE_DOMAIN
 
   VCD:
 
@@ -73,12 +85,63 @@ Provider specific environment variables:
 
 \$LAYOUT_OS_PASSWORD
 
+  Static-cse:
+
+\$LAYOUT_OS_PASSWORD
+
 EOF
 )
 
 
 set -Eeo pipefail
 shopt -s failglob
+
+function create_registry() {
+  registry_suffix=$(echo "$INSTALL_IMAGE_NAME" | sed -E 's|^[^/]*/([^/]+/[^/]+)/[^:]+:.*|\1|') # repo.url/project/path/install:prNum ==> project/path
+  decode_dockercfg=$(base64 -d <<< "${1}")
+  registry_address=$(jq -r '.auths | keys[]'  <<< "$decode_dockercfg")
+  registry_auth=$(jq -r ".auths.\"${registry_address}\".auth" <<< "$decode_dockercfg")
+  sleep_second=0
+  payload="{
+      \"name\": \"${PREFIX}\",
+      \"images_repo\": \"${registry_address}/${registry_suffix}\",
+      \"scheme\": \"https\",
+      \"dev_branch\": \"${DEV_BRANCH}\",
+      \"auth\": \"${registry_auth}\"
+  }"
+  for (( j=1; j<=5; j++ )); do
+    sleep "$sleep_second"
+    sleep_second=5
+
+    response=$(curl -s -X POST  \
+      "https://${COMMANDER_HOST}/api/v1/registries" \
+      -H 'accept: application/json' \
+      -H "X-Auth-Token: ${COMMANDER_TOKEN}" \
+      -H 'Content-Type: application/json' \
+      -d "$payload" \
+      -w "\n%{http_code}")
+
+    http_code=$(echo "$response" | tail -n 1)
+    response_body=$(echo "$response" | sed '$d')
+
+    # Check for HTTP errors
+    if [[ ${http_code} -ge 400 ]]; then
+      echo "Error: HTTP error ${http_code}" >&2
+      echo "$response_body" >&2
+      continue
+    else
+      registry_id=$(jq -r '.id' <<< "$response_body")
+      break
+    fi
+  done
+
+  if [[ -n "$registry_id" ]]; then
+      echo "$registry_id"
+  else
+      echo "Failed to create registry." >&2
+      return 1
+  fi
+}
 
 function prepare_environment() {
     if [[ -z "$KUBERNETES_VERSION" ]]; then
@@ -124,7 +187,7 @@ function prepare_environment() {
       if [[ "${DECKHOUSE_IMAGE_TAG}" =~ release-([0-9]+\.[0-9]+) ]]; then
         DEV_BRANCH="${INITIAL_IMAGE_TAG}"
         SWITCH_TO_IMAGE_TAG="v${BASH_REMATCH[1]}.0"
-        update_release_channel "${DEV_REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
+        update_release_channel "$(echo -n "${STAGE_DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')/${REGISTRY_PATH}" "${SWITCH_TO_IMAGE_TAG}"
         echo "Will install '${DEV_BRANCH}' first and then update to '${DECKHOUSE_IMAGE_TAG}' as '${SWITCH_TO_IMAGE_TAG}'"
       else
         echo "'${DECKHOUSE_IMAGE_TAG}' doesn't look like a release branch."
@@ -136,11 +199,10 @@ function prepare_environment() {
 
   case "$PROVIDER" in
   "Yandex.Cloud")
-    CLOUD_ID="$(base64 -d <<< "$LAYOUT_YANDEX_CLOUD_ID")"
-    FOLDER_ID="$(base64 -d <<< "$LAYOUT_YANDEX_FOLDER_ID")"
+    CLOUD_ID=$LAYOUT_YANDEX_CLOUD_ID
+    FOLDER_ID=$LAYOUT_YANDEX_FOLDER_ID
     SERVICE_ACCOUNT_JSON=$LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON
     ssh_user="redos"
-    cluster_template_id="6a47d23a-e16f-4e7a-bf57-a65f7c05e8ae"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -157,9 +219,84 @@ function prepare_environment() {
     }"
     ;;
 
+  "DVP")
+    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
+    ssh_user="debian"
+    bastion_host="185.11.73.171"
+    bastion_user="e2e-user"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
+  "DVP-cse")
+    cwd=$(pwd)/../testing/cloud_layouts/Static
+    KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
+    ssh_user="altlinux"
+    bastion_host="185.11.73.171"
+    bastion_user="e2e-user"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"kubeconfigDataBase64\": \"${KUBECONFIGDATABASE64}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
+  "zVirt")
+    ZVIRT_BASE_DOMAIN="${LAYOUT_ZVIRT_BASE_DOMAIN}"
+    ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
+    ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
+    ssh_user="altlinux"
+    bastion_host="31.184.210.185"
+    bastion_user="e2e-user"
+    bastion_port="8022"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"zVirtUsername\": \"${ZVIRT_USERNAME}\",
+      \"zVirtPassword\": \"${ZVIRT_PASSWORD}\",
+      \"zVirtBaseDomain\": \"${ZVIRT_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+    ;;
+
   "GCP")
     ssh_user="user"
-    cluster_template_id="565ed77c-0ae0-4baa-9ece-6603bcf3139a"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -176,7 +313,6 @@ function prepare_environment() {
 
   "AWS")
     ssh_user="ec2-user"
-    cluster_template_id="9b567623-91a9-4493-96de-f5c0b6acacfe"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -194,7 +330,6 @@ function prepare_environment() {
 
   "Azure")
     ssh_user="azureuser"
-    cluster_template_id="3900de40-547c-4c62-927c-ef42018d62f4"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -213,8 +348,7 @@ function prepare_environment() {
     ;;
 
   "OpenStack")
-    ssh_user="redos"
-    cluster_template_id="cb79a126-4234-4dac-a01e-2d3804266e3e"
+    ssh_user="astra"
     values="{
       \"branch\": \"${DEV_BRANCH}\",
       \"prefix\": \"a${PREFIX}\",
@@ -230,38 +364,67 @@ function prepare_environment() {
     ;;
 
   "vSphere")
-    # shellcheck disable=SC2016
-    env VSPHERE_PASSWORD="$(base64 -d <<<"$LAYOUT_VSPHERE_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" CRI="$CRI" DEV_BRANCH="$DEV_BRANCH" PREFIX="$PREFIX" DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" VSPHERE_BASE_DOMAIN="$LAYOUT_VSPHERE_BASE_DOMAIN" MASTERS_COUNT="$MASTERS_COUNT" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
     ssh_user="redos"
+    bastion_user="ubuntu"
+    bastion_host="31.128.54.168"
+    bastion_port="53359"
+    ssh_bastion="-J ${bastion_user}@${bastion_host}:${bastion_port}"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"vSphereUsername\": \"${LAYOUT_VSPHERE_USERNAME}\",
+      \"vSpherePassword\": \"${LAYOUT_VSPHERE_PASSWORD}\",
+      \"vSphereBaseDomain\": \"${LAYOUT_VSPHERE_BASE_DOMAIN}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"sshBastionHost\": \"${bastion_host}\",
+      \"sshBastionUser\": \"${bastion_user}\",
+      \"sshBastionPort\": \"${bastion_port}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+    }"
+
     ;;
 
   "VCD")
     # shellcheck disable=SC2016
-    env VCD_PASSWORD="$(base64 -d <<<"$LAYOUT_VCD_PASSWORD")" \
-        KUBERNETES_VERSION="$KUBERNETES_VERSION" \
-        CRI="$CRI" \
-        DEV_BRANCH="$DEV_BRANCH" \
-        PREFIX="$PREFIX" \
-        MASTERS_COUNT="$MASTERS_COUNT" \
-        DECKHOUSE_DOCKERCFG="$DECKHOUSE_DOCKERCFG" \
-        VCD_SERVER="$LAYOUT_VCD_SERVER" \
-        VCD_USERNAME="$LAYOUT_VCD_USERNAME" \
-        VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst <"$cwd/configuration.tpl.yaml" >"$cwd/configuration.yaml"
-
-    [ -f "$cwd/resources.tpl.yaml" ] && \
-        env VCD_ORG="$LAYOUT_VCD_ORG" \
-        envsubst <"$cwd/resources.tpl.yaml" >"$cwd/resources.yaml"
-
+    cwd=$(pwd)/testing/cloud_layouts/VCD/Standard
+    export VCD_USER="$LAYOUT_VCD_USERNAME"
+    export VCD_PASSWORD="$LAYOUT_VCD_PASSWORD"
+    export VCD_ORG="$LAYOUT_VCD_ORG"
+    export VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
+    export VCD_URL="$LAYOUT_VCD_SERVER/api"
+    export TF_VAR_PREFIX="$PREFIX"
+    export TF_VAR_VCD_ORG="$LAYOUT_VCD_ORG"
+    export TF_VAR_VCD_VDC="${LAYOUT_VCD_ORG}-MSK1-S1-vDC2"
     ssh_user="ubuntu"
+    ssh_bastion_ip="$LAYOUT_STATIC_BASTION_IP"
+    ssh_bastion="-J ${ssh_user}@${ssh_bastion_ip}"
+    values="{
+    \"vcdUsername\": \"${LAYOUT_VCD_USERNAME}\",
+    \"vcdPassword\": \"${LAYOUT_VCD_PASSWORD}\",
+    \"vcdOrg\": \"${LAYOUT_VCD_ORG}\",
+    \"vcdServer\": \"${LAYOUT_VCD_SERVER}\",
+    \"branch\": \"${DEV_BRANCH}\",
+    \"prefix\": \"${PREFIX}\",
+    \"kubeVersion\": \"${KUBERNETES_VERSION}\",
+    \"defaultCRI\": \"${CRI}\",
+    \"masterCount\": \"${MASTERS_COUNT}\",
+    \"sshPrivateKey\": \"${SSH_KEY}\",
+    \"sshUser\": \"${ssh_user}\",
+    \"sshBastionHost\": \"${ssh_bastion_ip}\",
+    \"sshBastionUser\": \"${ssh_user}\",
+    \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+    \"flantDockercfg\": \"${FOX_DOCKERCFG}\"
+  }"
     ;;
 
   "Static")
     cwd=$(pwd)/testing/cloud_layouts/Static
-    export TF_VAR_OS_PASSWORD="$(base64 -d <<<"$LAYOUT_OS_PASSWORD")"
+    export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
     export TF_VAR_PREFIX="$PREFIX"
 
     # use different users for different OSs
@@ -271,7 +434,20 @@ function prepare_environment() {
     ssh_opensuse_user_worker="opensuse"
     ssh_rosa_user_worker="centos"
 
-    cluster_template_id="dbe33391-02c1-4f23-a77b-0edb8b079ff6"
+    ;;
+
+  "Static-cse")
+    cwd=$(pwd)/../testing/cloud_layouts/Static
+    export TF_VAR_OS_PASSWORD="$LAYOUT_OS_PASSWORD"
+    export TF_VAR_PREFIX="$PREFIX"
+
+    # use different users for different OSs
+    ssh_astra_user="astra"
+    ssh_alt_user="altlinux"
+    ssh_redos_user="redos"
+    ssh_mosos_user="opensuse"
+    ssh_user="$ssh_astra_user"
+    ssh_user_system="$ssh_mosos_user"
 
     ;;
   esac
@@ -285,8 +461,17 @@ function get_opentofu() {
   docker rm "$CONTAINER_ID"
   chmod +x $cwd/opentofu
   cp -r $cwd/plugins/registry.terraform.io/terraform-provider-openstack $cwd/plugins/registry.opentofu.org/terraform-provider-openstack
+  cp -r $cwd/plugins/registry.terraform.io/vmware $cwd/plugins/registry.opentofu.org/vmware
 }
+function bootstrap_vcd() {
+   >&2 echo "Run terraform to create vapp for vcd cluster ..."
+   cd $cwd
 
+  pwd
+   get_opentofu
+   $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+   $cwd/opentofu  apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+}
 function bootstrap_static() {
   >&2 echo "Run terraform to create nodes for Static cluster ..."
 
@@ -294,38 +479,89 @@ function bootstrap_static() {
 
   get_opentofu
 
- $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
- $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
-
-  if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get master_ip from opentofu output"
-    return 1
+  if [[ ${PROVIDER} == "Static" ]]; then
+    $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
   fi
 
-  if ! system_ip="$($cwd/opentofu output -raw system_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get system_ip from opentofu output"
-    return 1
+  $cwd/opentofu apply -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+
+  if [[ ${PROVIDER} == "Static" ]]; then
+
+    if ! master_ip="$($cwd/opentofu output -raw master_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get master_ip from opentofu output"
+      return 1
+    fi
+
+    if ! system_ip="$($cwd/opentofu output -raw system_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get system_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_redos_ip="$($cwd/opentofu output -raw worker_redos_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_opensuse_ip="$($cwd/opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker_rosa_ip="$($cwd/opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
+      return 1
+    fi
+
+    if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then
+      >&2 echo "ERROR: can't get bastion_ip from opentofu output"
+      return 1
+    fi
+
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then # todo change to opentofu from $cwd
+      >&2 echo "ERROR: can't get bastion_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master1_ssh_addr' )"; then
+      >&2 echo "ERROR: can't get master_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master2_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master2_ssh_addr')"; then
+      >&2 echo "ERROR: can't get master2_ip from opentofu output"
+      return 1
+    fi
+
+    if ! master3_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.master3_ssh_addr')"; then
+      >&2 echo "ERROR: can't get master3_ip from opentofu output"
+      return 1
+    fi
+
+    if ! system_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.system_ssh_addr')"; then
+      >&2 echo "ERROR: can't get system_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker1_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker1_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker1_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker2_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker2_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker2_ip from opentofu output"
+      return 1
+    fi
+
+    if ! worker3_ip="$($cwd/opentofu output -json node_ip_address_for_ssh | jq -r '.worker3_ssh_addr')"; then
+      >&2 echo "ERROR: can't get worker3_ip from opentofu output"
+      return 1
+    fi
+
   fi
 
-  if ! worker_redos_ip="$($cwd/opentofu output -raw worker_redos_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_redos_ip from opentofu output"
-    return 1
-  fi
-
-  if ! worker_opensuse_ip="$($cwd/opentofu output -raw worker_opensuse_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_opensuse_ip from opentofu output"
-    return 1
-  fi
-
-  if ! worker_rosa_ip="$($cwd/opentofu output -raw worker_rosa_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get worker_rosa_ip from opentofu output"
-    return 1
-  fi
-
-  if ! bastion_ip="$($cwd/opentofu output -raw bastion_ip_address_for_ssh)"; then
-    >&2 echo "ERROR: can't get bastion_ip from opentofu output"
-    return 1
-  fi
 
   # Add key to access to hosts thru bastion
   set_common_ssh_parameters
@@ -334,82 +570,30 @@ function bootstrap_static() {
   scp_command="scp -S /usr/bin/ssh -F /tmp/cloud-test-ssh-config"
   ssh_bastion="-J $ssh_user@$bastion_ip"
 
-  waitForInstancesAreBootstrappedAttempts=20
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_user@$master_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: master instance couldn't get bootstrapped"
-      return 1
+  if [[ ${PROVIDER} == "Static" ]]; then
+    if [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+      echo "Release branch ${DEV_BRANCH} on ${PROVIDER} provider detected"
+      DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
     fi
-    >&2 echo "ERROR: master instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: system instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: system instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: redos worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: redos worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
+    E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
+    E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
+    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: opensuse worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: opensuse worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
-
-  attempt=0
-  until $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" /usr/local/bin/is-instance-bootstrapped; do
-    attempt=$(( attempt + 1 ))
-    if [ "$attempt" -gt "$waitForInstancesAreBootstrappedAttempts" ]; then
-      >&2 echo "ERROR: rosa worker instance couldn't get bootstrapped"
-      return 1
-    fi
-    >&2 echo "ERROR: rosa worker instance isn't bootstrapped yet (attempt #$attempt of $waitForInstancesAreBootstrappedAttempts)"
-    sleep 5
-  done
-
-
-  D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-  E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-  E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
-
-  IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
-  D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
-  testRunAttempts=20
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    # Install http/https proxy on bastion node
-    if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
-       cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
+    IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
+    D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
+    testRunAttempts=20
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      # Install http/https proxy on bastion node
+      if $ssh_command "$ssh_user@$bastion_ip" sudo su -c /bin/bash <<ENDSSH; then
+         cat <<'EOF' > /tmp/install-d8-and-pull-push-images.sh
 #!/bin/bash
 apt-get update
 apt-get install -y docker.io docker-compose wget curl chrony
@@ -424,7 +608,7 @@ CONF
 echo DAEMON_OPTS="-F 1 -f /etc/chrony/chrony.conf" > /etc/default/chrony
 systemctl daemon-reexec
 systemctl enable --now chronyd
-systemctl restart chronyd 
+systemctl restart chronyd
 chronyc tracking
 # get latest d8-cli release
 URL="https://api.github.com/repos/deckhouse/deckhouse-cli/releases/latest"
@@ -459,7 +643,7 @@ d8 mirror pull d8-modules \
   --include-module commander-agent --include-module commander --include-module prompp  --include-module pod-reloader  --include-module runtime-audit-engine --no-platform  --no-security-db
 
 d8 mirror pull d8 --source-login ${D8_MIRROR_USER} --source-password ${D8_MIRROR_PASSWORD} \
-  --source "dev-registry.deckhouse.io/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
+  --source "${D8_MIRROR_HOST}/sys/deckhouse-oss" --deckhouse-tag "${DEV_BRANCH}"
 # push
 d8 mirror push d8 "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
 d8 mirror push d8-modules "${IMAGES_REPO}" --registry-login ${E2E_REGISTRY_USER} --registry-password ${E2E_REGISTRY_PASSWORD} --insecure
@@ -516,134 +700,136 @@ EOF
        docker run -d --name='tinyproxy' --restart=always -p 8888:8888 -e ALLOWED_NETWORKS="127.0.0.1/8 10.0.0.0/8 192.168.0.1/8" mirror.gcr.io/kalaksi/tinyproxy:latest@sha256:561ef49fa0f0a9747db12abdfed9ab3d7de17e95c811126f11e026b3b1754e54
 ENDSSH
 
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of bastion in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    # Convert to air-gap environment by removing default route
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "echo Master ip"
-       echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
-       echo "ip route del default" >> /etc/network/if-up.d/add-routes
-       chmod 0755 /etc/network/if-up.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      # Convert to air-gap environment by removing default route
+      if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "echo Master ip"
+         echo "#!/bin/sh" > /etc/network/if-up.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/network/if-up.d/add-routes
+         echo "ip route del default" >> /etc/network/if-up.d/add-routes
+         chmod 0755 /etc/network/if-up.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of master in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "echo System ip"
-       echo "#!/bin/sh" > /etc/rc.d/rc.local
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
-       echo "ip route del default" >> /etc/rc.d/rc.local
-       chmod 0755 /etc/rc.d/rc.local
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_user_system@$system_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "echo System ip"
+         echo "#!/bin/sh" > /etc/rc.d/rc.local
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/rc.d/rc.local
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/rc.d/rc.local
+         echo "ip route del default" >> /etc/rc.d/rc.local
+         chmod 0755 /etc/rc.d/rc.local
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of system in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of system in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_redos_user_worker@$worker_redos_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of redos worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_opensuse_user_worker@$worker_opensuse_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of opensuse worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
-  fi
 
-  for ((i=1; i<=$testRunAttempts; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
-       echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
-       echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
-       chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
-       ip route del default
-       ip route add 10.111.0.0/16 dev lo
-       ip route add 10.222.0.0/16 dev lo
+    for ((i=1; i<=$testRunAttempts; i++)); do
+      if $ssh_command $ssh_bastion "$ssh_rosa_user_worker@$worker_rosa_ip" sudo su -c /bin/bash <<ENDSSH; then
+         echo "#!/bin/sh" > /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.111.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route add 10.222.0.0/16 dev lo" >> /etc/NetworkManager/dispatcher.d/add-routes
+         echo "ip route del default" >> /etc/NetworkManager/dispatcher.d/add-routes
+         chmod 0755 /etc/NetworkManager/dispatcher.d/add-routes
+         ip route del default
+         ip route add 10.111.0.0/16 dev lo
+         ip route add 10.222.0.0/16 dev lo
 ENDSSH
-      initial_setup_failed=""
-      break
-    else
-      initial_setup_failed="true"
-      >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
-      sleep 5
+        initial_setup_failed=""
+        break
+      else
+        initial_setup_failed="true"
+        >&2 echo "Initial setup of rosa worker in progress (attempt #$i of $testRunAttempts). Sleeping 5 seconds ..."
+        sleep 5
+      fi
+    done
+    if [[ $initial_setup_failed == "true" ]] ; then
+      return 1
     fi
-  done
-  if [[ $initial_setup_failed == "true" ]] ; then
-    return 1
+
   fi
 }
 
@@ -688,14 +874,21 @@ ENDSSH
   registration_failed=
   >&2 echo 'Waiting until Node registration finishes ...'
   for ((i=1; i<=20; i++)); do
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<"ENDSSH"; then
+    if [[ "$PROVIDER" == "Static" ]]; then
+      target_count="5"
+    elif [[ "$PROVIDER" == "Static-cse" ]]; then
+      target_count="7"
+    fi
+
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<EOF
 export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 export LANG=C
 set -Eeuo pipefail
 kubectl get nodes -o wide
-kubectl get nodes -o json | jq -re '.items | length == 5' >/dev/null
-kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all' >/dev/null
-ENDSSH
+kubectl get nodes -o json | jq -re ".items | length == ${target_count}" >/dev/null
+kubectl get nodes -o json | jq -re '[ .items[].status.conditions[] | select(.type == "Ready") ] | map(.status == "True") | all'
+EOF
+    then
       registration_failed=""
       break
     else
@@ -744,12 +937,13 @@ StrictHostKeyChecking no
 ServerAliveInterval 5
 ServerAliveCountMax 5
 ConnectTimeout 10
-LogLevel quiet
 EOF
   echo ${SSH_KEY} | base64 -d > id_rsa
   chmod 600 id_rsa
   # ssh command with common args.
   ssh_command="ssh -F /tmp/cloud-test-ssh-config -i id_rsa "
+  eval "$(ssh-agent -s)"
+  ssh-add "id_rsa"
 }
 
 function wait_alerts_resolve() {
@@ -765,6 +959,9 @@ function wait_alerts_resolve() {
   "ModuleConfigObsoleteVersion" # This alert is informational and should not block e2e tests
   "D8KubernetesVersionIsDeprecated" # Run test on deprecated version is OK
   "D8ClusterAutoscalerPodIsRestartingTooOften" # Pointless, as component might fail on initial setup/update and test will not succeed with a failed component anyway
+  "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
+  "LoadAverageHigh" # Pointless, as test servers have minimal resources
+  "SecurityEventsDetected" # This is normal for e2e tests
   )
 
   # Alerts
@@ -806,7 +1003,7 @@ function wait_alerts_resolve() {
 
 function wait_upmeter_green() {
   # Upmeter
-  iterations=40
+  iterations=60
   sleep_interval=30
 
   for i in $(seq 1 $iterations); do
@@ -846,21 +1043,32 @@ function wait_upmeter_green() {
 }
 
 function check_resources_state_results() {
+  local testRunAttempts=20
   echo "Check applied resource status..."
-  response=$(get_cluster_status)
-  errors=$(jq -c '
-    .resources_state_results[]
-    | select(.errors)
-    | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
-    | select(.errors | length > 0)
-    | .errors
-  ' <<< "$response")
-  if [ -n "$errors" ]; then
-    echo "  Errors found:"
-    echo "${errors}"
-    return 1
-  fi
-  echo "Check applied resource status... Passed"
+  for ((i=1; i<=testRunAttempts; i++)); do
+    response=$(get_cluster_status)
+    errors=$(jq -c '
+      .resources_state_results[]
+      | select(.errors)
+      | .errors |= map(select(test("vstaticinstancev1alpha1.deckhouse.io") | not))
+      | select(.errors | length > 0)
+      | .errors
+    ' <<< "$response")
+    if [ -n "$errors" ]; then
+      if [[ $i -lt $testRunAttempts ]]; then
+        echo "  Errors found. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+        sleep 30
+        continue
+      else
+        echo "  Attempt $i/$testRunAttempts failed."
+        echo "${errors}"
+        return 1
+      fi
+    else
+      echo "Check applied resource status... Passed"
+      return 0
+    fi
+  done
 }
 
 function change_deckhouse_image() {
@@ -877,6 +1085,45 @@ ENDSSH
   fi
 }
 
+function check_publish_api() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+if [[ "$(kubectl get mc/user-authn -o json | jq -r '.spec.settings.publishAPI.enabled')" == "true" ]]; then
+  if kubectl -n d8-user-authn get ing kubernetes-api >/dev/null 2>&1; then
+    HOST=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.spec.rules[0].host}')
+    IP=$(kubectl -n d8-user-authn get ing kubernetes-api -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+    RESPONSE=$(kubectl -n d8-system exec -i svc/deckhouse-leader -c deckhouse -- bash -c \
+    "curl -ks -H \"Authorization: Bearer \$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)\" -H \"Host: $HOST\" https://$IP/api")
+    if echo "$RESPONSE" | jq -e '.kind' >/dev/null 2>&1; then
+      exit 0
+    else
+      echo "PublishAPI is enabled, ingress kubernetes-api found, but API is not available. Response: $RESPONSE"
+      exit 1
+    fi
+  else
+    echo "PublishAPI is enabled, but ingress kubernetes-api not found"
+    exit 1
+  fi
+else
+  echo "PublishAPI is not enabled"
+  exit 1
+fi
+END_SCRIPT
+)
+
+  testRunAttempts=10
+  for ((i=1; i<=$testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    else
+      >&2 echo "Publish API test failed. Attempt $i/$testRunAttempts. Sleep for 10 seconds..."
+      sleep 10
+    fi
+  done
+  return 1
+}
 
 # update_release_channel changes the release-channel image to given tag
 function update_release_channel() {
@@ -956,6 +1203,44 @@ END_SCRIPT
   return 1
 }
 
+function wait_prom_rules_mutating_ready() {
+  testScript=$(cat <<"END_SCRIPT"
+export PATH="/opt/deckhouse/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+export LANG=C
+set -Eeuo pipefail
+kubectl get pods -l app=prom-rules-mutating
+
+RS_NAME=$(kubectl get rs -l app=prom-rules-mutating \
+  --sort-by='{.metadata.creationTimestamp}' \
+  -o jsonpath='{.items[-1:].metadata.name}')
+
+WORKING_POD=$(kubectl get pods -l app=prom-rules-mutating \
+  --selector=pod-template-hash=${RS_NAME##*-} \
+  --field-selector=status.phase=Running \
+  --no-headers | awk '$2 == "1/1" {print $1; exit}')
+
+[[ "$WORKING_POD" == prom-rules-mutating* ]]
+END_SCRIPT
+)
+
+  testRunAttempts=60
+  for ((i=1; i<=testRunAttempts; i++)); do
+    >&2 echo "Check prom-rules-mutating pod readiness..."
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
+      return 0
+    fi
+
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  prom-rules-mutating pod not ready. Attempt $i/$testRunAttempts failed."
+    fi
+  done
+
+  return 1
+}
+
 function update_comment() {
   echo "  Updating comment on pull request..."
   comment_url="${GITHUB_API_SERVER}/repos/${REPOSITORY}/issues/comments/${COMMENT_ID}"
@@ -977,7 +1262,7 @@ function update_comment() {
     return 1
   fi
 
-  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${bastion_connection} ${master_connection}\`"
+  local connection_str_body="${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION} - Connection string: \`ssh ${ssh_bastion} ${master_connection}\`"
   local result_body
 
   if ! result_body="$(echo "$comment" | jq -crM --arg a "$connection_str_body" '{body: (.body + "\r\n\r\n" + $a + "\r\n")}')"; then
@@ -1005,10 +1290,38 @@ function update_comment() {
     fi
 }
 
+function get_bootstrap_logs() {
+  echo "Getting cluster bootstrap logs..."
+  local cluster_tasks
+  local bootstrap_job_id
+  local cluster_bootstrap_logs
+  cluster_tasks=$(curl -s -X 'GET' \
+    "https://${COMMANDER_HOST}/api/v1/cluster_tasks?cluster_id=${cluster_id}" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  bootstrap_job_id=$(jq -r '.[] | select(.action == "bootstrap") | .id' <<< "$cluster_tasks")
+  echo "Bootstrap job id: ${bootstrap_job_id}"
+  cluster_bootstrap_logs=$(curl -s -X 'GET' \
+   "https://${COMMANDER_HOST}/api/v1/cluster_task_logs?cluster_task_id=${bootstrap_job_id}" \
+   -H 'accept: application/json' \
+   -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  jq -r 'reverse | .[] | .data | .[] | .msg' <<< "$cluster_bootstrap_logs"
+}
+
 function run-test() {
   local payload
   local response
   local cluster_id
+
+  if [[ "$PROVIDER" == "Static" ]]; then
+    echo "Provider = $PROVIDER: switch registry"
+    registry_id=$(create_registry "${DECKHOUSE_E2E_DOCKERCFG}")
+  elif [[ "$DEV_BRANCH" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+    echo "DEV_BRANCH = $DEV_BRANCH: detected release branch"
+    registry_id=$(create_registry "${STAGE_DECKHOUSE_DOCKERCFG}")
+  else
+    registry_id=$(create_registry "${DECKHOUSE_DOCKERCFG}")
+  fi
 
   if [[ ${PROVIDER} == "Static" ]]; then
       bootstrap_static || return $?
@@ -1030,16 +1343,42 @@ function run-test() {
             \"branch\": \"${DEV_BRANCH}\",
             \"deckhouseDockercfg\": \"${DECKHOUSE_E2E_DOCKERCFG}\"
           }"
+  elif [[ ${PROVIDER} == "Static-cse" ]]; then
+    bootstrap_static || return $?
+    values="{
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"sshMaster1Host\": \"${master_ip}\",
+      \"sshMaster1User\": \"${ssh_astra_user}\",
+      \"sshMaster2Host\": \"${master2_ip}\",
+      \"sshMaster2User\": \"${ssh_redos_user}\",
+      \"sshMaster3Host\": \"${master3_ip}\",
+      \"sshMaster3User\": \"${ssh_alt_user}\",
+      \"sshBastionHost\": \"${bastion_ip}\",
+      \"sshBastionUser\": \"${ssh_astra_user}\",
+      \"sshWorker1Host\": \"${worker1_ip}\",
+      \"sshWorker1User\": \"${ssh_alt_user}\",
+      \"sshWorker2Host\": \"${worker2_ip}\",
+      \"sshWorker2User\": \"${ssh_redos_user}\",
+      \"sshWorker3Host\": \"${worker3_ip}\",
+      \"sshWorker3User\": \"${ssh_astra_user}\",
+      \"sshSystemHost\": \"${system_ip}\",
+      \"sshSystemUser\": \"${ssh_mosos_user}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\"
+    }"
   fi
-
+  if [[ ${PROVIDER} == "VCD" ]]; then
+      bootstrap_vcd || return $?
+  fi
   cluster_template_version_id=$(curl -s -X 'GET' \
-    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${cluster_template_id}?without_archived=true" \
+    "https://${COMMANDER_HOST}/api/v1/cluster_templates/${TEMPLATE_ID}?without_archived=true" \
     -H 'accept: application/json' \
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r 'del(.cluster_template_versions).current_cluster_template_version_id')
 
   payload="{
     \"name\": \"${PREFIX}\",
+    \"registry_id\": \"${registry_id}\",
     \"cluster_template_version_id\": \"${cluster_template_version_id}\",
     \"values\": ${values}
   }"
@@ -1050,6 +1389,7 @@ function run-test() {
   for (( j=1; j<=5; j++ )); do
     sleep "$sleep_second"
     sleep_second=5
+    echo "Trying to connect to Commander"
 
     response=$(curl -s -X POST  \
       "https://${COMMANDER_HOST}/api/v1/clusters" \
@@ -1062,7 +1402,7 @@ function run-test() {
     http_code=$(echo "$response" | tail -n 1)
     response=$(echo "$response" | sed '$d')
     echo http_code: $http_code
-    
+
     # Check for HTTP errors
     if [[ "$http_code" -ge 200 && "$http_code" -lt 300 ]]; then
       break
@@ -1078,7 +1418,6 @@ function run-test() {
      echo "$response" >&2
     return 1
   fi
-
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
@@ -1098,10 +1437,9 @@ function run-test() {
         master_connection="${master_user}@${master_ip}"
         master_ip_find=true
         echo "  SSH connection string:"
-        echo "      ssh $master_connection"
+        echo "      ssh ${ssh_bastion} ${master_connection}"
         update_comment
         echo "$master_connection" > ssh-connect_str-"${PREFIX}"
-        # TODO add workflow template
       fi
     fi
 
@@ -1113,6 +1451,7 @@ function run-test() {
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
+      get_bootstrap_logs
       return 1
     elif [ "configuration_error" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
@@ -1129,7 +1468,7 @@ function run-test() {
     fi
   done
 
-  if [[ ${PROVIDER} == "Static" ]]; then
+  if [[ "$PROVIDER" == "Static" ]] || [[ "$PROVIDER" == "Static-cse" ]]; then
     system_node_register || return $?
   fi
 
@@ -1141,32 +1480,41 @@ function run-test() {
 
   set_common_ssh_parameters
 
-  testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh")
-
-  if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
-    echo "Ingress and Istio test passed"
-  else
-    echo "Ingress and Istio test failure"
-    return 1
+  if [[ $PROVIDER == "Yandex.Cloud" ]]; then
+    check_publish_api || return $?
   fi
 
-  testOpenvpnReady=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_openvpn_ready.sh")
+  if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
+    wait_prom_rules_mutating_ready || return $?
+  else
+    echo "Use ${PROVIDER} provider, skipping prom_rules_mutating_ready check, continue..."
+  fi
 
-  test_failed="true"
-    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" \
-      sudo su -c /bin/bash <<<"${testOpenvpnReady}"; then
-      test_failed=""
-    else
-      >&2 echo "OpenVPN test failed for Static provider. Sleeping 30 seconds..."
-      sleep 30
+  if [[ "$PROVIDER" != "Static-cse" && "$PROVIDER" != "DVP-cse" ]]; then
+    testScript="${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  else
+    testScript="${cwd}/../../../deckhouse/testing/cloud_layouts/script.d/wait_cluster_ready/test_commander_script.sh"
+  fi
+
+  testRunAttempts=5
+  $ssh_command $ssh_bastion "$ssh_user@$master_ip" "cat > /tmp/test.sh" < "${testScript}"
+  for ((i=1; i<=testRunAttempts; i++)); do
+    if $ssh_command $ssh_bastion "$ssh_user@$master_ip" "sudo bash /tmp/test.sh"; then
+      echo "Ingress and Istio test passed"
+      break
     fi
-
-    if [[ $test_failed == "true" ]]; then
+    if [[ $i -lt $testRunAttempts ]]; then
+      >&2 echo -n " Ingress and Istio test. Attempt $i/$testRunAttempts failed. Sleep for 30 seconds..."
+      sleep 30
+    else
+      >&2 echo -n "  Ingress and Istio test. Attempt $i/$testRunAttempts failed."
       return 1
     fi
+  done
+
   if [[ $TEST_AUTOSCALER_ENABLED == "true" ]] ; then
     echo "Run Autoscaler test"
-    testAutoscalerScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
+    testAutoscalerScript=$(cat "${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_autoscaler.sh")
     testRunAttempts=5
     for ((i=1; i<=$testRunAttempts; i++)); do
       if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testAutoscalerScript}"; then
@@ -1194,7 +1542,7 @@ function run-test() {
     wait_upmeter_green || return $?
     wait_alerts_resolve || return $?
 
-    testScript=$(cat "$(pwd)/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
+    testScript=$(cat "${GITHUB_WORKSPACE}/testing/cloud_layouts/script.d/wait_cluster_ready/test_script.sh")
 
     if $ssh_command $ssh_bastion "$ssh_user@$master_ip" sudo su -c /bin/bash <<<"${testScript}"; then
       echo "Ingress and Istio test passed"
@@ -1213,8 +1561,8 @@ function cleanup() {
     -H "X-Auth-Token: ${COMMANDER_TOKEN}" |
     jq -r ".[] | select(.name == \"${PREFIX}\") | .id")
 
-  if [ -z "$cluster_id" ] && [[ "$PROVIDER" == "Static" ]]; then
-    echo "  Error getting cluster id, but provider is Static, continue"
+  if [ -z "$cluster_id" ] && { [ "$PROVIDER" = "Static" ] || [ "$PROVIDER" = "Static-cse" ] || [ "$PROVIDER" = "VCD" ]; }; then
+    echo "  Error getting cluster id, but provider is Static or VCD, continue"
   elif [ -z $cluster_id ]; then
     echo "  Error getting cluster id"
     return 1
@@ -1238,7 +1586,7 @@ function cleanup() {
     fi
 
     # Waiting to cluster cleanup
-    testRunAttempts=40
+    testRunAttempts=80
     sleep=30
     for ((i=1; i<=testRunAttempts; i++)); do
       cluster_status="$(curl -s -X 'GET' \
@@ -1265,11 +1613,18 @@ function cleanup() {
   fi
 
 
-  if [[ ${PROVIDER} == "Static" ]]; then
-    get_opentofu
+  if [[ ${PROVIDER} == "Static" ]] || [[ "$PROVIDER" == "Static-cse" ]] || [[ ${PROVIDER} == "VCD" ]]; then
     cd $cwd
-     $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
-     $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
+
+    get_opentofu
+
+    if [[ ${PROVIDER} == "Static" ]] || [[ ${PROVIDER} == "VCD" ]]; then
+      $cwd/opentofu init -plugin-dir $cwd/plugins -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    elif [[ ${PROVIDER} == "Static-cse" ]]; then
+      $cwd/opentofu init -input=false -backend-config="key=${TF_VAR_PREFIX}" || return $?
+    fi
+
+    $cwd/opentofu destroy -auto-approve -no-color | tee "$cwd/terraform.log" || return $?
   fi
 
   return 0

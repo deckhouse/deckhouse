@@ -76,6 +76,11 @@ type PrefixedClaimOrExpression struct {
 	Expression string `yaml:"expression,omitempty"`
 }
 
+type ExtraClaimMapping struct {
+	Key             string `yaml:"key"`
+	ValueExpression string `yaml:"valueExpression"`
+}
+
 type AuthenticationConfigurationV1beta1 struct {
 	APIVersion string `yaml:"apiVersion"`
 	Kind       string `yaml:"kind"`
@@ -89,6 +94,7 @@ type AuthenticationConfigurationV1beta1 struct {
 		ClaimMappings struct {
 			Username PrefixedClaimOrExpression `yaml:"username"`
 			Groups   PrefixedClaimOrExpression `yaml:"groups"`
+			Extra    []ExtraClaimMapping       `yaml:"extra"`
 		} `yaml:"claimMappings"`
 	} `yaml:"jwt"`
 }
@@ -132,6 +138,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       - master-0
     pkiChecksum: checksum
     rolloutEpoch: 1857
+    nodesCount: 0
+    kubeSchedulerExtenders: []
 `
 
 	const defultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -256,22 +264,6 @@ internal:
 	const apiServerWithOidcFull = `
 internal:
   effectiveKubernetesVersion: "1.32"
-  etcdServers:
-    - https://192.168.199.186:2379
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
-  audit: {}
-apiserver:
-  authn:
-    oidcIssuerURL: https://dex.example.com
-    oidcCA: |
-      -----BEGIN CERTIFICATE-----
-      ...
-      -----END CERTIFICATE-----
-`
-	const apiServerWithOidcFullKube129 = `
-internal:
-  effectiveKubernetesVersion: "1.29"
   etcdServers:
     - https://192.168.199.186:2379
   pkiChecksum: checksum
@@ -746,13 +738,7 @@ resources:
 				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
 				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
 			})
-		})
-		Context("apiserver oidc settings are set fully and kubernetes 1.29", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcFullKube129)
-				f.HelmRender()
-			})
-			It("for issuer[0] should bet set discoveryURL, URL and certificateAuthority", func() {
+			It("should include extra claim mappings for user-authn.deckhouse.io claims", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
@@ -761,10 +747,31 @@ resources:
 				var config AuthenticationConfigurationV1beta1
 				err = yaml.Unmarshal(authConfig, &config)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1alpha1"))
-				Expect(config.JWT[0].Issuer.DiscoveryURL).Should(BeEmpty())
-				Expect(config.JWT[0].Issuer.URL).To(Equal("https://dex.example.com"))
-				Expect(config.JWT[0].Issuer.CertificateAuthority).To(Equal("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n    \n"))
+
+				// Verify extra claim mappings are present
+				extraMappings := config.JWT[0].ClaimMappings.Extra
+				Expect(extraMappings).To(HaveLen(3))
+
+				// Check user-authn.deckhouse.io/name mapping
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/name",
+					ValueExpression: "claims.name",
+				}))
+
+				// Check user-authn.deckhouse.io/preferred_username mapping
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/preferred_username",
+					ValueExpression: "has(claims.preferred_username) ? claims.preferred_username : null",
+				}))
+
+				// Check user-authn.deckhouse.io/dex-provider mapping (from Dex federated_claims.connector_id)
+				// Note: connector_id appears in id_token only when client requests federated:id scope
+				// Without this scope, the mapping returns null and field won't appear in .user.extra
+				// To enable: add --oidc-extra-scope=federated:id to OIDC client (e.g., kubelogin/oidc-login)
+				Expect(extraMappings).To(ContainElement(ExtraClaimMapping{
+					Key:             "user-authn.deckhouse.io/dex-provider",
+					ValueExpression: "has(claims.federated_claims) && has(claims.federated_claims.connector_id) ? claims.federated_claims.connector_id : null",
+				}))
 			})
 		})
 		Context("apiserver oidc settings are set partially", func() {
@@ -801,5 +808,281 @@ resources:
 				Expect(authConfig).Should(BeEmpty())
 			})
 		})
+	})
+
+	Context("kubeadm config version selection", func() {
+		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
+			testValues := fmt.Sprintf(`
+internal:
+  effectiveKubernetesVersion: "%s"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+`, k8sVersion)
+
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", testValues)
+				f.HelmRender()
+			})
+
+			It(fmt.Sprintf("should use %s for Kubernetes %s", expectedApiVersion, k8sVersion), func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
+
+				if expectedApiVersion == "v1beta3" {
+					var config ClusterConfigurationV3
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				} else {
+					var config ClusterConfigurationV4
+					err = yaml.Unmarshal(kubeadmConfigData, &config)
+					Expect(err).ShouldNot(HaveOccurred())
+					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+					Expect(config.Kind).To(Equal("ClusterConfiguration"))
+				}
+			})
+		}
+
+		Context("Kubernetes 1.30", func() {
+			testKubeadmVersion("1.30", "v1beta3")
+		})
+
+		Context("Kubernetes 1.31", func() {
+			testKubeadmVersion("1.31", "v1beta4")
+		})
+
+		Context("Kubernetes 1.32", func() {
+			testKubeadmVersion("1.32", "v1beta4")
+		})
+	})
+
+	Context("webhook configuration in v1beta4", func() {
+		const webhookTestValues = `
+internal:
+  effectiveKubernetesVersion: "1.31"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit:
+    webhookURL: "https://audit.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+  authn:
+    webhookURL: "https://authn.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+    webhookCacheTTL: "5m"
+`
+
+		const webhookAuthzMissingCATestValues = `
+internal:
+  effectiveKubernetesVersion: "1.31"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+`
+
+		const v1beta3TestValues = `
+internal:
+  effectiveKubernetesVersion: "1.30"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  audit:
+    webhookURL: "https://audit.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+apiserver:
+  authz:
+    webhookURL: "https://authz.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+  authn:
+    webhookURL: "https://authn.example.com"
+    webhookCA: "LS0tLS1CRUdJTi..."
+    webhookCacheTTL: "5m"
+`
+
+		Context("v1beta4 with webhook parameters", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValues)
+				f.HelmRender()
+			})
+
+			It("should include webhook parameters in v1beta4 configuration using array syntax", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				// structured authorization config file should be present in extra-files secret
+				authzConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				authzConfigYaml := string(authzConfigData)
+				Expect(authzConfigYaml).To(ContainSubstring("kind: AuthorizationConfiguration"))
+				// Ensure authz webhook is fail-closed but bypasses core control-plane identities to avoid deadlocks.
+				Expect(authzConfigYaml).To(ContainSubstring("failurePolicy: Deny"))
+				Expect(authzConfigYaml).To(ContainSubstring("matchConditions:"))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:node:"))'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				configYaml := string(kubeadmConfigData)
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
+
+				// v1beta4 uses array syntax with name/value pairs.
+				// Kubernetes >= 1.30 uses structured authorization config.
+				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
+				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
+
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
+				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
+
+				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
+
+				// v1beta4 should NOT have the map syntax
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+			})
+		})
+
+		Context("v1beta4 with authz webhookURL but without webhookCA", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", webhookAuthzMissingCATestValues)
+				f.HelmRender()
+			})
+
+			It("should fail helm render with explicit error", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+				Expect(f.RenderError.Error()).To(ContainSubstring("controlPlaneManager.apiserver.authz.webhookCA is required"))
+			})
+		})
+
+		Context("v1beta3 uses map syntax for webhook parameters", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("controlPlaneManager", v1beta3TestValues)
+				f.HelmRender()
+			})
+
+			It("should include webhook parameters using map syntax in v1beta3", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+
+				// structured authorization config file should be present in extra-files secret
+				authzConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				authzConfigYaml := string(authzConfigData)
+				Expect(authzConfigYaml).To(ContainSubstring("kind: AuthorizationConfiguration"))
+				Expect(authzConfigYaml).To(ContainSubstring("failurePolicy: Deny"))
+				Expect(authzConfigYaml).To(ContainSubstring("matchConditions:"))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:node:"))'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
+				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
+
+				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				Expect(err).ShouldNot(HaveOccurred())
+
+				configYaml := string(kubeadmConfigData)
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
+
+				// v1beta3 uses map syntax (key: value) instead of array syntax
+				// Kubernetes >= 1.30 uses structured authorization config.
+				Expect(configYaml).To(ContainSubstring("authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
+				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml"))
+				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-cache-ttl: \"5m\""))
+				Expect(configYaml).To(ContainSubstring("audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml"))
+
+				// v1beta3 should NOT have the array syntax with name/value pairs
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
+				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
+			})
+		})
+
+	})
+
+	Context("terminated-pod-gc-threshold based on node count", func() {
+		testTerminatedPodGcThreshold := func(nodesCount int, expectedThreshold string) {
+			Context(fmt.Sprintf("with %d nodes", nodesCount), func() {
+				const testValuesTemplate = `
+internal:
+  effectiveKubernetesVersion: "1.32"
+  etcdServers:
+    - https://192.168.199.186:2379
+  mastersNode:
+    - master-0
+  pkiChecksum: checksum
+  rolloutEpoch: 1857
+  nodesCount: %d
+  kubeSchedulerExtenders: []
+`
+
+				testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
+
+				BeforeEach(func() {
+					f.ValuesSetFromYaml("controlPlaneManager", testValues)
+					f.HelmRender()
+				})
+
+				It(fmt.Sprintf("should set terminated-pod-gc-threshold to %s", expectedThreshold), func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+					Expect(secret.Exists()).To(BeTrue())
+
+					kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+					Expect(err).ShouldNot(HaveOccurred())
+
+					configYaml := string(kubeadmConfigData)
+
+					// Check for the correct value in YAML
+					Expect(configYaml).To(ContainSubstring("terminated-pod-gc-threshold"))
+					Expect(configYaml).To(ContainSubstring(fmt.Sprintf("\"%s\"", expectedThreshold)))
+				})
+			})
+		}
+
+		// Test cases for different node counts with Kubernetes-1.32
+		testTerminatedPodGcThreshold(0, "1000") // default value
+		testTerminatedPodGcThreshold(50, "1000")
+		testTerminatedPodGcThreshold(99, "1000")
+		testTerminatedPodGcThreshold(100, "3000")
+		testTerminatedPodGcThreshold(150, "3000")
+		testTerminatedPodGcThreshold(299, "3000")
+		testTerminatedPodGcThreshold(300, "6000")
+		testTerminatedPodGcThreshold(500, "6000")
 	})
 })

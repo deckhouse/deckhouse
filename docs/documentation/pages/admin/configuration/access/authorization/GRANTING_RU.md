@@ -5,7 +5,7 @@ description: "Настройка RBAC для пользователей и се�
 lang: ru
 ---
 
-Для выдачи прав в Deckhouse Kubernetes Platform в пользовательских ресурсах указывается блок `subjects`.
+Для выдачи прав в Deckhouse Kubernetes Platform в пользовательских ресурсах указывается [блок `subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects).
 
 Для пользователя он указывается в формате:
 
@@ -16,7 +16,7 @@ subjects:
 ```
 
 {% alert level="warning" %}
-В случае использования модуля `user-authn` и статических пользователей, указывайте в `subjects` именно email пользователя, а не имя ресурса User.
+В случае использования [модуля `user-authn`](/modules/user-authn/) и статических пользователей, указывайте в `subjects` именно email пользователя, а не имя [ресурса User](/modules/user-authn/cr.html#user).
 {% endalert %}
 
 или
@@ -92,16 +92,16 @@ spec:
 
 Для назначения прав администратору кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:all:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
-Пример назначения прав администратору кластера (User `joe`):
+Пример назначения прав администратору кластера (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -127,16 +127,16 @@ roleRef:
 
 Для назначения прав сетевому администратору на управление сетевой подсистемой кластера используйте [manage-роль](../authorization/rbac-experimental.html#manage-роли) `d8:manage:networking:manager` в [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/).
 
-Пример назначения прав сетевому администратору (User `joe`):
+Пример назначения прав сетевому администратору (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -250,7 +250,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

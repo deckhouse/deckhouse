@@ -35,7 +35,7 @@ import (
 )
 
 func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -77,7 +77,7 @@ func DefineTestKubernetesAPIConnectionCommand(cmd *kingpin.CmdClause) *kingpin.C
 }
 
 func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineKubeFlags(cmd)
 
@@ -90,7 +90,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 		StringVar(&Name)
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
-
+		ctx := context.Background()
 		if err := terminal.AskBecomePassword(); err != nil {
 			return err
 		}
@@ -98,7 +98,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 			return err
 		}
 
-		sshClient, err := sshclient.NewInitClientFromFlags(true)
+		sshClient, err := sshclient.NewInitClientFromFlags(ctx, true)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func DefineWaitDeploymentReadyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 				return fmt.Errorf("open kubernetes connection: %v", err)
 			}
 
-			err = deckhouse.WaitForReadiness(context.Background(), kubeCl)
+			err = deckhouse.WaitForReadiness(ctx, kubeCl)
 			if err != nil {
 				return err
 			}

@@ -16,13 +16,13 @@
 package v1alpha2
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	apisdeckhouseiov1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha2"
+	deckhouseiov1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ModuleUpdatePolicies.
 type ModuleUpdatePolicyInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha2.ModuleUpdatePolicyLister
+	Lister() deckhouseiov1alpha2.ModuleUpdatePolicyLister
 }
 
 type moduleUpdatePolicyInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredModuleUpdatePolicyInformer(client versioned.Interface, resyncPer
 				return client.DeckhouseV1alpha2().ModuleUpdatePolicies().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha2.ModuleUpdatePolicy{},
+		&apisdeckhouseiov1alpha2.ModuleUpdatePolicy{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *moduleUpdatePolicyInformer) defaultInformer(client versioned.Interface,
 }
 
 func (f *moduleUpdatePolicyInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha2.ModuleUpdatePolicy{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha2.ModuleUpdatePolicy{}, f.defaultInformer)
 }
 
-func (f *moduleUpdatePolicyInformer) Lister() v1alpha2.ModuleUpdatePolicyLister {
-	return v1alpha2.NewModuleUpdatePolicyLister(f.Informer().GetIndexer())
+func (f *moduleUpdatePolicyInformer) Lister() deckhouseiov1alpha2.ModuleUpdatePolicyLister {
+	return deckhouseiov1alpha2.NewModuleUpdatePolicyLister(f.Informer().GetIndexer())
 }

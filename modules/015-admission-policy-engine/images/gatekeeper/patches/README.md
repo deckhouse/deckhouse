@@ -1,10 +1,9 @@
 ## Patches
 
-### 001-cve.patch
+### 001-fix-cve.patch
+
+This patch updates Go dependencies (including vendored sources) to meet security concerns.
 
 Fixes:
-CVE-2025-46569
-CVE-2025-22869
-CVE-2025-22870
-CVE-2025-22872
-CVE-2025-22868
+CVE-2025-47914
+CVE-2025-58181

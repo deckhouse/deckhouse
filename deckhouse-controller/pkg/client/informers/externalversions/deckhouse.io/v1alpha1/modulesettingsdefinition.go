@@ -16,13 +16,13 @@
 package v1alpha1
 
 import (
-	"context"
+	context "context"
 	time "time"
 
-	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	apisdeckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	versioned "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned"
 	internalinterfaces "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/informers/externalversions/internalinterfaces"
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/listers/deckhouse.io/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -33,7 +33,7 @@ import (
 // ModuleSettingsDefinitions.
 type ModuleSettingsDefinitionInformer interface {
 	Informer() cache.SharedIndexInformer
-	Lister() v1alpha1.ModuleSettingsDefinitionLister
+	Lister() deckhouseiov1alpha1.ModuleSettingsDefinitionLister
 }
 
 type moduleSettingsDefinitionInformer struct {
@@ -67,7 +67,7 @@ func NewFilteredModuleSettingsDefinitionInformer(client versioned.Interface, res
 				return client.DeckhouseV1alpha1().ModuleSettingsDefinitions().Watch(context.TODO(), options)
 			},
 		},
-		&deckhouseiov1alpha1.ModuleSettingsDefinition{},
+		&apisdeckhouseiov1alpha1.ModuleSettingsDefinition{},
 		resyncPeriod,
 		indexers,
 	)
@@ -78,9 +78,9 @@ func (f *moduleSettingsDefinitionInformer) defaultInformer(client versioned.Inte
 }
 
 func (f *moduleSettingsDefinitionInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&deckhouseiov1alpha1.ModuleSettingsDefinition{}, f.defaultInformer)
+	return f.factory.InformerFor(&apisdeckhouseiov1alpha1.ModuleSettingsDefinition{}, f.defaultInformer)
 }
 
-func (f *moduleSettingsDefinitionInformer) Lister() v1alpha1.ModuleSettingsDefinitionLister {
-	return v1alpha1.NewModuleSettingsDefinitionLister(f.Informer().GetIndexer())
+func (f *moduleSettingsDefinitionInformer) Lister() deckhouseiov1alpha1.ModuleSettingsDefinitionLister {
+	return deckhouseiov1alpha1.NewModuleSettingsDefinitionLister(f.Informer().GetIndexer())
 }

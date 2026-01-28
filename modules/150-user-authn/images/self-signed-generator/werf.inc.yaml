@@ -2,28 +2,28 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: common/distroless
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
     add: /src/self-signed-generator
     to: /self-signed-generator
     before: setup
-git:    
-{{- include "image mount points" . }}    
+git:
+{{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: [ "/self-signed-generator" ]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
     to: /src
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-self-signed-generator-artifact
-fromImage: builder/golang-alpine
+image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-self-signed-generator-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -36,6 +36,10 @@ shell:
   install:
     - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64
     - cd /src
-    - go build -ldflags="-w -s" -o self-signed-generator main.go
+    - |
+      {{- $buildContext := deepCopy $ -}}
+      {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-w -s" -o self-signed-generator main.go` -}}
+      {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 self-signed-generator
     - chmod 0700 self-signed-generator

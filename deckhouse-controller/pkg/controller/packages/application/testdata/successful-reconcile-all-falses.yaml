@@ -1,0 +1,58 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.3
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.3
+  labels:
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+spec:
+  package:
+    name: test
+    repositoryName: deckhouse
+    version: v1.0.3
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsEnriched
+  packageMetadata:
+    category: Misc
+    description:
+      en: example — test
+      ru: example — test
+    requirements:
+      deckhouse: '>=1.0.0'
+      kubernetes: '>=1.26'
+    stage: Preview
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  labels:
+    heritage: deckhouse
+  name: test
+status:
+  availableRepositories:
+    - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca

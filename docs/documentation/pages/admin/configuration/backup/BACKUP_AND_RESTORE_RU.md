@@ -14,7 +14,7 @@ lang: ru
 1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
@@ -26,7 +26,7 @@ lang: ru
 
    Убедитесь, что результат команды `etcdutl version` отображается без ошибок.
 
-   **При отсутствии** `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
+   При отсутствии `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -128,6 +128,8 @@ lang: ru
 
    - В облачном кластере воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
    - В статическом кластере удалите лишние master-узлы вручную.
+   - В статическом кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла удалите arbiter-узел и лишние master-узлы.
+   - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#уменьшение-числа-master-узлов-в-облачном-кластере) для удаления лишних мастер-узлов и arbiter-узла.
 
 1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-с-одним-control-plane-узлом) для кластера с одним control-plane узлом.
 
@@ -142,7 +144,7 @@ lang: ru
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
@@ -539,7 +541,7 @@ tar -czvf etcd-backup.tar.gz etcd-backup.snapshot
 mv etcd-backup.tar.gz /var/lib/etcd/etcd-backup.tar.gz
 ```
 
-Для настройки автоматического резервного копирования используется модуль `control-plane-manager`. Необходимые параметры задаются в его конфигурации:
+Для настройки автоматического резервного копирования используется [модуль `control-plane-manager`](/modules/control-plane-manager/). Необходимые параметры задаются в его конфигурации:
 
 | Параметр                 | Описание                                                                 |
 |--------------------------|--------------------------------------------------------------------------|

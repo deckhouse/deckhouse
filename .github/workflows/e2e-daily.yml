@@ -27,18 +27,19 @@ env:
   # <template: werf_envs>
   WERF_VERSION: "v2.46.0"
   WERF_ENV: "FE"
+  WERF_TELEMETRY_EXTRA_ATTRIBUTE_TEAM: "flantTeam=deckhouse/deckhouse"
   TEST_TIMEOUT: "15m"
   # Use fixed string 'sys/deckhouse-oss' for repo name. ${CI_PROJECT_PATH} is not available here in GitHub.
-  DEV_REGISTRY_PATH: "${{ secrets.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss"
+  REGISTRY_PATH: "sys/deckhouse-oss"
   # Registry for additional repositories used for testing Github Actions workflows.
   GHA_TEST_REGISTRY_PATH: "ghcr.io/${{ github.repository }}"
   # Need for ssh: default.
   DOCKER_BUILDKIT: "1"
-  WERF_DOCKER_REGISTRY_DEBUG: "1"
   WERF_FINAL_IMAGES_ONLY: true
   WERF_LOG_TERMINAL_WIDTH: "200"
   WERF_LOG_TIME: true
   WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+  GOPROXY: "${{vars.GOPROXY}}"
   # </template: werf_envs>
 
 # Always run a single job at a time.
@@ -54,7 +55,7 @@ permissions:
 jobs:
   skip_tests_repos:
     name: Skip tests repos
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     if: ${{ false || github.repository == 'deckhouse/deckhouse' }}
     steps:
     - name: Do nothing
@@ -66,7 +67,7 @@ jobs:
 
   git_info:
     name: Get git info
-    runs-on: ubuntu-latest
+    runs-on: "regular"
     needs:
     - skip_tests_repos
     outputs:
@@ -199,6 +200,17 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -222,11 +234,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -246,6 +306,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -265,15 +326,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -338,22 +404,24 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -370,13 +438,14 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -397,7 +466,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -405,21 +474,23 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          TEMPLATE_ID: "9b567623-91a9-4493-96de-f5c0b6acacfe"
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -436,13 +507,14 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_AWS_ACCESS_KEY=${LAYOUT_AWS_ACCESS_KEY:-not_provided}
           export LAYOUT_AWS_SECRET_ACCESS_KEY=${LAYOUT_AWS_SECRET_ACCESS_KEY:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -495,7 +567,7 @@ jobs:
       PROVIDER: EKS
       CRI: Containerd
       LAYOUT: WithoutNAT
-      KUBERNETES_VERSION: "1.30"
+      KUBERNETES_VERSION: "1.32"
       EVENT_LABEL: ${{ github.event.label.name }}
     runs-on: [self-hosted, e2e-common]
     steps:
@@ -534,6 +606,15 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS access_key | LAYOUT_AWS_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/AWS secret_key | LAYOUT_AWS_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -557,6 +638,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -586,6 +686,7 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
+
       # <template: werf_install_step>
       - name: Install werf CLI
         uses: werf/actions/install@v2
@@ -596,7 +697,7 @@ jobs:
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -616,6 +717,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -645,15 +747,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -728,9 +835,10 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          KUBERNETES_VERSION: "1.32"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
@@ -739,12 +847,13 @@ jobs:
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script_eks.sh run-test' via 'docker run', using environment:
@@ -772,6 +881,7 @@ jobs:
 
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -783,7 +893,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+          -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -791,13 +901,14 @@ jobs:
           bash /deckhouse/testing/cloud_layouts/script_eks.sh run-test
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
           -e LAYOUT=${LAYOUT:-not_provided} \
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
-          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+          -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v "$PWD/config.yml:/config.yml" \
           -v ${TMP_DIR_PATH}:/tmp \
           -v "$PWD/resources.yml:/resources.yml" \
@@ -813,6 +924,7 @@ jobs:
 
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -824,7 +936,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e KUBECONFIG=/tmp/eks-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}.kubeconfig \
           -e CRI=${CRI} \
-          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+          -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -e USER_RUNNER_ID=${user_runner_id} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
@@ -854,9 +966,10 @@ jobs:
           PROVIDER: EKS
           CRI: Containerd
           LAYOUT: WithoutNAT
-          KUBERNETES_VERSION: "1.30"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          KUBERNETES_VERSION: "1.32"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
@@ -864,12 +977,13 @@ jobs:
           TERRAFORM_IMAGE_NAME: ${{ steps.setup.outputs.terraform-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AWS_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_ACCESS_KEY }}
-          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ secrets.LAYOUT_AWS_SECRET_ACCESS_KEY }}
+          LAYOUT_AWS_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_ACCESS_KEY }}
+          LAYOUT_AWS_SECRET_ACCESS_KEY: ${{ steps.secrets.outputs.LAYOUT_AWS_SECRET_ACCESS_KEY }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
+          STAGE_DECKHOUSE_DOCKERCFG: ${{steps.secrets.outputs.STAGE_DECKHOUSE_DOCKERCFG}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
         run: |
           echo "Execute 'script_eks.sh cleanup' via 'docker run', using environment:
@@ -897,6 +1011,7 @@ jobs:
 
           docker run --rm \
           -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
+          -e STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG} \
           -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
           -e PREFIX=${PREFIX} \
           -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
@@ -908,7 +1023,7 @@ jobs:
           -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
           -e CRI=${CRI} \
           -e USER_RUNNER_ID=${user_runner_id} \
-          -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
+          -e FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG} \
           -v $(pwd)/testing:/deckhouse/testing \
           -v $(pwd)/release.yaml:/deckhouse/release.yaml \
           -v ${TMP_DIR_PATH}:/tmp \
@@ -1021,6 +1136,19 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure subscriptionId | LAYOUT_AZURE_SUBSCRIPTION_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure clientId | LAYOUT_AZURE_CLIENT_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure clientSecret | LAYOUT_AZURE_CLIENT_SECRET ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Azure tenantId | LAYOUT_AZURE_TENANT_ID ;
 
       # </template: import_secrets>
 
@@ -1044,11 +1172,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1068,6 +1244,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1087,15 +1264,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1160,24 +1342,26 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
-          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
-          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
-          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_TENANT_ID }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1194,6 +1378,7 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
@@ -1202,7 +1387,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1223,7 +1408,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1231,23 +1416,25 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ secrets.LAYOUT_AZURE_SUBSCRIPTION_ID }}
-          LAYOUT_AZURE_CLIENT_ID: ${{ secrets.LAYOUT_AZURE_CLIENT_ID }}
-          LAYOUT_AZURE_CLIENT_SECRET: ${{ secrets.LAYOUT_AZURE_CLIENT_SECRET }}
-          LAYOUT_AZURE_TENANT_ID: ${{ secrets.LAYOUT_AZURE_TENANT_ID }}
+          TEMPLATE_ID: "3900de40-547c-4c62-927c-ef42018d62f4"
+          LAYOUT_AZURE_SUBSCRIPTION_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_SUBSCRIPTION_ID }}
+          LAYOUT_AZURE_CLIENT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_ID }}
+          LAYOUT_AZURE_CLIENT_SECRET: ${{ steps.secrets.outputs.LAYOUT_AZURE_CLIENT_SECRET }}
+          LAYOUT_AZURE_TENANT_ID: ${{ steps.secrets.outputs.LAYOUT_AZURE_TENANT_ID }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1264,6 +1451,7 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
@@ -1272,7 +1460,7 @@ jobs:
           export LAYOUT_AZURE_CLIENT_ID=${LAYOUT_AZURE_CLIENT_ID:-not_provided}
           export LAYOUT_AZURE_CLIENT_SECRET=${LAYOUT_AZURE_CLIENT_SECRET:-not_provided}
           export LAYOUT_AZURE_TENANT_ID=${LAYOUT_AZURE_TENANT_ID:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1364,6 +1552,16 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/GCP credentials_json_b64 | LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1387,11 +1585,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1411,6 +1657,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1430,15 +1677,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1503,21 +1755,23 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
           TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
@@ -1535,13 +1789,14 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1562,7 +1817,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1570,20 +1825,22 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ secrets.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
+          TEMPLATE_ID: "565ed77c-0ae0-4baa-9ece-6603bcf3139a"
+          LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
           TEST_AUTOSCALER_ENABLED: "true"
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
@@ -1601,13 +1858,14 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export TEST_AUTOSCALER_ENABLED=${TEST_AUTOSCALER_ENABLED:-not_provided}
           export LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON=${LAYOUT_GCP_SERVICE_ACCOUT_KEY_JSON:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1662,7 +1920,7 @@ jobs:
       LAYOUT: WithoutNAT
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -1699,6 +1957,18 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex cloud_id | LAYOUT_YANDEX_CLOUD_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex folder_id | LAYOUT_YANDEX_FOLDER_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/Yandex authorized_key_json_b64 | LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON ;
 
       # </template: import_secrets>
 
@@ -1722,11 +1992,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -1746,6 +2064,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -1765,15 +2084,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -1838,23 +2162,25 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1871,6 +2197,7 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
@@ -1878,7 +2205,7 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -1899,7 +2226,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -1907,22 +2234,24 @@ jobs:
           CRI: Containerd
           LAYOUT: WithoutNAT
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_YANDEX_CLOUD_ID: ${{ secrets.LAYOUT_YANDEX_CLOUD_ID }}
-          LAYOUT_YANDEX_FOLDER_ID: ${{ secrets.LAYOUT_YANDEX_FOLDER_ID }}
-          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
+          TEMPLATE_ID: "7245bb18-0b72-4fb9-9e24-88c32dc47fb2"
+          LAYOUT_YANDEX_CLOUD_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_CLOUD_ID }}
+          LAYOUT_YANDEX_FOLDER_ID: ${{ steps.secrets.outputs.LAYOUT_YANDEX_FOLDER_ID }}
+          LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON: ${{ steps.secrets.outputs.LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -1939,6 +2268,7 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
@@ -1946,7 +2276,7 @@ jobs:
           export LAYOUT_YANDEX_CLOUD_ID=${LAYOUT_YANDEX_CLOUD_ID:-not_provided}
           export LAYOUT_YANDEX_FOLDER_ID=${LAYOUT_YANDEX_FOLDER_ID:-not_provided}
           export LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON=${LAYOUT_YANDEX_SERVICE_ACCOUNT_KEY_JSON:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2001,7 +2331,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2038,6 +2368,16 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
 
       # </template: import_secrets>
 
@@ -2061,11 +2401,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2085,6 +2473,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2104,15 +2493,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2177,21 +2571,23 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2208,12 +2604,13 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2234,7 +2631,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2242,20 +2639,22 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "19ae3748-08bf-4ad9-9102-9edbf576dc8f"
+          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -2272,12 +2671,13 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -2332,7 +2732,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-vsphere]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2369,6 +2769,18 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new e2e-username | LAYOUT_VSPHERE_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new e2e-password | LAYOUT_VSPHERE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vsphere-new base-domain | LAYOUT_VSPHERE_BASE_DOMAIN ;
 
       # </template: import_secrets>
 
@@ -2392,6 +2804,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2421,17 +2852,11 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2451,6 +2876,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2460,16 +2886,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -2480,15 +2896,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2532,15 +2953,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2558,24 +2974,27 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
-          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+          LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
+          LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
+          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2588,36 +3007,23 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided}
+          export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
+          export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
-            -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -2632,7 +3038,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -2640,23 +3046,26 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_VSPHERE_PASSWORD: ${{ secrets.LAYOUT_VSPHERE_PASSWORD }}
-          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ secrets.LAYOUT_VSPHERE_BASE_DOMAIN }}
+          TEMPLATE_ID: "5a290fd0-b56a-48e8-bcd7-7abf6dfcee7f"
+          LAYOUT_VSPHERE_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_USERNAME }}
+          LAYOUT_VSPHERE_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_PASSWORD }}
+          LAYOUT_VSPHERE_BASE_DOMAIN: ${{ steps.secrets.outputs.LAYOUT_VSPHERE_BASE_DOMAIN }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -2669,49 +3078,25 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_VSPHERE_USERNAME=${LAYOUT_VSPHERE_USERNAME:-not_provided}
+          export LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided}
+          export LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VSPHERE_PASSWORD=${LAYOUT_VSPHERE_PASSWORD:-not_provided} \
-            -e LAYOUT_VSPHERE_BASE_DOMAIN=${LAYOUT_VSPHERE_BASE_DOMAIN:-not_provided} \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_vsphere_containerd_automatic
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -2734,17 +3119,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
   # </template: e2e_run_job_template>
 
@@ -2769,7 +3143,7 @@ jobs:
       LAYOUT: Standard
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -2806,6 +3180,21 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD password | LAYOUT_VCD_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD login | LAYOUT_VCD_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD server | LAYOUT_VCD_SERVER ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/vCD org | LAYOUT_VCD_ORG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
 
       # </template: import_secrets>
 
@@ -2829,6 +3218,25 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
 
       # <template: login_rw_registry_step>
       - name: Check rw registry credentials
@@ -2858,17 +3266,11 @@ jobs:
           logout: false
       # </template: login_rw_registry_step>
 
-      # <template: werf_install_step>
-      - name: Install werf CLI
-        uses: werf/actions/install@v2
-        with:
-          version: ${{env.WERF_VERSION}}
-      # </template: werf_install_step>
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -2888,6 +3290,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -2897,16 +3300,6 @@ jobs:
           # because it prefix will use for k8s resources names (nodes, for example)
           DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
 
-          # Create tmppath for test script.
-          TMP_DIR_PATH=/tmp/cloud-layouts/layouts/${DHCTL_PREFIX}
-          if [[ -d "${TMP_DIR_PATH}" ]] ; then
-            echo "Temporary dir already exists: ${TMP_DIR_PATH}. ERROR!"
-            ls -la ${TMP_DIR_PATH}
-            exit 1
-          else
-            echo "Create temporary dir for job: ${TMP_DIR_PATH}."
-            mkdir -p "${TMP_DIR_PATH}"
-          fi
 
           ## Source: ci_templates/build.yml
 
@@ -2917,15 +3310,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -2969,15 +3367,10 @@ jobs:
           fi
           echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
 
-          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
-          echo "⚓️ [$(date -u)] Pull 'dev/install' image '${SAFE_IMAGE_NAME}'."
-          docker pull "${INSTALL_IMAGE_NAME}"
 
           IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
 
           echo '::echo::on'
-          echo "tmp-dir-path=${TMP_DIR_PATH}" >> $GITHUB_OUTPUT
-          echo "dhctl-log-file=${TMP_DIR_PATH}/dhctl.log" >> $GITHUB_OUTPUT
           echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
           echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
           echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
@@ -2995,27 +3388,29 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
-          LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+          LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
+          LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
-          LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
-          LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
+          LAYOUT_VCD_SERVER: ${{ steps.secrets.outputs.LAYOUT_VCD_SERVER }}
+          LAYOUT_VCD_ORG: ${{ steps.secrets.outputs.LAYOUT_VCD_ORG }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
-          echo "Execute 'script.sh run-test' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3028,39 +3423,27 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
+          export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
+          export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
+          export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
+          export LAYOUT_STATIC_BASTION_IP=80.249.129.56
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh run-test
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
 
         # </template: e2e_run_template>
 
@@ -3075,7 +3458,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3083,26 +3466,28 @@ jobs:
           CRI: Containerd
           LAYOUT: Standard
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
-          TMP_DIR_PATH: ${{ steps.setup.outputs.tmp-dir-path}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_VCD_PASSWORD: ${{ secrets.LAYOUT_VCD_PASSWORD }}
-          LAYOUT_VCD_USERNAME: ${{ secrets.LAYOUT_VCD_USERNAME }}
+          TEMPLATE_ID: "223f6711-3686-4d10-8ee2-ac83ce459b10"
+          LAYOUT_VCD_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_VCD_PASSWORD }}
+          LAYOUT_VCD_USERNAME: ${{ steps.secrets.outputs.LAYOUT_VCD_USERNAME }}
           LAYOUT_STATIC_BASTION_IP: 80.249.129.56
-          LAYOUT_VCD_SERVER: ${{ secrets.LAYOUT_VCD_SERVER }}
-          LAYOUT_VCD_ORG: ${{ secrets.LAYOUT_VCD_ORG }}
+          LAYOUT_VCD_SERVER: ${{ steps.secrets.outputs.LAYOUT_VCD_SERVER }}
+          LAYOUT_VCD_ORG: ${{ steps.secrets.outputs.LAYOUT_VCD_ORG }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
-          DHCTL_LOG_FILE: ${{ steps.setup.outputs.dhctl-log-file}}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
-          echo "Execute 'script.sh cleanup' via 'docker run', using environment:
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
             DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
             INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
@@ -3115,52 +3500,29 @@ jobs:
             MASTERS_COUNT=${MASTERS_COUNT}
           "
 
-          ls -lh $(pwd)/testing
 
-          dhctl_log_file="${DHCTL_LOG_FILE}-${PROVIDER}-${LAYOUT}-${CRI}-${KUBERNETES_VERSION}"
-          echo "DHCTL log file: $dhctl_log_file"
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided}
+          export LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided}
+          export LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided}
+          export LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided}
+          export LAYOUT_STATIC_BASTION_IP=80.249.129.56
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
-          user_runner_id=$(id -u):$(id -g)
-          echo "user_runner_id $user_runner_id"
-          docker run --rm \
-            -e DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG} \
-            -e PREFIX=${PREFIX} \
-            -e MASTERS_COUNT=${MASTERS_COUNT} \
-            -e DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG} \
-            -e INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG} \
-            -e KUBERNETES_VERSION=${KUBERNETES_VERSION} \
-            -e CRI=${CRI} \
-            -e PROVIDER=${PROVIDER:-not_provided} \
-            -e MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-} \
-            -e LAYOUT=${LAYOUT:-not_provided} \
-            -e DHCTL_LOG_FILE="/tmp/$(basename ${dhctl_log_file})" \
-            -e SSH_KEY=${LAYOUT_SSH_KEY:-not_provided} \
-            -e LAYOUT_VCD_PASSWORD=${LAYOUT_VCD_PASSWORD:-not_provided} \
-            -e LAYOUT_VCD_USERNAME=${LAYOUT_VCD_USERNAME:-not_provided} \
-            -e LAYOUT_VCD_SERVER=${LAYOUT_VCD_SERVER:-not_provided} \
-            -e LAYOUT_VCD_ORG=${LAYOUT_VCD_ORG:-not_provided} \
-            -e LAYOUT_STATIC_BASTION_IP=80.249.129.56 \
-            -e USER_RUNNER_ID=${user_runner_id} \
-            -e FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }} \
-            -v $(pwd)/testing:/deckhouse/testing \
-            -v $(pwd)/release.yaml:/deckhouse/release.yaml \
-            -v ${TMP_DIR_PATH}:/tmp \
-            -w /deckhouse \
-          ${INSTALL_IMAGE_NAME} \
-          bash /deckhouse/testing/cloud_layouts/script.sh cleanup
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
 
         # </template: e2e_run_template>
-
-      - name: Save dhctl state
-        id: save_failed_cluster_state
-        if: ${{ !success() }}
-        uses: actions/upload-artifact@v4.4.0
-        with:
-          name: failed_cluster_state_vcd_containerd_automatic
-          path: |
-            ${{ steps.setup.outputs.tmp-dir-path}}/dhctl
-            ${{ steps.setup.outputs.tmp-dir-path}}/*.tfstate
-            ${{ steps.setup.outputs.tmp-dir-path}}/logs
 
       - name: Save test results
         if: ${{ steps.setup.outputs.dhctl-log-file }}
@@ -3183,17 +3545,6 @@ jobs:
             rm -rf "${TMPPATH}"
           else
             echo Not a directory.
-          fi
-          if [ -n $USER_RUNNER_ID ]; then
-            echo "Fix temp directories owner..."
-            chown -R $USER_RUNNER_ID "$(pwd)/testing" || true
-            chown -R $USER_RUNNER_ID "/deckhouse/testing" || true
-            chown -R $USER_RUNNER_ID /tmp || true
-          else
-            echo "Fix temp directories permissions..."
-            chmod -f -R 777 "$(pwd)/testing" || true
-            chmod -f -R 777 "/deckhouse/testing" || true
-            chmod -f -R 777 /tmp || true
           fi
   # </template: e2e_run_job_template>
 
@@ -3218,7 +3569,7 @@ jobs:
       LAYOUT: Static
       KUBERNETES_VERSION: "Automatic"
       EVENT_LABEL: ${{ github.event.label.name }}
-    runs-on: [self-hosted, e2e-common]
+    runs-on: [self-hosted, regular]
     steps:
 
       # <template: started_at_output>
@@ -3255,6 +3606,20 @@ jobs:
             projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
             projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-os-password password | LAYOUT_OS_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_ACCESS_KEY_ID | S3_E2E_ACCESS_KEY_ID ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/s3-terraform-state-bucket AWS_SECRET_ACCESS_KEY | S3_E2E_SECRET_ACCESS_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_DOCKERCFG DECKHOUSE_E2E_DOCKERCFG | DECKHOUSE_E2E_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/DECKHOUSE_E2E_MODULES_DOCKERCFG DECKHOUSE_E2E_MODULES_DOCKERCFG | DECKHOUSE_E2E_MODULES_DOCKERCFG ;
 
       # </template: import_secrets>
 
@@ -3278,11 +3643,59 @@ jobs:
           logout: false
       # </template: login_dev_registry_step>
 
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
 
       - name: Setup
         id: setup
         env:
-          DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
           CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
           CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
@@ -3302,6 +3715,7 @@ jobs:
             KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
           fi
           DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
           if [[ "${MANUAL_RUN}" == "false" ]] ; then
             # for jobs which run multiple providers concurrency (daily e2e, for example)
             # add provider suffix to prevent "directory already exists" error
@@ -3321,15 +3735,20 @@ jobs:
             REPO_SUFFIX=
           fi
 
-          # Use dev-registry for Git branches.
-          BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           # Use rw-registry for Git tags.
           SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
 
           if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
             # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
             # Use dev-regisry for branches and Github Container Registry for semver tags.
-            BRANCH_REGISTRY_PATH="${DEV_REGISTRY_PATH}"
             SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
           fi
 
@@ -3394,21 +3813,23 @@ jobs:
           CRI: Containerd
           LAYOUT: Static
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
           INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3425,16 +3846,17 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
-          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
+          export DECKHOUSE_E2E_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_DOCKERCFG }}
+          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3455,7 +3877,7 @@ jobs:
             await waitPauseRemove();
 
       - name: Cleanup bootstrapped cluster
-        if: always()
+        if: success()
         id: cleanup_cluster
         timeout-minutes: 60
         env:
@@ -3463,20 +3885,22 @@ jobs:
           CRI: Containerd
           LAYOUT: Static
           KUBERNETES_VERSION: "Automatic"
-          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ secrets.LAYOUT_DECKHOUSE_DOCKERCFG }}
-          LAYOUT_SSH_KEY: ${{ secrets.LAYOUT_SSH_KEY}}
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
           PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
           MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
           INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
           DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
         # <template: e2e_run_template>
-          LAYOUT_OS_PASSWORD: ${{ secrets.LAYOUT_OS_PASSWORD }}
+          TEMPLATE_ID: "a820e87e-2ec7-473d-b316-f677a7d047f9"
+          LAYOUT_OS_PASSWORD: ${{ steps.secrets.outputs.LAYOUT_OS_PASSWORD }}
           COMMENT_ID: ${{ inputs.comment_id }}
           GITHUB_API_SERVER: ${{ github.api_url }}
           REPOSITORY: ${{ github.repository }}
           GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
-          COMMANDER_TOKEN: ${{secrets.E2E_COMMANDER_TOKEN}}
-          COMMANDER_HOST: ${{secrets.E2E_COMMANDER_HOST}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
         run: |
           echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
             INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
@@ -3493,16 +3917,17 @@ jobs:
 
 
           export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
           export PROVIDER=${PROVIDER:-not_provided}
           export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
           export LAYOUT=${LAYOUT:-not_provided}
           export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
           export LAYOUT_OS_PASSWORD=${LAYOUT_OS_PASSWORD:-not_provided}
-          export AWS_ACCESS_KEY_ID=${{ secrets.S3_E2E_ACCESS_KEY_ID }}
-          export DECKHOUSE_E2E_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_DOCKERCFG }}
-          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ secrets.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
-          export AWS_SECRET_ACCESS_KEY=${{ secrets.S3_E2E_SECRET_ACCESS_KEY }}
-          export FOX_DOCKERCFG=${{ secrets.FOX_DOCKERCFG }}
+          export AWS_ACCESS_KEY_ID=${{ steps.secrets.outputs.S3_E2E_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ steps.secrets.outputs.S3_E2E_SECRET_ACCESS_KEY }}
+          export DECKHOUSE_E2E_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_DOCKERCFG }}
+          export DECKHOUSE_E2E_MODULES_DOCKERCFG=${{ steps.secrets.outputs.DECKHOUSE_E2E_MODULES_DOCKERCFG }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
 
           # for logs upload
           ssh_connect_str_file="ssh-connect_str-${PREFIX}"
@@ -3536,11 +3961,817 @@ jobs:
           fi
   # </template: e2e_run_job_template>
 
+  # <template: e2e_run_job_template>
+  run_dvp_containerd_automatic:
+    name: "DVP, Containerd, Kubernetes Automatic"
+    needs:
+      - git_info
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "dvp;WithoutNAT;containerd;Automatic"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
+    env:
+      PROVIDER: DVP
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "Automatic"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/DVP LAYOUT_DVP_KUBECONFIGDATABASE64 | LAYOUT_DVP_KUBECONFIGDATABASE64 ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
+          MANUAL_RUN: "false"
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI and PROVIDER values are trimmed to reduce prefix length.
+          if [[ "${KUBERNETES_VERSION}" == "Automatic" ]] ; then
+            KUBERNETES_VERSION_SUF="auto"
+          else
+            KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
+          fi
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          if [[ "${MANUAL_RUN}" == "false" ]] ; then
+            # for jobs which run multiple providers concurrency (daily e2e, for example)
+            # add provider suffix to prevent "directory already exists" error
+            DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
+          fi
+          # converts to DNS-like (all letters in lower case and replace all dots to dash)
+          # because it prefix will use for k8s resources names (nodes, for example)
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
+          echo '::echo::on'
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
+
+          echo '::echo::off'
+
+      - name: "Run e2e test: DVP/Containerd/Automatic"
+        id: e2e_test_run
+        timeout-minutes: 120
+        env:
+          PROVIDER: DVP
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "Automatic"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+        # <template: e2e_run_template>
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        run: |
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTERS_COUNT=${MASTERS_COUNT}
+          "
+
+
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
+      - name: Cleanup bootstrapped cluster
+        if: success()
+        id: cleanup_cluster
+        timeout-minutes: 60
+        env:
+          PROVIDER: DVP
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "Automatic"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          TEMPLATE_ID: "fa812537-7648-4352-84e3-505abd4fb0b8"
+          LAYOUT_DVP_KUBECONFIGDATABASE64: ${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        run: |
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTERS_COUNT=${MASTERS_COUNT}
+          "
+
+
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_DVP_KUBECONFIGDATABASE64=${{ steps.secrets.outputs.LAYOUT_DVP_KUBECONFIGDATABASE64 }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_dvp_containerd_automatic
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+  # </template: e2e_run_job_template>
+
+  # <template: e2e_run_job_template>
+  run_zvirt_containerd_automatic:
+    name: "zVirt, Containerd, Kubernetes Automatic"
+    needs:
+      - git_info
+    outputs:
+      ssh_master_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_master_connection_string }}
+      ssh_bastion_connection_string: ${{ steps.check_stay_failed_cluster.outputs.ssh_bastion_connection_string }}
+      run_id: ${{ github.run_id }}
+      # need for find state in artifact
+      cluster_prefix: ${{ steps.setup.outputs.dhctl-prefix }}
+      ran_for: "zvirt;WithoutNAT;containerd;Automatic"
+      failed_cluster_stayed: ${{ steps.check_stay_failed_cluster.outputs.failed_cluster_stayed }}
+      issue_number: ${{ inputs.issue_number }}
+      install_image_path: ${{ steps.setup.outputs.install-image-path }}
+    env:
+      PROVIDER: zVirt
+      CRI: Containerd
+      LAYOUT: WithoutNAT
+      KUBERNETES_VERSION: "Automatic"
+      EVENT_LABEL: ${{ github.event.label.name }}
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_from_event_ref_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          ref: ${{ github.event.inputs.pull_request_ref || github.event.ref }}
+          fetch-depth: 0
+      # </template: checkout_from_event_ref_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: echo "name=${REPO##*/}" >> $GITHUB_OUTPUT
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_REGISTRY_STAGE_HOST | DECKHOUSE_REGISTRY_STAGE_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/LAYOUT_STAGE_DECKHOUSE_DOCKERCFG DOCKERCFG | LAYOUT_STAGE_DECKHOUSE_DOCKERCFG ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/fox_registry_secret FOX_DOCKERCFG | LAYOUT_FOX_DOCKERCFG ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken login | DECKHOUSE_REGISTRY_STAGE_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/stage-registry/writetoken password | DECKHOUSE_REGISTRY_STAGE_PASSWORD ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/e2e-id-rsa id_rsa_b64 | LAYOUT_SSH_KEY ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_TOKEN | E2E_COMMANDER_TOKEN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/commander/environment_variables E2E_NEW_COMMANDER_HOST | E2E_COMMANDER_HOST ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt base-domain | LAYOUT_ZVIRT_BASE_DOMAIN ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt login | LAYOUT_ZVIRT_USERNAME ;
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/e2e/zVirt password | LAYOUT_ZVIRT_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_stage_registry_step>
+      - name: Check stage registry credentials
+        id: check_stage_registry
+        env:
+          HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to stage registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_stage_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          logout: false
+      # </template: login_stage_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_IO_REGISTRY_USER }}
+          password: ${{ secrets.GHCR_IO_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_rw_registry_step>
+
+
+      - name: Setup
+        id: setup
+        env:
+          DECKHOUSE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          CI_COMMIT_TAG: ${{needs.git_info.outputs.ci_commit_tag}}
+          CI_COMMIT_BRANCH: ${{needs.git_info.outputs.ci_commit_branch}}
+          CI_COMMIT_REF_SLUG: ${{needs.git_info.outputs.ci_commit_ref_slug}}
+          REF_FULL: ${{needs.git_info.outputs.ref_full}}
+          INITIAL_REF_SLUG: ${{ github.event.inputs.initial_ref_slug }}
+          MANUAL_RUN: "false"
+          MULTIMASTER: ${{ needs.check_e2e_labels.outputs.multimaster }}
+        run: |
+          # Calculate unique prefix for e2e test.
+          # GITHUB_RUN_ID is a unique number for each workflow run.
+          # GITHUB_RUN_ATTEMPT is a unique number for each attempt of a particular workflow run in a repository.
+          # Add CRI and KUBERNETES_VERSION to create unique directory for each job.
+          # CRI and PROVIDER values are trimmed to reduce prefix length.
+          if [[ "${KUBERNETES_VERSION}" == "Automatic" ]] ; then
+            KUBERNETES_VERSION_SUF="auto"
+          else
+            KUBERNETES_VERSION_SUF=${KUBERNETES_VERSION}
+          fi
+          DHCTL_PREFIX=$(echo "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-$(echo ${CRI} | head -c 3)-${KUBERNETES_VERSION_SUF}")
+
+          if [[ "${MANUAL_RUN}" == "false" ]] ; then
+            # for jobs which run multiple providers concurrency (daily e2e, for example)
+            # add provider suffix to prevent "directory already exists" error
+            DHCTL_PREFIX="${DHCTL_PREFIX}-$(echo ${PROVIDER} | head -c 2)"
+          fi
+          # converts to DNS-like (all letters in lower case and replace all dots to dash)
+          # because it prefix will use for k8s resources names (nodes, for example)
+          DHCTL_PREFIX=$(echo "$DHCTL_PREFIX" | tr '.' '-' | tr '[:upper:]' '[:lower:]')
+
+
+          ## Source: ci_templates/build.yml
+
+          # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
+          REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
+          if [[ $REPO_SUFFIX == $GITHUB_REPOSITORY ]] ; then
+            # REPO_SUFFIX should be empty for main repo 'deckhouse/deckhouse'.
+            REPO_SUFFIX=
+          fi
+
+          # Use rw-registry for Git tags.
+          SEMVER_REGISTRY_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse"
+
+          if [[ "$CI_COMMIT_REF_SLUG" =~ ^release-[0-9]+\.[0-9]+ ]]; then
+            # Use stage-registry for release branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_REGISTRY_STAGE_HOST}/${REGISTRY_PATH}"
+          else
+            # Use dev-registry for Git branches.
+            BRANCH_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          fi
+
+          if [[ -z ${DECKHOUSE_REGISTRY_HOST:-} ]] ; then
+            # DECKHOUSE_REGISTRY_HOST is empty, so this repo is not the main repo.
+            # Use dev-regisry for branches and Github Container Registry for semver tags.
+            SEMVER_REGISTRY_PATH="${GHA_TEST_REGISTRY_PATH}"
+          fi
+
+          # Add edition name for non-FE tests on branch
+          if [[ -n ${WERF_ENV} && ${WERF_ENV,,} != "fe" ]]; then
+            IMAGE_EDITION=${WERF_ENV,,}
+          fi
+
+          # Prepare initial image tag for deploy/deckhouse to test switching from previous release.
+          INITIAL_IMAGE_TAG=
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INITIAL_IMAGE_TAG=${INITIAL_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+          fi
+
+          # Prepare image tag for deploy/deckhouse (DECKHOUSE_IMAGE_TAG option in testing/cloud_layouts/script.sh).
+          # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+          # Use it as image tag. Add suffix to not overlap with PRs in main repo.
+          IMAGE_TAG=${CI_COMMIT_REF_SLUG}${IMAGE_EDITION:+-${IMAGE_EDITION}}${REPO_SUFFIX:+-${REPO_SUFFIX}}
+
+          INSTALL_IMAGE_NAME=
+          if [[ -n ${CI_COMMIT_BRANCH} ]]; then
+            # CI_COMMIT_REF_SLUG is a 'prNUM' for dev branches or 'main' for default branch.
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${IMAGE_TAG}
+          fi
+          if [[ -n ${CI_COMMIT_TAG} ]] ; then
+            REGISTRY_SUFFIX=$(echo ${WERF_ENV} | tr '[:upper:]' '[:lower:]') # CE/EE/FE -> ce/ee/fe
+            INSTALL_IMAGE_NAME=${SEMVER_REGISTRY_PATH}/${REGISTRY_SUFFIX}/install:${CI_COMMIT_REF_SLUG}
+          fi
+          if [[ -n ${INITIAL_REF_SLUG} ]] ; then
+            INSTALL_IMAGE_NAME=${BRANCH_REGISTRY_PATH}/install:${INITIAL_IMAGE_TAG}
+            git fetch origin ${INITIAL_REF_SLUG}
+            git checkout origin/${INITIAL_REF_SLUG} -- testing/cloud_layouts
+          fi
+          SAFE_IMAGE_NAME=$(echo ${INSTALL_IMAGE_NAME} | tr '[:lower:]' '[:upper:]')
+          echo "Deckhouse Deployment will use install image ${SAFE_IMAGE_NAME} to test Git ref ${REF_FULL}"
+
+          if [ "${MULTIMASTER}" == true ] ; then
+            MASTERS_COUNT=3
+          else
+            MASTERS_COUNT=1
+          fi
+          echo "Multimaster set ${MULTIMASTER}, MASTERS_COUNT set ${MASTERS_COUNT}"
+
+
+          IMAGE_INSTALL_PATH="/${INSTALL_IMAGE_NAME#*/}"
+
+          echo '::echo::on'
+          echo "dhctl-prefix=${DHCTL_PREFIX}" >> $GITHUB_OUTPUT
+          echo "install-image-name=${INSTALL_IMAGE_NAME}" >> $GITHUB_OUTPUT
+          echo "deckhouse-image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "initial-image-tag=${INITIAL_IMAGE_TAG}" >> $GITHUB_OUTPUT
+          echo "install-image-path=${IMAGE_INSTALL_PATH}" >> $GITHUB_OUTPUT
+          echo "masters-count=${MASTERS_COUNT}" >> $GITHUB_OUTPUT
+
+          echo '::echo::off'
+
+      - name: "Run e2e test: zVirt/Containerd/Automatic"
+        id: e2e_test_run
+        timeout-minutes: 120
+        env:
+          PROVIDER: zVirt
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "Automatic"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count}}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+          INITIAL_IMAGE_TAG: ${{ steps.setup.outputs.initial-image-tag }}
+        # <template: e2e_run_template>
+          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        run: |
+          echo "Execute 'script-commander.sh run-test' via 'shell', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTERS_COUNT=${MASTERS_COUNT}
+          "
+
+
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
+          export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
+          export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh run-test
+
+        # </template: e2e_run_template>
+
+      - name: Check pause label
+        if: ${{ success() && needs.git_info.outputs.pr_number }}
+        uses: actions/github-script@v6.4.1
+        env:
+          PR_NUMBER: ${{needs.git_info.outputs.pr_number}}
+        with:
+          script: |
+            const waitPauseRemove = require('./.github/scripts/js/e2e/wait-remove-pause-label.js')({ github, context, core });
+            await waitPauseRemove();
+
+      - name: Cleanup bootstrapped cluster
+        if: success()
+        id: cleanup_cluster
+        timeout-minutes: 60
+        env:
+          PROVIDER: zVirt
+          CRI: Containerd
+          LAYOUT: WithoutNAT
+          KUBERNETES_VERSION: "Automatic"
+          LAYOUT_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_STAGE_DECKHOUSE_DOCKERCFG: ${{ steps.secrets.outputs.LAYOUT_STAGE_DECKHOUSE_DOCKERCFG }}
+          LAYOUT_SSH_KEY: ${{ steps.secrets.outputs.LAYOUT_SSH_KEY }}
+          PREFIX: ${{ steps.setup.outputs.dhctl-prefix}}
+          MASTERS_COUNT: ${{ steps.setup.outputs.masters-count }}
+          INSTALL_IMAGE_NAME: ${{ steps.setup.outputs.install-image-name }}
+          DECKHOUSE_IMAGE_TAG: ${{ steps.setup.outputs.deckhouse-image-tag }}
+        # <template: e2e_run_template>
+          TEMPLATE_ID: "4ab7bbc6-db0e-44c8-8015-af1b55434c66"
+          COMMENT_ID: ${{ inputs.comment_id }}
+          GITHUB_API_SERVER: ${{ github.api_url }}
+          REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{secrets.BOATSWAIN_GITHUB_TOKEN}}
+          COMMANDER_TOKEN: ${{ steps.secrets.outputs.E2E_COMMANDER_TOKEN }}
+          COMMANDER_HOST: ${{ steps.secrets.outputs.E2E_COMMANDER_HOST }}
+        run: |
+          echo "Execute 'script-commander.sh cleanup' via 'shell', using environment:
+            INSTALL_IMAGE_NAME=${INSTALL_IMAGE_NAME}
+            DECKHOUSE_IMAGE_TAG=${DECKHOUSE_IMAGE_TAG}
+            INITIAL_IMAGE_TAG=${INITIAL_IMAGE_TAG}
+            PREFIX=${PREFIX}
+            PROVIDER=${PROVIDER}
+            CRI=${CRI}
+            LAYOUT=${LAYOUT}
+            KUBERNETES_VERSION=${KUBERNETES_VERSION}
+            TMP_DIR_PATH=${TMP_DIR_PATH}
+            MASTERS_COUNT=${MASTERS_COUNT}
+          "
+
+
+          export DECKHOUSE_DOCKERCFG=${LAYOUT_DECKHOUSE_DOCKERCFG}
+          export STAGE_DECKHOUSE_DOCKERCFG=${LAYOUT_STAGE_DECKHOUSE_DOCKERCFG}
+          export PROVIDER=${PROVIDER:-not_provided}
+          export MASTER_CONNECTION_STRING=${SSH_MASTER_CONNECTION_STRING:-}
+          export LAYOUT=${LAYOUT:-not_provided}
+          export SSH_KEY=${LAYOUT_SSH_KEY:-not_provided}
+          export LAYOUT_ZVIRT_USERNAME=${{ steps.secrets.outputs.LAYOUT_ZVIRT_USERNAME }}
+          export LAYOUT_ZVIRT_PASSWORD=${{ steps.secrets.outputs.LAYOUT_ZVIRT_PASSWORD }}
+          export LAYOUT_ZVIRT_BASE_DOMAIN=${{ steps.secrets.outputs.LAYOUT_ZVIRT_BASE_DOMAIN }}
+          export FOX_DOCKERCFG=${LAYOUT_FOX_DOCKERCFG}
+
+          # for logs upload
+          ssh_connect_str_file="ssh-connect_str-${PREFIX}"
+          echo "ssh_connection_str_file=${ssh_connect_str_file}" >> $GITHUB_OUTPUT
+
+          bash $(pwd)/testing/cloud_layouts/script-commander.sh cleanup
+
+        # </template: e2e_run_template>
+
+      - name: Save test results
+        if: ${{ steps.setup.outputs.dhctl-log-file }}
+        uses: actions/upload-artifact@v4.4.0
+        with:
+          name: test_output_zvirt_containerd_automatic
+          path: |
+            ${{ steps.setup.outputs.dhctl-log-file}}*
+            ${{ steps.setup.outputs.tmp-dir-path}}/logs
+            testing/cloud_layouts/
+            !testing/cloud_layouts/**/sshkey
+
+      - name: Cleanup temp directory
+        if: always()
+        env:
+          TMPPATH: ${{ steps.setup.outputs.tmppath}}
+        run: |
+          echo "Remove temporary directory '${TMPPATH}' ..."
+          if [[ -d "${TMPPATH}" && ${#TMPPATH} > 1 ]] ; then
+            rm -rf "${TMPPATH}"
+          else
+            echo Not a directory.
+          fi
+  # </template: e2e_run_job_template>
+
 
   send_alert_about_workflow_problem:
     name: Send alert about workflow problem
-    runs-on: ubuntu-latest
-    needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic"]
+    runs-on: "regular"
+    needs: ["skip_tests_repos","git_info","run_aws_containerd_automatic","run_eks_containerd_automatic","run_azure_containerd_automatic","run_gcp_containerd_automatic","run_yandex_cloud_containerd_automatic","run_openstack_containerd_automatic","run_vsphere_containerd_automatic","run_vcd_containerd_automatic","run_static_containerd_automatic","run_dvp_containerd_automatic","run_zvirt_containerd_automatic"]
     if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
     steps:
     # <template: send_alert_loop_template>

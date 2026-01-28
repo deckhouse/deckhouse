@@ -5,10 +5,10 @@
         summary: The installed Istio version has been deprecated.
         description: |
           Deckhouse has detected that a deprecated Istio version `{{"{{$labels.version}}"}}` is installed.
-          
+
           Support for this version will be removed in upcoming Deckhouse releases. The higher the alert severity, the greater the probability of support being discontinued.
 
-          To learn how to upgrade Istio, refer to the [upgrade guide]({{ if .Values.global.modules.publicDomainTemplate }}{{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}{{- else }}https://deckhouse.io{{- end }}/products/kubernetes-platform/documentation/{{ $.Values.global.deckhouseVersion }}/modules/istio/examples.html#upgrading-istio).
+          To learn how to upgrade Istio, refer to the [upgrade guide]({{ if .Values.global.modules.publicDomainTemplate }}{{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}{{- else }}https://deckhouse.io{{- end }}/modules/istio/examples.html#upgrading-istio).
         plk_markup_format: markdown
         plk_labels_as_annotations: pod,instance
         plk_protocol_version: "1"

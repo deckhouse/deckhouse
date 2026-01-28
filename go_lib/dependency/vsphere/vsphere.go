@@ -42,6 +42,7 @@ import (
 type Client interface {
 	GetZonesDatastores() (*Output, error)
 	ListPolicies() ([]StoragePolicy, error)
+	RefreshClient() error
 }
 
 type client struct {
@@ -150,15 +151,20 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 		return nil, err
 	}
 
-	rtype := pbmTypes.PbmProfileResourceType{
-		ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
-	}
-
-	category := pbmTypes.PbmProfileCategoryEnumREQUIREMENT
-
-	ids, err := pc.QueryProfile(context.TODO(), rtype, string(category))
+	ids, err := pc.QueryProfile(
+		context.TODO(),
+		pbmTypes.PbmProfileResourceType{
+			ResourceType: string(pbmTypes.PbmProfileResourceTypeEnumSTORAGE),
+		},
+		string(pbmTypes.PbmProfileCategoryEnumREQUIREMENT),
+	)
 	if err != nil {
 		return nil, err
+	}
+
+	// RetrieveContent returns error if ids are empty.
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
 	profiles, err := pc.RetrieveContent(context.TODO(), ids)
@@ -176,6 +182,18 @@ func (v *client) ListPolicies() ([]StoragePolicy, error) {
 	}
 
 	return result, nil
+}
+
+func (v *client) RefreshClient() error {
+	c, err := createVsphereClient(v.config)
+	if err != nil {
+		return err
+	}
+
+	v.client = c.client
+	v.restClient = c.restClient
+
+	return nil
 }
 
 func createVsphereClient(config *ProviderClusterConfiguration) (client, error) {

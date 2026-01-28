@@ -9,7 +9,7 @@ description: "Configuring Huawei Cloud for Deckhouse cloud provider operation."
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-Deckhouse components interact with Huawei Cloud resources through the Huawei Cloud API. To configure this connection, you need to create a user in the Huawei Cloud IAM service and provide it with the necessary permissions.
+Deckhouse Kubernetes Platform components interact with Huawei Cloud resources through the Huawei Cloud API. To configure this connection, you need to create a user in the Huawei Cloud IAM service and provide it with the necessary permissions.
 
 ## Configuring IAM via the web interface
 

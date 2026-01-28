@@ -15,7 +15,6 @@
 package manifests
 
 import (
-	"encoding/base64"
 	"fmt"
 	"os"
 	"strings"
@@ -29,14 +28,14 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
 
 var imagesDigestsJSON = "/deckhouse/candi/images_digests.json"
 
 const (
-	deckhouseRegistrySecretName = "deckhouse-registry"
+	deckhouseRegistrySecretName      = "deckhouse-registry"
+	registryBashibleConfigSecretName = "registry-bashible-config"
 
 	deployTimeEnvVarName            = "KUBERNETES_DEPLOYED"
 	deployServiceHostEnvVarName     = "KUBERNETES_SERVICE_HOST"
@@ -53,7 +52,6 @@ type DeckhouseDeploymentParams struct {
 
 	DeployTime time.Time
 
-	IsSecureRegistry   bool
 	MasterNodeSelector bool
 	KubeadmBootstrap   bool
 }
@@ -140,10 +138,8 @@ func ParameterizeDeckhouseDeployment(input *appsv1.Deployment, params DeckhouseD
 		deckhousePodTemplate.Spec.NodeSelector = map[string]string{"node-role.kubernetes.io/control-plane": ""}
 	}
 
-	if params.IsSecureRegistry {
-		deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
-			{Name: "deckhouse-registry"},
-		}
+	deckhousePodTemplate.Spec.ImagePullSecrets = []apiv1.LocalObjectReference{
+		{Name: "deckhouse-registry"},
 	}
 
 	if params.KubeadmBootstrap && freshDeployment {
@@ -226,6 +222,7 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 			AutomountServiceAccountToken: ptr.To(true),
 			SecurityContext: &apiv1.PodSecurityContext{
 				RunAsUser:    ptr.To(int64(0)),
+				RunAsGroup:   ptr.To(int64(0)),
 				RunAsNonRoot: ptr.To(false),
 			},
 			Tolerations: []apiv1.Toleration{
@@ -258,6 +255,15 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 					VolumeSource: apiv1.VolumeSource{
 						HostPath: &apiv1.HostPathVolumeSource{
 							Path: "/var/lib/deckhouse",
+							Type: &hostPathDirectory,
+						},
+					},
+				},
+				{
+					Name: "dev-dir",
+					VolumeSource: apiv1.VolumeSource{
+						HostPath: &apiv1.HostPathVolumeSource{
+							Path: "/dev",
 							Type: &hostPathDirectory,
 						},
 					},
@@ -311,9 +317,18 @@ func DeckhouseDeployment(params DeckhouseDeploymentParams) *appsv1.Deployment {
 				ReadOnly:  false,
 				MountPath: "/deckhouse/downloaded",
 			},
+			{
+				Name:      "dev-dir",
+				ReadOnly:  false,
+				MountPath: "/dev",
+			},
 		},
 		SecurityContext: &apiv1.SecurityContext{
 			ReadOnlyRootFilesystem: ptr.To(true),
+			RunAsUser:              ptr.To(int64(0)),
+			RunAsGroup:             ptr.To(int64(0)),
+			RunAsNonRoot:           ptr.To(false),
+			Privileged:             ptr.To(true),
 		},
 	}
 
@@ -520,8 +535,7 @@ func DeckhouseAdminClusterRoleBinding() *rbacv1.ClusterRoleBinding {
 	}
 }
 
-func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
-	data, _ := base64.StdEncoding.DecodeString(registry.DockerCfg)
+func DeckhouseRegistrySecret(data map[string][]byte) *apiv1.Secret {
 	ret := &apiv1.Secret{
 		Type: apiv1.SecretTypeDockerConfigJson,
 		ObjectMeta: metav1.ObjectMeta{
@@ -536,23 +550,29 @@ func DeckhouseRegistrySecret(registry config.RegistryData) *apiv1.Secret {
 				"meta.helm.sh/release-namespace": "d8-system",
 			},
 		},
-		Data: map[string][]byte{
-			apiv1.DockerConfigJsonKey: data,
-			"address":                 []byte(registry.Address),
-			"scheme":                  []byte(registry.Scheme),
-			"imagesRegistry":          []byte(registry.Address),
+		Data: data,
+	}
+	return ret
+}
+
+func RegistryBashibleConfigSecret(data map[string][]byte) *apiv1.Secret {
+	ret := &apiv1.Secret{
+		Type: apiv1.SecretTypeOpaque,
+		ObjectMeta: metav1.ObjectMeta{
+			Name: registryBashibleConfigSecretName,
+			Labels: map[string]string{
+				"heritage":                     "deckhouse",
+				"app.kubernetes.io/managed-by": "Helm",
+				"app":                          "registry",
+			},
+			Annotations: map[string]string{
+				"helm.sh/resource-policy":        "keep",
+				"meta.helm.sh/release-name":      "registry",
+				"meta.helm.sh/release-namespace": "d8-system",
+			},
 		},
+		Data: data,
 	}
-
-	if registry.Path != "" {
-		ret.Data["path"] = []byte(registry.Path)
-		ret.Data["imagesRegistry"] = []byte(registry.Address + registry.Path)
-	}
-
-	if registry.CA != "" {
-		ret.Data["ca"] = []byte(registry.CA)
-	}
-
 	return ret
 }
 

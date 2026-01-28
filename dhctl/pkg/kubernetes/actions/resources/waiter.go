@@ -16,12 +16,14 @@ package resources
 
 import (
 	"context"
-	"reflect"
 
 	"github.com/hashicorp/go-multierror"
+	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -31,6 +33,13 @@ type Checker interface {
 	Single() bool
 }
 
+type constructorParams struct {
+	kubeProvider   kubernetes.KubeClientProviderWithCtx
+	metaConfig     *config.MetaConfig
+	loggerProvider log.LoggerProvider
+}
+
+// todo refact to pass parameters with kube and logger provider
 func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, metaConfig *config.MetaConfig) ([]Checker, error) {
 	errRes := &multierror.Error{}
 
@@ -43,7 +52,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 			return
 		}
 
-		if check == nil || reflect.ValueOf(check).IsNil() {
+		if govalue.IsNil(check) {
 			return
 		}
 
@@ -54,10 +63,19 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		}
 	}
 
-	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(kubeCl, metaConfig)
+	// todo pass logger as parameter
+	logger := log.GetDefaultLogger()
+
+	params := constructorParams{
+		kubeProvider:   kubernetes.NewSimpleKubeClientGetter(kubeCl),
+		metaConfig:     metaConfig,
+		loggerProvider: log.SimpleLoggerProvider(logger),
+	}
+
+	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
 	tryToAppendCheck(staticNGSChecker, err)
 
-	type constructor func(*client.KubernetesClient, *config.MetaConfig, *template.Resource) (Checker, error)
+	type constructor func(resource *template.Resource, params constructorParams) (Checker, error)
 
 	constructors := []constructor{
 		tryToGetClusterIsBootstrappedChecker,
@@ -66,7 +84,7 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 
 	for _, r := range resources {
 		for _, crtor := range constructors {
-			check, err := crtor(kubeCl, metaConfig, r)
+			check, err := crtor(r, params)
 			tryToAppendCheck(check, err)
 		}
 	}

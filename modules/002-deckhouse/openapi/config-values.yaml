@@ -3,7 +3,7 @@ properties:
 
   logLevel:
     type: string
-    enum: ["Debug", "Info", "Error"]
+    enum: ["Trace", "Debug", "Info", "Error"]
     x-examples: ["Info"]
     description: |
       Deckhouse logging level.
@@ -14,7 +14,7 @@ properties:
     enum: ["Default", "Minimal", "Managed"]
     x-examples: ["Default"]
     description: |
-      The Deckhouse [bundle](../../#module-bundles) defines a set of modules enabled by default.
+      The Deckhouse [bundle](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles) defines a set of modules enabled by default.
       - `Default` — the recommended set of modules for cluster operation: monitoring, authorization control, networking and other needs.
       - `Managed` — the bundle aimed at clusters managed by cloud providers (e.g., Google Kubernetes Engine).
       - `Minimal` — the minimum possible bundle option (includes a single module — this one). **Note** that several basic modules are not included in the set of modules `Minimal` (for example, the CNI module). Deckhouse with the set of modules `Minimal` without the basic modules will be able to work only in an already deployed cluster.
@@ -25,7 +25,7 @@ properties:
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.io/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#what-happens-when-the-release-channel-changes) to it when such an opportunity appears).
+      Target Deckhouse release channel (Deckhouse will [switch](/products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
 
@@ -289,10 +289,11 @@ properties:
     description: |
       Manually enable the high availability mode.
 
-      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](../../deckhouse-configure-global.html#parameters) to learn more about the HA mode for modules.
+      By default, Deckhouse automatically decides whether to enable the HA mode. Click [here](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters) to learn more about the HA mode for modules.
   allowExperimentalModules:
     type: boolean
     x-examples: [false]
+    default: false
     description: |
       Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
 
@@ -365,6 +366,7 @@ properties:
         properties: &registryDirectProperties
           imagesRepo:
             type: string
+            default: registry.deckhouse.io/deckhouse/ce
             x-doc-required: true
             pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
             description: |

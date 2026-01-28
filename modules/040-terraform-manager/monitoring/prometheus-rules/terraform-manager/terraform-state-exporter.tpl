@@ -18,19 +18,19 @@
       summary: Prometheus can't scrape terraform-state-exporter.
       description: |
         Prometheus is unable to scrape metrics from the `terraform-state-exporter`.
-        
+
         To investigate the details:
 
         - Check the Pod status:
-        
+
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
-        
+
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
 
   - alert: D8TerraformStateExporterTargetAbsent
@@ -54,15 +54,15 @@
         To investigate the details:
 
         - Check the Pod status:
-        
+
           ```shell
-          kubectl -n d8-system get pod -l app=terraform-state-exporter
+          d8 k -n d8-system get pod -l app=terraform-state-exporter
           ```
 
         - Check the container logs:
-        
+
           ```shell
-          kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+          d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
           ```
 
   - alert: D8TerraformStateExporterPodIsNotReady
@@ -92,13 +92,13 @@
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
 
   - alert: D8TerraformStateExporterPodIsNotRunning
@@ -123,13 +123,13 @@
         1. Deployment description:
 
            ```shell
-           kubectl -n d8-system describe deployment terraform-state-exporter
+           d8 k -n d8-system describe deployment terraform-state-exporter
            ```
 
         2. Pod status:
 
            ```shell
-           kubectl -n d8-system describe pod -l app=terraform-state-exporter
+           d8 k -n d8-system describe pod -l app=terraform-state-exporter
            ```
 
 - name: d8.terraform-manager.terraform-state-exporter.checks
@@ -154,9 +154,9 @@
         Errors occurred during the operation of the `terraform-state-exporter`.
 
         To get more details, check the Pod logs:
-        
+
         ```shell
-        kubectl -n d8-system logs -l app=terraform-state-exporter -c exporter
+        d8 k -n d8-system logs -l app=terraform-state-exporter -c exporter
         ```
 
   - alert: D8TerraformStateExporterClusterStateChanged
@@ -186,7 +186,7 @@
            ```shell
            dhctl terraform check
            ```
-        
+
         2. Apply the necessary changes to bring the cluster in sync:
 
            ```shell
@@ -220,7 +220,7 @@
            ```shell
            dhctl terraform check
            ```
-        
+
         2. Apply the necessary changes to bring the cluster in sync:
 
            ```shell
@@ -254,7 +254,7 @@
            ```shell
            dhctl terraform check
            ```
-        
+
         2. Apply the necessary changes to bring the cluster in sync:
 
            ```shell
@@ -263,9 +263,9 @@
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- else }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- end }}
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
@@ -298,7 +298,7 @@
            ```shell
            dhctl terraform check
            ```
-        
+
         2. Apply the necessary changes to bring the cluster in sync:
 
            ```shell
@@ -307,9 +307,9 @@
 
 {{- if (.Values.global.enabledModules | has "cloud-provider-aws") }}
 {{ if .Values.global.modules.publicDomainTemplate }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user]({{ include "helm_lib_module_uri_scheme" . }}://{{ include "helm_lib_module_public_domain" (list . "documentation") }}/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- else }}
-        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
+        Also, it can occur because of missing permissions for the following actions for the [Deckhouse IAM user](https://deckhouse.io/modules/cloud-provider-aws/environment.html#json-policy) in AWS (the new requirements in Deckhouse 1.45):
 {{- end }}
         1. `ec2:DescribeInstanceTypes`,
         2. `ec2:DescribeSecurityGroupRules`.
@@ -332,7 +332,7 @@
       summary: Terraform-state-exporter node template change detected.
       description: |
         The `terraform-state-exporter` has detected a mismatch between the node template in the cluster provider configuration and the one specified in the NodeGroup {{`{{ $labels.name }}`}}`.
-        
+
         Node template is `{{`{{ $labels.status }}`}}`.
 
         Troubleshooting steps:
@@ -342,7 +342,7 @@
            ```shell
            dhctl terraform check
            ```
-        
+
         2. Adjust NodeGroup settings to fix the issue or bring the cluster in sync via the following command:
 
            ```shell

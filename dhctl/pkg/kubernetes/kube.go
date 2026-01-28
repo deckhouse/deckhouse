@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -26,6 +29,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+func GetLabelSelector(label string, operator selection.Operator, vals []string) (string, error) {
+	selector := labels.NewSelector()
+	r, err := labels.NewRequirement(label, operator, vals)
+	if err != nil {
+		return "", err
+	}
+	selector = selector.Add(*r)
+	return selector.String(), nil
+}
 
 func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient
@@ -67,7 +80,13 @@ type KubeClientProvider interface {
 	KubeClient() *client.KubernetesClient
 }
 
+// todo refactor it we need one provider with context
+type KubeClientProviderWithCtx interface {
+	KubeClientCtx(ctx context.Context) (*client.KubernetesClient, error)
+}
+
 var _ KubeClientProvider = &SimpleKubeClientGetter{}
+var _ KubeClientProviderWithCtx = &SimpleKubeClientGetter{}
 
 type SimpleKubeClientGetter struct {
 	kubeCl *client.KubernetesClient
@@ -79,4 +98,8 @@ func NewSimpleKubeClientGetter(kubeCl *client.KubernetesClient) *SimpleKubeClien
 
 func (s *SimpleKubeClientGetter) KubeClient() *client.KubernetesClient {
 	return s.kubeCl
+}
+
+func (s *SimpleKubeClientGetter) KubeClientCtx(context.Context) (*client.KubernetesClient, error) {
+	return s.kubeCl, nil
 }

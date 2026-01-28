@@ -7,6 +7,8 @@ The alert management web UI can be used for handling alerts in a Deckhouse clust
 It allows you to view detailed information about alerts, including the source, severity, and trigger time,
 and to temporarily silence alert notifications when needed.
 
+For the list of all available alerts in the Deckhouse Kubernetes Platform monitoring system, refer to the [corresponding documentation page](../../reference/alerts.html).
+
 ## Accessing the web UI
 
 1. To open the alert management web UI,

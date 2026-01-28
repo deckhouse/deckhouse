@@ -17,14 +17,37 @@ export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
 {{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl (printf `
-%s
+{{- tpl $bbnn . }}
 
-{{ template "bb-d8-node-name" . }}
+bb-d8-node-name() {
+  echo $(</var/lib/bashible/discovered-node-name)
+}
 
-{{ template "bb-discover-node-name"   . }}
-`
-(index (splitList "\n---\n" $bbnn) 0)) . | nindent 0 }}
+bb-discover-node-name() {
+  local discovered_name_file="/var/lib/bashible/discovered-node-name"
+  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
+
+  if [ ! -s "$discovered_name_file" ]; then
+    if [[ -s "$kubelet_crt" ]]; then
+      openssl x509 -in "$kubelet_crt" \
+        -noout -subject -nameopt multiline |
+      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
+    else
+    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
+      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
+        hostnamectl set-hostname "$(hostname -s)"
+      fi
+    {{- end }}
+      hostname > "$discovered_name_file"
+    fi
+  fi
+}
+
+bb-kube-apiserver-healthy() {
+  local kubeconfig="$1"
+  local server="$2"
+  kubectl get --raw='/healthz' --kubeconfig="$kubeconfig" --request-timeout 3s --server="$server" >/dev/null 2>&1
+}
 
 bb-kubectl-exec() {
   local kubeconfig="/etc/kubernetes/kubelet.conf"
@@ -33,15 +56,13 @@ bb-kubectl-exec() {
   local kube_server
   kube_server=$(kubectl --kubeconfig="$kubeconfig" config view -o jsonpath='{.clusters[0].cluster.server}' 2>/dev/null)
   if [[ -n "$kube_server" ]]; then
-    host=$(echo "$kube_server" | sed -E 's#https?://([^:/]+).*#\1#')
-    port=$(echo "$kube_server" | sed -E 's#https?://[^:/]+:([0-9]+).*#\1#')
     # checking local kubernetes-api-proxy availability
-    if ! nc -z "$host" "$port"; then
+    if bb-kube-apiserver-healthy "$kubeconfig" "$kube_server"; then
+      args="--server=$kube_server"
+    else
       for server in {{ .normal.apiserverEndpoints | join " " }}; do
-        host=$(echo "$server" | cut -d: -f1)
-        port=$(echo "$server" | cut -d: -f2)
         # select the first available control plane
-        if nc -z "$host" "$port"; then
+        if bb-kube-apiserver-healthy "$kubeconfig" "https://$server"; then
           args="--server=https://$server"
           break
         fi
@@ -51,8 +72,38 @@ bb-kubectl-exec() {
 {{ end }}
   kubectl --request-timeout 60s --kubeconfig=$kubeconfig $args ${@}
 }
+
+bb-label-node-bashible-first-run-finished() {
+  local max_attempts=25
+  local attempt=1
+
+  while [ $attempt -le $max_attempts ]; do
+    if bb-kubectl-exec label nodes "$(bb-d8-node-name)" node.deckhouse.io/bashible-first-run-finished=true; then
+      echo "Successfully set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)"
+      return 0
+    fi
+
+    echo "[$attempt/$max_attempts] Failed to set label on node $(bb-d8-node-name), retrying in 5 seconds..."
+    attempt=$((attempt + 1))
+    sleep 5
+  done
+
+  echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  exit 1
+}
+
 # make the function available in $step
 export -f bb-kubectl-exec
+export -f bb-kube-apiserver-healthy
+export -f bb-label-node-bashible-first-run-finished
+
+bb-indent-text() {
+    local indent="$1"
+    local line
+    while IFS= read -r line || [[ -n "$line" ]]; do
+        printf '%s%s\n' "$indent" "$line"
+    done
+}
 
 function bb-event-error-create() {
     # This function is used for creating event in the default namespace with reference of
@@ -69,18 +120,26 @@ function bb-event-error-create() {
     eventName="$(echo -n $(bb-d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
     nodeName=$(bb-d8-node-name)
     eventLog="/var/lib/bashible/step.log"
+    if [[ -f "${eventLog}" ]]; then
+      eventNote="$(tail -c 500 "${eventLog}")"
+    else
+      eventNote="bashible step log is not available."
+    fi
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec apply -f - <<EOF || true
+      indent="            " # 12 spaces
+      logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-error-${eventName}
+            generateName: bashible-error-${eventName}-
           regarding:
             apiVersion: v1
             kind: Node
             name: ${nodeName}
             uid: ${nodeName}
-          note: '$(tail -c 500 ${eventLog})'
+          note: |
+${logs}
           reason: BashibleStepFailed
           type: Warning
           reportingController: bashible
@@ -92,14 +151,14 @@ EOF
 }
 
 function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$1"
+    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo $1 | sed 's#.*/##; s/_/-/g')"
     nodeName="$(bb-d8-node-name)"
     if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec apply -f - <<EOF || true
+      bb-kubectl-exec create -f - <<EOF || true
           apiVersion: events.k8s.io/v1
           kind: Event
           metadata:
-            name: bashible-info-${eventName}-update-$(date -u +"%Y-%m-%dt%H-%M-%S-%6N")
+            generateName: bashible-info-${eventName}-update-
           regarding:
             apiVersion: v1
             kind: Node
@@ -208,6 +267,15 @@ function get_bundle() {
   fi
 }
 
+log_configuration_checksum() {
+  local kind="$1"
+  local objName="$2"
+  local payload="$3"
+  local checksum
+  checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
+  echo "Got $kind/$objName configuration checksum: $checksum" >&2
+}
+
 function current_uptime() {
   cat /proc/uptime | cut -d " " -f1
 }
@@ -220,6 +288,7 @@ function main() {
   export UPTIME_FILE="$BOOTSTRAP_DIR/uptime"
   export CONFIGURATION_CHECKSUM="{{ .configurationChecksum | default "" }}"
   export FIRST_BASHIBLE_RUN="no"
+  export BASHIBLE_INITIALIZED_FILE="$BOOTSTRAP_DIR/bashible-fully-initialized"
   export NODE_GROUP="{{ .nodeGroup.name }}"
   export TMPDIR="/opt/deckhouse/tmp"
   export REGISTRY_MODULE_ENABLE="{{ (.registry).registryModuleEnable | default "false" }}" # Deprecated
@@ -250,7 +319,9 @@ function main() {
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
-    get_bundle bashible "${NODE_GROUP}" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
+    bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
+    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
       exit 1
@@ -276,6 +347,10 @@ function main() {
     else
       REBOOT_ANNOTATION=null
   fi
+ if [ "$FIRST_BASHIBLE_RUN" != "yes" ] && [[ ! -f $BASHIBLE_INITIALIZED_FILE ]]; then
+    bb-label-node-bashible-first-run-finished
+    touch $BASHIBLE_INITIALIZED_FILE
+ fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
     echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
@@ -293,7 +368,9 @@ function main() {
 
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
-    ng_steps_collection="$(get_bundle nodegroupbundle "${NODE_GROUP}" | jq -rc '.data')"
+    nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
+    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
       jq -r --arg step "$step" '.[$step] // ""' <<< "$ng_steps_collection" > "$BUNDLE_STEPS_DIR/$step"
@@ -319,7 +396,7 @@ function main() {
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
-      >&2 echo "Failed to execute step "$step" ... retry in 10 seconds."
+      >&2 echo -e "Failed to execute step "$step" ... retry in 10 seconds.\n"
       sleep 10
       echo ===
       echo === Step: $step

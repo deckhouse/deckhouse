@@ -100,6 +100,15 @@
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -113,6 +122,15 @@
     "tags": [
       "storage"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "external": "true",
     "path": "/modules/csi-huawei/stable/"
   },
@@ -132,12 +150,18 @@
   },
   "csi-netapp": {
     "editions": [
-      "ce",
-      "se",
-      "se-plus",
       "ee",
       "cse-pro"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "storage"
     ],
@@ -176,10 +200,6 @@
   },
   "delivery-kit": {
     "editions": [
-      "be",
-      "se",
-      "se-plus",
-      "ee",
       "cse-lite",
       "cse-pro"
     ],
@@ -187,50 +207,51 @@
       "delivery"
     ],
     "external": "true",
-    "path": "/modules/delivery-kit/stable/"
+    "path": ""
   },
   "managed-postgres": {
     "editions": [
       "ee"
     ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
     "tags": [
       "database"
     ],
     "external": "true",
-    "path": "/modules/managed-postgres/stable/"
+    "path": "/modules/managed-postgres/"
   },
   "managed-memcached": {
     "editions": [
       "ee"
     ],
-    "editionsWithRestrictions": [
-      "ee"
-    ],
-    "editionsWithRestrictionsComments": {
-      "all": {
-        "en": "Limited testing. Contact us to discuss the terms",
-        "ru": "Ограниченное тестирование. Свяжитесь с нами для обсуждения условий"
-      }
-    },
     "tags": [
       "database"
     ],
     "external": "true",
-    "path": "/modules/managed-memcached/stable/"
+    "path": "/modules/managed-memcached/"
+  },
+  "managed-valkey": {
+    "editions": [
+      "ee"
+    ],
+    "tags": [
+      "database"
+    ],
+    "external": "true",
+    "path": "/modules/managed-valkey/"
   },
   "neuvector": {
     "editions": [
       "ee"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "security"
     ],
@@ -277,13 +298,35 @@
   },
   "operator-argo": {
     "editions": [
-      "ee"
+      "ee",
+      "se-plus"
     ],
+    "editionsWithRestrictions": [
+      "cse-pro"
+    ],
+    "editionsWithRestrictionsComments": {
+      "cse-pro": {
+        "en": "Not included in the edition. Can be used as a module from external source",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый из внешнего источника"
+      }
+    },
     "tags": [
       "delivery"
     ],
     "external": "true",
     "path": "/modules/operator-argo/stable/"
+  },
+  "operator-trivy": {
+    "editions": [
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/operator-trivy/",
+    "tags": [
+      "security"
+    ]
   },
   "pod-reloader": {
     "tags": [
@@ -298,6 +341,16 @@
     ],
     "external": "true",
     "path": "/modules/pod-reloader/stable/"
+  },
+  "payload-registry": {
+    "tags": [
+      "registry"
+    ],
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/payload-registry/stable/"
   },
   "runtime-audit-engine": {
     "tags": [
@@ -334,8 +387,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "all": {
-        "en": "Restriction on the ability to create snapshots",
-        "ru": "Ограничение на возможность создания снимков"
+        "en": "Restriction on the ability to create snapshots and volume wiping",
+        "ru": "Ограничение на возможность создания снимков и затирание томов"
       }
     },
     "tags": [
@@ -414,10 +467,6 @@
   },
   "storage-volume-data-manager": {
     "editions": [
-      "ce",
-      "be",
-      "se",
-      "se-plus",
       "ee"
     ],
     "tags": [

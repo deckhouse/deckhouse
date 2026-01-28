@@ -6,7 +6,7 @@ lang: ru
 
 ## Выбор конкретных узлов для использования модуля
 
-Чтобы ограничить использование модуля определёнными узлами кластера, необходимо задать лейблы в поле `nodeSelector` в настройках модуля.
+Чтобы ограничить использование модуля определёнными узлами кластера, необходимо задать лейблы в [поле `nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля.
 
 Для отображения и редактирования настроек модуля выполните команду:
 
@@ -69,7 +69,7 @@ d8 k -n d8-sds-local-volume get po -owide
 
 ## Вывод узла из-под управления модуля
 
-Чтобы вывести узел из-под управления модуля, необходимо удалить лейблы, заданные в поле `nodeSelector` в настройках модуля `sds-local-volume`.
+Чтобы вывести узел из-под управления модуля, необходимо удалить лейблы, заданные в [поле `nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля `sds-local-volume`.
 
 Для проверки текущих лейблов выполните команду:
 
@@ -183,7 +183,7 @@ d8 k get node %node-name% --show-labels
 
 ## Отсутствие служебных подов на нужном узле
 
-Проблема может быть связана с некорректно установленными лейблами. Узлы, используемые модулем, определяются лейблами, заданными в поле `nodeSelector` в настройках модуля. Для просмотра текущих лейблов выполните:
+Проблема может быть связана с некорректно установленными лейблами. Узлы, используемые модулем, определяются лейблами, заданными в [поле `nodeSelector`](/modules/sds-local-volume/configuration.html#parameters-datanodes-nodeselector) в настройках модуля. Для просмотра текущих лейблов выполните:
 
 ```shell
 d8 k get mc sds-local-volume -o=jsonpath={.spec.settings.dataNodes.nodeSelector}
@@ -309,7 +309,7 @@ migrate.sh NAMESPACE SOURCE_PVC_NAME DESTINATION_PVC_NAME
 
 Подробную информацию о снимках и используемых ресурсах можно найти [в документации Kubernetes](https://kubernetes.io/docs/concepts/storage/volume-snapshots/).
 
-1. Включите модуль `snapshot-controller`:
+1. Включите [модуль `snapshot-controller`](/modules/snapshot-controller/):
 
    ```shell
    d8 k apply -f -<<EOF

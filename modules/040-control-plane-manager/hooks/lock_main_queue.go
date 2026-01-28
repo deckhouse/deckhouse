@@ -36,9 +36,9 @@ import (
 /*
 Description:
 
-	locks deckhouse main queue while control-plane-manager Pod will be rolled out and become ready
-	Checks Daemonset: d8-control-plane-manager exists
-	Checks Pod readiness
+	locks deckhouse main queue while control-plane-manager Pods will be rolled out and become ready
+	Checks DaemonSets: d8-control-plane-manager and d8-control-plane-manager-etcd-arbiter (if exists)
+	Checks Pod readiness for both DaemonSets
 */
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:       "main",
@@ -57,12 +57,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			},
 			LabelSelector: &v1.LabelSelector{
 				MatchLabels: map[string]string{
-					"app": "d8-control-plane-manager",
+					"component": "control-plane-manager",
 				},
 			},
 			FilterFunc: lockQueueFilterPod,
 		},
-
 		{
 			Name:                         "cpm_ds",
 			ApiVersion:                   "apps/v1",
@@ -74,8 +73,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					MatchNames: []string{"kube-system"},
 				},
 			},
-			NameSelector: &types.NameSelector{
-				MatchNames: []string{"d8-control-plane-manager"},
+			LabelSelector: &v1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "d8-control-plane-manager",
+				},
 			},
 			FilterFunc: lockQueueFilterDS,
 		},
@@ -83,9 +84,15 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleLockMainQueue)
 
 type controlPlaneManagerPod struct {
+	AppLabel   string
 	NodeName   string
 	Generation int64
 	IsReady    bool
+}
+
+type daemonSetInfo struct {
+	Name       string
+	Generation int64
 }
 
 func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -111,6 +118,7 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 	}
 
 	cpod := controlPlaneManagerPod{
+		AppLabel:   pod.Labels["app"],
 		Generation: podGeneration,
 		NodeName:   pod.Spec.NodeName,
 		IsReady:    isReady,
@@ -118,6 +126,7 @@ func lockQueueFilterPod(unstructured *unstructured.Unstructured) (go_hook.Filter
 
 	return cpod, nil
 }
+
 func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var ds appsv1.DaemonSet
 
@@ -126,7 +135,12 @@ func lockQueueFilterDS(unstructured *unstructured.Unstructured) (go_hook.FilterR
 		return nil, err
 	}
 
-	return ds.GetGeneration(), nil
+	appLabel := ds.Spec.Selector.MatchLabels["app"]
+
+	return daemonSetInfo{
+		Name:       appLabel,
+		Generation: ds.GetGeneration(),
+	}, nil
 }
 
 func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
@@ -136,7 +150,7 @@ func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 	}
 
 	// Lock deckhouse main queue while the control-plane is updating.
-	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[int64](input.Snapshots, "cpm_ds")
+	dsSnaps, err := sdkobjectpatch.UnmarshalToStruct[daemonSetInfo](input.Snapshots, "cpm_ds")
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal 'cpm_ds' snapshot: %w", err)
 	}
@@ -144,37 +158,53 @@ func handleLockMainQueue(_ context.Context, input *go_hook.HookInput) error {
 		return fmt.Errorf("lock the main queue: no control-plane-manager DaemonSet found")
 	}
 
-	dsGeneration := dsSnaps[0]
+	// Map: app label -> DaemonSet Generation
+	dsGenerations := make(map[string]int64)
+	for _, ds := range dsSnaps {
+		dsGenerations[ds.Name] = ds.Generation
+	}
 
-	podsSnaps := input.Snapshots.Get("cpm_pods")
+	podsSnaps, err := sdkobjectpatch.UnmarshalToStruct[controlPlaneManagerPod](input.Snapshots, "cpm_pods")
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal 'cpm_pods' snapshot: %w", err)
+	}
 	if len(podsSnaps) == 0 {
 		return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
 	}
 
-	expectedReadyPodsCount := 0
-	readyCount := 0
-	for pod, err := range sdkobjectpatch.SnapshotIter[controlPlaneManagerPod](podsSnaps) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'cpm_pods' snapshots: %v", err)
-		}
-
+	// Group pods by app label
+	podsByApp := make(map[string][]controlPlaneManagerPod)
+	for _, pod := range podsSnaps {
 		if pod.NodeName == "" {
 			continue
 		}
-
-		if pod.Generation < dsGeneration {
-			return fmt.Errorf("lock the main queue: waiting for control-plane-manager Pods being rolled out")
-		}
-
-		expectedReadyPodsCount++
-
-		if pod.IsReady {
-			readyCount++
-		}
+		podsByApp[pod.AppLabel] = append(podsByApp[pod.AppLabel], pod)
 	}
 
-	if readyCount != expectedReadyPodsCount {
-		return fmt.Errorf("lock the main queue: waiting for all control-plane-manager Pods to become Ready")
+	// Check each DaemonSet and his pods
+	for appLabel, dsGeneration := range dsGenerations {
+		pods, exists := podsByApp[appLabel]
+		if !exists || len(pods) == 0 {
+			return fmt.Errorf("lock the main queue: waiting for %s Pods being rolled out", appLabel)
+		}
+
+		expectedReadyPodsCount := 0
+		readyCount := 0
+		for _, pod := range pods {
+			if pod.Generation < dsGeneration {
+				return fmt.Errorf("lock the main queue: waiting for %s Pods being rolled out", appLabel)
+			}
+
+			expectedReadyPodsCount++
+
+			if pod.IsReady {
+				readyCount++
+			}
+		}
+
+		if readyCount != expectedReadyPodsCount {
+			return fmt.Errorf("lock the main queue: waiting for all %s Pods to become Ready", appLabel)
+		}
 	}
 
 	return nil

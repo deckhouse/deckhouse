@@ -16,15 +16,14 @@
 package v1alpha1
 
 import (
-	"context"
-	"time"
+	context "context"
 
-	v1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouseiov1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	scheme "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/client/clientset/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
-	rest "k8s.io/client-go/rest"
+	gentype "k8s.io/client-go/gentype"
 )
 
 // ModuleSettingsDefinitionsGetter has a method to return a ModuleSettingsDefinitionInterface.
@@ -35,131 +34,36 @@ type ModuleSettingsDefinitionsGetter interface {
 
 // ModuleSettingsDefinitionInterface has methods to work with ModuleSettingsDefinition resources.
 type ModuleSettingsDefinitionInterface interface {
-	Create(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.CreateOptions) (*v1alpha1.ModuleSettingsDefinition, error)
-	Update(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.UpdateOptions) (*v1alpha1.ModuleSettingsDefinition, error)
+	Create(ctx context.Context, moduleSettingsDefinition *deckhouseiov1alpha1.ModuleSettingsDefinition, opts v1.CreateOptions) (*deckhouseiov1alpha1.ModuleSettingsDefinition, error)
+	Update(ctx context.Context, moduleSettingsDefinition *deckhouseiov1alpha1.ModuleSettingsDefinition, opts v1.UpdateOptions) (*deckhouseiov1alpha1.ModuleSettingsDefinition, error)
 	Delete(ctx context.Context, name string, opts v1.DeleteOptions) error
 	DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error
-	Get(ctx context.Context, name string, opts v1.GetOptions) (*v1alpha1.ModuleSettingsDefinition, error)
-	List(ctx context.Context, opts v1.ListOptions) (*v1alpha1.ModuleSettingsDefinitionList, error)
+	Get(ctx context.Context, name string, opts v1.GetOptions) (*deckhouseiov1alpha1.ModuleSettingsDefinition, error)
+	List(ctx context.Context, opts v1.ListOptions) (*deckhouseiov1alpha1.ModuleSettingsDefinitionList, error)
 	Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error)
-	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleSettingsDefinition, err error)
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *deckhouseiov1alpha1.ModuleSettingsDefinition, err error)
 	ModuleSettingsDefinitionExpansion
 }
 
 // moduleSettingsDefinitions implements ModuleSettingsDefinitionInterface
 type moduleSettingsDefinitions struct {
-	client rest.Interface
+	*gentype.ClientWithList[*deckhouseiov1alpha1.ModuleSettingsDefinition, *deckhouseiov1alpha1.ModuleSettingsDefinitionList]
 }
 
 // newModuleSettingsDefinitions returns a ModuleSettingsDefinitions
 func newModuleSettingsDefinitions(c *DeckhouseV1alpha1Client) *moduleSettingsDefinitions {
 	return &moduleSettingsDefinitions{
-		client: c.RESTClient(),
+		gentype.NewClientWithList[*deckhouseiov1alpha1.ModuleSettingsDefinition, *deckhouseiov1alpha1.ModuleSettingsDefinitionList](
+			"modulesettingsdefinitions",
+			c.RESTClient(),
+			scheme.ParameterCodec,
+			"",
+			func() *deckhouseiov1alpha1.ModuleSettingsDefinition {
+				return &deckhouseiov1alpha1.ModuleSettingsDefinition{}
+			},
+			func() *deckhouseiov1alpha1.ModuleSettingsDefinitionList {
+				return &deckhouseiov1alpha1.ModuleSettingsDefinitionList{}
+			},
+		),
 	}
-}
-
-// Get takes name of the moduleSettingsDefinition, and returns the corresponding moduleSettingsDefinition object, and an error if there is any.
-func (c *moduleSettingsDefinitions) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	result = &v1alpha1.ModuleSettingsDefinition{}
-	err = c.client.Get().
-		Resource("modulesettingsdefinitions").
-		Name(name).
-		VersionedParams(&options, scheme.ParameterCodec).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// List takes label and field selectors, and returns the list of ModuleSettingsDefinitions that match those selectors.
-func (c *moduleSettingsDefinitions) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ModuleSettingsDefinitionList, err error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	result = &v1alpha1.ModuleSettingsDefinitionList{}
-	err = c.client.Get().
-		Resource("modulesettingsdefinitions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Watch returns a watch.Interface that watches the requested moduleSettingsDefinitions.
-func (c *moduleSettingsDefinitions) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
-	var timeout time.Duration
-	if opts.TimeoutSeconds != nil {
-		timeout = time.Duration(*opts.TimeoutSeconds) * time.Second
-	}
-	opts.Watch = true
-	return c.client.Get().
-		Resource("modulesettingsdefinitions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Watch(ctx)
-}
-
-// Create takes the representation of a moduleSettingsDefinition and creates it.  Returns the server's representation of the moduleSettingsDefinition, and an error, if there is any.
-func (c *moduleSettingsDefinitions) Create(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.CreateOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	result = &v1alpha1.ModuleSettingsDefinition{}
-	err = c.client.Post().
-		Resource("modulesettingsdefinitions").
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleSettingsDefinition).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Update takes the representation of a moduleSettingsDefinition and updates it. Returns the server's representation of the moduleSettingsDefinition, and an error, if there is any.
-func (c *moduleSettingsDefinitions) Update(ctx context.Context, moduleSettingsDefinition *v1alpha1.ModuleSettingsDefinition, opts v1.UpdateOptions) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	result = &v1alpha1.ModuleSettingsDefinition{}
-	err = c.client.Put().
-		Resource("modulesettingsdefinitions").
-		Name(moduleSettingsDefinition.Name).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(moduleSettingsDefinition).
-		Do(ctx).
-		Into(result)
-	return
-}
-
-// Delete takes name of the moduleSettingsDefinition and deletes it. Returns an error if one occurs.
-func (c *moduleSettingsDefinitions) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
-	return c.client.Delete().
-		Resource("modulesettingsdefinitions").
-		Name(name).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// DeleteCollection deletes a collection of objects.
-func (c *moduleSettingsDefinitions) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	var timeout time.Duration
-	if listOpts.TimeoutSeconds != nil {
-		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
-	}
-	return c.client.Delete().
-		Resource("modulesettingsdefinitions").
-		VersionedParams(&listOpts, scheme.ParameterCodec).
-		Timeout(timeout).
-		Body(&opts).
-		Do(ctx).
-		Error()
-}
-
-// Patch applies the patch and returns the patched moduleSettingsDefinition.
-func (c *moduleSettingsDefinitions) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ModuleSettingsDefinition, err error) {
-	result = &v1alpha1.ModuleSettingsDefinition{}
-	err = c.client.Patch(pt).
-		Resource("modulesettingsdefinitions").
-		Name(name).
-		SubResource(subresources...).
-		VersionedParams(&opts, scheme.ParameterCodec).
-		Body(data).
-		Do(ctx).
-		Into(result)
-	return
 }

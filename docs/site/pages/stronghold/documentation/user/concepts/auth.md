@@ -7,105 +7,99 @@ description: >-
   authenticated.
 ---
 
-Authentication in Stronghold is the process by which user or machine supplied
-information is verified against an internal or external system. Stronghold supports
-multiple auth methods including GitHub,
-LDAP, AppRole, and more. Each auth method has a specific use case.
+Authentication in Stronghold is the process by which user or machine supplied information is verified against an internal or external system.
+Stronghold supports multiple auth methods including Userpass, LDAP, AppRole, and more.
+Each auth method has a specific use case.
 
-Before a client can interact with Stronghold, it must _authenticate_ against an
-auth method. Upon authentication, a token is generated. This token is
-conceptually similar to a session ID on a website. The token may have attached
-policy, which is mapped at authentication time. This process is described in
-detail in the [policies concepts](policy.html) documentation.
+Before interacting with Stronghold, each client must _authenticate_ using one of the supported authentication methods.
+Upon successful authentication, a token is generated, which is conceptually similar to a session ID on a website.
+The token may have attached policy, which is mapped at the authentication time.
+For details on this process, refer to [Policies](policy.html).
 
-## Auth methods
+## Authentication methods
 
-Stronghold supports a number of auth methods. Some backends are targeted
-toward users while others are targeted toward machines. Most authentication
-backends must be enabled before use. To enable an auth method:
+Stronghold supports a number of authentication methods.
+Some backends are targeted toward users while others are targeted toward machines.
+Most authentication backends must be enabled before use.
 
-```shell-session
+To enable an authentication method, run the following command:
+
+```shell
 d8 stronghold write sys/auth/my-auth type=userpass
 ```
 
-This enables the "userpass" auth method at the path "my-auth". This
-authentication will be accessible at the path "my-auth". Often you will see
-authentications at the same path as their name, but this is not a requirement.
+This enables the `userpass` authentication method at the `my-auth` path.
+This authentication will be accessible at the `my-auth` path.
+Often you will see authentications at the same path as their name, but this is not a requirement.
 
 To learn more about this authentication, use the built-in `path-help` command:
 
-```shell-session
-$ d8 stronghold path-help auth/my-auth
-# ...
+```shell
+d8 stronghold path-help auth/my-auth
 ```
 
-Stronghold supports multiple auth methods simultaneously, and you can even
-mount the same type of auth method at different paths. Only one
-authentication is required to gain access to Stronghold, and it is not currently
-possible to force a user through multiple auth methods to gain
-access, although some backends do support MFA.
+Stronghold supports multiple authentication methods simultaneously,
+and you can even mount the same type of authentication method at different paths.
+Only one authentication is required to gain access to Stronghold,
+and it is not currently possible to force a user through multiple auth methods to gain access,
+although some backends do support the multifactor authentication (MFA).
 
 ## Tokens
 
-There is an [entire page dedicated to tokens](tokens.html),
-but it is important to understand that authentication works by verifying
-your identity and then generating a token to associate with that identity.
+Authentication works by verifying your identity and then generating a token to associate with that identity.
 
-For example, even though you may authenticate using something like GitHub,
-Stronghold generates a unique access token for you to use for future requests.
-The CLI automatically attaches this token to requests, but if you're using
-the API you'll have to do this manually.
+For example, even though you may authenticate using DEX, Stronghold generates a unique access token for you to use for future requests.
+The CLI automatically attaches this token to requests, but if you're using the API you'll have to do this manually.
 
-This token given for authentication with any backend can also be used
-with the full set of token commands, such as creating new sub-tokens,
-revoking tokens, and renewing tokens. This is all covered on the
-[token concepts page](tokens.html).
+This token given for authentication with any backend can also be used with the full set of token commands,
+such as creating new sub-tokens, revoking tokens, and renewing tokens.
+For details, refer to [Tokens](tokens.html).
 
-## Authenticating
+## Authentication
 
 ### Via the CLI
 
-To authenticate with the CLI, `d8 stronghold login` is used. This supports many
-of the built-in auth methods. For example, with GitHub:
+To authenticate with the CLI, `d8 stronghold login` is used.
+This supports many of the built-in authentication methods.
 
-```shell-session
-$ d8 stronghold login -method=github token=<token>
-...
+For example, to authenticate with OIDC, run the following command:
+
+```shell
+d8 stronghold login -method=oidc
 ```
 
-After authenticating, you will be logged in. The CLI command will also
-output your raw token. This token is used for revocation and renewal.
-As the user logging in, the primary use case of the token is renewal,
-covered below in the "Auth Leases" section.
+After authenticating, you will be logged in.
+The CLI command will also output your raw token.
+This token is used for revocation and renewal.
+As the user logging in, the primary use case of the token is renewal, which is covered below in [Authentication leases](#authentication-leases).
 
 To determine what variables are needed for an auth method,
-supply the `-method` flag without any additional arguments and help
-will be shown.
+supply the `-method` flag without any additional arguments and help will be shown.
 
-If you're using a method that isn't supported via the CLI, then the API
-must be used.
+If you're using a method that isn't supported via the CLI, then the API must be used.
 
 ### Via the API
 
-API authentication is generally used for machine authentication. Each
-auth method implements its own login endpoint. Use the `d8 stronghold path-help`
-mechanism to find the proper endpoint.
+API authentication is generally used for machine authentication.
+Each authentication method implements its own login endpoint.
 
-For example, the GitHub login endpoint is located at `auth/github/login`.
-And to determine the arguments needed, `d8 stronghold path-help auth/github/login` can
-be used.
+To find the proper endpoint, use the following command:
 
-## Auth leases
+```shell
+d8 stronghold path-help
+```
 
-Just like secrets, identities have
-[leases](lease.html) associated with them. This means that
-you must reauthenticate after the given lease period to continue accessing
-Stronghold.
+## Authentication leases
 
-To set the lease associated with an identity, reference the help for
-the specific auth method in use. It is specific to each backend
-how leasing is implemented.
+Just like secrets, identities have [leases](lease.html) associated with them.
+This means that you must reauthenticate after the given lease period to continue accessing Stronghold.
 
-And just like secrets, identities can be renewed without having to
-completely reauthenticate. Just use `d8 stronghold token renew <token>` with the
-leased token associated with your identity to renew it.
+To set the lease associated with an identity, reference the documentation for the specific auth method in use.
+It is specific to each backend how leasing is implemented.
+
+And just like secrets, identities can be renewed without having to completely reauthenticate.
+To renew it, use the following command, specifying the token associated with your identity:
+
+```shell
+d8 stronghold token renew <token>
+```

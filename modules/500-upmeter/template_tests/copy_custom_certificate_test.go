@@ -42,7 +42,7 @@ clusterConfiguration:
   clusterType: "Cloud"
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.29"
+  kubernetesVersion: "1.30"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -103,13 +103,13 @@ var _ = Describe("Module :: upmeter :: helm template :: custom-certificate", fun
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			createdSecret := f.KubernetesResource("Secret", "d8-upmeter", "ingress-tls-smoke-mini-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "ingress-tls-status-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "ingress-tls-webui-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
-			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"CRTCRTCRT","tls.key":"KEYKEYKEY"}`))
+			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
 			createdSecret = f.KubernetesResource("Secret", "d8-upmeter", "basic-auth-status")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			ensureBasicAuthPassword(createdSecret, "testP4ssw0rd")

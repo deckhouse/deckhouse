@@ -1,0 +1,27 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  creationTimestamp: null
+  name: deckhouse-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    repo: registry.example.com/test

@@ -40,6 +40,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -87,6 +88,8 @@ type Loader struct {
 	// global module dir
 	globalDir string
 
+	installer *installer.Installer
+
 	registries map[string]*addonmodules.Registry
 
 	dependencyContainer dependency.Container
@@ -94,16 +97,17 @@ type Loader struct {
 
 	downloadedModulesDir string
 	symlinksDir          string
-	clusterUUID          string
+	conversionsStore     *conversion.ConversionsStore
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, logger *log.Logger) *Loader {
+func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts *extenders.ExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
 		logger:               logger,
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
+		installer:            installer.New(dc, logger),
 		symlinksDir:          filepath.Join(d8env.GetDownloadedModulesDir(), "modules"),
 		modules:              make(map[string]*moduletypes.Module),
 		registries:           make(map[string]*addonmodules.Registry),
@@ -111,28 +115,29 @@ func New(client client.Client, version, modulesDir, globalDir string, dc depende
 		version:              version,
 		dependencyContainer:  dc,
 		exts:                 exts,
+		conversionsStore:     conversionsStore,
 	}
 }
 
 // Sync syncs fs and cluster, restores or deletes modules
 func (l *Loader) Sync(ctx context.Context) error {
-	l.clusterUUID = d8utils.GetClusterUUID(ctx, l.client)
+	l.installer.SetClusterUUID(d8utils.GetClusterUUID(ctx, l.client))
 
 	l.logger.Debug("init module loader")
 
-	l.logger.Debug("restore absent modules from overrides")
-	if err := l.restoreAbsentModulesFromOverrides(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from overrides: %w", err)
+	l.logger.Debug("delete orphan modules")
+	if err := l.deleteOrphanModules(ctx); err != nil {
+		return fmt.Errorf("delete orphan modules: %w", err)
 	}
 
-	l.logger.Debug("restore absent modules from releases")
-	if err := l.restoreAbsentModulesFromReleases(ctx); err != nil {
-		return fmt.Errorf("restore absent modules from releases: %w", err)
+	l.logger.Debug("restore modules by overrides")
+	if err := l.restoreModulesByOverrides(ctx); err != nil {
+		return fmt.Errorf("restore modules by overrides: %w", err)
 	}
 
-	l.logger.Debug("delete modules with absent release")
-	if err := l.deleteModulesWithAbsentRelease(ctx); err != nil {
-		return fmt.Errorf("delete modules with absent releases: %w", err)
+	l.logger.Debug("restore modules by releases")
+	if err := l.restoreModulesByReleases(ctx); err != nil {
+		return fmt.Errorf("restore modules by releases: %w", err)
 	}
 
 	go l.runDeleteStaleModuleReleasesLoop(ctx)
@@ -140,6 +145,11 @@ func (l *Loader) Sync(ctx context.Context) error {
 	l.logger.Debug("module loader initialized")
 
 	return nil
+}
+
+// Installer returns installer instance
+func (l *Loader) Installer() *installer.Installer {
+	return l.installer
 }
 
 // LoadModules implements the module loader interface from addon-operator, used for registering modules in addon-operator
@@ -214,7 +224,7 @@ func (l *Loader) processModuleDefinition(ctx context.Context, def *moduletypes.D
 	var conversions []v1alpha1.ModuleSettingsConversion
 	if _, err = os.Stat(conversionsDir); err == nil {
 		l.logger.Debug("conversions for the module found", slog.String("name", def.Name))
-		if err = conversion.Store().Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
+		if err = l.conversionsStore.Add(def.Name, filepath.Join(def.Path, "openapi", "conversions")); err != nil {
 			return nil, fmt.Errorf("load conversions for the %q module: %w", def.Name, err)
 		}
 
@@ -289,7 +299,7 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	// load the 'global' module conversions
 	if _, err := os.Stat(filepath.Join(l.globalDir, "openapi", "conversions")); err == nil {
 		l.logger.Debug("conversions for the 'global' module found")
-		if err = conversion.Store().Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
+		if err = l.conversionsStore.Add("global", filepath.Join(l.globalDir, "openapi", "conversions")); err != nil {
 			return fmt.Errorf("load conversions for the 'global' module: %w", err)
 		}
 	} else if !os.IsNotExist(err) {
@@ -437,7 +447,7 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
 	module := new(v1alpha1.Module)
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
 				if !apierrors.IsNotFound(err) {
@@ -509,6 +519,10 @@ func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, 
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
@@ -525,10 +539,16 @@ func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawCon
 	if settings.UID == "" {
 		settings.Name = module
 		settings.Labels = map[string]string{"heritage": "deckhouse"}
-		return l.client.Create(ctx, settings)
+		if err := l.client.Create(ctx, settings); err != nil {
+			return fmt.Errorf("create: %w", err)
+		}
+		return nil
 	}
 
-	return l.client.Update(ctx, settings)
+	if err := l.client.Update(ctx, settings); err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+	return nil
 }
 
 // parseModulesDir returns modules definitions from the target dir
@@ -555,7 +575,7 @@ func (l *Loader) parseModulesDir(modulesDir string) ([]*moduletypes.Definition, 
 
 		definition, err := l.moduleDefinitionByDir(name, absPath)
 		if err != nil {
-			return nil, fmt.Errorf("parse module definition by dir: %w", err)
+			return nil, fmt.Errorf("parse module definition '%s' from dir '%s': %w", name, absPath, err)
 		}
 
 		definitions = append(definitions, definition)
@@ -611,12 +631,12 @@ func (l *Loader) resolveDirEntry(dirPath string, entry os.DirEntry) (string, str
 func resolveSymlinkToDir(dirPath string, entry os.DirEntry) (string, error) {
 	info, err := entry.Info()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("info: %w", err)
 	}
 
 	targetDirPath, isTargetDir, err := addonutils.SymlinkInfo(filepath.Join(dirPath, info.Name()), info)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("symlink info: %w", err)
 	}
 
 	if isTargetDir {
@@ -652,13 +672,13 @@ func (l *Loader) moduleDefinitionByFile(absPath string) (*moduletypes.Definition
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("open: %w", err)
 	}
 	defer f.Close()
 
 	def := new(moduletypes.Definition)
 	if err = yaml.NewDecoder(f).Decode(def); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode: %w", err)
 	}
 
 	if def.Name == "" {
@@ -743,7 +763,7 @@ func (l *Loader) loadConversions(conversionsDir string) ([]v1alpha1.ModuleSettin
 func (l *Loader) readConversionFile(filePath string) (*v1alpha1.ModuleSettingsConversion, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("read file: %w", err)
 	}
 
 	// Parse YAML directly into a temporary struct

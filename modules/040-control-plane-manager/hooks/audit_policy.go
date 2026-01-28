@@ -133,6 +133,11 @@ func handleAuditPolicy(_ context.Context, input *go_hook.HookInput) error {
 			return err
 		}
 	}
+	// Unauthenticated requests are taken by directing all Metadata level requests with `UserGroups` with `system:authenticated` to None and then taking all remaining Metadata level logs
+	// There should always be a last rule
+	if input.Values.Get("controlPlaneManager.apiserver.basicAuditPolicyEnabled").Bool() {
+		appendUnauthenticatedRules(&policy)
+	}
 
 	if len(policy.Rules) == 0 {
 		input.Values.Remove("controlPlaneManager.internal.auditPolicy")
@@ -480,6 +485,24 @@ func appendVirtualizationPolicyRules(policy *audit.Policy) {
 			Level:     audit.LevelMetadata,
 			Verbs:     []string{"create", "update", "patch", "delete"},
 			Resources: []audit.GroupResources{{Group: "deckhouse.io", Resources: []string{"moduleconfigs"}}},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+}
+
+func appendUnauthenticatedRules(policy *audit.Policy) {
+	// A rule dropping all logs from authenticated users
+	{
+		rule := audit.PolicyRule{
+			Level:      audit.LevelNone,
+			UserGroups: []string{"system:authenticated"},
+		}
+		policy.Rules = append(policy.Rules, rule)
+	}
+	//  A rule collecting all remaining logs (only from unauthenticated users)
+	{
+		rule := audit.PolicyRule{
+			Level: audit.LevelMetadata,
 		}
 		policy.Rules = append(policy.Rules, rule)
 	}

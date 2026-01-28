@@ -66,7 +66,7 @@ func (svc *Service) Upload(body io.ReadCloser, moduleName string, version string
 			for _, channel := range channels {
 				path, ok := svc.getLocalPath(moduleName, channel, header.Name)
 				if !ok {
-					svc.logger.Info("skipping tree", slog.String("headerName", header.Name), slog.String("moduleName", moduleName))
+					svc.logger.Info("skipping tree", slog.String("header_name", header.Name), slog.String("module_name", moduleName))
 					continue
 				}
 
@@ -144,6 +144,10 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 	}
 
 	if fileName, ok := strings.CutPrefix(fileName, "docs"); ok {
+		// Skip internal documentation directories that should not be published
+		if hasBlockedPrefix(fileName) {
+			return "", false
+		}
 		return filepath.Join(svc.baseDir, contentDir, moduleName, channel, fileName), true
 	}
 
@@ -155,7 +159,35 @@ func (svc *Service) getLocalPath(moduleName, channel, fileName string) (string, 
 		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
 	}
 
+	if fileName == "module.yaml" || fileName == "oss.yaml" {
+		return filepath.Join(svc.baseDir, modulesDir, moduleName, channel, fileName), true
+	}
+
 	return "", false
+}
+
+func hasBlockedPrefix(path string) bool {
+	blockedDocPathPrefixes := []string{
+		"/internal",
+		"/internals",
+		"/development",
+		"/dev",
+	}
+	for _, prefix := range blockedDocPathPrefixes {
+		if !strings.HasPrefix(path, prefix) {
+			continue
+		}
+
+		if len(path) == len(prefix) {
+			return true
+		}
+
+		if path[len(prefix)] == '/' {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (svc *Service) cleanModulesFiles(moduleName string, channels []string) error {

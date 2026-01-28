@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/admin/platform-management/ne
 lang: ru
 ---
 
-Для настройки режима работы BPF Load Balancer (bpfLB) в Deckhouse Virtualization Platform можно использовать модуль [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/).
+Для настройки режима работы BPF Load Balancer (bpfLB) в Deckhouse Virtualization Platform можно использовать модуль [`cni-cilium`](/modules/cni-cilium/).
 
 <!-- перенесено с некоторыми доработками из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/cni-cilium/#%D0%BE%D0%B1%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D0%BA%D0%B0-%D0%B2%D0%BD%D0%B5%D1%88%D0%BD%D0%B5%D0%B3%D0%BE-%D1%82%D1%80%D0%B0%D1%84%D0%B8%D0%BA%D0%B0-%D0%B2-%D1%80%D0%B0%D0%B7%D0%BD%D1%8B%D1%85-%D1%80%D0%B5%D0%B6%D0%B8%D0%BC%D0%B0%D1%85-%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%8B-bpflb-%D0%B7%D0%B0%D0%BC%D0%B5%D0%BD%D0%B0-kube-proxy-%D0%BE%D1%82-cilium -->
 
@@ -12,7 +12,7 @@ lang: ru
 
 Для оптимизации трафика используется механизм `DSR`, в котором входящие пакеты проходят через балансировщик, а исходящие идут напрямую с терминирующих серверов. Так как обычно ответы имеют много больший размер чем запросы, то такой подход позволяет значительно увеличить общую пропускную способность схемы.
 
-В модуле возможен выбор режима работы с помощью параметра [`bpfLBMode`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html#parameters-bpflbmode), влияющего на поведение сервисов с типом `NodePort` и `LoadBalancer`:
+В модуле возможен выбор режима работы с помощью параметра [`bpfLBMode`](/modules/cni-cilium/configuration.html#parameters-bpflbmode), влияющего на поведение сервисов с типом `NodePort` и `LoadBalancer`:
 
 * `SNAT` (Source Network Address Translation) — один из подвидов NAT, при котором для каждого исходящего пакета происходит трансляция IP-адреса источника в IP-адрес шлюза из целевой подсети, а входящие пакеты, проходящие через шлюз, транслируются обратно на основе таблицы трансляций. В этом режиме `bpfLB` полностью повторяет логику работы `kube-proxy`:
   * если для объекта Service указано `externalTrafficPolicy: Local`, то трафик будет передаваться и балансироваться только в те целевые поды, которые запущены на том же узле, на который этот трафик пришел. Если целевой под не запущен на этом узле, то трафик будет отброшен.

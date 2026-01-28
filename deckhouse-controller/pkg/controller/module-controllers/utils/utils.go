@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package utils //nolint:revive
 
 import (
 	"context"
@@ -20,9 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -166,10 +163,10 @@ func ParseDeckhouseRegistrySecret(data map[string][]byte) (*DeckhouseRegistrySec
 
 // Update updates object with retryOnConflict to avoid conflict
 func Update[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			if updater(object) {
 				return cli.Update(ctx, object)
@@ -177,14 +174,18 @@ func Update[Object client.Object](ctx context.Context, cli client.Client, object
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 // UpdateStatus updates object status with retryOnConflict to avoid conflict
 func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, object Object, updater func(obj Object) bool) error {
-	return retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			if err := cli.Get(ctx, client.ObjectKey{Name: object.GetName()}, object); err != nil {
-				return err
+				return fmt.Errorf("get: %w", err)
 			}
 			if updater(object) {
 				return cli.Status().Update(ctx, object)
@@ -192,10 +193,14 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 			return nil
 		})
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
-// UpdatePolicy returns policy for the module, if no policy, embeddedPolicy is returned
-func UpdatePolicy(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
+// GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
+func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
 	module := new(v1alpha1.Module)
 	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -231,7 +236,7 @@ func ModulePullOverrideExists(ctx context.Context, cli client.Client, moduleName
 	mpo := new(v1alpha2.ModulePullOverride)
 	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, mpo); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return false, err
+			return false, fmt.Errorf("get: %w", err)
 		}
 		return false, nil
 	}
@@ -252,61 +257,6 @@ func GetClusterUUID(ctx context.Context, cli client.Client) string {
 
 	// generate a random UUID if the key is missing
 	return uuid.Must(uuid.NewV4()).String()
-}
-
-// GetModuleVersion gets version of the module by symlink(/downloaded/modules/{moduleName})
-func GetModuleVersion(moduleSymlink string) (string, error) {
-	downloadedModule, err := filepath.EvalSymlinks(moduleSymlink)
-	if err != nil {
-		return "", fmt.Errorf("evaluate the '%s' module symlink: %w", moduleSymlink, err)
-	}
-
-	return filepath.Base(downloadedModule), nil
-}
-
-// EnableModule deletes old symlinks and creates a new one
-func EnableModule(downloadedModulesDir, oldSymlinkPath, newSymlinkPath, modulePath string) error {
-	// delete the old module symlink with diff version if exists
-	if oldSymlinkPath != "" {
-		if _, err := os.Lstat(oldSymlinkPath); err == nil {
-			if err = os.Remove(oldSymlinkPath); err != nil {
-				return fmt.Errorf("delete the '%s' old symlink: %w", oldSymlinkPath, err)
-			}
-		}
-	}
-
-	// delete the new module symlink
-	if _, err := os.Lstat(newSymlinkPath); err == nil {
-		if err = os.Remove(newSymlinkPath); err != nil {
-			return fmt.Errorf("delete the '%s' new symlink: %w", newSymlinkPath, err)
-		}
-	}
-
-	// make absolute path for versioned module
-	moduleAbsPath := filepath.Join(downloadedModulesDir, strings.TrimPrefix(modulePath, "../"))
-	// check that module exists on a disk
-	if _, err := os.Stat(moduleAbsPath); os.IsNotExist(err) {
-		return fmt.Errorf("the '%s' module absolute path not found", moduleAbsPath)
-	}
-
-	return os.Symlink(modulePath, newSymlinkPath)
-}
-
-// GetModuleSymlink walks over the root dir to find a module symlink by regexp
-func GetModuleSymlink(rootPath, moduleName string) (string, error) {
-	var symlinkPath string
-
-	moduleRegexp := regexp.MustCompile(`^(([0-9]+)-)?(` + moduleName + `)$`)
-
-	err := filepath.WalkDir(rootPath, func(path string, d os.DirEntry, _ error) error {
-		if !moduleRegexp.MatchString(d.Name()) {
-			return nil
-		}
-		symlinkPath = path
-		return filepath.SkipDir
-	})
-
-	return symlinkPath, err
 }
 
 // EnsureModuleDocumentation creates or updates module documentation
@@ -346,7 +296,11 @@ func EnsureModuleDocumentation(
 		}
 	}
 
-	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum {
+	// Check if path needs to be migrated from old format (e.g., "/module/v1.0.0" or "/module/dev")
+	// to new format ("/modules/module")
+	needsPathUpdate := !strings.HasPrefix(md.Spec.Path, "/modules/")
+
+	if md.Spec.Version != moduleVersion || md.Spec.Checksum != moduleChecksum || needsPathUpdate {
 		// update module documentation
 		md.Spec.Path = modulePath
 		md.Spec.Version = moduleVersion

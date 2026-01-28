@@ -4,14 +4,14 @@ permalink: ru/admin/configuration/network/other/dns.html
 lang: ru
 ---
 
-Управление DNS в кластере Kubernetes реализуется с помощью модуля [`kube-dns`](../../../../modules/kube-dns/).
+Управление DNS в кластере Kubernetes реализуется с помощью модуля [`kube-dns`](/modules/kube-dns/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/kube-dns/ -->
 
 Модуль устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes.
 
 {% alert level="info" %}
-Модуль удаляет объекты Deployment, ConfigMap и RBAC для CoreDNS, установленные через утилиту `kubeadm`.
+Модуль удаляет объекты Deployment, ConfigMap и RBAC для CoreDNS, установленные через утилиту `kubeadm`. При развертывании собственного CoreDNS избегайте использования имен `coredns` или `system:coredns` для любых ресурсов (Deployment, Service, ConfigMap, ServiceAccount, ClusterRole, ClusterRoleBinding). Используйте альтернативные имена, например `infra-dns`, чтобы предотвратить их автоматическое удаление Deckhouse Kubernetes Platform.
 {% endalert %}
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/kube-dns/examples.html -->

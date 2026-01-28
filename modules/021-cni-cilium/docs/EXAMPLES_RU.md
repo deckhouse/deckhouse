@@ -4,7 +4,7 @@ title: "Модуль cni-cilium: примеры"
 
 ## Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE, CSE Lite (1.67), CSE Pro (1.67).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях: SE+, EE.{% endalert %}
 
 ### Принцип работы
 
@@ -24,6 +24,7 @@ title: "Модуль cni-cilium: примеры"
 ### Обслуживание узла
 
 Для проведения работ на узле, который в данный момент является активным egress-шлюзом, выполните следующие шаги:
+
 1. Снимите метку (label) с узла, чтобы исключить его из списка кандидатов для роли egress-шлюза. Egress-label — это метка, указанная в `spec.nodeSelector` вашего EgressGateway.
 
     ```bash
@@ -51,9 +52,9 @@ title: "Модуль cni-cilium: примеры"
 
 ### Сравнение с CiliumEgressGatewayPolicy
 
-`CiliumEgressGatewayPolicy` подразумевает настройку только одного узла в качестве egress-шлюза. При выходе его из строя не предусмотрено failover-механизмов и сетевая связь будет нарушена.
+CiliumEgressGatewayPolicy подразумевает настройку только одного узла в качестве egress-шлюза. При выходе его из строя не предусмотрено failover-механизмов и сетевая связь будет нарушена.
 
-### Примеры настроек
+### Примеры настроек Egress Gateway
 
 #### EgressGateway в режиме PrimaryIPFromEgressGatewayNodeInterface (базовый режим)
 
@@ -113,4 +114,70 @@ spec:
       matchLabels:
         app: backend
         io.kubernetes.pod.namespace: my-ns
+```
+
+## HubbleMonitoringConfig
+
+Кластерный ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) предназначен для настройки экспорта данных из Hubble, работающего внутри агентов Cilium.
+
+### Примеры настроек HubbleMonitoringConfig
+
+#### Включение расширенных метрик и экспорта flow logs (с фильтрами и маской полей)
+
+{% alert level="warning" %}
+Ресурс [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) **должен иметь имя** `hubble-monitoring-config`.
+{% endalert %}
+
+Пример включения метрик и экспорта:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: HubbleMonitoringConfig
+metadata:
+  name: hubble-monitoring-config
+spec:
+  extendedMetrics:
+    enabled: true
+    collectors:
+      - name: drop
+        # Добавить дополнительный контекст (лейблы) для выбранного коллектора.
+        contextOptions: "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+      - name: flow
+  flowLogs:
+    enabled: true
+    # Записывать в лог-файл /var/log/cilium/hubble/flow.log только указанные события.
+    allowFilterList:
+      - verdict:
+        - DROPPED
+        - ERROR
+    # Исключить из лог-файла события, соответствующие denyFilterList.
+    denyFilterList:
+      - source_pod:
+        - kube-system/
+      - destination_pod:
+        - kube-system/
+    # Сохранять в каждой записи только указанные поля.
+    fieldMaskList:
+      - time
+      - verdict
+    # Максимальный размер лог-файла (в МБ) перед ротацией.
+    fileMaxSizeMB: 30
+```
+
+### Сбор Hubble flow logs с помощью модуля log-shipper
+
+Для сбора flow logs используйте модуль [`log-shipper`](https://deckhouse.ru/modules/log-shipper/).
+
+Создайте ресурс ClusterLoggingConfig, который читает лог-файл с файловой системы узла:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: cilium-hubble-flow-logs
+spec:
+  type: File
+  file:
+    include:
+      - /var/log/cilium/hubble/flow.log
 ```

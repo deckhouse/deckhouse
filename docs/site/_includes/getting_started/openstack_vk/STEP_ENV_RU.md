@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/products/kubernetes-platform/documentation/v1/modules/cloud-provider-openstack/environment.html).
+Чтобы Deckhouse Kubernetes Platform смог управлять ресурсами в облаке {{ page.platform_name[page.lang] }}, необходимо создать сервисный аккаунт. Подробная инструкция по этому действию доступна в [документации](/modules/cloud-provider-openstack/environment.html).
 
 Краткая последовательность необходимых действий (выполняйте их на **персональном компьютере**):
 - Перейдите по [ссылке](https://mcs.mail.ru/app/project/keys/);

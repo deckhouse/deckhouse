@@ -26,8 +26,7 @@ import (
 
 const (
 	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
-
-	ModulePullOverrideFinalizer = "modules.deckhouse.io/mpo-finalizer"
+	ModulePullOverrideFinalizer            = "modules.deckhouse.io/mpo-finalizer"
 
 	ModulePullOverrideMessageReady          = "Ready"
 	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"
@@ -35,7 +34,6 @@ const (
 	ModulePullOverrideMessageModuleNotFound = "The module not found"
 	ModulePullOverrideMessageSourceNotFound = "The source not found"
 	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
-	ModulePullOverrideMessageNoDef          = "The module does not have a module definition"
 
 	ModulePullOverrideAnnotationRenew = "renew"
 )

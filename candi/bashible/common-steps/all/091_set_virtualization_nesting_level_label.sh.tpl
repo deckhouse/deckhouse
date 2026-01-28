@@ -13,5 +13,6 @@
 # limitations under the License.
 
 {{- if eq .runType "Normal" }}
+mkdir -p /var/lib/node_labels/
 echo "node.deckhouse.io/dvp-nesting-level=$(bb-dvp-nesting-level)" > /var/lib/node_labels/dvp-nesting-level
 {{- end  }}

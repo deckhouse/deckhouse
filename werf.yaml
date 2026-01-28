@@ -85,12 +85,9 @@ build:
 
 {{- $_ := set . "SVACE_ANALYZE_SSH_USER" (env "SVACE_ANALYZE_SSH_USER" "user") }}
 
-# goproxy  settings
+# goproxy settings
 {{- $_ := set . "GOPROXY" (env "GOPROXY" "https://proxy.golang.org,direct") }}
 
-# registry auth
-{{- $_ := set . "RegistryUser" (env "REGISTRY_USER" "test") }}
-{{- $_ := set . "RegistryPassword" (env "REGISTRY_PASSWORD" "test") }}
 ---
 # render ssh-static
 {{ include "ssh_static_artifact" (dict "Images" .Images "SOURCE_REPO" .SOURCE_REPO "DistroPackagesProxy" .DistroPackagesProxy) }}

@@ -75,7 +75,7 @@ func (p *StaticInstancePool) PickStaticInstance(
 		return nil, false, errors.Wrap(err, "failed to create instance scope")
 	}
 
-	instanceScope.MachineScope = machineScope
+	instanceScope.AttachMachineScope(machineScope)
 
 	err = instanceScope.LoadSSHCredentials(ctx, p.recorder)
 	if err != nil {

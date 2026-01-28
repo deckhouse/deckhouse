@@ -42,6 +42,8 @@ func DoAbsolutePath(p string, shouldBeDir bool) (string, error) {
 		return "", fmt.Errorf("Cannot get absolute path for %s: %w", p, err)
 	}
 
+	p = filepath.Clean(p)
+
 	stat, err := os.Stat(p)
 	if err != nil {
 		return "", fmt.Errorf("Cannot get stat for %s: %w", p, err)
@@ -52,4 +54,17 @@ func DoAbsolutePath(p string, shouldBeDir bool) (string, error) {
 	}
 
 	return p, nil
+}
+
+func IsExists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+
+	return false, err
 }

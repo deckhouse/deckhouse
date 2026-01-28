@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -65,6 +66,7 @@ const (
 func RegisterController(
 	runtimeManager manager.Manager,
 	mm moduleManager,
+	conversionsStore *conversion.ConversionsStore,
 	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
@@ -72,15 +74,16 @@ func RegisterController(
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:            new(sync.WaitGroup),
-		client:          runtimeManager.GetClient(),
-		logger:          logger,
-		handler:         handler,
-		moduleManager:   mm,
-		edition:         edition,
-		metricStorage:   ms,
-		configValidator: configtools.NewValidator(mm),
-		exts:            exts,
+		init:             new(sync.WaitGroup),
+		client:           runtimeManager.GetClient(),
+		logger:           logger,
+		handler:          handler,
+		conversionsStore: conversionsStore,
+		moduleManager:    mm,
+		edition:          edition,
+		metricStorage:    ms,
+		configValidator:  configtools.NewValidator(mm, conversionsStore),
+		exts:             exts,
 	}
 
 	r.init.Add(1)
@@ -99,7 +102,7 @@ func RegisterController(
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
 		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
@@ -116,19 +119,23 @@ func RegisterController(
 				return false
 			},
 		})).
-		Complete(configController)
+		Complete(configController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type reconciler struct {
-	init            *sync.WaitGroup
-	client          client.Client
-	edition         *d8edition.Edition
-	handler         *confighandler.Handler
-	moduleManager   moduleManager
-	metricStorage   metricsstorage.Storage
-	configValidator *configtools.Validator
-	exts            *extenders.ExtendersStack
-	logger          *log.Logger
+	init             *sync.WaitGroup
+	client           client.Client
+	conversionsStore *conversion.ConversionsStore
+	edition          *d8edition.Edition
+	handler          *confighandler.Handler
+	moduleManager    moduleManager
+	metricStorage    metricsstorage.Storage
+	configValidator  *configtools.Validator
+	exts             *extenders.ExtendersStack
+	logger           *log.Logger
 }
 
 type moduleManager interface {
@@ -154,7 +161,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		r.logger.Error("failed to get module config", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("get: %w", err)
 	}
 
 	// handle delete event
@@ -202,13 +209,14 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 		if err := r.client.Patch(ctx, moduleConfig, patch); err != nil {
 			r.logger.Error("failed to remove old finalizer", slog.String("name", moduleConfig.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("patch: %w", err)
 		}
 	}
 
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(moduleConfig.Name)
 	if moduleConfig.Name == moduleGlobal || basicModule != nil {
+		r.logger.Debug("send event to operator", slog.String("name", moduleConfig.Name), slog.Bool("enabled", moduleConfig.IsEnabled()))
 		r.handler.HandleEvent(moduleConfig, config.EventUpdate)
 	}
 
@@ -274,7 +282,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 					err := r.client.Delete(ctx, release)
 					if err != nil && !apierrors.IsNotFound(err) {
 						r.logger.Error("failed to delete pending release", slog.String("pending_release", release.Name), log.Err(err))
-						return ctrl.Result{}, err
+						return ctrl.Result{}, fmt.Errorf("delete: %w", err)
 					}
 				}
 			}
@@ -285,7 +293,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return ctrl.Result{}, err
 		}
 
-		err := utils.Update[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		err := utils.Update(ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 			if _, ok := moduleConfig.ObjectMeta.Annotations[v1alpha1.ModuleConfigAnnotationAllowDisable]; ok {
 				delete(moduleConfig.ObjectMeta.Annotations, v1alpha1.ModuleConfigAnnotationAllowDisable)
 				return true
@@ -295,6 +303,14 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		if err != nil {
 			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
 			return ctrl.Result{}, err
+		}
+
+		// Reset deprecated and experimental metrics when module is disabled
+		if module.IsDeprecated() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
+		}
+		if module.IsExperimental() {
+			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{"module": moduleConfig.GetName()})
 		}
 
 		// skip disabled modules
@@ -467,7 +483,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 }
 
 func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
-	r.logger.Debug("set new source to the module", slog.String("moduleSource", source), slog.String("module", module.Name))
+	r.logger.Debug("set new source to the module", slog.String("module_source", source), slog.String("module", module.Name))
 	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		module.Properties.Source = source
 		module.Properties.UpdatePolicy = updatePolicy

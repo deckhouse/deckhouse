@@ -9,7 +9,7 @@ lang: ru
 Далее будет рассмотрено добавление двух worker-узлов. Более подробную информацию о добавлении статических узлов в кластер можно найти [в документации](/products/virtualization-platform/documentation/admin/platform-management/platform-scaling/node/bare-metal-node.html).
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
 ## Подготовка узлов
@@ -34,7 +34,7 @@ lang: ru
 
 ## Добавление подготовленных узлов
 
-Создайте ресурс [NodeGroup](/products/virtualization-platform/reference/cr/nodegroup.html) `worker`. Для этого выполните следующую команду:
+Создайте ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup) `worker`. Для этого выполните следующую команду:
 
 ```shell
 d8 k create -f - << EOF
@@ -58,7 +58,7 @@ EOF
 ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 ```
 
-Создайте в кластере ресурс [SSHCredentials](/products/virtualization-platform/reference/cr/sshcredentials.html). Для этого выполните на **master-узле** следующую команду:
+Создайте в кластере ресурс [SSHCredentials](/modules/node-manager/cr.html#sshcredentials). Для этого выполните на **master-узле** следующую команду:
 
 ```yaml
 sudo -i d8 k create -f - <<EOF
@@ -98,7 +98,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 sudo -i pdpl-user -i 63 caps
 ```
 
-Создайте ресурсы [StaticInstance](/products/virtualization-platform/reference/cr/staticinstance.html). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
+Создайте ресурсы [StaticInstance](/modules/node-manager/cr.html#staticinstance). Выполните следующие команды с указанием IP-адреса и уникального имени каждого узла:
 
 ```yaml
 export NODE_IP=<NODE-IP-ADDRESS> # Укажите IP-адрес узла, который необходимо подключить к кластеру.

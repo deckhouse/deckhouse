@@ -28,23 +28,130 @@ spec:
             https://kubernetes.io/docs/concepts/security/pod-security-standards/
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.security_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.security_policies
 
-        violation[{"msg": msg, "details": {}}] {
-            c := input_containers[_]
-            c.securityContext.privileged
-            msg := sprintf("Privileged container is not allowed: %v, securityContext: %v", [c.name, c.securityContext])
-        }
+              violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
+                c := input_containers[_]
+                not allowed_by_any(c)
+                allowed_by_policy := "privileged: false"
+                actual_value := get_actual_privileged(c)
+                exception_allowed := get_exception_allowed(c)
+                msg := build_message(c.name, allowed_by_policy, actual_value, exception_allowed)
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.containers[_]
-        }
+              get_actual_privileged(c) := out if {
+                has_field(c, "securityContext")
+                has_field(c.securityContext, "privileged")
+                out := sprintf("privileged: %v", [c.securityContext.privileged])
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.initContainers[_]
-        }
+              get_actual_privileged(c) := "privileged: not set (defaults to false)" if {
+                not has_field(c, "securityContext")
+              }
 
-        input_containers[c] {
-            c := input.review.object.spec.ephemeralContainers[_]
-        }
+              get_actual_privileged(c) := "privileged: not set (defaults to false)" if {
+                has_field(c, "securityContext")
+                not has_field(c.securityContext, "privileged")
+              }
+
+              get_exception_allowed(c) := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "privileged")
+                has_field(exception.spec.securityContext.privileged, "allowedValue")
+                out := sprintf("SecurityPolicyException allowed: privileged: %v", [exception.spec.securityContext.privileged.allowedValue])
+              }
+
+              get_exception_allowed(_) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "privileged")
+              }
+
+              get_exception_allowed(_) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "privileged")
+                not has_field(exception.spec.securityContext.privileged, "allowedValue")
+              }
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("Privileged container is not allowed: %v.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("Privileged container is not allowed: %v.\n%v\n%v", [name, actual_value, allowed_by_policy])
+              }
+
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
+              }
+
+              allowed_by_any(c) if {
+                allowed_by_securitypolicyexception(c)
+              }
+
+              allowed_by_any(c) if {
+                allowed_by_securitypolicy(c)
+              }
+
+              allowed_by_securitypolicyexception(c) if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "privileged")
+                has_field(exception.spec.securityContext.privileged, "allowedValue")
+                exception.spec.securityContext.privileged.allowedValue == c.securityContext.privileged
+              }
+
+              allowed_by_securitypolicy(c) if {
+                not c.securityContext.privileged
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.containers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.initContainers[_]
+              }
+
+              input_containers contains c if {
+                c := input.review.object.spec.ephemeralContainers[_]
+              }

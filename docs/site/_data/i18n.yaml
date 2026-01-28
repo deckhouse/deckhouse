@@ -18,9 +18,14 @@ be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
 ee: Enterprise Edition
+cse: Certified Security Edition
 kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
+dkp-ce: DKP CE
+dkp-se-plus: DKP SE+
+dkp-ee: DKP EE
+dvp-ee: DVP EE
 
 common:
   of:
@@ -176,9 +181,15 @@ common:
   search_placeholder_text_guides:
     en: Search for guides...
     ru: Поиск гайдов...
-  search_placeholder_text_modules:
-    en: Search by modules documentation...
-    ru: Поиск по документации модулей...
+  search_context_dkpdocs_and_modules:
+    en: The search is performed throughout DKP documentation and modules.
+    ru: Поиск выполняется по всей документации DKP и модулям.
+  search_context_modules:
+    en: The search is performed throughout modules, excluding the DKP documentation.
+    ru: Поиск выполняется по всем модулям, не включая документацию DKP.
+  search_context_only_product_docs:
+    en: The search is performed throughout the product documentation, excluding modules.
+    ru: Поиск выполняется по всей документации продукта, не включая модули.
   warning_ee_version:
     en: Available only in
     ru: Доступно только в
@@ -242,6 +253,36 @@ common:
   role:
     en: role
     ru: роль
+  related_reference_links:
+    en: Related links to API
+    ru: Ссылки на связанный API
+  related_reference_and_documentation_links:
+    en: Links to related documentation and API
+    ru: Ссылки на связанную документацию и API
+  related_additional_resources:
+    en: Additional resources
+    ru: Дополнительные ресурсы
+  related_links:
+    en: Related links
+    ru: Связанные ссылки
+  global_parameters:
+    en: Global parameters
+    ru: Глобальные параметры
+  global_crds:
+    en: Global custom resources
+    ru: Глобальные кастомные ресурсы
+  module_x_parameters:
+    en: Module <code>XXXX</code> parameters
+    ru: Параметры модуля <code>XXXX</code>
+  module_x_crds:
+    en: Module <code>XXXX</code> custom resources
+    ru: Кастомные ресурсы модуля <code>XXXX</code>
+  module_x_documentation:
+    en: Module <code>XXXX</code> documentation
+    ru: Документация модуля <code>XXXX</code>
+  module_x_cluster_configuration:
+    en: Module <code>XXXX</code> provider configuration
+    ru: Настройки провайдера модуля <code>XXXX</code>
   includes_rules_from:
     en: includes all rules from the role
     ru: включает все правила из роли
@@ -257,12 +298,24 @@ common:
   show_more:
     en: Show more
     ru: Показать ещё
+  show_details:
+    en: Show details...
+    ru: Показать подробности...
+  hide_details:
+    en: Hide details
+    ru: Скрыть подробности
   guides_description:
     en: Helping you achieve a goal or solve a problem with Deckhouse.
     ru: Помогут решить задачу или достичь нужной цели с помощью Deckhouse.
   breadcrumbs_link_guides:
     en: All Guides
     ru: Все руководства
+  additional_property_name:
+    en: item (key) name
+    ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

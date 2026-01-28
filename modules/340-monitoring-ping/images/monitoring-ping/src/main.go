@@ -18,23 +18,23 @@ package main
 
 import (
 	"context"
+	"flag"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
-	"flag"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 var (
-	countPings int = 30 // Count pings on every cycle
+	countPings                 int = 30 // Count pings on every cycle
 	cleanupNodeExporterMetrics bool
 )
 
 func main() {
-
 	flag.BoolVar(&cleanupNodeExporterMetrics, "cleanup-node-exporter-metrics", false, "Clean up node exporter metrics")
 	flag.Parse()
 	if cleanupNodeExporterMetrics {

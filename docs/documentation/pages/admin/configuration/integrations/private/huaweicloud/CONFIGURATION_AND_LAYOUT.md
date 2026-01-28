@@ -1,6 +1,6 @@
 ---
 title: Layouts and configuration
-permalink: en/admin/integrations/private/huaweicloud/huawei-layout.html
+permalink: en/admin/integrations/private/huaweicloud/layout.html
 ---
 
 This section describes the cluster layouts in Huawei Cloud infrastructure and the associated parameters.

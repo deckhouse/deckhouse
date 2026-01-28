@@ -222,7 +222,7 @@ func checkAbandonedNodeState(ctx context.Context, kubeCl *client.KubernetesClien
 		return plan.HasNoChanges, nil, nil, err
 	}
 
-	return infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, true)
+	return infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, true, false)
 }
 
 type NodeStateCheckResult struct {
@@ -232,7 +232,7 @@ type NodeStateCheckResult struct {
 	IsTerraformState   bool
 }
 
-func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (*NodeStateCheckResult, error) {
+func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeGroup *NodeGroupOptions, nodeName string, infrastructureContext *infrastructure.Context, opts CheckStateOptions, noout bool) (*NodeStateCheckResult, error) {
 	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
 		return nil, fmt.Errorf("can't extract index from infrastructure state secret (%v), skip %s", err, nodeName)
@@ -270,7 +270,7 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		return nil, err
 	}
 
-	change, pl, destructiveChanges, err := infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, false)
+	change, pl, destructiveChanges, err := infrastructure.CheckPipeline(ctx, nodeRunner, nodeName, false, noout)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +298,7 @@ type CheckStateOptions struct {
 	StateCache    dhctlstate.Cache
 }
 
-func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, opts CheckStateOptions) (*Statistics, bool, error) {
+func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context, opts CheckStateOptions, noout bool) (*Statistics, bool, error) {
 	statistics := Statistics{
 		Node:          make([]NodeCheckResult, 0),
 		NodeTemplates: make([]NodeGroupCheckResult, 0),
@@ -467,7 +467,7 @@ func CheckState(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig
 				Status: OKStatus,
 			}
 			// changed, infrastructurePlan, destructiveChanges,
-			nodeRes, err := checkNodeState(ctx, kubeCl, metaConfig, &nodeGroup, name, infrastructureContext, opts)
+			nodeRes, err := checkNodeState(ctx, kubeCl, metaConfig, &nodeGroup, name, infrastructureContext, opts, noout)
 			switch {
 			case err != nil:
 				checkResult.Status = ErrorStatus

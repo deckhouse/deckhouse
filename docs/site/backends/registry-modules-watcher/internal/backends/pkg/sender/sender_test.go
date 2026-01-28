@@ -123,6 +123,9 @@ func TestSender(t *testing.T) {
 
 				s.Send(context.Background(), listBackends, versions)
 
+				// Wait for async processing to complete
+				time.Sleep(1000 * time.Millisecond)
+
 				// Verify the sender attempted the expected number of requests
 				assert.Equal(t, 3, requestCount,
 					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
@@ -170,6 +173,9 @@ func TestSender(t *testing.T) {
 
 				s.Send(context.Background(), listBackends, versions)
 
+				// Wait for async processing to complete
+				time.Sleep(1000 * time.Millisecond)
+
 				// Verify the sender attempted the expected number of requests
 				assert.Equal(t, 3, requestCount,
 					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
@@ -212,6 +218,9 @@ func TestSender(t *testing.T) {
 
 				s.Send(context.Background(), listBackends, versions)
 
+				// Wait for async processing to complete
+				time.Sleep(1000 * time.Millisecond)
+
 				// Verify the sender attempted the expected number of requests
 				assert.Equal(t, 3, requestCount,
 					"Expected sender to make 3 requests total (1 initial + 2 retries) before success")
@@ -221,17 +230,19 @@ func TestSender(t *testing.T) {
 				// Counter to track number of requests
 				requestCount := 0
 
-				// Create a server that initially refuses connections then works
+				// Create a server that returns connection errors for first 2 attempts
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					requestCount++
 					if requestCount <= 2 {
-						// Close the connection without response for first 2 attempts
+						// Simulate connection error by closing connection
 						hj, ok := w.(http.Hijacker)
-						if !ok {
-							t.Fatal("couldn't hijack connection")
+						if ok {
+							conn, _, _ := hj.Hijack()
+							conn.Close()
+							return
 						}
-						conn, _, _ := hj.Hijack()
-						conn.Close()
+						// Fallback if hijacking not available
+						w.WriteHeader(http.StatusInternalServerError)
 					} else {
 						// Success on the 3rd attempt
 						if r.URL.Path == "/api/v1/doc/TestModule/1.0.0" {
@@ -259,6 +270,9 @@ func TestSender(t *testing.T) {
 				}
 
 				s.Send(context.Background(), listBackends, versions)
+
+				// Wait for async processing to complete
+				time.Sleep(2000 * time.Millisecond)
 
 				// Verify the sender attempted the expected number of requests
 				assert.Equal(t, 3, requestCount,

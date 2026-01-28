@@ -10,7 +10,7 @@ Chaos engineering mode can only be enabled for node groups with [`nodeType: Clou
 
 Enable chaos engineering mode for a node group in one of the following ways:
 
-1. Define the `spec.chaos` parameter in the configuration of the target node group with two nested parameters:
+1. Define the [`spec.chaos`](/modules/node-manager/cr.html#nodegroup-v1-spec-chaos) parameter in the configuration of the target node group with two nested parameters:
 
    ```yaml
    chaos:

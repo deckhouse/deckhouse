@@ -120,13 +120,13 @@ Deckhouse Kubernetes Platform provides flexible mechanisms for managing pod plac
 
 Main placement configuration options:
 
-- Using node labels (`NodeGroup.spec.nodeTemplate.labels`).  
+- Using node labels ([`NodeGroup.spec.nodeTemplate.labels`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels)).  
   Allows explicitly targeting specific nodes for pods using `spec.nodeSelector` or `spec.affinity.nodeAffinity`.
 
 - Configuring taints and tolerations.  
   Enables limiting pod scheduling to specific nodes, preventing them from being placed on unsuitable hosts.
 
-- Using custom toleration keys (`settings.modules.placement.customTolerationKeys`).  
+- Using custom toleration keys ([`settings.modules.placement.customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys)).  
   Allows control over the scheduling of critical Deckhouse components (e.g., CNI and CSI) on dedicated nodes.
 
 1. Using `nodeSelector` — allows you to explicitly specify which nodes pods should be scheduled on. This is done by labeling the desired nodes and referencing those labels in the pod’s `spec.nodeSelector`. Example:
@@ -162,7 +162,7 @@ Main placement configuration options:
 
    This mechanism prevents unintended pods from being scheduled on nodes that are meant for specific purposes.
 
-1. Using `customTolerationKeys` — Deckhouse supports the `customTolerationKeys` mechanism, which explicitly defines allowed toleration keys. This is useful when you need to run system services (such as CNI, CSI, etc.) on specific nodes. Example:
+1. Using [`customTolerationKeys`](../../../../reference/api/global.html#parameters-modules-placement-customtolerationkeys) — Deckhouse supports the `customTolerationKeys` mechanism, which explicitly defines allowed toleration keys. This is useful when you need to run system services (such as CNI, CSI, etc.) on specific nodes. Example:
 
    ```yaml
    customTolerationKeys:
@@ -276,9 +276,9 @@ You can do this in one of the following ways:
 1. Using the `d8` command (in the `d8-system/deckhouse` pod):
 
    ```console
-   d8 platform module enable descheduler
+   d8 system module enable descheduler
    # or to disable:
-   d8 platform module disable descheduler
+   d8 system module disable descheduler
    ```
 
 1. Through the [Deckhouse web interface](/modules/console/):
@@ -291,7 +291,7 @@ The module does not require mandatory configuration. You can enable it without a
 
 ### Descheduling strategies
 
-The `spec.strategies` parameter lists the strategies you want to enable or configure. Each strategy has an `enabled` flag (default is `false`).
+The [`spec.strategies`](/modules/descheduler/cr.html#descheduler-v1alpha2-spec-strategies) parameter lists the strategies you want to enable or configure. Each strategy has an `enabled` flag (default is `false`).
 
 Below is a list of the main strategies available in DKP.
 
@@ -319,6 +319,14 @@ spec:
       thresholds:
         cpu: 50
         memory: 50
+```
+
+If any of these resource types is not specified, all its thresholds default to 100 to avoid nodes going from underutilized to overutilized
+For example, If the memory threshold is not specified in thresholds, it defaults to 100.
+
+```yaml
+thresholds:
+  cpu: 50
 ```
 
 {% alert level="info" %}

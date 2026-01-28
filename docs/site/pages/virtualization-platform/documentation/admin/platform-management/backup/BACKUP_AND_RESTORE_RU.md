@@ -13,7 +13,7 @@ lang: ru
 1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
+   cp $(find /var/lib/containerd/ \
    -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
    ```
 
@@ -25,7 +25,7 @@ lang: ru
 
    Убедитесь, что результат команды `etcdutl version` отображается без ошибок.
 
-   **При отсутствии** `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
+   При отсутствии `etcdutl` скачайте исполняемый файл из [официального репозитория etcd](https://github.com/etcd-io/etcd/releases), выбрав версию, которая соответствует версии etcd в кластере:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -140,7 +140,7 @@ lang: ru
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
    ```shell
-   d8 platform queue main
+   d8 system queue main
    ```
 
 1. Переведите кластер обратно в мультимастерный режим.

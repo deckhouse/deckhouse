@@ -21,7 +21,7 @@ lang: ru
 
 - Управлять доступом к модулям, относящимся к определённой [подсистеме](#подсистемы-ролевой-модели) платформы.
 
-  Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, `cni-cilium`, `ingress-nginx`, `istio` и т. д.), можно использовать в ClusterRoleBinding роль `d8:manage:networking:manager`.
+  Например, чтобы дать возможность пользователю, выполняющему функции сетевого администратора, настраивать *сетевые* модули (например, [`cni-cilium`](/modules/cni-cilium/), [`ingress-nginx`](/modules/ingress-nginx/), [`istio`](/modules/istio/) и т. д.), можно использовать в ClusterRoleBinding роль `d8:manage:networking:manager`.
   
 - Управлять доступом к *пользовательским* ресурсам модулей в рамках пространства имён.
 
@@ -109,7 +109,7 @@ Manage-роль определяет права на доступ:
 ## Создание новой роли подсистемы
 
 Если текущие подсистемы не соответствуют требованиям ролевого распределения в компании, можно создать новую [подсистему](#подсистемы-ролевой-модели),
-которая будет включать в себя роли из подсистем `deckhouse`, `kubernetes` и модуля `user-authn`.
+которая будет включать в себя роли из подсистем `deckhouse`, `kubernetes` и [модуля `user-authn`](/modules/user-authn/).
 
 Для этого создайте следующую роль:
 
@@ -155,7 +155,7 @@ rules: []
 - `rbac.deckhouse.io/kind: manage`, `rbac.deckhouse.io/aggregate-to-deckhouse-as: manager` — агрегирует manage-роль из подсистем `deckhouse`, `kubernetes`.
 - `rbac.deckhouse.io/kind: manage`, `module: user-authn` — агрегирует все правила из модуля `user-authn`.
 
-Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от модуля `user-authn`.
+Таким образом роль получает права от подсистем `deckhouse`, `kubernetes` и от [модуля `user-authn`](/modules/user-authn/).
 
 {% alert level="info" %}
 

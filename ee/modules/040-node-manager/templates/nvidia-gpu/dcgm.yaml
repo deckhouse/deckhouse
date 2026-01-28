@@ -25,7 +25,7 @@ spec:
     kind: DaemonSet
     name: nvidia-dcgm
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: nvidia-dcgm

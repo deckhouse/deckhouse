@@ -131,7 +131,7 @@ func (e *Extender) createModuleRequirement(name string, value map[string]string)
 		}
 
 		if err := matcher.AddConstraint(dependency, raw); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("add constraint: %w", err)
 		}
 	}
 
@@ -159,7 +159,7 @@ func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, erro
 	if len(version.Prerelease()) > 0 {
 		woPrerelease, err := version.SetPrerelease("")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("set prerelease: %w", err)
 		}
 
 		version = &woPrerelease
@@ -168,7 +168,7 @@ func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, erro
 	if len(version.Metadata()) > 0 {
 		woMetadata, err := version.SetMetadata("")
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("set metadata: %w", err)
 		}
 
 		version = &woMetadata
@@ -182,7 +182,7 @@ func removePrereleaseAndMetadata(version *semver.Version) (*semver.Version, erro
 func parseParentVersion(parentVersion string) (*semver.Version, error) {
 	parsedParentVersion, err := semver.NewVersion(parentVersion)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new version: %w", err)
 	}
 
 	return removePrereleaseAndMetadata(parsedParentVersion)
@@ -193,7 +193,10 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 	// check if the new constraints may impose a loop
 	if formsLoop, dependentModule := e.constraintFormsLoop(moduleName, value); formsLoop {
 		validateErr = multierror.Append(validateErr, fmt.Errorf("module depency error: add '%s' module release dependencies forms a dependency loop with the installed \"%s\" module", moduleName, dependentModule))
-		return validateErr
+		if err := validateErr.ErrorOrNil(); err != nil {
+			return err
+		}
+		return nil
 	}
 
 	req, err := e.createModuleRequirement(moduleName, value)
@@ -201,7 +204,10 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 		validateErr = multierror.Append(validateErr, fmt.Errorf("failed to validate module dependencies: %s", err.Error()))
 		return validateErr
 	}
-	enabledModules := e.modulesStateHelper()
+	enabledModules := []string{}
+	if e.modulesStateHelper != nil {
+		enabledModules = e.modulesStateHelper()
+	}
 
 	// check if the new requirements are satisfied
 	for _, parentModule := range req.matcher.GetConstraintsNames() {
@@ -244,12 +250,18 @@ func (e *Extender) ValidateRelease(moduleName, moduleRelease string, version *se
 
 	// check if the new module's version breaks current constraints
 	for dependent, r := range e.modules {
+		if r == nil || r.matcher == nil {
+			continue
+		}
 		if err = r.matcher.ValidateModuleVersion(moduleName, sanitizedVersion); err != nil {
 			validateErr = multierror.Append(validateErr, fmt.Errorf("module '%s' not meet requirement if '%s' module release is installed: %s", dependent, moduleRelease, err.Error()))
 		}
 	}
 
-	return validateErr.ErrorOrNil()
+	if err := validateErr.ErrorOrNil(); err != nil {
+		return fmt.Errorf("error or nil: %w", err)
+	}
+	return nil
 }
 
 func (e *Extender) DeleteConstraint(name string) {
@@ -413,5 +425,8 @@ func (e *Extender) CheckEnabling(moduleName string) error {
 		}
 	}
 
-	return validateErr.ErrorOrNil()
+	if err := validateErr.ErrorOrNil(); err != nil {
+		return fmt.Errorf("error or nil: %w", err)
+	}
+	return nil
 }

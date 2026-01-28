@@ -47,14 +47,14 @@ func TestCache(t *testing.T) {
 	}
 
 	t.Run("EmptyCache", func(t *testing.T) {
-		cache := New(metricsstorage.NewMetricStorage("test"))
+		cache := New(metricsstorage.NewMetricStorage())
 		state := cache.GetState()
 		assert.Empty(t, state, "GetState should return empty state")
 	})
 
 	t.Run("SyncWithRegistryVersions", func(t *testing.T) {
 		t.Run("AddNewVersions", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			tasks := cache.SyncWithRegistryVersions(testVersions)
 
@@ -75,7 +75,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("AddAdditionalVersion", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -125,7 +125,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("UpdateExistingVersion", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -189,7 +189,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("NoChangeNoTask", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -215,7 +215,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("AddNewReleaseChannel", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -269,7 +269,7 @@ func TestCache(t *testing.T) {
 		})
 
 		t.Run("RemoveVersion", func(t *testing.T) {
-			cache := New(metricsstorage.NewMetricStorage("test"))
+			cache := New(metricsstorage.NewMetricStorage())
 
 			initialTasks := cache.SyncWithRegistryVersions(testVersions)
 			assert.NotEmpty(t, initialTasks, "Initial sync should return tasks")
@@ -297,7 +297,7 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("ReleaseData", func(t *testing.T) {
-		cache := New(metricsstorage.NewMetricStorage("test"))
+		cache := New(metricsstorage.NewMetricStorage())
 		cache.SyncWithRegistryVersions(testVersions)
 
 		t.Run("GetVersionDataByChecksum", func(t *testing.T) {

@@ -183,14 +183,14 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(c).To(Not(ExecuteSuccessfully()))
 
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.additionalSecurityGroups should match`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.ami is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.associatePublicIPAddress is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.iamProfileName is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.keyName is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.loadBalancerSecurityGroup is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zoneToSubnetIdMap is required`))
-			Expect(c.GoHookError.Error()).Should(ContainSubstring(`.zones is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.additionalSecurityGroups in body should match`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.ami in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.associatePublicIPAddress in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`instances.iamProfileName in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`keyName in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`loadBalancerSecurityGroup in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`zoneToSubnetIdMap in body is required`))
+			Expect(c.GoHookError.Error()).Should(ContainSubstring(`zones in body is required`))
 		})
 	})
 
@@ -204,12 +204,11 @@ data:
 		It("All values should be gathered from discovered data", func() {
 			Expect(d).To(Not(ExecuteSuccessfully()))
 
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.layout is required`))
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`vpcNetworkCIDR should match`))
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.masterNodeGroup is required`))
-			Expect(d.GoHookError.Error()).Should(ContainSubstring(`.provider is required`))
-			// etcetera...
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`layout in body is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`vpcNetworkCIDR in body should match`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`provider in body is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`masterNodeGroup in body is required`))
+			Expect(d.GoHookError.Error()).Should(ContainSubstring(`sshPublicKey in body is required`))
 		})
 	})
 })

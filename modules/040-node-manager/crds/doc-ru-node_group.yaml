@@ -173,9 +173,9 @@ spec:
                           description: |
                             Выгон (draining) подов с узла перед выдачей разрешения на disruption.
 
-                            **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
+                            **Внимание.** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -212,7 +212,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -413,7 +417,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -436,7 +440,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -576,6 +584,8 @@ spec:
                         Если указаны одновременно `matchExpressions` и `matchLabels`, учитываются оба фильтра (операция `И`).
 
                          Пустое значение `labelSelector` соответствует всем объектам. Нулевое — никаким.
+
+                        > **Внимание!** Поле `labelSelector` можно добавить, но нельзя изменить после установки. Для изменения `labelSelector` создайте новую NodeGroup и переместите статические узлы в неё, изменив их метки.
                       properties:
                         matchExpressions:
                           description: |
@@ -736,7 +746,7 @@ spec:
 
                             **Внимание!** Данная настройка игнорируется (узлам будет выдано разрешение без предварительного выгона подов с узлов):
                             - для nodeGroup `master` с единственным узлом;
-                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-faq.html#как-запускать-deckhouse-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
+                            - для [выделенного под запуск Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html#запуск-dkp-на-произвольном-узле) узла, если этот узел в группе узлов единственно рабочий (Ready).
                         windows:
                           description: |
                             Список окон disruption-обновлений узлов.
@@ -779,7 +789,11 @@ spec:
                   properties:
                     maxPods:
                       description: |
-                        Максимальное количество подов на узлах данной `NodeGroup`.
+                        Максимальное количество подов на узлах данной `NodeGroup`. Если явно не задан, по умолчанию задается в зависимости от значения параметра [podSubnetNodeCIDRPrefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix) ClusterConfiguration:
+                        - `120`  подов для `podSubnetNodeCIDRPrefix` ≥ `24`;
+                        - `250`  подов для `podSubnetNodeCIDRPrefix` = `23`;
+                        - `500`  подов для `podSubnetNodeCIDRPrefix` = `22`;
+                        - `1000` подов для `podSubnetNodeCIDRPrefix` ≤ `21`.
                     rootDir:
                       description: |
                         Путь к каталогу для файлов kubelet (volume mounts и т. д.).
@@ -836,6 +850,34 @@ spec:
                             - `SingleNumaNode` — для каждого контейнера пода определяется предпочтительный NUMA-узел. Если нет NUMA-узла, предпочтительного для **всех контейнеров пода**, то новый под не будет запланирован, а уже запущенный под будет остановлен.
 
                             Больше информации читайте в [документации Kubernetes](https://kubernetes.io/docs/tasks/administer-cluster/topology-manager/#topology-manager-policies).
+                    memorySwap:
+                      description: |
+                        Конфигурация использования swap-памяти для kubelet.
+                      properties:
+                        swapBehavior:
+                          description: |
+                            Определяет, как используется swap-память на узле:
+                            
+                            * `NoSwap` — swap отключен. Это традиционное поведение Kubernetes.
+                            * `LimitedSwap` — kubelet может использовать swap-память в пределах, заданных в `limitedSwap.size`.
+                            
+                            Подробнее об использовании swap-памяти на узлах можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/cluster-administration/swap-memory-management/).
+                        swappiness:
+                          description: |
+                            Определяет склонность ядра к использованию swap.
+                            
+                            * `0` — минимальное использование (только для предотвращения OOM).
+                            * `60` — сбалансированное поведение по умолчанию.
+                            * `100` — агрессивное использование.
+                            
+                            Значение устанавливается через параметр sysctl `vm.swappiness`.
+                        limitedSwap:
+                          description: |
+                            Настройки режима ограниченного использования swap. Требуются, если для `swapBehavior` указано значение `LimitedSwap`.
+                          properties:
+                            size:
+                              description: |
+                                Размер создаваемого swap-файла в ГБ (например, "2G", "4G").
                 update:
                   properties:
                     maxConcurrent:

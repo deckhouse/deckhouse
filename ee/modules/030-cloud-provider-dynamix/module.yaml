@@ -4,6 +4,7 @@ weight: 30
 subsystems:
   - infrastructure
 namespace: d8-cloud-provider-dynamix
-stage: Experimental
-requirements:
-  deckhouse: ">= 1.68"
+stage: Preview
+descriptions:
+  en: Manages interaction with Dynamix resources. Allows to use Dynamix resources for provisioning nodes.
+  ru: Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов.

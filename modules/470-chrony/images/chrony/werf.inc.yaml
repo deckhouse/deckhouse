@@ -24,7 +24,7 @@ shell:
   - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/chrony/chrony /src/chrony && rm -rf /src/chrony/.git
 ---
 image: {{ .ModuleName }}/build-chrony-static-artifact
-fromImage: builder/alpine-3.20
+fromImage: builder/alpine
 final: false
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact

@@ -206,7 +206,7 @@ entries:
             ru: Введение
           url: /stronghold/documentation/user/overview.html
         - title:
-            en: Configuring access to the project
+            en: Configuring access to project
             ru: Настройка доступа к проекту
           url: /stronghold/documentation/user/access.html
         - title:
@@ -231,7 +231,7 @@ entries:
               url: /stronghold/documentation/user/concepts/policy.html
             - title:
                 en: Identity
-                ru: Сущности
+                ru: Идентичность
               url: /stronghold/documentation/user/concepts/identity.html
             - title:
                 en: Token
@@ -385,10 +385,38 @@ entries:
             en: Automatic backup API guide
             ru: Руководство по API автоматического резервного копирования
           url: /stronghold/documentation/user/auto-snapshot.html
+        - title:
+            en: Stronghold agent
+            ru: Stronghold агент
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /stronghold/documentation/agent/overview.html
+            - title:
+                en: Use cases
+                ru: Сценарии использования
+              url: /stronghold/documentation/agent/use-cases.html
+            - title:
+                en: Key features
+                ru: Основные возможности
+              url: /stronghold/documentation/agent/key-features.html
+            - title:
+                en: Main settings
+                ru: Основные настройки
+              url: /stronghold/documentation/agent/settings.html
+            - title:
+                en: Launch and control
+                ru: Запуск и управление
+              url: /stronghold/documentation/agent/launch-and-control.html
     - title:
         en: Reference
         ru: Справка
       folders:
+        - title:
+            en: API
+            ru: API
+          url: /stronghold/documentation/api/openapi.html
         - title:
             en: Console utilities
             ru: Консольные утилиты
@@ -396,4 +424,4 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /stronghold/reference/cli/d8/
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/

@@ -10,19 +10,7 @@ Vertical Pod Autoscaler (VPA) automates container resource management and signif
 
 If the application load changes depending on time of day, user requests, or other factors, VPA automatically adjusts the allocated resources. This helps prevent outages due to lack of resources or excessive CPU and memory consumption.
 
-## VPA Operating Modes
-
-VPA can operate in two modes:
-
-- Automatic resource adjustment:
-  - **Auto** (default): changes resource requests without recreating pods. In current versions of Kubernetes, this mode behaves the same as **Recreate**: when resource changes are needed, VPA restarts the pod. However, in the future, with the introduction of [in-place resource updates](https://github.com/kubernetes/design-proposals-archive/blob/main/autoscaling/vertical-pod-autoscaler.md#in-place-updates), the **Auto** mode will use this feature to modify resources without restarting the pod.
-  - **Recreate**: VPA adjusts the resources of running pods by restarting them. For a single pod (replicas: 1), this will result in service unavailability during the restart. VPA does not restart pods that were created without a controller.
-
-- Recommendations only, without modifying resources:
-  - **Initial**: resource requests are set only at pod creation time, not during runtime.
-  - **Off**: VPA does not change resources automatically. However, it still provides recommendations, which can be viewed using the `d8 k describe vpa` command.
-
-When VPA is enabled and configured appropriately, resource requests are set automatically based on Prometheus data. It is also possible to configure the system to only provide recommendations without applying any changes.
+For details on VPA operating modes, its components and limitations, refer to [Architecture](../../../architecture/vpa.html).
 
 ## How to enable or disable VPA
 
@@ -42,7 +30,7 @@ You can enable VPA in the following ways:
 1. Via the `d8` command (run inside the `d8-system/deckhouse pod`):
 
    ```console
-   d8 platform module enable vertical-pod-autoscaler
+   d8 system module enable vertical-pod-autoscaler
    ```
 
 1. Through the [Deckhouse web interface](/modules/console/):

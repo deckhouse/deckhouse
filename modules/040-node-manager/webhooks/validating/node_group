@@ -52,7 +52,8 @@ kubernetes:
       {
         "defaultCRI": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*defaultCRI:[ ]+(.*)\n").captures[0].string),
         "clusterPrefixLen": (.data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*prefix:[ ]+(.*)\n").captures[0].string | length),
-        "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string)
+        "clusterType": (.data."cluster-configuration.yaml" // "" | @base64d | match("clusterType:[ ]+(.*)\n").captures[0].string),
+        "podSubnetNodeCIDRPrefix": ((.data."cluster-configuration.yaml" // "" | @base64d | match("podSubnetNodeCIDRPrefix:[ ]*\"?([0-9]+)\"?") | .captures[0].string) // "")
       }
   - name: provider_cluster_config
     apiVersion: v1
@@ -152,6 +153,23 @@ EOF
     return 0
   fi
 
+  # if maxPods == null then we do not set maxPods - it is allowed
+  maxPods=$(context::jq -r '.review.request.object.spec.kubelet.maxPods // null')
+  if [[ "$maxPods" != "null" ]]; then
+    prefix=$(context::jq -r '.snapshots.cluster_config[0].filterResult.podSubnetNodeCIDRPrefix')
+    if [[ -z "$prefix" || "$prefix" == "null" ]]; then
+      prefix=24
+    fi
+    availableIPs=$((2**(32 - prefix) - 3))
+    # every pod can use two IP (one in terminating phase + one in starting phase)
+    if (( 2 * maxPods > availableIPs )); then
+      cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed": true, "warnings": [".spec.kubelet.maxPods ($maxPods) is too high: may lead to IP exhaustion"]}
+EOF
+      return 0
+    fi
+  fi
+
   # Check zones existence for CloudEphemeral nodes
   allowedZones=$(context::jq -e -r 'if (.snapshots.provider_cluster_config | length) > 0 then .snapshots.provider_cluster_config[0].filterResult.zones else [] end | if . == [] then [] else .[] end')
   ngZones=$(context::jq -r '.review.request.object.spec.cloudInstances.zones // []')
@@ -201,7 +219,7 @@ EOF
     customTolerationKeys=$(context::jq -e -r 'if (.snapshots.deckhouse_config | length) > 0 then .snapshots.deckhouse_config[0].filterResult else {} end' | yq  e '.' -j - | jq -r '.modules.placement.customTolerationKeys | if . == null then empty else .[] end')
     for taint in $(jq -e -r '.[].key' <<< "$taints"); do
       # Skip 'standart' taints
-      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' ]]; then
+      if [[ $taint = 'dedicated' || $taint = 'dedicated.deckhouse.io' || $taint = 'node-role.kubernetes.io/control-plane' || $taint = 'node-role.kubernetes.io/master' || $taint = 'node.deckhouse.io/etcd-arbiter' ]]; then
         continue
       fi
       if ! printf '%s\n' "${customTolerationKeys[@]}" | grep -q -E "^$taint\$"; then
@@ -247,6 +265,71 @@ EOF
 EOF
         return 0
     fi
+
+    # Check labelSelector immutability for static/cloud static node groups
+    if [[ "${newNodeType}" == "Static" || "${newNodeType}" == "CloudStatic" ]]; then
+      # Check if staticInstances is present (node groups could not be in caps)
+      if context::jq -e -r '.review.request.object.spec.staticInstances != null' >/dev/null 2>&1; then
+        # Check if old staticInstances exists (for UPDATE operations)
+        oldStaticInstancesExists=$(context::jq -e -r '.review.request.oldObject.spec.staticInstances != null' 2>/dev/null || echo "false")
+        
+        # Only check labelSelector immutability if old staticInstances exists
+        if [[ "$oldStaticInstancesExists" == "true" ]]; then
+          # Check if old labelSelector exists
+          oldLabelSelectorExists=$(context::jq -e -r '.review.request.oldObject.spec.staticInstances.labelSelector != null' 2>/dev/null || echo "false")
+          
+          if [[ "$oldLabelSelectorExists" == "true" ]]; then
+            # Check if old labelSelector is empty (has no matchLabels and matchExpressions)
+            oldMatchLabels=$(context::jq -r '.review.request.oldObject.spec.staticInstances.labelSelector.matchLabels // {}')
+            oldMatchExpressions=$(context::jq -r '.review.request.oldObject.spec.staticInstances.labelSelector.matchExpressions // []')
+            oldLabelSelectorEmpty=false
+            if [[ "$oldMatchLabels" == "{}" && "$oldMatchExpressions" == "[]" ]]; then
+              oldLabelSelectorEmpty=true
+            fi
+
+            # If old labelSelector is not empty, check if it has changed
+            if [[ "$oldLabelSelectorEmpty" == "false" ]]; then
+              # Check if new labelSelector exists
+              newLabelSelectorExists=$(context::jq -e -r '.review.request.object.spec.staticInstances.labelSelector != null' 2>/dev/null || echo "false")
+              
+              # Disallow removal: old has values but new is null
+              if [[ "$newLabelSelectorExists" == "false" ]]; then
+                cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.staticInstances.labelSelector can be added but cannot be modified or removed once set. To change it, create a new NodeGroup."}
+EOF
+                return 0
+              fi
+              
+              # Check if new labelSelector is empty
+              newMatchLabels=$(context::jq -r '.review.request.object.spec.staticInstances.labelSelector.matchLabels // {}')
+              newMatchExpressions=$(context::jq -r '.review.request.object.spec.staticInstances.labelSelector.matchExpressions // []')
+              newLabelSelectorEmpty=false
+              if [[ "$newMatchLabels" == "{}" && "$newMatchExpressions" == "[]" ]]; then
+                newLabelSelectorEmpty=true
+              fi
+              
+              # Disallow changing from non-empty to empty
+              if [[ "$newLabelSelectorEmpty" == "true" ]]; then
+                cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.staticInstances.labelSelector can be added but cannot be modified or removed once set. To change it, create a new NodeGroup."}
+EOF
+                return 0
+              fi
+              
+              # Compare old and new labelSelector using jq
+              oldLabelSelectorJson=$(context::jq -c '.review.request.oldObject.spec.staticInstances.labelSelector')
+              newLabelSelectorJson=$(context::jq -c '.review.request.object.spec.staticInstances.labelSelector')
+              if ! context::jq -e --argjson old "$oldLabelSelectorJson" --argjson new "$newLabelSelectorJson" '$old == $new' >/dev/null 2>&1; then
+                cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":".spec.staticInstances.labelSelector can be added but cannot be modified once set. To change it, create a new NodeGroup."}
+EOF
+                return 0
+              fi
+            fi
+          fi
+        fi
+      fi
+    fi
   fi
 
   # Forbid more than one taint with the same key and effect
@@ -280,7 +363,10 @@ EOF
 
     if [[ "${oldCriType}" != "${newCriType}" ]]; then
       nodeGroupNameWithChangedCRI="$(context::jq -r '.review.request.object.metadata.name')"
-      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '.snapshots.nodes_with_containerd_custom_conf.[]? | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup) | .filterResult.nodeName' )"
+      nodesForbidingChanges="$(context::jq -r --arg nodeGroup "${nodeGroupNameWithChangedCRI}" '
+        .snapshots.nodes_with_containerd_custom_conf[]?
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $nodeGroup)
+        | .filterResult.nodeName' | tr '\n' ' ')"
       if [[ $nodesForbidingChanges != "" ]]; then
         cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"CRI cannot be changed because some nodes are using custom configuration: ${nodesForbidingChanges}"}
@@ -304,6 +390,26 @@ EOF
       if [[ -n "${unsupportedNodes}" ]]; then
          cat <<EOF > "$VALIDATING_RESPONSE_PATH"
 {"allowed":false, "message":"It is forbidden for NodeGroup \"${nodeGroupName}\" to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. You can list them with: kubectl get node -l node.deckhouse.io/containerd-v2-unsupported,node.deckhouse.io/group=${nodeGroupName}"}
+EOF
+        return 0
+      fi
+    fi
+  fi
+
+  # Check memorySwap configuration requires cgroup v2 on update
+  if [[ "${operationType}" == "UPDATE" ]]; then
+    swapBehavior="$(context::jq -r '.review.request.object.spec.kubelet.memorySwap.swapBehavior // ""')"
+    if [[ "${swapBehavior}" == "LimitedSwap" ]]; then
+      # Block if NodeGroup contains nodes without cgroup v2 support
+      nodeGroupName="$(context::jq -r '.review.request.object.metadata.name')"
+      unsupportedNodes="$(context::jq -r --arg ng "${nodeGroupName}" '
+        .snapshots.nodes_without_containerd_support[]
+        | select(.filterResult.labels["node.deckhouse.io/group"] == $ng)
+        | .filterResult.nodeName
+      ')"
+      if [[ -n "${unsupportedNodes}" ]]; then
+        cat <<EOF > "$VALIDATING_RESPONSE_PATH"
+{"allowed":false, "message":"memorySwap requires cgroup v2, but NodeGroup \"${nodeGroupName}\" contains nodes where cgroup v2 is not supported."}
 EOF
         return 0
       fi

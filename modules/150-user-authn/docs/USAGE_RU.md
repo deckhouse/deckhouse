@@ -41,6 +41,8 @@ metadata:
 spec:
   type: Github
   displayName: My Company GitHub
+  # Опционально: временно отключить провайдер, не удаляя CR
+  # enabled: false
   github:
     clientID: plainstring
     clientSecret: plainstring
@@ -79,8 +81,8 @@ spec:
 В GitLab проекта необходимо создать новое приложение.
 
 Для этого выполните следующие шаги:
-* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
-* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback url)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **self-hosted**: перейдите в `Admin area` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
+* **cloud gitlab.com**: под главной учетной записью проекта перейдите в `User Settings` -> `Application` -> `New application` и в качестве `Redirect URI (Callback URL)` укажите адрес `https://dex.<modules.publicDomainTemplate>/callback`, выберите scopes: `read_user`, `openid`;
 * (для GitLab версии 16 и выше) включить опцию `Trusted`/`Trusted applications are automatically authorized on GitLab OAuth flow` при создании приложения.
 
 Полученные `Application ID` и `Secret` укажите в Custom Resource [DexProvider](cr.html#dexprovider).
@@ -158,7 +160,7 @@ spec:
 
 * Создайте в разделе [Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes) `scope` с именем `groups`, и назначьте ему предопределенный маппинг `groups` («Client scopes» → «Client scope details» → «Mappers» → «Add predefined mappers»).
 * В созданном ранее клиенте добавьте данный `scope` [во вкладке Client scopes](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) («Clients → «Client details» → «Client Scopes» → «Add client scope»).
-* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
+* В полях «Valid redirect URIs», «Valid post logout redirect URIs» и «Web origins» [конфигурации клиента](https://www.keycloak.org/docs/latest/server_admin/#general-settings) укажите `https://dex.<publicDomainTemplate>/*`, где `publicDomainTemplate` – это [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) шаблон DNS-имен кластера в модуле `global`.
 
 В примере представлены настройки провайдера для интеграции с Keycloak:
 
@@ -183,7 +185,7 @@ spec:
       - groups
 ```
 
-Если в KeyCloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
+Если в Keycloak не используется подтверждение учетных записей по email, для корректной работы с ним в качестве провайдера аутентификации внесите изменения в настройку [`Client scopes`](https://www.keycloak.org/docs/latest/server_admin/#_client_scopes_linking) одним из следующих способов:
 
 * Удалите маппинг `Email verified` («Client Scopes» → «Email» → «Mappers»).
   Это необходимо для корректной обработки значения `true` в поле [`insecureSkipEmailVerified`](cr.html#dexprovider-v1-spec-oidc-insecureskipemailverified) и правильной выдачи прав пользователям с неподтвержденным email.
@@ -230,7 +232,7 @@ spec:
 
 #### Blitz Identity Provider
 
-На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
+На стороне провайдера Blitz Identity Provider при [регистрации приложения](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html) необходимо указать URL для перенаправления пользователя после авторизации. При использовании `DexProvider` необходимо указать `https://dex.<publicDomainTemplate>/`, где `publicDomainTemplate` – [указанный](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) в модуле `global` шаблон DNS-имен кластера.
 
 В примере представлены настройки провайдера для интеграции с Blitz Identity Provider:
 
@@ -305,6 +307,8 @@ spec:
 
     usernamePrompt: Email Address
 
+    enableBasicAuth: true
+
     userSearch:
       baseDN: cn=Users,dc=example,dc=com
       filter: "(objectClass=person)"
@@ -322,11 +326,86 @@ spec:
       nameAttr: cn
 ```
 
-Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
+#### Настройка базовой аутентификации
 
-Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` Custom Resource [DexProvider](cr.html#dexprovider).
-1. Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
-2. В параметре `bindPW` укажите пароль в plain-виде. Стратегии с передачей хэшированных паролей не предусмотрены.
+Чтобы включить доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication) по учетным записям LDAP:
+
+1. Убедитесь, что в конфигурации модуля `user-authn` включен параметр [`publishAPI`](configuration.html#parameters-publishapi).
+1. Установите параметр [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) в ресурсе DexProvider для LDAP.
+
+> **Внимание**. В кластере может быть только один провайдер аутентификации с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+
+После настройки пользователи смогут обращаться к Kubernetes API с помощью `kubectl`, используя свой логин и пароль в LDAP .
+
+Пример `kubeconfig` для пользователя:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+#### Kerberos (SPNEGO) SSO для LDAP
+
+Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP‑коннектора. При использовании этого механизма браузер, доверяющий хосту Dex, отправляет `Authorization: Negotiate …`, Dex валидирует Kerberos‑билет по keytab, пропускает форму вводу логина/пароля, сопоставляет principal с LDAP‑именем, получает группы и завершает OIDC‑поток.
+
+Минимальный пример (расширение спецификации LDAP‑провайдера):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
+```
+
+Примечания:
+
+* Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
+* Один под Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab. `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).
+Для настройки аутентификации заведите в LDAP read-only-пользователя (service account).
+Полученные путь до пользователя и пароль укажите в параметрах `bindDN` и `bindPW` кастомного ресурса [DexProvider](cr.html#dexprovider). В параметре `bindPW` укажите пароль в открытом виде (plain text). Стратегии с передачей хешированных паролей не предусмотрены.
+Если в LDAP настроен анонимный доступ на чтение, настройки можно не указывать.
 
 ## Настройка OAuth2-клиента в Dex для подключения приложения
 
@@ -379,7 +458,7 @@ data:
 
 ### Создание пользователя
 
-Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`.
+Придумайте пароль и укажите его хэш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
 
 Для вычисления хэш-суммы пароля воспользуйтесь командой:
 
@@ -507,4 +586,4 @@ spec:
 
 ### Выдача прав пользователю или группе
 
-Для настройки используются параметры в Custom Resource [`ClusterAuthorizationRule`](../../modules/user-authz/cr.html#clusterauthorizationrule).
+Для настройки прав доступа используются параметры кастомного ресурса [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule).

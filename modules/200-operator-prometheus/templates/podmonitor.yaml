@@ -16,8 +16,9 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
-    - regex: endpoint|container|namespace
+    - regex: endpoint|container
       action: labeldrop
     - targetLabel: tier
       replacement: cluster

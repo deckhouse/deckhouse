@@ -32,6 +32,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+  clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -138,6 +139,40 @@ const badModuleValues = `
     zones: ["zonea", "zoneb"]
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-cloud-provider-openstack"
+
 func openstackCheck(f *Config, k8sVer string) {
 	BeforeEach(func() {
 		f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, k8sVer, k8sVer))
@@ -149,15 +184,15 @@ func openstackCheck(f *Config, k8sVer string) {
 	It("Everything must render properly", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-openstack")
-		registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "deckhouse-registry")
+		namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+		registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
 		providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-		cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
+		cinderControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 		cinderCSIDriver := f.KubernetesGlobalResource("CSIDriver", "cinder.csi.openstack.org")
-		cinderNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-openstack", "csi-node")
-		cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "csi")
+		cinderNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+		cinderControllerPluginSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 		cinderProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
 		cinderProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-provisioner")
 		cinderAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-attacher")
@@ -165,18 +200,20 @@ func openstackCheck(f *Config, k8sVer string) {
 		cinderResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:csi:controller:external-resizer")
 		cinderResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:csi:controller:external-resizer")
 
-		ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 		ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-openstack:cloud-controller-manager")
 		ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-openstack:cloud-controller-manager")
-		ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-controller-manager")
-		ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager")
-		ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
+		ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
+		ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+		ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 
 		userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:user")
 		userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-openstack:cluster-admin")
 
 		scFast := f.KubernetesGlobalResource("StorageClass", "fastssd")
 		scSlow := f.KubernetesGlobalResource("StorageClass", "slowhdd")
+
+		cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 
 		Expect(namespace.Exists()).To(BeTrue())
 		Expect(registrySecret.Exists()).To(BeTrue())
@@ -213,8 +250,10 @@ func openstackCheck(f *Config, k8sVer string) {
 		// user story #2
 		Expect(cinderCSIDriver.Exists()).To(BeTrue())
 		Expect(cinderNodePluginDS.Exists()).To(BeTrue())
+		Expect(cinderNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 		Expect(cinderControllerPluginSA.Exists()).To(BeTrue())
 		Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
+		Expect(cinderControllerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 		Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=true`))
 		Expect(cinderAttacherCR.Exists()).To(BeTrue())
 		Expect(cinderAttacherCRB.Exists()).To(BeTrue())
@@ -269,6 +308,10 @@ rescan-on-resize = true`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 		Expect(scSlow.Exists()).To(BeTrue())
+
+		Expect(cddDeployment.Exists()).To(BeTrue())
+		Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+		Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 	})
 }
 
@@ -289,17 +332,17 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
-	Context("Openstack with k8s 1.30", func() {
-		openstackCheck(f, "1.30")
+	Context("Openstack with k8s 1.31", func() {
+		openstackCheck(f, "1.31")
 	})
 
 	Context("Openstack", func() {
-		openstackCheck(f, "1.29")
+		openstackCheck(f, "1.30")
 	})
 
 	Context("Openstack with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `slowhdd`)
@@ -324,7 +367,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack bad config", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", badModuleValues)
 			f.HelmRender()
@@ -338,7 +381,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Hybrid Openstack", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.HelmRender()
@@ -351,7 +394,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Unsupported Kubernetes version", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -360,14 +403,14 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-controller-manager").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 		})
 	})
 
 	Context("Openstack StorageClass topology disabled", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 			f.ValuesSetFromYaml("cloudProviderOpenstack.storageClass.topologyEnabled", "false")
@@ -377,7 +420,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("Everything must render properly and csi controller provisioner arg must have flag feature-gates=Topology=false", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			cinderControllerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "csi-controller")
+			cinderControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			Expect(cinderControllerPluginSS.Exists()).To(BeTrue())
 			Expect(cinderControllerPluginSS.Field("spec.template.spec.containers.0.args.3").String()).To(MatchYAML(`--feature-gates=Topology=false`))
 		})
@@ -385,7 +428,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Openstack ignoreVolumeMicroversion", func() {
 		assertConfigSecretIgnoreMicroVer := func(f *Config, s string) {
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 			ccmConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
 			Expect(err).ShouldNot(HaveOccurred())
 			sExp := fmt.Sprintf("ignore-volume-microversion = %s", s)
@@ -395,7 +438,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		Context("all kube versions", func() {
 			Context("ignoreVolumeMicroversion disabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "false")
@@ -411,7 +454,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 			Context("ignoreVolumeMicroversion enabled", func() {
 				BeforeEach(func() {
-					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+					f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 					f.ValuesSet("global.modulesImages", GetModulesImages())
 					f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 					f.ValuesSetFromYaml("cloudProviderOpenstack.ignoreVolumeMicroversion", "true")
@@ -429,7 +472,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Cloud data discoverer", func() {
 		deployment := func(f *Config) object_store.KubeObject {
-			return f.KubernetesResource("Deployment", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+			return f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 		}
 
 		assertEnv := func(f *Config, envName string) {
@@ -450,7 +493,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		}
 
 		assertSecretFieldExists := func(f *Config, field string) {
-			s := f.KubernetesResource("Secret", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+			s := f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer")
 			Expect(s.Exists()).To(BeTrue())
 
 			Expect(s.Field(fmt.Sprintf("data.%s", field)).Exists()).To(BeTrue())
@@ -458,7 +501,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant name", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.HelmRender()
@@ -489,7 +532,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 		Context("with tenant id", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection", `
@@ -529,7 +572,7 @@ region: myreg
 
 		Context("with ca cert", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
 				f.ValuesSetFromYaml("cloudProviderOpenstack.internal.connection.caCert", `
@@ -564,7 +607,7 @@ ca
 
 		Context("vertical-pod-autoscaler module enabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler"]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
@@ -574,14 +617,14 @@ ca
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeTrue())
 			})
 		})
 
 		Context("vertical-pod-autoscaler module disabled", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.29", "1.29"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("global.enabledModules", `[]`)
 				f.ValuesSetFromYaml("cloudProviderOpenstack", moduleValues)
@@ -591,7 +634,7 @@ ca
 			It("Should render VPA resource", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				d := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-openstack", "cloud-data-discoverer")
+				d := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-data-discoverer")
 				Expect(d.Exists()).To(BeFalse())
 			})
 		})

@@ -9,4 +9,4 @@ description: "Управление облачными ресурсами в Deck
 
 - управление ресурсами Huawei Cloud через `cloud-controller-manager`;
 - заказ дисков с использованием компонента `CSI storage`;
-- интеграция с [модулем node-manager](/modules/node-manager/) для поддержки [HuaweicloudInstanceClass](cr.html#huaweicloudinstanceclass) при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- интеграция с [модулем node-manager](/modules/node-manager/) для поддержки [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).

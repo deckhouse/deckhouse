@@ -8,8 +8,8 @@ CandI subsystem consists of the following components:
 * kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
-  * [**control-plane-manager**](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/) — `control-plane` maintaining.
-  * [**node-manager**](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/node-manager/) — swiss knife to create and update cloud and bare metal nodes.
+  * [**control-plane-manager**](https://deckhouse.io/modules/control-plane-manager/) — `control-plane` maintaining.
+  * [**node-manager**](https://deckhouse.io/modules/node-manager/) — swiss knife to create and update cloud and bare metal nodes.
   * **cloud-provider-** — modules to integrate different cloud with Deckhouse.
 * Installer or **dhctl** — tool for creating the first master node, deploy `Deckhouse` and converging the cluster state.
 
@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.29
+kubernetesVersion: 1.30
 defaultCRI: "ContainerdV2"
 clusterDomain: cluster.local
 ---
@@ -51,7 +51,6 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 | GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/openapi.yaml) |
 | KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap

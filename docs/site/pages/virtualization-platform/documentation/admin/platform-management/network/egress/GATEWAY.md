@@ -11,7 +11,7 @@ Egress Gateway enables centralized management and control of outgoing traffic
 and provides features such as encryption, routing, and monitoring.
 
 {% alert level="warning"%}
-To use the Egress Gateway, enable the [`cni-cilium`](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/configuration.html) module in the cluster.
+To use the Egress Gateway, enable the [`cni-cilium`](/modules/cni-cilium/configuration.html) module in the cluster.
 {% endalert %}
 
 ## Egress Gateway usage modes
@@ -34,7 +34,7 @@ Egress Gateway lets you dynamically assign additional IP addresses to nodes.
 
 Configuring an egress gateway requires two custom resources:
 
-1. [EgressGateway](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/cr.html#egressgateway): Describes the group of nodes,
+1. [EgressGateway](/modules/cni-cilium/cr.html#egressgateway): Describes the group of nodes,
    one of which will be selected as the active egress gateway, while the rest will remain in standby mode:
    - Among the group of nodes matching the `spec.nodeSelector` the eligible nodes will be selected.
      One of them will be assigned as the active gateway.
@@ -49,7 +49,7 @@ Configuring an egress gateway requires two custom resources:
        The status of this agent's pod is also taken into account when determining the eligibility of a node.
      - Different EgressGateways can use the same nodes for operation.
        The active node is selected independently for each EgressGateway, which allows for load balancing between them.
-1. [EgressGatewayPolicy](/products/kubernetes-platform/documentation/v1/modules/cni-cilium/cr.html#egressgatewaypolicy): Describes the policy for routing network requests
+1. [EgressGatewayPolicy](/modules/cni-cilium/cr.html#egressgatewaypolicy): Describes the policy for routing network requests
    from pods in the cluster to a specific egress gateway defined using EgressGateway.
 
 ## Node maintenance

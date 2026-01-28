@@ -19,7 +19,7 @@ To create StorageClass objects, you need to connect one or more storage backends
 
 The default StorageClass is used when a PersistentVolumeClaim is created without explicitly specifying a storage class. This simplifies the process of creating and using storage by eliminating the need to define the class manually each time.
 
-To set the default StorageClass, specify the desired class in the [global configuration](/products/kubernetes-platform/documentation/v1/deckhouse-configure-global.html#parameters-defaultclusterstorageclass). Example command:
+To set the default StorageClass, specify the desired class in the [global configuration](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Example command:
 
 ```shell
 # Replace with the name of your StorageClass object.

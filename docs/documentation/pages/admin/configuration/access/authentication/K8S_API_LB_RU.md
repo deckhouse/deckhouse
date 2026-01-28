@@ -9,7 +9,7 @@ lang: ru
 
 Чтобы настроить доступ, выполните следующие шаги:
 
-1. Включите публикацию Kubernetes API. Для этого установите параметр `publishAPI.enabled: true` в настройках модуля `user-authn` (ModuleConfig `user-authn`) или с помощью веб-интерфейса администратора Deckhouse.
+1. Включите публикацию Kubernetes API. Для этого установите [параметр `publishAPI.enabled: true`](/modules/user-authn/configuration.html#parameters-publishapi-enabled) в настройках модуля `user-authn` или с помощью веб-интерфейса администратора Deckhouse.
 
    Пример конфигурации модуля:
 
@@ -32,7 +32,7 @@ lang: ru
 
 1. Сгенерируйте конфигурацию `kubectl`. После авторизации в интерфейсе kubeconfig пользователь получит набор команд для настройки `kubectl`. Эти команды можно скопировать и вставить в консоль. Аутентификация будет производиться по OIDC-токену, выданному Dex. При поддержке провайдером функции продления сессии конфигурация будет включать `refresh token`, что позволит продлевать доступ без повторной аутентификации.
 
-1. Настройте несколько точек подключения к API. В конфигурации модуля `user-authn` можно задать несколько точек подключения (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
+1. Настройте несколько точек подключения к API. В [конфигурации модуля `user-authn`](/modules/user-authn/configuration.html#parameters-kubeconfiggenerator) можно задать несколько точек подключения (kube-apiserver) с описанием и CA-сертификатами для каждой. Это может понадобиться, если кластер доступен через разные сети — например, VPN или публичный IP:
 
    ```yaml
    settings:
@@ -44,7 +44,7 @@ lang: ru
 
 ## Как работает защита доступа к Kubernetes API
 
-В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через модуль `user-authn`. Вы можете настроить:
+В Deckhouse Kubernetes Platform вы можете безопасно опубликовать Kubernetes API наружу с помощью Ingress-контроллера, сохранив контроль над доступом. Публикация API и настройка аутентификации осуществляется через [модуль `user-authn`](/modules/user-authn/). Вы можете настроить:
 
 - список доверенных IP-адресов или сетей, которым разрешён доступ;
 - список групп пользователей, которые имеют право аутентификации;
@@ -53,7 +53,7 @@ lang: ru
 Для настройки:
 
 1. Включите публикацию API, как в примере выше.
-1. Настройте ограничения доступа. В конфигурации модуля можно указать:
+1. Настройте ограничения доступа. В [конфигурации модуля](/modules/user-authn/configuration.html) можно указать:
    - список сетевых адресов, которым разрешён доступ (`allowedSourceRanges`);
    - список групп пользователей, которым разрешено подключение к Kubernetes API (`allowedUserGroups`);
    - выбор Ingress-контроллера, через который будет работать публикация (`ingressClass`).
@@ -64,3 +64,102 @@ lang: ru
 - Deckhouse сам настроит необходимые аргументы для kube-apiserver;
 - будет сгенерирован сертификат CA и добавлен в kubeconfig;
 - будет настроен вход через Dex с поддержкой OIDC.
+
+## Доступ с использованием базовой аутентификации (LDAP)
+
+Помимо OIDC можно настроить прямой доступ к Kubernetes API с использованием базовой аутентификации (Basic Authentication, по логину и паролю). В этом случае проверка учетных данных осуществляется через LDAP-совместимую службу каталогов.
+
+Для настройки:
+
+1. Включите публикацию API (параметр [`publishAPI`](/modules/user-authn/configuration.html#parameters-publishapi)).
+1. Настройте провайдер LDAP в модуле `user-authn` и включите в нём опцию [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+
+{% alert level="warning" %}
+В кластере может быть только один провайдер с включенным параметром [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth).
+{% endalert %}
+
+После этого пользователи могут настроить свой `kubeconfig`, указав логин и пароль LDAP:
+
+```yaml
+apiVersion: v1
+kind: Config
+clusters:
+- name: my-cluster
+  cluster:
+    server: https://api.example.com
+    # Путь к CA сертификату или insecure-skip-tls-verify: true
+    certificate-authority: /path/to/ca.crt
+users:
+- name: ldap-user
+  user:
+    username: janedoe@example.com
+    password: userpassword
+contexts:
+- name: default
+  context:
+    cluster: my-cluster
+    user: ldap-user
+current-context: default
+```
+
+## SSO по Kerberos (SPNEGO) для LDAP
+
+Dex поддерживает аутентификацию без отображения формы ввода логина/пароля, которая реализуется с помощью механизма Kerberos (SPNEGO) для LDAP‑коннектора. Механизм работает по следующему принципу:
+
+1. Браузер, доверяющий хосту Dex, отправляет `Authorization: Negotiate …`.
+1. Dex валидирует Kerberos‑билет по keytab и пропускает форму вводу логина/пароля.
+1. Dex сопоставляет principal с LDAP‑именем, получает группы и завершает OIDC‑поток.
+
+{% alert level="info" %}
+Для настройки SSO по Kerberos (SPNEGO) в LDAP должна быть учетная запись с правами только на чтение (service account). Подробнее о настройке — в разделе [«Интеграция по LDAP»](external-authentication-providers.html#интеграция-по-ldap).
+{% endalert %}
+
+Включение SSO по Kerberos (SPNEGO) для LDAP:
+
+1. В инфраструктуре клиента должен быть задан SPN `HTTP/<fqdn-dex>` для сервисного аккаунта и сгенерирован keytab.
+1. В кластере создайте секрет в неймспейсе `d8-user-authn` с ключом `krb5.keytab`.
+1. В ресурсе DexProvider (тип LDAP) включите блок `spec.ldap.kerberos` и настройте в нём параметры:
+   - `enabled: true`;
+   - `keytabSecretName: <имя секрета>`;
+   - опционально: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`.
+
+Dex автоматически смонтирует keytab и начнёт принимать SPNEGO. `krb5.conf` на сервере не обязателен — билеты проверяются по keytab.
+
+Пример настройки SSO по Kerberos (SPNEGO) для LDAP (расширение спецификации LDAP‑провайдера):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: active-directory
+spec:
+  type: LDAP
+  displayName: Active Directory
+  ldap:
+    host: ad.example.com:636
+    bindDN: cn=Administrator,cn=users,dc=example,dc=com
+    bindPW: admin0!
+    userSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      username: sAMAccountName
+      idAttr: uid
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: cn=Users,dc=example,dc=com
+      nameAttr: cn
+      userMatchers:
+      - userAttr: uid
+        groupAttr: memberUid
+    kerberos:
+      enabled: true
+      keytabSecretName: dex-kerberos-keytab   # Секрет в неймспейсе `d8-user-authn` с ключом 'krb5.keytab'.
+      expectedRealm: EXAMPLE.COM              # Опционально, проверка realm (без учёта регистра).
+      usernameFromPrincipal: sAMAccountName   # localpart|sAMAccountName|userPrincipalName
+      fallbackToPassword: false               # По умолчанию false; если true — при отсутствии/ошибке заголовка `Authorization: Negotiate` будет показана форма ввода логина/пароля.
+```
+
+Примечания:
+
+- Секрет `dex-kerberos-keytab` должен находиться в неймспейсе `d8-user-authn` и содержать ключ `krb5.keytab`.
+- Один под Dex может обслуживать несколько LDAP+Kerberos провайдеров. У каждого — свой keytab; `krb5.conf` не требуется (Dex проверяет билеты офлайн по keytab).

@@ -181,11 +181,11 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 
 	app.SanityCheck = true
 	app.UseTfCache = app.UseStateCacheYes
-	app.CacheDir = s.params.CacheDir
+	app.SetCacheDir(s.params.CacheDir)
 	app.ApplyPreflightSkips(p.request.Options.CommonOptions.SkipPreflightChecks)
 
-	loggerFor.LogInfoF("Task is running by DHCTL Server pod/%s\n", s.params.PodName)
-	defer func() { loggerFor.LogInfoF("Task done by DHCTL Server pod/%s\n", s.params.PodName) }()
+	logBeforeExit := logInformationAboutInstance(s.params, loggerFor)
+	defer logBeforeExit()
 
 	var (
 		configPaths             []string
@@ -261,7 +261,7 @@ func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.Bootstra
 			return fmt.Errorf("parsing connection config: %w", err)
 		}
 
-		sshClient, cleanup, err = helper.CreateSSHClient(connectionConfig)
+		sshClient, cleanup, err = helper.CreateSSHClient(ctx, connectionConfig)
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("preparing ssh client: %w", err)

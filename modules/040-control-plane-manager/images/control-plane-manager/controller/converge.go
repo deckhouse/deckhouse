@@ -29,19 +29,28 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func installExtraFiles() error {
-	dstDir := filepath.Join(deckhousePath, "extra-files")
-	log.Infof("phase: install extra files to %s", dstDir)
-
-	if err := removeDirectory(dstDir); err != nil {
-		return err
+// Generate etcd performance patch before converge phase
+func generateEtcdPerformancePatch() error {
+	log.Info("phase: generate etcd performance patch")
+	params := GetEtcdPerformanceParams()
+	if err := GenerateEtcdPerformancePatch(params); err != nil {
+		return fmt.Errorf("failed to generate etcd performance patch: %w", err)
 	}
+	return nil
+}
+
+// Synchronize extra files with the destination directory,
+// ensuring the destination contains exactly the same set of files as in the config.
+func syncExtraFiles() error {
+	dstDir := filepath.Join(deckhousePath, "extra-files")
+	log.Infof("phase: sync extra files to %s", dstDir)
 
 	if err := os.MkdirAll(dstDir, 0o700); err != nil {
 		return err
@@ -52,6 +61,7 @@ func installExtraFiles() error {
 		return err
 	}
 
+	expected := make(map[string]struct{})
 	for _, entry := range dirEntries {
 		if entry.IsDir() {
 			continue
@@ -60,16 +70,56 @@ func installExtraFiles() error {
 			continue
 		}
 
-		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, strings.TrimPrefix(entry.Name(), "extra-file-")), 0o600); err != nil {
+		dstName := strings.TrimPrefix(entry.Name(), "extra-file-")
+		expected[dstName] = struct{}{}
+
+		if err := installFileIfChanged(filepath.Join(configPath, entry.Name()), filepath.Join(dstDir, dstName), 0o600); err != nil {
 			return err
 		}
 	}
+
+	// Remove unexpected files/dirs after writes
+	entries, err := os.ReadDir(dstDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, entry := range entries {
+		name := entry.Name()
+		if _, ok := expected[name]; ok {
+			continue
+		}
+		path := filepath.Join(dstDir, name)
+		if entry.IsDir() {
+			log.Info("remove unexpected directory", slog.String("path", path))
+			if err := os.RemoveAll(path); err != nil {
+				return err
+			}
+			continue
+		}
+		log.Info("remove unexpected file", slog.String("path", path))
+		if err := removeFile(path); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
 func convergeComponents() error {
 	log.Infof("phase: converge kubernetes components")
-	for _, v := range []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"} {
+
+	var components []string
+	if config.EtcdArbiter {
+		components = []string{"etcd"}
+		log.Info("ETCD_ARBITER mode: skipping control-plane components")
+	} else {
+		components = []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
+	}
+
+	for _, v := range components {
 		if err := convergeComponent(v); err != nil {
 			return err
 		}
@@ -77,11 +127,44 @@ func convergeComponents() error {
 	return nil
 }
 
+func rejoinEtcdMemberIfNeeded(etcd *Etcd) error {
+	_, err := os.Stat("/var/lib/etcd/member")
+	if err == nil {
+		memberExists, err := etcd.checkMemberExists(config.NodeName)
+		if err != nil {
+			return fmt.Errorf("failed to check if etcd member %s exists: %w", config.NodeName, err)
+		}
+
+		if !memberExists {
+			log.Infof("etcd member folder exists but %s is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", config.NodeName)
+			if err := cleanupEtcdFolder(); err != nil {
+				return fmt.Errorf("failed to cleanup etcd folder: %w", err)
+			}
+			if err := EtcdJoinConverge(); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func convergeComponent(componentName string) error {
-	log.Infof("converge component %s", componentName)
+	log.Info("converge component", slog.String("component", componentName))
 	// remove checksum patch, if it was left from previous run
 	_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
-
+	// handle etcd member deletion after converge, if etcd member is not a member of the cluster, cleanup etcd folder and join etcd
+	var etcd *Etcd
+	var err error
+	if componentName == "etcd" {
+		etcd, err = NewEtcd()
+		if err != nil {
+			return fmt.Errorf("failed to create etcd client: %w", err)
+		}
+		defer etcd.client.Close()
+		if err := rejoinEtcdMemberIfNeeded(etcd); err != nil {
+			return err
+		}
+	}
 	if err := prepareConverge(componentName, true); err != nil {
 		return err
 	}
@@ -115,6 +198,9 @@ func convergeComponent(componentName string) error {
 
 		_, err := os.Stat("/var/lib/etcd/member")
 		if componentName == "etcd" && err != nil {
+			if config.EtcdArbiter {
+				log.Info("etcd-arbiter mode: joining etcd cluster using kubeadm")
+			}
 			if err := EtcdJoinConverge(); err != nil {
 				return err
 			}
@@ -125,9 +211,8 @@ func convergeComponent(componentName string) error {
 		}
 
 		_ = os.Remove(filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml"))
-
 	} else {
-		log.Infof("skip manifest generation for component %s because checksum in manifest is up to date", componentName)
+		log.Info("skip manifest generation for component because checksum in manifest is up to date", slog.String("component", componentName))
 	}
 
 	err = waitPodIsReady(componentName, checksum)
@@ -144,13 +229,7 @@ func convergeComponent(componentName string) error {
 
 	// Handle the situation when etcd member remains in the learner state
 	if componentName == "etcd" {
-		etcd, err := NewEtcd()
-		if err != nil {
-			return err
-		}
-		defer etcd.client.Close()
-
-		err = etcd.PromoteLearnersIfNeeded()
+		err = etcd.promoteLearnersIfNeeded()
 		if err != nil {
 			return err
 		}
@@ -170,6 +249,14 @@ func prepareConverge(componentName string, isTemp bool) error {
 	if isTemp {
 		args = append(args, "--rootfs", config.TmpPath)
 	}
+
+	log.Info("run kubeadm",
+		slog.String("phase", "prepare-converge"),
+		slog.String("component", componentName),
+		slog.Any("args", args),
+		slog.Bool("temp_rootfs", isTemp),
+	)
+
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
@@ -225,7 +312,7 @@ func manifestChecksumIsEqual(componentName, checksum string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return strings.Index(string(content), checksum) != -1, nil
+	return strings.Contains(string(content), checksum), nil
 }
 
 func generateChecksumPatch(componentName string, checksum string) error {

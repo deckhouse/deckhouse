@@ -1,0 +1,48 @@
+admission-policy-engine:
+  fixes:
+    - summary: Fix constraint templates, add additional tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17561
+cloud-provider-aws:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17470
+cloud-provider-vcd:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17136
+cloud-provider-yandex:
+  fixes:
+    - summary: fix cve
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17469
+cni-cilium:
+  fixes:
+    - summary: Fixed egress-gateway-agent controller logic for deleted resources and disable dev logging.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17378
+deckhouse:
+  fixes:
+    - summary: Fix module rerun.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17478
+docs:
+  fixes:
+    - summary: Added a link to the ModuleSource to the explanation table of the editions.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17411
+metallb:
+  fixes:
+    - summary: >-
+        Fixed D8MetallbBGPSessionDown alert false positives caused by duplicate metrics without port
+        information.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17563
+node-local-dns:
+  fixes:
+    - summary: The safe-updater's logic of detecting if daemonset pods are up-to-date is improved.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17506
+      impact: Node-local-dns safe-uptader pods will be restarted.
+prometheus:
+  features:
+    - summary: Add prometheus configuration reload failed alert
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17128
+registry:
+  fixes:
+    - summary: Fixed validation of input image list changes in the registry checker.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17553
+

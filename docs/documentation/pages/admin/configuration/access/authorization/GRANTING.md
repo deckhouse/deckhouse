@@ -4,7 +4,7 @@ permalink: en/admin/configuration/access/authorization/granting.html
 description: "Grant RBAC permissions to users and service accounts in Deckhouse Kubernetes Platform. Role and ClusterRole binding configuration for secure access control."
 ---
 
-To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a `subjects` block in custom resources.
+To grant permissions in Deckhouse Kubernetes Platform (DKP), you need to define a [`subjects`](/modules/user-authz/cr.html#authorizationrule-v1alpha1-spec-subjects) block in custom resources.
 
 For users, it should be specified in the following format:
 
@@ -15,8 +15,8 @@ subjects:
 ```
 
 {% alert level="warning" %}
-If you are using the `user-authn` module and static users, make sure to specify the user’s email in `subjects`,
-not the name of the User resource.
+If you are using the [`user-authn`](/modules/user-authn/) module and static users, make sure to specify the user’s email in `subjects`,
+not the name of the [User](/modules/user-authn/cr.html#user) resource.
 {% endalert %}
 
 Alternatively, you can grant permissions by group:
@@ -102,16 +102,16 @@ you can grant permissions to users via the [ClusterRoleBinding](https://kubernet
 
 To assign cluster administrator permissions, use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:all:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
-Example of assigning cluster administrator permissions to the user `joe`:
+Example of assigning cluster administrator permissions to the user `jane`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: cluster-admin-joe
+  name: cluster-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -139,16 +139,16 @@ The user will have the following permissions:
 To assign networking administrator permissions for managing the cluster’s networking subsystem,
 use the [manage role](rbac-experimental.html#manage-roles) `d8:manage:networking:manager` in a [ClusterRoleBinding](https://kubernetes.io/docs/reference/kubernetes-api/authorization-resources/cluster-role-binding-v1/) resource.
 
-Example of assigning networking administrator permissions to the user `joe`:
+Example of assigning networking administrator permissions to the user `jane`:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: network-admin-joe
+  name: network-admin-jane
 subjects:
 - kind: User
-  name: joe
+  name: jane.doe@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole
@@ -269,7 +269,7 @@ metadata:
   namespace: myapp
 subjects:
 - kind: User
-  name: app-developer
+  name: app-developer@example.com
   apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

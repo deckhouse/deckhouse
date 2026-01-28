@@ -170,7 +170,7 @@ func (c *deckhouseVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhouse
 		// or an enabled module has requirements
 		// prevent deckhouse release from becoming predicted
 		if releaseName == "" || c.enabledModules.Has(releaseName) {
-			return err
+			return fmt.Errorf("validate base version: %w", err)
 		}
 	}
 
@@ -213,7 +213,7 @@ func (c *kubernetesVersionCheck) Verify(_ context.Context, dr *v1alpha1.Deckhous
 			// or an enabled module has requirements
 			// prevent deckhouse release from becoming predicted
 			if moduleName == "" || c.enabledModules.Has(moduleName) {
-				return err
+				return fmt.Errorf("validate base version: %w", err)
 			}
 		}
 	}
@@ -377,7 +377,7 @@ func (c *moduleRequirementsCheck) GetName() string {
 func (c *moduleRequirementsCheck) Verify(_ context.Context, mr *v1alpha1.ModuleRelease) error {
 	err := c.exts.CheckModuleReleaseRequirements(mr.GetModuleName(), mr.GetName(), mr.GetVersion(), mr.GetModuleReleaseRequirements())
 	if err != nil {
-		return err
+		return fmt.Errorf("check module release requirements: %w", err)
 	}
 
 	return nil
@@ -428,9 +428,9 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
 
 	// Fetch ModuleConfigs and ModuleSources
-	mcList := &v1alpha1.ModuleConfigList{}
-	if err := c.k8sclient.List(ctx, mcList); err != nil {
-		return fmt.Errorf("failed to list ModuleConfigs: %w", err)
+	moduleList := &v1alpha1.ModuleList{}
+	if err := c.k8sclient.List(ctx, moduleList); err != nil {
+		return fmt.Errorf("failed to list Modules: %w", err)
 	}
 
 	moduleSources := &v1alpha1.ModuleSourceList{}
@@ -440,15 +440,20 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 
 	for _, moduleName := range modules {
 		foundMS := false
-		foundMC := false
-		// Check if module exists in ModuleConfig and is disabled
-		for _, mc := range mcList.Items {
-			if mc.Name == moduleName && !mc.IsEnabled() {
-				c.logger.Debug("migrated module is disabled in ModuleConfig", slog.String("module", moduleName))
-				foundMC = true
+		ModuleEnabled := false
+		// Check if module exists in ModuleList and is disabled
+		for _, module := range moduleList.Items {
+			if module.Name == moduleName {
+				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
+					ModuleEnabled = true
+				} else {
+					c.logger.Debug("migrated module is disabled", slog.String("module", moduleName))
+				}
+				break
 			}
 		}
-		if foundMC {
+		if !ModuleEnabled {
 			continue
 		}
 

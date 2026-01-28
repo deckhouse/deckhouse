@@ -74,7 +74,6 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
-
 	}
 
 	return nil, nil
@@ -101,7 +100,6 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 		if err != nil {
 			return nil, field.Invalid(field.NewPath("spec", "SudoPasswordEncoded"), "******", "SudoPasswordEncoded must be a valid base64 encoded string")
 		}
-
 	}
 
 	return nil, nil

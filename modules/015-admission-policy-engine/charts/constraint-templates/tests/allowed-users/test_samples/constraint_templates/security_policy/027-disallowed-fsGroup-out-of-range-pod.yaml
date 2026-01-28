@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: disallowed-fsGroup-out-of-range-pod
+  namespace: testns
+spec:
+  securityContext:
+    fsGroup: 5
+  containers:
+    - name: nginx
+      image: nginx
+

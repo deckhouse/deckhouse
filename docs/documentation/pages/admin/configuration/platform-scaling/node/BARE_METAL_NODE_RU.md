@@ -49,7 +49,7 @@ lang: ru
    - убедиться, что пользователь может выполнять команды через `sudo`.
 
 1. Создать объект [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) с доступом к серверу. DKP использует объект SSHCredentials для подключения к серверам по SSH. В нём указывается:
-   - приватный ключ;
+   - приватный ключ, закодированный в формате Base64;
    - пользователь ОС;
    - порт SSH;
    - (опционально) пароль для `sudo`, если требуется.
@@ -62,16 +62,14 @@ lang: ru
      metadata:
        name: static-nodes
      spec:
-       privateSSHKey: |
-         -----BEGIN OPENSSH PRIVATE KEY-----
-         LS0tLS1CRUdJlhrdG...................VZLS0tLS0K
-         -----END OPENSSH PRIVATE KEY-----
+       privateSSHKey: LS0tLS1CRUdJTiBPUEVOU1NIIFBSSVZBVEUgS0VZLS0tLS0KTUlJRXZBSUJBREFOQmdrcWhraUc5dzBCQVFFRkFBT0NBZzhBTUlJQkNnS0NBUUVB
        sshPort: 22
        sudoPassword: password
        user: ubuntu
      ```
 
-     > **Важно**. Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
+     > **Важно**. Поле `privateSSHKey` должно содержать приватный SSH-ключ, закодированный в формате Base64.
+     > Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
 
 1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 
@@ -141,7 +139,7 @@ lang: ru
 Чтобы изменить параметры статического кластера, выполните команду:
 
 ```shell
-d8 platform edit static-cluster-configuration
+d8 system edit static-cluster-configuration
 ```
 
 ## Перемещение статического узла между NodeGroup
@@ -253,7 +251,7 @@ spec:
  При изменении `cri.type` для NodeGroup, созданных с помощью `dhctl`, необходимо обновить это значение в `dhctl config edit provider-cluster-configuration` и настройках объекта NodeGroup.
 {% endalert %}
 
-После изменения CRI для NodeGroup модуль `node-manager` будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
+После изменения CRI для NodeGroup [модуль `node-manager`](/modules/node-manager/) будет поочередно перезагружать узлы, применяя новый CRI.  Обновление узла сопровождается простоем (disruption). В зависимости от настройки `disruption` для NodeGroup, модуль `node-manager` либо автоматически выполнит обновление узлов, либо потребует подтверждения вручную.
 
 ## Изменение NodeGroup у статического узла
 

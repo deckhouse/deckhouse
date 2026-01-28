@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
+	tmp "github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -44,7 +45,7 @@ If you understand what you are doing, you can use flag "--yes-i-am-sane-and-i-un
 )
 
 func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
-	app.DefineSSHFlags(cmd, config.ConnectionConfigParser{})
+	app.DefineSSHFlags(cmd, config.NewConnectionConfigParser())
 	app.DefineBecomeFlags(cmd)
 	app.DefineCacheFlags(cmd)
 	app.DefineSanityFlags(cmd)
@@ -53,6 +54,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 
 	cmd.Action(func(c *kingpin.ParseContext) error {
 		logger := log.GetDefaultLogger()
+		ctx := context.Background()
 
 		if !app.SanityCheck {
 			logger.LogWarnLn(destroyApprovalsMessage)
@@ -68,11 +70,7 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		sshClient, err := sshclient.NewClientFromFlags()
-		if err != nil {
-			return err
-		}
-		err = sshClient.Start()
+		sshClient, err := sshclient.NewClientFromFlags(ctx)
 		if err != nil {
 			return err
 		}
@@ -82,18 +80,25 @@ func DefineDestroyCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 
 		destroyer, err := destroy.NewClusterDestroyer(context.TODO(), &destroy.Params{
-			NodeInterface: ssh.NewNodeInterfaceWrapper(sshClient),
-			StateCache:    cache.Global(),
-			SkipResources: app.SkipResources,
-			Logger:        logger,
-			IsDebug:       app.IsDebug,
-			TmpDir:        app.TmpDirName,
+			NodeInterface:  ssh.NewNodeInterfaceWrapper(sshClient),
+			StateCache:     cache.Global(),
+			SkipResources:  app.SkipResources,
+			LoggerProvider: log.SimpleLoggerProvider(logger),
+			IsDebug:        app.IsDebug,
+			TmpDir:         app.TmpDirName,
 		})
 		if err != nil {
 			return err
 		}
 
-		return destroyer.DestroyCluster(context.Background(), app.SanityCheck)
+		err = destroyer.DestroyCluster(ctx, app.SanityCheck)
+		if err != nil {
+			msg := fmt.Sprintf("Failed to destroy cluster: %v", err)
+			tmp.GetGlobalTmpCleaner().DisableCleanup(msg)
+			return err
+		}
+
+		return nil
 	})
 
 	return cmd

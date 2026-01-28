@@ -12,7 +12,7 @@ properties:
     description: |
       The name of StorageClass that will be used in the cluster by default.
 
-      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](../../deckhouse-configure-global.html#parameters-storageclass) setting.
+      If omitted, the StorageClass of the existing Loki PVC is used. If there is no PVC yet, the StorageClass will be used according to the [global storageClass parameter](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-storageclass) setting.
 
       The global `storageClass` parameter is only considered when the module is enabled. Changing the global `storageClass` parameter while the module is enabled will not trigger disk re-provisioning.
 
@@ -161,7 +161,7 @@ properties:
     x-examples:
       - mode: VPA
         vpa:
-          mode: Auto
+          mode: "InPlaceOrRecreate"
           cpu:
             min: 50m
             max: 2
@@ -178,6 +178,17 @@ properties:
           limits:
             cpu: 2
             memory: 2Gi
+      - mode: VPA
+        vpa:
+          mode: Auto
+          cpu:
+            min: 50m
+            max: 2
+            limitRatio: 1.5
+          memory:
+            min: 256Mi
+            max: 2Gi
+            limitRatio: 1.5
     properties:
       mode:
         type: string
@@ -199,10 +210,21 @@ properties:
             type: string
             description: |
               VPA operating mode.
+
+              - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                Resource values are not changed automatically afterwards.
+
+              - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                If in-place updates are not possible, the pod will be recreated.
+
+              - `Auto` — VPA automatically recreates pods to apply updated resource values.
+                > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                > It is recommended to use `InPlaceOrRecreate` instead.
             enum:
               - Initial
+              - InPlaceOrRecreate
               - Auto
-            default: Auto
+            default: InPlaceOrRecreate
           cpu:
             type: object
             default: {}

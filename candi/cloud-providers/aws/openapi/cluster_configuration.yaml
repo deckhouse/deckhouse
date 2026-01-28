@@ -11,10 +11,10 @@ apiVersions:
       Run the following command to change the configuration in a running cluster:
 
       ```shell
-      d8 p edit provider-cluster-configuration
+      d8 system edit provider-cluster-configuration
       ```
 
-      > After updating the node parameters, you need to run the [dhctl converge](../../deckhouse-faq.html#changing-the-configuration) command to apply the changes.
+      > After updating the node parameters, you need to run the `dhctl converge` command for the changes to take effect. For more information about changing the cluster configuration, see [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html).
     x-doc-search: |
       ProviderClusterConfiguration
     x-examples:
@@ -84,7 +84,7 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -224,7 +224,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -287,7 +287,7 @@ apiVersions:
         description: |
           The way resources are located in the cloud.
 
-          Read [more](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
+          Read [more](https://deckhouse.io/modules/cloud-provider-aws/layouts.html) about possible provider layouts.
 
           > **Note,** that the `Standard` layout is deprecated.
         enum: ['WithoutNAT', 'WithNAT', 'Standard']
@@ -322,7 +322,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string
@@ -410,6 +410,14 @@ apiVersions:
           A list of CIDR's allowed to connect to nodes via SSH.
 
           By default, `0.0.0.0/0`.
+      publicNetworkAllowList:
+        type: array
+        items:
+          pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+          type: string
+        x-doc-default: ["0.0.0.0/0"]
+        description: |
+          A list of CIDRs allowed to access public endpoints of the cluster.
       tags:
         type: object
         additionalProperties:
@@ -424,7 +432,7 @@ apiVersions:
         additionalProperties: false
         required: [providerAccessKeyId, providerSecretAccessKey, region]
         description: |
-          Contains [settings to connect](https://deckhouse.io/products/kubernetes-platform/documentation/v1/modules/cloud-provider-aws/environment.html) to the AWS API.
+          Contains [settings to connect](https://deckhouse.io/modules/cloud-provider-aws/environment.html) to the AWS API.
         properties:
           providerAccessKeyId:
             type: string
@@ -470,7 +478,7 @@ apiVersions:
         description: |
           The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
 
-          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](../../installing/configuration.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
+          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
 
           More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
     allOf:

@@ -43,4 +43,4 @@ If you need a different configuration, please refer to the documentation on [ins
 1. **Physical server or virtual machine for the worker node.**
 
    The requirements are similar to the requirements for the master node but also depend on the applications running on the nodes.
-   Additional disks are also required on the worker nodes for deploying software-defined storage.
+   Worker nodes also require additional disks for deploying software-defined storage, at least one unpartitioned disk with a capacity of at least 200 GB.

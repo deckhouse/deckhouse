@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: allowed-daemonset-runAsUser-in-range-container
+  namespace: testns
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      securityContext:
+        runAsUser: 5
+        runAsGroup: 50
+        fsGroup: 50
+        supplementalGroups:
+        - 50
+      containers:
+        - name: nginx
+          image: nginx
+

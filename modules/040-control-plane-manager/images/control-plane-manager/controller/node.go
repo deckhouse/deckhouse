@@ -20,8 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func annotateNode() error {

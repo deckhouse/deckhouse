@@ -9,7 +9,7 @@ lang: ru
 Далее рассматривается использование программно-определяемого реплицируемого блочного хранилища на базе DRBD, которое позволяет создавать реплицируемые тома на основе дискового пространства узлов. Для примера настроим StorageClass на основе томов с двумя репликами, которые располагаются на дисках `/dev/sda`.
 
 {% alert level="info" %}
-Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/virtualization-platform/reference/console-utilities/d8.html) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
+Для выполнения приведенных ниже команд необходима установленная утилита [d8](/products/kubernetes-platform/documentation/v1/cli/d8/) (Deckhouse CLI) и настроенный контекст kubectl для доступа к кластеру. Также, можно подключиться к master-узлу по SSH и выполнить команду от пользователя `root` с помощью `sudo -i`.
 {% endalert %}
 
 ## Включение возможности использования реплицируемого хранилища
@@ -19,7 +19,7 @@ lang: ru
 1. Включите модуль `sds-node-configurator`:
 
    ```shell
-   sudo -i d8 s module enable sds-node-configurator
+   sudo -i d8 system module enable sds-node-configurator
    ```
 
 1. Дождитесь, пока модуль `sds-node-configurator` перейдёт в состояние `Ready`:
@@ -31,13 +31,13 @@ lang: ru
 1. Включите модуль `snapshot-controller`:
 
    ```shell
-   sudo -i d8 s module enable snapshot-controller
+   sudo -i d8 system module enable snapshot-controller
    ```
 
 1. Включите модуль `sds-replicated-volume`:
 
    ```shell
-   sudo -i d8 s module enable sds-replicated-volume
+   sudo -i d8 system module enable sds-replicated-volume
    ```
 
 1. Дождитесь пока модуль `sds-replicated-volume` перейдёт в состояние `Ready`:
@@ -77,7 +77,7 @@ lang: ru
 
 1. Создайте VolumeGroup на каждом узле.
 
-   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/products/virtualization-platform/reference/cr/lvmvolumegroup.html).
+   На каждом узле необходимо создать группу томов LVM с помощью ресурса [LVMVolumeGroup](/modules/sds-node-configurator/stable/cr.html#lvmvolumegroup).
 
    Для создания ресурса LVMVolumeGroup, для каждого узла выполните следующие команды (укажите имя узла и имя блочного устройства):
 
@@ -163,7 +163,7 @@ lang: ru
    - `replication` — параметры репликации, для 2 реплик будет использоваться значение `Availability`;
    - `storagePool` — имя созданного ранее пула, в данном примере указывается `sds-pool`.
 
-   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/products/virtualization-platform/reference/cr/replicatedstorageclass.html).
+   Остальные параметры описаны [в документации ресурса ReplicatedStorageClass](/modules/sds-replicated-volume/cr.html#replicatedstorageclassreplicatedstorageclass.html).
 
    ```shell
    d8 k apply -f - <<EOF

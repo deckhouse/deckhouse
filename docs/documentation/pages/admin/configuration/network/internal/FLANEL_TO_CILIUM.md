@@ -5,7 +5,7 @@ permalink: en/admin/configuration/network/internal/flannel-to-cilium.html
 
 ## Procedure for switching CNI from Flannel to Cilium
 
-1. Disable the `kube-proxy` module:
+1. Disable the [`kube-proxy`](/modules/kube-proxy/) module:
 
    ```shell
    d8 k apply -f - << EOF
@@ -18,7 +18,7 @@ permalink: en/admin/configuration/network/internal/flannel-to-cilium.html
    EOF
    ```
 
-1. Enable the `cni-cilium` module:
+1. Enable the [`cni-cilium`](/modules/cni-cilium/) module:
 
    ```shell
    d8 k create -f - << EOF
@@ -59,7 +59,7 @@ permalink: en/admin/configuration/network/internal/flannel-to-cilium.html
 
    > If Cilium agents can't reach the `Running` status, reboot the associated nodes.
 
-1. Disable the `cni-flannel` module:
+1. Disable the [`cni-flannel`](/modules/cni-flannel/) module:
 
    ```shell
    d8 k apply -f - << EOF
@@ -72,7 +72,7 @@ permalink: en/admin/configuration/network/internal/flannel-to-cilium.html
    EOF
    ```
 
-1. Enable the `node-local-dns` module:
+1. Enable the [`node-local-dns`](/modules/node-local-dns/) module:
 
    ```shell
    d8 k apply -f - << EOF
@@ -98,13 +98,13 @@ To ensure the CNI switching from Flannel to Cilium was completed successfully, f
    - If using a single master node:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
    - If using a multi-master installation:
 
      ```shell
-     d8 platform queue list
+     d8 system queue list
      ```
 
 1. Check the Cilium agents. They must be in the `Running` status:

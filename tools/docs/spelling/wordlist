@@ -23,6 +23,7 @@ AES
 Affero
 aggregator
 aggregators
+AKS
 alertmanager
 Alertmanager
 alertmanagers
@@ -55,8 +56,8 @@ APIVersion
 app
 apparmor
 AppArmor
-apps
 app’s
+apps
 Aps
 aren
 argocd
@@ -95,6 +96,7 @@ autoscaler
 autoscalers
 autoscaling
 autounattend
+Avi
 aws
 AWS
 awscli
@@ -264,8 +266,8 @@ config
 configMap
 ConfigMap
 configmaps
-ConfigMaps
 ConfigMap’s
+ConfigMaps
 configOverrides
 configs
 configurator
@@ -328,6 +330,7 @@ CVE
 CVEs
 CWND
 Cелектор
+Cертификат
 Cинхронизация
 cмаршрутизировать
 Cоздается
@@ -408,8 +411,8 @@ Dnsmasq
 dnsPolicy
 DNSs
 Dockerfile
-Dockerfiles
 Dockerfile’s
+Dockerfiles
 dockerignore
 dockersamples
 documentation
@@ -452,6 +455,7 @@ eg
 egressgateway
 EgressGateway
 EgressGatewayPolicy
+EgressGateways
 EKS
 EL7
 ElasticIP
@@ -486,8 +490,10 @@ externalNetworkName
 externalNetworkNames
 ExternalSecret
 externalTargets
+ExtraConfig
 extraGroups
 extranet
+failback
 failover
 Failover
 falco
@@ -621,6 +627,7 @@ httpsPort
 httpsProxy
 Huawei
 hubble
+HubbleMonitoringConfig
 HugePage
 HWE
 hyperconverged
@@ -686,6 +693,7 @@ internalNetworkCIDRs
 internalNetworkDNSServers
 internalNetworkNames
 internalNetworkSecurity
+internet
 interoperate
 interpod
 InterPodAntiAffinity
@@ -742,10 +750,12 @@ keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
+Kerberos
 KESL
 Keycloak
 keyField
 KeypairFullAccess
+keytab
 KeyValue
 Kiali
 KiB
@@ -818,6 +828,7 @@ loki
 longtermStorageClass
 LowNodeUtilization
 LRS
+lsblk
 LTS
 LUN
 lv
@@ -902,6 +913,7 @@ mongo
 Mongo
 monorepo
 monorepos
+MostAllocated
 MQL
 MRA
 MRs
@@ -956,7 +968,6 @@ NGINX’s
 NIC
 NICs
 NLB
-Node.js
 nodeAffinity
 nodegroup
 nodeGroup
@@ -965,6 +976,7 @@ NodeGroupConfiguration
 nodegroups
 nodeGroups
 NodeGroups
+Node.js
 NodeManager
 nodeName
 nodeNetworkCIDR
@@ -1000,6 +1012,7 @@ oauth
 OAuth
 objectmeta
 OCI
+offline
 OFFLINE
 offtopic
 OICD
@@ -1055,6 +1068,7 @@ overprovisioning
 overprovisioningRate
 overriden
 overutilized
+OVF
 ovh
 OVH
 ovirt
@@ -1066,6 +1080,7 @@ parametersSchema
 paravirtualization
 passphrase
 passwordHash
+passwordless
 pathPrefix
 PCI
 pcs
@@ -1123,6 +1138,7 @@ Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
 printf
+prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
@@ -1209,6 +1225,7 @@ ReplicatedStoragePool
 ReplicationController
 repo
 reprovisioning
+repurposed
 RequestAuthentication
 RequirementCheck
 resizer
@@ -1313,6 +1330,7 @@ spellchecker
 Spellchecking
 SPIFFE
 Splunk
+SPNEGO
 SQL
 SQLite
 sqs
@@ -1333,6 +1351,7 @@ SSZ
 stakater
 StandardSSD
 StandardWithInternalNetwork
+StandardWithNetwork
 StandardWithNoRouter
 Stapel
 startTLS
@@ -1456,6 +1475,7 @@ uninstall
 uninstalling
 Unlabel
 UNPACKEDSIZE
+unschedulable
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1483,6 +1503,7 @@ vCenter
 vCloud
 vCPU
 vCPUs
+VDC
 VDI
 ve
 vectoradd
@@ -1721,6 +1742,7 @@ ZvirtInstanceClass
 валидация
 валидирования
 валидировать
+валидирует
 валидируется
 валидируются
 вебхук
@@ -1757,11 +1779,14 @@ ZvirtInstanceClass
 высокогранулярной
 высокодоступном
 высокодоступную
+высокодоступный
 высокодоступных
 высокоуровневой
 высокоуровневыми
 высокоуровневых
 г
+гайде
+гайде
 Гб
 Гбит
 геораспределенном
@@ -1883,9 +1908,20 @@ ZvirtInstanceClass
 кастомными
 кастомных
 Катастрофоустойчивость
+кеш
+кеша
+кешах
+кеше
 кешей
+кешем
+кеши
 кеширование
+кешированием
+кешированию
 кеширования
+кешировать
+кешироваться
+кеширует
 кеширующий
 киберугроз
 коммит
@@ -1903,6 +1939,7 @@ ZvirtInstanceClass
 компонента
 конвержа
 консистентного
+консистентное
 консистентности
 консистентность
 консистентный
@@ -1931,19 +1968,6 @@ ZvirtInstanceClass
 криптовалютных
 кроссплатформенной
 кубернетизация
-кэш
-кэша
-кэшах
-кэше
-кэшем
-кэши
-кэширование
-кэшированию
-кэширования
-кэшировать
-кэшироваться
-кэширующий
-Кэширующий
 лабу
 лейбл
 лейбла
@@ -1978,6 +2002,8 @@ ZvirtInstanceClass
 масштабируемости
 масштабируемость
 масштабируется
+Мб
+Мб
 МБ
 медиафайлов
 медиафайлы
@@ -2007,6 +2033,8 @@ ZvirtInstanceClass
 монорепо
 монорепозиториях
 мульти
+мультиарендности
+мультиарендность
 мультикластер
 Мультикластер
 мультикластера
@@ -2024,6 +2052,7 @@ ZvirtInstanceClass
 мусорку
 мэтчем
 наблюдаемости
+наблюдаемость
 неавторизованный
 невалидным
 недеструктивные
@@ -2033,6 +2062,9 @@ ZvirtInstanceClass
 незашифрованном
 неизменяем
 неинтерактивном
+неймспейс
+неймспейсах
+неймспейсе
 некоммитнутые
 некоммитнутыми
 неконсистентному
@@ -2052,6 +2084,8 @@ ZvirtInstanceClass
 непринадлежности
 непубличного
 непубличный
+неразмеченным
+неразмеченным
 нереляционные
 несекретной
 несекретную
@@ -2082,6 +2116,7 @@ ZvirtInstanceClass
 отмасштабирует
 отмонтировать
 отрисовки
+офлайн
 п
 пайплайна
 пайплайнами
@@ -2123,6 +2158,8 @@ ZvirtInstanceClass
 перезапускается
 перезапускать
 перезапускаться
+перезапустились
+перезапустился
 перезапустится
 перезапуститься
 перезапущен
@@ -2203,6 +2240,7 @@ ZvirtInstanceClass
 примонтированный
 примонтированных
 примонтируем
+приоритетность
 приоритизация
 проброс
 проброса
@@ -2287,6 +2325,7 @@ ZvirtInstanceClass
 ротирован
 ротировать
 ротируется
+ротируются
 роутер
 роутера
 роутерами
@@ -2328,6 +2367,7 @@ ZvirtInstanceClass
 сервисах
 сервисов
 сервисы
+синтаксисы
 скачался
 скачаться
 скейлить
@@ -2341,6 +2381,7 @@ ZvirtInstanceClass
 скрейпа
 скрейпер
 скрейпера
+скрейпит
 скриншоте
 скриншотом
 скриншоты
@@ -2449,9 +2490,14 @@ ZvirtInstanceClass
 хейтеры
 хелпер
 хеш
+хешированные
+хешированный
+хешированных
 хост
 хоста
 хостам
+хостами
+хостах
 хосте
 хостнейм
 хостов

@@ -79,6 +79,7 @@ spec:
         - --controller-class=ingress-nginx.deckhouse.io/%!s(<nil>)
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-%!s(<nil>)
+        - --status-service-label=network.deckhouse.io/ingress-nginx-class=
         env:
         - name: POD_NAME
           valueFrom:
@@ -159,6 +160,7 @@ spec:
           capabilities:
             drop:
             - ALL
+          privileged: false
           readOnlyRootFilesystem: true
           runAsGroup: 64535
           runAsNonRoot: true

@@ -245,6 +245,18 @@ dpkg-reconfigure cloud-init
 
 ![Настройка шаблона, OVF](../../../../images/cloud-provider-vcd/template/OVF.png)
 
+Убедитесь, что в конфигурации `cloud-init` задан параметр `datasource_list`, с помощью следующей команды:
+
+```shell
+cat /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+```
+
+Если вывод окажется пустым, выполните следующую команду:
+
+```shell
+echo "datasource_list: [ OVF, VMware, None ]" > /etc/cloud/cloud.cfg.d/90_dpkg.cfg
+```
+
 Выполните оставшиеся команды:
 
 ```shell
@@ -276,14 +288,22 @@ shutdown -P now
 
 1. В созданном шаблоне перейдите на вкладку «Metadata» и добавьте шесть полей:
 
-* `guestinfo.metadata`;
-* `guestinfo.metadata.encoding`;
-* `guestinfo.userdata`;
-* `guestinfo.userdata.encoding`;
-* `disk.enableUUID`;
-* `guestinfo.hostname`.
+   * `guestinfo.metadata`;
+   * `guestinfo.metadata.encoding`;
+   * `guestinfo.userdata`;
+   * `guestinfo.userdata.encoding`;
+   * `disk.enableUUID`;
+   * `guestinfo.hostname`.
 
    ![Настройка шаблона, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
+
+   Для **каждого** поля в форме добавления/редактирования укажите:
+
+   * «Type»: `Text` (текстовое значение);
+   * «User access»: `Read/Write`;
+   * «Value»: один пробел (space).
+
+   > Интерфейс VCD может не сохранять метаданные с пустым значением. Пробел используется как техническое заполнение и не влияет на работу. Фактические значения будут подставлены автоматически при создании виртуальных машин.
 
    ![Настройка шаблона, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
 
@@ -304,3 +324,13 @@ shutdown -P now
 * VCD поддерживает CSI. Диски создаются как VCD Independent Disks.
 * Guest property `disk.EnableUUID` должно быть разрешено для используемых шаблонов виртуальных машин.
 * Deckhouse Kubernetes Platform поддерживает изменение размера дисков с версии v1.59.1.
+
+## Использование балансировщика нагрузки
+
+* Компоненты DKP поддерживают ресурсов Service типа LoadBalancer при установке в VMware Cloud Director (VCD).
+* В качестве балансировщика используется VMware NSX Advanced Load Balancer (ALB или Avi Networks).
+* Поддержка доступна **только** при использовании платформы виртуализации сети `NSX-T`.
+* Балансировка должна быть включёна на Edge Gateway вашим провайдером VCD. Проверить, включёна ли балансировка, можно в разделе Edge Gateway → Load Balancer → General Settings — параметр `State` должен быть в статусе `Active`.
+* Если балансировщик был активирован после успешного создания кластера DKP, компоненты автоматически подхватят изменения в течение часа (дополнительных действий не требуется).
+* Для каждого открытого порта создаётся связка Pool + Virtual Service.
+* При наличии межсетевого экрана необходимо создать разрешающее правило для внешнего IP-адреса балансировщика и соответствующих портов.

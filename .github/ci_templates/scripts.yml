@@ -72,7 +72,7 @@ Use statusConfig to set status source and render options.
 # <template: check_label_job>
 check_label:
   name: Check label
-  runs-on: ubuntu-latest
+  runs-on: "regular"
   outputs:
     should_run: ${{ steps.check_label.outputs.should_run }}
     labels: ${{ steps.check_label.outputs.labels }}

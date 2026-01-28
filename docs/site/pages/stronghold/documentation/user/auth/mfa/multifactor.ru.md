@@ -4,7 +4,7 @@ permalink: ru/stronghold/documentation/user/auth/mfa/multifactor.html
 lang: ru
 ---
 
-MULTIFACTOR Ldap Adapter — LDAP proxy-сервер, разработанный и поддерживаемый компанией МУЛЬТИФАКТОР. Он используется для двухфакторной защиты пользователей в приложениях, использующих LDAP-аутентификацию.
+MULTIFACTOR Ldap Adapter — это LDAP proxy-сервер, разработанный и поддерживаемый компанией МУЛЬТИФАКТОР. Он используется для двухфакторной защиты пользователей в приложениях, использующих LDAP-аутентификацию.
 Система обеспечивает многофакторную аутентификацию и контроль доступа для любых удалённых подключений: RDP, VPN, VDI, SSH и других.
 
 ## Настройка LDAP Adapter
@@ -13,14 +13,14 @@ MULTIFACTOR Ldap Adapter — LDAP proxy-сервер, разработанный
 
 Stronghold может осуществлять двухфакторную аутентификацию пользователей из каталога LDAP или Active Directory:
 
-- Пользователь подключается к Stronghold, вводит логин и пароль;
-- Stronghold по протоколу LDAP подключается к компоненту [MULTIFACTOR Ldap Adapter](https://multifactor.ru/docs/ldap-adapter/ldap-adapter/);
-- Компонент проверяет логин и пароль пользователя в Active Directory или другом LDAP-каталоге и запрашивает второй фактор аутентификации;
-- Пользователь подтверждает запрос доступа выбранным способом аутентификации.
+1. Пользователь подключается к Stronghold, вводит логин и пароль.
+1. Stronghold по протоколу LDAP подключается к компоненту [MULTIFACTOR Ldap Adapter](https://multifactor.ru/docs/ldap-adapter/ldap-adapter/).
+1. Компонент проверяет логин и пароль пользователя в Active Directory или другом LDAP-каталоге и запрашивает второй фактор аутентификации.
+1. Пользователь подтверждает запрос доступа выбранным способом аутентификации.
 
 ### Настройка MULTIFACTOR
 
-1. Зайдите в [систему управления MULTIFACTOR](https://admin.multifactor.ru/account/login), в разделе «Ресурсы» создайте новое LDAP приложение.
+1. Зайдите в [систему управления MULTIFACTOR](https://admin.multifactor.ru/account/login). В разделе «Ресурсы» создайте новое LDAP-приложение.
   После создания будут доступны два параметра: `NAS Identifier` и `Shared Secret`, они потребуются для последующих шагов.
 1. Загрузите и установите [MULTIFACTOR Ldap Adapter](https://multifactor.ru/docs/ldap-adapter/ldap-adapter/).
 
@@ -96,8 +96,9 @@ data:
 В конфигурации укажите адрес своего LDAP-сервера и значения `multifactor-nas-identifier` и `multifactor-shared-secret` из панели управления MULTIFACTOR.
 
 Доступные образы:
-- на базе Ubuntu 24.04 `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7`
-- на базе Alpine 3.22 `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7-alpine`
+
+- на базе Ubuntu 24.04: `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7`;
+- на базе Alpine 3.22: `registry.deckhouse.ru/stronghold/multifactor/multifactor-ldap-adapter:3.0.7-alpine`.
 
 ## Настройка Stronghold
 
@@ -111,7 +112,7 @@ d8 stronghold write auth/ldap/config url="ldap://ldap-adapter.default.svc" \
    username_as_alias=true
 ```
 
-## Тестирование с помощью локального сервера openldap
+## Тестирование с помощью локального сервера OpenLDAP
 
 Ниже приведен пример манифеста, с помощью которого можно запустить сервис OpenLDAP в Kubernetes для целей тестирования:
 
@@ -158,33 +159,33 @@ spec:
     app: openldap
 ```
 
-После того как запустите контейнер, создайте пользователя (в качестве примера приведено создание пользователя `alice` с паролем `D3mo-Passw0rd`).
+После запуска контейнера создайте пользователя (в качестве примера приведено создание пользователя `alice` с паролем `D3mo-Passw0rd`):
 
-Сначала выполните вход в контейнер openldap:
+1. Сначала выполните вход в контейнер OpenLDAP:
 
-```shell
-d8 k exec svc/openldap -it -- bash
-```
+   ```shell
+   d8 k exec svc/openldap -it -- bash
+   ```
 
-Создайте пользователя с помощью следующих команд:
+1. Создайте пользователя с помощью следующих команд:
 
-```shell
-cd /tmp
-cat << EOF > create_entries.ldif
-dn: uid=alice,ou=users,dc=example,dc=com
-objectClass: inetOrgPerson
-objectClass: person
-objectClass: top
-cn: Alice
-sn: User
-userPassword: D3mo-Passw0rd
-EOF
+   ```shell
+   cd /tmp
+   cat << EOF > create_entries.ldif
+   dn: uid=alice,ou=users,dc=example,dc=com
+   objectClass: inetOrgPerson
+   objectClass: person
+   objectClass: top
+   cn: Alice
+   sn: User
+   userPassword: D3mo-Passw0rd
+   EOF
 
-ldapadd -H ldap://openldap -cxD "cn=admin,dc=example,dc=com" \
-        -w "Password-1" -f "create_entries.ldif"
-```
+   ldapadd -H ldap://openldap -cxD "cn=admin,dc=example,dc=com" \
+           -w "Password-1" -f "create_entries.ldif"
+   ```
 
 Можете выполнить вход под пользователем `alice` с паролем `D3mo-Passw0rd`. В [панели управления MULTIFACTOR](https://admin.multifactor.ru/account/login)
-в разделе `Пользователи` будет создан пользователь `alice`, для которого можно назначить второй фактор.
+в разделе «Пользователи» будет создан пользователь `alice`, для которого можно назначить второй фактор.
 Далее будет требоваться его подтверждение при каждом входе в Stronghold.
 Помимо аудит-логов на стороне Stronghold подтверждение второго фактора будет фиксироваться также на стороне MULTIFACTOR.

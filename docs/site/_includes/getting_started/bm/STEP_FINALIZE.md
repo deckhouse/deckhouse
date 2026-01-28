@@ -2,36 +2,15 @@
 <script type="text/javascript" src='{% javascript_asset_tag getting-started-access %}[_assets/js/getting-started-access.js]{% endjavascript_asset_tag %}'></script>
 <script type="text/javascript" src='{% javascript_asset_tag bcrypt %}[_assets/js/bcrypt.js]{% endjavascript_asset_tag %}'></script>
 
-At this point, you have created a cluster consisting of a **single node** — the master node. By default, only a limited set of system components runs on the master node. To ensure the full functionality of the cluster, you need to either add at least one worker node to the cluster or allow the remaining Deckhouse components to run on the master node.
-
-Select one of the two options below to continue installing the cluster:
-
-<div class="tabs">
-        <a id='tab_layout_worker' href="javascript:void(0)" class="tabs__btn tabs__btn_revision active"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');">
-        A cluster of several nodes
-        </a>
-        <a id='tab_layout_master' href="javascript:void(0)" class="tabs__btn tabs__btn_revision"
-        onclick="openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_master', 'block_layout_worker');
-                 openTabAndSaveStatus(event, 'tabs__btn_revision', 'tabs__content_worker', 'block_layout_master');">
-        A cluster of a single node
-        </a>
-</div>
+<style>
+  #block_layout_master, #block_layout_worker { display: none; }
+</style>
 
 <div id="block_layout_master" class="tabs__content_master" style="display: none;">
 <p>A single-node cluster may be sufficient, for example, for familiarization purposes.</p>
 <ul>
   <li>
-<p>Run the following command on the <strong>master node</strong>, to remove the taint from the master node and permit the other Deckhouse components to run on it:</p>
-<div markdown="1">
-```bash
-sudo -i d8 k patch nodegroup master --type json -p '[{"op": "remove", "path": "/spec/nodeTemplate/taints"}]'
-```
-</div>
-  </li>
-  <li>
-<p>Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
+<p>Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -66,7 +45,7 @@ sudo -i d8 k patch mc global --type merge \
     Start a <strong>new virtual machine</strong> that will become the cluster node.
   </li>
   <li>
-  Configure the StorageClass for the <a href="/products/kubernetes-platform/documentation/v1/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
+  Configure the StorageClass for the <a href="/modules/local-path-provisioner/cr.html#localpathprovisioner">local storage</a> by running the following command on the <strong>master node</strong>:
 <div markdown="1">
 ```shell
 sudo -i d8 k create -f - << EOF
@@ -91,7 +70,7 @@ sudo -i d8 k patch mc global --type merge \
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#nodegroup">NodeGroup</a> <code>worker</code> and add a node using Cluster API Provider Static (CAPS) or manually using a bootstrap script.</p>
     
 <div class="tabs">
         <a id='tab_block_caps' href="javascript:void(0)" class="tabs__btn tabs__btn_caps_bootstrap active"
@@ -170,7 +149,7 @@ ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
 </div>
   </li>
   <li>
-    <p>Create an <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
+    <p>Create an <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> resource in the cluster. To do so, run the following command on the <strong>master node</strong>:</p>
 <div markdown="1">
 ```bash
 sudo -i d8 k create -f - <<EOF
@@ -229,7 +208,7 @@ chmod 600 /home/caps/.ssh/authorized_keys
 </div>
   </li>
   <li>
-    <p>Create a <a href="/products/kubernetes-platform/documentation/v1/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
+    <p>Create a <a href="/modules/node-manager/cr.html#staticinstance">StaticInstance</a> for the node to be added. To do so, run the following command on the <strong>master node</strong> (specify IP address of the node):</p>
 <div markdown="1">
 ```bash
 # Specify the IP address of the node you want to connect to the cluster.
@@ -271,6 +250,30 @@ d8cluster-worker   Ready    worker                 10m   v1.23.17
 {%- endofftopic %}
 </li>
 </ul>
+{% alert type="info" %}
+{% offtopic title="Adding two or more worker nodes..." %}
+**Bootstrap script**:  
+Use the same NodeGroup `worker` and the same bootstrap script you used to add the first node.
+For each additional node:
+
+1. Prepare a clean virtual machine.
+1. On this VM, run the command with the same Base64-encoded script you used to add the first node:
+
+   ```shell
+   echo <BASE64-SCRIPT-CODE> | base64 -d | bash
+   ```
+
+**CAPS**:  
+If you use CAPS and want to add more static nodes in the `worker` NodeGroup:
+
+1. Increase the value of <a href="/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count">spec.staticInstances.count</a> in the NodeGroup `worker` resource up to the required number of nodes.  
+1. Create one StaticInstance resource for each new node, specifying:  
+   - The label `role: worker`.
+   - The IP address of this node in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-address">spec.address</a>.
+   - A reference to <a href="/modules/node-manager/cr.html#sshcredentials">SSHCredentials</a> in <a href="/modules/node-manager/cr.html#staticinstance-v1alpha2-spec-credentialsref">spec.credentialsRef</a>.
+{%- endofftopic %}
+{% endalert %}
+
 </div>
 
 <p>Note that it may take some time to get all Deckhouse components up and running after the installation is complete.</p>
@@ -342,7 +345,11 @@ sudo -i d8 k create -f $PWD/user.yml
 </div>
 </li>
 <li><strong>Create DNS records</strong> to organize access to the cluster web-interfaces:
-  <ul><li>Discover public IP address of the node where the Ingress controller is running.</li>
+  <ul><li>Identify the public IP address of the node where the Ingress Controller is running:
+  <div class="highlight">
+  <pre class="highlight"><code>sudo -i d8 k get pods -n d8-ingress-nginx -o=jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.hostIP}{"\n"}{end}' | grep '^controller' | awk '{print $2}'</code></pre>
+  </div>
+  </li>
   <li>If you have the DNS server and you can add a DNS records:
   <ul>
     <li>If your cluster DNS name template is a <a href="https://en.wikipedia.org/wiki/Wildcard_DNS_record">wildcard DNS</a> (e.g., <code>%s.kube.my</code>), then add a corresponding wildcard A record containing the public IP, you've discovered previously.
@@ -352,10 +359,11 @@ sudo -i d8 k create -f $PWD/user.yml
           <div class="highlight">
 <pre class="highlight">
 <code example-hosts>api.example.com
-argocd.example.com
-dashboard.example.com
-documentation.example.com
+code.example.com
+commander.example.com
+console.example.com
 dex.example.com
+documentation.example.com
 grafana.example.com
 hubble.example.com
 istio.example.com
@@ -364,6 +372,7 @@ kubeconfig.example.com
 openvpn-admin.example.com
 prometheus.example.com
 status.example.com
+tools.example.com
 upmeter.example.com</code>
 </pre>
         </div>
@@ -378,10 +387,11 @@ upmeter.example.com</code>
 export PUBLIC_IP="<PUT_PUBLIC_IP_HERE>"
 sudo -E bash -c "cat <<EOF >> /etc/hosts
 $PUBLIC_IP api.example.com
-$PUBLIC_IP argocd.example.com
-$PUBLIC_IP dashboard.example.com
-$PUBLIC_IP documentation.example.com
+$PUBLIC_IP code.example.com
+$PUBLIC_IP commander.example.com
+$PUBLIC_IP console.example.com
 $PUBLIC_IP dex.example.com
+$PUBLIC_IP documentation.example.com
 $PUBLIC_IP grafana.example.com
 $PUBLIC_IP hubble.example.com
 $PUBLIC_IP istio.example.com
@@ -390,6 +400,7 @@ $PUBLIC_IP kubeconfig.example.com
 $PUBLIC_IP openvpn-admin.example.com
 $PUBLIC_IP prometheus.example.com
 $PUBLIC_IP status.example.com
+$PUBLIC_IP tools.example.com
 $PUBLIC_IP upmeter.example.com
 EOF
 "

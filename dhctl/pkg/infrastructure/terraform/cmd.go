@@ -28,6 +28,23 @@ import (
 type RunExecutorParams struct {
 	RootDir          string
 	TerraformBinPath string
+	ExecutorID       string
+}
+
+func (p *RunExecutorParams) validateRunParams() error {
+	if p.RootDir == "" {
+		return fmt.Errorf("RootDir is required for terraform executor")
+	}
+
+	if p.TerraformBinPath == "" {
+		return fmt.Errorf("TerraformBinPath is required for terraform executor")
+	}
+
+	if p.ExecutorID == "" {
+		return fmt.Errorf("ExecutorID is required for terraform executor")
+	}
+
+	return nil
 }
 
 func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string) *exec.Cmd {
@@ -37,10 +54,12 @@ func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string)
 		return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT)
 	}
 
+	dataDir := filepath.Join(params.RootDir, fmt.Sprintf("tf_%s", params.ExecutorID))
+
 	cmd.Env = append(
 		os.Environ(),
 		"TF_IN_AUTOMATION=yes",
-		"TF_DATA_DIR="+filepath.Join(params.RootDir, "tf_dhctl"),
+		fmt.Sprintf("TF_DATA_DIR=%s", dataDir),
 	)
 
 	// always use dug log for write its to debug log file

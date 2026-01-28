@@ -1,3 +1,143 @@
+## Версия 1.74
+
+### Обратите внимание
+
+- Добавлена поддержка Kubernetes 1.34 и прекращена поддержка Kubernetes 1.29.
+  В будущих релизах DKP будет прекращена поддержка Kubernetes 1.30.
+  Версия Kubernetes используемая по умолчанию ([параметр `kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`) изменена на [1.32](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/supported_versions.html#kubernetes).
+
+### Основные изменения
+
+- Добавлена поддержка управления отдельными экспериментальными и предварительными возможностями Kubernetes ([feature gates](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/))
+  с помощью [параметра `enabledFeatureGates`](https://deckhouse.ru/modules/control-plane-manager/v1.74/configuration.html#parameters-enabledfeaturegates) модуля `control-plane-manager`.
+  Подробнее об управлении этими возможностями в DKP можно почитать в [документации модуля](https://deckhouse.ru/modules/control-plane-manager/v1.74/#feature-gates).
+
+- Параметр `--terminated-pod-gc-threshold` (порог удаления выселенных подов)
+  теперь рассчитывается автоматически в зависимости от количества узлов в кластере.
+  Это обеспечивает баланс между стабильностью кластера и возможностями для диагностики.
+  Пороговые значения приведены в [документации модуля `control-plane-manager`](https://deckhouse.ru/modules/control-plane-manager/v1.74/#динамическое-пороговое-значение-удаления-выселенных-подов).
+
+- Максимальное число подов ([`maxPods`](https://deckhouse.ru/modules/node-manager/v1.74/cr.html#nodegroup-v1-spec-kubelet-maxpods))
+  для группы узлов теперь устанавливается автоматически на основе [параметра `podSubnetNodeCIDRPrefix`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/reference/api/cr.html#clusterconfiguration-podsubnetnodecidrprefix)
+  ресурса ClusterConfiguration (если параметр не задан явно).
+  Это позволяет поддерживать стабильную работу кластера.
+
+- В ресурс HuaweiCloudInstanceClass облачного провайдера Huawei Cloud добавлен [параметр `vipAddress`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cr.html#huaweicloudinstanceclass-v1-spec-vipaddress),
+  позволяющий задавать виртуальный IP-адрес для всех узлов инстанс-класса.
+
+- В настройках провайдера Huawei Cloud добавлена возможность переопределять главную сеть для основного сетевого интерфейса ([параметр `mainNetwork`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-mainnetwork))
+  и указывать подсети для дополнительных сетевых интерфейсов ([параметр `additionalNetworks`](https://deckhouse.ru/modules/cloud-provider-huaweicloud/v1.74/cluster_configuration.html#huaweicloudclusterconfiguration-nodegroups-instanceclass-additionalnetworks)) в CloudPermanent- и CloudEphemeral-узлах.
+
+- Сборка архива с данными для отладки теперь выполняется с помощью [утилиты `d8`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.74/cli/d8/).
+  При необходимости собрать данные воспользуйтесь [инструкцией](https://deckhouse.ru/modules/deckhouse/v1.74/faq.html#как-собрать-информацию-для-отладки).
+
+- Теперь при ошибках выполнения хуков сохраняются все собранные ими метрики.
+  Это позволяет не терять отладочную информацию и упрощает последующий анализ причин возникновения ошибки.
+
+- Исправлено зависание очереди Deckhouse в гибридных кластерах, возникавшее при неполном наборе параметров в конфигурации модуля.
+
+### Безопасность
+
+- Внедрён контроль целостности модулей на базе файловой системы EROFS
+  для обеспечения безопасности и предотвращения несанкционированных изменений.
+  Для работы новой системы необходима поддержка dm-verity и EROFS в ядре.
+
+### Сеть
+
+- Добавлена поддержка протокола SCTP (Stream Control Transmission Protocol).
+  Теперь в кластере Deckhouse можно запускать приложения, использующие этот тип соединения.
+
+- В [модуль `ingress-nginx`](https://deckhouse.ru/modules/ingress-nginx/) добавлен вспомогательный компонент `geoproxy`.
+  Он нацелен на повышение стабильности Ingress-контроллера при работе с GeoIP-базами и предоставляет следующие возможности:
+  - экономия лицензий MaxMind (загрузка баз происходит из одной точки, раз в день);
+  - постоянное хранение данных (перезагрузка компонентов не приводит к обращениям на серверы MaxMind);
+  - возможность указать своё зеркало для загрузки баз.
+
+- Добавлена метрика Prometheus `bpf_progs_complexity_max_verified_insts` для оценки количества инструкций eBPF-подпрограмм,
+  загружаемых в ядро системы на узлах кластера.
+  Новая метрика позволяет оценить совместимость сетевой подсистемы с имеющимися ядрами.
+  Для работы метрики необходимо наличие ядра Linux версии 5.16 и выше.
+
+- Добавлена новая метрика `geoip_version` и дашборды для оценки работоспособности GeoIP в кластере.
+
+- Исправлены проблемы с одновременным обновлением [модуля `node-local-dns`](https://deckhouse.ru/modules/node-local-dns/)
+  совместно с сетевой подсистемой.
+
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.74.md) на GitHub.
+
+## Версия 1.73
+
+### Обратите внимание
+
+- Релиз содержит ряд важных изменений, повышающих безопасность. Устранен ряд известных уязвимостей. В частности, устранена уязвимость в модуле `user-authn` (CVE-2025-22868), потенциально позволявшая обходить проверку аутентификации. Рекомендуется запланировать обновление. Подробнее в разделе [Безопасность](#безопасность).
+
+- Модуль `dashboard` будет удален в будущих версиях DKP. Используйте [веб-интерфейс Deckhouse](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/user/web/ui.html) (необходим включенный модуль [`console`](https://deckhouse.ru/modules/console/)).
+
+- Модуль `runtime-audit-engine` теперь загружается из  внешнего источника (ModuleSource `deckhouse`).
+
+- В процессе обновления будут перезапущены все компоненты DKP.
+
+### Основные изменения
+
+- Добавлена возможность смены настроек registry (параметр [`mode`](https://deckhouse.ru/modules/deckhouse/v1.73/configuration.html#parameters-registry-mode)) в режиме `Unmanaged` аналогично режиму `Direct`. Также, добавлена настройка режима проверки registry при смене настроек (параметр [`checkMode`](https://deckhouse.ru/modules/deckhouse/v1.73/configuration.html#parameters-registry-direct-checkmode)):
+  - `Default` — проверяется наличие всех образов для системных модулей и образы deckhouse-controller.
+  - `Relax` — проверяется наличие только образов deckhouse-controller.
+
+- Изменение требований к полю `email` объекта [User](https://deckhouse.ru/modules/user-authn/v1.73/cr.html#user). Адрес `email` должен быть в нижнем регистре. Для уже существующих пользователей сохранена совместимость.
+
+- Обновление Dex до **v2.44.0** теперь позволяет выполнять аутентификацию через подключенные провайдеры, если один из них не работает. Также, аутентификация через провайдера аутентификации теперь может работать через прокси.
+
+- В статусе объекта [User](https://deckhouse.ru/modules/user-authn/v1.73/cr.html#user) теперь выводится информация о причине блокировки пользователя (управляется параметром [`lockout`](https://deckhouse.ru/modules/user-authn/v1.73/configuration.html#parameters-passwordpolicy-lockout)).
+
+- В провайдере для интеграции с Deckhouse Virtualization Platform добавлен параметр [`additionalDisks`](https://deckhouse.ru/modules/cloud-provider-dvp/v1.73/cluster_configuration.html#dvpclusterconfiguration-masternodegroup-instanceclass-additionaldisks) — позволяет создавать и подключать к VM дополнительные диски в NodeGroup (задаются `size`, StorageClass). Упрощает разнесение данных по нескольким дискам.
+
+- В провайдере для интеграции с VMware Cloud Director добавлена поддержка [`additionalMetadata`](https://deckhouse.ru/modules/cloud-provider-vcd/v1.73/cr.html#vcdinstanceclass-v1-spec-additionalmetadata) для объектов (сети, ВМ, диски). Метаданные объединяются с существующими, значения из `additionalMetadata` имеют приоритет.  Изменение `additionalMetadata` приводит к пересозданию групп узлов с типом CloudEphemeral, использующих соответствующий VCDInstanceClass.
+
+- В провайдере для интеграции с VMware vSphere добавлена возможность указания ID политики хранения SPBM (параметр [`storagePolicyID`](https://deckhouse.ru/modules/cloud-provider-vsphere/v1.73/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid)) и автоматическое создание StorageClass для каждой доступной политики хранения SPBM. Теперь можно явно выбирать политику для master- и worker-узлов, и получать соответствующие классы хранения.
+
+- Добавлены алерты, помогающие запланировать отключение модуля или миграцию:
+  - [`ModuleIsDeprecated`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-moduleisdeprecated) — сообщает о наличии устаревшего модуля, поддержка которого скоро прекратится.
+  - [`D8ModuleOutdatedByMajorVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73//reference/alerts.html#monitoring-deckhouse-d8moduleoutdatedbymajorversion) — сообщает о том, что модуль отстаёт по мажорным версиям.
+
+- Добавлен алерт [`GeoIPDownloadErrorDetected`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/reference/alerts.html#ingress-nginx-geoipdownloaderrordetected), сообщающий об ошибках загрузки GeoIP-баз MaxMind.
+
+- Механика [оповещений об обновлениях](https://deckhouse.ru/modules/deckhouse/v1.73/usage.html#оповещение-об-обновлении-deckhouse) изменена — релиз применяется только при успешной доставке уведомления на настроенный вебхук. При ошибке доставки применение обновления приостанавливается до восстановления вебхука.
+
+- Изменена структура внутрикластерной документации. Документация всех модулей (включая подключенные) теперь находится [в разделе «Модули»](https://deckhouse.ru/modules/). Обновлен поиск.
+
+- Для Ingress-контроллера версии 1.10 появилась возможность включать профилировщик (параметр [`nginxProfilingEnabled`](https://deckhouse.ru/modules/ingress-nginx/v1.73/cr.html#ingressnginxcontroller-v1-spec-nginxprofilingenabled)). Включение профилировщика увеличивает потребление ресурсов, но может потребоваться при поиске причин ошибок в работе контроллера.
+
+- При отправке метрик мониторинга SLA по протоколу Prometheus Remote Write теперь можно установить HTTP-заголовки аутентификации (параметр [`headers`](https://deckhouse.ru/modules/upmeter/v1.73/cr.html#upmeterremotewrite-v1-spec-config-headers) ресурса UpmeterRemoteWrite).
+
+- Оптимизирована загрузка модулей ядром DKP, снижено время запуска при большом числе модулей.
+
+- В аудит-логах теперь видно, какой OIDC-провайдер выдал токен аутентификации.
+
+- Обновлена версия Deckhouse CLI (`d8`) до v0.23.0:
+  - Добавлена команда [`d8 status`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-status). Быстрый сводный отчёт о состоянии кластера (узлы, релизы, поды Deckhouse, алерты, registry, настройки Deckhouse, CNI, состояние очереди).
+  - Добавлена команда [`d8 k debug`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-k-debug). Запускает встроенный в DKP debug-контейнер — образ можно переопределить через `--image`. Упрощает интерактивную отладку подов.
+  - Для команды [`d8 system queue list`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.73/cli/d8/reference/#d8-system-queue-list) добавлен режим наблюдения за состоянием очереди (ключ `--watch`).
+
+### Безопасность
+
+- Повышена базовая безопасность контейнеров. У следующих модулей обновлены профили безопасности для использования только необходимых привилегий и прав доступа: `cni-cilium`, `cni-flannel`, `cni-simple-bridge`, `ingress-nginx`, `istio`, `keepalived`, `kube-dns`, `kube-proxy`, `node-local-dns`, `network-gateway`, `network-policy-engine`, `open-vpn`.
+
+- Добавлен флаг [`allowRbacWildcards`](https://deckhouse.ru/modules/admission-policy-engine/v1.73/cr.html#securitypolicy-v1alpha1-spec-policies-allowrbacwildcards) политики безопасности (SecurityPolicy) позволяющий управлять возможностью использования wildcard при описании объектов Role и RoleBinding (по умолчанию `true`). Также, политиками безопасности теперь можно ограничивать интерактивные подключения к подам (`CONNECT` для `pods/exec` и `pods/attach`) в пространствах имён.
+
+- Добавлена возможность управления запретом создания подов с tolerations из указанного списка (параметр [`policies.disallowedTolerations`](https://deckhouse.ru/modules/admission-policy-engine/v1.73/cr.html#operationpolicy-v1alpha1-spec-policies-disallowedtolerations) операционной политики). Это помогает предотвратить попадание пользовательской нагрузки на узлы, отведенные под выделенные задачи.
+
+- Ingress-контроллер обновлен до версии 1.12 — добавлены изменения, повышающие безопасность (distroless-образ, устранение уязвимостей и др.).
+
+- Исправлены известные уязвимости в модулях: `operator-trivy`, `registry`, `user-authn`, `cloud-provider-dvp`, `multitenancy-manager`, `admission-policy-engine`, `ingress-nginx`, `alertmanager`, `metallb`, `istio`, `node-local-dns`, `kube-apiserver`.
+
+### Сеть
+
+- В провайдере для интеграции с VMware Cloud Director добавлена поддержка [LoadBalancer](https://deckhouse.ru/modules/cloud-provider-vcd/v1.73/environment.html#использование-балансировщика-нагрузки) на базе VMware NSX Advanced Load Balancer (ALB/Avi) при использовании `NSX-T`. Для работы нужна активированная функция Load Balancer на Edge Gateway. Если LoadBalancer включен после создания кластера, DKP автоматически учтет изменения в течение часа. Для открытых портов создаются пары `Pool + Virtual Service`; при наличии межсетевого экрана необходимо добавить разрешающие правила для внешнего IP-адреса балансировщика и соответствующих портов.
+
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.73.md) на GitHub.
+
 ## Версия 1.72
 
 ### Обратите внимание
@@ -28,19 +168,14 @@
 
 - Реализована поддержка политики паролей для локальных пользователей (управляется в секции параметров [passwordPolicy](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-passwordpolicy)). Теперь можно настраивать минимальный уровень сложности пароля, срок его действия и обязательную ротацию, предотвращать повторное использование старых паролей, а также блокировать аккаунт после заданного числа неудачных попыток входа. Эти изменения позволяют администраторам кластера централизованно применять требования к паролям и повышают уровень безопасности.
 
-### Обновление версий компонентов
-
-Обновлены следующие компоненты DKP:
-
-- Kubernetes control plane: 1.30.14, 1.31.11, 1.32.7, 1.33.3
-- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.6.0
-- `node-manager capi-controller-manager`: 1.10.4
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.72.md) на GitHub.
 
 ## Версия 1.71
 
 ### Обратите внимание
 
-- Prometheus заменён на Deckhouse Prom++. Если вы хотите продолжать использовать Prometheus, **до обновления платформы** явно выключите модуль `prompp` командой `d8 platform module disable prompp`.
+- Prometheus заменён на Deckhouse Prom++. Если вы хотите продолжать использовать Prometheus, **до обновления платформы** явно выключите модуль `prompp` командой `d8 system module disable prompp`.
 
 - Добавлена поддержка Kubernetes 1.33 и прекращена поддержка Kubernetes 1.28. В будущих релизах DKP поддержка Kubernetes 1.29 будет прекращена. Версия Kubernetes используемая по умолчанию (параметр [`kubernetesVersion`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/installing/configuration.html#clusterconfiguration-kubernetesversion) установлен в `Automatic`) изменена на [1.31](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/supported_versions.html#kubernetes).
 
@@ -58,7 +193,7 @@
 
 - Добавлена поддержка GPU на узлах. Доступно управление тремя режимами разделения ресурсов GPU: `Exclusive` (без разделения), `TimeSlicing` (разделение по времени), `MIG` (разделение одного GPU на несколько экземпляров). Для управления режимом разделения ресурсов GPU используется секция параметров [spec.gpu](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/modules/node-manager/cr.html#nodegroup-v1-spec-gpu) в NodeGroup. Использование GPU на узле возможно после установки NVIDIA Container Toolkit и драйвера GPU.
 
-- При включении модуля (`d8 platform module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
+- При включении модуля (`d8 system module enable`) или при редактировании ресурса ModuleConfig, теперь выводится предупреждение, если для модуля найдено несколько источников модуля. В этом случае требуется явно указать источник модуля в параметре [`source`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.71/cr.html#moduleconfig-v1alpha1-spec-source) конфигурации модуля.
 
 - Улучшена обработка ошибок конфигурации модулей. Теперь ошибки при работе модуля не блокируют работу DKP, а отображаются в статусах объектов Module и ModuleRelease.
 
@@ -118,49 +253,8 @@
   - Удалено:
     - `49152`, `49153/TCP` — порты использовались для live-миграции виртуальных машин (модуль `virtualization`). Теперь миграция работает через сеть подов.  
 
-### Обновление версий компонентов
-
-Обновлены следующие компоненты DKP:
-
-- `cilium`: 1.17.4
-- `golang.org/x/net`: v0.40.0
-- `etcd`: v3.6.1
-- `terraform-provider-azure`: 3.117.1
-- `Deckhouse CLI`: 0.13.2
-- `Falco`: 0.41.1
-- `falco-ctl`: 0.11.2
-- `gcpaudit`: v0.6.0
-- `Grafana`: 10.4.19
-- `Vertical pod autoscaler`: 1.4.1
-- `dhctl-kube-client`: v1.3.1
-- `cloud-provider-dynamix dynamix-common`: v0.5.0
-- `cloud-provider-dynamix capd-controller-manager`: v0.5.0
-- `cloud-provider-dynamix cloud-controller-manager`: v0.4.0
-- `cloud-provider-dynamix cloud-data-discoverer`: v0.6.0
-- `cloud-provider-huaweicloud huaweicloud-common`: v0.5.0
-- `cloud-provider-huaweicloud caphc-controller-manager`: v0.3.0
-- `cloud-provider-huaweicloud cloud-data-discoverer`: v0.5.0
-- `registry-packages-containerdv2`: 2.1.3
-- `registry-packages-containerdv2-runc`: 1.3.0
-- `cilium`: 1.17.4
-- `cilium envoy-bazel`: 6.5.0
-- `cilium cni-plugins`: 1.7.1
-- `cilium protoc`: 30.2
-- `cilium grpc-go`: 1.5.1
-- `cilium protobuf-go`: 1.36.6
-- `cilium protoc-gen-go-json`: 1.5.0
-- `cilium gops`: 0.3.27
-- `cilium llvm`: 18.1.8
-- `cilium llvm-build-cache`: llvmorg-18.1.8-alt-p11-gcc11-v2-180225
-- `User-authn basic-auth-proxy go`: 1.23.0
-- `Prometheus alerts-reciever go`: 1.23.0
-- `Prometheus memcached_exporter`: 0.15.3
-- `Prometheus mimir`: 2.14.3
-- `Prometheus promxy`: 0.0.93
-- `Extended-monitoring k8s-image-availability-exporter`: 0.13.0
-- `Extended-monitoring x509-certificate-exporter`: 3.19.1
-- `Cilium-hubble hubble-ui`: 0.13.2
-- `Cilium-hubble hubble-ui-frontend-assets`: 0.13.2
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.71.md) на GitHub.
 
 ## Версия 1.70
 
@@ -226,19 +320,8 @@
 
 - Исправлены CVE-уязвимости в модулях: `chrony`, `descheduler`, `dhctl`, `node-manager`, `registry-packages-proxy`, `falco`, `cni-cilium`, `vertical-pod-autoscaler`.
 
-### Обновление версий компонентов
-
-Обновлены следующие компоненты DKP:
-
-- `containerd`: 1.7.27
-- `runc`: 1.2.5
-- `go`: 1.24.2, 1.23.8
-- `golang.org/x/net`: v0.38.0
-- `mcm`: v0.36.0-flant.23
-- `ingress-nginx`: 1.12.1
-- `terraform-provider-aws`: 5.83.1
-- `Deckhouse CLI`: 0.12.1
-- `etcd`: v3.5.21
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.70.md) на GitHub.
 
 ## Версия 1.69
 
@@ -315,26 +398,10 @@
 
 ### Безопасность
 
-Закрыты известные уязвимости в модулях `ingress-nginx`, `istio`, `prometheus` и `local-path-provisioner`.
+- Закрыты известные уязвимости в модулях `ingress-nginx`, `istio`, `prometheus` и `local-path-provisioner`.
 
-### Обновление версий компонентов
-
-Обновлены следующие компоненты DKP:
-
-- `cert-manager`: 1.17.1
-- `dashboard`: 1.6.1
-- `dex`: 2.42.0
-- `go-vcloud-director`: 2.26.1
-- Grafana: 10.4.15
-- Kubernetes control plane: 1.29.14, 1.30.1, 1.31.6, 1.32.2
-- `kube-state-metrics` (`monitoring-kubernetes`): 2.15.0
-- `local-path-provisioner`: 0.0.31
-- `machine-controller-manager`: v0.36.0-flant.19
-- `pod-reloader`: 1.2.1
-- `prometheus`: 2.55.1
-- Terraform-провайдеры:
-  - OpenStack: 1.54.1
-  - vCD: 3.14.1
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.69.md) на GitHub.
 
 ## Версия 1.68
 
@@ -364,7 +431,7 @@
   которые нужно использовать для организации межкластерных запросов.
   Ранее эти адреса вычислялись только автоматически, но в некоторых конфигурациях их определить невозможно.
 
-- У аутентификатора (ресурс DexAuthenticator) появился [параметр `highAvailability`](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability),
+- У аутентификатора (ресурс DexAuthenticator) появился [параметр `highAvailability`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/user-authn/cr.html#dexauthenticator-v1-spec-highavailability),
   который управляет режимом высокой доступности.
   В режиме высокой доступности запускается несколько реплик аутентификатора.
   Ранее режим высокой доступности всех аутентификаторов определялся [настройками глобального параметра](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/deckhouse-configure-global.html#parameters-highavailability)
@@ -377,7 +444,7 @@
 
 - Добавлена поддержка [облачного провайдера Huawei Cloud](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/cloud-provider-huaweicloud/).
 
-- Новый параметр [`keepDeletedFilesOpenedFor`](https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha2-spec-kubernetespods-keepdeletedfilesopenedfor) в модуле `log-shipper` позволяет настроить период,
+- Новый параметр [`keepDeletedFilesOpenedFor`](https://deckhouse.ru/products/kubernetes-platform/documentation/v1.68/modules/log-shipper/cr.html#clusterloggingconfig-v1alpha1-spec-kubernetespods-keepdeletedfilesopenedfor) в модуле `log-shipper` позволяет настроить период,
   в течение которого будут храниться открытыми удалённые файлы логов.
   Опция позволит какое-то время читать логи удалённых подов в случае недоступности хранилища логов.
 
@@ -427,27 +494,6 @@
 - `vertical-pod-autoscaler`
 - `static-routing-manager`
 
-### Обновление версий компонентов
-
-Обновлены следующие компоненты DKP:
-
-- Kubernetes Control Plane: 1.29.14, 1.30.10, 1.31.6
-- `aws-node-termination-handler`: 1.22.1
-- `capcd-controller-manager`: 1.3.2
-- `cert-manager`: 1.16.2
-- `chrony`: 4.6.1
-- `cni-flannel`: 0.26.2
-- `docker_auth`: 1.13.0
-- `flannel-cni`: 1.6.0-flannel1
-- `gatekeeper`: 3.18.1
-- `jq`: 1.7.1
-- `kubernetes-cni`: 1.6.2
-- `kube-state-metrics`: 2.14.0
-- `vector` (`log-shipper`): 0.44.0
-- `prometheus`: 2.55.1
-- `snapshot-controller`: 8.2.0
-- `yq4`: 3.45.1
-
 ### Перезапуск компонентов
 
 После обновления DKP до версии 1.68 будут перезапущены следующие компоненты:
@@ -488,3 +534,6 @@
 - `terraform-manager`
 - `user-authn`
 - `vertical-pod-autoscaler`
+
+Полный список изменений, включая перечень обновлённых компонентов,
+доступен в [журнале изменений (changelog)](https://github.com/deckhouse/deckhouse/blob/main/CHANGELOG/CHANGELOG-v1.68.md) на GitHub.

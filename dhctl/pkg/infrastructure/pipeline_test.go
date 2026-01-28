@@ -65,7 +65,18 @@ func TestGetMasterNodeResult(t *testing.T) {
 			name:        "With output error return err",
 			outputResp:  fakeResponse{code: 1, err: fmt.Errorf("failed")},
 			expectedRes: nil,
-			expectedErr: fmt.Errorf("can't get infrastructure output for \"master_ip_address_for_ssh\"\nfailed"),
+			expectedErr: fmt.Errorf("Can't get infrastructure output for \"master_ip_address_for_ssh\"\nfailed"),
+		},
+		{
+			name:       "With nil output",
+			outputResp: fakeResponse{code: 0, resp: nil},
+			expectedRes: &PipelineOutputs{
+				InfrastructureState: state,
+				MasterIPForSSH:      "",
+				NodeInternalIP:      "",
+				KubeDataDevicePath:  "",
+			},
+			expectedErr: nil,
 		},
 	}
 

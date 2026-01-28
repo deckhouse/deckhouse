@@ -61,3 +61,22 @@ spec:
     app: lab-4-backend
   type: ClusterIP
 ```
+
+### Пример создания внутреннего балансировщика для VK Cloud
+
+Этот пример подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    annotations:
+      service.beta.kubernetes.io/openstack-internal-load-balancer: "true"
+  nodeSelector:
+    node.deckhouse.io/group: worker
+```

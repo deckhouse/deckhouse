@@ -29,8 +29,10 @@ import (
 
 	addonoperator "github.com/flant/addon-operator/pkg/addon-operator"
 	aoapp "github.com/flant/addon-operator/pkg/app"
+	admetrics "github.com/flant/addon-operator/pkg/metrics"
 	"github.com/flant/kube-client/client"
 	shapp "github.com/flant/shell-operator/pkg/app"
+	shmetrics "github.com/flant/shell-operator/pkg/metrics"
 	"github.com/shirou/gopsutil/v3/process"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -50,6 +52,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
 	"github.com/deckhouse/deckhouse/pkg/log"
+	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
@@ -89,10 +92,25 @@ func start(logger *log.Logger) func(_ *kingpin.ParseContext) error {
 		}
 
 		shapp.AppStartMessage = version()
+		shapp.KubeClientFieldManager = "deckhouse-hook"
 
 		ctx := context.Background()
 
-		operator := addonoperator.NewAddonOperator(ctx, addonoperator.WithLogger(logger.Named("addon-operator")))
+		metricsStorage := metricsstorage.NewMetricStorage(
+			metricsstorage.WithLogger(logger.Named("metric-storage")),
+		)
+
+		hookMetricStorage := metricsstorage.NewMetricStorage(
+			metricsstorage.WithNewRegistry(),
+			metricsstorage.WithLogger(logger.Named("hook-metric-storage")),
+		)
+
+		// Initialize metric names with the configured prefix
+		shmetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+		// Initialize addon-operator specific metrics
+		admetrics.InitMetrics(shapp.PrometheusMetricsPrefix)
+
+		operator := addonoperator.NewAddonOperator(ctx, metricsStorage, hookMetricStorage, addonoperator.WithLogger(logger.Named("addon-operator")))
 
 		operator.StartAPIServer()
 
@@ -413,7 +431,7 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 		Cap:      5 * time.Minute,
 	}
 
-	return retry.OnError(bk, func(err error) bool {
+	err := retry.OnError(bk, func(err error) bool {
 		logger.Error("An error occurred during the bootstrap lock. Retrying", log.Err(err))
 		// retry on any error
 		return true
@@ -447,6 +465,10 @@ func lockOnBootstrap(ctx context.Context, client *client.Client, logger *log.Log
 
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("on error: %w", err)
+	}
+	return nil
 }
 
 func registerTelemetry(ctx context.Context) func(ctx context.Context) error {

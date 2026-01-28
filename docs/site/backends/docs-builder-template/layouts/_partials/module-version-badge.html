@@ -16,6 +16,7 @@
   <span title='{{ replace  (T "version_of_module" ) "###" $module }}'>{{ $version }}</span>
 {{- else if $moduleChannelsData }}
 <a data-proofer-ignore="" href="#" class="highlight">{{ (index ( where $channelsInfo "code" $moduleChannel ) 0 ).title }}</a>
+{{ "<!--noindex-->" | safeHTML }}
 <div class="submenu-container">
     <ul class="submenu">
 
@@ -36,4 +37,16 @@
 {{- end }}
     </ul>
 </div>
+{{ "<!--/noindex-->" | safeHTML }}
+<script>
+  // Fix version menu item URLs for cases where the URL lacks a channel (e.g., /modules/MODULE/).
+  const currentUrl = window.location.pathname;
+
+  if (!currentUrl.match(/\/modules\/[^\/]+\/(alpha|beta|early-access|stable|rock-solid|latest)\//)
+      && currentUrl.includes('/modules/')) {
+    document.querySelectorAll('#doc-versions-menu a.submenu-item-link').forEach(link => {
+        link.href = link.href.replace(/.*\/(alpha|beta|early-access|stable|rock-solid|latest)\//, `$1/`);
+    });
+  }
+</script>
 {{- end }}

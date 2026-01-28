@@ -99,7 +99,6 @@ entries:
             - title:
                 en: Platform scaling and node management
                 ru: Масштабирование платформы и управление узлами
-              url: /virtualization-platform/documentation/admin/platform-management/platform-scaling/overwiew.html
               folders:
                 - title:
                     en: Overview
@@ -190,8 +189,8 @@ entries:
                         ru: ALB
                       folders:
                         - title:
-                            en: ALB with NGINX Ingress controller
-                            ru: ALB средствами NGINX Ingress controller
+                            en: ALB with Ingress NGINX Controller
+                            ru: ALB средствами Ingress NGINX Controller
                           url: /virtualization-platform/documentation/admin/platform-management/network/ingress/alb/nginx.html
                     - title:
                         en: Ensuring high availability and fault tolerance (keepalived)
@@ -241,10 +240,6 @@ entries:
                     en: Storage configuration
                     ru: Настройка хранилищ
                   url: /virtualization-platform/documentation/admin/platform-management/storage/supported-storage.html
-                - title:
-                    en: Configuring volume snapshot creation
-                    ru: Настройка создания снимков томов
-                  url: /virtualization-platform/documentation/admin/platform-management/storage/snapshot-controller.html
                 - title:
                     en: Software-defined storage (SDS)
                     ru: Программно-определяемые хранилища (SDS)
@@ -572,7 +567,7 @@ entries:
             - title:
                 en: d8 (Deckhouse CLI)
                 ru: d8 (Deckhouse CLI)
-              url: /virtualization-platform/reference/console-utilities/d8.html
+              external_url: /products/kubernetes-platform/documentation/v1/cli/d8/
         - title:
             en: FAQ
             ru: FAQ

@@ -10,7 +10,7 @@ title: "Модуль user-authz: примеры конфигурации"
 
 Для назначения прав администратору кластера используйте роль `d8:manage:all:manager` в `ClusterRoleBinding`.
 
-Пример назначения прав администратору кластера (User `joe`):
+Пример назначения прав администратору кластера (User `jane`):
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -597,8 +597,8 @@ spec:
 
 Изменения манифеста `kube-apiserver`, которые произойдут после включения режима multi-tenancy:
 
-* исправление аргумента `--authorization-mode`. Перед методом RBAC добавится метод Webhook (например, `--authorization-mode=Node,Webhook,RBAC`);
-* добавление аргумента `--authorization-webhook-config-file=/etc/kubernetes/authorization-webhook-config.yaml`;
+* настройка цепочки авторизации через structured authorization configuration (`--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml`) с авторизаторами `Node`, `Webhook` и `RBAC`;
+* создание `kubeconfig` для authorization webhook по пути `/etc/kubernetes/deckhouse/extra-files/webhook-config.yaml`;
 * добавление `volumeMounts`:
 
   ```yaml

@@ -1,5 +1,19 @@
 type: object
 properties:
+  sctpEnabled:
+    type: boolean
+    default: false
+    description: |
+      Enable SCTP support for Cilium (for both incoming and outgoing traffic).
+
+      > **Note.** Cilium implements only basic SCTP support. Therefore, when using SCTP with Cilium, please be aware of the following limitations:
+
+      - The following features are not currently supported: `SCTP multi-homing`, `NetworkPolicies for pod-to-VIP`.
+      - For incoming SCTP packets port overwriting is not supported.
+        This means that applications must be published through either HostPort or Service, where the `targetPort` MUST match the `port` specified. Otherwise, the packet will be dropped.
+      - For outgoing SCTP packets, only 1:1 SNAT is supported by default.
+        In this mode, only the src_ip is replaced, while the src_port remains unchanged. If the src_port is already in use on the node, the packet will be rejected.
+        To enable src_port substitution, you must switch the `masqueradeMode` parameter to `Netfilter` mode.
   debugLogging:
     type: boolean
     default: false
@@ -115,7 +129,7 @@ properties:
     x-examples:
     - mode: VPA
       vpa:
-        mode: Auto
+        mode: "InPlaceOrRecreate"
         cpu:
           min: "50m"
           max: 2
@@ -132,6 +146,17 @@ properties:
         limits:
           cpu: 2
           memory: "2Gi"
+    - mode: VPA
+      vpa:
+        mode: Auto
+        cpu:
+          min: "50m"
+          max: 2
+          limitRatio: 1.5
+        memory:
+          min: "256Mi"
+          max: "2Gi"
+          limitRatio: 1.5
     properties:
       mode:
         type: string
@@ -151,7 +176,18 @@ properties:
             type: string
             description: |
               VPA operating mode.
-            enum: ['Initial', 'Auto']
+
+                 - `Initial` — VPA sets initial values for pod resource requests and limits at pod creation time.
+                   Resource values are not changed automatically afterwards.
+
+                 - `InPlaceOrRecreate` — VPA attempts to update pod resources in place when supported by the cluster.
+                   If in-place updates are not possible, the pod will be recreated.
+
+                 - `Auto` — VPA automatically recreates pods to apply updated resource values.
+
+                   > Starting from Deckhouse version 1.75, this mode is considered legacy.
+                   > It is recommended to use `InPlaceOrRecreate` instead.
+            enum: ['Initial', 'InPlaceOrRecreate', 'Auto']
             default: 'Initial'
           cpu:
             type: object

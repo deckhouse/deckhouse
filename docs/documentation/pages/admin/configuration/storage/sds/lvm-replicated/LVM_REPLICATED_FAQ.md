@@ -61,7 +61,7 @@ To designate a StorageClass as the default, set the field `spec.isDefault` to `t
 
 ## Changing DRBD volume limits and cluster ports
 
-The default port range for DRBD resources is TCP `7000`–`7999`. You can override it with the `drbdPortRange` setting by specifying the desired `minPort` and `maxPort` values.
+The default port range for DRBD resources is TCP `7000`–`7999`. You can override it with the [`drbdPortRange`](/modules/sds-replicated-volume/stable/configuration.html#parameters-drbdportrange) setting by specifying the desired `minPort` and `maxPort` values.
 
 {% alert level="warning" %}
 After changing `drbdPortRange`, restart the LINSTOR controller so that the new settings take effect. Existing DRBD resources will retain their assigned ports.
@@ -327,7 +327,7 @@ If the output contains messages like `Remote failed to finish a request within �
 
 ## After the ReplicatedStoragePool resource is deleted, the corresponding Storage Pool remains in the backend
 
-This is expected behavior. The `sds-replicated-volume` module does not handle deletion operations for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource.
+This is expected behavior. The [`sds-replicated-volume`](/modules/sds-replicated-volume/) module does not handle deletion operations for the [ReplicatedStoragePool](/modules/sds-replicated-volume/cr.html#replicatedstoragepool) resource.
 
 ## Restrictions on changing ReplicatedStorageClass spec
 
@@ -343,7 +343,7 @@ For temporary external issues (for example, when `kube‑apiserver` is unavailab
 
 ## Error "You're not allowed to change state of linstor cluster manually"
 
-Operations requiring manual intervention are partially or fully automated in the `sds-replicated-volume` module. Therefore, the module restricts the list of allowed LINSTOR commands. For example, creating a Tie‑Breaker is automated because LINSTOR sometimes does not create one for two‑replica resources. To see the list of allowed commands, run:
+Operations requiring manual intervention are partially or fully automated in the [`sds-replicated-volume`](/modules/sds-replicated-volume/) module. Therefore, the module restricts the list of allowed LINSTOR commands. For example, creating a Tie‑Breaker is automated because LINSTOR sometimes does not create one for two‑replica resources. To see the list of allowed commands, run:
 
 ```shell
 alias linstor='d8 k -n d8-sds-replicated-volume exec -ti deploy/linstor-controller -- linstor'
@@ -544,7 +544,7 @@ User data is not affected because the migration moves to a new namespace and add
    d8 k get namespace d8-linstor
    ```
 
-1. Create a ModuleConfig for `sds-node-configurator`:
+1. Create a ModuleConfig for [`sds-node-configurator`](/modules/sds-node-configurator/):
 
    ```yaml
    d8 k apply -f -<<EOF
@@ -564,7 +564,7 @@ User data is not affected because the migration moves to a new namespace and add
    d8 k get moduleconfig sds-node-configurator
    ```
 
-1. Create a ModuleConfig for `sds-replicated-volume`:
+1. Create a ModuleConfig for [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
    > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `linstor` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
 
@@ -610,7 +610,7 @@ If no faulty resources are found, migration was successful.
 
 ### Migrating to ReplicatedStorageClass
 
-StorageClasses in this module are managed via the ReplicatedStorageClass resource. StorageClasses must not be created manually.
+StorageClasses in this module are managed via the [ReplicatedStorageClass](/modules/sds-replicated-volume/stable/cr.html#replicatedstorageclass) resource. StorageClasses must not be created manually.
 
 When migrating from the LINSTOR module, delete old StorageClasses and create new ones via ReplicatedStorageClass according to the table below.
 
@@ -666,7 +666,7 @@ The migration will not affect user data, as it is performed in a new namespace a
    d8 k get namespace d8-sds-drbd
    ```
 
-1. Create a ModuleConfig for `sds-replicated-volume`:
+1. Create a ModuleConfig for [`sds-replicated-volume`](/modules/sds-replicated-volume/):
 
    > **Warning.** If `settings.dataNodes.nodeSelector` is not specified for `sds-replicated-volume`, its value will be taken from the `sds-drbd` module. If it is absent there as well, it will remain empty and all cluster nodes will be considered data nodes.
 

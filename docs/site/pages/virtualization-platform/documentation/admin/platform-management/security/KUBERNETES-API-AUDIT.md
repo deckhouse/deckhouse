@@ -13,14 +13,40 @@ By default, audit results are written to the `/var/log/kube-audit/audit.log` fil
 
 ## Built-in audit policies
 
-Deckhouse Virtualization Platform (DVP) creates a default set of audit policies that log:
+Deckhouse Virtualization Platform (DVP) configures a default audit policy that logs the following:
 
-- Create, update, and delete operations on resources.
-- Requests made on behalf of service accounts from the `kube-system` and `d8-*` system namespaces.
-- Access to resources in the `kube-system` and `d8-*` system namespaces.
+General events:
+
+- Creation and deletion of cluster nodes (`Node` objects);
+- Create, update, and delete operations on resources in all system namespaces (`kube-system`, `d8-*`);
+- Requests from service accounts in system namespaces (`kube-system`, `d8-*`);
+- Bulk `LIST` requests to all resources (used to diagnose high API server resource consumption);
+- Operations related to `virtualization` module resources;
+- Actions in the `d8-virtualization` namespace;
+- Operations on `ModuleConfig` objects;
+- Requests from unauthenticated users (only `Metadata` level events are recorded).
+
+Security-sensitive events:
+
+- Creation, modification, and deletion of `Pod` objects;
+- Use of container image references without a `@sha256` digest;
+- Creation and deletion of `ServiceAccount` objects, including in system namespaces;
+- Creation, modification, and deletion of `Role` and `ClusterRole` objects;
+- Creation, modification, and deletion of `ClusterRoleBinding` objects;
+- Use of `attach` and `exec` commands against Pods, as well as adding ephemeral containers (get and patch operations on `pods/exec`, `pods/attach`, and `pods/ephemeralcontainers`).
+
+Events explicitly excluded from audit logging (because the corresponding objects change very frequently):
+
+- Operations on `Endpoints`, `EndpointSlice`, and `Event` objects;
+- Operations on `Lease` objects (raft leader election in platform components);
+- Actions on `ConfigMap` objects used for raft leader election (`cert-manager-cainjector-leader-election`, `cert-manager-controller`, `ingress-nginx`, and similar);
+- Operations on `VerticalPodAutoscalerCheckpoints` objects;
+- `PATCH` operations on `VerticalPodAutoscaler` objects performed by the `d8-vertical-pod-autoscaler-recommender` service account;
+- Actions on `UpmeterHookProbes` objects;
+- Any operations in the `d8-upmeter` namespace.
 
 These policies are enabled by default.
-To disable them, set the [`basicAuditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) parameter to `false`.
+To disable them, set the [`basicAuditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-basicauditpolicyenabled) parameter to `false`.
 
 Example:
 
@@ -41,7 +67,7 @@ spec:
 
 To create an advanced Kubernetes API audit policy, follow these steps:
 
-1. Enable the [`auditPolicyEnabled`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) parameter
+1. Enable the [`auditPolicyEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditpolicyenabled) parameter
    in the `control-plane-manager` module configuration:
 
    ```yaml
@@ -124,7 +150,7 @@ If the API server fails to start, take the following steps:
 
 By default, the audit log is saved to the `/var/log/kube-audit/audit.log` file on master nodes.
 If necessary, you can redirect its output to the `kube-apiserver` process stdout instead of a file
-by setting the [`apiserver.auditLog.output`](/products/kubernetes-platform/documentation/v1/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the `control-plane-manager` module to `Stdout`:
+by setting the [`apiserver.auditLog.output`](/modules/control-plane-manager/configuration.html#parameters-apiserver-auditlog-output) parameter in the `control-plane-manager` module to `Stdout`:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

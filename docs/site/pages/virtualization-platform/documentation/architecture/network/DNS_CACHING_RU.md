@@ -4,7 +4,7 @@ permalink: ru/virtualization-platform/documentation/architecture//network/dns-ca
 lang: ru
 ---
 
-<!-- перенесено с некоторыми изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/v1/modules/node-local-dns/ -->
+<!-- перенесено с некоторыми изменениями из https://deckhouse.ru/modules/node-local-dns/ -->
 
 В стандартной работе DNS в Kubernetes существует ряд проблем, которые могут привести к неоправданному снижению ключевых показателей работы сервиса:
 
@@ -15,14 +15,14 @@ lang: ru
 При появлении небольших сетевых задержек качество сервиса может значительно деградировать из-за приведенных выше проблем.
 
 Одно из решений — установить DNS-сервер на каждый узел.
-В Deckhouse Virtualization Platform это реализуется с помощью модуля [`node-local-dns`](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/).
+В Deckhouse Virtualization Platform это реализуется с помощью модуля [`node-local-dns`](/modules/node-local-dns/).
 
 При использовании кэширующего DNS-сервера внешние запросы (но только отсутствующие в кэше) также будут сначала пытаться разрешаться по цепочке внутренних зон.
 При большой нагрузке (при большом количестве запросов на одни и те же записи в секунду, как это часто и бывает) кэширования достаточно для значительного улучшения DNS-резолвинга.
 
 ## Принцип работы кэширующего DNS-сервера
 
-При разворачивании кэширующего DNS-сервера модуль [`node-local-dns`](/products/kubernetes-platform/documentation/v1/modules/node-local-dns/) выполняет на каждом узле кластера следующие настройки:
+При разворачивании кэширующего DNS-сервера модуль [`node-local-dns`](/modules/node-local-dns/) выполняет на каждом узле кластера следующие настройки:
 
 - Настраивает интерфейс с IP-адресом clusterIP сервиса `kube-dns`.
 - Запускает кэширующий CoreDNS, который слушает на этом адресе.

@@ -166,6 +166,8 @@ spec:
           mountPath: "/run/cilium/cgroupv2"
         - name: cilium-run
           mountPath: /var/run/cilium
+        - name: cilium-logs
+          mountPath: /var/log/cilium/hubble
         - name: cilium-netns
           mountPath: /var/run/cilium/netns
           mountPropagation: HostToContainer
@@ -222,6 +224,18 @@ spec:
                   resource: daemonsets
                   subresource: prometheus-metrics
                   name: agent
+        {{- if $context.Values.cniCilium.internal.hubble.settings.extendedMetrics.enabled }}
+            - upstream: http://127.0.0.1:9091/metrics
+              path: /extended-metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ $context.Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: agent
+        {{- end }}
         ports:
         - containerPort: 4241
           name: https-metrics
@@ -315,7 +329,7 @@ spec:
         command:
         - cilium-dbg
         - build-config
-        - --allow-config-keys=debug,single-cluster-route
+        - --allow-config-keys=debug,single-cluster-route,mtu,bpf-map-dynamic-size-ratio
         env:
         - name: K8S_NODE_NAME
           valueFrom:
@@ -527,6 +541,10 @@ spec:
       - name: cilium-run
         hostPath:
           path: "/var/run/cilium"
+          type: DirectoryOrCreate
+      - name: cilium-logs
+        hostPath:
+          path: "/var/log/cilium/hubble"
           type: DirectoryOrCreate
       - name: cilium-netns
         hostPath:

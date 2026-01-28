@@ -27,6 +27,9 @@ shell:
   - cd /src/llvm
   # CSE
   - rm -rf clang-tools-extra/clangd/clients/clangd-vscode
+  - rm -rf /src/llvm/llvm/utils/git/requirements.txt
+  - rm -rf /src/llvm/mlir/utils/vscode/package-lock.json
+  - rm -rf /src/llvm/third-party/benchmark/requirements.txt
   - rm -rf /src/llvm/.git
 ---
 image: {{ .ModuleName }}/llvm-artifact
