@@ -18,8 +18,10 @@ bb-sync-file /var/lib/bashible/cleanup_static_node.sh - << "EOF"
 MOTD_FILE="/etc/motd"
 MARKER="D8_CLEANUP_STATIC_NODE"
 CLEANUP_FAILED=0
+SCRIPT_PATH="/var/lib/bashible/cleanup_static_node.sh"
+SCRIPT_BACKUP="/tmp/cleanup_static_node.sh.bak"
 
-FILES_TO_REMOVE=(
+PATHS_TO_REMOVE=(
   /var/cache/registrypackages
   /etc/kubernetes
   /var/lib/kubelet
@@ -32,7 +34,6 @@ FILES_TO_REMOVE=(
   /etc/containerd
   /opt/deckhouse
   /var/lib/deckhouse
-  /var/lib/bashible
   /var/log/kube-audit
   /var/log/pods
   /var/log/containers
@@ -91,7 +92,8 @@ set_motd_message() {
   cat <<BLOCK >> "$MOTD_FILE"
 # ${MARKER}_START
 Deckhouse node cleanup is not complete. Reboot and run:
-  bash /root/d8_cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+  bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
+If you see this message by mistake, please remove it from /etc/motd.
 # ${MARKER}_END
 BLOCK
 }
@@ -125,18 +127,23 @@ kill_and_wait() {
   return 1
 }
 
-remove_dir() {
-  local dir="$1"
-  [ ! -e "$dir" ] && return 0
-  
+remove_path() {
+  local path="$1"
+
+  # if it does not exist
+  [ ! -e "$path" ] && return 0
+
   for i in {1..5}; do
-    mount | grep "$dir" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
-    rm -rf "$dir" 2>/dev/null && return 0
+    if [ -d "$path" ]; then
+      mount | grep -F "$path" | awk '{print $3}' | sort -r | xargs -r umount -l 2>/dev/null
+    fi
+    rm -rf "$path" 2>/dev/null && return 0
     sleep 1
   done
-  
-  if [ -e "$dir" ]; then
-    log_err "ERROR: failed to remove $dir"
+
+  # if it exists after attempting to delete
+  if [ -e "$path" ]; then
+    log_err "ERROR: failed to remove $path"
     return 1
   fi
 }
@@ -144,15 +151,13 @@ remove_dir() {
 # --- Main ---
 log_info "Starting static node cleanup"
 
+# Backup current script for potential rerun
+cp -f "$0" "$SCRIPT_BACKUP" 2>/dev/null || log_err "Failed to backup cleanup script to $SCRIPT_BACKUP"
+chmod +x "$SCRIPT_BACKUP" 2>/dev/null || true
+
 if [ "$1" != "--yes-i-am-sane-and-i-understand-what-i-am-doing" ]; then
   log_err "Needed flag isn't passed, exit without any action (--yes-i-am-sane-and-i-understand-what-i-am-doing)"
   exit 1
-fi
-
-if [ "$0" != /root/d8_cleanup_static_node.sh ]; then
-  log_info "Copying cleanup script to /root/d8_cleanup_static_node.sh"
-  cp -f "$0" /root/d8_cleanup_static_node.sh
-  chmod +x /root/d8_cleanup_static_node.sh
 fi
 
 log_info "Setting MOTD cleanup message"
@@ -186,9 +191,9 @@ systemctl daemon-reload
 systemctl -s SIGHUP kill systemd-logind
 
 # Remove files
-for d in "${FILES_TO_REMOVE[@]}"; do
-  log_info "Removing $d"
-  remove_dir "$d" || CLEANUP_FAILED=1
+for p in "${PATHS_TO_REMOVE[@]}"; do
+  log_info "Removing $p"
+  remove_path "$p" || CLEANUP_FAILED=1
 done
 
 # Remove Users
@@ -211,13 +216,19 @@ EOF_CRON
   (cat /root/old_crontab; echo "@reboot /root/d8-user-cleanup.sh") | crontab -
 fi
 
+remove_path /var/lib/bashible/ || CLEANUP_FAILED=1
+
 if [ "$CLEANUP_FAILED" -ne 0 ]; then
-  log_err "Cleanup finished with errors. Reboot the server and run as root user /root/d8_cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing again, or fix the issues above manually"
+  if [ ! -f "$SCRIPT_PATH" ]; then
+    mkdir -p /var/lib/bashible/
+    cp -f "$SCRIPT_BACKUP" "$SCRIPT_PATH"
+    chmod +x "$SCRIPT_PATH"
+  fi
+  log_err "Cleanup finished with errors. Reboot the server and run as root user $SCRIPT_PATH --yes-i-am-sane-and-i-understand-what-i-am-doing again, or fix the issues above manually"
   exit 2
 fi
 
 log_info "Cleanup completed successfully, restoring MOTD and rebooting"
-rm -rf /root/d8_cleanup_static_node.sh
 restore_motd_message
 shutdown -r -t 5
 EOF
