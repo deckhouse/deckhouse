@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -37,6 +38,7 @@ const (
 // Installer handles package lifecycle using symlinks instead of dm-verity mounts.
 // Simpler alternative for environments where dm-verity is unavailable.
 type Installer struct {
+	mu       sync.Mutex
 	registry registryService
 	logger   *log.Logger
 }
@@ -80,13 +82,18 @@ func (i *Installer) Download(ctx context.Context, repo registry.Remote, download
 	default:
 	}
 
-	// <downloaded>/<version>.erofs
+	// one package can be downloaded by different apps in the same time
+	// so lock it to prevent downloading same package
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	imagePath := filepath.Join(downloaded, version)
 	if err := os.MkdirAll(filepath.Dir(imagePath), 0755); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newCreatePackageDirErr(err)
 	}
 
+	// download/extract into <downloaded>/<version> directory
 	if err := i.registry.Download(ctx, repo, imagePath, name, version); err != nil {
 		return newDownloadErr(err)
 	}
