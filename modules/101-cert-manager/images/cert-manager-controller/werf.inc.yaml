@@ -1,5 +1,4 @@
-{{- $version := "1.19.2" -}} 
-
+{{- $version := include "get_oss_version_by_id" (list "cert-manager" $ )  -}} # see in oss.yaml
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
 import:
