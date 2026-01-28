@@ -41,7 +41,7 @@ spec:
       image: kubernetes-api-proxy:0.0.1
       imagePullPolicy: IfNotPresent
       args:
-        - "--listen-address=0.0.0.0"
+        - "--listen-address=127.0.0.1"
         - "--listen-port=6445"
         - "--health-listen=:6480"
         - "--log-level=debug"
