@@ -42,7 +42,9 @@
     {{- partial "sidebar-filter" . }}
   </div>
   <div class="layout-sidebar__content layout-sidebar__content--tile">
-
+    <div class="selected__filters">
+      <div class="selected__filters--list"></div>
+    </div>
     <h1 class="tile__title">{{ .Title }}</h1>
 
     {{.Content}}
@@ -122,9 +124,7 @@
 {{- end }}
 
       <div class="block__tile">
-      {{- range (sort $modulesList "module" "asc") }}
-        <a class="button-tile" href="{{ .url }}">
-        <h2 class="button-tile__title">{{ .module }}</h2>
+        {{- range (sort $modulesList "module" "asc") }}
         {{- $moduleStage := "" }}
         {{- $moduleDescription := default "" .description }}
 
@@ -137,14 +137,21 @@
             {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
           {{- end }}
         {{- end }}
+        <a class="button-tile" data-editorial="{{- $moduleStage }}" href="{{ .url }}">
 
-        {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
-          <span>
-            <span class='button-tile__stage button-tile__stage-{{ lower $moduleStage }}' title='{{ T (printf "module_alert_%s_long" (replace (lower $moduleStage) " " "_") ) }}'>
-              {{- $moduleStage }}
-            </span>
+        {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
+          {{- $stageKey := lower $moduleStage }}
+          {{- $stageIcon := $stageKey }}
+          {{- if eq $moduleStage "General Availability" }}
+            {{- $stageKey = "generalAvailability" }}
+            {{- $stageIcon = "general_availability" }}
+          {{- end }}
+          <span class='button-tile__stage button-tile__stage-{{ $stageKey }}'>
+            <img src="/images/{{ $stageIcon }}.svg" alt="{{- $moduleStage }}">
           </span>
         {{- end }}
+        <h2 class="button-tile__title">{{ .module }}</h2>
+
           <p class="button-tile__descr">
             {{ $moduleDescription }}
           </p>
@@ -202,7 +209,7 @@
           </div>
         </a>
       {{- end }}
-
+      
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>

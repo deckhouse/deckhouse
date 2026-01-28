@@ -406,6 +406,8 @@
       @media screen and (width < 1100px) {
           gap: 35px;
       }
+
+
   }
 }
 
@@ -469,6 +471,108 @@
     &--tile {
       @media screen and (width < 1500px) {
         max-width: 100%;
+      }
+
+      .tippy-box {
+          border: none !important;
+          box-shadow: none !important;
+          text-transform: none;
+      }
+
+      .tippy-content {
+          padding: 0;
+      }
+
+      .tippy-arrow {
+          bottom: 2px;
+          z-index: 99999;
+          background-color: #fff;
+
+          &::before {
+              color: #fff;
+          }
+      }
+      
+      .statuses-tooltip {
+          width: 100%;
+          max-width: 310px;
+          height: 100%;
+          padding: 8px 8px 16px;
+          color: #2B313B;
+          font-style: normal;
+          background-color: #fff;
+          box-shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 4px 8px rgba(16, 24, 40, 0.1);
+
+          &__title {
+              margin: 8;
+              margin-bottom: 2px;
+              font-size: 14px;
+              font-weight: 600;
+              line-height: 24px;
+              letter-spacing: 0.3px;
+              text-transform: capitalize;
+          }
+
+          &__descr {
+              margin: 0;
+              font-size: 12px;
+              font-weight: 400;
+              line-height: 18px;
+          }
+      }
+
+      .selected__filters {
+        margin-bottom: 28px;
+
+        &--list {
+          display: flex;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 12px;
+
+          .selected__filter {
+            display: flex;
+            padding: 6px 12px;
+            align-items: center;
+            gap: 8px;
+            border-radius: 14px;
+            border: 1px solid var(--Neutral-60, #B2B8D9);
+            background: var(--Neutral-90, #F5F5FB);
+            color: #2B313B;
+            font-size: 14px;
+            font-style: normal;
+            font-weight: 400;
+            line-height: 24px;
+            letter-spacing: 0.3px;
+            text-transform: capitalize;
+
+            .remove__filter {
+              width: 16px;
+              height: 16px;
+              background-image: url(/images/close-selected-filter.svg);
+              background-position: center;
+              background-repeat: no-repeat;
+              cursor: pointer;
+            }
+          }
+        }
+
+        .full-reset {
+          display: flex;
+          box-sizing: border-box;
+          width: 36px;
+          height: 36px;
+          padding: 6px 12px;
+          justify-content: center;
+          align-items: center;
+          gap: 8px;
+          border-radius: 14px;
+          background: var(--Primary-50, #0064FF);
+          background-image: url(/images/full-reset.svg);
+          background-position: center;
+          background-repeat: no-repeat;
+          cursor: pointer;
+        }
       }
     }
 }

@@ -1,8 +1,58 @@
 <script type="text/javascript" src='/assets/js/filter.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>
 
-<div class="filter__container">
-    <h2 class="filter__container--title">{{ T "category" | humanize }}</h2>
-
-    <div class="filter__checkboxes"></div>
-    <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button>
+<div class="filter">
+    <h2 class="filter--title">{{ T "filters" | humanize }}</h2>
+    <div class="filter__container filter__container--search">
+        <h3 class="filter__container--title">{{ T "search_filter" | humanize }}</h3>
+        <div class="filter__search">
+            <div class="filter__search--container">
+                <div class="input-wrapper">
+                    <input type="text" id="search-filter" placeholder='{{ T "search_placeholder_text_filter" }}' class="input">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="filter__container filter__container--editorial">
+        <h3 class="filter__container--title closing-title">{{ T "editorial_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--editorial">
+            <input type="checkbox" id="editorialExperimental" value="Experimental">
+            <label for="editorialExperimental" style="text-transform: capitalize;">Experimental</label>
+            <input type="checkbox" id="editorialPreview" value="Preview">
+            <label for="editorialPreview" style="text-transform: capitalize;">Preview</label>
+            <input type="checkbox" id="editorialGeneralAvailability" value="General Availability">
+            <label for="editorialGeneralAvailability" style="text-transform: capitalize;">General Availability</label>
+            <input type="checkbox" id="editorialDeprecated" value="Deprecated">
+            <label for="editorialDeprecated" style="text-transform: capitalize;">Deprecated</label>
+        </div>
+    </div>
+    <div class="filter__container filter__container--statuses">
+        <h3 class="filter__container--title closing-title">{{ T "statuses_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--statuses">
+            <input type="checkbox" id="experimental" value="experimental">
+            <label for="experimental" style="text-transform: capitalize;">
+                Experimental
+                <img src="/images/experimental.svg">
+            </label>
+            <input type="checkbox" id="preview" value="preview">
+            <label for="preview" style="text-transform: capitalize;">
+                Preview
+                <img src="/images/preview.svg">
+            </label>
+            <input type="checkbox" id="generalAvailability" value="generalAvailability">
+            <label for="generalAvailability" style="text-transform: capitalize;">
+                General Availability (GA)
+                <img src="/images/general_availability.svg">
+            </label>
+            <input type="checkbox" id="deprecated" value="deprecated">
+            <label for="deprecated" style="text-transform: capitalize;">
+                Deprecated
+                <img src="/images/deprecated.svg">
+            </label>
+        </div>
+    </div>
+    <div class="filter__container filter__container--tags">
+        <h3 class="filter__container--title closing-title">{{ T "tags_filter" | humanize }}</h3>
+        <div class="filter__checkboxes filter__checkboxes--tags"></div>
+         <!-- <button class="reset-check reset-check__{{ .Language.Lang }}">{{ T "reset_filter" | humanize }}</button> -->
+    </div>
 </div>
