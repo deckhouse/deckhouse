@@ -81,14 +81,8 @@ The provider supports working with only one disk in the virtual machine template
 1. Before creating the VM template, reset the `cloud-init` identifiers and state using the following commands:
 
    ```shell
-   truncate -s 0 /etc/machine-id
-   ```
-
-   ```shell
-   rm /var/lib/dbus/machine-id
-   ```
-
-   ```shell
+   truncate -s 0 /etc/machine-id &&
+   rm /var/lib/dbus/machine-id &&
    ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
 

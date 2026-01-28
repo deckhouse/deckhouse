@@ -87,15 +87,9 @@ DKP использует `cloud-init` для настройки виртуаль
 
 1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`, используя следующие команды:
 
-      ```shell
-   truncate -s 0 /etc/machine-id
-   ```
-
    ```shell
-   rm /var/lib/dbus/machine-id
-   ```
-
-   ```shell
+   truncate -s 0 /etc/machine-id &&
+   rm /var/lib/dbus/machine-id &&
    ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
 
