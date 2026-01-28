@@ -200,7 +200,7 @@ Manually edit the configuration:
      --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
    ```
 
-5. Remove the annotation after applying the changes:
+1. Remove the annotation after applying the changes:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
