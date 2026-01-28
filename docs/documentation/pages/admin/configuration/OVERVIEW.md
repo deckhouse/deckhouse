@@ -169,7 +169,6 @@ This command will automatically:
 
 4. Edit the configuration in the opened editor, save, and exit.
 
-
 {% offtopic title="Edit manually" %}
 
 Manually edit the configuration:
@@ -187,33 +186,32 @@ Manually edit the configuration:
      -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
 
-1. Edit the `cluster-config.yaml` file with your preferred editor:
+3. Edit the `cluster-config.yaml` file with your preferred editor:
 
    ```shell
    vi cluster-config.yaml
    ```
 
-1. Encode the edited configuration and update the Secret:
+4. Encode the edited configuration and update the Secret:
 
    ```shell
    d8 k -n kube-system patch secret d8-cluster-configuration \
      --patch="{\"data\":{\"cluster-configuration.yaml\":\"$(base64 -w0 < cluster-config.yaml)\"}}"
    ```
 
-1. Remove the annotation after applying the changes:
+5. Remove the annotation after applying the changes:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
 
-1. Delete the temporary file:
+6. Delete the temporary file:
 
    ```shell
    rm cluster-config.yaml
    ```
 
 > **Important:** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
-
 
 ### Viewing current configuration
 
