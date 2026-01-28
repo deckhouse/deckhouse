@@ -230,11 +230,12 @@ func (a *ApplicationPackageVersion) AddInstalledApp(namespace string, appName st
 
 // RemoveInstalledApp removes an application from the list of applications using this package version.
 func (a *ApplicationPackageVersion) RemoveInstalledApp(namespace string, appName string) *ApplicationPackageVersion {
+	prevLen := len(a.Status.UsedBy)
 	a.Status.UsedBy = slices.DeleteFunc(a.Status.UsedBy, func(v ApplicationPackageVersionStatusInstance) bool {
 		return v.Namespace == namespace && v.Name == appName
 	})
 
-	if a.Status.UsedByCount > 0 {
+	if len(a.Status.UsedBy) < prevLen && a.Status.UsedByCount > 0 {
 		a.Status.UsedByCount--
 	}
 

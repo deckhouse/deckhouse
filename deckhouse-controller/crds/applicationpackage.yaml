@@ -15,8 +15,8 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .status.installedOverall
-      name: Installed
+    - jsonPath: .status.usedByCount
+      name: UsedBy
       type: integer
     name: v1alpha1
     schema:
@@ -50,21 +50,23 @@ spec:
                 items:
                   type: string
                 type: array
-              installed:
-                additionalProperties:
-                  items:
-                    properties:
-                      name:
-                        description: Name of the installed application.
-                        type: string
-                    type: object
-                  type: array
-                description: |-
-                  Information about applications installed in each namespace.
-                  The key is the namespace name, and the value is a list of installed applications.
-                type: object
-              installedOverall:
-                description: Total number of applications installed across all namespaces.
+              usedBy:
+                description: Information about applications using this package.
+                items:
+                  properties:
+                    name:
+                      description: Name of the application instance.
+                      type: string
+                    namespace:
+                      description: Namespace where the application is installed.
+                      type: string
+                    version:
+                      description: Version of the package used by this application.
+                      type: string
+                  type: object
+                type: array
+              usedByCount:
+                description: Number of applications using this package.
                 type: integer
             type: object
         type: object

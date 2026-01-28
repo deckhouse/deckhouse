@@ -1,10 +1,6 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
-  creationTimestamp: null
-  finalizers:
-  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
   ownerReferences:
@@ -13,51 +9,48 @@ metadata:
     controller: false
     kind: ApplicationPackageVersion
     name: deckhouse-test-v1.0.1
-    uid: ""
+    uid: old-apv-uid
   - apiVersion: deckhouse.io/v1alpha1
     blockOwnerDeletion: true
     controller: false
     kind: ApplicationPackage
     name: test
-    uid: ""
-  resourceVersion: "3"
+    uid: ap-uid
 spec:
   packageName: test
   packageRepositoryName: deckhouse
-  packageVersion: v1.0.1
+  packageVersion: v1.0.2
 status:
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
     status: "True"
     type: Processed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  creationTimestamp: null
   labels:
     heritage: deckhouse
   name: test
-  resourceVersion: "2"
+  uid: ap-uid
 status:
   availableRepositories:
-  - deckhouse
+    - deckhouse
   usedBy:
-  - name: test-app
-    namespace: foobar
-    version: v1.0.1
+    - name: test-app
+      namespace: foobar
+      version: v1.0.1
   usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  creationTimestamp: null
+  name: deckhouse-test-v1.0.1
   labels:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-test-v1.0.1
-  resourceVersion: "2"
+  uid: old-apv-uid
 spec:
   packageName: test
   packageRepositoryName: deckhouse
@@ -83,16 +76,40 @@ status:
   usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.2
+  labels:
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  uid: new-apv-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsEnriched
+  packageMetadata:
+    category: Misc
+    description:
+      en: example — test
+      ru: example — test
+    requirements:
+      deckhouse: '>=1.0.0'
+      kubernetes: '>=1.26'
+    stage: Preview
+---
+apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository
 metadata:
-  creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
 spec:
   registry:
-    ca: test-ca
-    dockerCfg: test-docker-cfg
-    repo: registry.example.com/test
     scheme: https
-status:
-  syncTime: null
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca
