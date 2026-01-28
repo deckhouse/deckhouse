@@ -5,7 +5,7 @@
   {{- if $value.ccm.azure }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/*" $patches) }}
       {{- if contains $version $path }}
         {{- $patch = true }}
       {{- end }}
@@ -25,14 +25,14 @@ imageSpec:
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
 fromImage: common/src-artifact
-#return
+{{- if $patch }}
 git:
 - add: {{ $patches }}/patches/{{ $version }}
   to: /patches
   stageDependencies:
     install:
       - '**/*'
-#return
+{{- end }}
 secrets:
 - id: SOURCE_REPO
   value: {{ $.SOURCE_REPO }}
@@ -40,9 +40,9 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $value.ccm.azure }}  $(cat /run/secrets/SOURCE_REPO)/kubernetes-sigs/cloud-provider-azure.git /src
   - cd /src
-  #return
+  {{- if $patch}}
   - git apply /patches/*.patch --verbose
-  #return
+  {{- end}}
   - rm -rf vendor .git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
