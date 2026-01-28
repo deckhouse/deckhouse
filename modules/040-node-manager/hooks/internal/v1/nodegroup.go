@@ -147,6 +147,19 @@ type TimeSlicing struct {
 type Mig struct {
 	// MIG profiles
 	PartedConfig *string `json:"partedConfig,omitempty"`
+
+	// Per-GPU custom layouts for the selected MIG config.
+	CustomConfigs []MigCustomConfig `json:"customConfigs,omitempty"`
+}
+
+type MigCustomConfig struct {
+	Index  int32          `json:"index,omitempty"`
+	Slices []MigSliceSpec `json:"slices,omitempty"`
+}
+
+type MigSliceSpec struct {
+	Profile string `json:"profile,omitempty"`
+	Count   *int32 `json:"count,omitempty"`
 }
 
 type Containerd struct {
