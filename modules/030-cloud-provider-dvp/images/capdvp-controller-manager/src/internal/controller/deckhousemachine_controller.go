@@ -48,7 +48,10 @@ import (
 	infrastructurev1a1 "cluster-api-provider-dvp/api/v1alpha1"
 )
 
-const ProviderIDPrefix = "dvp://"
+const (
+	ProviderIDPrefix   = "dvp://"
+	ClusterPrefixLabel = "dvp.deckhouse.io/cluster-prefix"
+)
 
 // DeckhouseMachineReconciler reconciles a DeckhouseMachine object
 type DeckhouseMachineReconciler struct {
@@ -131,7 +134,7 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// Handle other kinds of changes
-	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
+	return r.reconcileUpdates(ctx, logger, cluster, dvpCluster, machine, dvpMachine)
 }
 
 func patchDeckhouseMachine(
@@ -158,6 +161,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	ctx context.Context,
 	logger logr.Logger,
 	cluster *clusterv1b1.Cluster,
+	dvpCluster *infrastructurev1a1.DeckhouseCluster,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
 ) (ctrl.Result, error) {
@@ -196,8 +200,15 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 	}
 
 	logger.Info("Reconciling DeckhouseMachine")
+	clusterPrefix := ""
+	if dvpCluster != nil && dvpCluster.Labels != nil {
+		clusterPrefix = dvpCluster.Labels[ClusterPrefixLabel]
+		if clusterPrefix != "" {
+			logger = logger.WithValues("cluster_prefix", clusterPrefix)
+		}
+	}
 
-	vm, err := r.getOrCreateVM(ctx, machine, dvpMachine)
+	vm, err := r.getOrCreateVM(ctx, machine, dvpMachine, clusterPrefix)
 	if err != nil {
 		logger.Info("No VM can be found or created for Machine, see DeckhouseMachine status for details")
 		conditions.MarkFalse(
@@ -348,6 +359,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	ctx context.Context,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	clusterPrefix string,
 ) (
 	vm *v1alpha2.VirtualMachine,
 	err error,
@@ -355,7 +367,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
-			vm, err = r.createVM(ctx, machine, dvpMachine)
+			vm, err = r.createVM(ctx, machine, dvpMachine, clusterPrefix)
 			return vm, err
 		}
 		return nil, fmt.Errorf("cannot get VirtualMachine: %w", err)
@@ -368,6 +380,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 	ctx context.Context,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	clusterPrefix string,
 ) (*v1alpha2.VirtualMachine, error) {
 	if machine.Spec.Bootstrap.DataSecretName == nil {
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
@@ -441,13 +454,16 @@ func (r *DeckhouseMachineReconciler) createVM(
 			liveMigrationPolicy = string(v1alpha2.PreferSafeMigrationPolicy)
 		}
 	}
-
+	labels := map[string]string{
+		"dvp.deckhouse.io/hostname": dvpMachine.Name,
+	}
+	if clusterPrefix != "" {
+		labels[ClusterPrefixLabel] = clusterPrefix
+	}
 	vm, err := r.DVP.ComputeService.CreateVM(ctx, &v1alpha2.VirtualMachine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: dvpMachine.Name,
-			Labels: map[string]string{
-				"dvp.deckhouse.io/hostname": dvpMachine.Name,
-			},
+			Name:   dvpMachine.Name,
+			Labels: labels,
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
 			RunPolicy:                v1alpha2.RunPolicy(runPolicy),
