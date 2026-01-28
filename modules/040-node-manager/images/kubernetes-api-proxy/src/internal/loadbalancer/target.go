@@ -17,7 +17,6 @@ limitations under the License.
 package loadbalancer
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -48,38 +47,41 @@ type lbTarget struct {
 func (t *lbTarget) HandleConn(src net.Conn) {
 	var backendAddr string
 
+	// 1. Try to pick address from MainList (served with endpoint slices)
 	backend, err := t.list.Pick()
 	if err == nil {
 		backendAddr = backend.Address()
-	} else {
-		if errors.Is(upstream.ErrNoUpstreams, err) {
-			backend, err := t.fallbackList.Pick()
-			if err != nil {
-				t.logger.Warn(
-					"failed to pick upstream from fallback list, "+
-						"falling to KUBERNETES_SERVICE_HOST:KUBERNETES_SERVICE_PORT",
-					slog.String("err", err.Error()),
-				)
+	}
 
-				kubernetesHost := os.Getenv("KUBERNETES_SERVICE_HOST")
-				kubernetesPort := os.Getenv("KUBERNETES_SERVICE_PORT")
+	// 2. If we don't get any, try to get it from fallback list
+	if backendAddr == "" {
+		if fallbackBackend, err := t.fallbackList.Pick(); err == nil {
+			backendAddr = fallbackBackend.Address()
+		}
+	}
 
-				backendAddr = fmt.Sprintf("%s:%s", kubernetesHost, kubernetesPort)
+	// 3. If fallback list is empty for any reason - trying to serve with default kubernetes service host:port
+	if backendAddr == "" {
+		t.logger.Warn(
+			"failed to pick upstream from fallback list, " +
+				"falling to KUBERNETES_SERVICE_HOST:KUBERNETES_SERVICE_PORT",
+		)
 
-			} else {
-				backendAddr = backend.Address()
-			}
+		kubernetesHost := os.Getenv("KUBERNETES_SERVICE_HOST")
+		kubernetesPort := os.Getenv("KUBERNETES_SERVICE_PORT")
+
+		backendAddr = fmt.Sprintf("%s:%s", kubernetesHost, kubernetesPort)
+	}
+
+	// 4. If any of steps don't give us backendAddr, fail to serve, close connection and give up
+	if backendAddr == "" {
+		_ = src.Close()
+
+		if t.logger != nil {
+			t.logger.Error("no upstreams available to handle connection")
 		}
 
-		if backendAddr == "" {
-			_ = src.Close()
-
-			if t.logger != nil {
-				t.logger.Warn("no upstreams available to handle connection")
-			}
-
-			return
-		}
+		return
 	}
 
 	if t.logger != nil {
