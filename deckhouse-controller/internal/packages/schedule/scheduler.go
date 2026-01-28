@@ -15,6 +15,7 @@
 package schedule
 
 import (
+	"log/slog"
 	"sync"
 	"sync/atomic"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/condition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/version"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // Package represents a package that can be scheduled for enable/disable based on conditions.
@@ -40,15 +42,16 @@ type Scheduler struct {
 	onEnable  Callback // Called when package transitions to enabled state
 	onDisable Callback // Called when package transitions to disabled state
 
-	kubeVersionGetter      version.Getter      // Gets current Kubernetes version
-	deckhouseVersionGetter version.Getter      // Gets current Deckhouse version
-	dependencyGetter       dependency.Getter   // Get dependencies
-	bootstrapCondition     condition.Condition // Bootstrap readiness check
+	kubeVersionGetter      version.Getter                    // Gets current Kubernetes version
+	deckhouseVersionGetter version.Getter                    // Gets current Deckhouse version
+	moduleDependencyGetter dependency.ModuleDependencyGetter // Get dependencies
+	bootstrapCondition     condition.Condition               // Bootstrap readiness check
 
 	pause atomic.Bool // When true, no state changes are processed
 
-	mu    sync.Mutex       // Protects nodes map
-	nodes map[string]*node // Package name -> node mapping
+	mu     sync.Mutex       // Protects nodes map
+	nodes  map[string]*node // Package name -> node mapping
+	logger *log.Logger
 }
 
 // Callback is invoked when package state changes.
@@ -81,9 +84,9 @@ func WithBootstrapCondition(cond condition.Condition) Option {
 	}
 }
 
-func WithDependencyGetter(dependencyGetter dependency.Getter) Option {
+func WithDependencyGetter(dependencyGetter dependency.ModuleDependencyGetter) Option {
 	return func(s *Scheduler) {
-		s.dependencyGetter = dependencyGetter
+		s.moduleDependencyGetter = dependencyGetter
 	}
 }
 
@@ -101,8 +104,8 @@ func WithOnDisable(callback Callback) Option {
 
 // NewScheduler creates a new Scheduler instance.
 // The scheduler starts in paused state and must be explicitly resumed.
-func NewScheduler(opts ...Option) *Scheduler {
-	sch := new(Scheduler)
+func NewScheduler(logger *log.Logger, opts ...Option) *Scheduler {
+	sch := &Scheduler{logger: logger}
 
 	sch.nodes = make(map[string]*node)
 	sch.pause.Store(true) // Start paused - no state changes until Resume()
@@ -119,21 +122,23 @@ func (s *Scheduler) Check(checks Checks) error {
 
 	// Add version constraint checkers (all are blockers)
 	if checks.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, string(ConditionReasonRequirementsKubernetes)))
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, string(ConditionReasonRequirementsKubernetes), s.logger))
 	}
 
 	if checks.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, string(ConditionReasonRequirementsDeckhouse)))
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, string(ConditionReasonRequirementsDeckhouse), s.logger))
 	}
 
-	if len(checks.Modules) > 0 && s.dependencyGetter != nil {
-		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, checks.Modules))
+	if len(checks.Modules) > 0 && s.moduleDependencyGetter != nil {
+		checkers = append(checkers, dependency.NewChecker(s.moduleDependencyGetter, checks.Modules, s.logger))
 	}
 
 	// Add bootstrap condition as blocker (prevents enabling during startup)
 	if s.bootstrapCondition != nil {
 		checkers = append(checkers, condition.NewChecker(s.bootstrapCondition, string(ConditionReasonRequirementsBootstrap)))
 	}
+
+	s.logger.Debug("checking", slog.Int("checkers_count", len(checkers)))
 
 	for _, ch := range checkers {
 		if res := ch.Check(); !res.Enabled {
@@ -166,15 +171,15 @@ func (s *Scheduler) Add(pkg Package) {
 
 	// Add version constraint checkers (all are blockers)
 	if checks.Kubernetes != nil && s.kubeVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, "kubernetes version unmet"))
+		checkers = append(checkers, version.NewChecker(s.kubeVersionGetter, checks.Kubernetes, "kubernetes version unmet", s.logger))
 	}
 
 	if checks.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, "deckhouse version unmet"))
+		checkers = append(checkers, version.NewChecker(s.deckhouseVersionGetter, checks.Deckhouse, "deckhouse version unmet", s.logger))
 	}
 
-	if len(checks.Modules) > 0 && s.dependencyGetter != nil {
-		checkers = append(checkers, dependency.NewChecker(s.dependencyGetter, checks.Modules))
+	if len(checks.Modules) > 0 && s.moduleDependencyGetter != nil {
+		checkers = append(checkers, dependency.NewChecker(s.moduleDependencyGetter, checks.Modules, s.logger))
 	}
 
 	// Add bootstrap condition as blocker (prevents enabling during startup)
