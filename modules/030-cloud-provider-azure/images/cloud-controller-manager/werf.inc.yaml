@@ -5,7 +5,7 @@
   {{- if $value.ccm.azure }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/*" $patches) }}
       {{- if contains $version $path }}
         {{- $patch = true }}
       {{- end }}
