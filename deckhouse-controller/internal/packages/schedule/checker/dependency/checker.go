@@ -21,7 +21,6 @@ import (
 	"log/slog"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/samber/lo"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -111,8 +110,7 @@ func (c *Checker) Check() checker.Result {
 	for name, dep := range c.modulesDependencies {
 		c.logger.Debug("check dependency",
 			slog.String("name", name),
-			slog.Bool("optional", dep.Optional),
-			slog.String("constraint", dep.Constraint.String()))
+			slog.Bool("optional", dep.Optional))
 
 		moduleInfo, err := c.getter(name)
 		if err != nil {
@@ -129,7 +127,10 @@ func (c *Checker) Check() checker.Result {
 				continue // Optional dependency - skip validation
 			}
 
-			suffix := lo.If(moduleInfo.IsModuleEnabled == nil, "not found").Else("not enabled")
+			suffix := "not enabled"
+			if moduleInfo.IsModuleEnabled == nil {
+				suffix = "not found"
+			}
 			msg := fmt.Sprintf("dependency '%s' %s", name, suffix)
 
 			// Required dependency is missing - fail
@@ -140,10 +141,16 @@ func (c *Checker) Check() checker.Result {
 			}
 		}
 
+		version := removePrereleaseAndMetadata(moduleInfo.Version, c.logger)
+
+		c.logger.Debug("semver validate",
+			slog.String("constraint", dep.Constraint.String()),
+			slog.String("version", version.String()))
+
 		// Validate version constraint
 		// semver.Constraints.Validate returns (bool, []error)
 		// We only care about the errors - if any exist, constraint is not satisfied
-		if _, errs := dep.Constraint.Validate(moduleInfo.Version); len(errs) != 0 {
+		if _, errs := dep.Constraint.Validate(version); len(errs) != 0 {
 			return checker.Result{
 				Enabled: false,
 				Reason:  fmt.Sprintf("dependency %s error: %s", name, errs[0].Error()), // Return first validation error
@@ -156,4 +163,27 @@ func (c *Checker) Check() checker.Result {
 	return checker.Result{
 		Enabled: true,
 	}
+}
+
+// removePrereleaseAndMetadata returns a version without prerelease and metadata parts
+func removePrereleaseAndMetadata(version *semver.Version, logger *log.Logger) *semver.Version {
+	if len(version.Prerelease()) > 0 {
+		woPrerelease, err := version.SetPrerelease("")
+		if err != nil {
+			logger.Warn("could not remove prerelease")
+			return version
+		}
+		version = &woPrerelease
+	}
+
+	if len(version.Metadata()) > 0 {
+		woMetadata, err := version.SetMetadata("")
+		if err != nil {
+			logger.Warn("could not remove metadata")
+			return version
+		}
+		version = &woMetadata
+	}
+
+	return version
 }

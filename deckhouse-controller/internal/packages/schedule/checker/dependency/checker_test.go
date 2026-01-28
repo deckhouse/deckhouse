@@ -156,3 +156,14 @@ func Test_Check(t *testing.T) {
 		assert.True(t, result.Enabled)
 	})
 }
+
+func TestRemovePrereleaseAndMetadata(t *testing.T) {
+	ver := semver.MustParse("1.21")
+	newVer := removePrereleaseAndMetadata(ver, log.NewLogger())
+	assert.Equal(t, ver.String(), newVer.String())
+
+	verPre := semver.MustParse("1.75.0-pr17646+5019b18")
+	ver = semver.MustParse("1.75.0")
+	newVer = removePrereleaseAndMetadata(verPre, log.NewLogger())
+	assert.Equal(t, ver.String(), newVer.String())
+}

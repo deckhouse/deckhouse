@@ -79,13 +79,13 @@ type Operator struct {
 	logger *log.Logger
 }
 
-//go:generate mockgen -source=$GOFILE -package=operator_mock -destination=./mock/operator_mock.go
+//go:generate mockgen -source=$GOFILE -package=operatormock -destination=./mock/operator_mock.go
 type moduleManager interface {
 	GetGlobal() *modules.GlobalModule
 	IsModuleEnabled(moduleName string) bool
 }
 
-type clusterObjectVersion func(ctx context.Context, moduleName string) (string, error)
+type moduleVersionGetter func(ctx context.Context, moduleName string) (string, error)
 
 // New creates and initializes a new Operator instance with all subsystems.
 //
@@ -103,7 +103,7 @@ type clusterObjectVersion func(ctx context.Context, moduleName string) (string, 
 //   - NELM monitor: Tuned QPS for Helm resource monitoring
 //
 // The event handler starts immediately to begin processing events.
-func New(versionInfo clusterObjectVersion, moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
+func New(versionInfo moduleVersionGetter, moduleManager moduleManager, dc dependency.Container, logger *log.Logger) (*Operator, error) {
 	o := new(Operator)
 
 	o.packages = make(map[string]*lifecyclePackage)
@@ -355,7 +355,7 @@ func (o *Operator) buildNelmService() error {
 //   - onDisable: Stops hooks and transitions package back to Loaded state
 //
 // The scheduler starts paused and is resumed after initial package loading completes.
-func (o *Operator) buildScheduler(versionInfo clusterObjectVersion, moduleManager moduleManager) {
+func (o *Operator) buildScheduler(versionInfo moduleVersionGetter, moduleManager moduleManager) {
 	deckhouseVersionGetter := func() (*semver.Version, error) {
 		discovery := moduleManager.GetGlobal().GetValues(false).GetKeySection("discovery")
 		if len(discovery) == 0 {
