@@ -9,12 +9,12 @@ clusterType: Static
 # [<ru>] Адресное пространство подов кластера.
 # [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR and internalNetworkCIDRs.
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
-podSubnetCIDR: 10.115.0.0/16
+podSubnetCIDR: <POD_SUBNET_CIDR>
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство сети сервисов кластера.
 # [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR and internalNetworkCIDRs.
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
-serviceSubnetCIDR: 10.225.0.0/16
+serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
@@ -155,4 +155,4 @@ kind: StaticClusterConfiguration
 # [<ru>] Укажите, если используете модуль virtualization или узлы кластера имеют более одного сетевого интерфейса.
 # [<ru>] Если на узлах кластера используется только один интерфейс, ресурс StaticClusterConfiguration можно не создавать.
 internalNetworkCIDRs:
-- *!CHANGE_internalNetworkCIDRs*
+- <INTERNAL_NETWORK_CIDRS>
