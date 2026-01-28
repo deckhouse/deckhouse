@@ -214,7 +214,6 @@ Manually edit the configuration:
 
 > **Important:** If you forget to remove the `deckhouse.io/allow-unsafe` annotation, this protection mechanism will remain disabled, leaving your cluster vulnerable to accidental configuration changes.
 
-{% endofftopic %}
 
 ### Viewing current configuration
 
