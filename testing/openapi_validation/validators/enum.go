@@ -230,14 +230,14 @@ var (
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},
-		"candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
+		"modules/030-cloud-provider-vcd/candi/openapi/cluster_configuration.yaml": {
 			// ignore enum values "NSX-T" and "NSX-V"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
 			// ignore enum values "org" and "ext"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
-		"ee/candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
+		"ee/modules/030-cloud-provider-vcd/candi/openapi/cluster_configuration.yaml": {
 			// ignore enum values "NSX-T" and "NSX-V"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",

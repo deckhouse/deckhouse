@@ -7,7 +7,6 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
