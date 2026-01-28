@@ -27,11 +27,11 @@ spec:
       name: Repository
       priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
-      name: Ready
-      type: string
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Message
