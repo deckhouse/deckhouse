@@ -1,0 +1,72 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: vcdinstanceclasses.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-vcd
+spec:
+  versions:
+    - name: v1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Параметры группы виртуальных машин VCD, используемых `cluster-api-controller-manager` (модулем [cloud-provider-vcd](https://deckhouse.io/modules/cloud-provider-vcd/)).
+          properties:
+            spec:
+              properties:
+                rootDiskSizeGb:
+                  description: |
+                    Размер root-диска. Значение указывается в гигабайтах.
+                placementPolicy:
+                  description: |
+                    PlacementPolicy, которая будет использоваться на данном компьютере.
+
+                    Если PlacementPolicy не указана, для создания узлов будет использоваться PlacementPolicy по умолчанию.
+                sizingPolicy:
+                  description: |
+                    SizingPolicy, которая будет использоваться на данном компьютере.
+
+                    Если SizingPolicy не указана, для создания узлов будет использоваться SizingPolicy по умолчанию.
+                storageProfile:
+                  description: |
+                    StorageProfile, который будет использоваться на данном компьютере.
+                template:
+                  description: |
+                    Путь к шаблону OVA, который будет использоваться. Состоит из организации (опционально), каталога, названия или идентификатора шаблона.
+                    Если используется общий каталог, имя организации указывать обязательно (оно может отличаться от значения `provider.organization`).
+
+                    Если в нескольких каталогах с одинаковым названием есть шаблоны с одинаковым именем, следует указать идентификатор шаблона.
+
+                    Идентификатор шаблона можно найти в URL-адресе при открытии шаблона в пользовательском интерфейсе vCD. Например, если URL-адрес `https://vcd.example.com/tenant/MyOrg/libraries/catalogs/1032506a-4555-43e1-8589-77b0c0522c75/catalog-vapp-templates/5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7/general`, то идентификатор шаблона будет `5438c9f2-7e59-4eb3-b37c-cbd7f3e710c7`.
+                mainNetwork:
+                  description: |
+                    Путь до сети, которая будет подключена к виртуальной машине как основная (шлюз по умолчанию).
+                additionalMetadata:
+                  description: |
+                    Дополнительные строковые пары ключ-значение, которые будут добавлены в раздел метаданных (Metadata) каждой виртуальной машины master-узлов.
+                    Это позволяет более эффективно организовывать и классифицировать виртуальные машины в вашей системе виртуализации.
+
+
+                    Свойства из этого поля будут объединены с уже существующими метаданными, хранящимися в поле `metadata` в корне спецификации VCDProviderClusterConfiguration. В случае совпадения ключей значения из этого поля будут иметь приоритет.
+
+                    > **Внимание.** Изменение поля `additionalMetadata` приведет к пересозданию CloudEphemeral NodeGroups, использующих данный VCDInstanceClass.
+                affinityRule:
+                  description: |
+                    Определяет правило размещения, применяемое только к виртуальным машинам NodeGroup, ссылающимся на этот класс инстансов внутри кластера.
+                    Такие правила определяют, как узлы располагаются друг относительно друга на уровне гипервизоров,
+                    что может повысить отказоустойчивость и контролировать распределение рабочих нагрузок.
+                    Если не указано, правило размещения применяться не будет.
+                  properties:
+                    polarity:
+                      description: |
+                        Полярность правила размещения. Должно быть либо `Affinity`, либо `AntiAffinity`.
+                        `Affinity` означает, что узлы должны быть размещены на одном хосте,
+                        в то время как `AntiAffinity` означает, что они должны быть размещены на разных хостах.
+                    required:
+                      description: |
+                        Указывает, является ли правило размещения обязательным (`true`) или предпочтительным (`false`).
+                        Если установлено в `true`, правило должно быть соблюдено; если в `false`, правило применяется, если это возможно, но не является строго обязательным.
+      additionalPrinterColumns:
+        - name: "Node Groups"
+          description: NodeGroups, которые используют этот класс инстансов.
