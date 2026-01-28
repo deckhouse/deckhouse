@@ -51,7 +51,7 @@ func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Conf
 		Namespace: common.KubeSystemNamespace,
 	}, secret)
 	if err != nil {
-		return nil, common.WrapIntoReconcileTolerantError(err, "failed to get secret")
+		return nil, fmt.Errorf("failed to get secret: %w", err)
 	}
 
 	return cluster.GetConfiguration(secret)
@@ -68,7 +68,7 @@ func (r *reconciler) getNodesState(ctx context.Context, desiredVersion string) (
 			Continue: continueToken,
 		})
 		if err != nil {
-			return nil, common.WrapIntoReconcileTolerantError(err, "failed to list nodes")
+			return nil, fmt.Errorf("failed to list nodes: %w", err)
 		}
 
 		nodes = append(nodes, list.Items...)
@@ -108,7 +108,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 		Namespace:     common.KubeSystemNamespace,
 	})
 	if err != nil {
-		return nil, common.WrapIntoReconcileTolerantError(err, "failed to fetch pod list")
+		return nil, fmt.Errorf("failed to fetch pod list: %w", err)
 	}
 
 	if isRetry {

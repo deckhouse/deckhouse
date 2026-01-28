@@ -112,5 +112,4 @@ const (
 	ClusterNodesUpdating            Phase = "NodesUpdating"
 	ClusterVersionDrift             Phase = "VersionDrift"
 	ClusterInconsistent             Phase = "Inconsistent"
-	ClusterUnknown                  Phase = "Unknown"
 )

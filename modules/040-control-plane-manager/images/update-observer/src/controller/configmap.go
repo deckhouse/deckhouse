@@ -132,14 +132,6 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 }
 
 func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
-	if clusterState == nil {
-		return ConfigMapData{
-			Status: &Status{
-				Phase: string(cluster.ClusterUnknown),
-			},
-		}
-	}
-
 	renderControlPlanes := func(m map[string]*cluster.MasterNode) []ControlPlaneNode {
 		controlPlanes := make([]ControlPlaneNode, 0, len(m))
 		for name, nodeState := range m {

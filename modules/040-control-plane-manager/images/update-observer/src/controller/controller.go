@@ -18,7 +18,6 @@ package controller
 
 import (
 	"context"
-	"errors"
 	"time"
 	"update-observer/cluster"
 	"update-observer/common"
@@ -136,11 +135,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	clusterState, err := r.getClusterState(ctx, clusterCfg, reconcileTrigger == ReconcileTriggerDowngradeK8s)
 	if err != nil {
-		if errors.Is(err, &common.ReconcileTolerantError{}) { // TODO: common.ApiServerConnectivityError
-			klog.Info("Tolerant error encountered while getting cluster state, will requeue", err)
-			return reconcile.Result{RequeueAfter: requeueInterval}, nil
-		}
-		klog.Error("Non-tolerant error encountered while getting cluster state, marking state as Unknown", err)
+		klog.Error("Error encountered while getting cluster state", err)
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	configMap, err = fillConfigMap(configMap, clusterState, reconcileTrigger)
