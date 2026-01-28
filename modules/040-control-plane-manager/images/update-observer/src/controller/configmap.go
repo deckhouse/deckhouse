@@ -140,16 +140,16 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		}
 	}
 
-	renderControlPlanes := func(m map[string]*cluster.MasterNodeState) []ControlPlaneNode {
+	renderControlPlanes := func(m map[string]*cluster.MasterNode) []ControlPlaneNode {
 		controlPlanes := make([]ControlPlaneNode, 0, len(m))
 		for name, nodeState := range m {
 			controlPlaneNode := ControlPlaneNode{
 				Name:       name,
 				Phase:      string(nodeState.Phase),
-				Components: make(map[string]string, len(nodeState.ComponentsState)),
+				Components: make(map[string]string, len(nodeState.Components)),
 			}
 
-			for component, componentState := range nodeState.ComponentsState {
+			for component, componentState := range nodeState.Components {
 				controlPlaneNode.Components[component] = componentState.Version
 			}
 
@@ -175,7 +175,7 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 			CurrentVersion: clusterState.CurrentVersion,
 			Phase:          string(clusterState.Status.Phase),
 			Progress:       renderProgress(clusterState.Progress),
-			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.NodesState),
+			ControlPlane:   renderControlPlanes(clusterState.ControlPlaneState.MasterNodes),
 			Nodes: Nodes{
 				DesiredCount:  clusterState.NodesState.DesiredCount,
 				UpToDateCount: clusterState.NodesState.UpToDateCount,

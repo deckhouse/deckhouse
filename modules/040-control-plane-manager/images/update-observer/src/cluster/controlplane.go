@@ -18,7 +18,6 @@ package cluster
 
 import (
 	"fmt"
-	"update-observer/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
 )
@@ -29,7 +28,7 @@ type ControlPlaneState struct {
 	DesiredComponentCount  int
 	UpToDateComponentCount int
 	Phase                  ControlPlanePhase
-	NodesState             map[string]*MasterNodeState
+	MasterNodes            map[string]*MasterNode
 }
 
 type ControlPlanePhase string
@@ -42,14 +41,14 @@ const (
 )
 
 func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion string) (*ControlPlaneState, error) {
-	componentsByNode, err := getComponentsStateByNode(controlPlanePods)
+	masterNodes, err := buildControlPlaneTopology(controlPlanePods)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get components state: %w", err)
 	}
 
 	res := &ControlPlaneState{
-		DesiredCount: len(componentsByNode),
-		NodesState:   componentsByNode,
+		DesiredCount: len(masterNodes),
+		MasterNodes:  masterNodes,
 	}
 
 	res.aggregateNodesState(desiredVersion)
@@ -57,81 +56,36 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 	return res, nil
 }
 
-func getComponentsStateByNode(pods *corev1.PodList) (map[string]*MasterNodeState, error) {
-	nodesState := make(map[string]*MasterNodeState)
-
-	for _, pod := range pods.Items {
-		nodeName := pod.Spec.NodeName
-		var nodeState *MasterNodeState
-		if _, exists := nodesState[nodeName]; !exists {
-			nodesState[nodeName] = &MasterNodeState{
-				ComponentsState: make(map[string]*ControlPlaneComponentState),
-			}
-		}
-		nodeState = nodesState[nodeName]
-
-		componentLabel, exists := pod.GetLabels()[componentLabelKey]
-		if !exists {
-			return nil, fmt.Errorf("%s label are missing", componentLabelKey)
-		}
-
-		kubeVersion, exists := pod.GetAnnotations()[kubeVersionAnnotation]
-		if !exists {
-			return nil, fmt.Errorf("%s annotation are missing", kubeVersionAnnotation)
-		}
-
-		version, err := version.NormalizeAndTrimPatch(kubeVersion)
-		if err != nil {
-			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
-		}
-
-		component := &ControlPlaneComponentState{
-			Version: version,
-			Pod:     pod,
-		}
-
-		nodeState.ComponentsState[componentLabel] = component
-	}
-
-	return nodesState, nil
-}
-
 func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
-	var desiredCount, upToDateCount, desiredComponentCount, upToDateComponentCount int
+	var desiredCount, upToDateCount, desiredComponentsCount, upToDateComponentsCount int
 	var phase ControlPlanePhase
 
-	for _, nodeState := range s.NodesState {
-		var hasComponentUpdating, hasComponentFailed bool
+	for _, masterNode := range s.MasterNodes {
+		var failedComponents, updatingComponents int
 
 		desiredCount++
-		for _, componentState := range nodeState.ComponentsState {
-			desiredComponentCount++
+		for _, component := range masterNode.Components {
+			desiredComponentsCount++
 
-			if !componentState.isRunningAndReady() {
-				hasComponentFailed = true
-				continue
+			switch component.getState(desiredVersion) {
+			case ControlPlaneComponentFailed:
+				failedComponents++
+			case ControlPlaneComponentUpdating:
+				updatingComponents++
+			case ControlPlaneComponentUpToDate:
+				upToDateComponentsCount++
 			}
-
-			if !componentState.isUpdated(desiredVersion) {
-				hasComponentUpdating = true
-				continue
-			}
-
-			upToDateComponentCount++
 		}
 
-		if hasComponentFailed {
-			nodeState.Phase = MasterNodeFailed
-			continue
+		switch {
+		case failedComponents > 0:
+			masterNode.Phase = MasterNodeFailed
+		case updatingComponents > 0:
+			masterNode.Phase = MasterNodeUpdating
+		default:
+			masterNode.Phase = MasterNodeUptoDate
+			upToDateCount++
 		}
-
-		if hasComponentUpdating {
-			nodeState.Phase = MasterNodeUpdating
-			continue
-		}
-
-		nodeState.Phase = MasterNodeUptoDate
-		upToDateCount++
 	}
 
 	switch {
@@ -145,7 +99,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 
 	s.DesiredCount = desiredCount
 	s.UpToDateCount = upToDateCount
-	s.DesiredComponentCount = desiredComponentCount
-	s.UpToDateComponentCount = upToDateComponentCount
+	s.DesiredComponentCount = desiredComponentsCount
+	s.UpToDateComponentCount = upToDateComponentsCount
 	s.Phase = phase
 }

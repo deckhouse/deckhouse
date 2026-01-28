@@ -22,6 +22,7 @@ import (
 	"time"
 	"update-observer/cluster"
 	"update-observer/common"
+	podstatus "update-observer/pkg/pod-status"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -119,30 +120,22 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	// 2) Incomplete List results from previous call.
 
 	const retryDelay = 30 * time.Second
-	notReadyPods := 0
+	unhealtyPods := 0
 	nodes := make(map[string]struct{})
 	for _, pod := range podList.Items {
 		if _, exists := nodes[pod.Spec.NodeName]; !exists {
 			nodes[pod.Spec.NodeName] = struct{}{}
 		}
 
-		if pod.Status.Phase != corev1.PodRunning {
-			notReadyPods++
-			continue
-		}
-
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.State.Running == nil || !containerStatus.Ready {
-				notReadyPods++
-				break
-			}
+		if podstatus.IsUnhealthy(pod) {
+			unhealtyPods++
 		}
 	}
 
 	var needRetry bool
 
-	if notReadyPods > 0 {
-		klog.Warningf("Pod readiness check failed: %d instance(s) not ready", notReadyPods)
+	if unhealtyPods > 0 {
+		klog.Warningf("Pod readiness check failed: %d instance(s) not ready", unhealtyPods)
 		needRetry = true
 	}
 

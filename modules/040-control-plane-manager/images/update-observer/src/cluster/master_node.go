@@ -17,13 +17,18 @@ limitations under the License.
 package cluster
 
 import (
+	"fmt"
+	"slices"
+	podstatus "update-observer/pkg/pod-status"
+	"update-observer/pkg/version"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
 
-type MasterNodeState struct {
-	Phase           MasterNodePhase
-	ComponentsState map[string]*ControlPlaneComponentState
+type MasterNode struct {
+	Phase      MasterNodePhase
+	Components map[string]*ControlPlaneComponent
 }
 
 type MasterNodePhase string
@@ -34,33 +39,96 @@ const (
 	MasterNodeFailed   MasterNodePhase = "Failed"
 )
 
-type ControlPlaneComponentState struct {
+func buildControlPlaneTopology(pods *corev1.PodList) (map[string]*MasterNode, error) {
+	nodesState := make(map[string]*MasterNode)
+
+	for _, pod := range pods.Items {
+		nodeName := pod.Spec.NodeName
+		var nodeState *MasterNode
+		if _, exists := nodesState[nodeName]; !exists {
+			nodesState[nodeName] = &MasterNode{
+				Components: make(map[string]*ControlPlaneComponent),
+			}
+		}
+		nodeState = nodesState[nodeName]
+
+		componentLabel, exists := pod.GetLabels()[componentLabelKey]
+		if !exists {
+			return nil, fmt.Errorf("%s label are missing", componentLabelKey)
+		}
+
+		kubeVersion, exists := pod.GetAnnotations()[kubeVersionAnnotation]
+		if !exists {
+			return nil, fmt.Errorf("%s annotation are missing", kubeVersionAnnotation)
+		}
+
+		version, err := version.NormalizeAndTrimPatch(kubeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to normalize kubernetes-version '%s': %w", kubeVersion, err)
+		}
+
+		component := &ControlPlaneComponent{
+			Version: version,
+			Pod:     pod,
+		}
+
+		nodeState.Components[componentLabel] = component
+	}
+
+	return nodesState, nil
+}
+
+type ControlPlaneComponent struct {
 	Version string
 	Pod     corev1.Pod
 }
 
-func (s *ControlPlaneComponentState) isUpdated(desiredVersion string) bool {
-	return s.Version == desiredVersion
-}
+type ControlPlaneComponentState int
 
-func (s *ControlPlaneComponentState) isRunningAndReady() bool {
+const (
+	ControlPlaneComponentFailed ControlPlaneComponentState = iota
+	ControlPlaneComponentUpdating
+	ControlPlaneComponentUpToDate
+)
+
+func (s *ControlPlaneComponent) getState(desiredVersion string) ControlPlaneComponentState {
 	if s.Pod.Status.Phase != corev1.PodRunning {
-		klog.Warningf("Insufficient component state: \n\tName: %s\n\tPodPhase: %s",
+		klog.Warningf("Pod is not in Running phase: \n\tName: %s\n\tPodPhase: %s",
 			s.Pod.Name,
 			s.Pod.Status.Phase)
-		return false
+		return ControlPlaneComponentFailed
 	}
 
 	for _, containerStatus := range s.Pod.Status.ContainerStatuses {
-		if containerStatus.State.Running == nil || !containerStatus.Ready {
-			klog.Warningf("Insufficient container state: \n\tName: %s\n\tRunning: %t\n\tReady: %t",
-				containerStatus.Name,
-				containerStatus.State.Running != nil,
-				containerStatus.Ready,
-			)
-			return false
+		switch {
+		case containerStatus.State.Waiting != nil:
+			if slices.Contains(podstatus.GetProblematicStatuses(), containerStatus.State.Waiting.Reason) {
+				klog.Warningf("Container waiting state has problematic reason: \n\tName: %s\n\tReason: %s",
+					containerStatus.Name,
+					containerStatus.State.Waiting.Reason,
+				)
+				return ControlPlaneComponentFailed
+			}
+			return ControlPlaneComponentUpdating
+
+		case containerStatus.State.Terminated != nil:
+			if slices.Contains(podstatus.GetProblematicStatuses(), containerStatus.State.Terminated.Reason) {
+				klog.Warningf("Container terminated state has problematic reason: \n\tName: %s\n\tReason: %s",
+					containerStatus.Name,
+					containerStatus.State.Terminated.Reason,
+				)
+				return ControlPlaneComponentFailed
+			}
+			return ControlPlaneComponentUpdating
+
+		case containerStatus.State.Running != nil && !containerStatus.Ready:
+			return ControlPlaneComponentUpdating
 		}
 	}
 
-	return true
+	if s.Version != desiredVersion {
+		return ControlPlaneComponentUpdating
+	}
+
+	return ControlPlaneComponentUpToDate
 }
