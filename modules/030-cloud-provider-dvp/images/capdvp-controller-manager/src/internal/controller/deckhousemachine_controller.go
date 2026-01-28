@@ -61,8 +61,9 @@ const (
 // DeckhouseMachineReconciler reconciles a DeckhouseMachine object
 type DeckhouseMachineReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
-	DVP    *dvpapi.DVPCloudAPI
+	Scheme      *runtime.Scheme
+	DVP         *dvpapi.DVPCloudAPI
+	ClusterUUID string
 }
 
 // +kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=deckhousemachines,verbs=get;list;watch;create;update;patch;delete
@@ -433,6 +434,8 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
 		ctx,
+		r.ClusterUUID,
+		dvpMachine.Name,
 		dvpMachine.Name+"-boot",
 		dvpMachine.Spec.RootDiskSize,
 		dvpMachine.Spec.RootDiskStorageClass,
@@ -464,7 +467,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
 	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(r.ClusterUUID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
 	}
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
@@ -473,7 +476,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	for i, d := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
-		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, addDiskName, d.Size.Value(), d.StorageClass)
+		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, r.ClusterUUID, dvpMachine.Name, addDiskName, d.Size.Value(), d.StorageClass)
 		if err != nil {
 			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
 		}
@@ -504,7 +507,9 @@ func (r *DeckhouseMachineReconciler) createVM(
 		ObjectMeta: metav1.ObjectMeta{
 			Name: dvpMachine.Name,
 			Labels: map[string]string{
-				"dvp.deckhouse.io/hostname": dvpMachine.Name,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": r.ClusterUUID,
+				"dvp.deckhouse.io/hostname":     dvpMachine.Name,
 			},
 		},
 		Spec: v1alpha2.VirtualMachineSpec{
