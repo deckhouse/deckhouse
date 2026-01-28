@@ -172,7 +172,7 @@ d8 system edit cluster-configuration
 
 Если необходимо вручную отредактировать конфигурацию:
 
-1. Добавьте аннотацию `deckhouse.io/allow-unsafe` к Secret `d8-cluster-configuration`:
+1. Добавьте аннотацию `deckhouse.io/allow-unsafe` к секрету `d8-cluster-configuration`:
 
    ```shell
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
