@@ -1,0 +1,488 @@
+diff --git a/bpf/bpf_host.c b/bpf/bpf_host.c
+index 7c0176f604..b4a471398a 100644
+--- a/bpf/bpf_host.c
++++ b/bpf/bpf_host.c
+@@ -593,6 +593,133 @@ struct {
+ 	__uint(max_entries, 1);
+ } CT_TAIL_CALL_BUFFER4 __section_maps_btf;
+ 
++#if 0
++#ifndef ICMP_PACKET_MAX_SAMPLE_SIZE
++#define ICMP_PACKET_MAX_SAMPLE_SIZE 64
++#endif
++static __always_inline 
++int make_icmp_responce_lb4_h(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
++	void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	//int sample_len;
++	//__be32 old_flag;
++	//__be32 new_flag;
++	__be32 tmp_addr;
++	//unsigned int icmp_len;
++	//__u16 pkt_let;
++	//__wsum csum = 0;
++	__be16 ccsum = 0;
++	//int csum_off;
++	/* changing size invalidates pointers, so we need to re-fetch them. */
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++	//printk("MEG:1111 HOST GOT A NEW ICMP HANDLER ENTER!\n");
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++
++	if(icmphdr < 0)
++		return CTX_ACT_OK;
++
++	if (icmphdr->type != ICMP_ECHO) 
++		return CTX_ACT_OK;
++	
++
++	//data_len = data_end - (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++	//	sizeof(struct icmphdr));
++	/* Resize to ethernet header + 64 bytes or less */
++	//sample_len = (int)ctx_full_len(ctx);
++
++	//csum = icmp_wsum_accumulate(data + sizeof(struct ethhdr), data_end, sample_len);
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++	//ethhdr->h_proto = bpf_htons(ETH_P_IP);
++
++	/* Write reversed ip header, ready for egress */
++	//ip4 = data + sizeof(struct ethhdr);
++	//ip4->version = 4;
++	//ip4->ihl = sizeof(struct iphdr) >> 2;
++	//ip4->tos = tos;
++	//ip4->tot_len = bpf_htons(sizeof(struct iphdr) + sizeof(struct icmphdr) +
++	//	       (__u16)sample_len);
++	//ip4->id = 0;
++	//ip4->frag_off = 0;
++	//ip4->ttl = IPDEFTTL;
++	//ip4->protocol = IPPROTO_ICMP;
++	//ip4->check = 0;
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++	//ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
++
++	/*pkt_let = bpf_ntohs(ip4->tot_len);
++
++	if (pkt_let < sizeof(*ip4) + sizeof(*icmphdr))
++		return 0;
++	*/
++	//icmp_len = pkt_let - sizeof(*ip4);
++	
++
++
++	
++	//csum_off = (int) ( (void *) (icmphdr + offsetof(struct icmphdr, checksum) ) - data);
++	//old_flag = bpf_htons((__u16) ICMP_ECHO);
++	//new_flag = bpf_htons((__u16) ICMP_ECHOREPLY );
++
++	/*l4_csum_replace(ctx, csum_off, old_flag, new_flag, BPF_F_HDR_FIELD_MASK | sizeof(__be16));*/
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++	//icmphdr->code = 0;
++	//icmphdr->checksum = 0;
++	//icmphdr->un.gateway = 0;
++
++	//icmphdr->checksum = 0;
++
++	ccsum = bpf_ntohs(icmphdr->checksum);
++	ccsum += (0x08) << 8;
++	icmphdr->checksum = bpf_htons(ccsum);
++
++	/* Add ICMP header checksum to sum of its body */
++	/*csum = ~(bpf_ntohs(icmphdr->checksum));
++	csum += csum_diff(&old_flag, 2, &new_flag, 2, 0);
++	icmphdr->checksum = csum_fold(csum);*/
++
++	/*
++	icmp_len = (data_end - (void*)icmphdr);
++	if ( icmp_len < 0 ) {
++		printk("MEG:1111 HOST GOT A NEW ICMP HANDLER FAILED LEN(icmplen=%d)!\n", icmp_len);
++		return DROP_INVALID;
++	}
++	if (icmp_len + (void*)icmphdr > data_end ) {
++		printk("MEG:1111 HOST GOT A NEW ICMP HANDLER FAILED LEN(icmplen=%d)!\n", icmp_len);
++		return DROP_INVALID;
++	}
++
++	csum = csum_diff(NULL, 0, (void *)icmphdr, icmp_len, 0);
++	icmphdr->checksum = csum_fold(csum);*/
++
++	/* Redirect ICMP to the interface we received it on. */
++	printk("MEG:1111 HOST GOT A NEW ICMP HANDLER DONE(datalen=%d, csum=%x)!\n", 0, csum);
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++}
++#endif
++
+ static __always_inline int
+ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+ 	    __u32 ipcache_srcid __maybe_unused,
+@@ -619,8 +746,20 @@ handle_ipv4(struct __ctx_buff *ctx, __u32 secctx __maybe_unused,
+ 	if (ipv4_is_fragment(ip4))
+ 		return DROP_FRAG_NOSUPPORT;
+ #endif
+-
++#if 0
++	if(ip4->protocol == IPPROTO_ICMP ) {
++		int ret = CTX_ACT_OK;
++		__be32 vip = bpf_htonl(0xc0a8c7c8);
++		if ((ip4->daddr == vip || ip4->saddr == vip)) {
++			printk("MEG:1111 GOT A HANDLE_JUST IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
++        	ret = make_icmp_responce_lb4_h(ctx, ip4);
++			if (ret != CTX_ACT_OK)
++				return ret;
++		}
++	}
++#endif
+ #ifdef ENABLE_NODEPORT
++	
+ 	if (!from_host) {
+ 		if (!ctx_skip_nodeport(ctx)) {
+ 			bool __maybe_unused is_dsr = false;
+@@ -713,7 +852,15 @@ handle_ipv4_cont(struct __ctx_buff *ctx, __u32 secctx, const bool from_host,
+ 
+ 	if (!revalidate_data(ctx, &data, &data_end, &ip4))
+ 		return DROP_INVALID;
+-
++	if(ip4->protocol == IPPROTO_ICMP ) {
++		//int ret;
++		__be32 vip = bpf_htonl(0xc0a8c7c8);
++		if ((ip4->daddr == vip || ip4->saddr == vip))
++			printk("MEG:3333 GOT A HANDLE IPV4 NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        /*ret = make_icmp_responce_lb4_h(ctx, ip4);
++		if (ret != CTX_ACT_OK)
++			return ret;*/
++	}
+ #ifdef ENABLE_HOST_FIREWALL
+ 	from_host_raw = ctx_load_and_clear_meta(ctx, CB_FROM_HOST);
+ 
+@@ -1178,6 +1325,12 @@ do_netdev(struct __ctx_buff *ctx, __u16 proto, __u32 __maybe_unused identity,
+ 		identity = resolve_srcid_ipv4(ctx, ip4, identity, &ipcache_srcid,
+ 					      from_host);
+ 		ctx_store_meta(ctx, CB_SRC_LABEL, identity);
++		/*
++		if(ip4->protocol == IPPROTO_ICMP) {
++			__be32 vip = bpf_htonl(0xc0a8c7c8);
++			if ((ip4->daddr == vip || ip4->saddr == vip))
++				printk("MEG:4444 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->saddr, ip4->daddr);
++		}*/
+ 
+ # if defined(ENABLE_HOST_FIREWALL) && !defined(ENABLE_MASQUERADE_IPV4)
+ 		if (from_host) {
+diff --git a/bpf/bpf_lxc.c b/bpf/bpf_lxc.c
+index 878185780a..ef36307c6d 100644
+--- a/bpf/bpf_lxc.c
++++ b/bpf/bpf_lxc.c
+@@ -69,6 +69,77 @@
+ #ifdef ENABLE_PER_PACKET_LB
+ 
+ #ifdef ENABLE_IPV4
++
++#if 0
++static __always_inline 
++int make_icmp_responce_lb4_n(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
++	void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	__be32 tmp_addr;
++	__wsum csum = 0;
++	/* changing size invalidates pointers, so we need to re-fetch them. */
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++	//printk("MEG: GOT A NEW ICMP HANDLER ENTER!\n");
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++	if (icmphdr->type != ICMP_ECHO) 
++		return DROP_UNSUPP_SERVICE_PROTO;
++
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++	ethhdr->h_proto = bpf_htons(ETH_P_IP);
++
++	/* Write reversed ip header, ready for egress */
++	//ip4 = data + sizeof(struct ethhdr);
++	ip4->version = 4;
++	ip4->ihl = sizeof(struct iphdr) >> 2;
++	//ip4->tos = tos;
++	//ip4->tot_len = bpf_htons(sizeof(struct iphdr) + sizeof(struct icmphdr) +
++	//	       (__u16)sample_len);
++	ip4->id = 0;
++	//ip4->frag_off = 0;
++	ip4->ttl = IPDEFTTL;
++	ip4->protocol = IPPROTO_ICMP;
++	ip4->check = 0;
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++	ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++	icmphdr->code = 0;
++	icmphdr->checksum = 0;
++	icmphdr->un.gateway = 0;
++
++	/* Add ICMP header checksum to sum of its body */
++	csum += csum_diff(icmphdr, 0, icmphdr, sizeof(struct icmphdr), 0);
++	icmphdr->checksum = csum_fold(csum);
++
++	/* Redirect ICMP to the interface we received it on. */
++	printk("MEG: 222 bpf_LXC GOT A NEW ICMP HANDLER DONE!\n");
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++	//return 0;//DROP_UNSUPP_SERVICE_PROTO;
++}
++#endif
++
+ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *ip4,
+ 						       __s8 *ext_err)
+ {
+@@ -81,10 +152,22 @@ static __always_inline int __per_packet_lb_svc_xlate_4(void *ctx, struct iphdr *
+ 	__u32 cluster_id = 0;
+ 	int l4_off;
+ 	int ret = 0;
+-
++	
+ 	has_l4_header = ipv4_has_l4_header(ip4);
+ 
+ 	ret = lb4_extract_tuple(ctx, ip4, ETH_HLEN, &l4_off, &tuple);
++	#if 0
++	if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++		__be32 vip = bpf_htonl(0xc0a8c7c8);
++		if ((ip4->daddr == vip || ip4->saddr == vip))
++			printk("MEG:222 GOT A NEW ICMP PACKET ENTER src:%x dst:%x! (svc:)\n", ip4->daddr, ip4->saddr);
++        ret = make_icmp_responce_lb4_n(ctx, ip4);
++		if (ret == CTX_ACT_REDIRECT) {
++			return ret;
++		}
++	}
++		#endif
++
+ 	if (IS_ERR(ret)) {
+ 		if (ret == DROP_UNSUPP_SERVICE_PROTO || ret == DROP_UNKNOWN_L4)
+ 			goto skip_service_lookup;
+diff --git a/bpf/bpf_sock.c b/bpf/bpf_sock.c
+index 7bdc7753c2..9811c624ec 100644
+--- a/bpf/bpf_sock.c
++++ b/bpf/bpf_sock.c
+@@ -270,7 +270,7 @@ static __always_inline int __sock4_xlate_fwd(struct bpf_sock_addr *ctx,
+ 
+ 	if (!udp_only && !sock_proto_enabled(protocol))
+ 		return -ENOTSUP;
+-
++	
+ 	/* In case a direct match fails, we try to look-up surrogate
+ 	 * service entries via wildcarded lookup for NodePort and
+ 	 * HostPort services.
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 15dacfa4df..28cff178ee 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -1300,7 +1300,8 @@ lb4_extract_tuple(struct __ctx_buff *ctx, struct iphdr *ip4, int l3_off, int *l4
+ 			return ret;
+ 		return 0;
+ 	case IPPROTO_ICMP:
+-		return DROP_UNSUPP_SERVICE_PROTO;
++		//return DROP_UNSUPP_SERVICE_PROTO;
++		return 0;
+ 	default:
+ 		return DROP_UNKNOWN_L4;
+ 	}
+diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
+index 0142716855..32f856354a 100644
+--- a/bpf/lib/nodeport.h
++++ b/bpf/lib/nodeport.h
+@@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+ 				  ext_err);
+ }
+ 
++#if 1
++static __always_inline 
++int make_icmp_responce_lb4(struct __ctx_buff *ctx,
++					struct iphdr *ip4) {
++		void *data, *data_end;
++	struct ethhdr *ethhdr;
++	struct icmphdr *icmphdr;
++	union macaddr smac = {};
++	union macaddr dmac = {};
++	__be32 tmp_addr;
++	__be16 ccsum = 0;
++	/* changing size invalidates pointers, so we need to re-fetch them. */
++	data = ctx_data(ctx);
++	data_end = ctx_data_end(ctx);
++	//printk("MEG:1111 HOST GOT A NEW ICMP HANDLER ENTER!\n");
++
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++		sizeof(struct icmphdr) > data_end)
++		return DROP_INVALID;
++
++	if (eth_load_saddr(ctx, smac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	if (eth_load_daddr(ctx, dmac.addr, 0) < 0)
++		return DROP_INVALID;
++
++	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
++
++	if(icmphdr < 0)
++		return CTX_ACT_OK;
++
++	if (icmphdr->type != ICMP_ECHO) 
++		return CTX_ACT_OK;
++	
++	/* Write reversed eth header, ready for egress */
++	ethhdr = data;
++	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
++	memcpy(ethhdr->h_source, dmac.addr, sizeof(dmac.addr));
++
++	/* Write reversed ip header, ready for egress */
++	tmp_addr = ip4->daddr;
++	ip4->daddr = ip4->saddr;
++	ip4->saddr = tmp_addr;
++	//ip4->check = csum_fold(csum_diff(ip4, 0, ip4, sizeof(struct iphdr), 0));
++
++	/*pkt_let = bpf_ntohs(ip4->tot_len);
++
++	if (pkt_let < sizeof(*ip4) + sizeof(*icmphdr))
++		return 0;
++	*/
++	//icmp_len = pkt_let - sizeof(*ip4);
++	
++	//csum_off = (int) ( (void *) (icmphdr + offsetof(struct icmphdr, checksum) ) - data);
++	//old_flag = bpf_htons((__u16) ICMP_ECHO);
++	//new_flag = bpf_htons((__u16) ICMP_ECHOREPLY );
++
++	/*l4_csum_replace(ctx, csum_off, old_flag, new_flag, BPF_F_HDR_FIELD_MASK | sizeof(__be16));*/
++
++	/* Write reversed icmp header */
++	icmphdr->type = ICMP_ECHOREPLY;
++
++	ccsum = bpf_ntohs(icmphdr->checksum);
++	ccsum += (0x08) << 8;
++	icmphdr->checksum = bpf_htons(ccsum);
++
++	/* Add ICMP header checksum to sum of its body */
++	/*csum = ~(bpf_ntohs(icmphdr->checksum));
++	csum += csum_diff(&old_flag, 2, &new_flag, 2, 0);
++	icmphdr->checksum = csum_fold(csum);*/
++
++	/*
++	csum = csum_diff(NULL, 0, (void *)icmphdr, icmp_len, 0);
++	icmphdr->checksum = csum_fold(csum);*/
++
++	/* Redirect ICMP to the interface we received it on. */
++	printk("MEG:2222 HOST GOT A NEW ICMP HANDLER DONE(datalen=, csum=%x)!\n", ccsum);
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++}
++#endif
+ /* Main node-port entry point for host-external ingressing node-port traffic
+  * which handles the case of: i) backend is local EP, ii) backend is remote EP,
+  * iii) reply from remote backend EP.
+@@ -2697,9 +2776,12 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 	struct lb4_service *svc;
+ 	struct lb4_key key = {};
+ 	int ret, l4_off;
++	struct endpoint_info __maybe_unused *enp;
++	//struct l2_responder_v4_key l2key;
++	//struct l2_responder_v4_stats *stats;
+ 
+ 	cilium_capture_in(ctx);
+-
++	//printk("MEG: GOT A NEW PACKET!\n");
+ 	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
+ 	if (IS_ERR(ret)) {
+ 		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
+@@ -2714,13 +2796,41 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+ 	}
+ 
+ 	lb4_fill_key(&key, &tuple);
+-
++	
+ 	svc = lb4_lookup_service(&key, false);
++	
+ 	if (svc) {
++		printk("MEG:22223 GOT A PACKET wit svc, key addr:%x dport:%x! (proto:%d)", 
++					key.address, key.dport, key.proto);
++		#if 1
++        if(ip4->protocol == IPPROTO_ICMP /*&& lb4_svc_is_loadbalancer(svc)*/) {
++			__be32 vip = bpf_htonl(0xc0a8c7c8);
++			if ((ip4->daddr == vip || ip4->saddr == vip))
++				printk("MEG:22223 GOT A NODEPORT NEW ICMP PACKET ENTER src:%x dst:%x! (svc_is_lb:%d)", 
++					ip4->saddr, ip4->daddr, lb4_svc_is_l7loadbalancer(svc) ? 1 : 0);
++        	return make_icmp_responce_lb4(ctx, ip4);
++        }
++		#endif
++
+ 		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
+ 					has_l4_header, l4_off,
+ 					src_sec_identity, punt_to_stack, ext_err);
+ 	} else {
++		if(ip4->protocol == IPPROTO_ICMP) {
++			key.dport = 0;
++			key.proto = 0;
++			svc = lb4_lookup_service(&key, false);
++			/*l2key.ip4 = ip4->daddr;
++			l2key.ifindex = ctx->ingress_ifindex;
++			stats = map_lookup_elem(&L2_RESPONDER_MAP4, &l2key);*/
++			enp = lookup_ip4_endpoint(ip4);
++			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP (svb:%d) (enp:%d)", svc ? 1 : 0, enp ? 1: 0);
++			if (svc) {
++				printk("MEG:5555 GOT SVC FOR NEW ICMP PACKET ENTER src:%x dst:%x! (svc_is_lb:%d)", 
++						ip4->saddr, ip4->daddr, 0);
++						return make_icmp_responce_lb4(ctx, ip4);
++			}
++		}
+ skip_service_lookup:
+ #ifdef ENABLE_NAT_46X64_GATEWAY
+ 		if (ip4->daddr != IPV4_DIRECT_ROUTING)
+diff --git a/pkg/loadbalancer/experimental/bpf_reconciler.go b/pkg/loadbalancer/experimental/bpf_reconciler.go
+index 57e4f0d0e9..c6281e0b16 100644
+--- a/pkg/loadbalancer/experimental/bpf_reconciler.go
++++ b/pkg/loadbalancer/experimental/bpf_reconciler.go
+@@ -748,7 +748,12 @@ func (ops *BPFOps) upsertMaster(svcKey lbmap.ServiceKey, svcVal lbmap.ServiceVal
+ 	if svc.ProxyRedirect.Redirects(fe.ServicePort) {
+ 		svcVal.SetL7LBProxyPort(svc.ProxyRedirect.ProxyPort)
+ 	}
+-	return ops.upsertService(svcKey, svcVal)
++	ret_val := ops.upsertService(svcKey, svcVal)
++	if fe.Type == loadbalancer.SVCTypeLoadBalancer {
++		svcKey = lbmap.NewService4Key(svcKey.GetAddress(), 0, u8proto.ANY, fe.Address.Scope, 0)
++		ops.upsertService(svcKey, svcVal)
++	}
++	return ret_val
+ }
+ 
+ func (ops *BPFOps) cleanupSlots(svcKey lbmap.ServiceKey, oldCount, newCount int) error {
