@@ -60,7 +60,7 @@ diff --git a/server/passwordchangehandler.go b/server/passwordchangehandler.go
 index 040a33d..c242c65 100644
 --- a/server/passwordchangehandler.go
 +++ b/server/passwordchangehandler.go
-@@ -150,10 +150,14 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
+@@ -150,10 +150,15 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
  
  		updater := func(p storage.Password) (storage.Password, error) {
 -			p.PreviousHashes = append(p.PreviousHashes, p.Hash)
@@ -77,16 +77,9 @@ index 040a33d..c242c65 100644
 +			}
  			p.HashUpdatedAt = time.Now()
  			p.Hash = hash
- 			return p, nil
- 		}
-@@ -157,6 +157,7 @@ func (s *Server) handlePasswordChange(w http.ResponseWriter, r *http.Request) {
- 			}
- 			p.HashUpdatedAt = time.Now()
- 			p.Hash = hash
 +			p.RequireResetHashOnNextSuccLogin = false
  			return p, nil
  		}
- 		if err := s.storage.UpdatePassword(ctx, username, updater); err != nil {
 diff --git a/server/templates.go b/server/templates.go
 index 6539f0f..1f9da46 100644
 --- a/server/templates.go
