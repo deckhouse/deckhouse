@@ -230,19 +230,6 @@ const tolerationsAnyNodeWithUninitialized = `
 
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("VCD Suite A", func() {
 		BeforeEach(func() {
