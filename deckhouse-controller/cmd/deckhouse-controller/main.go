@@ -111,6 +111,9 @@ func main() {
 	// deckhouse-controller requirements
 	debug.DefineRequirementsCommands(kpApp)
 
+	// deckhouse-controller packages
+	debug.DefinePackagesCommands(kpApp)
+
 	// deckhouse-controller registry
 	registry.DefineRegistryCommand(kpApp, logger)
 

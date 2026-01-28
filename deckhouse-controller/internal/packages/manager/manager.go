@@ -382,3 +382,10 @@ func (m *Manager) GetAppInfo(name string) apps.Info {
 
 	return app.GetInfo()
 }
+
+func (m *Manager) GetApp(name string) *apps.Application {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	return m.apps[name]
+}
