@@ -193,7 +193,7 @@ Manually edit the configuration:
    vi cluster-config.yaml
    ```
 
-4. Encode the edited configuration and update the Secret:
+1. Encode the edited configuration and update the Secret:
 
    ```shell
    d8 k -n kube-system patch secret d8-cluster-configuration \
