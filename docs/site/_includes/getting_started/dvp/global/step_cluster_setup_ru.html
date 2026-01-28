@@ -68,6 +68,22 @@
     </div>
   </div>
 
+  <div class="form__row">
+    <div style="flex: 1; min-width: 250px;">
+      <label class="label" title="Укажите IP-адрес worker-узла">
+        IP-адрес worker-узла <span style="color: red;">*</span>
+      </label>
+      <input class="textfield"
+        type="text" id="workernodeip"
+        name="workernodeip" placeholder="192.168.1.11"
+        autocomplete="off" />
+      <span class="info invalid-message invalid-message-main">Введите IP-адрес worker-узла. Это обязательное поле.</span>
+      <span class="info">
+        IP-адрес worker-узла кластера. Это обязательное поле.
+      </span>
+    </div>
+  </div>
+
   <h3>Настройки DNS</h3>
 
   <div class="form__row">
