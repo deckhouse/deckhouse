@@ -51,13 +51,6 @@ locals {
     {
       from = [{
         namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
-        }
-      }]
-    },
-    {
-      from = [{
-        namespaceSelector = {
           matchLabels = { "kubernetes.io/metadata.name" = "d8-ingress-nginx" }
         }
         podSelector = {
@@ -83,13 +76,6 @@ locals {
       }]
     },
     { to = [{ ipBlock = { cidr = "0.0.0.0/0" } }] },
-    {
-      to = [{
-        namespaceSelector = {
-          matchLabels = { "kubernetes.io/metadata.name" = "d8-virtualization" }
-        }
-      }]
-    },
     {
       to = [{
         namespaceSelector = {
