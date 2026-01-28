@@ -103,7 +103,7 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		log := logger.L(ctx).With(slog.String("addr", address))
 		log.Info(
-			"Tmp dir for standalone dhctl from streaming director",
+			"tmp dir for standalone dhctl from streaming director",
 			slog.String("proxyUUID", proxyUUIDStr),
 			slog.String("tmpDirForInstance", tmpDirForInstance),
 			slog.String("address", address),
@@ -141,14 +141,14 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		d.writeLogs(log, stdOutReader, stdErrReader)
 
-		log.Info("Dhctl instance will start with next command arguments", slog.String("cmd", strings.Join(cmd.Args, " ")))
+		log.Info("dhctl instance will start with next command arguments", slog.String("cmd", strings.Join(cmd.Args, " ")))
 
 		err = cmd.Start()
 		if err != nil {
 			return outCtx, nil, fmt.Errorf("starting dhctl server: %w", err)
 		}
 
-		log.Info("Started new dhctl instance")
+		log.Info("started new dhctl instance")
 
 		d.wg.Add(1)
 		go func() {
@@ -157,17 +157,9 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 			log.Info("stopped dhctl instance", logger.Err(exitErr))
 		}()
 
-		conn, err := grpc.NewClient(
-			"unix://"+address,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-		)
+		conn, err := createDHCTLServerConnRetried(ctx, log, address)
 		if err != nil {
-			return outCtx, nil, fmt.Errorf("creating client connection: %w", err)
-		}
-
-		err = checkDHCTLServer(ctx, conn)
-		if err != nil {
-			return outCtx, nil, fmt.Errorf("waiting for dhctl server ready: %w", err)
+			return outCtx, nil, fmt.Errorf("creating dhctl server connection: %w", err)
 		}
 
 		return outCtx, conn, err
@@ -196,19 +188,53 @@ func (d *StreamDirector) writeLogs(log *slog.Logger, stdOutReader, stdErrReader 
 	}()
 }
 
-func checkDHCTLServer(ctx context.Context, conn grpc.ClientConnInterface) error {
-	healthCl := grpc_health_v1.NewHealthClient(conn)
-	loop := retry.NewSilentLoop("wait for dhctl server", 10, time.Second)
-	return loop.Run(func() error {
-		check, err := healthCl.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
+func createDHCTLServerConn(ctx context.Context, address string) (*grpc.ClientConn, error) {
+	conn, err := grpc.NewClient(
+		"unix://"+address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("creating client connection: %w", err)
+	}
+
+	check, err := grpc_health_v1.NewHealthClient(conn).Check(ctx, &grpc_health_v1.HealthCheckRequest{})
+	if err != nil {
+		_ = conn.Close()
+		return nil, fmt.Errorf("checking dhctl server status: %w", err)
+	}
+
+	if check.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+		_ = conn.Close()
+		return nil, fmt.Errorf("bad dhctl server status: %s", check.Status)
+	}
+
+	return conn, nil
+}
+
+func createDHCTLServerConnRetried(ctx context.Context, l *slog.Logger, address string) (*grpc.ClientConn, error) {
+	var dhctlServerConn *grpc.ClientConn
+
+	loop := retry.NewSilentLoop("wait for dhctl server", 30, time.Second)
+	err := loop.RunContext(ctx, func() error {
+		if _, err := os.Stat(address); err != nil {
+			return fmt.Errorf("checking dhctl server unix socket file: %w", err)
+		}
+
+		conn, err := createDHCTLServerConn(ctx, address)
 		if err != nil {
-			return fmt.Errorf("checking dhctl server status: %w", err)
+			l.Debug("failed to connect to server", logger.Err(err))
+
+			return fmt.Errorf("connecting to dhctl server: %w", err)
 		}
-		if check.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-			return fmt.Errorf("bad dhctl server status: %s", check.Status)
-		}
+
+		dhctlServerConn = conn
+
 		return nil
 	})
+
+	l.Debug("dhctl server connection created")
+
+	return dhctlServerConn, err
 }
 
 func (d *StreamDirector) socketPath(directorUUID string) string {
