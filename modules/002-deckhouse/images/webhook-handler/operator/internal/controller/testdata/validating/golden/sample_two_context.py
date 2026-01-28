@@ -69,13 +69,20 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
+        message, allowed = validate(binding_context)
+        if allowed:
+            if message:
+                ctx.output.validations.allow(message)  # warning
+            else:
+                ctx.output.validations.allow()
+        else:
+            ctx.output.validations.deny(message)
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-def validate(bindingcontext, output):
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
   # logic here
-  return
+  return None, True
 
 if __name__ == "__main__":
     hook.run(main, config=config)

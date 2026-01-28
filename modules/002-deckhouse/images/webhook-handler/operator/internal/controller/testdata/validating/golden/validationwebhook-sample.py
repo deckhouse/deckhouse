@@ -32,16 +32,22 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
+        message, allowed = validate(binding_context)
+        if allowed:
+            if message:
+                ctx.output.validations.allow(message)  # warning
+            else:
+                ctx.output.validations.allow()
+        else:
+            ctx.output.validations.deny(message)
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     resource = ctx.review.request.name
     if "test" in resource:
-        output.deny("TEST: service with \"test\" in .metadata.name")
-        return
-    output.allow()
+        return "TEST: service with \"test\" in .metadata.name", False
+    return None, True
 
 
 if __name__ == "__main__":

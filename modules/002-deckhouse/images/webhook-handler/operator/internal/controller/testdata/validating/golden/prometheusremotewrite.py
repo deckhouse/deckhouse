@@ -37,28 +37,33 @@ def main(ctx: hook.Context):
     try:
         # DotMap is a dict with dot notation
         binding_context = DotMap(ctx.binding_context)
-        validate(binding_context, ctx.output.validations)
+        message, allowed = validate(binding_context)
+        if allowed:
+            if message:
+                ctx.output.validations.allow(message)  # warning
+            else:
+                ctx.output.validations.allow()
+        else:
+            ctx.output.validations.deny(message)
     except Exception as e:
         ctx.output.validations.error(str(e))
 
-def validate(ctx: DotMap, output: hook.ValidationsCollector):
+def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
     operation = ctx.review.request.operation
     if operation == "CREATE" or operation == "UPDATE":
-        validate_creation_or_update(ctx, output)
+        return validate_creation_or_update(ctx)
     else:
         raise Exception(f"Unknown operation {ctx.operation}")
 
 
-def validate_creation_or_update(ctx: DotMap, output: hook.ValidationsCollector):
+def validate_creation_or_update(ctx: DotMap) -> tuple[Optional[str], bool]:
     error = check_verify_url_signatures(ctx)
     if error is not None:
-        output.deny(error)
-        return
+        return error, False
     error = check_verify_ca_signatures(ctx)
     if error is not None:
-        output.deny(error)
-        return
-    output.allow()
+        return error, False
+    return None, True
 
 
 # check that all image references don't have intersection, it's required by ratify
@@ -72,7 +77,7 @@ def check_verify_url_signatures(ctx: DotMap) -> Optional[str]:
         return f"Remote write URL {url} is already in use"
     # search in all prometheusremote write if url alredy used
     return None
-    
+
 def check_verify_ca_signatures(ctx: DotMap) -> Optional[str]:
     ca = ctx.review.request.object.spec.tlsConfig.ca
     if len(ca) == 0:
