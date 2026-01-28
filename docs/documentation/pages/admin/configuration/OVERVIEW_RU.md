@@ -204,7 +204,7 @@ d8 system edit cluster-configuration
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
 
-6. Удалите временный файл:
+1. Удалите временный файл с новой конфигурацией:
 
    ```shell
    rm cluster-config.yaml
