@@ -79,9 +79,9 @@
       "index": "{{ test }}",
       "indexed_fields": [
         "datetime",
+        "file",
         "host",
         "host_ip",
-        "file",
         "app"
       ],
       "tls": {

@@ -66,7 +66,7 @@ var K8sLabelsWithPodLabels = func() map[string]string {
 var FilesLabels = map[string]string{
 	"host":    "{{ .host }}",
 	"host_ip": "{{ .host_ip }}",
-	"file":    "{{ .file }}",
+	"file":    "{{ file }}",
 }
 
 // SortedExtraLabelsKeys returns sorted keys from extraLabels map.

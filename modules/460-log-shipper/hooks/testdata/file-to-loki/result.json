@@ -80,8 +80,8 @@
         "app": "{{ app }}",
         "file": "{{ file }}",
         "foo": "{{ foo }}",
-        "host": "{{ host }}",
-        "host_ip": "{{ host_ip }}"
+        "host": "{{ .host }}",
+        "host_ip": "{{ .host_ip }}"
       },
       "remove_label_fields": true,
       "out_of_order_action": "rewrite_timestamp"
