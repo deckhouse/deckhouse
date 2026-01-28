@@ -14,7 +14,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl`:
@@ -138,7 +138,11 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Reboot all cluster nodes. Ensure that after the reboot all nodes are available and functioning correctly.
+ {% alert level="warning" %}
+ If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration. It should only specify your current API server. If the configuration contains IP addresses of old masters, remove the lines containing them. You will also need to correct the configuration on all other nodes.
+ {% endalert %}
+
+1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
 
 1. Wait for Deckhouse to process all tasks in the queue:
 
@@ -371,7 +375,7 @@ KUBERNETES_VERSION=1.28.0                   # Kubernetes version.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -423,7 +427,7 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \

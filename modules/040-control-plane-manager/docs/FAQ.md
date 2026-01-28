@@ -509,17 +509,25 @@ This operation is unsafe and breaks the guarantees given by the consensus protoc
 
 This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
 
-1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
+1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   * `<HOSTNAME>` — the name of the master node;
-   * `<ADDRESS>` — the address of the master node.
+   where:
+
+* `<HOSTNAME>` — the name of the master node;
+* `<ADDRESS>` — the address of the master node.
 
 1. Execute the following commands to use the new snapshot:
 
@@ -895,7 +903,7 @@ Follow these steps to restore a single-master cluster on master node:
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
@@ -1274,7 +1282,7 @@ To update the certificates, do the following on each master node:
 1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
 
    ```shell
-   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 2. Update the certificates:

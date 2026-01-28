@@ -304,7 +304,7 @@ done
 
    ```shell
    ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
