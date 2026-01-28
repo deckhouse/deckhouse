@@ -185,7 +185,7 @@ d8 system edit cluster-configuration
      -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
 
-3. Отредактируйте файл `cluster-config.yaml` в предпочитаемом редакторе:
+1. Отредактируйте файл `cluster-config.yaml` в предпочитаемом редакторе:
 
    ```shell
    vi cluster-config.yaml
