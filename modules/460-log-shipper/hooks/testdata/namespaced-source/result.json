@@ -26,7 +26,7 @@
     "transform/destination/loki-storage/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/09_clean_up"
+        "transform/source/tests-whispers_whispers-logs/09_clean_up_kubernetes"
       ],
       "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
@@ -42,7 +42,7 @@
     "transform/destination/test-es-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/tests-whispers_whispers-logs/09_clean_up"
+        "transform/source/tests-whispers_whispers-logs/09_clean_up_kubernetes"
       ],
       "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.foo=\"bar\"",
       "type": "remap"
@@ -129,7 +129,7 @@
       ],
       "type": "filter"
     },
-    "transform/source/tests-whispers_whispers-logs/09_clean_up": {
+    "transform/source/tests-whispers_whispers-logs/09_clean_up_kubernetes": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/tests-whispers_whispers-logs/08_log_filter"

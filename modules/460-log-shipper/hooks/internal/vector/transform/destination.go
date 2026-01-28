@@ -24,7 +24,7 @@ import (
 )
 
 // CreateLogDestinationTransforms creates a list of transforms for a log destination
-func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination) ([]apis.LogTransform, error) {
+func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestination, sourceType string) ([]apis.LogTransform, error) {
 	var transforms []apis.LogTransform
 	if dest.Spec.RateLimit.LinesPerMinute != nil {
 		throttleTransform, err := ThrottleTransform(dest.Spec.RateLimit)

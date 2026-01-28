@@ -155,7 +155,7 @@ func (c *Composer) composeDestinations(destinationRefs []string, sourceType stri
 			continue
 		}
 
-		transforms, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec)
+		transforms, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
 		if err != nil {
 			return nil, err
 		}

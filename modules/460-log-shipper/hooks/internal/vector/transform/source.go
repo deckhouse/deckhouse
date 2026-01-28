@@ -25,6 +25,34 @@ import (
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
+func CleanUpForKubernetesSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "clean_up_kubernetes",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.CleanUpAfterSourceRuleForKubernetes.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
+func CleanUpForFileSourceTransform() *DynamicTransform {
+	return &DynamicTransform{
+		CommonTransform: CommonTransform{
+			Name:   "clean_up_file",
+			Type:   "remap",
+			Inputs: set.New(),
+		},
+		DynamicArgsMap: map[string]interface{}{
+			"source":        vrl.CleanUpAfterSourceRuleForFile.String(),
+			"drop_on_abort": false,
+		},
+	}
+}
+
 func OwnerReferenceSourceTransform() *DynamicTransform {
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
@@ -34,20 +62,6 @@ func OwnerReferenceSourceTransform() *DynamicTransform {
 		},
 		DynamicArgsMap: map[string]interface{}{
 			"source":        vrl.OwnerReferenceRule.String(),
-			"drop_on_abort": false,
-		},
-	}
-}
-
-func CleanUpAfterSourceTransform() *DynamicTransform {
-	return &DynamicTransform{
-		CommonTransform: CommonTransform{
-			Name:   "clean_up",
-			Type:   "remap",
-			Inputs: set.New(),
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"source":        vrl.CleanUpAfterSourceRule.String(),
 			"drop_on_abort": false,
 		},
 	}
@@ -122,7 +136,12 @@ func CreateLogSourceTransforms(name string, cfg *LogSourceConfig) ([]apis.LogTra
 	}
 	transforms = append(transforms, logFilterTransforms...)
 
-	transforms = append(transforms, CleanUpAfterSourceTransform())
+	switch cfg.SourceType {
+	case v1alpha1.SourceKubernetesPods:
+		transforms = append(transforms, CleanUpForKubernetesSourceTransform())
+	case v1alpha1.SourceFile:
+		transforms = append(transforms, CleanUpForFileSourceTransform())
+	}
 
 	sTransforms, err := BuildFromMapSlice("source", name, transforms)
 	if err != nil {

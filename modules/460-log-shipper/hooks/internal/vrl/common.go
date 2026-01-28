@@ -60,10 +60,10 @@ func Combine(r1, r2 Rule) Rule {
 
 // FileSourceHostRule sets the host label from the VECTOR_SELF_NODE_NAME environment variable for File sources.
 const FileSourceHostRule Rule = `
-."host" = "${VECTOR_SELF_NODE_NAME}"
+.host = "${VECTOR_SELF_NODE_NAME}"
 `
 
 // FileSourceHostIPRule sets the host_ip label from the VECTOR_HOST_IP environment variable for File sources.
 const FileSourceHostIPRule Rule = `
-."host_ip" = "${VECTOR_HOST_IP}"
+.host_ip = "${VECTOR_HOST_IP}"
 `

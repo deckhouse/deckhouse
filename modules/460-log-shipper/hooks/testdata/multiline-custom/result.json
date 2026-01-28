@@ -26,7 +26,7 @@
     "transform/destination/test-es-dest/00_extra_fields": {
       "drop_on_abort": false,
       "inputs": [
-        "transform/source/whispers-logs/03_clean_up"
+        "transform/source/whispers-logs/03_clean_up_kubernetes"
       ],
       "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\nif exists(.parsed_data.ap_p[0].a) { .app=.parsed_data.ap_p[0].a } \n if exists(.parsed_data.\"ap-p\"[0].a) { .\"app-with-line\"=.parsed_data.\"ap-p\"[0].a } \n .foo=\"bar\"",
       "type": "remap"
@@ -77,7 +77,7 @@
       "starts_when": "matched, err = match(.message, r'^startsWhen');\nif err != null {\n    false;\n} else {\n    matched;\n}",
       "type": "reduce"
     },
-    "transform/source/whispers-logs/03_clean_up": {
+    "transform/source/whispers-logs/03_clean_up_kubernetes": {
       "drop_on_abort": false,
       "inputs": [
         "transform/source/whispers-logs/02_multiline"
