@@ -109,7 +109,8 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	// 0. Prepare Phase: continuously annotate pods.
 	// We do this until the cleanup starts to ensure new pods created during migration
 	// (but before the switch) are identified for restart.
-	if !r.hasParentCondition(cniMigration, cnimigrationv1alpha1.ConditionCurrentCNIDisabled) {
+	if r.hasParentCondition(cniMigration, cnimigrationv1alpha1.ConditionTargetCNIValidated) &&
+		!r.hasParentCondition(cniMigration, cnimigrationv1alpha1.ConditionCurrentCNIDisabled) {
 		if nodeMigration.Status.Phase != cnimigrationv1alpha1.NodePhasePreparing {
 			nodeMigration.Status.Phase = cnimigrationv1alpha1.NodePhasePreparing
 			if err := r.Status().Patch(ctx, nodeMigration, client.MergeFrom(originalNodeMigration)); err != nil {

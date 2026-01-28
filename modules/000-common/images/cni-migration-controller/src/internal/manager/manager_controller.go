@@ -335,6 +335,7 @@ func (r *CNIMigrationReconciler) setCondition(
 }
 
 func (r *CNIMigrationReconciler) detectCurrentCNI(ctx context.Context) (string, error) {
+	var enabledCNIs []string
 	for cni := range CNIDaemonSetMap {
 		moduleName := "cni-" + cni
 		enabled, err := r.isModuleEnabled(ctx, moduleName)
@@ -342,10 +343,19 @@ func (r *CNIMigrationReconciler) detectCurrentCNI(ctx context.Context) (string, 
 			continue // Skip errors, maybe module doesn't exist
 		}
 		if enabled {
-			return cni, nil
+			enabledCNIs = append(enabledCNIs, cni)
 		}
 	}
-	return "", fmt.Errorf("could not detect any enabled CNI module")
+
+	if len(enabledCNIs) == 0 {
+		return "", fmt.Errorf("could not detect any enabled CNI module")
+	}
+
+	if len(enabledCNIs) > 1 {
+		return "", fmt.Errorf("multiple CNI modules are enabled: %v", enabledCNIs)
+	}
+
+	return enabledCNIs[0], nil
 }
 
 func (r *CNIMigrationReconciler) isModuleEnabled(ctx context.Context, moduleName string) (bool, error) {

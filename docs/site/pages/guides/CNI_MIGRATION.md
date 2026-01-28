@@ -10,7 +10,8 @@ This document describes the procedure for changing the network plugin (CNI) in a
 
 {% alert level="danger" %}
 
-The tool is NOT intended for switching to any (third-party) CNI.
+* The tool is NOT intended for switching to any (third-party) CNI.
+* During the migration process, the target CNI module will be automatically enabled, which must be pre-configured by the user/administrator.
 
 {% endalert %}
 
