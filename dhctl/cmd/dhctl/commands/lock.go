@@ -23,6 +23,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/lease"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/lock"
@@ -65,6 +66,10 @@ func DefineReleaseConvergeLockCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause
 				ssh.NewNodeInterfaceWrapper(sshClient),
 			)
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
+			return err
+		}
+
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
 			return err
 		}
 

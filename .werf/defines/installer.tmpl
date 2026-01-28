@@ -335,7 +335,7 @@ shell:
     EOD
 
     echo 'eval "$(dhctl --completion-script-bash)"' >> /etc/bashrc
-    echo '{{- $context.CI_COMMIT_TAG }}' > /deckhouse/version
+    echo '{{- ternary "v1.73" $context.CI_COMMIT_TAG (eq $context.CI_COMMIT_TAG "dev") }}' > /deckhouse/version
     echo '{{- $context.Env | default "unknown" }}' > /deckhouse/edition
 
     # add bash envsubst
@@ -423,7 +423,7 @@ shell:
 {{- define "installer_standalone_setup_script" }}
 {{- $context := . -}}
 
-- echo '{{- $context.CI_COMMIT_TAG }}' > /image/deckhouse/version
+- echo '{{- ternary "v1.73" $context.CI_COMMIT_TAG (eq $context.CI_COMMIT_TAG "dev") }}' > /image/deckhouse/version
 - echo '{{- $context.Env | default "unknown" }}' > /image/deckhouse/edition
 - cd /image
 - tar -czf /dhctl-{{- $context.CI_COMMIT_TAG }}.x86_64.tar.gz *
