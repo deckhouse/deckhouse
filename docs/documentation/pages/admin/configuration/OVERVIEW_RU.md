@@ -135,7 +135,7 @@ d8 system edit cluster-configuration
    DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]')
    ```
 
-2. Запустите контейнер инсталлятора DKP (при необходимости измените адрес registry):
+1. Запустите контейнер инсталлятора DKP (при необходимости измените адрес registry):
 
    ```shell
    docker run --pull=always -it [<MOUNT_OPTIONS>] \
