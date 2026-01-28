@@ -33,7 +33,7 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+    - jsonPath: .status.conditions[?(@.type=='Ready')].message
       name: Message
       type: string
     - jsonPath: .metadata.creationTimestamp
