@@ -294,10 +294,22 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(ds.Exists()).To(BeTrue())
 			Expect(ds.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 
+			// Webhook listens on a node-local port, kube-apiserver calls it via https://127.0.0.1:40443.
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(40443)))
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.protocol").String()).To(Equal("TCP"))
+
 			Expect(ds.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
+		})
+
+		It("Should allow node-local webhook port in SecurityPolicyException", func() {
+			spe := f.KubernetesResource("SecurityPolicyException", "d8-user-authz", "user-authz-webhook")
+			Expect(spe.Exists()).To(BeTrue())
+			Expect(spe.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			Expect(spe.Field("spec.network.hostPorts.0.port").Int()).To(Equal(int64(40443)))
+			Expect(spe.Field("spec.network.hostPorts.0.protocol").String()).To(Equal("TCP"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
