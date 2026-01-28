@@ -206,7 +206,7 @@ Manually edit the configuration:
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe-
    ```
 
-6. Clean up the temporary file:
+1. Delete the temporary file:
 
    ```shell
    rm cluster-config.yaml
