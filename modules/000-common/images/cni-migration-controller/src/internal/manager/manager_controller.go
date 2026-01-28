@@ -424,7 +424,10 @@ func (r *CNIMigrationReconciler) ensureAgentsReady(ctx context.Context, m *cnimi
 }
 
 func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, string, error) {
-	moduleName := "cni-" + strings.ToLower(m.Spec.TargetCNI)
+	targetCNI := strings.ToLower(m.Spec.TargetCNI)
+	moduleName := "cni-" + targetCNI
+
+	// 1. Enable module
 	done, err := r.toggleModule(ctx, moduleName, true)
 	if err != nil {
 		return false, "", err
@@ -432,11 +435,34 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(ctx context.Context, m *
 	if !done {
 		return false, fmt.Sprintf("Enabling module %s...", moduleName), nil
 	}
+
+	// 2. Wait for DaemonSet to appear and schedule pods
+	dsName, ok := CNIDaemonSetMap[targetCNI]
+	if !ok {
+		return false, "", fmt.Errorf("unknown CNI: %s", targetCNI)
+	}
+	dsNamespace := "d8-" + moduleName
+
+	ds := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
+		if errors.IsNotFound(err) {
+			return false, fmt.Sprintf("Waiting for %s DaemonSet creation...", dsName), nil
+		}
+		return false, "", err
+	}
+
+	if ds.Status.DesiredNumberScheduled == 0 {
+		return false, fmt.Sprintf("Waiting for %s pods to be scheduled...", dsName), nil
+	}
+
 	return true, "", nil
 }
 
 func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(ctx context.Context, m *cnimigrationv1alpha1.CNIMigration) (bool, string, error) {
-	moduleName := "cni-" + strings.ToLower(m.Status.CurrentCNI)
+	currentCNI := strings.ToLower(m.Status.CurrentCNI)
+	moduleName := "cni-" + currentCNI
+
+	// 1. Disable module
 	done, err := r.toggleModule(ctx, moduleName, false)
 	if err != nil {
 		return false, "", err
@@ -444,7 +470,24 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(ctx context.Context, m
 	if !done {
 		return false, fmt.Sprintf("Disabling module %s...", moduleName), nil
 	}
-	return true, "", nil
+
+	// 2. Wait for DaemonSet to be deleted
+	dsName, ok := CNIDaemonSetMap[currentCNI]
+	if !ok {
+		return true, "", nil
+	}
+	dsNamespace := "d8-" + moduleName
+
+	ds := &appsv1.DaemonSet{}
+	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
+		if errors.IsNotFound(err) {
+			return true, "", nil
+		}
+		return false, "", err
+	}
+
+	// DaemonSet still exists
+	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion...", dsName), nil
 }
 
 func (r *CNIMigrationReconciler) toggleModule(ctx context.Context, moduleName string, enabled bool) (bool, error) {
