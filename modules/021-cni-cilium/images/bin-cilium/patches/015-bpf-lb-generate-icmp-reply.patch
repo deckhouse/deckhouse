@@ -322,7 +322,7 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..5a13f83305 100644
+index 0142716855..32f856354a 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -411,12 +411,13 @@ index 0142716855..5a13f83305 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2697,9 +2776,11 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2697,9 +2776,12 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	struct lb4_service *svc;
  	struct lb4_key key = {};
  	int ret, l4_off;
-+	struct l2_responder_v4_key l2key;
-+	struct l2_responder_v4_stats *stats;
++	struct endpoint_info __maybe_unused *enp;
++	//struct l2_responder_v4_key l2key;
++	//struct l2_responder_v4_stats *stats;
  
  	cilium_capture_in(ctx);
 -
@@ -424,7 +425,7 @@ index 0142716855..5a13f83305 100644
  	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
-@@ -2714,13 +2795,40 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,13 +2796,41 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -450,16 +451,17 @@ index 0142716855..5a13f83305 100644
  					src_sec_identity, punt_to_stack, ext_err);
  	} else {
 +		if(ip4->protocol == IPPROTO_ICMP) {
-+			/*key.dport = 0;
-+			key.proto = 6;
-+			svc = lb4_lookup_service(&key, false);*/
-+			l2key.ip4 = ip4->daddr;
++			key.dport = 0;
++			key.proto = 0;
++			svc = lb4_lookup_service(&key, false);
++			/*l2key.ip4 = ip4->daddr;
 +			l2key.ifindex = ctx->ingress_ifindex;
-+			stats = map_lookup_elem(&L2_RESPONDER_MAP4, &l2key);
-+			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP");
-+			if (stats) {
++			stats = map_lookup_elem(&L2_RESPONDER_MAP4, &l2key);*/
++			enp = lookup_ip4_endpoint(ip4);
++			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP (svb:%d) (enp:%d)", svc ? 1 : 0, enp ? 1: 0);
++			if (svc) {
 +				printk("MEG:5555 GOT SVC FOR NEW ICMP PACKET ENTER src:%x dst:%x! (svc_is_lb:%d)", 
-+						ip4->saddr, ip4->daddr, stats != NULL ? 1 : 0);
++						ip4->saddr, ip4->daddr, 0);
 +						return make_icmp_responce_lb4(ctx, ip4);
 +			}
 +		}
