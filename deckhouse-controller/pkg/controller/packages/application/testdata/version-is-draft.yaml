@@ -27,7 +27,8 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
     packages.deckhouse.io/draft: "true"
 spec:
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
+  package:
+    name: test
+    repositoryName: deckhouse
+    version: v1.0.0
 status: {}

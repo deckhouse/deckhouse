@@ -87,33 +87,25 @@ type ApplicationPackageVersion struct {
 type ApplicationPackageVersionSpec struct {
 	// Name of the application package.
 	// +optional
+	// +kubebuilder:validation:Immutable
 	PackageName string `json:"packageName,omitempty"`
 
 	// The name of the repository containing the package.
 	// +optional
+	// +kubebuilder:validation:Immutable
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
 	// Version of the application package.
 	// +optional
+	// +kubebuilder:validation:Immutable
 	PackageVersion string `json:"packageVersion,omitempty"`
 }
 
 type ApplicationPackageVersionStatus struct {
-	// Name of the application package.
-	// +optional
-	PackageName string `json:"packageName,omitempty"`
-
-	// Name of the repository containing the package.
-	// +optional
-	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
-
 	// Metadata about the package such as description, requirements, etc.
 	// +optional
 	PackageMetadata *ApplicationPackageVersionStatusMetadata `json:"packageMetadata,omitempty"`
 
-	// Version of the application package.
-	// +optional
-	PackageVersion string `json:"packageVersion,omitempty"`
 	// Conditions represent the latest available observations of the package version's state.
 	// +optional
 	// +patchMergeKey=type

@@ -211,7 +211,7 @@ metadata:
   creationTimestamp: "2025-11-12T11:53:57Z"
   labels:
     app: node-local-dns
-    controller-revision-hash: 5fdd46b48
+    controller-revision-hash: 5fdd46b49
     k8s-app: node-local-dns
   name: node-local-dns-5fdd46b48
   namespace: kube-system
@@ -303,7 +303,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 7cd779576d
+    controller-revision-hash: 6dc65d9f6
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xxlml
@@ -362,7 +362,7 @@ metadata:
   generation: 1
   labels:
     app: agent
-    controller-revision-hash: 7cd779576d
+    controller-revision-hash: 6dc65d9f6
     module: cni-cilium
     pod-template-generation: "40"
   name: agent-xylml

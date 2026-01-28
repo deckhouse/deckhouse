@@ -164,7 +164,6 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
 		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
-
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 

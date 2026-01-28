@@ -17,10 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/api/deckhouse.io/v1alpha2"
-
 	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+
+	"caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 // ConvertTo converts SSHCredentials to the Hub version (v1alpha2).

@@ -37,12 +37,12 @@ import (
 	"helm.sh/helm/v3/pkg/releaseutil"
 	"helm.sh/helm/v3/pkg/storage/driver"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
+	"k8s.io/client-go/rest"
 
 	"controller/apis/deckhouse.io/v1alpha1"
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/internal/validate"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
-	"k8s.io/client-go/rest"
 )
 
 const (
@@ -137,24 +137,23 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 
 // Upgrade upgrades resources
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := buildChart(c.templates, project.Name)
-	if err != nil {
-		return fmt.Errorf("build chart: %w", err)
-	}
+	ch := buildChart(c.templates, project.Name)
 
 	versions, err := c.discoverAPI()
 	if err != nil {
 		return fmt.Errorf("discover api: %w", err)
 	}
 
-	post := newPostRenderer(project, versions, c.logger)
 	values := buildValues(project, template)
 	hash := hashMD5(c.templates, values)
 
 	releases, err := action.NewHistory(c.conf).Run(project.Name)
+	isFirstInstall := false
 	if err != nil {
 		if errors.Is(err, driver.ErrReleaseNotFound) {
+			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
+			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
 			install.Timeout = c.opts.Timeout
@@ -186,6 +185,7 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 		}
 	}
 
+	post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 	upgrade := action.NewUpgrade(c.conf)
 	upgrade.Install = true
 	upgrade.MaxHistory = int(c.opts.HistoryMax)
@@ -227,7 +227,7 @@ func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	return versions, nil
 }
 
-func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, error) {
+func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -246,7 +246,7 @@ func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, 
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
 
-	return ch, nil
+	return ch
 }
 
 func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
@@ -361,10 +361,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 // ValidateRender tests project render
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := buildChart(c.templates, project.Name)
-	if err != nil {
-		return fmt.Errorf("make chart: %w", err)
-	}
+	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
 		Name:      project.Name,
@@ -384,7 +381,7 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		buf.WriteString(file)
 	}
 
-	renderer := newPostRenderer(project, nil, c.logger)
+	renderer := newPostRenderer(project, nil, c.logger, false)
 	if _, err = renderer.Run(buf); err != nil {
 		return fmt.Errorf("post render: %w", err)
 	}

@@ -33,9 +33,9 @@ A list of OpenStack services required for Deckhouse Kubernetes Platform to work 
 | Compute (Nova)                    | v2          |
 | Network (Neutron)                 | v2          |
 | Block Storage (Cinder)            | v3          |
-| Load Balancing (Octavia) &#8432;  | v2          |
+| Load Balancing (Octavia) *        | v2          |
 
-&#8432;  If you need to order a Load Balancer.
+\* If you need to order a Load Balancer.
 
 To ensure proper integration and functionality, the OpenStack user associated with the Deckhouse Kubernetes Platform should be granted the "member" role. This role assignment is essential to provide the necessary permissions for interacting with the listed services and managing resources within the OpenStack environment.
 

@@ -102,7 +102,7 @@ apiVersions:
             additionalProperties: false
             required: [numCPUs, memory, template, mainNetwork, datastore]
             description: |
-              Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+              Partial contents of the fields of the [VsphereInstanceClass](cr.html#vsphereinstanceclass).
             properties: &instanceClassProperties
               numCPUs:
                 type: integer
@@ -301,7 +301,7 @@ apiVersions:
               additionalProperties: false
               required: [numCPUs, memory, template, mainNetwork, datastore]
               description: |
-                Partial contents of the fields of the [VsphereInstanceClass](https://deckhouse.io/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+                Partial contents of the fields of the [VsphereInstanceClass](cr.html#vsphereinstanceclass).
               properties:
                 <<: *instanceClassProperties
       sshPublicKey:

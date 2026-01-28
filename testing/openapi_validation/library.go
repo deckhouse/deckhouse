@@ -87,13 +87,13 @@ func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
 			if strings.Contains(path, "/conversions/") {
 				data, err := os.ReadFile(path)
 				if err != nil {
-					return err
+					return fmt.Errorf("read file: %w", err)
 				}
 				var parsed struct {
 					Version int
 				}
 				if err = yaml.Unmarshal(data, &parsed); err != nil {
-					return err
+					return fmt.Errorf("unmarshal: %w", err)
 				}
 				if mv, ok := result[module]; ok {
 					if parsed.Version > mv.conversionsVersion {
@@ -106,7 +106,10 @@ func modulesVersions(rootPath string) (map[string]*moduleVersions, error) {
 		}
 		return nil
 	})
-	return result, err
+	if err != nil {
+		return nil, fmt.Errorf("walk: %w", err)
+	}
+	return result, nil
 }
 
 // GetOpenAPIYAMLFiles returns all .yaml files which are placed into openapi/ | crds/ directory
@@ -156,7 +159,10 @@ func GetOpenAPIYAMLFiles(rootPath string) ([]string, error) {
 		return nil
 	})
 
-	return result, err
+	if err != nil {
+		return nil, fmt.Errorf("walk: %w", err)
+	}
+	return result, nil
 }
 
 // RunOpenAPIValidator runs validator, get channel with file paths and returns channel with results

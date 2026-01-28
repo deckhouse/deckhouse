@@ -32,9 +32,11 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- else }}
     {{- $gcThresholdCount = 6000 }}
 {{- end }}
+{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
+{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 apiVersion: kubeadm.k8s.io/v1beta3
 kind: ClusterConfiguration
-kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
+kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString ) ($k8sPatch | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 networking:
   serviceSubnet: {{ .clusterConfiguration.serviceSubnetCIDR | quote }}
@@ -129,9 +131,8 @@ apiServer:
   {{- else }}
     bind-address: "0.0.0.0"
   {{- end }}
-  {{ if .apiserver.webhookURL }}
-    authorization-mode: Node,Webhook,RBAC
-    authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+  {{- if .apiserver.webhookURL }}
+    authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
   {{- end -}}
   {{ if .apiserver.authnWebhookURL }}
     authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml

@@ -17,12 +17,11 @@ package main
 import (
 	"os"
 
+	"gopkg.in/alecthomas/kingpin.v2"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"exporter/app"
-
-	"gopkg.in/alecthomas/kingpin.v2"
-
 	"exporter/internal/server"
 	"exporter/internal/yandex"
 )

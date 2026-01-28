@@ -232,7 +232,7 @@ func (q *queue) processOne() bool {
 	// Check for parent context cancellation
 	select {
 	case <-t.ctx.Done():
-		q.logger.Debug("context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
+		q.logger.Debug("task context canceled", slog.String("id", t.id), slog.String("name", t.task.String()))
 		if t.wg != nil {
 			t.wg.Done()
 		}

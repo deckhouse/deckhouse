@@ -43,12 +43,12 @@ var (
 )
 
 func ExportViolations(constraints []Constraint) []prometheus.Metric {
-	m := make([]prometheus.Metric, 0)
+	m := make([]prometheus.Metric, 0, len(constraints))
 	for _, c := range constraints {
 		if c.Status.TotalViolations == 0 {
 			metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 0, c.Meta.Kind, c.Meta.Name, "", "", "", "", "", c.Meta.SourceType)
 			m = append(m, metric)
-		} else{
+		} else {
 			for _, v := range c.Status.Violations {
 				metric := prometheus.MustNewConstMetric(ConstraintViolation, prometheus.GaugeValue, 1, c.Meta.Kind, c.Meta.Name, v.Kind, v.Name, v.Namespace, v.Message, v.EnforcementAction, c.Meta.SourceType)
 				m = append(m, metric)
@@ -59,7 +59,7 @@ func ExportViolations(constraints []Constraint) []prometheus.Metric {
 }
 
 func ExportConstraintInformation(constraints []Constraint) []prometheus.Metric {
-	m := make([]prometheus.Metric, 0)
+	m := make([]prometheus.Metric, 0, len(constraints))
 	for _, c := range constraints {
 		metric := prometheus.MustNewConstMetric(ConstraintInformation, prometheus.GaugeValue, c.Status.TotalViolations, c.Meta.Kind, c.Meta.Name, c.Spec.EnforcementAction, fmt.Sprintf("%f", c.Status.TotalViolations))
 		m = append(m, metric)

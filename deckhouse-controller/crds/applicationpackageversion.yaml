@@ -228,15 +228,6 @@ spec:
                         type: object
                     type: object
                 type: object
-              packageName:
-                description: Name of the application package.
-                type: string
-              packageRepositoryName:
-                description: Name of the repository containing the package.
-                type: string
-              packageVersion:
-                description: Version of the application package.
-                type: string
               usedBy:
                 description: Information about applications that are using this package
                   version.

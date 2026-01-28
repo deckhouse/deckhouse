@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: allowed
+  namespace: default
+spec:
+  containers:
+    - name: nginx
+      image: nginx
+  hostNetwork: true
+  dnsPolicy: ClusterFirstWithHostNet

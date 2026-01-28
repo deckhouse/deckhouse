@@ -247,8 +247,8 @@ func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageN
 	switch list := versionList.(type) {
 	case *v1alpha1.ApplicationPackageVersionList:
 		for _, item := range list.Items {
-			if item.Status.PackageVersion != "" {
-				versionTags = append(versionTags, item.Status.PackageVersion)
+			if item.Status.PackageMetadata != nil {
+				versionTags = append(versionTags, item.Spec.PackageVersion)
 			}
 		}
 	default:

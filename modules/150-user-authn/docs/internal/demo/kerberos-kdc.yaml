@@ -83,16 +83,16 @@ spec:
     port: 88
     targetPort: 88
     protocol: TCP
-    nodePort: 30089
+    # NodePort assigned automatically by Kubernetes (range 30000-32767)
   - name: kdc-udp
     port: 88
     targetPort: 88
     protocol: UDP
-    nodePort: 30088
+    # NodePort assigned automatically by Kubernetes
   - name: kadm
     port: 749
     targetPort: 749
     protocol: TCP
-    nodePort: 30749
+    # NodePort assigned automatically by Kubernetes
 
 

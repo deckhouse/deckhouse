@@ -40,6 +40,9 @@ shell:
   - cd /src/gops
   - mkdir -p "/out/linux/amd64/bin"
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops`) | indent 4 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - strip /out/linux/amd64/bin/gops
 ---

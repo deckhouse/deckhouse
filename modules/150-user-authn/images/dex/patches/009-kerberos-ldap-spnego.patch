@@ -1,29 +1,3 @@
-From 24317060bb75a14e9d371c2e92a8997e8f8f5bf7 Mon Sep 17 00:00:00 2001
-From: Ivan Zvyagintsev <ivan.zvyagintsev@flant.com>
-Date: Tue, 28 Oct 2025 20:13:10 +0300
-Subject: [PATCH] update
-
----
- connector/ldap/kerberos_gokrb5.go  | 191 ++++++++++++
- connector/ldap/kerberos_spnego.go  |  44 +++
- connector/ldap/ldap.go             |  54 +++-
- connector/ldap/ldap_spnego.go      | 129 ++++++++
- connector/ldap/ldap_spnego_test.go | 458 +++++++++++++++++++++++++++++
- connector/spnego.go                |  22 ++
- docs/kerberos_ldap.md              |  57 ++++
- examples/ldap/config-ldap.yaml     |   9 +
- go.mod                             |   7 +
- go.sum                             |  33 +++
- server/handlers.go                 |  40 +++
- server/handlers_test.go            |  86 ++++++
- 12 files changed, 1129 insertions(+), 1 deletion(-)
- create mode 100644 connector/ldap/kerberos_gokrb5.go
- create mode 100644 connector/ldap/kerberos_spnego.go
- create mode 100644 connector/ldap/ldap_spnego.go
- create mode 100644 connector/ldap/ldap_spnego_test.go
- create mode 100644 connector/spnego.go
- create mode 100644 docs/kerberos_ldap.md
-
 diff --git a/connector/ldap/kerberos_gokrb5.go b/connector/ldap/kerberos_gokrb5.go
 new file mode 100644
 index 00000000..9c9e9595
@@ -272,7 +246,7 @@ index 00000000..209e563c
 +
 +// (intentionally no default/simple validator; gokrb5-backed validator is used at runtime)
 diff --git a/connector/ldap/ldap.go b/connector/ldap/ldap.go
-index 9fe386c6..6f01e07a 100644
+index 9fe386c6..7788ce16 100644
 --- a/connector/ldap/ldap.go
 +++ b/connector/ldap/ldap.go
 @@ -102,6 +102,9 @@ type Config struct {
@@ -307,7 +281,7 @@ index 9fe386c6..6f01e07a 100644
  	}
 +	// If Kerberos is enabled, initialize gokrb5 validator.
 +	if lc, ok := conn.(*ldapConnector); ok && lc.krbEnabled && lc.krbValidator == nil {
-+		v, verr := newGokrb5Validator(lc.krbConf.KeytabPath)
++		v, verr := newGokrb5ValidatorWithLogger(lc.krbConf.KeytabPath, logger)
 +		if verr != nil {
 +			logger.Warn("failed to initialize kerberos validator; disabling kerberos", "err", verr)
 +			lc.krbEnabled = false
@@ -366,10 +340,10 @@ index 9fe386c6..6f01e07a 100644
  var (
 diff --git a/connector/ldap/ldap_spnego.go b/connector/ldap/ldap_spnego.go
 new file mode 100644
-index 00000000..2bcb73b4
+index 00000000..29bf57a7
 --- /dev/null
 +++ b/connector/ldap/ldap_spnego.go
-@@ -0,0 +1,129 @@
+@@ -0,0 +1,127 @@
 +package ldap
 +
 +import (
@@ -454,12 +428,10 @@ index 00000000..2bcb73b4
 +		})
 +	}
 +	if err != nil {
-+		c.logger.Info("kerberos user lookup failed", "principal", principal, "mapped", mapped, "err", err)
-+		if !c.krbConf.FallbackToPassword {
-+			c.krbValidator.Challenge(w)
-+			return nil, true, nil
-+		}
-+		return nil, false, nil
++		c.logger.Error("kerberos user lookup failed", "principal", principal, "mapped", mapped, "err", err)
++		// Kerberos auth succeeded but LDAP lookup failed - return error to show in UI
++		// (don't send 401 challenge since user is already authenticated via Kerberos)
++		return nil, true, fmt.Errorf("ldap: user lookup failed for kerberos principal %q: %v", principal, err)
 +	}
 +	c.logger.Info("kerberos user lookup succeeded", "dn", userEntry.Entry.DN)
 +
@@ -501,10 +473,10 @@ index 00000000..2bcb73b4
 +}
 diff --git a/connector/ldap/ldap_spnego_test.go b/connector/ldap/ldap_spnego_test.go
 new file mode 100644
-index 00000000..3f0a8090
+index 00000000..afe97a2f
 --- /dev/null
 +++ b/connector/ldap/ldap_spnego_test.go
-@@ -0,0 +1,458 @@
+@@ -0,0 +1,460 @@
 +package ldap
 +
 +import (
@@ -726,15 +698,17 @@ index 00000000..3f0a8090
 +	}
 +}
 +
-+func Test_SPNEGO_UserNotFound_401(t *testing.T) {
++func Test_SPNEGO_UserNotFound_ReturnsError(t *testing.T) {
 +	lc := &ldapConnector{logger: slog.Default(), krbEnabled: true, krbConf: kerberosConfig{FallbackToPassword: false, UsernameFromPrincipal: "localpart"}}
 +	mv := &mockKrbValidator{principal: "jdoe@EXAMPLE.COM", realm: "EXAMPLE.COM", ok: true, err: nil, step: -1}
 +	lc.krbValidator = mv
 +	r := httptest.NewRequest("GET", "/auth/ldap/login?state=abc", nil)
 +	w := httptest.NewRecorder()
 +	ident, handled, err := lc.TrySPNEGO(r.Context(), connector.Scopes{}, w, r)
-+	if err != nil {
-+		t.Fatalf("unexpected err: %v", err)
++	// When Kerberos auth succeeds but LDAP lookup fails, we should return an error
++	// so the server can render an error page instead of empty 401
++	if err == nil {
++		t.Fatalf("expected error for user not found")
 +	}
 +	if !bool(handled) {
 +		t.Fatalf("expected handled")
@@ -742,8 +716,8 @@ index 00000000..3f0a8090
 +	if ident != nil {
 +		t.Fatalf("expected no identity")
 +	}
-+	if w.Result().StatusCode != 401 {
-+		t.Fatalf("expected 401, got %d", w.Result().StatusCode)
++	if !strings.Contains(err.Error(), "user lookup failed") {
++		t.Fatalf("expected 'user lookup failed' error, got: %v", err)
 +	}
 +}
 +
@@ -1215,10 +1189,10 @@ index a4a1f2cb..efa05651 100644
  gopkg.in/yaml.v2 v2.4.0/go.mod h1:RDklbk79AGWmwhnvt/jBztapEOGDOx6ZbXqjP6csGnQ=
  gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
 diff --git a/server/handlers.go b/server/handlers.go
-index 94c31018..3501c737 100644
+index bf6343c8..457ddb55 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
-@@ -366,6 +366,46 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
+@@ -366,6 +366,48 @@ func (s *Server) handlePasswordLogin(w http.ResponseWriter, r *http.Request) {
  
  	switch r.Method {
  	case http.MethodGet:
@@ -1227,9 +1201,11 @@ index 94c31018..3501c737 100644
 +			scopes := parseScopes(authReq.Scopes)
 +			if ident, handled, err := sp.TrySPNEGO(r.Context(), scopes, w, r); bool(handled) {
 +				if err != nil {
-+					// If SPNEGO reported an error, do not block other connectors' expectations.
-+					// Fall back to rendering the form to keep backward compatibility in tests.
-+					break
++					// SPNEGO handled the request but reported an error (e.g., LDAP lookup failed
++					// after successful Kerberos auth). Log error details, show generic message to user.
++					s.logger.ErrorContext(r.Context(), "SPNEGO authentication error", "err", err)
++					s.renderError(r, w, http.StatusUnauthorized, ErrMsgAuthenticationFailed)
++					return
 +				}
 +				if ident != nil {
 +					redirectURL, canSkipApproval, err := s.finalizeLogin(r.Context(), *ident, authReq, conn.Connector)
@@ -1266,7 +1242,7 @@ index 94c31018..3501c737 100644
  			s.logger.ErrorContext(r.Context(), "server template error", "err", err)
  		}
 diff --git a/server/handlers_test.go b/server/handlers_test.go
-index 114712ba..c6bbec69 100644
+index 00d7f2d8..1931f665 100644
 --- a/server/handlers_test.go
 +++ b/server/handlers_test.go
 @@ -20,6 +20,7 @@ import (
@@ -1277,7 +1253,7 @@ index 114712ba..c6bbec69 100644
  	"github.com/dexidp/dex/storage"
  )
  
-@@ -693,6 +694,91 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+@@ -748,6 +749,181 @@ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
  	}
  }
  
@@ -1366,9 +1342,97 @@ index 114712ba..c6bbec69 100644
 +	return &id, true, nil
 +}
 +
++// spnegoError implements connector.PasswordConnector and connector.SPNEGOAware
++// to simulate SPNEGO authentication that fails with an error (e.g., LDAP lookup failed).
++type spnegoError struct{ Err error }
++
++func (s spnegoError) Close() error   { return nil }
++func (s spnegoError) Prompt() string { return "" }
++func (s spnegoError) Login(ctx context.Context, sc connector.Scopes, u, p string) (connector.Identity, bool, error) {
++	return connector.Identity{}, false, nil
++}
++func (s spnegoError) TrySPNEGO(ctx context.Context, sc connector.Scopes, w http.ResponseWriter, r *http.Request) (*connector.Identity, connector.Handled, error) {
++	return nil, true, s.Err
++}
++
++// TestHandlePasswordLogin_SPNEGOError verifies that when SPNEGO returns an error
++// (e.g., Kerberos auth succeeded but LDAP lookup failed), the server renders
++// an error page instead of showing an empty 401 or falling back to password form.
++func TestHandlePasswordLogin_SPNEGOError(t *testing.T) {
++	ctx := t.Context()
++	connID := "mockPassword"
++	authReqID := "spnego-err"
++	expiry := time.Now().Add(100 * time.Second)
++	resTypes := []string{responseTypeCode}
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.SkipApprovalScreen = true
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++
++	// Create password connector
++	sc := storage.Connector{
++		ID:              connID,
++		Type:            "mockPassword",
++		Name:            "MockPassword",
++		ResourceVersion: "1",
++		Config:          []byte("{\"username\": \"foo\", \"password\": \"password\"}"),
++	}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	_, err := s.OpenConnector(sc)
++	require.NoError(t, err)
++
++	// Prepare auth request
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID:            authReqID,
++		ClientID:      "client_1",
++		ConnectorID:   connID,
++		RedirectURI:   "cb",
++		Expiry:        expiry,
++		ResponseTypes: resTypes,
++		Scopes:        []string{"openid"},
++	}))
++
++	// Replace the server connector with a SPNEGO-aware fake that returns an error
++	s.mu.Lock()
++	orig := s.connectors[connID]
++	s.connectors[connID] = Connector{
++		ResourceVersion: orig.ResourceVersion,
++		Connector:       spnegoError{Err: errors.New("ldap: user lookup failed for kerberos principal")},
++	}
++	s.mu.Unlock()
++
++	// Need a client for the flow
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID:           "client_1",
++		Secret:       "secret",
++		RedirectURIs: []string{"http://127.0.0.1/callback"},
++		Name:         "test",
++	}))
++
++	// GET login should return 401 with error message rendered
++	rr := httptest.NewRecorder()
++	path := fmt.Sprintf("/auth/%s/login?state=%s&back=", connID, authReqID)
++	s.handlePasswordLogin(rr, httptest.NewRequest("GET", path, nil))
++
++	// Should return 401 (unauthorized) with an error page, not 200 (form) or empty response
++	if rr.Code != http.StatusUnauthorized {
++		t.Fatalf("expected 401 Unauthorized, got %d", rr.Code)
++	}
++
++	// The response body should contain safe generic error message (not internal details)
++	body := rr.Body.String()
++	if !strings.Contains(body, "Authentication failed") {
++		t.Fatalf("expected error page with 'Authentication failed', got: %s", body)
++	}
++	// Should NOT contain internal error details (per 008-hide-internal-500-error-details.patch)
++	if strings.Contains(body, "ldap: user lookup failed") {
++		t.Fatalf("error page should not contain internal error details")
++	}
++}
++
  func TestHandleTokenExchange(t *testing.T) {
  	tests := []struct {
  		name               string
--- 
-2.51.0
 

@@ -1,0 +1,15 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: disallowed-dep
+  namespace: default
+  annotations:
+    bar: xxx.example.com
+spec:
+  template:
+    spec:
+      containers:
+        - name: foo
+  selector:
+    matchLabels:
+      foo: bar

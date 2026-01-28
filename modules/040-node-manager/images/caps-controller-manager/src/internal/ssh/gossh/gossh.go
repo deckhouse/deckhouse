@@ -18,13 +18,14 @@ package gossh
 
 import (
 	"bytes"
-	"caps-controller-manager/internal/scope"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+
+	"caps-controller-manager/internal/scope"
 )
 
 type SSH struct {
@@ -136,7 +137,6 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 						return fmt.Errorf("failed to write password to stdin: %w", err)
 					}
 				}
-
 			}
 		}
 		if len(stdoutBuf.Bytes()) > 0 {

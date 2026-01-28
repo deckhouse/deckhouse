@@ -20,8 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +31,8 @@ import (
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 )
 
 const (
@@ -38,6 +40,11 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+)
+
+const (
+	// DefaultVMDeletionTimeout is the maximum time to wait for VM deletion
+	DefaultVMDeletionTimeout = 10 * time.Minute
 )
 
 type ComputeService struct {
@@ -163,11 +170,32 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 		return fmt.Errorf("delete VirtualMachine resource: %w", err)
 	}
 
-	err = c.Wait(ctx, name, vm, func(obj client.Object) (bool, error) { return obj == nil, nil })
+	// Create context with timeout for waiting
+	waitCtx, cancel := context.WithTimeout(ctx, DefaultVMDeletionTimeout)
+	defer cancel()
+
+	klog.Infof("Waiting for VirtualMachine %s deletion (timeout: %v)", name, DefaultVMDeletionTimeout)
+
+	// Wait for VM to be deleted with timeout
+	err = c.Wait(waitCtx, name, vm, func(obj client.Object) (bool, error) {
+		return obj == nil, nil
+	})
+
 	if err != nil {
+		// Check if timeout exceeded
+		if errors.Is(err, context.DeadlineExceeded) {
+			klog.Warningf("VirtualMachine %s deletion timed out after %v, VM may still be terminating in parent DVP cluster", name, DefaultVMDeletionTimeout)
+			return fmt.Errorf("VM deletion timeout after %v, VM may still be terminating in parent DVP cluster: %w", DefaultVMDeletionTimeout, err)
+		}
+		// Check if operation was canceled
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("VM deletion was canceled: %w", err)
+		}
+		// Other errors
 		return fmt.Errorf("await VirtualMachine deletion: %w", err)
 	}
 
+	klog.Infof("VirtualMachine %s deleted successfully", name)
 	return nil
 }
 

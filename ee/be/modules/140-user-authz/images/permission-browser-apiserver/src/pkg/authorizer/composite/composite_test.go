@@ -105,4 +105,3 @@ func TestCompositeAuthorizer_BothNoOpinion(t *testing.T) {
 	assert.Equal(t, authorizer.DecisionNoOpinion, decision)
 	assert.Empty(t, reason)
 }
-

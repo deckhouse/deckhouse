@@ -228,9 +228,6 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	// Patch the status
 	apv = enrichWithPackageDefinition(apv, packageMeta.PackageDefinition)
-	if apv.Status.PackageRepositoryName == "" {
-		apv.Status.PackageRepositoryName = apv.Spec.PackageRepositoryName
-	}
 
 	apv = r.SetConditionTrue(apv, v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded)
 
@@ -344,9 +341,6 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 	if pd == nil {
 		return apv
 	}
-
-	apv.Status.PackageName = pd.Name
-	apv.Status.PackageVersion = pd.Version
 
 	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Category: pd.Category,
