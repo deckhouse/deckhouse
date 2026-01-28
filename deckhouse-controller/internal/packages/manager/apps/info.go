@@ -24,7 +24,7 @@ type Info struct {
 	Instance   string            `json:"name" yaml:"name"`
 	Namespace  string            `json:"namespace" yaml:"namespace"`
 	Definition Definition        `json:"definition" yaml:"definition"`
-	Registry   registry.Registry `json:"registry" yaml:"registry"`
+	Repository registry.Remote   `json:"repository" yaml:"repository"`
 	Digests    map[string]string `json:"digests" yaml:"digests"`
 	Values     addonutils.Values `json:"values,omitempty" yaml:"values,omitempty"`
 	Hooks      []string          `json:"hooks,omitempty" yaml:"hooks,omitempty"`
@@ -40,7 +40,7 @@ func (a *Application) GetInfo() Info {
 		Instance:   a.instance,
 		Namespace:  a.namespace,
 		Definition: a.definition,
-		Registry:   a.registry,
+		Repository: a.repository,
 		Digests:    a.digests,
 		Values:     a.values.GetValues(),
 		Hooks:      hooks,

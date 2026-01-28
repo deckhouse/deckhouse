@@ -32,5 +32,5 @@ func (i *Installer) Uninstall(_ context.Context, _ string) error {
 }
 
 func (i *Installer) Download(_ context.Context, _ *v1alpha1.ModuleSource, _ string, _ string) (string, error) {
-	return "testdata//validation/module", nil
+	return "testdata/validation/module", nil
 }

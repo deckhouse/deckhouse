@@ -18,10 +18,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -29,8 +31,13 @@ const (
 	taskTracer = "package-download"
 )
 
+var (
+	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
+	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+)
+
 type downloader interface {
-	Download(ctx context.Context, reg registry.Registry, packageName, version string) error
+	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
 }
 
 type statusService interface {
@@ -39,10 +46,12 @@ type statusService interface {
 }
 
 type task struct {
-	instance    string
+	downloaded  string
+	name        string
 	packageName string
 	version     string
-	registry    registry.Registry
+
+	repository registry.Remote
 
 	downloader downloader
 	status     statusService
@@ -50,12 +59,26 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(name, pack, version string, reg registry.Registry, status statusService, downloader downloader, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, status statusService, downloader downloader, logger *log.Logger) queue.Task {
 	return &task{
-		instance:    name,
-		packageName: pack,
+		downloaded:  filepath.Join(modulesDownloadedDir, name),
+		name:        name,
+		packageName: name,
 		version:     version,
-		registry:    reg,
+		repository:  repo,
+		downloader:  downloader,
+		status:      status,
+		logger:      logger.Named(taskTracer),
+	}
+}
+
+func NewAppTask(instance, name, version string, repo registry.Remote, status statusService, downloader downloader, logger *log.Logger) queue.Task {
+	return &task{
+		downloaded:  filepath.Join(appsDownloadedDir, repo.Name, name),
+		packageName: name,
+		name:        instance,
+		version:     version,
+		repository:  repo,
 		downloader:  downloader,
 		status:      status,
 		logger:      logger.Named(taskTracer),
@@ -68,19 +91,19 @@ func (t *task) String() string {
 
 func (t *task) Execute(ctx context.Context) error {
 	logger := t.logger.With(
-		slog.String("name", t.instance),
-		slog.String("package", t.packageName),
-		slog.String("registry", t.registry.Name),
+		slog.String("name", t.name),
+		slog.String("downloaded", t.downloaded),
+		slog.String("repository", t.repository.Name),
 		slog.String("version", t.version))
 
-	// Download package from repository
+	// download package from repository
 	logger.Debug("download package")
-	if err := t.downloader.Download(ctx, t.registry, t.packageName, t.version); err != nil {
-		t.status.HandleError(t.instance, err)
+	if err := t.downloader.Download(ctx, t.repository, t.downloaded, t.packageName, t.version); err != nil {
+		t.status.HandleError(t.name, err)
 		return fmt.Errorf("download package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.instance, status.ConditionDownloaded)
+	t.status.SetConditionTrue(t.name, status.ConditionDownloaded)
 
 	return nil
 }
