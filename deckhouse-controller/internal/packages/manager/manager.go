@@ -232,7 +232,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run nelm upgrade", slog.String("name", name))
 
-	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		return newHelmUpgradeErr(err)
 	}
@@ -247,7 +247,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			return newHelmUpgradeErr(err)
 		}
@@ -287,7 +287,7 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	if !keep {
 		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err := m.nelm.Delete(ctx, app); err != nil {
+		if err := m.nelm.Delete(ctx, app.GetNamespace(), app.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}

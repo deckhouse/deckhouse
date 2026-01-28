@@ -18,6 +18,7 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -170,6 +171,15 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 			"Version":  a.definition.Version,
 		},
 	}
+}
+
+// GetExtraNelmValues returns runtime values in string format
+func (a *Application) GetExtraNelmValues() string {
+	runtimeValues := a.GetRuntimeValues()
+	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
+	packageJSON, _ := json.Marshal(runtimeValues.Package)
+
+	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
