@@ -28,7 +28,7 @@ git:
         - '**/*'
   - url: {{ $.SOURCE_REPO }}/oauth2-proxy/oauth2-proxy.git
     to: /src
-    tag: v7.5.1
+    tag: v{{include "get_oss_version_by_id" (list "oauth2-proxy" $ )}}
     stageDependencies:
       install:
         - '**/*.go'

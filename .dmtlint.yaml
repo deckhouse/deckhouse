@@ -4,6 +4,8 @@ global:
       rules:
         license:
           impact: warn
+        oss: 
+          impact: warn
     templates:
       rules:
         grafana-dashboards:

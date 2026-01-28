@@ -3,3 +3,5 @@
   description: A autoscaling-related components for Kubernetes.
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
+  id: autoscaler
+  version: 1.5.1
