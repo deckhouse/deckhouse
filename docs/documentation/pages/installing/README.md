@@ -622,6 +622,7 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
 
 {% offtopic title="List of preflight skip flags..." %}
 
+<<<<<<< HEAD
 - `--preflight-skip-all-checks`: Skip all preflight checks.
 - `--preflight-skip-ssh-forward-check`: Skip the SSH forwarding check.
 - `--preflight-skip-availability-ports-check`: Skip the check for the availability of required ports.
@@ -642,8 +643,9 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
 - `--preflight-skip-deckhouse-user-check`: Skip the `deckhouse` user existence check.
 - `--preflight-skip-yandex-with-nat-instance-check`: Skip the Yandex Cloud with NAT Instance configuration check.
 - `--preflight-skip-dvp-kubeconfig`: Skip the DVP kubeconfig check.
+- `--preflight-skip-staticinstances-with-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
 
-Example of using a preflight skip flag:
+Example of using the preflight skip flag:
 
   ```shell
       dhctl bootstrap \

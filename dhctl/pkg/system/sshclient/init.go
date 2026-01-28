@@ -17,8 +17,11 @@ package sshclient
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
+
+	"os"
 
 	"github.com/name212/govalue"
 
@@ -210,6 +213,52 @@ func NewClientFromFlagsWithHosts(ctx context.Context) (node.SSHClient, error) {
 	}
 
 	return NewClientFromFlags(ctx)
+}
+
+type ClientConfig struct {
+	User                string
+	SSHPort             int
+	PrivateSSHKey       string
+	SudoPasswordEncoded string
+	BastionHost         string
+	BastionPort         string
+	BastionUser         string
+	BastionPassword     string
+	BastionKeys         []session.AgentPrivateKey
+}
+
+func NewClientFromConfig(ctx context.Context, host string, cred ClientConfig) (node.SSHClient, error) {
+	input := session.Input{
+		AvailableHosts:  []session.Host{{Host: host}},
+		User:            cred.User,
+		Port:            strconv.Itoa(cred.SSHPort),
+		BecomePass:      cred.SudoPasswordEncoded,
+		BastionHost:     cred.BastionHost,
+		BastionPort:     cred.BastionPort,
+		BastionUser:     cred.BastionUser,
+		BastionPassword: cred.BastionPassword,
+	}
+
+	var keys []session.AgentPrivateKey
+	keys = append(keys, cred.BastionKeys...)
+
+	if cred.PrivateSSHKey != "" {
+		tmpFile, err := os.CreateTemp(app.TmpDirName, "sshkey-for-staticinstance-*")
+		if err != nil {
+			return nil, fmt.Errorf("cannot create temp file for SSH key: %w", err)
+		}
+		defer tmpFile.Close()
+
+		if _, err = tmpFile.WriteString(cred.PrivateSSHKey); err != nil {
+			return nil, fmt.Errorf("cannot write SSH key to temp file: %w", err)
+		}
+
+		keys = append(keys, session.AgentPrivateKey{Key: tmpFile.Name()})
+	}
+
+	settings := session.NewSession(input)
+	client := gossh.NewClient(ctx, settings, keys)
+	return client, nil
 }
 
 func IsModernMode() bool {
