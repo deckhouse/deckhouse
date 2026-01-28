@@ -29,7 +29,7 @@ func BuildFromMapSlice(prefix, inputName string, sourceType string, transforms [
 	prevInput := ""
 
 	for i, transform := range transforms {
-		name := fmt.Sprintf("transform/%s/%s/%s/%02d_%s", prefix, sourceType, inputName, i, transform.GetName())
+		name := fmt.Sprintf("transform/%s/%s/%s/%02d_%s", sourceType, prefix, inputName, i, transform.GetName())
 
 		transform.SetName(name)
 		if prevInput != "" {

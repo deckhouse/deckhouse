@@ -44,7 +44,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/testoutput/KubernetesPods": {
+    "KubernetesPods/destination/cluster/testoutput": {
       "type": "socket",
       "inputs": [
         "cluster_logging_config/testsource:baar",

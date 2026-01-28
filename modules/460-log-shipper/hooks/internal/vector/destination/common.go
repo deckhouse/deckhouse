@@ -18,6 +18,7 @@ package destination
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	"github.com/iancoleman/strcase"
 
@@ -100,7 +101,7 @@ func ComposeName(n string) string {
 // ComposeNameWithSourceType creates a unique sink name by including the source type.
 // This allows the same destination to have separate sink instances for different source types.
 func ComposeNameWithSourceType(n string, sourceType string) string {
-	return "destination/cluster/" + n + "/" + sourceType
+	return fmt.Sprintf("%s/destination/cluster/%s", sourceType, n)
 }
 
 // buildVectorBuffer generates buffer config for vector if CRD buffer config is set

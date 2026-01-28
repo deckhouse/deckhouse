@@ -25,7 +25,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/testoutput/KubernetesPods": {
+    "KubernetesPods/destination/cluster/testoutput": {
       "type": "vector",
       "inputs": [
         "cluster_logging_config/testsource"

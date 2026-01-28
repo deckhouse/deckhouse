@@ -12,7 +12,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/testoutput/File": {
+    "File/destination/cluster/testoutput": {
       "type": "elasticsearch",
       "inputs": [
         "cluster_logging_config/testfile"
