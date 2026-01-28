@@ -27,15 +27,16 @@ You can install DKP using a CLI installer, which is available as a container ima
 
 You can install DKP in the following ways::
 
-- **In a supported cloud.** The installer automatically creates and configures all required resources (including virtual machines, network objects, etc.), deploys a Kubernetes cluster, and installs DKP. A full list of supported cloud providers is available in the [Platform integration with IaaS](../admin/integrations/public/overview.html) section.
+- **In a supported cloud.** The installer automatically creates and configures all required resources (including virtual machines, network objects, etc.), deploys a Kubernetes cluster, and installs DKP. A full list of supported cloud providers is available in the [Integration with IaaS](../admin/integrations/public/overview.html) section.
 
 - **On bare-metal servers (including hybrid clusters) or in unsupported clouds.** The installer configures the servers or virtual machines specified in the configuration, deploys a Kubernetes cluster, and installs DKP. Step-by-step instructions for bare metal are available in [Getting started → Deckhouse Kubernetes Platform for bare metal]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/bm/step2.html).
 
-- **In an existing Kubernetes cluster.** The installer deploys DKP and integrates it with the current infrastructure. Step-by-step instructions for an existing cluster are available in [Getting started → Deckhouse Kubernetes Platform in an existing cluster]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
+- **In an existing Kubernetes cluster.** The installer deploys DKP and integrates it with the current infrastructure. Step-by-step instructions for an existing cluster are available in [Getting started → Deckhouse Kubernetes Platform in existing cluster]({% if site.mode == 'module' %}{{ site.urls[page.lang] }}{% endif %}/products/kubernetes-platform/gs/existing/step2.html).
 
 ## Installation requirements
 
-To estimate the resources required for installation, see:
+To estimate the resources required for Deckhouse Kubernetes Platform installation, refer to the following guides:
+
 - [Bare-metal cluster sizing guide](/products/kubernetes-platform/guides/hardware-requirements.html)
 - [Disk layout and sizing guide](/products/kubernetes-platform/guides/fs-requirements.html)
 - [Production preparation guide](/products/kubernetes-platform/guides/production.html)
@@ -50,63 +51,64 @@ Before installation, ensure the following:
 
 ## Preparing the Configuration
 
-Before installation, you need to prepare the [installation configuration file](#installation-config) and, if needed, a [post-bootstrap script](#post-bootstrap-script).
+Before installation, you need to prepare the [installation configuration file](#installation-configuration-file) and, if needed, a [post-bootstrap script](#post-bootstrap-script).
 
-### Installation config
+### Installation configuration file
 
 The installation configuration file is a set of YAML documents that contains DKP settings and manifests for cluster objects and resources to be created after installation. The configuration file is used by the CLI installer and is passed via the `--config` parameter (see below).
 
 Required and optional objects/resources that may be needed in the installation configuration file:
-1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**) — initial [configuration parameters](../#deckhouse-configuration) necessary to start DKP.
-   
-   > Starting with DKP 1.75, use ModuleConfig `deckhouse` to configure access to the DKP container registry. Configuring registry access with InitConfiguration (`imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) is a legacy method.
 
-1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — general cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when DKP is installed into an already existing Kubernetes cluster.
+1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**required**): Initial [configuration parameters](../admin/configuration/) necessary to start DKP.
 
-1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration) — parameters for a cluster deployed on bare-metal servers (including hybrid clusters) or in unsupported clouds. **Required**, except when DKP is installed into an already existing Kubernetes cluster.
+   > Starting with DKP 1.75, use the ModuleConfig `deckhouse` to configure access to the DKP container registry. Configuring access with InitConfiguration (via `imagesRepo`, `registryDockerCfg`, `registryScheme`, and `registryCA` parameters) is considered a legacy method.
+
+1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration): General cluster parameters, such as Kubernetes (control plane components) version, network settings, CRI parameters, etc. **Required**, except when DKP is installed into an already existing Kubernetes cluster.
+
+1. [StaticClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration): Parameters for a cluster deployed on bare-metal servers (including hybrid clusters) or in unsupported clouds. **Required**, except when DKP is installed into an already existing Kubernetes cluster.
 
    To add worker node groups (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object), you may also need [StaticInstance](/modules/node-manager/cr.html#staticinstance) and [SSHCredentials](/modules/node-manager/cr.html#sshcredentials).
 
-1. `<PROVIDER>ClusterConfiguration` — parameters for integration with a cloud provider. **Required** when integrating DKP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
+1. &lt;PROVIDER&gt;ClusterConfiguration: Parameters for integration with a cloud provider. **Required** when integrating DKP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
    Examples of resources configuring integration with a cloud provider:
 
-   * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration): Amazon Web Services;
-   * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration): Microsoft Azure;
-   * [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration): Deckhouse Virtualization Platform;
-   * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration): Google Cloud Platform;
-   * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration): Huawei Cloud;
-   * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration): OpenStack, OVHcloud, Selectel, VK Cloud;
-   * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration): VMware vSphere;
-   * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration): VMware Cloud Director;
-   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration): Yandex Cloud;
-   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration): zVirt.
+   * [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration): Amazon Web Services
+   * [AzureClusterConfiguration](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration): Microsoft Azure
+   * [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration): Deckhouse Virtualization Platform
+   * [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration): Google Cloud Platform
+   * [HuaweiCloudClusterConfiguration](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration): Huawei Cloud
+   * [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration): OpenStack, OVHcloud, Selectel, VK Cloud
+   * [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration): VMware vSphere
+   * [VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration): VMware Cloud Director
+   * [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration): Yandex Cloud
+   * [ZvirtClusterConfiguration](/modules/cloud-provider-zvirt/cluster_configuration.html#zvirtclusterconfiguration): zVirt
 
-   To add cloud nodes, you also need `<PROVIDER>InstanceClass` objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
+   To add cloud nodes, you also need &lt;PROVIDER&gt;InstanceClass objects (for example [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) for Yandex Cloud) that describe VM configuration in the node group (the [NodeGroup](/modules/node-manager/cr.html#nodegroup) object).
 
 1. DKP module configurations.
 
-   Each module is configured (and can be enabled or disabled) with its own [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, ModuleConfig `user-authn` for the [user-authn](/modules/user-authn/) module). Allowed parameters are described in the module documentation under "Configuration" (for example, [user-authn settings](/modules/user-authn/configuration.html)).
- 
+   Each module is configured (and can be enabled or disabled) with its own [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) (for example, ModuleConfig `user-authn` for the [`user-authn`](/modules/user-authn/) module). Parameters that are allowed in the ModuleConfig object are described in the respective module documentation under "Configuration" (for example, [configuration of the `user-authn` module](/modules/user-authn/configuration.html)).
+
    A list of all Deckhouse Kubernetes Platform modules is available in the [Modules](/modules/) section.
 
    Some modules may be enabled and preconfigured automatically depending on the selected installation option and cluster configuration (for example, modules that provide control plane and networking functionality).
 
    Modules often configured during installation:
 
-   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): global DKP settings for parameters used by default by all modules and components (DNS name template, StorageClass, module component placement settings, etc.).
-   * [`deckhouse`](/modules/deckhouse/configuration.html): registry access settings, the desired release channel, and other parameters.
-   * [`user-authn`](/modules/user-authn/configuration.html): unified authentication.
-   * [`cni-cilium`](/modules/cni-cilium/configuration.html): cluster networking (e.g., used when installing DKP on bare metal, in an air-gapped environment).
+   * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html): Global DKP settings for parameters used by default by all modules and components (DNS name template, StorageClass, module component placement settings, etc.).
+   * [`deckhouse`](/modules/deckhouse/configuration.html): Container registry access settings, the desired release channel, and other parameters.
+   * [`user-authn`](/modules/user-authn/configuration.html): Unified authentication.
+   * [`cni-cilium`](/modules/cni-cilium/configuration.html): Cluster networking (for example, used when installing DKP on bare metal or in an air-gapped environment).
 
-   If the cluster is created with nodes dedicated to specific workload types (for example, system or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in module configurations that use persistent storage volumes (for example, in the [nodeSelector](/modules/prometheus/configuration.html#parameters-nodeselector) parameter of the `prometheus` ModuleConfig).
+   If the cluster is created with nodes dedicated to specific workload types (for example, system or monitoring nodes), it is recommended to explicitly set the `nodeSelector` parameter in module configurations that use persistent storage volumes (for example, in the [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector) parameter of the `prometheus` ModuleConfig for the `prometheus` module).
 
-1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) — parameters of the HTTP/HTTPS load balancer (Ingress controller).
+1. [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller): Parameters of the HTTP/HTTPS load balancer (Ingress controller).
 
-1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — node group parameters. Required to add worker nodes.
+1. [NodeGroup](/modules/node-manager/cr.html#nodegroup): Node group parameters. Required to add worker nodes.
 
 1. Objects for authentication and authorization such as [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule), [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule), [User](/modules/user-authn/cr.html#user), [Group](/modules/user-authn/cr.html#group), and [DexProvider](/modules/user-authn/cr.html#dexprovider).
-   
+
    See [authentication](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authentication/) and [authorization](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/) documentation for details.
 
 {% offtopic title="An example of the installation config..." %}
@@ -224,7 +226,7 @@ metadata:
 spec:
   version: 2
   enabled: true
-  # Specify, in case of using dedicated nodes for monitoring.
+  # Specify if you plan to use dedicated nodes for monitoring.
   # settings:
   #   nodeSelector:
   #     node.deckhouse.io/group: monitoring
@@ -379,7 +381,7 @@ metadata:
 spec:
   version: 2
   enabled: true
-  # Specify, in case of using dedicated nodes for monitoring.
+  # Specify if you plan to use dedicated nodes for monitoring.
   # settings:
   #   nodeSelector:
   #     node.deckhouse.io/group: monitoring
@@ -443,9 +445,9 @@ spec:
 
 The installer allows you to run a custom script on one of the master nodes after installation (post-bootstrap script). This script can be used for:
 
-* Performing additional cluster configurations;
-* Collecting diagnostic information;
-* Integrating with external systems or other tasks.
+* Additional cluster configuration
+* Collecting diagnostic information
+* Integrating with external systems or other tasks
 
 The path to the post-bootstrap script can be specified using the `--post-bootstrap-script-path` parameter when running the CLI installer.
 
@@ -464,10 +466,10 @@ INGRESS_NAME="nginx"
 
 echo_err() { echo "$@" 1>&2; }
 
-# declare the variable
+# Declare the variable.
 lb_ip=""
 
-# get the load balancer IP
+# Get the load balancer IP address.
 for i in {0..100}
 do
   if lb_ip="$(kubectl -n d8-ingress-nginx get svc "${INGRESS_NAME}-load-balancer" -o jsonpath='{.status.loadBalancer.ingress[0].ip}')"; then
@@ -510,7 +512,7 @@ docker login -u license-token registry.deckhouse.io
 
 {% endalert %}
 
-The command to run the installer container from the Deckhouse official container registry:
+The command to run the installer container from the public Deckhouse container registry:
 
 ```shell
 docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
@@ -518,17 +520,17 @@ docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.io/deckhouse/<
 
 Where:
 
-1. `<DECKHOUSE_REVISION>` — the [DKP edition](../reference/revision-comparison.html), such as `ee` for Enterprise Edition, `ce` for Community Edition, etc.
-1. `<MOUNT_OPTIONS>` — parameters for mounting files into the installer container, such as:
-   - SSH access keys;
-   - Configuration file;
+1. `<DECKHOUSE_REVISION>`: [DKP edition](../reference/revision-comparison.html). For example, `ee` for Enterprise Edition, `ce` for Community Edition, etc.
+1. `<MOUNT_OPTIONS>`: Parameters for mounting files into the installer container, such as:
+   - SSH access keys
+   - Configuration file
    - Resource file, etc.
-1. `<RELEASE_CHANNEL>` — the [release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
-   - `alpha` — for the Alpha release channel;
-   - `beta` — for the Beta release channel;
-   - `early-access` — for the Early Access release channel;
-   - `stable` — for the Stable release channel;
-   - `rock-solid` — for the Rock Solid release channel.
+1. `<RELEASE_CHANNEL>`: [Release channel](/modules/deckhouse/configuration.html#parameters-releasechannel) in kebab-case format:
+   - `alpha`: Alpha channel
+   - `beta`: Beta channel
+   - `early-access`: Early Access channel
+   - `stable`: Stable channel
+   - `rock-solid`: Rock Solid channel
 
 Here is an example of a command to run the DKP Community Edition installer container from the Stable release channel:
 
@@ -545,10 +547,10 @@ DKP installation is performed within the installer container using the `dhctl` c
 * To install DKP into an already existing cluster, use the command `dhctl bootstrap-phase install-deckhouse`.
 
 {% alert level="info" %}
-Run `dhctl bootstrap -h` to learn more about the parameters available.
+To learn more about the available parameters, run `dhctl bootstrap -h`.
 {% endalert %}
 
-Example of running DKP installation with cloud cluster deployment:
+Example of running a DKP installation with cloud cluster deployment:
 
 ```shell
 dhctl bootstrap \
@@ -558,14 +560,14 @@ dhctl bootstrap \
 
 Where:
 
-- `/config.yml` — the installation configuration file;
-- `<SSH_USER>` — the username for SSH connection to the server;
-- `--ssh-agent-private-keys` — the private SSH key file for SSH connection.
+- `/config.yml`: Installation configuration file.
+- `<SSH_USER>`: Username for SSH connection to the server.
+- `--ssh-agent-private-keys`: Private SSH key file for SSH connection.
 
-### Pre-Installation Checks
+### Pre-installation checks
 
 {% alert level="info" %}
-Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the cluster nodes supports the `erofs` kernel module. If `erofs` is not supported by the OS, the module integrity control will be disabled and a monitoring alert will appear indicating this functionality is not working.
+Starting with version 1.74, DKP has a built-in module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the cluster nodes supports the `erofs` kernel module. If such a support is missing, the module integrity control will be disabled and a respective monitoring alert will appear.
 {% endalert %}
 
 {% offtopic title="Diagram of checks performed by the installer before installation..." %}
@@ -575,74 +577,73 @@ Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integ
 List of checks performed by the installer before starting Deckhouse Kubernetes Platform installation:
 
 1. General checks:
-   - The values of the parameters [PublicDomainTemplate](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
+   - The values of the parameters [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) and [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) do not match.
    - The authentication data for the container registry specified in the installation configuration is correct.
    - The host name meets the following requirements:
-     - The length does not exceed 63 characters;
-     - It consists only of lowercase letters;
+     - The length does not exceed 63 characters.
+     - It consists only of lowercase letters.
      - It does not contain special characters (hyphens `-` and periods `.` are allowed, but they cannot be at the beginning or end of the name).
    - The server (VM) has a supported container runtime (`containerd`) installed.
    - The host name is unique within the cluster.
    - The server's system time is correct.
    - The address spaces for Pods (`podSubnetCIDR`) and services (`serviceSubnetCIDR`) do not intersect.
 
-
 1. Checks for static and hybrid cluster installation:
    - Only one `--ssh-host` parameter is specified. For static cluster configuration, only one IP address can be provided for configuring the first master node.
    - SSH connection is possible using the specified authentication data.
    - SSH tunneling to the master node server (or VM) is possible.
    - The server (VM) selected for the master node installation must meet the [minimum system requirements](/products/kubernetes-platform/guides/hardware-requirements.html):
-     - at least 4 CPU cores;
-     - at least 8 GB of RAM;
-     - at least 60 GB of disk space with 400+ IOPS performance;
-     - Linux kernel version 5.8 or newer;
-     - one of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`;
-     - access to standard OS package repositories;
+     - At least 4 CPU cores.
+     - At least 8 GB of RAM.
+     - At least 60 GB of disk space with 400+ IOPS performance.
+     - Linux kernel version 5.8 or newer.
+     - One of the package managers installed: `apt`, `apt-get`, `yum`, or `rpm`.
+     - Access to standard OS package repositories.
      - **When using `ContainerdV2`** as the default container runtime on cluster nodes:
-        - Support for `CgroupsV2`;
-        - Systemd version `244`;
+        - Support for `CgroupsV2`.
+        - Systemd version `244`.
         - Support for the `erofs` kernel module.
    - Python is installed on the master node server (VM).
    - The container registry is accessible through a proxy (if proxy settings are specified in the installation configuration).
    - Required installation ports are free on the master node server (VM) and on the host running the installer.
-   - DNS must resolve `localhost` to IP address 127.0.0.1.
+   - DNS must resolve `localhost` to IP address `127.0.0.1`.
    - The user has `sudo` privileges on the server (VM).
    - Required ports for the installation must be open:
-     - port 22/TCP between the host running the installer and the server;
-     - no port conflicts with those used by the installation process.
+     - Port `22/TCP` between the host running the installer and the server.
+     - No port conflicts with those used by the installation process.
    - The server (VM) has the correct time.
    - The user `deckhouse` must not exist on the server (VM).
-   - The address spaces for Pods (`podSubnetCIDR`) services (`serviceSubnetCIDR`) and internal network (`internalNetworkCIDRs`) do not intersect.
+   - The address spaces for Pods (`podSubnetCIDR`), services (`serviceSubnetCIDR`), and internal network (`internalNetworkCIDRs`) do not intersect.
 
 1. Checks for cloud cluster installation:
    - The configuration of the virtual machine for the master node meets the minimum requirements.
    - The cloud provider API is accessible from the cluster nodes.
-   - For Yandex Cloud deployments with NAT Instance, the configuration for Yandex Cloud with NAT Instance is verified.
+   - The configuration for [Yandex Cloud with NAT Instance](/modules/cloud-provider-yandex/layouts.html#withnatinstance) is verified.
 
 {% offtopic title="List of preflight skip flags..." %}
 
-- `--preflight-skip-all-checks` — skip all preflight checks.
-- `--preflight-skip-ssh-forward-check` — skip the SSH forwarding check.
-- `--preflight-skip-availability-ports-check` — skip the check for the availability of required ports.
-- `--preflight-skip-resolving-localhost-check` — skip the `localhost` resolution check.
-- `--preflight-skip-deckhouse-version-check` — skip the DKP version check.
-- `--preflight-skip-registry-through-proxy` — skip the check for access to the registry through a proxy server.
-- `--preflight-skip-public-domain-template-check` — skip the check for the `publicDomain` template.
-- `--preflight-skip-ssh-credentials-check` — skip the check for SSH user credentials.
-- `--preflight-skip-registry-credential` — skip the check for registry access credentials.
-- `--preflight-skip-containerd-exist` — skip the check for the existence of `containerd`.
-- `--preflight-skip-python-checks` — skip the check for Python installation.
-- `--preflight-skip-sudo-allowed` — skip the check for `sudo` privileges.
-- `--preflight-skip-system-requirements-check` — skip the system requirements check.
-- `--preflight-skip-one-ssh-host` — skip the check for the number of specified SSH hosts.
-- `--preflight-cloud-api-accesibility-check` — skip the Cloud API accessibility check.
-- `--preflight-time-drift-check` — skip the time drift check.
-- `--preflight-skip-cidr-intersection` — skip the CIDR intersection check.
-- `--preflight-skip-deckhouse-user-check` — skip the `deckhouse` user existence check.
-- `--preflight-skip-yandex-with-nat-instance-check` — skip the Yandex Cloud with NAT Instance configuration check.
-- `--preflight-skip-dvp-kubeconfig` — skip DVP kubeconfig check.
+- `--preflight-skip-all-checks`: Skip all preflight checks.
+- `--preflight-skip-ssh-forward-check`: Skip the SSH forwarding check.
+- `--preflight-skip-availability-ports-check`: Skip the check for the availability of required ports.
+- `--preflight-skip-resolving-localhost-check`: Skip the `localhost` resolution check.
+- `--preflight-skip-deckhouse-version-check`: Skip the DKP version check.
+- `--preflight-skip-registry-through-proxy`: Skip the check for accessing the registry through a proxy server.
+- `--preflight-skip-public-domain-template-check`: Skip the check for the `publicDomain` template.
+- `--preflight-skip-ssh-credentials-check`: Skip the check for SSH user credentials.
+- `--preflight-skip-registry-credential`: Skip the check for registry access credentials.
+- `--preflight-skip-containerd-exist`: Skip the check for the existence of `containerd`.
+- `--preflight-skip-python-checks`: Skip the check for Python installation.
+- `--preflight-skip-sudo-allowed`: Skip the check for `sudo` privileges.
+- `--preflight-skip-system-requirements-check`: Skip the check for meeting system requirements.
+- `--preflight-skip-one-ssh-host`: Skip the check for the number of specified SSH hosts.
+- `--preflight-cloud-api-accesibility-check`: Skip the Cloud API accessibility check.
+- `--preflight-time-drift-check`: Skip the time drift check.
+- `--preflight-skip-cidr-intersection`: Skip the CIDR intersection check.
+- `--preflight-skip-deckhouse-user-check`: Skip the `deckhouse` user existence check.
+- `--preflight-skip-yandex-with-nat-instance-check`: Skip the Yandex Cloud with NAT Instance configuration check.
+- `--preflight-skip-dvp-kubeconfig`: Skip the DVP kubeconfig check.
 
-Example of using the preflight skip flag:
+Example of using a preflight skip flag:
 
   ```shell
       dhctl bootstrap \
@@ -655,37 +656,46 @@ Example of using the preflight skip flag:
 
 ### Aborting the installation
 
-If the installation was interrupted or issues occurred during the installation process in a supported cloud, there might be leftover resources created during the installation. To remove them, use the `dhctl bootstrap-phase abort` command within the installer container.
+If the installation was interrupted or issues occurred during the installation process in a supported cloud, there might be leftover resources created during the installation. To remove them, run the following command within the installer container:
+
+```shell
+dhctl bootstrap-phase abort
+```
 
 {% alert level="warning" %}
-The configuration file provided through the `--config` parameter when running the installer must be the same one used during the initial installation.
+The configuration file provided through the `--config` parameter when running the installer must be the same that was used during the initial installation.
 {% endalert %}
 
-## Air-Gapped environment, working via proxy and using external registries
+## Air-gapped environment, working via proxy and using external registries
 
 <div id="installing-deckhouse-kubernetes-platform-from-an-external-registry"></div>
 
 ### Installing from an external (third-party) registry
 
 {% alert level="warning" %}
-Available in the following editions: SE, SE+, EE, CSE Lite, CSE Pro.
+Available in the following editions: SE, SE+, EE.
 {% endalert %}
 
 DKP can be installed from an external container registry or via a proxy registry inside an air-gapped environment.
 
 {% alert level="warning" %}
-DKP supports only the Bearer token authentication scheme for container image registries.
+DKP supports only the Bearer-token authentication scheme for container registries.
 
-The following container image registries are tested and officially supported:
-{% for registry in site.data.supported_versions.registries %}
-[{{ registry[1].shortname }}]({{ registry[1].url }})
+The following container registries were verified and are guaranteed to work:
+{%- for registry in site.data.supported_versions.registries %}
+[{{- registry[1].shortname }}]({{- registry[1].url }})
 {%- unless forloop.last %}, {% endunless %}
 {%- endfor %}.
 
 When working with external registries, do not use an administrator account to access them from DKP. Create a dedicated read-only account limited to the required repository in the registry. Refer to an [example of creating](#nexus-configuration-notes) such an account.
 {% endalert %}
 
-To configure an external registry during installation, use [ModuleConfig `deckhouse`](#configuration-using-moduleconfig-deckhouse) **(starting with DKP 1.75)**. For DKP versions below 1.75, use InitConfiguration (example below). The InitConfiguration method is considered legacy.
+There are several options for configuring access to external container registries during cluster installation:
+
+- Starting from DKP version 1.75 — using the `deckhouse` ModuleConfig.
+- Prior to DKP version 1.75 — using InitConfiguration (considered a legacy method, refer to the example below).
+
+To configure access using the `deckhouse` ModuleConfig, specify the external registry access parameters in the [`settings.registry`](/modules/deckhouse/configuration.html#parameters-registry) section.
 
 <div id="configuration-using-moduleconfig-deckhouse"></div>
 
@@ -716,11 +726,10 @@ spec:
 
 Set the following parameters in `InitConfiguration`:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — the path to the DKP EE image in the external registry.  
-  Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`;
-* `registryDockerCfg: <BASE64>` — base64-encoded Docker config with access credentials to the external registry.
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee`: Path to the DKP EE image in an external registry. Example: `imagesRepo: registry.deckhouse.io/deckhouse/ee`.
+* `registryDockerCfg: <BASE64>`: Base64-encoded access credentials to the external registry.
 
-If anonymous access is allowed to DKP images in the external registry, the `registryDockerCfg` should look like this:
+If anonymous access is allowed to DKP images in the external registry, the `registryDockerCfg` should look as follows:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {}}}
@@ -728,18 +737,18 @@ If anonymous access is allowed to DKP images in the external registry, the `regi
 
 The provided value must be Base64-encoded.
 
-If authentication is required to access DKP images in the external registry, the `registryDockerCfg` should look like this:
+If authentication is required to access DKP images in the external registry, the `registryDockerCfg` should look as follows:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
 ```
 
-where:
+Where:
 
-* `<PROXY_USERNAME>` — the username for authenticating to `<PROXY_REGISTRY>`;
-* `<PROXY_PASSWORD>` — the password for authenticating to `<PROXY_REGISTRY>`;
-* `<PROXY_REGISTRY>` — the address of the external registry in the format `<HOSTNAME>[:PORT]`;
-* `<AUTH_BASE64>` — a Base64-encoded string of `<PROXY_USERNAME>:<PROXY_PASSWORD>`.
+* `<PROXY_USERNAME>`: Username for authenticating to `<PROXY_REGISTRY>`
+* `<PROXY_PASSWORD>`: Password for authenticating to `<PROXY_REGISTRY>`
+* `<PROXY_REGISTRY>`: Address of the external registry in the `<HOSTNAME>[:PORT]` format
+* `<AUTH_BASE64>`: A Base64-encoded string of `<PROXY_USERNAME>:<PROXY_PASSWORD>`
 
 The final value for `registryDockerCfg` must also be Base64-encoded.
 
@@ -749,37 +758,40 @@ You can use the following script to generate the `registryDockerCfg`:
 declare MYUSER='<PROXY_USERNAME>'
 declare MYPASSWORD='<PROXY_PASSWORD>'
 declare MYREGISTRY='<PROXY_REGISTRY>'
+
 MYAUTH=$(echo -n "$MYUSER:$MYPASSWORD" | base64 -w0)
 MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",\"password\":\"$MYPASSWORD\",\"auth\":\"$MYAUTH\"}}}" | base64 -w0)
+
 echo "$MYRESULTSTRING"
 ```
 
 To support non-standard configurations of external registries, InitConfiguration provides two additional parameters:
 
-* `registryCA` — a root certificate to validate the registry's certificate (used if the registry uses self-signed certificates);
-* `registryScheme` — the protocol used to access the registry (`HTTP` or `HTTPS`). Defaults to `HTTPS`.
+* `registryCA`: Root certificate to validate the registry's certificate (used if the registry uses self-signed certificates).
+* `registryScheme`: Protocol used to access the registry (`HTTP` or `HTTPS`). The default is `HTTPS`.
 {% endofftopic %}
 
 ### Nexus configuration notes
 
 {% alert level="warning" %}
-When interacting with a `docker`-type repository in Nexus (e.g., using `docker pull` or `docker push`), you must specify the address in the format `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>`.  
-Using the `URL` value from the Nexus repository settings is **not supported**.
+When interacting with a `docker`-type repository in Nexus (for example, using `docker pull` or `docker push` commands), you must specify the address in the following format: `<NEXUS_URL>:<REPOSITORY_PORT>/<PATH>`.
+
+Using the `URL` value from the Nexus repository settings is **not allowed**.
 {% endalert %}
 
 When using the [Nexus](https://github.com/sonatype/nexus-public) repository manager, the following requirements must be met:
 
-* A proxy Docker repository must be created (`Administration` → `Repository` → `Repositories`):
-  * Set the `Maximum metadata age` parameter to `0`.
+* A proxy Docker repository must be created ("Administration" → "Repository" → "Repositories"):
+  * The `Maximum metadata age` parameter is set to `0`.
 * Access control must be configured:
-  * Create a role named **Nexus** (`Administration` → `Security` → `Roles`) with the following privileges:
+  * Create a role named **Nexus** ("Administration" → "Security" → "Roles") with the following privileges:
     * `nx-repository-view-docker-<repository>-browse`
     * `nx-repository-view-docker-<repository>-read`
-  * Create a user (`Administration` → `Security` → `Users`) and assign them the **Nexus** role.
+  * Create a user ("Administration" → "Security" → "Users") and assign them the **Nexus** role.
 
-Setup Steps:
+To configure Nexus, follow these steps: 
 
-1. Create a proxy Docker repository (`Administration` → `Repository` → `Repositories`) that points to the [Deckhouse official container registry](https://registry.deckhouse.io/):  
+1. Create a proxy Docker repository ("Administration" → "Repository" → "Repositories") that points to the [public Deckhouse container registry](https://registry.deckhouse.io/).
    ![Create Proxy Docker Repository](../images/registry/nexus/nexus-repository.png)
 
 1. Fill out the repository creation form with the following values:
@@ -789,25 +801,24 @@ Setup Steps:
    * `Auto blocking enabled` and `Not found cache enabled`: can be disabled for debugging; otherwise, enable them.
    * `Maximum Metadata Age`: must be set to `0`.
    * If using a commercial edition of Deckhouse Kubernetes Platform, enable the `Authentication` checkbox and fill in the following:
-     * `Authentication Type`: `Username`
-     * `Username`: `license-token`
-     * `Password`: your Deckhouse Kubernetes Platform license key
+     * `Authentication Type`: `Username`.
+     * `Username`: `license-token`.
+     * `Password`: Your Deckhouse Kubernetes Platform license key.
 
    ![Example repository settings 1](../images/registry/nexus/nexus-repo-example-1.png)  
    ![Example repository settings 2](../images/registry/nexus/nexus-repo-example-2.png)  
    ![Example repository settings 3](../images/registry/nexus/nexus-repo-example-3.png)
 
 1. Configure Nexus access control to allow DKP to access the created repository:
-   * Create a **Nexus** role (`Administration` → `Security` → `Roles`) with the following privileges:  
-     `nx-repository-view-docker-<repository>-browse` and `nx-repository-view-docker-<repository>-read`.
+   * Create a **Nexus** role ("Administration" → "Security" → "Roles") with the following privileges: `nx-repository-view-docker-<repository>-browse` and `nx-repository-view-docker-<repository>-read`.
 
      ![Create Nexus Role](../images/registry/nexus/nexus-role.png)
 
-   * Create a user (`Administration` → `Security` → `Users`) and assign them the role created above.
+   * Create a user ("Administration" → "Security" → "Users") and assign them the role created above.
 
      ![Create Nexus User](../images/registry/nexus/nexus-user.png)
 
-   * Enable **Docker Bearer Token Realm** (`Administration` → `Security` → `Realms`):
+   * Enable **Docker Bearer Token Realm** ("Administration" → "Security" → "Realms"):
      * The **Docker Bearer Token Realm** must be in the **Active** list (on the right), not in **Available** (on the left).
      * If it is not in **Active**:
        1. Find it in the **Available** list.
@@ -817,7 +828,7 @@ Setup Steps:
 
      ![Docker Bearer Token Realm Configuration](../images/registry/nexus/nexus-realms.png)
 
-     As a result, DKP images will be available at a URL like: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
+As a result, DKP images will be available at a URL as follows: `https://<NEXUS_HOST>:<REPOSITORY_PORT>/deckhouse/ee:<d8s-version>`.
 
 ### Harbor configuration notes
 
@@ -874,13 +885,13 @@ You can check the current status of versions in the release channels at [release
     --license='<LICENSE_KEY>' /home/user/d8-bundle
   ```
 
-  where:
+  Where:
 
-  - `--source` — address of the Deckhouse Kubernetes Platform container registry.
-  - `<EDITION>` — Deckhouse Kubernetes Platform edition code (e.g., `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
-  - `--license` — parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
-  - `<LICENSE_KEY>` — Deckhouse Kubernetes Platform license key.
-  - `/home/user/d8-bundle` — directory where the image packages will be placed. It will be created if it does not exist.
+  - `--source`: Address of the Deckhouse container registry.
+  - `<EDITION>`: Deckhouse Kubernetes Platform edition code (for example, `ee`, `se`, `se-plus`). By default, the `--source` parameter refers to the Enterprise Edition (`ee`) and can be omitted.
+  - `--license`: Parameter for specifying the Deckhouse Kubernetes Platform license key for authentication in the official container registry.
+  - `<LICENSE_KEY>`: Deckhouse Kubernetes Platform license key.
+  - `/home/user/d8-bundle`: Directory where the image packages will be placed. It will be created if it does not exist.
 
   > If the image download is interrupted, rerunning the command will resume the download, provided no more than one day has passed since the interruption.
 
@@ -901,7 +912,7 @@ You can check the current status of versions in the release channels at [release
   /home/user/d8-bundle
   ```
 
-  Example command to download DKP images from an external image registry:
+  Example command to download DKP images from an external registry:
 
   ```shell
   d8 mirror pull \
@@ -968,33 +979,33 @@ You can check the current status of versions in the release channels at [release
 
 {% offtopic title="Other command parameters available for use:" %}
 
-- `--no-pull-resume` — force the download to start from the beginning;
-- `--no-platform` — skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`);
-- `--no-modules` — skip downloading module packages (`module-*.tar`);
-- `--no-security-db` — skip downloading the vulnerability scanner database package (`security.tar`);
-- `--include-module` / `-i` = `name[@Major.Minor]` — download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
+- `--no-pull-resume`: Force the download to start from the beginning.
+- `--no-platform`: Skip downloading the Deckhouse Kubernetes Platform image package (`platform.tar`).
+- `--no-modules`: Skip downloading module packages (`module-*.tar`).
+- `--no-security-db`: Skip downloading the vulnerability scanner database package (`security.tar`).
+- `--include-module` / `-i` = `name[@Major.Minor]`: Download only a specific set of modules using a whitelist (and, if needed, their minimum versions). Use multiple times to add more modules to the whitelist. These flags are ignored if used with `--no-modules`.
 
   The following syntax options are supported for specifying module versions:
-  - `module-name@1.3.0` — pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1;
-  - `module-name@~1.3.0` — pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3;
-  - `module-name@=v1.3.0` — pulls exact tag match v1.3.0, publishing to all release channels;
-  - `module-name@=bobV1` — pulls exact tag match "bobV1", publishing to all release channels;
-- `--exclude-module` / `-e` = `name` — skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
-- `--modules-path-suffix` — change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (e.g., full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`);
-- `--since-version=X.Y` — download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`;
-- `--deckhouse-tag` — download only the specific DKP version (regardless of release channels). Cannot be used with `--since-version`;
-- `--gost-digest` — calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball;
-- use the `--source-login` and `--source-password` parameters to authenticate with an external image registry;
-- `--images-bundle-chunk-size=N` — set the maximum file size (in GB) to split the image archive. As a result, instead of one image archive, a set of `.chunk` files will be created (e.g., `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (e.g., `d8.tar` for files `d8.tar.NNNN.chunk`);
-- `--tmp-dir` — path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
+  - `module-name@1.3.0`: Pulls versions with semver ^ constraint (^1.3.0), including v1.3.0, v1.3.3, v1.4.1.
+  - `module-name@~1.3.0`: Pulls versions with semver ~ constraint (>=1.3.0 <1.4.0), including only v1.3.0, v1.3.3.
+  - `module-name@=v1.3.0`: Pulls exact tag match v1.3.0, publishing to all release channels.
+  - `module-name@=bobV1`: Pulls exact tag match "bobV1", publishing to all release channels.
+- `--exclude-module` / `-e` = `name`: Skip downloading a specific set of modules using a blacklist. Use multiple times to add more modules to the blacklist. Ignored if `--no-modules` or `--include-module` is used;
+- `--modules-path-suffix`: Change the suffix of the path to the module repository in the main DKP registry. The default suffix is `/modules` (for example, the full path to the module repo will be `registry.deckhouse.io/deckhouse/EDITION/modules`).
+- `--since-version=X.Y`: Download all DKP versions starting from the specified minor version. This option is ignored if the specified version is higher than the version on the Rock Solid release channel. Cannot be used with `--deckhouse-tag`.
+- `--deckhouse-tag`: Download only the specific DKP version (regardless of release channels). Cannot be used with `--since-version`.
+- `--gost-digest`: Calculate the checksum of the final DKP image bundle using the GOST R 34.11-2012 (Streebog) algorithm. The checksum will be displayed and written to a `.tar.gostsum` file in the folder containing the image tarball.
+- `--source-login` and `--source-password`: Authentication data to access the external registry.
+- `--images-bundle-chunk-size=N`: The maximum file size (in GB) to split the image archive into. As a result, instead of one image archive, a set of CHUNK files will be created (for example, `d8.tar.NNNN.chunk`). To upload images from such a set, use the file name without the `.NNNN.chunk` suffix (for example, `d8.tar` for files `d8.tar.NNNN.chunk`).
+- `--tmp-dir`: Path to a directory for temporary files used during image download and upload. All processing is done in this directory. It must have enough free disk space to hold the entire image bundle. Defaults to the `.tmp` subdirectory in the image bundle directory.
 
 Additional configuration parameters for the `d8 mirror` command family are available as environment variables:
 
-- `HTTP_PROXY` / `HTTPS_PROXY` — proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable.
-- `NO_PROXY` — comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying.
-- `SSL_CERT_FILE` — path to an SSL certificate. If set, system certificates are not used.
-- `SSL_CERT_DIR` — colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
-- `MIRROR_BYPASS_ACCESS_CHECKS` — set this variable to `1` to disable credential validation for the registry.
+- `HTTP_PROXY` / `HTTPS_PROXY`: Proxy server URL for HTTP(S) requests not listed in the `$NO_PROXY` variable.
+- `NO_PROXY`: Comma-separated list of hosts to exclude from proxying. Each entry can be an IP (`1.2.3.4`), CIDR (`1.2.3.4/8`), domain, or wildcard (`*`). IPs and domains may include a port (`1.2.3.4:80`). A domain matches itself and all subdomains. A domain starting with a `.` matches only subdomains. For example, `foo.com` matches `foo.com` and `bar.foo.com`; `.y.com` matches `x.y.com` but not `y.com`. The `*` disables proxying.
+- `SSL_CERT_FILE`: Path to an SSL certificate. If set, system certificates are not used.
+- `SSL_CERT_DIR`: Colon-separated list of directories to search for SSL certificate files. If set, system certificates are not used. [More info...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
+- `MIRROR_BYPASS_ACCESS_CHECKS`: Set this variable to `1` to disable credential validation for the registry.
 {% endofftopic %}
 
 - On the host with access to the container registry where DKP images should be uploaded, copy the downloaded DKP image bundle and install the [Deckhouse CLI](../cli/d8/).
@@ -1002,7 +1013,7 @@ Additional configuration parameters for the `d8 mirror` command family are avail
 - Upload DKP images to the registry using the `d8 mirror push` command.
 
   The `d8 mirror push` command uploads images from all packages located in the specified directory.
-  If you only want to push specific packages, you can either run the command separately for each `.tar` image bundle by specifying the direct path to it,
+  If you only want to push specific packages, you can either run the command separately for each TAR image bundle by specifying the direct path to it,
   or temporarily remove the `.tar` extension from unwanted files or move them out of the directory.
 
   Example command to upload image packages from the `/mnt/MEDIA/d8-images` directory (provide authentication data if required):
@@ -1012,15 +1023,15 @@ Additional configuration parameters for the `d8 mirror` command family are avail
     --registry-login='<USER>' --registry-password='<PASSWORD>'
   ```
 
-  Before uploading the images, make sure that the target path in the container registry exists (in the example — `/sys/deckhouse`) and that the account used has write permissions.
+  Before uploading the images, make sure that the target path in the container registry exists (in the example, `/sys/deckhouse`) and that the account used has write permissions.
 
   If you're using Harbor, you won't be able to upload images to the root of a project. Use a dedicated repository within the project to store DKP images.
 
-- After uploading the images to the registry, you can proceed with installing DKP. Use the [Quick Start Guide](/products/kubernetes-platform/gs/bm-private/step2.html).
+- After uploading the images to the registry, you can proceed with installing DKP. Use the [getting-started guide](/products/kubernetes-platform/gs/bm-private/step2.html).
 
   When running the installer, use the address of your own image registry (where the images were uploaded earlier) instead of the official public DKP container registry. For the example above, the installer image address will be `corp.company.com:5000/sys/deckhouse/install:stable` instead of `registry.deckhouse.io/deckhouse/ee/install:stable`.
 
-  In the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of ModuleConfig `deckhouse`, use your registry address and authorization data (starting with DKP 1.75). The legacy method is to use [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (parameters [imagesRepo](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [registryDockerCfg](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
+  In the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of ModuleConfig `deckhouse`, use your registry address and authorization data (starting with DKP 1.75). The legacy method is to use [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (parameters [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
 
 ### Creating a cluster and running DKP without using release channels
 
@@ -1031,15 +1042,15 @@ This method should only be used if your private (isolated) registry does not con
 If you need to install DKP with automatic updates disabled:
 
 1. Use the installer image tag corresponding to the desired version. For example, to install release `v1.44.3`, use the image `your.private.registry.com/deckhouse/install:v1.44.3`.
-1. Specify the appropriate version number in the [deckhouse.devBranch](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).  
-   > **Do not specify** the [deckhouse.releaseChannel](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in the [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
+1. Specify the appropriate version number in the [`deckhouse.devBranch`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-devbranch) parameter of [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).  
+   > **Do not specify** the [`deckhouse.releaseChannel`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-releasechannel) parameter in [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration).
 
-If you want to disable automatic updates in an already running Deckhouse installation (including patch updates), remove the [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
+If you want to disable automatic updates in an already running DKP installation (including patch updates), remove the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter from the `deckhouse` module configuration.
 
 ### Using a proxy server
 
 {% alert level="warning" %}
-Available in the following editions: BE, SE, SE+, EE, CSE Lite, CSE Pro.
+Available in the following editions: BE, SE, SE+, EE.
 {% endalert %}
 
 {% offtopic title="Example steps for configuring a proxy server using Squid..." %}
@@ -1080,7 +1091,7 @@ Available in the following editions: BE, SE, SE+, EE, CSE Lite, CSE Pro.
 
 {% endofftopic %}
 
-To configure DKP to use a proxy, use the ClusterConfiguration [proxy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter.
+To configure DKP to work with a proxy server, use the [`proxy`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-proxy) parameter of the ClusterConfiguration resource.
 
 Example:
 
@@ -1105,8 +1116,8 @@ proxy:
 
 ### Automatic proxy variable loading for users in CLI
 
-Starting from DKP v1.67, the `/etc/profile.d/d8-system-proxy.sh` file is no longer configured to set proxy variables for users.  
-To automatically load proxy variables for users in CLI, use [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
+Starting from version 1.67, the `/etc/profile.d/d8-system-proxy.sh` file is no longer configured in DKP to set proxy variables for users.  
+To automatically load proxy variables for users in CLI, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
