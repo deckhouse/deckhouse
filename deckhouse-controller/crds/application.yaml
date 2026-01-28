@@ -23,11 +23,11 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
-    - jsonPath: .spec.packageVersion
+    - jsonPath: .spec.version
       name: Version
       type: string
-    - jsonPath: .spec.packageRepositoryName
-      name: Repository
+    - jsonPath: .spec.packageRepository
+      name: Registry
       priority: 1
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
@@ -39,7 +39,7 @@ spec:
     - jsonPath: .status.resourceConditions[?(@.type=='Processed')].status
       name: Processed
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+    - jsonPath: .status.resourceConditions[?(@.type=='Processed')].message
       name: Message
       type: string
     name: v1alpha1

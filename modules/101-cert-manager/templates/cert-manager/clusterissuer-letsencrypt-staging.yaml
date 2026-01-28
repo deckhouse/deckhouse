@@ -37,5 +37,9 @@ spec:
                 - key: "dedicated.deckhouse.io"
                   operator: "Equal"
                   value: "cert-manager"
+              {{- if and (.Values.certManager) (.Values.certManager.letsencryptStaging) (hasKey .Values.certManager.letsencryptStaging "resources")  }}
+              resources:
+              {{ .Values.certManager.letsencryptStaging.resources | toYaml | nindent 16 }}
+              {{- end }}                                              
 {{- end }}
 

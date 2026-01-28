@@ -215,6 +215,9 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 		return settingscheck.Result{}, err
 	}
 
+	// apply defaults from config values spec
+	settings = a.values.ApplyDefaultsConfigValues(settings)
+
 	// no need to call the settings check if nothing changed
 	if a.values.GetConfigChecksum() == settings.Checksum() {
 		return settingscheck.Result{Valid: true}, nil
@@ -354,7 +357,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = a.values.ApplyPatch(*valuesPatch); err != nil {
+		if err = a.values.ApplyValuesPatch(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

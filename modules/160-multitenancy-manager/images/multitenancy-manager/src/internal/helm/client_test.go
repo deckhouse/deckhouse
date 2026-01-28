@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/engine"
@@ -36,6 +37,21 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/internal/validate"
 )
+
+func parseManifest(raw string) (*unstructured.Unstructured, bool, error) {
+	object := new(unstructured.Unstructured)
+	if err := yaml.Unmarshal([]byte(raw), object); err != nil {
+		return nil, false, err
+	}
+	if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		return nil, false, nil
+	}
+
+	// Normalize fields that can differ between serializers/versions.
+	unstructured.RemoveNestedField(object.Object, "metadata", "creationTimestamp")
+
+	return object, true, nil
+}
 
 func Test(t *testing.T) {
 	templates, err := parseHelmTemplates("../../helmlib")
@@ -83,35 +99,35 @@ func test(templates map[string][]byte, basePath string) error {
 	}
 	expected := releaseutil.SplitManifests(string(rawExpected))
 
-	renderedMap := make(map[string]interface{})
+	renderedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range rendered {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			return err
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			return parseErr
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
-	expectedMap := make(map[string]string)
+	expectedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range expected {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			return err
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			return parseErr
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	for name := range renderedMap {
 		if _, ok := expectedMap[name]; !ok {
 			return fmt.Errorf("rendered manifests don't match the expected manifests: resource '%s' not found", name)
 		}
-		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			fmt.Println(diff)
 			return fmt.Errorf("rendered manifest '%s' doesn't match the expected manifest: %s", name, diff)
 		}
@@ -121,7 +137,7 @@ func test(templates map[string][]byte, basePath string) error {
 		if _, ok := renderedMap[name]; !ok {
 			return fmt.Errorf("expected manifests don't match the rendered manifests: resource '%s' not found", name)
 		}
-		if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			fmt.Println(diff)
 			return fmt.Errorf("expected '%s' manifest doesn't match the rendered manifests: %s", name, diff)
 		}
@@ -146,16 +162,16 @@ func TestUnmanagedResourcesFirstInstall(t *testing.T) {
 	assert.Nil(t, err)
 
 	rendered := releaseutil.SplitManifests(buf.String())
-	renderedMap := make(map[string]interface{})
+	renderedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range rendered {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal: %v", parseErr)
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	// Check that unmanaged resource is present
@@ -165,11 +181,7 @@ func TestUnmanagedResourcesFirstInstall(t *testing.T) {
 	}
 
 	// Verify unmanaged resource has correct annotations and labels
-	unmanagedRaw := renderedMap[unmanagedKey].(string)
-	unmanagedObj := new(unstructured.Unstructured)
-	if err = yaml.Unmarshal([]byte(unmanagedRaw), unmanagedObj); err != nil {
-		t.Fatalf("failed to unmarshal unmanaged resource: %v", err)
-	}
+	unmanagedObj := renderedMap[unmanagedKey]
 
 	annotations := unmanagedObj.GetAnnotations()
 	if annotations["helm.sh/resource-policy"] != "keep" {
@@ -189,22 +201,22 @@ func TestUnmanagedResourcesFirstInstall(t *testing.T) {
 	assert.Nil(t, err)
 	expected := releaseutil.SplitManifests(string(rawExpected))
 
-	expectedMap := make(map[string]string)
+	expectedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range expected {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			t.Fatalf("failed to unmarshal expected: %v", err)
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal expected: %v", parseErr)
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	for name := range renderedMap {
 		if _, ok := expectedMap[name]; !ok {
 			t.Errorf("rendered resource '%s' not found in expected first install manifests", name)
-		} else if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		} else if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("rendered manifest '%s' doesn't match expected first install manifest: %s", name, diff)
 		}
 	}
@@ -232,16 +244,16 @@ func TestUnmanagedResourcesUpgrade(t *testing.T) {
 	assert.Nil(t, err)
 
 	rendered := releaseutil.SplitManifests(buf.String())
-	renderedMap := make(map[string]interface{})
+	renderedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range rendered {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			t.Fatalf("failed to unmarshal: %v", err)
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal: %v", parseErr)
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		renderedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	// Check that unmanaged resource is NOT present
@@ -255,22 +267,22 @@ func TestUnmanagedResourcesUpgrade(t *testing.T) {
 	assert.Nil(t, err)
 	expected := releaseutil.SplitManifests(string(rawExpected))
 
-	expectedMap := make(map[string]string)
+	expectedMap := make(map[string]*unstructured.Unstructured)
 	for _, raw := range expected {
-		object := new(unstructured.Unstructured)
-		if err = yaml.Unmarshal([]byte(raw), object); err != nil {
-			t.Fatalf("failed to unmarshal expected: %v", err)
+		object, ok, parseErr := parseManifest(raw)
+		if parseErr != nil {
+			t.Fatalf("failed to unmarshal expected: %v", parseErr)
 		}
-		if object.GetAPIVersion() == "" || object.GetKind() == "" {
+		if !ok {
 			continue
 		}
-		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = raw
+		expectedMap[fmt.Sprintf("%s.%s.%s.%s", object.GetAPIVersion(), object.GetKind(), object.GetNamespace(), object.GetName())] = object
 	}
 
 	for name := range renderedMap {
 		if _, ok := expectedMap[name]; !ok {
 			t.Errorf("rendered resource '%s' not found in expected upgrade manifests", name)
-		} else if diff := cmp.Diff(renderedMap[name], expectedMap[name]); diff != "" {
+		} else if diff := cmp.Diff(renderedMap[name].Object, expectedMap[name].Object, cmpopts.EquateEmpty()); diff != "" {
 			t.Errorf("rendered manifest '%s' doesn't match expected upgrade manifest: %s", name, diff)
 		}
 	}
@@ -298,10 +310,7 @@ func read[T any](path string) (*T, error) {
 }
 
 func render(templates map[string][]byte, project *v1alpha2.Project, projectTemplate *v1alpha1.ProjectTemplate, isFirstInstall bool) (*bytes.Buffer, error) {
-	ch, err := buildChart(templates, project.Name)
-	if err != nil {
-		return nil, err
-	}
+	ch := buildChart(templates, project.Name)
 
 	valuesToRender, err := chartutil.ToRenderValues(ch, buildValues(project, projectTemplate), chartutil.ReleaseOptions{
 		Name:      project.Name,

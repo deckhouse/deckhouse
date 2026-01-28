@@ -28,6 +28,8 @@ spec:
         cpu: 50m
         memory: 50Mi
   {{- end }}
+
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
@@ -43,7 +45,7 @@ spec:
         description: |
           User Authz Webhook need to run on hostNetwork for fault tolerance. Architectural feature.
           The pod runs on the host network to ensure independence from the state of the "Service" object in k8s.
-          
+{{- end }}   
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -75,6 +77,15 @@ spec:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "webhook") }}
+        # Use node-local kube-apiserver endpoint (hostNetwork) instead of ClusterIP "kubernetes" service.
+        # Some environments may block access to ClusterIP from hostNetwork pods, which makes the webhook unstable.
+        env:
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
         volumeMounts:
         - mountPath: /etc/user-authz-webhook/
           name: user-authz-webhook-config

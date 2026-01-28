@@ -16,9 +16,10 @@ metadata:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
 spec:
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.3
+  package:
+    name: test
+    repositoryName: deckhouse
+    version: v1.0.3
 status:
   conditions:
   - lastProbeTime: null
@@ -34,9 +35,6 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

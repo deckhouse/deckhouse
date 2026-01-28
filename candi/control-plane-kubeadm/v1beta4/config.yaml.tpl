@@ -23,9 +23,6 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
     {{- $schedulerFeatureGates = append $schedulerFeatureGates (printf "%s=true" .) -}}
   {{- end -}}
 {{- end -}}
-{{- if semverCompare "<1.30" .clusterConfiguration.kubernetesVersion -}}
-  {{- $apiserverFeatureGates = append $apiserverFeatureGates "StructuredAuthorizationConfiguration=true" -}}
-{{- end -}}
 {{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
 {{- $controllerManagerFeatureGatesStr := $controllerManagerFeatureGates | uniq | join "," -}}
 {{- $schedulerFeatureGatesStr := $schedulerFeatureGates | uniq | join "," -}}

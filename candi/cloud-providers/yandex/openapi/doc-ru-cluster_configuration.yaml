@@ -35,7 +35,7 @@ apiVersions:
               Порядок указания зон не влияет на порядок создания узлов. Узлы будут размещаться в зонах в алфавитном порядке: первый узел — в зоне, стоящей первой по алфавиту, второй — во второй зоне и так далее. Если количество зон меньше числа узлов, то после размещения узла в последней зоне по алфавиту распределение продолжится сначала списка.
           instanceClass:
             description: |
-              Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Частичное содержимое полей [YandexInstanceClass](cr.html#yandexinstanceclass).
             properties: &instanceClassProperties_ru
               platform:
                 description: |
@@ -143,7 +143,7 @@ apiVersions:
                     > Доступны только поля `effect`, `key`, `values`.
             instanceClass:
               description: |
-                Частичное содержимое полей [YandexInstanceClass](https://deckhouse.ru/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Частичное содержимое полей [YandexInstanceClass](cr.html#yandexinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 coreFraction:

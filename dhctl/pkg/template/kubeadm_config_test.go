@@ -163,7 +163,7 @@ func testAPIServerConfiguration(t *testing.T) {
 	}{
 		{
 			name:       "v1beta3 configuration",
-			k8sVersion: "1.29",
+			k8sVersion: "1.30",
 		},
 		{
 			name:       "v1beta4 configuration",
@@ -189,10 +189,6 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Error("Expected authorization-config not found")
 				}
 
-				// For Kubernetes < 1.30, StructuredAuthorizationConfiguration is feature-gated and must be enabled explicitly.
-				if tt.k8sVersion == "1.29" && !strings.Contains(result, "StructuredAuthorizationConfiguration=true") {
-					t.Error("Expected StructuredAuthorizationConfiguration feature gate to be enabled for Kubernetes 1.29")
-				}
 			})
 
 			t.Run("Authentication Webhook", func(t *testing.T) {
