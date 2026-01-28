@@ -9,12 +9,12 @@ clusterType: Static
 # [<ru>] Адресное пространство подов кластера.
 # [<en>] You might consider changing this. Ensure that there are no overlaps with serviceSubnetCIDR and internalNetworkCIDRs.
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с serviceSubnetCIDR и internalNetworkCIDRs.
-podSubnetCIDR: 10.115.0.0/16
+podSubnetCIDR: <POD_SUBNET_CIDR>
 # [<en>] Address space of the cluster's services.
 # [<ru>] Адресное пространство сети сервисов кластера.
 # [<en>] You might consider changing this. Ensure that there are no overlaps with podSubnetCIDR and internalNetworkCIDRs.
 # [<ru>] Возможно, захотите изменить. Убедитесь, что не будет пересечений с podSubnetCIDR и internalNetworkCIDRs.
-serviceSubnetCIDR: 10.225.0.0/16
+serviceSubnetCIDR: <SERVICE_SUBNET_CIDR>
 kubernetesVersion: "Automatic"
 # [<en>] Cluster domain (used for local routing).
 # [<ru>] Домен кластера.
@@ -74,9 +74,6 @@ spec:
       # [<ru>] Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
       # [<ru>] Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
       publicDomainTemplate: "%s.example.com"
-    # [<en>] Default StorageClass for the cluster.
-    # [<ru>] StorageClass по умолчанию для кластера.
-    defaultClusterStorageClass: nfs-storage-class
 ---
 # [<en>] user-authn module settings.
 # [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/user-authn/configuration.html
@@ -142,93 +139,6 @@ metadata:
 spec:
   enabled: true
   version: 1
----
-# [<en>] csi-nfs module settings.
-# [<en>] https://deckhouse.io/modules/csi-nfs/configuration.html
-# [<ru>] Настройки модуля csi-nfs.
-# [<ru>] https://deckhouse.ru/modules/csi-nfs/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: csi-nfs
-spec:
-  enabled: true
-  version: 1
----
-# [<en>] virtualization module settings.
-# [<en>] https://deckhouse.io/modules/virtualization/configuration.html
-# [<ru>] Настройки модуля virtualization.
-# [<ru>] https://deckhouse.ru/modules/virtualization/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: virtualization
-spec:
-  enabled: true
-  version: 1
-  settings:
-    dvcr:
-      storage:
-        persistentVolumeClaim:
-          size: 50G
-        type: PersistentVolumeClaim
-    # [<en>] Subnets from which IP addresses will be assigned to virtual machines.
-    # [<en>] These subnets MUST NOT overlap with node subnets, service subnets, or pod subnets.
-    # [<en>] Replace with your own subnets if needed.
-    # [<ru>] Подсети, из которых будут назначаться IP-адреса виртуальным машинам.
-    # [<ru>] Эти подсети НЕ ДОЛЖНЫ пересекаться с подсетями узлов, сервисов или подов.
-    # [<ru>] Замените на свои подсети при необходимости.
-    virtualMachineCIDRs:
-    - 10.66.10.0/24
-    - 10.66.20.0/24
-    - 10.66.30.0/24
----
-# [<en>] NFS StorageClass configuration.
-# [<en>] https://deckhouse.io/modules/csi-nfs/stable/cr.html#nfsstorageclass
-# [<ru>] Конфигурация NFS StorageClass.
-# [<ru>] https://deckhouse.ru/modules/csi-nfs/stable/cr.html#nfsstorageclass
-apiVersion: storage.deckhouse.io/v1alpha1
-kind: NFSStorageClass
-metadata:
-  name: nfs-storage-class
-spec:
-  connection:
-    host: <NFS_HOST>
-    share: <NFS_SHARE>
-    nfsVersion: "4.1"
-  reclaimPolicy: Delete
-  volumeBindingMode: WaitForFirstConsumer
----
-# [<en>] Section containing the parameters of Ingress NGINX Controller.
-# [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
-# [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/modules/ingress-nginx/cr.html
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: nginx
-spec:
-  ingressClass: nginx
-  # [<en>] The way traffic goes to cluster from the outer network.
-  # [<ru>] Способ поступления трафика из внешнего мира.
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-  # [<en>] Describes on which nodes the Ingress Controller will be located.
-  # [<ru>] Описывает, на каких узлах будет находиться Ingress-контроллер.
-  # [<en>] You might consider changing this.
-  # [<en>] More examples here.
-  # [<en>] https://deckhouse.io/products/virtualization-platform/documentation/v1/modules/ingress-nginx/examples.html
-  # [<ru>] Возможно, захотите изменить.
-  # [<ru>] Больше примеров здесь
-  # [<ru>] https://deckhouse.ru/products/virtualization-platform/documentation/v1/modules/ingress-nginx/examples.html
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/control-plane
-    operator: Exists
 ---
 # [<en>] Static cluster settings.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#staticclusterconfiguration
