@@ -1,0 +1,29 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: Fixed VM deletion timeout and improved memory validation error reporting
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17587
+cloud-provider-vcd:
+  fixes:
+    - summary: fix the interaction of legacy and non-legacy components with the API
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17642
+dhctl:
+  fixes:
+    - summary: Extended and fixed custom storage classes list
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17526
+docs:
+  features:
+    - summary: Add the enableNote display to the external modules configuration page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17603
+  fixes:
+    - summary: Fixed typo in the OpenStack integration section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17681
+    - summary: Added Docker Bearer Token Realm configuration steps for Nexus registry setup.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17615
+    - summary: Document NAT instance deployment zones for different subnet configurations
+      pull_request: https://github.com/deckhouse/deckhouse/pull/15382
+      impact: Improved documentation clarity for Yandex Cloud NAT instance deployment scenarios
+monitoring-kubernetes:
+  fixes:
+    - summary: fix kube_persistentvolume_is_local recording rule for not-bound PVCs
+      pull_request: https://github.com/deckhouse/deckhouse/pull/17638
+
