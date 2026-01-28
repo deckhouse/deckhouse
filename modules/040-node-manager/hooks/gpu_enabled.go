@@ -18,6 +18,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
@@ -58,9 +59,11 @@ var _ = sdk.RegisterFunc(
 	setGPULabel)
 
 type nodeGroupInfo struct {
-	Name       string
-	GpuSharing string
-	MIGConfig  *string
+	Name            string
+	GpuSharing      string
+	MIGConfig       *string
+	ResolvedMIGName string
+	CustomConfigs   []ngv1.MigCustomConfig
 }
 
 type NodeInfo struct {
@@ -82,6 +85,9 @@ func filterGPUSpec(obj *unstructured.Unstructured) (go_hook.FilterResult, error)
 
 	if nodeGroup.Spec.GPU.Mig != nil && nodeGroup.Spec.GPU.Mig.PartedConfig != nil {
 		ngi.MIGConfig = nodeGroup.Spec.GPU.Mig.PartedConfig
+		if nodeGroup.Spec.GPU.Mig.CustomConfigs != nil {
+			ngi.CustomConfigs = nodeGroup.Spec.GPU.Mig.CustomConfigs
+		}
 	}
 
 	return ngi, nil
@@ -101,8 +107,24 @@ func nodeFilterFunc(obj *unstructured.Unstructured) (go_hook.FilterResult, error
 }
 
 func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
+	// Skip if gpu module is enabled - it handles GPU labeling itself
+	if input.Values.Exists("global.enabledModules") {
+		for _, module := range input.Values.Get("global.enabledModules").Array() {
+			if module.String() == "gpu" {
+				input.Logger.Info("Skipping GPU labeling hook: gpu module is enabled")
+				return nil
+			}
+		}
+	}
+
 	ngs := input.Snapshots.Get("nodegroups")
 	nodes := input.Snapshots.Get("nodes")
+	resolvedNames := map[string]string{}
+	if input.Values.Exists("nodeManager.internal.customMIGNames") {
+		for k, v := range input.Values.Get("nodeManager.internal.customMIGNames").Map() {
+			resolvedNames[k] = v.String()
+		}
+	}
 
 	for _, ngSnapshot := range ngs {
 		var ng nodeGroupInfo
@@ -112,6 +134,9 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 		}
 		if ng.GpuSharing == "" {
 			continue
+		}
+		if val, ok := resolvedNames[ng.Name]; ok {
+			ng.ResolvedMIGName = val
 		}
 		input.Logger.Info("Processing GPU nodegroup %s", ng.Name)
 
@@ -130,7 +155,14 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 			labels := map[string]interface{}{}
 
 			if ng.MIGConfig != nil {
-				labels[migConfigLabel] = ng.MIGConfig
+				migConfigName := *ng.MIGConfig
+				if migConfigName == "custom" {
+					if ng.ResolvedMIGName == "" {
+						return fmt.Errorf("cannot resolve MIG config name for nodegroup %s", ng.Name)
+					}
+					migConfigName = ng.ResolvedMIGName
+				}
+				labels[migConfigLabel] = migConfigName
 			} else {
 				// remove MIG label if it's set and it's not a MIG node
 				if _, ok := node.Labels[migConfigLabel]; ok {

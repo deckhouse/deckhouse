@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- if ($ng).gpu -}}
 
@@ -205,4 +206,5 @@ spec:
         - name: config
           emptyDir: {}
   {{- end }}
+{{- end }}
 {{- end }}

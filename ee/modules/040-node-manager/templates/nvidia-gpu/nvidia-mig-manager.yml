@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
   {{- $kubernetesSemVer := semver .Values.global.discovery.kubernetesVersion }}
   {{- $nmmImageName := join "" (list "nvidiaMigManager" $kubernetesSemVer.Major $kubernetesSemVer.Minor ) }}
@@ -134,4 +135,5 @@ spec:
         configMap:
           name: mig-parted-reconfigure-script
           defaultMode: 0755
+{{- end }}
 {{- end }}

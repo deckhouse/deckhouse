@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- $prometheusRules := list
   "monitoring/prometheus-rules/caps-nodes.tpl"
   "monitoring/prometheus-rules/cloud-data-discovery.tpl"
@@ -22,3 +23,9 @@
 {{- end }}
 
 {{- include "helm_lib_prometheus_rules" (list . "d8-cloud-instance-manager" $prometheusRules) }}
+
+{{- if include "nvidia_gpu_enabled" . }}
+  {{- include "helm_lib_grafana_dashboard_definitions" . }}
+{{- end }}
+
+{{- end }}

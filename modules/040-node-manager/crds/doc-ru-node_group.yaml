@@ -507,7 +507,36 @@ spec:
                       properties:
                         partedConfig:
                           description: |
-                            Имя используемой конфигурация MIG.
+                            Имя используемой конфигурации MIG.
+
+                            Поддерживаются стандартные профили `all-*` (одинаковое разбиение для всех GPU) или значение `custom`, позволяющее задать разбиение отдельно для каждой карты.
+                          x-doc-default: all-1g.5gb
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
+                      customConfigs:
+                        description: |
+                          Кастомное разбиение MIG по индексам GPU (используется только при `partedConfig: custom`).
+                          Массив устройств (map по `index`), каждый элемент указывает на GPU по индексу и перечисляет создаваемые срезы:
+                          - `index` — индекс GPU на узле (начиная с 0);
+                          - `slices` — список срезов:
+                            - `profile` — имя MIG-профиля;
+                            - `count` — количество срезов выбранного профиля (целое, минимум 1, максимум 7, по умолчанию 1).
+                        x-doc-examples:
+                          - profile: 3g.40gb
+                            count: 2
+                          - profile: 1g.10gb.me
+                            count: 1
                     timeSlicing:
                       description: |
                         Параметры для стратегии `TimeSlicing`.
