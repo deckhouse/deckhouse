@@ -23,6 +23,7 @@ import (
 	"time"
 
 	dvpapi "dvp-common/api"
+
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -303,6 +304,8 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
 			logger.Error(err, "Corresponding VirtualMachine resource was not found, will consider this VM as properly deleted")
+
+			controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("cannot get VirtualMachine: %w", err)
@@ -324,7 +327,10 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	}
 
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
-		return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
+		if !errors.Is(err, cloudprovider.InstanceNotFound) {
+			return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
+		}
+		logger.Info("VirtualMachine already deleted during DeleteVM call, continuing")
 	}
 
 	merr := &multierror.Error{}
