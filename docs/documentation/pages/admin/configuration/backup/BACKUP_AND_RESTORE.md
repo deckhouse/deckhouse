@@ -126,7 +126,7 @@ To properly restore a multi-master cluster, follow these steps:
 1. Switch the cluster to single master mode:
 
    - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
-   - In a static cluster, manually remove the additional master nodes.
+   - In a static cluster, remove any unnecessary master nodes from the control-plane role by following the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself), and then remove them from the cluster.
    - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
    - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
 
