@@ -6,22 +6,6 @@
   license: Apache License 2.0
   version: 1.9.3
 
-- id: flant/addon-operator
-  name: Addon operator
-  link: https://github.com/flant/addon-operator
-  description: A tool to combine Helm charts with hooks and values storage to transform charts into smart modules that configure themselves and respond to changes in the cluster.
-  logo: /images/logos/addon-operator-small.png
-  license: Apache License 2.0
-  version: 1.18.5
-
-- id: helm/helm
-  name: Helm
-  link: https://github.com/helm/helm
-  description: The package manager for Kubernetes
-  logo: https://helm.sh/img/helm.svg
-  license: Apache License 2.0
-  version: 3.17.4
-
 - id: stedolan/jq
   name: JQ
   link: https://github.com/stedolan/jq
