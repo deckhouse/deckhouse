@@ -70,7 +70,7 @@ func CreateLogDestinationTransforms(name string, dest v1alpha1.ClusterLogDestina
 	case v1alpha1.DestLoki:
 	}
 	transforms = append(transforms, CleanUpParsedDataTransform())
-	dTransforms, err := BuildFromMapSlice("destination", name, transforms)
+	dTransforms, err := BuildFromMapSlice("destination", name, sourceType, transforms)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build destination transforms: %w", err)
 	}

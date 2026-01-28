@@ -93,7 +93,7 @@ func TestTransformSnippet(t *testing.T) {
 
 		transforms = append(transforms, filterTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		tr, err := BuildFromMapSlice("prefix", "testit", "", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 6)
@@ -121,7 +121,7 @@ func TestTransformSnippet(t *testing.T) {
 
 		transforms = append(transforms, ExtraFieldTransform(extraLabels))
 
-		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		tr, err := BuildFromMapSlice("prefix", "testit", "", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
@@ -140,7 +140,7 @@ func TestTransformSnippet(t *testing.T) {
 		transforms := make([]apis.LogTransform, 0)
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		tr, err := BuildFromMapSlice("prefix", "testit", "", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 0)
@@ -159,7 +159,7 @@ func TestTransformSnippet(t *testing.T) {
 
 		transforms = append(transforms, multilineTransforms...)
 
-		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		tr, err := BuildFromMapSlice("prefix", "testit", "", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 1)
@@ -202,7 +202,7 @@ func TestTransformSnippet(t *testing.T) {
 			transforms = append(transforms, multilineTransforms...)
 		}
 
-		tr, err := BuildFromMapSlice("prefix", "testit", transforms)
+		tr, err := BuildFromMapSlice("prefix", "testit", "", transforms)
 		require.NoError(t, err)
 
 		assert.Len(t, tr, 4)
