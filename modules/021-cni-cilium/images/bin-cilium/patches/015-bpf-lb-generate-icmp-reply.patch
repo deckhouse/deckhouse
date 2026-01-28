@@ -322,7 +322,7 @@ index 15dacfa4df..28cff178ee 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..4569bc6b04 100644
+index 0142716855..17c2b69f46 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -2679,6 +2679,85 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
@@ -420,7 +420,7 @@ index 0142716855..4569bc6b04 100644
  	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
  	if (IS_ERR(ret)) {
  		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
-@@ -2714,13 +2793,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,13 +2793,37 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -446,13 +446,15 @@ index 0142716855..4569bc6b04 100644
  					src_sec_identity, punt_to_stack, ext_err);
  	} else {
 +		if(ip4->protocol == IPPROTO_ICMP) {
-+			key.dport = bpf_htons(8000);
++			key.dport = 0;
 +			key.proto = 6;
 +			svc = lb4_lookup_service(&key, false);
 +			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP");
-+			if (svc)
++			if (svc) {
 +				printk("MEG:5555 GOT SVC FOR NEW ICMP PACKET ENTER src:%x dst:%x! (svc_is_lb:%d)", 
 +						ip4->saddr, ip4->daddr, svc != NULL ? 1 : 0);
++						return make_icmp_responce_lb4(ctx, ip4);
++			}
 +		}
  skip_service_lookup:
  #ifdef ENABLE_NAT_46X64_GATEWAY
