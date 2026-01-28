@@ -17,11 +17,10 @@ package sshclient
 import (
 	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"sync"
 	"time"
-
-	"os"
 
 	"github.com/name212/govalue"
 
