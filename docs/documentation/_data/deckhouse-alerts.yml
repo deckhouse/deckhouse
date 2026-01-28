@@ -2367,6 +2367,17 @@ alerts:
         Too many Kruise controller restarts detected.
       severity: "8"
       markupFormat: markdown
+    - name: D8NodeCgroupV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` is using `{{ $labels.cgroup_version }}` instead of cgroup v2.
+      summary: |
+        Node {{ $labels.node }} does not use cgroup v2.
+      severity: "8"
+      markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
