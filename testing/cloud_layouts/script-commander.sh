@@ -1290,6 +1290,24 @@ function update_comment() {
     fi
 }
 
+function get_bootstrap_logs() {
+  echo "Getting cluster bootstrap logs..."
+  local cluster_tasks
+  local bootstrap_job_id
+  local cluster_bootstrap_logs
+  cluster_tasks=$(curl -s -X 'GET' \
+    "https://${COMMANDER_HOST}/api/v1/cluster_tasks?cluster_id=${cluster_id}" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  bootstrap_job_id=$(jq -r '.[] | select(.action == "bootstrap") | .id' <<< "$cluster_tasks")
+  echo "Bootstrap job id: ${bootstrap_job_id}"
+  cluster_bootstrap_logs=$(curl -s -X 'GET' \
+   "https://${COMMANDER_HOST}/api/v1/cluster_task_logs?cluster_task_id=${bootstrap_job_id}" \
+   -H 'accept: application/json' \
+   -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  jq -r 'reverse | .[] | .data | .[] | .msg' <<< "$cluster_bootstrap_logs"
+}
+
 function run-test() {
   local payload
   local response
@@ -1433,6 +1451,7 @@ function run-test() {
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
+      get_bootstrap_logs
       return 1
     elif [ "configuration_error" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
