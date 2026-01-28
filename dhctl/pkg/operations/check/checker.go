@@ -23,6 +23,7 @@ import (
 	"github.com/name212/govalue"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
@@ -32,17 +33,28 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	dhctlstate "github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 )
 
+type externalPhasedContext interface {
+	CompleteSubPhase(completedSubPhase phases.OperationSubPhase)
+}
+
 type Params struct {
-	SSHClient     node.SSHClient
-	StateCache    dhctlstate.Cache
-	CommanderMode bool
-	CommanderUUID uuid.UUID
+	SSHClient      node.SSHClient
+	StateCache     dhctlstate.Cache
+	OnPhaseFunc    phases.DefaultOnPhaseFunc
+	OnProgressFunc phases.OnProgressFunc
+	CommanderMode  bool
+	CommanderUUID  uuid.UUID
 	*commander.CommanderModeParams
+
+	// if check runs in embedded mode, it uses external PhasedExecutionContext
+	// Checker is embedded in CommanderAttach and CommanderDetach operations
+	Embedded bool
 
 	InfrastructureContext *infrastructure.Context
 
@@ -57,6 +69,8 @@ type Cleaner func() error
 
 type Checker struct {
 	*Params
+	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	ExternalPhasedContext  externalPhasedContext
 
 	logger log.Logger
 }
@@ -65,6 +79,10 @@ func NewChecker(params *Params) *Checker {
 	logger := params.Logger
 	if govalue.IsNil(logger) {
 		logger = log.GetDefaultLogger()
+	}
+
+	if app.ProgressFilePath != "" {
+		params.OnProgressFunc = phases.WriteProgress(app.ProgressFilePath)
 	}
 
 	if !params.CommanderMode {
@@ -78,8 +96,15 @@ func NewChecker(params *Params) *Checker {
 
 	return &Checker{
 		Params: params,
+		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(
+			phases.OperationCheck, params.OnPhaseFunc, params.OnProgressFunc,
+		),
 		logger: logger,
 	}
+}
+
+func (c *Checker) SetExternalPhasedContext(pec externalPhasedContext) {
+	c.ExternalPhasedContext = pec
 }
 
 func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
@@ -95,6 +120,13 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 	metaConfig, err := commander.ParseMetaConfig(ctx, c.StateCache, c.Params.CommanderModeParams, c.logger)
 	if err != nil {
 		return nil, cleaner, fmt.Errorf("unable to parse meta configuration: %w", err)
+	}
+
+	if !c.Embedded {
+		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
+			return nil, cleaner, err
+		}
+		defer c.PhasedExecutionContext.Finalize(c.StateCache)
 	}
 
 	if c.InfrastructureContext == nil {
@@ -173,6 +205,8 @@ func (c *Checker) checkConfiguration(ctx context.Context, kubeCl *client.Kuberne
 		inClusterSource = "in-cluster"
 	)
 
+	defer c.switchPhase(phases.CheckConfiguration)()
+
 	clusterConfig, err := getClusterConfig(metaConfig, commanderSource)
 	if err != nil {
 		return "", err
@@ -226,6 +260,8 @@ type InfraResult struct {
 }
 
 func (c *Checker) checkInfra(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, infrastructureContext *infrastructure.Context) (*InfraResult, error) {
+	defer c.switchPhase(phases.CheckInfra)()
+
 	stat, hasTerraformState, err := CheckState(
 		ctx, kubeCl, metaConfig, infrastructureContext,
 		CheckStateOptions{
@@ -308,6 +344,19 @@ func (c *Checker) GetKubeClient(ctx context.Context) (*client.KubernetesClient, 
 		return nil, fmt.Errorf("unable to connect to kubernetes api over ssh: %w", err)
 	}
 	return kubeCl, nil
+}
+
+func (c *Checker) switchPhase(s phases.OperationPhase) func() {
+	if !c.Embedded {
+		_, _ = c.PhasedExecutionContext.SwitchPhase(s, false, c.StateCache, nil)
+		return func() {}
+	}
+
+	return func() {
+		if c.ExternalPhasedContext != nil {
+			c.ExternalPhasedContext.CompleteSubPhase(phases.OperationSubPhase(s))
+		}
+	}
 }
 
 type configTypeForCompare map[string]any

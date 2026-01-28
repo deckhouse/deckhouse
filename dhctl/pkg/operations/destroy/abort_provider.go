@@ -123,12 +123,13 @@ func (a *abortDestroyerProvider) Cloud(_ context.Context, metaConfig *config.Met
 
 func (a *abortDestroyerProvider) Static(context.Context, *config.MetaConfig) (Destroyer, error) {
 	return static.NewDestroyer(&static.DestroyerParams{
-		SSHClientProvider:    a.params.SSHClientProvider,
-		State:                static.NewDestroyState(a.params.StateCache),
-		KubeProvider:         a.kubeProvider(),
-		LoggerProvider:       a.params.LoggerProvider,
-		PhasedActionProvider: a.phaseProvider(),
-		Loops:                a.params.staticLoopsParams,
+		SSHClientProvider:      a.params.SSHClientProvider,
+		State:                  static.NewDestroyState(a.params.StateCache),
+		KubeProvider:           a.kubeProvider(),
+		LoggerProvider:         a.params.LoggerProvider,
+		PhasedActionProvider:   a.phaseProvider(),
+		PhasedExecutionContext: a.params.PhasedExecutionContext,
+		Loops:                  a.params.staticLoopsParams,
 
 		TmpDir: a.params.TmpDir,
 	}), nil
