@@ -468,3 +468,20 @@ index 0142716855..32f856354a 100644
  skip_service_lookup:
  #ifdef ENABLE_NAT_46X64_GATEWAY
  		if (ip4->daddr != IPV4_DIRECT_ROUTING)
+diff --git a/pkg/loadbalancer/experimental/bpf_reconciler.go b/pkg/loadbalancer/experimental/bpf_reconciler.go
+index 57e4f0d0e9..57c11b287d 100644
+--- a/pkg/loadbalancer/experimental/bpf_reconciler.go
++++ b/pkg/loadbalancer/experimental/bpf_reconciler.go
+@@ -748,7 +748,11 @@ func (ops *BPFOps) upsertMaster(svcKey lbmap.ServiceKey, svcVal lbmap.ServiceVal
+ 	if svc.ProxyRedirect.Redirects(fe.ServicePort) {
+ 		svcVal.SetL7LBProxyPort(svc.ProxyRedirect.ProxyPort)
+ 	}
+-	return ops.upsertService(svcKey, svcVal)
++	ret_val := ops.upsertService(svcKey, svcVal)
++	if fe.Type == loadbalancer.SVCTypeLoadBalancer {
++		svcKey = lbmap.NewService4Key(svcKey.GetAddress(), 0, u8proto.ANY, fe.Address.Scope, 0)
++	}
++	return ret_val
+ }
+ 
+ func (ops *BPFOps) cleanupSlots(svcKey lbmap.ServiceKey, oldCount, newCount int) error {
