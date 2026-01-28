@@ -1,9 +1,16 @@
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'
+fromImage: base/distroless
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/vcd
-  to: /deckhouse/candi/cloud-providers/vcd
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
+  to: /candi
+  excludePaths:
+  - '**/terraform-versions.yml'
+  stageDependencies:
+    install:
+    - '**/*'
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform-versions.yml
+  to: /terraform-manager/terraform-versions.yml
 import:
 {{- range $version := .TF.vcd.versions }}
 - image: terraform-provider-vcd-artifact
