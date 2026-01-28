@@ -125,3 +125,17 @@
         ```
 
         Note that the taint `key: node-role.kubernetes.io/master` is deprecated and has no effect starting from Kubernetes 1.24.
+
+  - alert: D8NodeCgroupV2NotSupported
+    expr: |
+      max by (node, node_group, cgroup_version) (d8_node_cgroup_v2_unsupported == 1)
+    for: 10m
+    labels:
+      tier: cluster
+      severity_level: "8"
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      summary: Node {{`{{ $labels.node }}`}} does not use cgroup v2.
+      description: |
+        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is using `{{`{{ $labels.cgroup_version }}`}}` instead of cgroup v2.

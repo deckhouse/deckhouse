@@ -29,16 +29,25 @@ import (
 
 	sdkpkg "github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 )
 
 const (
 	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
+	cgroupLabel              = "node.deckhouse.io/cgroup"
+	cgroupV2Value            = "cgroup2fs"
 	cntrdV2GroupName         = "nodes_cntrd_v2"
+	cgroupV2SupportValuesKey = "nodeManager:cgroupV2Support"
 )
 
-var cntrdV2UnsupportedMetricName = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
+var (
+	cntrdV2UnsupportedMetricName       = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
+	nodesCgroupV2UnsupportedMetricName = "d8_node_cgroup_v2_unsupported"
+)
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
+// or if node.deckhouse.io/cgroup label has value other than cgroup2fs
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Schedule: []go_hook.ScheduleConfig{
 		{
@@ -69,6 +78,7 @@ type cgroupV2SupportNode struct {
 	Name                string
 	NodeGroup           string
 	HasUnsupportedLabel bool
+	CgroupVersion       string
 }
 
 func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -80,11 +90,13 @@ func filterNodeForCgroupV2Support(obj *unstructured.Unstructured) (go_hook.Filte
 
 	nodeGroup := node.Labels[nodeGroupLabel]
 	_, hasLabel := node.Labels[containerdV2SupportLabel]
+	cgroupVersion := node.Labels[cgroupLabel]
 
 	return cgroupV2SupportNode{
 		Name:                node.Name,
 		NodeGroup:           nodeGroup,
 		HasUnsupportedLabel: hasLabel,
+		CgroupVersion:       cgroupVersion,
 	}, nil
 }
 
@@ -94,6 +106,8 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 	options := []sdkpkg.MetricCollectorOption{
 		metrics.WithGroup(cntrdV2GroupName),
 	}
+
+	allNodesSupportCgroupV2 := true
 	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[cgroupV2SupportNode](snaps) {
 		if err != nil {
 			return fmt.Errorf("failed to iterate over 'nodes_cntrdv2_unsupported snapshot': %w", err)
@@ -101,13 +115,28 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 
 		metricValue := 1.0
 		if nodeInfo.HasUnsupportedLabel {
+			allNodesSupportCgroupV2 = false
 			labels := map[string]string{
 				"node":       nodeInfo.Name,
 				"node_group": nodeInfo.NodeGroup,
 			}
 			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 		}
+
+		cgroupV2UnsupportedValue := 0.0
+		if nodeInfo.CgroupVersion != cgroupV2Value {
+			allNodesSupportCgroupV2 = false
+			cgroupV2UnsupportedValue = 1.0
+		}
+		labelsCgroup := map[string]string{
+			"node":           nodeInfo.Name,
+			"node_group":     nodeInfo.NodeGroup,
+			"cgroup_version": nodeInfo.CgroupVersion,
+		}
+		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labelsCgroup, options...)
 	}
+
+	requirements.SaveValue(cgroupV2SupportValuesKey, allNodesSupportCgroupV2)
 
 	return nil
 }
