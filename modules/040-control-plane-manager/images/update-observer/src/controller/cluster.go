@@ -120,7 +120,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 	// 2) Incomplete List results from previous call.
 
 	const retryDelay = 30 * time.Second
-	unhealtyPods := 0
+	unhealthyPods := 0
 	nodes := make(map[string]struct{})
 	for _, pod := range podList.Items {
 		if _, exists := nodes[pod.Spec.NodeName]; !exists {
@@ -128,14 +128,14 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 		}
 
 		if !podstatus.IsHealthy(pod) {
-			unhealtyPods++
+			unhealthyPods++
 		}
 	}
 
 	var needRetry bool
 
-	if unhealtyPods > 0 {
-		klog.Warningf("Pod readiness check failed: %d instance(s) not ready", unhealtyPods)
+	if unhealthyPods > 0 {
+		klog.Warningf("Pod readiness check failed: %d instance(s) not ready", unhealthyPods)
 		needRetry = true
 	}
 

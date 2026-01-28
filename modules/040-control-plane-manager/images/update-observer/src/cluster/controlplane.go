@@ -83,7 +83,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 		case updatingComponents > 0:
 			masterNode.Phase = MasterNodeUpdating
 		default:
-			masterNode.Phase = MasterNodeUptoDate
+			masterNode.Phase = MasterNodeUpToDate
 			upToDateCount++
 		}
 	}

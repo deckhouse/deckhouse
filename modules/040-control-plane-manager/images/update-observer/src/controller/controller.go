@@ -128,7 +128,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 
 	clusterCfg, err := r.getClusterConfiguration(ctx)
 	if err != nil {
-		klog.Info("Error occured while getting cluster configuration", err)
+		klog.Info("Error occurred while getting cluster configuration", err)
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 

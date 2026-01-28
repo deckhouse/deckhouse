@@ -34,7 +34,7 @@ type MasterNode struct {
 type MasterNodePhase string
 
 const (
-	MasterNodeUptoDate MasterNodePhase = "UpToDate"
+	MasterNodeUpToDate MasterNodePhase = "UpToDate"
 	MasterNodeUpdating MasterNodePhase = "Updating"
 	MasterNodeFailed   MasterNodePhase = "Failed"
 )
