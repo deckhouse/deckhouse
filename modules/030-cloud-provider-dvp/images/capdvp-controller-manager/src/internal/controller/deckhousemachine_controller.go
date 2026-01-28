@@ -373,23 +373,6 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
-	bootDisk, err := r.DVP.DiskService.CreateDiskFromDataSource(
-		ctx,
-		dvpMachine.Name+"-boot",
-		dvpMachine.Spec.RootDiskSize,
-		dvpMachine.Spec.RootDiskStorageClass,
-		&v1alpha2.VirtualDiskDataSource{
-			Type: v1alpha2.DataSourceTypeObjectRef,
-			ObjectRef: &v1alpha2.VirtualDiskObjectRef{
-				Kind: v1alpha2.VirtualDiskObjectRefKind(dvpMachine.Spec.BootDiskImageRef.Kind),
-				Name: dvpMachine.Spec.BootDiskImageRef.Name,
-			},
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
-	}
-
 	bootstrapDataSecret := &corev1.Secret{}
 	if err := r.Client.Get(
 		ctx,
@@ -405,23 +388,16 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	cloudInitSecretName := "cloud-init-" + dvpMachine.Name
-	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript); err != nil {
-		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
-	}
+
 	blockDeviceRefs := []v1alpha2.BlockDeviceSpecRef{
-		{Kind: v1alpha2.DiskDevice, Name: bootDisk.Name},
+		{Kind: v1alpha2.DiskDevice, Name: dvpMachine.Name + "-boot"},
 	}
 
-	for i, d := range dvpMachine.Spec.AdditionalDisks {
+	for i := range dvpMachine.Spec.AdditionalDisks {
 		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
-		addDisk, err := r.DVP.DiskService.CreateDisk(ctx, addDiskName, d.Size.Value(), d.StorageClass)
-		if err != nil {
-			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
-		}
 		blockDeviceRefs = append(blockDeviceRefs, v1alpha2.BlockDeviceSpecRef{
 			Kind: v1alpha2.DiskDevice,
-			Name: addDisk.Name,
+			Name: addDiskName,
 		})
 	}
 
@@ -475,6 +451,51 @@ func (r *DeckhouseMachineReconciler) createVM(
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create VM: %w", err)
+	}
+
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, cloudInitSecretName, cloudInitScript, vm.Name, vm.UID); err != nil {
+		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)
+	}
+
+	if _, err = r.DVP.DiskService.CreateDiskFromDataSource(
+		ctx,
+		dvpMachine.Name+"-boot",
+		dvpMachine.Spec.RootDiskSize,
+		dvpMachine.Spec.RootDiskStorageClass,
+		&v1alpha2.VirtualDiskDataSource{
+			Type: v1alpha2.DataSourceTypeObjectRef,
+			ObjectRef: &v1alpha2.VirtualDiskObjectRef{
+				Kind: v1alpha2.VirtualDiskObjectRefKind(dvpMachine.Spec.BootDiskImageRef.Kind),
+				Name: dvpMachine.Spec.BootDiskImageRef.Name,
+			},
+		},
+		[]metav1.OwnerReference{
+			{
+				APIVersion: "virtualization.deckhouse.io/v1alpha2",
+				Kind:       "VirtualMachine",
+				Name:       vm.Name,
+				UID:        vm.UID,
+			},
+		},
+	); err != nil {
+		return nil, fmt.Errorf("Cannot create boot disk: %w", err)
+	}
+
+	for i, d := range dvpMachine.Spec.AdditionalDisks {
+		addDiskName := fmt.Sprintf("%s-additional-disk-%d", dvpMachine.Name, i)
+		if _, err = r.DVP.DiskService.CreateDisk(
+			ctx,
+			addDiskName,
+			d.Size.Value(),
+			d.StorageClass,
+			[]metav1.OwnerReference{{
+				APIVersion: "virtualization.deckhouse.io/v1alpha2",
+				Kind:       "VirtualMachine",
+				Name:       vm.Name,
+				UID:        vm.UID,
+			}}); err != nil {
+			return nil, fmt.Errorf("Cannot create additional disk %s: %w", addDiskName, err)
+		}
 	}
 
 	return vm, nil
