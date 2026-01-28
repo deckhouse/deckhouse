@@ -41,7 +41,6 @@ const labels = {
   'e2e/run/zvirt': { type: 'e2e-run', provider: 'zvirt' },
 
   // E2E: use Kubernetes version
-  'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
   'e2e/use/k8s/1.31': { type: 'e2e-use', ver: '1.31' },
   'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
