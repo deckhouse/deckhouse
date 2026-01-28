@@ -46,6 +46,12 @@ spec:
   nodeName: master-1
 status:
   phase: Running
+  containerStatuses:
+    - containerID: containerd://ca4b72fae2d83e56cca8add30a09f815f3c595e5e93c614f0094f0a41d823b72
+      ready: true
+      state:
+        running:
+          startedAt: "2026-01-28T06:34:19Z"
 ---
 apiVersion: v1
 kind: Pod
@@ -60,6 +66,12 @@ spec:
   nodeName: master-1
 status:
   phase: Running
+  containerStatuses:
+    - containerID: containerd://ca4b72fae2d83e56cca8add30a09f815f3c595e5e93c614f0094f0a41d823b72
+      ready: true
+      state:
+        running:
+          startedAt: "2026-01-28T06:34:19Z"
 ---
 apiVersion: v1
 kind: Pod
@@ -74,6 +86,12 @@ spec:
   nodeName: master-1
 status:
   phase: Running
+  containerStatuses:
+    - containerID: containerd://ca4b72fae2d83e56cca8add30a09f815f3c595e5e93c614f0094f0a41d823b72
+      ready: true
+      state:
+        running:
+          startedAt: "2026-01-28T06:34:19Z"
 ---
 apiVersion: v1
 kind: Pod
@@ -88,6 +106,12 @@ spec:
   nodeName: master-2
 status:
   phase: Running
+  containerStatuses:
+    - containerID: containerd://ca4b72fae2d83e56cca8add30a09f815f3c595e5e93c614f0094f0a41d823b72
+      ready: true
+      state:
+        running:
+          startedAt: "2026-01-28T06:34:19Z"
 ---
 apiVersion: v1
 kind: Pod
@@ -102,6 +126,12 @@ spec:
   nodeName: master-2
 status:
   phase: Running
+  containerStatuses:
+    - containerID: containerd://ca4b72fae2d83e56cca8add30a09f815f3c595e5e93c614f0094f0a41d823b72
+      ready: true
+      state:
+        running:
+          startedAt: "2026-01-28T06:34:19Z"
 ---
 apiVersion: v1
 kind: Pod

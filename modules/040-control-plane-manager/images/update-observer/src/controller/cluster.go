@@ -127,7 +127,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 			nodes[pod.Spec.NodeName] = struct{}{}
 		}
 
-		if podstatus.IsUnhealthy(pod) {
+		if !podstatus.IsHealthy(pod) {
 			unhealtyPods++
 		}
 	}

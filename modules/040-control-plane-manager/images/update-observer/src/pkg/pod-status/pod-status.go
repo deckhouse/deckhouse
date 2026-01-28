@@ -24,7 +24,7 @@ import (
 
 var problematicStatuses = []string{"Failed", "CrashLoopBackOff", "ImagePullBackOff", "ErrImagePull", "Error", "Evicted"}
 
-func IsUnhealthy(pod corev1.Pod) bool {
+func IsHealthy(pod corev1.Pod) bool {
 	if pod.Status.Phase != corev1.PodRunning {
 		return false
 	}

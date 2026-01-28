@@ -7,13 +7,13 @@ data:
     currentVersion: v1.31
     phase: UpToDate
     controlPlane:
-    - name: master-2
+    - name: master-1
       phase: UpToDate
       components:
         kube-apiserver: v1.31
         kube-controller-manager: v1.31
         kube-scheduler: v1.31
-    - name: master-1
+    - name: master-2
       phase: UpToDate
       components:
         kube-apiserver: v1.31
@@ -25,7 +25,7 @@ data:
 metadata:
   annotations:
     cause: init
-    lastReconcilationTime: "2026-01-27T18:42:57+03:00"
+    lastReconcilationTime: "2026-01-28T12:26:34+03:00"
   labels:
     heritage: deckhouse
     k8s-version: v1.31
