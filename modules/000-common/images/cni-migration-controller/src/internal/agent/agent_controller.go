@@ -358,12 +358,21 @@ func (r *CNIAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("NODE_NAME env var is required")
 	}
 
-	// Map any CNIMigration event to a request for this node's CNINodeMigration
-	mapFn := func(ctx context.Context, obj client.Object) []reconcile.Request {
+	// Map CNIMigration event to a request for this node's CNINodeMigration
+	mapMigrationToRequest := func(ctx context.Context, obj client.Object) []reconcile.Request {
 		// Only react to the specific migration we are configured for
 		if obj.GetName() != r.MigrationName {
 			return []reconcile.Request{}
 		}
+		return []reconcile.Request{
+			{NamespacedName: types.NamespacedName{
+				Name: nodeName,
+			}},
+		}
+	}
+
+	// Map Pod event to a request for this node's CNINodeMigration
+	mapPodToRequest := func(ctx context.Context, obj client.Object) []reconcile.Request {
 		return []reconcile.Request{
 			{NamespacedName: types.NamespacedName{
 				Name: nodeName,
@@ -399,11 +408,11 @@ func (r *CNIAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&cnimigrationv1alpha1.CNINodeMigration{}).
 		Watches(
 			&cnimigrationv1alpha1.CNIMigration{},
-			handler.EnqueueRequestsFromMapFunc(mapFn),
+			handler.EnqueueRequestsFromMapFunc(mapMigrationToRequest),
 		).
 		Watches(
 			&corev1.Pod{},
-			handler.EnqueueRequestsFromMapFunc(mapFn),
+			handler.EnqueueRequestsFromMapFunc(mapPodToRequest),
 			builder.WithPredicates(podPredicate),
 		).
 		Complete(r)
