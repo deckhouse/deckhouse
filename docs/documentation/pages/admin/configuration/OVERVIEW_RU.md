@@ -120,7 +120,7 @@ d8 system edit cluster-configuration
 
 Используйте утилиту `dhctl` из контейнера инсталлятора DKP с флагом `--yes-i-am-sane-and-i-understand-what-i-am-doing`.
 
-Эта команда автоматически:
+Она автоматически:
 
 - добавит аннотацию `deckhouse.io/allow-unsafe` к секрету `d8-cluster-configuration`;
 - откроет редактор для изменения конфигурации;
