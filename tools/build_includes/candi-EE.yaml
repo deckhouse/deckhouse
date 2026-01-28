@@ -14,11 +14,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/candi/cloud-providers/vcd
-  to: /deckhouse/candi/cloud-providers/vcd
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/candi/cloud-providers/dynamix
   to: /deckhouse/candi/cloud-providers/dynamix
   stageDependencies:
