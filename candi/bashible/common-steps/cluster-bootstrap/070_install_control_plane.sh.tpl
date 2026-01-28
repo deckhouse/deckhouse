@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" -}}
+{{ $kubernetesVersion := .kubernetesVersion | toString }}
+{{ $kubeadmDir := ternary "/var/lib/bashible/kubeadm/v1beta4" "/var/lib/bashible/kubeadm/v1beta3" (semverCompare ">=1.31" $kubernetesVersion) }}
 
 check_container_running() {
   local container_name=$1
