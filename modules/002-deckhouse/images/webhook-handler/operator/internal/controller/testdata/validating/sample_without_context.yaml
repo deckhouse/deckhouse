@@ -26,6 +26,6 @@ handler:
   cel: |
     TODO: not need now
   python: |
-    def validate(bindingcontext, output):
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
       # logic here
-      return
+      return None, True

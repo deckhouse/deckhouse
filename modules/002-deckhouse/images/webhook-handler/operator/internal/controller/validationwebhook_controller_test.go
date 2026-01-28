@@ -167,11 +167,10 @@ func TestTemplateTwoContext(t *testing.T) {
 	assert.Equal(t, string(ref), string(res))
 }
 
-// TODO: complete compare logic
 func TestTemplateEqual(t *testing.T) {
 	r := setupTestReconciler()
 
-	vh, err := getStructFromYamlFile("testdata/conversion/nodegroups.deckhouse.io.yaml")
+	vh, err := getStructFromYamlFile("testdata/validating/prometheusremotewrite.yaml")
 	assert.NoError(t, err)
 
 	err = r.Client.Create(context.Background(), vh)
