@@ -155,7 +155,7 @@ def _prepare_validation_binding_context(k8s_version: str, enabled_feature_gates:
 class TestFeatureGatesValidationWebhook(unittest.TestCase):
     
     def test_validate_with_valid_feature_gate_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.30.0', ['CPUManager'])
+        ctx = _prepare_validation_binding_context('1.31.0', ['CPUManager'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
@@ -165,34 +165,34 @@ class TestFeatureGatesValidationWebhook(unittest.TestCase):
         tests.assert_validation_allowed(self, out, "'SomeProblematicFeature' is forbidden for Kubernetes version 1.33 and will not be applied")
     
     def test_validate_with_multiple_feature_gates(self):
-        ctx = _prepare_validation_binding_context('1.30.0', ['CPUManager', 'MemoryManager', 'UnknownGate'])
+        ctx = _prepare_validation_binding_context('1.31.0', ['CPUManager', 'MemoryManager', 'UnknownGate'])
         out = hook.testrun(main, [ctx])
-        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.30 and will not be applied")
+        tests.assert_validation_allowed(self, out, "'UnknownGate' is unknown or enabled by default FeatureGate for Kubernetes version 1.31 and will not be applied")
     
     def test_validate_with_apiserver_feature_gate(self):
-        ctx = _prepare_validation_binding_context('1.30.0', ['APIServerIdentity'])
+        ctx = _prepare_validation_binding_context('1.31.0', ['APIServerIdentity'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_kubecontroller_manager_feature_gate(self):
-        ctx = _prepare_validation_binding_context('1.30.0', ['CronJobsScheduledAnnotation'])
+        ctx = _prepare_validation_binding_context('1.31.0', ['CronJobsScheduledAnnotation'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_scheduler_feature_gate(self):
-        ctx = _prepare_validation_binding_context('1.30.0', ['SchedulerQueueingHints'])
+        ctx = _prepare_validation_binding_context('1.31.0', ['SchedulerQueueingHints'])
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_missing_feature_gates_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.30.0', None)
+        ctx = _prepare_validation_binding_context('1.31.0', None)
         if hasattr(ctx.review.request.object.spec.settings, 'enabledFeatureGates'):
             del ctx.review.request.object.spec.settings.enabledFeatureGates
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
     
     def test_validate_with_none_feature_gates_should_allow(self):
-        ctx = _prepare_validation_binding_context('1.30.0', None)
+        ctx = _prepare_validation_binding_context('1.31.0', None)
         ctx.review.request.object.spec.settings.enabledFeatureGates = None
         out = hook.testrun(main, [ctx])
         tests.assert_validation_allowed(self, out, None)
