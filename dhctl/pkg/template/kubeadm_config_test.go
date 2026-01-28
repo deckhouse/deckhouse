@@ -49,6 +49,12 @@ func testVersionSelection(t *testing.T) {
 		expectedConfig string
 	}{
 		{
+			name:           "Kubernetes 1.30 should use v1beta3",
+			k8sVersion:     "1.30",
+			expectedAPI:    "kubeadm.k8s.io/v1beta3",
+			expectedConfig: "ClusterConfiguration",
+		},
+		{
 			name:           "Kubernetes 1.31 should use v1beta4",
 			k8sVersion:     "1.31",
 			expectedAPI:    "kubeadm.k8s.io/v1beta4",
@@ -88,6 +94,14 @@ func testFeatureGates(t *testing.T) {
 		expectedFeatures []string
 	}{
 		{
+			name:       "Kubernetes 1.30 should not include legacy feature gates",
+			k8sVersion: "1.30",
+			expectedFeatures: []string{
+				"TopologyAwareHints=true",
+				"RotateKubeletServerCertificate=true",
+			},
+		},
+		{
 			name:       "Kubernetes 1.31 should not include legacy feature gates",
 			k8sVersion: "1.31",
 			expectedFeatures: []string{
@@ -105,7 +119,14 @@ func testFeatureGates(t *testing.T) {
 				t.Fatalf("Failed to render kubeadm config: %v", err)
 			}
 
-			featureGatesRegex := regexp.MustCompile(`- name: feature-gates\s+value:\s*"([^"]+)"`)
+			var featureGatesRegex *regexp.Regexp
+			if strings.Contains(result, "v1beta3") {
+				// v1beta3 uses different format
+				featureGatesRegex = regexp.MustCompile(`feature-gates:\s*"([^"]+)"`)
+			} else {
+				// v1beta4 uses name/value format
+				featureGatesRegex = regexp.MustCompile(`- name: feature-gates\s+value:\s*"([^"]+)"`)
+			}
 
 			matches := featureGatesRegex.FindStringSubmatch(result)
 			if len(matches) < 2 {
@@ -140,6 +161,10 @@ func testAPIServerConfiguration(t *testing.T) {
 		name       string
 		k8sVersion string
 	}{
+		{
+			name:       "v1beta3 configuration",
+			k8sVersion: "1.30",
+		},
 		{
 			name:       "v1beta4 configuration",
 			k8sVersion: "1.31",
@@ -232,7 +257,12 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 
-				foundStdout := strings.Contains(result, `value: "-"`)
+				var foundStdout bool
+				if strings.Contains(result, "v1beta3") {
+					foundStdout = strings.Contains(result, `audit-log-path: "-"`)
+				} else {
+					foundStdout = strings.Contains(result, `value: "-"`)
+				}
 				if !foundStdout {
 					t.Error("Expected stdout audit log path not found")
 				}
@@ -310,7 +340,12 @@ func testAPIServerConfiguration(t *testing.T) {
 							t.Fatalf("Failed to render kubeadm config: %v", err)
 						}
 
-						bindAddrRegex := regexp.MustCompile(`- name: bind-address\s+value:\s*"([^"]+)"`)
+						var bindAddrRegex *regexp.Regexp
+						if strings.Contains(result, "v1beta3") {
+							bindAddrRegex = regexp.MustCompile(`bind-address:\s*"([^"]+)"`)
+						} else {
+							bindAddrRegex = regexp.MustCompile(`- name: bind-address\s+value:\s*"([^"]+)"`)
+						}
 						matches := bindAddrRegex.FindStringSubmatch(result)
 						if len(matches) < 2 {
 							t.Fatalf("Could not find bind-address in result")
@@ -363,7 +398,7 @@ func testAPIServerConfiguration(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config: %v", err)
 				}
 
-				// kubeadm configuration should include encryption-provider-config
+				// Both v1beta3 and v1beta4 should include encryption-provider-config
 				if !strings.Contains(result, "encryption-provider-config") {
 					t.Error("Expected encryption provider config not found")
 				}
@@ -566,7 +601,12 @@ func testServiceAccountConfiguration(t *testing.T) {
 				t.Fatalf("Failed to render kubeadm config: %v", err)
 			}
 
-			apiAudiencesRegex := regexp.MustCompile(`- name: api-audiences\s+value:\s*([^\s]+)`)
+			var apiAudiencesRegex *regexp.Regexp
+			if strings.Contains(result, "v1beta3") {
+				apiAudiencesRegex = regexp.MustCompile(`api-audiences:\s*([^\s]+)`)
+			} else {
+				apiAudiencesRegex = regexp.MustCompile(`- name: api-audiences\s+value:\s*([^\s]+)`)
+			}
 			matches := apiAudiencesRegex.FindStringSubmatch(result)
 			if len(matches) < 2 {
 				t.Fatalf("Could not find api-audiences in result")
@@ -603,7 +643,12 @@ func testServiceAccountConfiguration(t *testing.T) {
 				t.Fatalf("Failed to render kubeadm config: %v", err)
 			}
 
-			apiAudiencesRegex := regexp.MustCompile(`- name: api-audiences\s+value:\s*([^\s]+)`)
+			var apiAudiencesRegex *regexp.Regexp
+			if strings.Contains(result, "v1beta3") {
+				apiAudiencesRegex = regexp.MustCompile(`api-audiences:\s*([^\s]+)`)
+			} else {
+				apiAudiencesRegex = regexp.MustCompile(`- name: api-audiences\s+value:\s*([^\s]+)`)
+			}
 			matches := apiAudiencesRegex.FindStringSubmatch(result)
 			if len(matches) < 2 {
 				t.Fatalf("Could not find api-audiences in result")
@@ -756,7 +801,7 @@ func testOptionalArguments(t *testing.T) {
 
 func testPatchesRendering(t *testing.T) {
 	t.Run("All Patches Render Successfully", func(t *testing.T) {
-		versions := []string{"1.31", "1.32"}
+		versions := []string{"1.30", "1.31", "1.32"}
 
 		for _, version := range versions {
 			t.Run("Version "+version, func(t *testing.T) {
@@ -890,12 +935,23 @@ func testEdgeCases(t *testing.T) {
 				t.Error("Empty result for minimal configuration")
 			}
 
-			requiredStrings := []string{
-				"apiVersion: kubeadm.k8s.io/v1beta4",
-				"kind: ClusterConfiguration",
-				fmt.Sprintf("kubernetesVersion: %s.1", version),
-				"service-account-issuer",
-				"feature-gates",
+			var requiredStrings []string
+			if strings.Contains(result, "v1beta3") {
+				requiredStrings = []string{
+					"apiVersion: kubeadm.k8s.io/v1beta3",
+					"kind: ClusterConfiguration",
+					fmt.Sprintf("kubernetesVersion: %s.1", version),
+					"service-account-issuer",
+					"feature-gates",
+				}
+			} else {
+				requiredStrings = []string{
+					"apiVersion: kubeadm.k8s.io/v1beta4",
+					"kind: ClusterConfiguration",
+					fmt.Sprintf("kubernetesVersion: %s.1", version),
+					"service-account-issuer",
+					"feature-gates",
+				}
 			}
 
 			for _, required := range requiredStrings {
@@ -909,10 +965,11 @@ func testEdgeCases(t *testing.T) {
 	t.Run("Version Boundary Cases", func(t *testing.T) {
 		testCases := []struct {
 			version     string
-			expectBeta4 bool
+			expectBeta3 bool
 		}{
-			{"1.31", true},
-			{"1.32", true},
+			{"1.30", true},
+			{"1.31", false},
+			{"1.32", false},
 		}
 
 		for _, tc := range testCases {
@@ -923,10 +980,23 @@ func testEdgeCases(t *testing.T) {
 					t.Fatalf("Failed to render kubeadm config for version %s: %v", tc.version, err)
 				}
 
+				containsBeta3 := strings.Contains(result, "kubeadm.k8s.io/v1beta3")
 				containsBeta4 := strings.Contains(result, "kubeadm.k8s.io/v1beta4")
 
-				if !containsBeta4 {
-					t.Errorf("Expected v1beta4 for version %s", tc.version)
+				if tc.expectBeta3 {
+					if !containsBeta3 {
+						t.Errorf("Expected v1beta3 for version %s", tc.version)
+					}
+					if containsBeta4 {
+						t.Errorf("Unexpected v1beta4 for version %s", tc.version)
+					}
+				} else {
+					if containsBeta3 {
+						t.Errorf("Unexpected v1beta3 for version %s", tc.version)
+					}
+					if !containsBeta4 {
+						t.Errorf("Expected v1beta4 for version %s", tc.version)
+					}
 				}
 			})
 		}
@@ -1090,6 +1160,27 @@ func testMissingCoverage(t *testing.T) {
 		})
 	}
 
+	t.Run("V1beta3 Additional Conditions", func(t *testing.T) {
+		// Test v1beta3 specific conditions
+		data := getBaseTemplateData("1.30")
+		data["runType"] = "Runtime"
+
+		result, err := renderKubeadmConfig(data)
+		if err != nil {
+			t.Fatalf("Failed to render v1beta3 kubeadm config: %v", err)
+		}
+
+		// v1beta3 should have runtime-config without version condition
+		if !strings.Contains(result, "runtime-config:") {
+			t.Error("Expected runtime-config in v1beta3 not found")
+		}
+
+		// v1beta3 uses different format (map syntax)
+		if !strings.Contains(result, `runtime-config: "admissionregistration.k8s.io/v1beta1=true`) {
+			t.Error("Expected v1beta3 runtime-config format not found")
+		}
+	})
+
 	for _, version := range versions {
 		t.Run(fmt.Sprintf("Service Account Edge Cases (v%s)", version), func(t *testing.T) {
 			data := getBaseTemplateData(version)
@@ -1180,23 +1271,32 @@ func testMissingCoverage(t *testing.T) {
 				t.Fatalf("Failed to render kubeadm config: %v", err)
 			}
 
-			if !strings.Contains(result, "apiVersion: kubeadm.k8s.io/v1beta4") {
-				t.Error("Expected v1beta4 API version not found")
-			}
-			if !strings.Contains(result, "- name: bind-address") {
-				t.Error("Expected v1beta4 name/value format for bind-address not found")
-			}
-			if !strings.Contains(result, `value: "0.0.0.0"`) {
-				t.Error("Expected v1beta4 bind-address value not found")
-			}
-			if !strings.Contains(result, "- name: feature-gates") {
-				t.Error("Expected v1beta4 name/value format for feature-gates not found")
-			}
-			if !strings.Contains(result, "- name: runtime-config") {
-				t.Error("Expected v1beta4 name/value format for runtime-config not found")
-			}
-			if !strings.Contains(result, "value: admissionregistration.k8s.io/v1beta1=true") {
-				t.Error("Expected v1beta4 runtime-config value not found")
+			if strings.Contains(result, "v1beta3") {
+				if !strings.Contains(result, "apiVersion: kubeadm.k8s.io/v1beta3") {
+					t.Error("Expected v1beta3 API version not found")
+				}
+				if !strings.Contains(result, `bind-address: "0.0.0.0"`) {
+					t.Error("Expected v1beta3 bind-address format not found")
+				}
+			} else {
+				if !strings.Contains(result, "apiVersion: kubeadm.k8s.io/v1beta4") {
+					t.Error("Expected v1beta4 API version not found")
+				}
+				if !strings.Contains(result, "- name: bind-address") {
+					t.Error("Expected v1beta4 name/value format for bind-address not found")
+				}
+				if !strings.Contains(result, `value: "0.0.0.0"`) {
+					t.Error("Expected v1beta4 bind-address value not found")
+				}
+				if !strings.Contains(result, "- name: feature-gates") {
+					t.Error("Expected v1beta4 name/value format for feature-gates not found")
+				}
+				if !strings.Contains(result, "- name: runtime-config") {
+					t.Error("Expected v1beta4 name/value format for runtime-config not found")
+				}
+				if !strings.Contains(result, "value: admissionregistration.k8s.io/v1beta1=true") {
+					t.Error("Expected v1beta4 runtime-config value not found")
+				}
 			}
 		})
 	}
