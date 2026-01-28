@@ -56,7 +56,7 @@ relatedLinks:
 
 - При настройке интеграции с поддерживаемыми облаками: имеются необходимые квоты для создания ресурсов и подготовлены параметры доступа к облачной инфраструктуре (зависят от конкретного провайдера).
 
-- Есть доступ к Deckhouse container registry (публичный — `registry.deckhouse.io` или `registry.deckhouse.ru`, либо зеркало).
+- Есть доступ к хранилищу образов контейнеров Deckhouse (к публичному — `registry.deckhouse.io` или `registry.deckhouse.ru`, либо к зеркалу).
 
 ## Подготовка конфигурации
 
@@ -70,7 +70,7 @@ relatedLinks:
 
 1. [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (**обязательный**) — начальные [параметры конфигурации](../admin/configuration/), необходимые для запуска DKP.
 
-   > Начиная с версии DKP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к DKP container registry. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
+   > Начиная с версии DKP 1.75, используйте ModuleConfig `deckhouse` для настройки доступа к хранилищу образов DKP. Настройка доступа с помощью InitConfiguration (параметры `imagesRepo`, `registryDockerCfg`, `registryScheme`, `registryCA`) считается устаревшим способом.
 
 1. [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) — общие параметры кластера, такие как версия Kubernetes (компонентов control plane кластера), сетевые настройки, параметры CRI и т. д. Является **обязательным**, кроме случая, когда DKP устанавливается в уже существующий кластер Kubernetes.
 
@@ -107,7 +107,7 @@ relatedLinks:
    Модули, часто настраиваемые при установке:
 
    * [`global`](/products/kubernetes-platform/documentation/v1/reference/api/global.html) — глобальные настройки DKP для указания параметров, которые используются по умолчанию всеми модулями и компонентами (шаблон DNS-имен, StorageClass, настройки расположения компонентов модулей и т.д.);
-   * [`deckhouse`](/modules/deckhouse/configuration.html) — настройки доступа к container registry, желаемый канал обновлений и другие параметры;
+   * [`deckhouse`](/modules/deckhouse/configuration.html) — настройки доступа к хранилищу образов, желаемый канал обновлений и другие параметры;
    * [`user-authn`](/modules/user-authn/configuration.html) — отвечает за единую систему аутентификации;
    * [`cni-cilium`](/modules/cni-cilium/configuration.html) — отвечает за работу сети в кластере (например, используется при установке DKP на bare metal, в закрытом окружении, на РЕД-виртуализации и на SpaceVM).
 
@@ -139,7 +139,7 @@ relatedLinks:
 </div>
 
 <div id='block_variant_new_config' class="tabs__content tabs__content_variant active" markdown="1">
-В этом примере доступ к DKP container registry настраивается с помощью ModuleConfig `deckhouse`.
+В этом примере доступ к хранилищу образов DKP настраивается с помощью ModuleConfig `deckhouse`.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -296,7 +296,7 @@ spec:
 
 <div id='block_variant_legacy_config' class="tabs__content tabs__content_variant" markdown="1">
 
-В этом примере доступ к DKP container registry настраивается с помощью InitConfiguration.
+В этом примере доступ к хранилищу образов DKP настраивается с помощью InitConfiguration.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -514,7 +514,7 @@ fi
 ## Установка
 
 {% alert level="info" %}
-При установке коммерческой редакции Deckhouse Kubernetes Platform из публичного container registry `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
+При установке коммерческой редакции Deckhouse Kubernetes Platform из публичного хранилища образов `registry.deckhouse.ru` необходимо предварительно пройти аутентификацию с использованием лицензионного ключа:
 
 ```shell
 docker login -u license-token registry.deckhouse.ru
@@ -522,7 +522,7 @@ docker login -u license-token registry.deckhouse.ru
 
 {% endalert %}
 
-Команда для запуска контейнера с установщиком из публичного Deckhouse container registry:
+Команда для запуска контейнера с установщиком из публичного хранилища образов контейнеров Deckhouse:
 
 ```shell
 docker run --pull=always -it [<MOUNT_OPTIONS>] registry.deckhouse.ru/deckhouse/<DECKHOUSE_REVISION>/install:<RELEASE_CHANNEL> bash
@@ -588,7 +588,7 @@ dhctl bootstrap \
 
 1. Общие проверки:
    - Значения параметров [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) и [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) не совпадают.
-   - Данные аутентификации для container registry, указанные в конфигурации установки, корректны.
+   - Данные аутентификации для хранилища образов, указанные в конфигурации установки, корректны.
    - Имя хоста соответствует следующим требованиям:
      - длина не более 63 символов;
      - состоит только из строчных букв;
@@ -615,7 +615,7 @@ dhctl bootstrap \
        - systemd версии `244`;
        - поддержка модуля ядра `erofs`.
    - На сервере (ВМ) для master-узла установлен Python.
-   - Container registry доступен через прокси (если настройки прокси указаны в конфигурации установки).
+   - Хранилище образов доступно через прокси (если настройки прокси указаны в конфигурации установки).
    - На сервере (ВМ) для master-узла и в хосте, на котором запущен установщик, свободны порты, необходимые для процесса установки.
    - DNS должен разрешать `localhost` в IP-адрес `127.0.0.1`.
    - На сервере (ВМ) пользователю доступна команда `sudo`.
@@ -638,10 +638,10 @@ dhctl bootstrap \
 - `--preflight-skip-availability-ports-check` — пропуск проверки доступности необходимых портов;
 - `--preflight-skip-resolving-localhost-check` — пропуск проверки разрешения `localhost`;
 - `--preflight-skip-deckhouse-version-check` — пропуск проверки версии DKP;
-- `--preflight-skip-registry-through-proxy` — пропуск проверки доступа к registry через прокси-сервер;
+- `--preflight-skip-registry-through-proxy` — пропуск проверки доступа к хранилищу образов через прокси-сервер;
 - `--preflight-skip-public-domain-template-check` — пропуск проверки шаблона `publicDomain`;
 - `--preflight-skip-ssh-credentials-check` — пропуск проверки учетных данных SSH-пользователя;
-- `--preflight-skip-registry-credential` — пропуск проверки учетных данных для доступа к registry;
+- `--preflight-skip-registry-credential` — пропуск проверки учетных данных для доступа к хранилищу образов;
 - `--preflight-skip-containerd-exist` — пропуск проверки наличия containerd;
 - `--preflight-skip-python-checks` — пропуск проверки наличия Python;
 - `--preflight-skip-sudo-allowed` — пропуск проверки прав доступа для выполнения команды `sudo`;
@@ -679,36 +679,36 @@ dhctl bootstrap-phase abort
 
 <div id="#закрытое-окружение-работа-через-proxy-и-сторонние-registries"></div>
 
-## Закрытое окружение, работа через прокси-сервер и сторонний container registry
+## Закрытое окружение, работа через прокси-сервер и стороннее хранилище образов контейнеров
 
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
 
-### Установка из стороннего container registry
+### Установка из стороннего хранилища образов контейнеров
 
 {% alert level="warning" %}
 Доступно в следующих редакциях: SE, SE+, EE, CSE Lite, CSE Pro.
 {% endalert %}
 
-DKP можно установить из стороннего registry или через проксирующий сервер внутри закрытого контура.
+DKP можно установить из стороннего хранилища образов или через проксирующий сервер внутри закрытого контура.
 
 {% alert level="warning" %}
-DKP поддерживает аутентификацию в container registry только по схеме Bearer token.
+DKP поддерживает аутентификацию в хранилище образов только по схеме Bearer token.
 
-Протестирована и гарантируется работа со следующими container registries:
+Протестирована и гарантируется работа со следующими хранилищами образов:
 {%- for registry in site.data.supported_versions.registries %}
 [{{- registry[1].shortname }}]({{- registry[1].url }})
 {%- unless forloop.last %}, {% endunless %}
 {%- endfor %}.
 
-При работе со сторонним registry не используйте учетную запись администратора для доступа к нему со стороны DKP. Используйте отдельную учетную запись с правами только на чтение и только в пределах нужного раздела в registry. Ознакомьтесь с [примером создания](#особенности-настройки-nexus) такой учетной записи.
+При работе со сторонним хранилищем образов не используйте учетную запись администратора для доступа к нему со стороны DKP. Используйте отдельную учетную запись с правами только на чтение и только в пределах нужного раздела в хранилище образов. Ознакомьтесь с [примером создания](#особенности-настройки-nexus) такой учетной записи.
 {% endalert %}
 
-Варианты настройки работы со сторонними container registry при установке кластера:
+Варианты настройки работы со сторонними хранилищами образов при установке кластера:
 
 - начиная с версии DKP 1.75 — с помощью ModuleConfig `deckhouse`;
 - до версии DKP 1.75 — с помощью InitConfiguration (устаревший способ, пример приведен ниже).
 
-Для настройки с помощью ModuleConfig `deckhouse` укажите параметры доступа к стороннему registry в [секции `settings.registry`](/modules/deckhouse/configuration.html#parameters-registry).
+Для настройки с помощью ModuleConfig `deckhouse` укажите параметры доступа к стороннему хранилищу образов в [секции `settings.registry`](/modules/deckhouse/configuration.html#parameters-registry).
 
 Пример:
 
@@ -731,14 +731,14 @@ spec:
         ca: <CA>
 ```
 
-{% offtopic title="Настройка работы со сторонним registry через InitConfiguration **(устаревший способ)**" %}
+{% offtopic title="Настройка работы со сторонним хранилищем образов через InitConfiguration **(устаревший способ)**" %}
 
 Установите следующие параметры в InitConfiguration:
 
-* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа DKP EE в стороннем registry. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
-* `registryDockerCfg: <BASE64>` — права доступа к стороннему registry, зашифрованные в Base64.
+* `imagesRepo: <PROXY_REGISTRY>/<DECKHOUSE_REPO_PATH>/ee` — адрес образа DKP EE в стороннем хранилище образов. Пример: `imagesRepo: registry.deckhouse.ru/deckhouse/ee`;
+* `registryDockerCfg: <BASE64>` — права доступа к стороннему хранилищу образов, зашифрованные в Base64.
 
-Если разрешен анонимный доступ к образам DKP в стороннем registry, `registryDockerCfg` должен выглядеть следующим образом:
+Если разрешен анонимный доступ к образам DKP в стороннем хранилище образов, `registryDockerCfg` должен выглядеть следующим образом:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {}}}
@@ -746,7 +746,7 @@ spec:
 
 Приведенное значение должно быть закодировано в Base64.
 
-Если для доступа к образам DKP в стороннем registry необходима аутентификация, `registryDockerCfg` должен выглядеть следующим образом:
+Если для доступа к образам DKP в стороннем хранилище образов необходима аутентификация, `registryDockerCfg` должен выглядеть следующим образом:
 
 ```json
 {"auths": { "<PROXY_REGISTRY>": {"username":"<PROXY_USERNAME>","password":"<PROXY_PASSWORD>","auth":"<AUTH_BASE64>"}}}
@@ -756,7 +756,7 @@ spec:
 
 * `<PROXY_USERNAME>` — имя пользователя для аутентификации на `<PROXY_REGISTRY>`;
 * `<PROXY_PASSWORD>` — пароль пользователя для аутентификации на `<PROXY_REGISTRY>`;
-* `<PROXY_REGISTRY>` — адрес стороннего registry в виде `<HOSTNAME>[:PORT]`;
+* `<PROXY_REGISTRY>` — адрес стороннего хранилища образов в виде `<HOSTNAME>[:PORT]`;
 * `<AUTH_BASE64>` — строка вида `<PROXY_USERNAME>:<PROXY_PASSWORD>`, закодированная в Base64.
 
 Итоговое значение для `registryDockerCfg` должно быть также закодировано в Base64.
@@ -774,10 +774,10 @@ MYRESULTSTRING=$(echo -n "{\"auths\":{\"$MYREGISTRY\":{\"username\":\"$MYUSER\",
 echo "$MYRESULTSTRING"
 ```
 
-Для настройки нестандартных конфигураций сторонних registries в InitConfiguration предусмотрены еще два параметра:
+Для настройки нестандартных конфигураций сторонних хранилищ образов в InitConfiguration предусмотрены еще два параметра:
 
-* `registryCA` — корневой сертификат, которым можно проверить сертификат registry (если registry использует самоподписанные сертификаты);
-* `registryScheme` — протокол доступа к registry (`HTTP` или `HTTPS`). По умолчанию — `HTTPS`.
+* `registryCA` — корневой сертификат, которым можно проверить сертификат хранилища образов (если хранилище образов использует самоподписанные сертификаты);
+* `registryScheme` — протокол доступа к хранилищу образов (`HTTP` или `HTTPS`). По умолчанию — `HTTPS`.
 {% endofftopic %}
 
 <div markdown="0" style="height: 0;" id="особенности-настройки-сторонних-registry"></div>
@@ -802,7 +802,7 @@ echo "$MYRESULTSTRING"
 
 Чтобы настроить Nexus, выполните следующие шаги:
 
-1. Создайте проксирующий репозиторий Docker («Administration» → «Repository» → «Repositories»), указывающий на [публичный Deckhouse container registry](https://registry.deckhouse.ru/).
+1. Создайте проксирующий репозиторий Docker («Administration» → «Repository» → «Repositories»), указывающий на [публичное хранилище образов Deckhouse](https://registry.deckhouse.ru/).
    ![Создание проксирующего репозитория Docker](../images/registry/nexus/nexus-repository.png)
 
 1. Заполните поля страницы создания репозитория следующим образом:
@@ -845,25 +845,25 @@ echo "$MYRESULTSTRING"
 
 Используйте функцию [Harbor Proxy Cache](https://github.com/goharbor/harbor).
 
-1. Настройте доступ к registry:
+1. Настройте доступ к хранилищу образов:
    * в боковом меню перейдите в раздел «Administration» → «Registries»
-     и нажмите «New Endpoint», чтобы добавить эндпоинт для registry;
+     и нажмите «New Endpoint», чтобы добавить эндпоинт для хранилища образов;
    * в выпадающем списке «Provider» выберите «Docker Registry»;
    * в поле «Name» укажите имя эндпоинта на свое усмотрение;
    * в поле «Endpoint URL» укажите `https://registry.deckhouse.ru`;
    * в поле «Access ID» укажите `license-token`;
    * в поле «Access Secret» укажите свой лицензионный ключ Deckhouse Kubernetes Platform;
    * задайте остальные параметры по своему усмотрению;
-   * нажмите «ОК», чтобы подтвердить создание эндпоинта для registry.
+   * нажмите «ОК», чтобы подтвердить создание эндпоинта для хранилища образов.
 
-   ![Настройка доступа к registry](../images/registry/harbor/harbor1.png)
+   ![Настройка доступа к хранилищу образов](../images/registry/harbor/harbor1.png)
 
 1. Создайте новый проект:
    * в боковом меню перейдите в раздел «Projects» и нажмите «New Project», чтобы добавить проект;
    * в поле «Project Name» укажите любое имя проекта на свое усмотрение (например, `d8s`).
      Указанное имя будет частью URL-адреса;
    * в поле «Access Level» выберите «Public»;
-   * включите «Proxy Cache» и в выпадающем списке выберите registry, созданный ранее;
+   * включите «Proxy Cache» и в выпадающем списке выберите хранилище образов, созданное ранее;
    * задайте остальные параметры по своему усмотрению;
    * нажмите «ОК», чтобы подтвердить создание проекта.
 
@@ -871,7 +871,7 @@ echo "$MYRESULTSTRING"
 
 После настройки Harbor образы DKP станут доступны по адресу следующего вида: `https://your-harbor.com/d8s/deckhouse/ee:{d8s-version}`.
 
-### Ручная загрузка образов DKP и БД уязвимостей в приватный registry
+### Ручная загрузка образов DKP и БД уязвимостей в приватное хранилище образов контейнеров
 
 {% alert level="warning" %}
 Утилита `d8 mirror` недоступна для использования с редакциями Community Edition (CE) и Basic Edition (BE).
@@ -898,9 +898,9 @@ echo "$MYRESULTSTRING"
 
   где:
 
-  - `--source` — адрес Deckhouse container registry;
+  - `--source` — адрес хранилища образов Deckhouse;
   - `<EDITION>` — код редакции Deckhouse Kubernetes Platform (например, `ee`, `se`, `se-plus`). По умолчанию параметр `--source` ссылается на редакцию Enterprise Edition (`ee`) и может быть опущен;
-  - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном registry;
+  - `--license` — параметр для указания лицензионного ключа Deckhouse Kubernetes Platform для аутентификации в официальном хранилище образов;
   - `<LICENSE_KEY>` — лицензионный ключ Deckhouse Kubernetes Platform;
   - `/home/user/d8-bundle` — директория, в которой будут расположены пакеты образов. Будет создана, если не существует.
 
@@ -923,7 +923,7 @@ echo "$MYRESULTSTRING"
   /home/user/d8-bundle
   ```
 
-  Пример команды для загрузки образов DKP из стороннего registry:
+  Пример команды для загрузки образов DKP из стороннего хранилища образов:
 
   ```shell
   d8 mirror pull \
@@ -1006,7 +1006,7 @@ echo "$MYRESULTSTRING"
 - `--since-version=X.Y` — скачать все версии DKP, начиная с указанной минорной версии. Параметр будет проигнорирован, если указанная версия выше, чем версия на канале обновлений Rock Solid. Параметр не может быть использован одновременно с параметром `--deckhouse-tag`;
 - `--deckhouse-tag` — скачать только конкретную версию DKP (без учета каналов обновлений). Параметр не может быть использован одновременно с параметром `--since-version`;
 - `--gost-digest` — рассчитать контрольную сумму итогового набора образов DKP в формате ГОСТ Р 34.11-2012 (Стрибог). Контрольная сумма будет отображена и записана в файл с расширением `.tar.gostsum` в папке с TAR-архивом, содержащим образы DKP;
-- `--source-login` и `--source-password` — данные для аутентификации в стороннем registry;
+- `--source-login` и `--source-password` — данные для аутентификации в стороннем хранилище образов;
 - `--images-bundle-chunk-size=N` — максимальный размер файлов (в ГБ), на которые нужно разбить архив образов. В результате работы вместо одного файла архива образов будет создан набор CHUNK-файлов (например, `d8.tar.NNNN.chunk`). Чтобы загрузить образы из такого набора файлов, укажите в команде `d8 mirror push` имя файла без суффикса `.NNNN.chunk` (например, `d8.tar` для файлов `d8.tar.NNNN.chunk`);
 - `--tmp-dir` — путь к директории для временных файлов, который будет использоваться во время операций загрузки и выгрузки образов. Вся обработка выполняется в этом каталоге. Он должен иметь достаточный объем свободного дискового пространства, чтобы вместить весь загружаемый пакет образов. По умолчанию используется поддиректория `.tmp` в директории с пакетами образов.
 
@@ -1016,15 +1016,15 @@ echo "$MYRESULTSTRING"
 - `NO_PROXY` — список хостов, разделенных запятыми, которые следует исключить из проксирования. Каждое значение может быть представлено в виде IP-адреса (`1.2.3.4`), CIDR (`1.2.3.4/8`), домена или символа (`*`). IP-адреса и домены также могут включать номер порта (`1.2.3.4:80`). Доменное имя соответствует как самому себе, так и всем поддоменам. Доменное имя, начинающееся с `.`, соответствует только поддоменам. Например, `foo.com` соответствует `foo.com` и `bar.foo.com`; `.y.com` соответствует `x.y.com`, но не соответствует `y.com`. Символ `*` отключает проксирование;
 - `SSL_CERT_FILE` — путь до SSL-сертификата. Если переменная установлена, системные сертификаты не используются;
 - `SSL_CERT_DIR` — список каталогов, разделенный двоеточиями. Определяет, в каких каталогах искать файлы SSL-сертификатов. Если переменная установлена, системные сертификаты не используются. [Подробнее...](https://www.openssl.org/docs/man1.0.2/man1/c_rehash.html)
-- `MIRROR_BYPASS_ACCESS_CHECKS` — установите для этого параметра значение `1`, чтобы отключить проверку корректности переданных учетных данных для registry.
+- `MIRROR_BYPASS_ACCESS_CHECKS` — установите для этого параметра значение `1`, чтобы отключить проверку корректности переданных учетных данных для хранилища образов.
 {% endofftopic %}
 
-- На хост с доступом к registry, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](../cli/d8/).
+- На хост с доступом к хранилищу образов, куда нужно загрузить образы DKP, скопируйте загруженный пакет образов DKP и установите [Deckhouse CLI](../cli/d8/).
 
-- Загрузите образы DKP в registry с помощью команды `d8 mirror push`.
+- Загрузите образы DKP в хранилище образов с помощью команды `d8 mirror push`.
 
-  Команда `d8 mirror push` загружает в registry образы из всех пакетов, которые присутствуют в переданной директории.
-  При необходимости выгрузить в registry только часть пакетов вы можете либо выполнить команду для каждого необходимого пакета образов, передав ей прямой путь до TAR-пакета вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
+  Команда `d8 mirror push` загружает в хранилище образов образы из всех пакетов, которые присутствуют в переданной директории.
+  При необходимости выгрузить в хранилище образов только часть пакетов вы можете либо выполнить команду для каждого необходимого пакета образов, передав ей прямой путь до TAR-пакета вместо директории, либо убрав расширение `.tar` у ненужных пакетов или переместив их вне директории.
 
   Пример команды для загрузки пакетов образов из директории `/mnt/MEDIA/d8-images` (укажите данные для авторизации при необходимости):
 
@@ -1033,20 +1033,20 @@ echo "$MYRESULTSTRING"
     --registry-login='<USER>' --registry-password='<PASSWORD>'
   ```
 
-  Перед загрузкой образов убедитесь, что путь для загрузки в container registry существует (в примере — `/sys/deckhouse`) и у используемой учетной записи есть права на запись.
+  Перед загрузкой образов убедитесь, что путь для загрузки в хранилище образов существует (в примере — `/sys/deckhouse`) и у используемой учетной записи есть права на запись.
 
   Если вы используете Harbor, вы не сможете выгрузить образы в корень проекта. Используйте выделенный репозиторий в проекте для размещения образов DKP.
 
-- После загрузки образов в registry можно переходить к установке DKP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
+- После загрузки образов в хранилище образов можно переходить к установке DKP. Воспользуйтесь [руководством по быстрому старту](/products/kubernetes-platform/gs/bm-private/step2.html).
 
-  При запуске установщика используйте registry, в который ранее были загружены образы, а не официальный публичный DKP registry. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
+  При запуске установщика используйте хранилище образов, в которое ранее были загружены образы, а не официальное публичное хранилище образов DKP. Для примера выше адрес запуска установщика будет иметь вид `corp.company.com:5000/sys/deckhouse/install:stable` вместо `registry.deckhouse.ru/deckhouse/ee/install:stable`.
 
-  В [секции параметров `registry`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig `deckhouse` при установке также используйте адрес вашего registry и данные авторизации (с версии DKP 1.75). Устаревший способ — использование [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (параметры [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
+  В [секции параметров `registry`](/modules/deckhouse/configuration.html#parameters-registry) ModuleConfig `deckhouse` при установке также используйте адрес вашего хранилища образов и данные авторизации (с версии DKP 1.75). Устаревший способ — использование [InitConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration) (параметры [`imagesRepo`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo), [`registryDockerCfg`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-registrydockercfg)).
 
 ### Создание кластера и запуск DKP без использования каналов обновлений
 
 {% alert level="warning" %}
-Этот способ следует использовать только в случае, если в приватном registry нет образов, содержащих информацию о каналах обновлений.
+Этот способ следует использовать только в случае, если в приватном хранилище нет образов, содержащих информацию о каналах обновлений.
 {% endalert %}
 
 Если необходимо установить DKP с отключенным автоматическим обновлением:
