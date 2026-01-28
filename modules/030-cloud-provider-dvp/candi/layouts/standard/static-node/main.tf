@@ -25,12 +25,44 @@ module "root-disk" {
   cluster_uuid  = local.cluster_uuid
 }
 
+resource "kubernetes_owner_references_v1" "root-disk" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualDisk"
+  metadata {
+    name      = module.root-disk.name
+    namespace = local.namespace
+  }
+
+  ownerReferences {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.static-node.name
+    uid         = module.static-node.uid
+  }
+}
+
 module "ipv4-address" {
   source       = "../../../terraform-modules/ipv4-address/"
   namespace    = local.namespace
   hostname     = local.hostname
   ipv4_address = local.ipv4_address
   cluster_uuid = local.cluster_uuid
+}
+
+resource "kubernetes_owner_references_v1" "ipv4-address" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "VirtualMachineIPAddress"
+  metadata {
+    name      = module.ipv4-address.name
+    namespace = local.namespace
+  }
+
+  ownerReferences {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.static-node.name
+    uid         = module.static-node.uid
+  }
 }
 
 module "additional-disk" {
@@ -88,4 +120,20 @@ module "static-node" {
   zone                       = local.zone
   cloud_config               = local.user_data
   additional_disks           = local.static_additional_disks
+}
+
+resource "kubernetes_owner_references_v1" "cloudinit-secret" {
+  api_version = "virtualization.deckhouse.io/v1alpha2"
+  kind        = "Secret"
+  metadata {
+    name      = module.static-node.cloudinit_secret_name
+    namespace = local.namespace
+  }
+
+  ownerReferences {
+    api_version = "virtualization.deckhouse.io/v1alpha2"
+    kind        = "VirtualMachine"
+    name        = module.static-node.name
+    uid         = module.static-node.uid
+  }
 }
