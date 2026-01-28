@@ -2,7 +2,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'
 git:
-- add: /{{ .ModulePath }}modules/cloud-provider-vcd/candi
+- add: /{{ .ModulePath }}modules/030-cloud-provider-vcd/candi
   to: /deckhouse/candi/cloud-providers/vcd
 import:
 {{- range $version := .TF.vcd.versions }}
