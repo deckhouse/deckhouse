@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	dvpapi "dvp-common/api"
@@ -49,6 +50,13 @@ import (
 )
 
 const ProviderIDPrefix = "dvp://"
+
+const (
+	// OrphanedVMAnnotation marks DeckhouseMachine when VM deletion timed out
+	OrphanedVMAnnotation = "dvp.deckhouse.io/orphaned-vm"
+	// OrphanedVMTimestampAnnotation records when VM became orphaned
+	OrphanedVMTimestampAnnotation = "dvp.deckhouse.io/orphaned-vm-timestamp"
+)
 
 // DeckhouseMachineReconciler reconciles a DeckhouseMachine object
 type DeckhouseMachineReconciler struct {
@@ -259,18 +267,40 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		// If the machine has a NodeRef then it must have been working at some point,
 		// so the error could be something temporary.
 		// If not, it is more likely a configuration error, so we record failure and never retry.
-		logger.Info("VM failed", "state", vm.Status.Phase)
+		logger.Error(fmt.Errorf("VM in degraded state"), "VM failed",
+			"vm_phase", vm.Status.Phase,
+			"vm_name", vm.Name,
+			"has_node_ref", machine.Status.NodeRef != nil,
+			"requested_memory", dvpMachine.Spec.Memory.String(),
+			"requested_cpu_cores", dvpMachine.Spec.CPU.Cores,
+			"vm_class", dvpMachine.Spec.VMClassName,
+		)
+
 		if machine.Status.NodeRef == nil {
-			err = fmt.Errorf("VM state %q is unexpected", vm.Status.Phase)
-			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.UpdateMachineError))
-			dvpMachine.Status.FailureMessage = ptr.To(err.Error())
+			// VM never successfully started - likely a resource or configuration error
+			err = fmt.Errorf("VM state %q indicates failure, likely due to resource constraints or configuration error", vm.Status.Phase)
+			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf(
+				"VM failed to start (vmClass: %s, memory: %s, CPU: %d cores). Check parent DVP cluster for detailed error: %s",
+				dvpMachine.Spec.VMClassName,
+				dvpMachine.Spec.Memory.String(),
+				dvpMachine.Spec.CPU.Cores,
+				err.Error(),
+			))
+		} else {
+			// VM was working before, this might be temporary
+			logger.Info("VM had NodeRef before entering degraded state, may be temporary issue",
+				"node_name", machine.Status.NodeRef.Name,
+			)
 		}
+
 		conditions.MarkFalse(
 			dvpMachine,
 			infrastructurev1a1.VMReadyCondition,
 			infrastructurev1a1.VMInFailedStateReason,
 			clusterv1b1.ConditionSeverityError,
-			"",
+			"VM in degraded state: %s",
+			vm.Status.Phase,
 		)
 		return ctrl.Result{}, nil
 	default:
@@ -323,8 +353,28 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 		return ctrl.Result{}, err
 	}
 
+	// Try to delete VM with timeout
+	vmDeletionFailed := false
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
-		return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
+		// Check if it's a timeout error - in this case, proceed with cleanup
+		if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") {
+			logger.Error(err, "VM deletion timed out, VM may still be terminating in parent DVP cluster. Proceeding with cleanup to unblock DeckhouseMachine deletion.",
+				"vm_name", dvpMachine.Name,
+			)
+			vmDeletionFailed = true
+
+			// Mark the VM as orphaned for manual cleanup
+			if dvpMachine.Annotations == nil {
+				dvpMachine.Annotations = make(map[string]string)
+			}
+			dvpMachine.Annotations[OrphanedVMAnnotation] = dvpMachine.Name
+			dvpMachine.Annotations[OrphanedVMTimestampAnnotation] = time.Now().Format(time.RFC3339)
+
+			// Continue with disk cleanup despite VM deletion timeout
+		} else {
+			// For other errors, fail the reconciliation
+			return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
+		}
 	}
 
 	merr := &multierror.Error{}
@@ -340,7 +390,15 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	}
 
 	controllerutil.RemoveFinalizer(dvpMachine, infrastructurev1a1.MachineFinalizer)
-	logger.Info("Reconciled Machine delete successfully")
+
+	if vmDeletionFailed {
+		logger.Info("Reconciled Machine delete with orphaned VM - manual cleanup may be required in parent DVP cluster",
+			"orphaned_vm", dvpMachine.Name,
+		)
+	} else {
+		logger.Info("Reconciled Machine delete successfully")
+	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -474,7 +532,48 @@ func (r *DeckhouseMachineReconciler) createVM(
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("create VM: %w", err)
+		// Get logger for detailed error logging
+		logger := log.FromContext(ctx)
+
+		// Log the request details for debugging
+		logger.Error(err, "Failed to create VM in parent DVP cluster",
+			"vm_name", dvpMachine.Name,
+			"vm_class", dvpMachine.Spec.VMClassName,
+			"requested_memory", dvpMachine.Spec.Memory.String(),
+			"requested_cpu_cores", dvpMachine.Spec.CPU.Cores,
+			"requested_cpu_fraction", dvpMachine.Spec.CPU.Fraction,
+		)
+
+		errMsg := err.Error()
+
+		// Check for permission/forbidden errors (e.g., vmClass mismatch or quota)
+		if strings.Contains(errMsg, "forbidden") || strings.Contains(errMsg, "Forbidden") {
+			return nil, fmt.Errorf("VM creation blocked in parent DVP cluster - possible vmClass resource limits exceeded or permission issue (vmClass: %s, memory: %s, CPU: %d cores @ %s): %w",
+				dvpMachine.Spec.VMClassName,
+				dvpMachine.Spec.Memory.String(),
+				dvpMachine.Spec.CPU.Cores,
+				dvpMachine.Spec.CPU.Fraction,
+				err)
+		}
+
+		// Check for resource constraint errors
+		if strings.Contains(errMsg, "insufficient") ||
+			strings.Contains(errMsg, "exceeded") ||
+			strings.Contains(errMsg, "quota") ||
+			strings.Contains(errMsg, "limit") {
+			return nil, fmt.Errorf("VM creation failed due to resource constraints - requested resources may exceed available capacity or vmClass limits (vmClass: %s, memory: %s, CPU: %d cores): %w",
+				dvpMachine.Spec.VMClassName,
+				dvpMachine.Spec.Memory.String(),
+				dvpMachine.Spec.CPU.Cores,
+				err)
+		}
+
+		// Generic error with context
+		return nil, fmt.Errorf("create VM failed (vmClass: %s, memory: %s, CPU: %d cores): %w",
+			dvpMachine.Spec.VMClassName,
+			dvpMachine.Spec.Memory.String(),
+			dvpMachine.Spec.CPU.Cores,
+			err)
 	}
 
 	return vm, nil
