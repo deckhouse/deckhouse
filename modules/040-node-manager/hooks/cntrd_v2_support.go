@@ -34,12 +34,11 @@ import (
 )
 
 const (
-	containerdV2SupportLabel       = "node.deckhouse.io/containerd-v2-unsupported"
-	cgroupLabel                    = "node.deckhouse.io/cgroup"
-	cgroupV2Value                  = "cgroup2fs"
-	cntrdV2GroupName               = "nodes_cntrd_v2"
-	cgroupV2SupportValuesKey       = "nodeManager:cgroupV2Support"
-	cgroupV2SupportRequirementsKey = "cgroupV2Support"
+	containerdV2SupportLabel = "node.deckhouse.io/containerd-v2-unsupported"
+	cgroupLabel              = "node.deckhouse.io/cgroup"
+	cgroupV2Value            = "cgroup2fs"
+	cntrdV2GroupName         = "nodes_cntrd_v2"
+	cgroupV2SupportValuesKey = "nodeManager:cgroupV2Support"
 )
 
 var cntrdV2UnsupportedMetricName = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
