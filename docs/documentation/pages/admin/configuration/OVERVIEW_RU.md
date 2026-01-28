@@ -122,9 +122,9 @@ d8 system edit cluster-configuration
 
 Эта команда автоматически:
 
-- Добавит аннотацию `deckhouse.io/allow-unsafe` к Secret `d8-cluster-configuration`
-- Откроет редактор для изменения конфигурации
-- Удалит аннотацию после сохранения изменений
+- добавит аннотацию `deckhouse.io/allow-unsafe` к секрету `d8-cluster-configuration`;
+- откроет редактор для изменения конфигурации;
+- удалит аннотацию после сохранения изменений.
 
 **Шаги:**
 
