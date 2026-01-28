@@ -1,8 +1,18 @@
 diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
-index 1e82cf3543..3506809565 100644
+index 1e82cf354..da620347f 100644
 --- a/pkg/provider/azure.go
 +++ b/pkg/provider/azure.go
-@@ -397,7 +397,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
+@@ -201,6 +201,9 @@ type Cloud struct {
+ 	endpointSlicesCache                             sync.Map
+ 
+ 	azureResourceLocker *AzureResourceLocker
++
++	// DisableAPICallCache disables caching of IMDS metadata. wresponses when set to true
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
+ }
+ 
+ // NewCloud returns a Cloud with initialized clients
+@@ -397,7 +400,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
  	az.Config = *config
  	az.Environment = *env
  	az.ResourceRequestBackoff = resourceRequestBackoff
@@ -12,7 +22,7 @@ index 1e82cf3543..3506809565 100644
  		return err
  	}
 diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
-index ad198e6740..a4f94e941b 100644
+index ad198e674..a4f94e941 100644
 --- a/pkg/provider/azure_instance_metadata.go
 +++ b/pkg/provider/azure_instance_metadata.go
 @@ -109,12 +109,12 @@ type InstanceMetadataService struct {
@@ -30,6 +40,7 @@ index ad198e6740..a4f94e941b 100644
  	if err != nil {
  		return nil, err
  	}
+
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
 index 2fca5898ce..1ecb620653 100644
 --- a/pkg/provider/azure_vmss.go

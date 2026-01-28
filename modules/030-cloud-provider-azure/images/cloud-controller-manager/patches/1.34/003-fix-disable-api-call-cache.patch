@@ -1,8 +1,18 @@
 diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
-index 6dec5d582..efd1b92e8 100644
+index f0a8cf28a..a512f6a58 100644
 --- a/pkg/provider/azure.go
 +++ b/pkg/provider/azure.go
-@@ -344,7 +344,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *config.C
+@@ -156,6 +156,9 @@ type Cloud struct {
+ 	endpointSlicesCache                             sync.Map
+ 
+ 	azureResourceLocker *AzureResourceLocker
++
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
+ }
+ 
+ // NewCloud returns a Cloud with initialized clients
+@@ -343,7 +346,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
  	az.Config = *config
  	az.Environment = env
  	az.ResourceRequestBackoff = resourceRequestBackoff
@@ -30,11 +40,12 @@ index 239e95a81..43312c02d 100644
  	if err != nil {
  		return nil, err
  	}
+
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
-index d618b1b31..582f9a3d8 100644
+index 2ef66bd3dc..64bcc2355e 100644
 --- a/pkg/provider/azure_vmss.go
 +++ b/pkg/provider/azure_vmss.go
-@@ -448,6 +448,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+@@ -446,6 +446,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
  	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
  	if err != nil {
  		klog.Errorf("Failed to check VM management type: %v", err)
@@ -42,16 +53,16 @@ index d618b1b31..582f9a3d8 100644
 +		if vmManagementType == ManagedByUnknownVMSet {
 +			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
 +
-+			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			nodeName, err2 := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from availability set: %v", providerID, err2)
 +			} else {
 +				return nodeName, nil
 +			}
 +
-+			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			nodeName, err2 = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from vmss flex: %v", providerID, err2)
 +			} else {
 +				return nodeName, nil
 +			}
