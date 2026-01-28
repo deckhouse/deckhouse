@@ -17,6 +17,7 @@ package template
 import (
 	"path/filepath"
 
+	"github.com/Masterminds/semver/v3"
 	"gopkg.in/yaml.v2"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -35,7 +36,9 @@ const (
 )
 
 const (
-	kubeadmV1Beta4 = "v1beta4"
+	kubeadmV1Beta4MinKubeVersion = "1.31.0"
+	kubeadmV1Beta4               = "v1beta4"
+	kubeadmV1Beta3               = "v1beta3"
 )
 
 type saveFromTo struct {
@@ -136,7 +139,17 @@ func PrepareBashibleBundle(templateController *Controller, templateData map[stri
 }
 
 func GetKubeadmVersion(kubernetesVersion string) (string, error) {
-	return kubeadmV1Beta4, nil
+	v, err := semver.NewVersion(kubernetesVersion)
+	if err != nil {
+		return "", err
+	}
+
+	minConstraint, _ := semver.NewConstraint(">=" + kubeadmV1Beta4MinKubeVersion)
+
+	if minConstraint.Check(v) {
+		return kubeadmV1Beta4, nil
+	}
+	return kubeadmV1Beta3, nil
 }
 
 func PrepareKubeadmConfig(templateController *Controller, templateData map[string]interface{}) error {
