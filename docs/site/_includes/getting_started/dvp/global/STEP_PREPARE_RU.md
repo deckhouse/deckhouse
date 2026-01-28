@@ -56,8 +56,7 @@ pdpl-user -i 63 caps
 1. Установите пакеты NFS-сервера (если они еще не установлены):
 
    ```bash
-   sudo apt update
-   sudo apt install nfs-kernel-server
+   sudo apt update && sudo apt install nfs-kernel-server
    ```
 
 1. Создайте каталог, который будет использоваться для хранения данных:
@@ -93,12 +92,7 @@ pdpl-user -i 63 caps
 1. Выполните следующие команды на master- и worker-узлах, чтобы убедиться в успешном монтировании каталога:
 
    ```bash
+   sudo apt update && sudo apt install -y nfs-common
    sudo mount -t nfs4 <NFS_HOST>:<NFS_SHARE> /mnt
    sudo umount /mnt
    ```
-
-{% alert level="info" %}
-**Важно**: Запишите значения `<NFS_HOST>` и `<NFS_SHARE>`, которые вы использовали при настройке NFS-сервера. Эти значения понадобятся вам на следующем шаге для заполнения плейсхолдеров `<NFS_HOST>` и `<NFS_SHARE>` в файле `config.yml`.
-
-Также обратите внимание, что в файле `config.yml` уже настроен модуль `virtualization` с примерами подсетей для виртуальных машин (`10.66.10.0/24`, `10.66.20.0/24`, `10.66.30.0/24`). Эти подсети не должны пересекаться с подсетями узлов кластера, подсетью сервисов (`serviceSubnetCIDR: 10.225.0.0/16`) или подсетью подов (`podSubnetCIDR: 10.115.0.0/16`). При необходимости замените примеры подсетей на свои значения.
-{% endalert %}

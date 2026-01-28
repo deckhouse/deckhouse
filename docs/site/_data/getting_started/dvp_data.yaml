@@ -59,10 +59,15 @@ installTypes:
         template: getting_started/dvp/global/STEP_INSTALL.md
       step5:
         name:
+          en: Platform configuration
+          ru: Настройка платформы
+        template: getting_started/dvp/global/STEP_CONFIGURATION.md
+      step6:
+        name:
           en: Deploying a test application
           ru: Развёртывание тестового приложения
         template: getting_started/dvp/global/STEP_TESTAPP.md
-      step6:
+      step7:
         name:
           en: What can I do next?
           ru: Куда двигаться дальше?
