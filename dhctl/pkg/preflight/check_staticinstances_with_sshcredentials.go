@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -49,6 +50,7 @@ func (pc *Checker) CheckStaticInstancesSSH(ctx context.Context) error {
 		if !ok {
 			return fmt.Errorf("Instance %s: SSHCredentials %s not found", inst.Name, inst.CredName)
 		}
+		log.InfoF("Checking StaticInstance %s (%s)\n", inst.Name, inst.Address)
 		if err := testSSHConnection(ctx, pc.nodeInterface, inst.Address, cred); err != nil {
 			return fmt.Errorf(
 				"Cannot connect to %s (%s:%d): %w",
