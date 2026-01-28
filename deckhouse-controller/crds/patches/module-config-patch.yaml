@@ -1,0 +1,30 @@
+spec:
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          x-doc-examples:
+            - apiVersion: deckhouse.io/v1alpha1
+              kind: ModuleConfig
+              metadata:
+                name: module-1
+              spec:
+                enabled: true
+                settings: {}
+                version: 1
+          properties:
+            spec:
+              properties:
+                enabled:
+                  x-doc-examples:
+                    - false
+                maintenance:
+                  x-doc-examples:
+                    - NoResourceReconciliation
+                version:
+                  x-doc-examples:
+                    - 1
+                updatePolicy:
+                  x-doc-examples:
+                    - test-alpha

@@ -48,10 +48,19 @@ func List() ([]apiextensionsv1.CustomResourceDefinition, error) {
 		}
 
 		if d.IsDir() {
+			// Skip patches directory
+			if filepath.Base(path) == "patches" {
+				return fs.SkipDir
+			}
 			return nil
 		}
 
-		if strings.HasPrefix(path, "doc-ru-") {
+		// Skip files in patches directory
+		if strings.Contains(path, "patches/") || strings.Contains(path, "patches\\") {
+			return nil
+		}
+
+		if strings.HasPrefix(filepath.Base(path), "doc-ru-") {
 			return nil
 		}
 
