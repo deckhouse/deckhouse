@@ -178,7 +178,7 @@ d8 system edit cluster-configuration
    d8 k -n kube-system annotate secret d8-cluster-configuration deckhouse.io/allow-unsafe="true"
    ```
 
-2. Получите текущую конфигурацию, декодируйте её и сохраните в файл:
+1. Получите текущую конфигурацию, декодируйте её и сохраните в файл:
 
    ```shell
    d8 k -n kube-system get secret d8-cluster-configuration \
