@@ -1,5 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
     const channelListTitle = document.querySelectorAll('.channel__list--title');
+    console.log(channelListTitle)
 
     channelListTitle.forEach(title => {
         title.addEventListener('click', function() {
