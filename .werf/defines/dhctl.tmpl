@@ -41,6 +41,7 @@ git:
 {{- define "dhctl_artifact" }}
 {{- $context := . -}}
 {{- $rppSignCheck := ternary "true" "false" (eq $context.Env "CSE") -}}
+{{- $dhctlVersion := ternary "v1.73" $context.CI_COMMIT_TAG (eq $context.CI_COMMIT_TAG "dev") -}}
 image: dhctl
 final: false
 fromImage: base-for-go
@@ -58,5 +59,5 @@ shell:
   install:
   - cd /dhctl
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - RPP_SIGN_CHECK={{- $rppSignCheck }} D8_VERSION={{- $context.CI_COMMIT_TAG }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
+  - RPP_SIGN_CHECK={{- $rppSignCheck }} D8_VERSION={{- $dhctlVersion }} DEFAULT_KUBERNETES_VERSION={{- $context.DEFAULT_KUBERNETES_VERSION }} make build
 {{- end }}

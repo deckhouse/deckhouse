@@ -157,6 +157,10 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		}
 	}
 
+	if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+		return err
+	}
+
 	if !c.CommanderMode {
 		cacheIdentity := ""
 		if app.KubeConfigInCluster {
@@ -277,6 +281,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("unable to connect to Kubernetes over ssh tunnel: %w", err)
 		}
+	}
+
+	if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+		return nil, err
 	}
 
 	if !c.CommanderMode {
@@ -491,6 +499,10 @@ func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Durati
 		if err := kubeCl.Init(client.AppKubernetesInitParams()); err != nil {
 			return err
 		}
+	}
+
+	if err := kubernetes.CheckDeckhouseVersionCompatibility(context.Background(), kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+		return err
 	}
 
 	var convergeCtx *convergectx.Context
