@@ -342,7 +342,7 @@ apiVersions:
                         type: string
             instanceClass:
               description: |
-                Partial contents of the fields of the [AzureInstanceClass](https://deckhouse.io/modules/cloud-provider-azure/cr.html#azureinstanceclass).
+                Partial contents of the fields of the [AzureInstanceClass](cr.html#azureinstanceclass).
               required: [machineSize, urn]
               type: object
               properties:

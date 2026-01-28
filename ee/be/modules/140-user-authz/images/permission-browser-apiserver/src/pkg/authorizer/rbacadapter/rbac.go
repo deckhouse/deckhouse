@@ -135,7 +135,7 @@ func (r *RBACAuthorizer) checkRoleBindings(attrs authorizer.Attributes, userName
 }
 
 // subjectMatches checks if any subject in the list matches the user
-func (r *RBACAuthorizer) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, namespace string) bool {
+func (r *RBACAuthorizer) subjectMatches(subjects []rbacv1.Subject, userName string, userGroups []string, _ string) bool {
 	for _, subject := range subjects {
 		switch subject.Kind {
 		case rbacv1.UserKind:

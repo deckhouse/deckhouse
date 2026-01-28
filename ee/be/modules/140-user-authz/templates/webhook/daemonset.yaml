@@ -28,6 +28,8 @@ spec:
         cpu: 50m
         memory: 50Mi
   {{- end }}
+
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: SecurityPolicyException
@@ -50,8 +52,8 @@ spec:
       - port: 40443
         protocol: TCP
         metadata:
-          description: Node-local authorization webhook listener.
-          
+          description: Node-local authorization webhook listener.    
+{{- end }}   
 ---
 apiVersion: apps/v1
 kind: DaemonSet

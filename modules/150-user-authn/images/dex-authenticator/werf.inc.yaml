@@ -17,7 +17,7 @@ imageSpec:
     entrypoint: [ "/bin/oauth2_proxy" ]
     cmd: [ "--upstream=http://0.0.0.0:8080/", "--http-address=0.0.0.0:4180" ]
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
 final: false
 git:
@@ -34,6 +34,17 @@ git:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/url-exec-prober
+    to: /src/url-exec-prober
+    includePaths:
+    - '**/*.go'
+    - '**/go.mod'
+    - '**/go.sum'
+    stageDependencies:
+      install:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
 shell:
   install:
     - cd /src
@@ -44,7 +55,7 @@ image: {{ .ModuleName }}/{{ .ImageName }}-oauth2-proxy-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
 final: false
 import:
-  - image: {{ $.ModuleName }}/{{ $.ImageName }}-oauth2-proxy-src-artifact
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
     to: /src
     before: install
@@ -63,28 +74,12 @@ shell:
     - chown 64535:64535 oauth2-proxy
     - chmod 0700 oauth2-proxy
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-src-artifact
-fromImage: common/src-artifact
-final: false
-git:
-- add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/url-exec-prober
-  to: /src
-  includePaths:
-  - '**/*.go'
-  - '**/go.mod'
-  - '**/go.sum'
-  stageDependencies:
-    install:
-    - '**/*.go'
-    - '**/go.mod'
-    - '**/go.sum'
----
 image: {{ .ModuleName }}/{{ .ImageName }}-url-exec-prober-artifact
 fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 final: false
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-url-exec-prober-src-artifact
-  add: /src
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/url-exec-prober
   to: /src
   before: install
 mount:

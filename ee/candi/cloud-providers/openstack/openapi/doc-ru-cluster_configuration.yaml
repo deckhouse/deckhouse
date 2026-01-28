@@ -44,7 +44,7 @@ apiVersions:
               Количество создаваемых master-узлов. Для обеспечения кворума важно, чтобы количество было нечетным.
           instanceClass:
             description: |
-              Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+              Частичное содержимое полей [OpenStackInstanceClass](cr.html#openstackinstanceclass).
             properties: &instanceClassProperties_ru
               flavorName:
                 description: |
@@ -162,7 +162,7 @@ apiVersions:
                     ```
             instanceClass:
               description: |
-                Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+                Частичное содержимое полей [OpenStackInstanceClass](cr.html#openstackinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
                 configDrive:
@@ -224,7 +224,7 @@ apiVersions:
                   Тип корневого диска.
               instanceClass:
                 description: |
-                  Частичное содержимое полей [OpenStackInstanceClass](https://deckhouse.ru/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+                  Частичное содержимое полей [OpenStackInstanceClass](cr.html#openstackinstanceclass).
                 properties:
                   flavorName:
                     description: |

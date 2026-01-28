@@ -137,10 +137,7 @@ func (c *Client) DebugLog(format string, args ...interface{}) {
 
 // Upgrade upgrades resources
 func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := buildChart(c.templates, project.Name)
-	if err != nil {
-		return fmt.Errorf("build chart: %w", err)
-	}
+	ch := buildChart(c.templates, project.Name)
 
 	versions, err := c.discoverAPI()
 	if err != nil {
@@ -230,7 +227,7 @@ func (c *Client) discoverAPI() (map[string]struct{}, error) {
 	return versions, nil
 }
 
-func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, error) {
+func buildChart(templates map[string][]byte, releaseName string) *chart.Chart {
 	ch := &chart.Chart{
 		Metadata: &chart.Metadata{
 			Name:    releaseName,
@@ -249,7 +246,7 @@ func buildChart(templates map[string][]byte, releaseName string) (*chart.Chart, 
 		ch.Templates = append(ch.Templates, &chartFile)
 	}
 
-	return ch, nil
+	return ch
 }
 
 func buildValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) map[string]interface{} {
@@ -364,10 +361,7 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 // ValidateRender tests project render
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
-	ch, err := buildChart(c.templates, project.Name)
-	if err != nil {
-		return fmt.Errorf("make chart: %w", err)
-	}
+	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
 		Name:      project.Name,

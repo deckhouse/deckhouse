@@ -1,6 +1,12 @@
 {{- $moduleName := .ModuleName }}
 {{- $configVersion := .configVersion}}
+{{- $pageParams := .pageParams }}
 
 {{- $content := replace (T "module_enabling_details_content") "<ModuleName>" .ModuleName }}
+
+{{- if and $pageParams $pageParams.enablingNote }}
+  {{- $enablingNote := $pageParams.enablingNote | markdownify }}
+  {{- $content = printf "%s%s" (partial "alert" ( dict "level" "info" "content" $enablingNote )) $content }}
+{{- end }}
 
 {{- partial "details" (dict "summary" (T "module_enabling_details_title") "content" $content) }}

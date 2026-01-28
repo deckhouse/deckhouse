@@ -614,7 +614,7 @@ If you don’t receive any errors, it means that [security groups](https://docs.
 
 ### Configuring online volume resize
 
-When resizing a disk via the VK Cloud API, Cinder does not pass updated size information to Nova.
+When resizing a disk via the OpenStack API, Cinder does not pass updated size information to Nova.
 As a result, the disk size inside the guest OS remains unchanged.
 
 To fix this, you must configure access to the Nova API in the `cinder.conf` file.
