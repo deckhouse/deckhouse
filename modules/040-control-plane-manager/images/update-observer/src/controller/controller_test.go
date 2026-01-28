@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"testing/synctest"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -71,25 +73,27 @@ type ControllerTestSuite struct {
 }
 
 func (suite *ControllerTestSuite) TestConfigMapIsValid() {
-	suite.Run("When cluster is up to date", func() {
-		suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
+	synctest.Test(suite.T(), func(*testing.T) {
+		suite.Run("When cluster is up to date", func() {
+			suite.setupController(suite.fetchTestFileData("init-up-to-date.yaml"))
 
-		_, err := suite.controller.Reconcile(
-			suite.ctx,
-			reconcile.Request{},
-		)
+			_, err := suite.controller.Reconcile(
+				suite.ctx,
+				reconcile.Request{},
+			)
 
-		require.NoError(suite.T(), err)
-	})
-	suite.Run("When control plane component was failed", func() {
-		suite.setupController(suite.fetchTestFileData("init-component-failed.yaml"))
+			require.NoError(suite.T(), err)
+		})
+		suite.Run("When control plane component was failed", func() {
+			suite.setupController(suite.fetchTestFileData("init-component-failed.yaml"))
 
-		_, err := suite.controller.Reconcile(
-			suite.ctx,
-			reconcile.Request{},
-		)
+			_, err := suite.controller.Reconcile(
+				suite.ctx,
+				reconcile.Request{},
+			)
 
-		require.NoError(suite.T(), err)
+			require.NoError(suite.T(), err)
+		})
 	})
 }
 

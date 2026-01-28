@@ -26,7 +26,7 @@ data:
 metadata:
   annotations:
     cause: init
-    lastReconcilationTime: "2026-01-28T12:27:04+03:00"
+    lastReconciliationTime: "2000-01-01T03:00:30+03:00"
   labels:
     heritage: deckhouse
     k8s-version: v1.31
