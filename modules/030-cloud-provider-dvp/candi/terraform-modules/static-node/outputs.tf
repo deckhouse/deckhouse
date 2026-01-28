@@ -15,3 +15,15 @@
 output "node_ip_address" {
   value = data.kubernetes_resource.vm_data.object.status.ipAddress
 }
+
+output "name" {
+  value = local.vm_name
+}
+
+output "uid" {
+  value = data.kubernetes_resource.vm_data.uid
+}
+
+output "cloudinit_secret_name" {
+  value = local.cloudinit_secret_name
+}
