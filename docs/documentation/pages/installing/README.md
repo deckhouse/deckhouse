@@ -642,6 +642,7 @@ List of checks performed by the installer before starting Deckhouse Kubernetes P
 - `--preflight-skip-deckhouse-user-check`: Skip the `deckhouse` user existence check.
 - `--preflight-skip-yandex-with-nat-instance-check`: Skip the Yandex Cloud with NAT Instance configuration check.
 - `--preflight-skip-dvp-kubeconfig`: Skip the DVP kubeconfig check.
+- `--preflight-skip-staticinstances-with-ssh-credentials` — skip verifying accessibility StaticInstances with SSHCredentials.
 
 Example of using a preflight skip flag:
 
