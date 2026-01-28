@@ -187,7 +187,7 @@ Manually edit the configuration:
      -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d > cluster-config.yaml
    ```
 
-3. Edit the `cluster-config.yaml` file with your preferred editor:
+1. Edit the `cluster-config.yaml` file with your preferred editor:
 
    ```shell
    vi cluster-config.yaml
