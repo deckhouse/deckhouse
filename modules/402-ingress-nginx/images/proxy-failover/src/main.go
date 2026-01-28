@@ -142,7 +142,6 @@ func checker(w http.ResponseWriter, pid int) {
 }
 
 func main() {
-
 	err := prepareConfig()
 	if err != nil {
 		log.Fatalf("could not prepare nginx config: %v", err)
@@ -181,7 +180,6 @@ func main() {
 loop:
 	for {
 		select {
-
 		case event := <-watcher.Events:
 			if event.Op == fsnotify.Remove {
 				_ = watcher.Remove(event.Name)
@@ -221,7 +219,7 @@ loop:
 	}
 
 	if len(output) > 0 {
-		log.Printf(output)
+		log.Print(output)
 	}
 
 	for {

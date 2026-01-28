@@ -11,6 +11,8 @@ import (
 	"log/slog"
 	"path/filepath"
 
+	"github.com/vmware/go-vcloud-director/v2/govcd"
+	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -24,12 +26,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"infra-controller-manager/api/v1alpha1"
 	"infra-controller-manager/internal/vcd"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/vmware/go-vcloud-director/v2/govcd"
-	"github.com/vmware/go-vcloud-director/v2/types/v56"
 )
 
 // VCDAffinityRuleReconciler reconciles a VCDAffinityRule object
@@ -316,7 +316,7 @@ func (r *VCDAffinityRuleReconciler) buildVMAffinityRule(resource *v1alpha1.VCDAf
 
 func (r *VCDAffinityRuleReconciler) deleteVMAffinityRule(ctx context.Context, resource *v1alpha1.VCDAffinityRule, vdc *govcd.Vdc) error {
 	if resource.Status.RuleID != "" {
-		r.Logger.Info("deleting affinity rule from VCD API by id", slog.String("ruleID", resource.Status.RuleID))
+		r.Logger.Info("deleting affinity rule from VCD API by id", slog.String("rule_id", resource.Status.RuleID))
 		vmAffinityRule, err := vdc.GetVmAffinityRuleById(resource.Status.RuleID)
 
 		if err != nil {

@@ -51,7 +51,7 @@ func applyAutoscalerResourcesFilter(obj *unstructured.Unstructured) (go_hook.Fil
 	var depl appsv1.Deployment
 	err := sdk.FromUnstructured(obj, &depl)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("from unstructured: %w", err)
 	}
 
 	return depl.Spec.Template.Spec.Containers[0].Resources, nil
@@ -79,7 +79,7 @@ func removeResourcesLimitsForClusterAutoscaler(_ context.Context, input *go_hook
 		var depl appsv1.Deployment
 		err := sdk.FromUnstructured(u, &depl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("from unstructured: %w", err)
 		}
 
 		// Remove resource limits from the first container

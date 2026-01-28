@@ -27,10 +27,14 @@ exec >"${TMPDIR}/bootstrap.log" 2>&1
 
   {{- if or (eq $ng.nodeType "CloudEphemeral") (hasKey $ng "staticInstances") }}
 function run_log_output() {
-  if type nc >/dev/null 2>&1; then
-    tail -n 100 -f ${TMPDIR}/bootstrap.log | nc -l -p 8000 &
-    bootstrap_job_log_pid=$!
-  fi
+  check_python
+
+  cat - <<'PY' > "${TMPDIR}/tail-log.py"
+{{- include "node_group_tail_log_py" . | nindent 0 }}
+PY
+
+  "${python_binary}" "${TMPDIR}/tail-log.py" "${TMPDIR}/bootstrap.log" &
+  bootstrap_job_log_pid=$!
 }
   {{- end }}
 

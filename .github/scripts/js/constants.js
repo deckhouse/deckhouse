@@ -38,6 +38,7 @@ const labels = {
   'e2e/run/yandex-cloud': { type: 'e2e-run', provider: 'yandex-cloud' },
   'e2e/run/static': { type: 'e2e-run', provider: 'static' },
   'e2e/run/dvp': { type: 'e2e-run', provider: 'dvp' },
+  'e2e/run/zvirt': { type: 'e2e-run', provider: 'zvirt' },
 
   // E2E: use Kubernetes version
   'e2e/use/k8s/1.30': { type: 'e2e-use', ver: '1.30' },
@@ -45,6 +46,7 @@ const labels = {
   'e2e/use/k8s/1.32': { type: 'e2e-use', ver: '1.32' },
   'e2e/use/k8s/1.33': { type: 'e2e-use', ver: '1.33' },
   'e2e/use/k8s/1.34': { type: 'e2e-use', ver: '1.34' },
+  'e2e/use/k8s/1.35': { type: 'e2e-use', ver: '1.35' },
   'e2e/use/k8s/automatic': { type: 'e2e-use', ver: 'Automatic' },
 
   // E2E: use multimaster configuration

@@ -196,7 +196,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-The [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in cni-cilium module for correct work.
+The [`svcSourceRangeCheck`](/modules/cni-cilium/configuration.html#parameters-svcsourcerangecheck) parameter should be enabled in the `cni-cilium` module for correct work.
 {% endalert %}
 
 ## How to add extra log fields to a nginx-controller?
@@ -324,6 +324,7 @@ This uses the audit mode (`DetectionOnly`) and [basic recommended configuration]
 ### Setting up ModSecurity
 
 You can configure ModSecurity in two ways:
+
 1. For the entire ingress-nginx controller
    - the necessary directives are described in the section `config.modsecurity-snippet` in CR IngressNginxController, as in the example above.
 1. For each CR Ingress separately
@@ -344,6 +345,8 @@ spec:
       SecRuleEngine On
 ```
 
+### Adding SecRules
+
 An example of a rule to limit the number of arguments in a request URL. If the number of arguments exceeds 10, the server will reject the request with an error code 400 (Bad Request).
 
 ```yaml
@@ -360,6 +363,22 @@ spec:
       SecRule &ARGS "@gt 10" "id:100100,phase:2,deny,status:400,log,auditlog,severity:WARNING,msg:\"too many args\""
 ```
 
-A full list and description of the directives can be found in the [official documentation](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29 ).
+A full list and description of the directives can be found in the [official documentation](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
 
-Currently, the OWASP Core Rule Set (CRS) is not available.
+### Enabling OWASP Core Rule Set (CRS)
+
+To enable OWASP Core Rule Set (CRS) add the `config.enable-owasp-modsecurity-crs` in CR IngressNginxController, as in the example below.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    enable-owasp-modsecurity-crs: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+```

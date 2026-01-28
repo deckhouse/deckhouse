@@ -21,9 +21,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/spf13/fsync"
+
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
-	"github.com/spf13/fsync"
 
 	"github.com/flant/docs-builder/internal/metrics"
 )
@@ -78,8 +79,8 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		return false
 	}
 
-	oldLocation := filepath.Join(hugoInitDir)
-	newLocation := filepath.Join(svc.baseDir)
+	oldLocation := hugoInitDir
+	newLocation := svc.baseDir
 	err = syncer.Sync(newLocation, oldLocation)
 	if err != nil {
 		svc.logger.Error("sync init folder with base dir", log.Err(err))

@@ -1,0 +1,318 @@
+// Copyright 2025 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+package registry
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
+)
+
+func TestModeNoError(t *testing.T) {
+	tests := []struct {
+		name  string
+		input module_config.DeckhouseSettings
+	}{
+		{
+			name: "mode direct",
+			input: ConfigBuilder(
+				WithModeDirect(),
+			).DeckhouseSettings,
+		},
+		{
+			name: "mode unmanaged",
+			input: ConfigBuilder(
+				WithModeUnmanaged(),
+			).DeckhouseSettings,
+		},
+		{
+			name: "mode unmanaged && legacy ",
+			input: ConfigBuilder(
+				WithModeUnmanaged(),
+				WithLegacyMode(),
+			).DeckhouseSettings,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			settings, err := newModeSettings(tt.input)
+			require.NoError(t, err)
+
+			t.Run("InClusterData", func(t *testing.T) {
+				_, err := settings.
+					ToModel().
+					InClusterData(GeneratePKI)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("BashibleConfig", func(t *testing.T) {
+				_, err := settings.
+					ToModel().
+					BashibleConfig()
+
+				require.NoError(t, err)
+			})
+		})
+	}
+}
+
+func TestModeDirect(t *testing.T) {
+	pki, err := GeneratePKI()
+	require.NoError(t, err)
+
+	getPKI := func() (PKI, error) {
+		return pki, nil
+	}
+
+	t.Run("Direct mode", func(t *testing.T) {
+		config := ConfigBuilder(
+			WithModeDirect(),
+			WithImagesRepo("r.example.com/test"),
+			WithCredentials("test-user", "test-password"),
+			WithSchemeHTTPS(),
+			WithCA("-----BEGIN CERTIFICATE-----"),
+		)
+
+		t.Run("modeSettings", func(t *testing.T) {
+			expect := ModeSettings{
+				Mode: constant.ModeDirect,
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, config.Settings)
+		})
+
+		t.Run("modeModel", func(t *testing.T) {
+			actual := config.
+				Settings.
+				ToModel()
+
+			expect := ModeModel{
+				Mode:                constant.ModeDirect,
+				InClusterImagesRepo: constant.HostWithPath,
+				RemoteImagesRepo:    "r.example.com/test",
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("InclusterData", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(getPKI)
+
+			require.NoError(t, err)
+
+			expect := Data{
+				ImagesRepo: constant.HostWithPath,
+				CA:         pki.CA.Cert,
+				Scheme:     "HTTPS",
+				Username:   "test-user",
+				Password:   "test-password",
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("BashibleConfig", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig()
+
+			require.NoError(t, err)
+
+			expect := bashible.Config{
+				Mode:           string(constant.ModeDirect),
+				Version:        actual.Version,
+				ImagesBase:     constant.HostWithPath,
+				ProxyEndpoints: nil,
+				Hosts: map[string]bashible.ConfigHosts{
+					constant.Host: {
+						Mirrors: []bashible.ConfigMirrorHost{
+							{
+								Host:   "r.example.com",
+								Scheme: "https",
+								CA:     "-----BEGIN CERTIFICATE-----",
+								Auth: bashible.ConfigAuth{
+									Username: "test-user",
+									Password: "test-password",
+								},
+								Rewrites: []bashible.ConfigRewrite{
+									{
+										From: constant.PathRegexp,
+										To:   "test",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			require.NotEmpty(t, actual.Version)
+			require.EqualValues(t, expect, actual)
+		})
+	})
+}
+
+func TestModeUnmanaged(t *testing.T) {
+	pki, err := GeneratePKI()
+	require.NoError(t, err)
+
+	getPKI := func() (PKI, error) {
+		return pki, nil
+	}
+
+	t.Run("Unmanaged mode", func(t *testing.T) {
+		config := ConfigBuilder(
+			WithModeUnmanaged(),
+			WithImagesRepo("r.example.com/test"),
+			WithCredentials("test-user", "test-password"),
+			WithSchemeHTTPS(),
+			WithCA("-----BEGIN CERTIFICATE-----"),
+		)
+
+		t.Run("modeSettings", func(t *testing.T) {
+			expect := ModeSettings{
+				Mode: constant.ModeUnmanaged,
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, config.Settings)
+		})
+
+		t.Run("modeModel", func(t *testing.T) {
+			expect := ModeModel{
+				Mode:                constant.ModeUnmanaged,
+				InClusterImagesRepo: "r.example.com/test",
+				RemoteImagesRepo:    "r.example.com/test",
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, config.Settings.ToModel())
+		})
+
+		t.Run("InclusterData", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(getPKI)
+
+			require.NoError(t, err)
+
+			expect := Data{
+				ImagesRepo: "r.example.com/test",
+				Scheme:     "HTTPS",
+				CA:         "-----BEGIN CERTIFICATE-----",
+				Username:   "test-user",
+				Password:   "test-password",
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("BashibleConfig", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig()
+
+			require.NoError(t, err)
+
+			expect := bashible.Config{
+				Mode:           string(constant.ModeUnmanaged),
+				Version:        actual.Version,
+				ImagesBase:     "r.example.com/test",
+				ProxyEndpoints: nil,
+				Hosts: map[string]bashible.ConfigHosts{
+					"r.example.com": {
+						Mirrors: []bashible.ConfigMirrorHost{
+							{
+								Host:   "r.example.com",
+								Scheme: "https",
+								CA:     "-----BEGIN CERTIFICATE-----",
+								Auth: bashible.ConfigAuth{
+									Username: "test-user",
+									Password: "test-password",
+								},
+							},
+						},
+					},
+				},
+			}
+
+			require.NotEmpty(t, actual.Version)
+			require.EqualValues(t, expect, actual)
+		})
+	})
+}
+
+func TestModeSettings_DeepCopy(t *testing.T) {
+	t.Run("should create a deep copy of ModeSettings", func(t *testing.T) {
+		original := &ModeSettings{
+			Mode: "test-mode",
+			RemoteData: Data{
+				ImagesRepo: "test-repo",
+				Scheme:     "https",
+				CA:         "test-ca",
+				Username:   "test-user",
+				Password:   "test-pass",
+			},
+		}
+
+		copied := original.DeepCopy()
+		require.NotNil(t, copied)
+		require.NotSame(t, original, copied)
+		require.EqualValues(t, original, copied)
+	})
+
+	t.Run("should handle nil receiver", func(t *testing.T) {
+		var nilSettings *ModeSettings
+		copied := nilSettings.DeepCopy()
+		require.Nil(t, copied)
+	})
+}

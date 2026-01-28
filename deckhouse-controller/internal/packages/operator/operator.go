@@ -190,9 +190,14 @@ func (o *Operator) Status() *status.Service {
 	return o.status
 }
 
-// Scheduler return the scheduler for external access
+// Scheduler returns the scheduler for external access
 func (o *Operator) Scheduler() *schedule.Scheduler {
 	return o.scheduler
+}
+
+// Manager returns the manager for external access
+func (o *Operator) Manager() *manager.Manager {
+	return o.manager
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
@@ -214,7 +219,7 @@ func (o *Operator) Stop() {
 
 	// Stop generating new events
 	o.scheduleManager.Stop()
-	o.kubeEventsManager.PauseHandleEvents()
+	o.kubeEventsManager.Stop()
 
 	// Stop accepting and processing new tasks
 	o.eventHandler.Stop()

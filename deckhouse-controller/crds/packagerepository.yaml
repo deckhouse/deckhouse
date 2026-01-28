@@ -1,0 +1,112 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: packagerepositories.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: PackageRepository
+    listKind: PackageRepositoryList
+    plural: packagerepositories
+    singular: packagerepository
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.syncTime
+      name: Sync
+      type: string
+    - jsonPath: .status.packagesCount
+      name: Packages
+      priority: 1
+      type: integer
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PackageRepository is a source of packages for Deckhouse.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the behavior of a PackageRepository.
+            properties:
+              registry:
+                description: Configuration for the package registry.
+                properties:
+                  ca:
+                    description: Certificate authority data for TLS verification.
+                    type: string
+                  dockerCfg:
+                    description: Docker configuration for authentication.
+                    type: string
+                  repo:
+                    description: Repository path in the registry.
+                    type: string
+                  scheme:
+                    description: Scheme to use for accessing the registry (e.g., https).
+                    type: string
+                required:
+                - repo
+                type: object
+            required:
+            - registry
+            type: object
+          status:
+            description: Status of a PackageRepository.
+            properties:
+              message:
+                description: Human-readable message about the repository status.
+                type: string
+              packages:
+                description: List of packages available in this repository.
+                items:
+                  properties:
+                    name:
+                      description: Name of the package.
+                      type: string
+                    type:
+                      description: Type of the package.
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+              packagesCount:
+                description: Total number of packages in this repository.
+                type: integer
+              phase:
+                description: Current phase of the repository.
+                type: string
+              syncTime:
+                description: Last time the repository was synchronized.
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

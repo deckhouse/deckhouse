@@ -27,3 +27,32 @@ properties:
             properties:
               knownRanges:
                 description: "Список диапазонов портов, которые будут разрешены в привязке hostPort."
+  denyVulnerableImages:
+    description: |
+      Настройки Trivy-провайдера.
+
+      Trivy-провайдер запрещает создание ресурсов Pod, Deployment, StatefulSet и DaemonSet с образами, содержащими уязвимости, в неймспейсах с лейблом `security.deckhouse.io/trivy-provider: ""`.
+    properties:
+      allowedSeverityLevels:
+        description: |-
+          Список допустимых уровней критичности уязвимости.
+          
+          Образы контейнеров, содержащие только уязвимости указанных уровней, не будут запрещены.
+      storageClass:
+        description: |-
+          Имя StorageClass, который используется Trivy-провайдером.
+
+          Если значение не задано, будет использоваться StorageClass, заданный в [глобальном параметре `settings.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass).
+
+          Глобальный параметр `settings.modules.storageClass` применяется только при включении модуля. Изменение глобального параметра при включенном модуле не приведет к перезаказу диска.
+          
+          > **Внимание.** Если указать значение, отличное от текущего StorageClass, используемого существующим PersistentVolumeClaim, диск будет перезаказан, и все данные удалятся.
+
+          Если указать `false`, вместо PVC будет принудительно использоваться `emptyDir`.
+      enabled:
+        description: Включить Trivy-провайдер.
+      registrySecrets:
+        description: |
+          Список дополнительных секретов для доступа к приватным registry.
+
+          По умолчанию для загрузки образов для сканирования используется секрет `deckhouse-registry`.

@@ -1,7 +1,7 @@
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.25.0",
+  "version": "v0.26.3",
   "aliases": null,
   "flags": {
     "help": {
@@ -39789,6 +39789,13 @@
       "flags": {},
       "subcommands": [
         {
+          "name": "agent",
+          "description": "Start a Stronghold agent",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "auth",
           "description": "Interact with auth methods",
           "aliases": null,
@@ -39880,6 +39887,13 @@
           "subcommands": null
         },
         {
+          "name": "proxy",
+          "description": "Start a Stronghold Proxy",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "read",
           "description": "Read data and retrieves secrets",
           "aliases": null,
@@ -39924,6 +39938,13 @@
         {
           "name": "version",
           "description": "Print version",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
+          "name": "version-history",
+          "description": "Prints the version history of the target Stronghold server",
           "aliases": null,
           "flags": {},
           "subcommands": null

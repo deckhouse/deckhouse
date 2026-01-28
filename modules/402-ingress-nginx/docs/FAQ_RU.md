@@ -197,7 +197,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-Для работы необходимо включить параметр [`svcSourceRangeCheck`](../cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле cni-cilium.
+Для работы необходимо включить [параметр `svcSourceRangeCheck`](/modules/cni-cilium/configuration.html#parameters-svcsourcerangecheck) в модуле `cni-cilium`.
 {% endalert %}
 
 ## Как добавить дополнительные поля для логирования в nginx-controller?
@@ -347,6 +347,8 @@ spec:
       SecRuleEngine On
 ```
 
+### Добавление SecRule
+
 Пример правила для ограничения количества аргументов в URL-адресе запроса. Если количество аргументов превышает 10, сервер отклоняет запрос с кодом ошибки 400 (Bad request).
 
 ```yaml
@@ -365,4 +367,20 @@ spec:
 
 Полный перечень и описание директив вы можете найти в [официальной документации](https://github.com/owasp-modsecurity/ModSecurity/wiki/Reference-Manual-%28v3.x%29).
 
-На данный момент использование набора правил OWASP Core Rule Set (CRS) недоступно.
+### Включение OWASP Core Rule Set (CRS)
+
+Для включения OWASP Core Rule Set (CRS) необходимо добавить `config.enable-owasp-modsecurity-crs` в кастомном ресурсе IngressNginxController, как показано на примере ниже.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: <name_of_the_controller>
+spec:
+  config:
+    enable-modsecurity: "true"
+    enable-owasp-modsecurity-crs: "true"
+    modsecurity-snippet: |
+      Include /etc/nginx/modsecurity/modsecurity.conf
+      SecRuleEngine On
+```

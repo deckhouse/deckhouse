@@ -20,14 +20,21 @@ spec:
   - host: {{ include "helm_lib_module_public_domain" (list . "documentation") }}
     http:
       paths:
-      - path: /(android-chrome|apple-touch|favicon|mstile|safari-pinned)(-[a-z0-9-]*)?\.(png|ico|svg)
+      - path: /(apple-touch|favicon|safari-pinned)(-[a-z0-9-]*)?\.(png|ico|svg)
         pathType: ImplementationSpecific
         backend:
           service:
             name: documentation
             port:
               name: https
-      - path: /(site.webmanifest|browserconfig.xml)
+      - path: /images
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: documentation
+            port:
+              name: https
+      - path: /site.webmanifest
         pathType: ImplementationSpecific
         backend:
           service:

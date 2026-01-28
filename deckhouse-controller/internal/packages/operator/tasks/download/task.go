@@ -34,7 +34,7 @@ type downloader interface {
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 }
 
@@ -63,7 +63,7 @@ func NewTask(name, pack, version string, reg registry.Registry, status statusSer
 }
 
 func (t *task) String() string {
-	return "Download"
+	return fmt.Sprintf("Download:%s", t.version)
 }
 
 func (t *task) Execute(ctx context.Context) error {

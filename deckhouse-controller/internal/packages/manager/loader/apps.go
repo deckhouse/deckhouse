@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"go.opentelemetry.io/otel"
@@ -52,15 +53,6 @@ type ApplicationLoader struct {
 	appsDir string
 
 	logger *log.Logger
-}
-
-// ApplicationInstance represents a deployed application instance.
-// It contains the metadata needed to locate and load the corresponding package.
-type ApplicationInstance struct {
-	Name      string // Unique name of the application instance
-	Namespace string // Kubernetes namespace where the application is deployed
-	Package   string // Package name (directory name under appsDir)
-	Version   string // Package version (directory name under package)
 }
 
 // NewApplicationLoader creates a new ApplicationLoader for the specified directory.
@@ -116,8 +108,14 @@ func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, nam
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
+	splits := strings.SplitN(name, ".", 2)
+	if len(splits) != 2 {
+		span.SetStatus(codes.Error, "invalid name")
+		return nil, fmt.Errorf("invalid package name '%s'", name)
+	}
+
 	// Discover and load hooks (shell and batch)
-	hooksLoader := newHookLoader(name, path, shapp.DebugKeepTmpFiles, l.logger)
+	hooksLoader := newHookLoader(splits[0], splits[1], path, shapp.DebugKeepTmpFiles, l.logger)
 	hooks, err := hooksLoader.load(ctx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -148,6 +146,8 @@ func (l *ApplicationLoader) Load(ctx context.Context, reg registry.Registry, nam
 		ValuesSchema: values,
 
 		Hooks: hooks,
+
+		SettingsCheck: hooksLoader.settingsCheck,
 	}
 
 	app, err := apps.NewApplication(name, path, conf)

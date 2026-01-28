@@ -4,13 +4,13 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 
-## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+## How do I add master nodes to a cloud cluster?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+For the procedure of converting a cluster with a single master node to a multi-master cluster, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-add-master-nodes-to-a-cloud-cluster) of the `control-plane-manager` module.
 
-## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+## How do I reduce the number of master nodes in a cloud cluster?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+For the procedure of converting a multi-master cluster to a cluster with a single master node, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) of the `control-plane-manager` module.
 
 ## Static nodes
 
@@ -348,11 +348,11 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
+1. Run the command you got (`curl -N http://192.168.199.158:8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 

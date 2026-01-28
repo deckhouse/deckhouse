@@ -33,9 +33,6 @@ import (
 const (
 	// this is util to manage dm-verity
 	verityCommand = "veritysetup"
-
-	dmTemplate = "/dev/mapper/%s"
-
 	// formatArg computes the Merkle tree
 	formatArg = "format"
 	// verifyArg verifies and gets the root hash

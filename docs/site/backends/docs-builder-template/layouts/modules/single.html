@@ -11,7 +11,6 @@
 {{- $_pathElements := index ( findRESubmatch  `^modules/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/*$` .File.Dir 1 ) 0 }}
 {{- $currentModuleName := index $_pathElements 1 }}
 {{- $currentModuleChannel := index $_pathElements 2 }}
-
 <div class="navigation__container">
   <div class="navigation__container--versions">
     <div>
@@ -26,11 +25,13 @@
       {{- end }}
     </div>
   </div>
+  {{ "<!--noindex-->" | safeHTML }}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {{- partial "breadcrumbs" . }}
     </ol>
   </div>
+  {{ "<!--/noindex-->" | safeHTML }}
 
   <!--start search-->
   {{- $cachingTime := "60" }}
@@ -113,12 +114,15 @@
               {{- else if eq .File.ContentBaseName "CONFIGURATION" }} {{/* Render module configuration JSONschema */}}
                 {{- $type = "configuration" }}
               {{- end }}
-              {{- partial "module-resources" (dict "name" $moduleName "channel" $moduleChannel "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang )}}
+              {{- partial "module-resources" (dict "name" $moduleName "channel" $moduleChannel "data" (index $moduleData $moduleChannel) "type" $type "lang" .Language.Lang "pageParams" $.Page.Params ) }}
             {{- end }}
           {{- end }}
         {{- end }}
 
       </div>
+
+      {{ partial "related-links" . }}
+
     </div>
     {{- if ne site.Params.mode "module" }}
      {{- "<!--#include virtual=\"/includes/feedback.html\" -->"  | safeHTML }}

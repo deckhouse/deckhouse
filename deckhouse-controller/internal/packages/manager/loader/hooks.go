@@ -25,11 +25,9 @@ import (
 	"slices"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
-	"github.com/flant/addon-operator/pkg/utils"
 	shapp "github.com/flant/shell-operator/pkg/app"
 	"github.com/flant/shell-operator/pkg/executor"
 	"go.opentelemetry.io/otel"
@@ -65,22 +63,27 @@ var (
 // It supports both shell hooks (.sh, .py) and batch hooks (executables).
 // This causes executable hooks to be rejected and non-executable files to be accepted.
 type hookLoader struct {
-	packageName string // Package name for hook context
-	path        string // Package directory path
-	keepTmp     bool   // Whether to keep temporary files for debugging
+	path    string // Package directory path
+	keepTmp bool   // Whether to keep temporary files for debugging
+
+	name      string // Application name
+	namespace string // Application namespace
 
 	// readinessLoaded tracks if a readiness hook was found
 	readinessLoaded bool
+
+	settingsCheck *kind.SettingsCheck
 
 	logger *log.Logger
 }
 
 // newHookLoader creates a new hook loader for the specified package.
-func newHookLoader(packageName, path string, keepTmp bool, logger *log.Logger) *hookLoader {
+func newHookLoader(namespace, name, path string, keepTmp bool, logger *log.Logger) *hookLoader {
 	return &hookLoader{
-		packageName: packageName,
-		path:        path,
-		keepTmp:     keepTmp,
+		namespace: namespace,
+		name:      name,
+		path:      path,
+		keepTmp:   keepTmp,
 
 		logger: logger,
 	}
@@ -92,7 +95,8 @@ func (l *hookLoader) load(ctx context.Context) ([]*hooks.ModuleHook, error) {
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "load")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("package", l.packageName))
+	span.SetAttributes(attribute.String("name", l.name))
+	span.SetAttributes(attribute.String("namespace", l.namespace))
 	span.SetAttributes(attribute.String("path", l.path))
 
 	l.logger.Debug("load hooks")
@@ -109,22 +113,12 @@ func (l *hookLoader) load(ctx context.Context) ([]*hooks.ModuleHook, error) {
 }
 
 func (l *hookLoader) searchPackageHooks() ([]*hooks.ModuleHook, error) {
-	shellHooks, err := l.searchPackageShellHooks()
-	if err != nil {
-		return nil, fmt.Errorf("search shell hooks: %w", err)
-	}
-
 	batchHooks, err := l.searchPackageBatchHooks()
 	if err != nil {
 		return nil, fmt.Errorf("search batch hooks: %w", err)
 	}
 
-	result := make([]*hooks.ModuleHook, 0, len(shellHooks)+len(batchHooks))
-
-	for _, h := range shellHooks {
-		result = append(result, hooks.NewModuleHook(h))
-	}
-
+	result := make([]*hooks.ModuleHook, 0, len(batchHooks))
 	for _, h := range batchHooks {
 		result = append(result, hooks.NewModuleHook(h))
 	}
@@ -132,66 +126,6 @@ func (l *hookLoader) searchPackageHooks() ([]*hooks.ModuleHook, error) {
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].GetPath() < result[j].GetPath()
 	})
-
-	return result, nil
-}
-
-func (l *hookLoader) searchPackageShellHooks() ([]*kind.ShellHook, error) {
-	hooksPath := filepath.Join(l.path, hooksDir)
-	if _, err := os.Stat(hooksPath); os.IsNotExist(err) {
-		return nil, nil
-	}
-
-	hooksRelativePaths, err := l.getHookExecutablePaths(hooksPath, false)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]*kind.ShellHook, 0)
-
-	// sort hooks by path
-	sort.Strings(hooksRelativePaths)
-
-	var (
-		checkPythonEnv           sync.Once
-		discoveredPythonVenvPath string
-	)
-
-	for _, hookPath := range hooksRelativePaths {
-		options := make([]kind.ShellHookOption, 0, 1)
-
-		if filepath.Ext(hookPath) == ".py" {
-			checkPythonEnv.Do(func() {
-				f, err := os.Stat(filepath.Join(l.path, kind.PythonVenvPath, kind.PythonBinaryPath))
-				if err == nil {
-					if !f.IsDir() && f.Mode()&0o111 != 0 {
-						discoveredPythonVenvPath = filepath.Join(l.path, kind.PythonVenvPath)
-					}
-				}
-			})
-			options = append(options, kind.WithPythonVenv(discoveredPythonVenvPath))
-		}
-
-		hookName, err := normalizeHookPath(filepath.Dir(l.path), hookPath)
-		if err != nil {
-			return nil, fmt.Errorf("get hook name: %w", err)
-		}
-
-		if filepath.Ext(hookPath) == "" {
-			if _, err = kind.GetBatchHookConfig(l.packageName, hookPath); err == nil {
-				continue
-			}
-
-			l.logger.Warn("get batch hook config", slog.String("hook_file_path", hookPath), log.Err(err))
-		}
-
-		logger := l.logger.Named("shell-hook")
-		hook := kind.NewShellHook(hookName,
-			hookPath, l.packageName, l.keepTmp,
-			shapp.LogProxyHookJSON, logger, options...)
-
-		result = append(result, hook)
-	}
 
 	return result, nil
 }
@@ -218,7 +152,7 @@ func (l *hookLoader) searchPackageBatchHooks() ([]*kind.BatchHook, error) {
 			return nil, fmt.Errorf("get hook name: %w", err)
 		}
 
-		hookConfig, err := kind.GetBatchHookConfig(l.packageName, hookPath)
+		hookConfig, err := kind.GetBatchHookConfig(l.name, hookPath)
 		if err != nil {
 			return nil, fmt.Errorf("get sdk config for hook '%s': %w", hookName, err)
 		}
@@ -234,19 +168,28 @@ func (l *hookLoader) searchPackageBatchHooks() ([]*kind.BatchHook, error) {
 			nestedHookName := fmt.Sprintf("%s-readiness", hookName)
 			logger := l.logger.Named("batch-hook")
 
-			hook := kind.NewBatchHook(nestedHookName,
-				hookPath, l.packageName, kind.BatchHookReadyKey,
+			hook := kind.NewApplicationBatchHook(nestedHookName,
+				hookPath, l.namespace, l.name, kind.BatchHookReadyKey,
 				l.keepTmp, shapp.LogProxyHookJSON, logger)
 
 			result = append(result, hook)
+		}
+
+		if hookConfig.HasSettingsCheck {
+			if l.settingsCheck != nil {
+				return nil, fmt.Errorf("multiple settings checks found in '%s'", hookPath)
+			}
+
+			logger := l.logger.Named("settings-check")
+			l.settingsCheck = kind.NewSettingsCheck(hookPath, os.TempDir(), logger)
 		}
 
 		for key, cfg := range hookConfig.Hooks {
 			nestedHookName := fmt.Sprintf("%s:%s:%s", hookName, cfg.Metadata.Name, key)
 			logger := l.logger.Named("batch-hook")
 
-			hook := kind.NewBatchHook(nestedHookName,
-				hookPath, l.packageName, key,
+			hook := kind.NewApplicationBatchHook(nestedHookName,
+				hookPath, l.namespace, l.name, key,
 				l.keepTmp, shapp.LogProxyHookJSON, logger)
 
 			result = append(result, hook)
@@ -279,7 +222,7 @@ func (l *hookLoader) getHookExecutablePaths(dir string, checkBatch bool) ([]stri
 		}
 
 		if checkBatch {
-			if err = isExecutableBatchHook(l.packageName, path, f); err != nil {
+			if err = isExecutableBatchHook(path, f); err != nil {
 				l.logger.Debug("skip file", slog.String("path", path), log.Err(err))
 
 				return nil
@@ -297,7 +240,7 @@ func (l *hookLoader) getHookExecutablePaths(dir string, checkBatch bool) ([]stri
 	return paths, nil
 }
 
-func isExecutableBatchHook(name, path string, file os.FileInfo) error {
+func isExecutableBatchHook(path string, file os.FileInfo) error {
 	if err := isExecutable(file); err != nil {
 		return err
 	}
@@ -305,7 +248,7 @@ func isExecutableBatchHook(name, path string, file os.FileInfo) error {
 	switch filepath.Ext(file.Name()) {
 	// ignore any extension and hidden files
 	case "":
-		return isBatchHook(name, path)
+		return isBatchHook(path)
 	// ignore all with extensions
 	default:
 		return ErrFileWrongExtension
@@ -318,7 +261,7 @@ func isExecutableBatchHook(name, path string, file os.FileInfo) error {
 // WARNING: Security issue - executes untrusted binaries during discovery
 // WARNING: Performance issue - runs every executable file found
 // TODO: Consider alternative detection methods (file signatures, metadata, etc.)
-func isBatchHook(moduleName, path string) error {
+func isBatchHook(path string) error {
 	// TODO: check binary another way
 	args := []string{"hook", "list"}
 
@@ -327,8 +270,7 @@ func isBatchHook(moduleName, path string) error {
 		"",
 		path,
 		args,
-		[]string{}).
-		WithChroot(utils.GetModuleChrootPath(moduleName))
+		[]string{})
 
 	out, err := cmd.Output()
 	if err != nil {

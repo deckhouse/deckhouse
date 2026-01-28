@@ -20,16 +20,20 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-
-	"vector/internal"
+	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
+
+	"vector/internal"
 )
 
 const (
@@ -39,6 +43,13 @@ const (
 
 	sampleConfigPath  = "/opt/vector/vector.json"
 	dynamicConfigPath = "/etc/vector/dynamic/vector.json"
+)
+
+var configValidationErrorMetric = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "vector_config_validation_error",
+		Help: "Vector config validation error flag (1=invalid, 0=valid)",
+	},
 )
 
 // pkill -P vector SIGHUP
@@ -74,13 +85,25 @@ func reloadOnce() {
 
 	if compareConfigs(dynamicConfig, sampleConfig) {
 		log.Println("configs are equal, doing nothing")
+		// Important behavior:
+		// - Suppose you had a valid config.
+		// - Then you add an invalid line (so the config becomes invalid),
+		//   and later you remove that invalid line, restoring the original config.
+		//
+		// In that case, when the config reloader runs:
+		// - It compares the current config with the previous one.
+		// - Since they are now identical again, it will NOT run validation.
+		// - It simply sees "no change" and skips validation.
+		configValidationErrorMetric.Set(0.0)
 		return
 	}
 
 	if err := sampleConfig.Validate(); err != nil {
+		configValidationErrorMetric.Set(1.0)
 		log.Println("invalid config, skip running")
 		return
 	}
+	configValidationErrorMetric.Set(0.0)
 
 	if err := sampleConfig.SaveTo(dynamicConfigPath); err != nil {
 		log.Println(err)
@@ -177,6 +200,22 @@ func compareConfigs(c1, c2 *Config) bool {
 }
 
 func main() {
+	prometheus.MustRegister(configValidationErrorMetric)
+
+	go func() {
+		mux := http.NewServeMux()
+
+		mux.Handle("/reloader/metrics", promhttp.Handler())
+
+		server := &http.Server{
+			Addr:              "127.0.0.1:9255",
+			ReadHeaderTimeout: 3 * time.Second,
+			Handler:           mux,
+		}
+
+		server.ListenAndServe()
+	}()
+
 	cleanLocks()
 
 	if err := LoadConfig(sampleConfigPath).SaveTo(dynamicConfigPath); err != nil {

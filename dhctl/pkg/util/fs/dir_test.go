@@ -252,7 +252,7 @@ func testCreateFileExistsInDirAndParentsDirsTest(t *testing.T, params testFileEx
 		assertFromRoot(t, writeFileIn)
 	}
 
-	rootDir, err := RandomTmpDirWith10Runes(testFileExistsInDirAndParentsDirsRoot, params.title, 8)
+	rootDir, err := RandomTmpDirWithNRunes(testFileExistsInDirAndParentsDirsRoot, params.title, 8)
 	require.NoError(t, err)
 
 	logger.LogInfoF("Test root dir '%s' for test '%s' was created\n", rootDir, params.title)

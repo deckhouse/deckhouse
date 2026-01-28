@@ -47,6 +47,15 @@ spec:
                   type: string
                   description: Desirable default release channel for modules in the current source.
                   x-doc-deprecated: true
+                scanInterval:
+                  type: string
+                  x-doc-default: 3m
+                  x-doc-examples: ['5m', '1h', '6h30m']
+                  description: |
+                    Interval for registry scan.
+                    
+                    Defines the frequency of checking the container registry for new modules and their versions.
+                  pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
                 registry:
                   type: object
                   required:

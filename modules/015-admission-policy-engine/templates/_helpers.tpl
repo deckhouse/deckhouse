@@ -83,12 +83,15 @@ spec:
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ baseline, restricted ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged ] }
+        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- end }}
       {{- else if eq $standard "restricted" }}
         {{- if eq $defaultPolicy "restricted" }}
         - { key: security.deckhouse.io/pod-policy, operator: NotIn, values: [ privileged, baseline ] }
+        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- else }}
         - { key: security.deckhouse.io/pod-policy, operator: In, values: [ restricted ] }
+        - { key: heritage, operator: NotIn, values: [ deckhouse ] }
         {{- end }}
       {{- else}}
         {{ cat "Unknown policy standard" | fail }}
@@ -107,6 +110,59 @@ spec:
   parameters:
     {{ $parameters | toYaml | nindent 4 }}
   {{- end }}
+{{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
+{{- if or (and (eq $standard "baseline") (ne $defaultPolicy "privileged"))  (and (eq $standard "restricted") (ne $defaultPolicy "restricted")) }} 
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: {{ $policyCRDName }}
+metadata:
+{{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+  name: d8-pod-security-{{$standard}}-{{$policyAction}}-d8-default
+{{- else }}
+  name: d8-pod-security-{{$standard}}-{{$policyAction}}-d8
+{{- end }}
+  {{- include "helm_lib_module_labels" (list $context (dict "security.deckhouse.io/pod-standard" $standard)) | nindent 2 }}
+spec:
+  enforcementAction: {{ $policyAction }}
+  match:
+    scope: Namespaced
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+    labelSelector:
+      matchExpressions:
+        - key: security.deckhouse.io/skip-pss-check
+          operator: NotIn
+          values: ["true"]
+    namespaceSelector:
+      matchExpressions:
+    {{- if eq $standard "baseline" }}
+      {{- if ne $defaultPolicy "privileged" }}
+        - { key: heritage, operator: In, values: [ deckhouse ] }
+        - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
+      {{- end }}
+    {{- else if eq $standard "restricted" }}
+      {{- if ne $defaultPolicy "restricted" }}
+        - { key: heritage, operator: In, values: [ deckhouse ] }
+        - { key: security.deckhouse.io/enable-security-policy-check, operator: In, values: [ "true" ] }
+      {{- end }}
+    {{- end }}
+      # matches default enforcement action
+      {{- if eq $policyAction ($context.Values.admissionPolicyEngine.podSecurityStandards.enforcementAction | default "deny" | lower) }}
+        # if there are other policy actions apart from the default one, we add all of them to NotIn list, so that the namespaces with such labels aren't subject to the default policy
+        {{- if gt (len $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions) 1 }}
+        - { key: security.deckhouse.io/pod-policy-action, operator: NotIn, values: [{{ (without $context.Values.admissionPolicyEngine.internal.podSecurityStandards.enforcementActions $policyAction | join ",") }}] }
+        {{- end }}
+      # matches another action (non-default)
+      {{- else }}
+        - { key: security.deckhouse.io/pod-policy-action, operator: In, values: [{{ $policyAction }}] }
+      {{- end }}
+  {{- if $parameters }}
+  parameters:
+    {{ $parameters | toYaml | nindent 4 }}
+  {{- end }} 
+{{- end }} 
+{{/* #### end of TODO */}}
 {{- end }}
 {{- end }}
 

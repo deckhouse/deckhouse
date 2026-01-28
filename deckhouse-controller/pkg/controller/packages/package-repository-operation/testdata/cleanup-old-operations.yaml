@@ -7,7 +7,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-1
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -23,7 +23,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-2
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -39,7 +39,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-3
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -55,7 +55,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-4
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -71,7 +71,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-5
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -87,7 +87,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-6
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -105,7 +105,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-7
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -123,7 +123,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-8
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -141,7 +141,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-9
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -159,7 +159,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-10
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -177,7 +177,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-11
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -195,7 +195,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-scan-12
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true

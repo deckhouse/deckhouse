@@ -486,6 +486,37 @@ spec:
                         - can be enabled for only one OIDC or Crowd provider in the cluster.
 
                         Authentication data and group membership obtained from the IdP are cached for 10 seconds.
+                    kerberos:
+                      type: object
+                      description: |
+                        Optional Kerberos (SPNEGO) SSO settings for LDAP.
+                      properties:
+                        enabled:
+                          type: boolean
+                          default: false
+                          description: Enable Kerberos SPNEGO flow for this LDAP provider.
+                        expectedRealm:
+                          type: string
+                          description: Optional realm to require (case-insensitive).
+                        usernameFromPrincipal:
+                          type: string
+                          enum: ["Localpart", "SAMAccountName", "UserPrincipalName"]
+                          default: "Localpart"
+                          description: How to map Kerberos principal to LDAP username.
+                        fallbackToPassword:
+                          type: boolean
+                          default: false
+                          description: |
+                            If `true`, in the absence of/incorrect `Authorization: Negotiate` header, a login/password form will be displayed instead of a 401 response with `WWW-Authenticate: Negotiate`.
+                        keytabSecretName:
+                          type: string
+                          description: Name of Secret containing key 'krb5.keytab' to mount for Dex.
+                        krb5ConfConfigMapName:
+                          type: string
+                          description: Optional ConfigMap name containing key 'krb5.conf' to mount at /etc/krb5.conf.
+                        krb5ConfSecretName:
+                          type: string
+                          description: Optional Secret name containing key 'krb5.conf' to mount at /etc/krb5.conf.
               oneOf:
                 - properties:
                     inlet:

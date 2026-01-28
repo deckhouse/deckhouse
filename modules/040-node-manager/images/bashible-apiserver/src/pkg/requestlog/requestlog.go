@@ -33,8 +33,10 @@ import (
 type contextKey string
 
 const (
-	requestIDKey     contextKey = "bashible-request-id"
-	bashibleAPIGroup            = "bashible.deckhouse.io"
+	requestIDKey       contextKey = "bashible-request-id"
+	checksumAnnotation            = "bashible.deckhouse.io/configuration-checksum"
+	bashibles_uri                 = "/apis/bashible.deckhouse.io"
+	bashibleAPIGroup              = "bashible.deckhouse.io"
 )
 
 func WithRequestLogging(next http.Handler) http.Handler {

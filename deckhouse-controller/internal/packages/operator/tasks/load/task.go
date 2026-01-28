@@ -35,11 +35,11 @@ const (
 
 type manager interface {
 	LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error)
-	ApplySettings(name string, settings addonutils.Values) error
+	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
 }
@@ -82,20 +82,20 @@ func (t *task) Execute(ctx context.Context) error {
 	}
 
 	t.logger.Debug("apply initial settings", slog.String("name", t.packageName))
-	if err = t.manager.ApplySettings(t.packageName, t.settings); err != nil {
+	if err = t.manager.ApplySettings(ctx, t.packageName, t.settings); err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsIsValid)
+	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 	t.status.SetVersion(t.packageName, version)
 
 	t.status.HandleError(t.packageName, &status.Error{
 		Err: errors.New("wait for converge done"),
 		Conditions: []status.Condition{
 			{
-				Name:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
+				Type:    status.ConditionWaitConverge,
+				Status:  metav1.ConditionTrue,
 				Reason:  "WaitConverge",
 				Message: "wait for converge done",
 			},

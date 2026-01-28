@@ -8,8 +8,8 @@ metadata:
   resourceVersion: "2"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status:
   resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"

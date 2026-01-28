@@ -15,12 +15,12 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/go-vcloud-director/v2/govcd"
 	"github.com/vmware/go-vcloud-director/v2/types/v56"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {
@@ -439,8 +439,8 @@ func (d *Discoverer) getLoadBalancer(vcdClient *govcd.VCDClient) (*types.NsxtAlb
 	}
 
 	if (network.OpenApiOrgVdcNetwork.Connection == nil || network.OpenApiOrgVdcNetwork.Connection.RouterRef == types.OpenApiReference{}) {
-			return nil, fmt.Errorf("network is not connected to edge gateway")
-		}
+		return nil, fmt.Errorf("network is not connected to edge gateway")
+	}
 
 	edge, err := vdc.GetNsxtEdgeGatewayById(network.OpenApiOrgVdcNetwork.Connection.RouterRef.ID)
 	if err != nil {

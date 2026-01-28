@@ -449,9 +449,9 @@ Below is the list of {{ site.data.admin.cloud-types.types[page.cloud_type].name 
 | Compute (Nova)                   | v2         |
 | Network (Neutron)                | v2         |
 | Block Storage (Cinder)           | v3         |
-| Load Balancing (Octavia) &#8432; | v2         |
+| Load Balancing (Octavia) *       | v2         |
 
-&#8432;  If you need to provision a LoadBalancer.
+\* If you need to provision a LoadBalancer.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 For the API endpoints and ports, refer to the [official documentation](https://cloud.vk.com/docs/en/tools-for-using-services/api/rest-api/endpoints).
@@ -614,7 +614,7 @@ If you don’t receive any errors, it means that [security groups](https://docs.
 
 ### Configuring online volume resize
 
-When resizing a disk via the VK Cloud API, Cinder does not pass updated size information to Nova.
+When resizing a disk via the OpenStack API, Cinder does not pass updated size information to Nova.
 As a result, the disk size inside the guest OS remains unchanged.
 
 To fix this, you must configure access to the Nova API in the `cinder.conf` file.

@@ -18,9 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -76,7 +73,7 @@ func (pc *Checker) CheckDhctlEdition(ctx context.Context) error {
 	if imageConfig == nil ||
 		imageConfig.Config.Labels == nil ||
 		imageConfig.Config.Labels["io.deckhouse.edition"] != app.AppEdition {
-		return errors.New(fmt.Sprintf(dhctlEditionMismatchError, app.AppEdition, imageConfig.Config.Labels["io.deckhouse.edition"]))
+		return fmt.Errorf(dhctlEditionMismatchError, app.AppEdition, imageConfig.Config.Labels["io.deckhouse.edition"])
 	}
 
 	return nil
@@ -88,11 +85,14 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 		return nil, fmt.Errorf("parse ClusterConfiguration.deckhouse.registryDockerCfg: %w", err)
 	}
 
+	registry := pc.metaConfig.Registry.Settings.RemoteData
+	image := pc.installConfig.GetRemoteImage(true)
+
 	var versionTagRef name.Reference
-	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" {
-		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true), name.Insecure)
+	if strings.ToLower(string(registry.Scheme)) == "http" {
+		versionTagRef, err = name.ParseReference(image, name.Insecure)
 	} else {
-		versionTagRef, err = name.ParseReference(pc.installConfig.GetImage(true))
+		versionTagRef, err = name.ParseReference(image)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("parse image reference: %w", err)
@@ -109,40 +109,12 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 }
 
 func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
-	buf, err := base64.StdEncoding.DecodeString(pc.installConfig.Registry.DockerCfg)
-	if err != nil {
-		return nil, fmt.Errorf("decode dockerCfg: %w", err)
-	}
+	registry := pc.metaConfig.Registry.Settings.RemoteData
 
-	decodedDockerCfg := struct {
-		Auths map[string]struct {
-			Auth     string `json:"auth,omitempty"`
-			User     string `json:"username,omitempty"`
-			Password string `json:"password,omitempty"`
-		} `json:"auths"`
-	}{}
-	if err := json.Unmarshal(buf, &decodedDockerCfg); err != nil {
-		return nil, fmt.Errorf("decode dockerCfg: %w", err)
-	}
-
-	if decodedDockerCfg.Auths == nil {
-		return authn.Anonymous, nil
-	}
-	registryAuth, hasRegistryCreds := decodedDockerCfg.Auths[pc.installConfig.Registry.Address]
-	if !hasRegistryCreds {
-		return authn.Anonymous, nil
-	}
-
-	if registryAuth.Auth != "" {
+	if registry.Username != "" && registry.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
-			Auth: registryAuth.Auth,
-		}), nil
-	}
-
-	if registryAuth.User != "" && registryAuth.Password != "" {
-		return authn.FromConfig(authn.AuthConfig{
-			Username: registryAuth.User,
-			Password: registryAuth.Password,
+			Username: registry.Username,
+			Password: registry.Password,
 		}), nil
 	}
 
@@ -153,13 +125,14 @@ func (pc *Checker) prepareTLS() (*http.Client, error) {
 	client := &http.Client{}
 	httpTransport := http.DefaultTransport.(*http.Transport).Clone()
 
-	if strings.ToLower(pc.metaConfig.Registry.Scheme) == "http" || len(pc.metaConfig.Registry.CA) == 0 {
+	registry := pc.metaConfig.Registry.Settings.RemoteData
+	if strings.ToLower(string(registry.Scheme)) == "http" || len(registry.CA) == 0 {
 		client.Transport = httpTransport
 		return client, nil
 	}
 
 	certPool := x509.NewCertPool()
-	if ok := certPool.AppendCertsFromPEM([]byte(pc.metaConfig.Registry.CA)); !ok {
+	if ok := certPool.AppendCertsFromPEM([]byte(registry.CA)); !ok {
 		return nil, fmt.Errorf("invalid cert in CA PEM")
 	}
 

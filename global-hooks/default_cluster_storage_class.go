@@ -16,6 +16,7 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strings"
 
@@ -64,7 +65,7 @@ func setupDefaultStorageClass(_ context.Context, input *go_hook.HookInput, dc de
 
 	client, err := dc.GetK8sClient()
 	if err != nil {
-		return err
+		return fmt.Errorf("get k8s client: %w", err)
 	}
 
 	storageClasses, err := client.StorageV1().StorageClasses().List(context.Background(), metav1.ListOptions{})

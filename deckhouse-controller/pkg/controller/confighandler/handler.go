@@ -17,6 +17,7 @@ package confighandler
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/backend"
@@ -109,7 +110,7 @@ func (h *Handler) StartInformer(_ context.Context, eventCh chan config.Event) {
 func (h *Handler) LoadConfig(ctx context.Context, _ ...string) (*config.KubeConfig, error) {
 	configs := new(v1alpha1.ModuleConfigList)
 	if err := h.client.List(ctx, configs); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
 	kubeConfig := config.NewConfig()
@@ -161,7 +162,7 @@ func (h *Handler) valuesByModuleConfig(moduleConfig *v1alpha1.ModuleConfig) (uti
 	converter := h.conversionsStore.Get(moduleConfig.Name)
 	newVersion, newSettings, err := converter.ConvertToLatest(moduleConfig.Spec.Version, settings)
 	if err != nil {
-		return utils.Values{}, err
+		return utils.Values{}, fmt.Errorf("convert to latest: %w", err)
 	}
 
 	moduleConfig.Spec.Version = newVersion

@@ -138,13 +138,13 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 
 	// Get registry credentials from PackageRepository resource
 	var packageRepo v1alpha1.PackageRepository
-	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.PackageRepository}, &packageRepo)
+	err := r.client.Get(ctx, types.NamespacedName{Name: apv.Spec.PackageRepositoryName}, &packageRepo)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
 			v1alpha1.ApplicationPackageVersionConditionTypeMetadataLoaded,
 			v1alpha1.ApplicationPackageVersionConditionReasonGetPackageRepoErr,
-			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepository, err.Error()),
+			fmt.Sprintf("failed to get packageRepository %s: %s", apv.Spec.PackageRepositoryName, err.Error()),
 		)
 
 		patchErr := r.client.Status().Patch(ctx, apv, client.MergeFrom(original))
@@ -152,7 +152,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.PackageRepository, err)
+		return fmt.Errorf("get packageRepository %s: %w", apv.Spec.PackageRepositoryName, err)
 	}
 
 	logger.Debug("got package repository", slog.String("repo", packageRepo.Spec.Registry.Repo))
@@ -188,7 +188,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 	}
 
 	// Get package.yaml from image
-	img, err := registryClient.Image(ctx, apv.Spec.Version)
+	img, err := registryClient.Image(ctx, apv.Spec.PackageVersion)
 	if err != nil {
 		r.SetConditionFalse(
 			apv,
@@ -202,7 +202,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, apv *v1alpha1.App
 			return fmt.Errorf("patch status ApplicationPackageVersion %s: %w", apv.Name, patchErr)
 		}
 
-		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.Version, err)
+		return fmt.Errorf("get image for %s: %w", apv.Name+":"+apv.Spec.PackageVersion, err)
 	}
 
 	packageMeta, err := r.fetchPackageMetadata(ctx, img)
@@ -341,9 +341,6 @@ func enrichWithPackageDefinition(apv *v1alpha1.ApplicationPackageVersion, pd *Pa
 	if pd == nil {
 		return apv
 	}
-
-	apv.Status.PackageName = pd.Name
-	apv.Status.Version = pd.Version
 
 	apv.Status.PackageMetadata = &v1alpha1.ApplicationPackageVersionStatusMetadata{
 		Category: pd.Category,

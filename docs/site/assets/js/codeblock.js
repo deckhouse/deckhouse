@@ -150,6 +150,9 @@ document.addEventListener("DOMContentLoaded", function() {
     if(!pre.querySelector('code.language-tree')) {
       pre.classList.add('code__transfer');
       const code = pre.querySelector('code');
+      if (!code) {
+        return;
+      }
 
       const codeText = code.innerHTML;
       const lines = codeText.split('\n');

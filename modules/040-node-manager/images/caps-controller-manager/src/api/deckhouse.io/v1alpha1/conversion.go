@@ -17,10 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"encoding/base64"
 
 	"k8s.io/apimachinery/pkg/conversion"
+
+	"caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
 func Convert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in *v1alpha2.SSHCredentialsSpec, out *SSHCredentialsSpec, s conversion.Scope) error {
