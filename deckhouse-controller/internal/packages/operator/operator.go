@@ -79,7 +79,7 @@ type Operator struct {
 	logger *log.Logger
 }
 
-//go:generate mockgen -source=$GOFILE -package=operator_mock -destination=./mock/operator_mock.go
+//go:generate mockgen -source=$GOFILE -package=operatormock -destination=./mock/operator_mock.go
 type moduleManager interface {
 	GetGlobal() *modules.GlobalModule
 	IsModuleEnabled(moduleName string) bool
