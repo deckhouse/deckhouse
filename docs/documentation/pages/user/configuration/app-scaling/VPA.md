@@ -110,7 +110,7 @@ To prevent this, you can:
       kind: Deployment
       name: my-app
     updatePolicy:
-      updateMode: "Auto"
+      updateMode: "InPlaceOrRecreate"
     resourcePolicy:
       containerPolicies:
       - containerName: hamster
@@ -189,7 +189,7 @@ Key columns to monitor:
        kind: Deployment
        name: my-app
      updatePolicy:
-       updateMode: "Auto"
+       updateMode: "InPlaceOrRecreate"
      resourcePolicy:
        containerPolicies:
        - containerName: hamster
