@@ -1776,6 +1776,7 @@ func assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t *testing.T, params
 			"terraform-modules",
 			"registry.terraform.io",
 			"registry.opentofu.org",
+			"terraform-versions.yml",
 			infraBin,
 		}
 
