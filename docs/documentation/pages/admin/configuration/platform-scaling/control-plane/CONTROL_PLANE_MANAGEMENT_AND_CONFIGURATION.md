@@ -178,7 +178,7 @@ To manually renew the control plane certificates, use the `kubeadm` utility on e
 1. Locate the `kubeadm` binary on the master node and create a symbolic link:
 
    ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 1. Execute the following command:

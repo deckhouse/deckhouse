@@ -518,17 +518,25 @@ done
 
 Этот способ может понадобиться, если использование параметра `--force-new-cluster` не восстанавливает работу etcd. Это может произойти, если converge master-узлов прошел неудачно, в результате чего новый master-узел был создан на старом диске etcd, изменил свой адрес в локальной сети, а другие master-узлы отсутствуют. Этот метод стоит использовать если контейнер etcd находится в бесконечном цикле перезапуска, а в его логах появляется ошибка: `panic: unexpected removal of unknown remote peer`.
 
-1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
+
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
 1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   * `<HOSTNAME>` — название master-узла;
-   * `<ADDRESS>` — адрес master-узла.
+   где:
+
+- `<HOSTNAME>` — название master-узла;
+- `<ADDRESS>` — адрес master-узла.
 
 1. Выполните следующие команды для использования нового снапшота:
 
@@ -908,7 +916,7 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl` с помощью команды:
@@ -1285,7 +1293,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 1. Найдите утилиту `kubeadm` на master-узле и создайте символьную ссылку c помощью следующей команды:
 
    ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 2. Обновите сертификаты:

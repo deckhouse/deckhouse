@@ -182,7 +182,7 @@ DKP автоматически сгенерирует новые сертифи�
 1. Найдите утилиту `kubeadm` на master-узле и создайте символьную ссылку c помощью следующей команды:
 
    ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 1. Выполните команду:
