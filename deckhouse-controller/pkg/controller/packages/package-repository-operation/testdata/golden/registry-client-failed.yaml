@@ -40,9 +40,17 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   registry:
     repo: registry.example.com/test
 status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: 'Failed to create registry client: create package service: failed to
+      get auth from docker config: read auth config: unmarshal docker config: unexpected
+      end of JSON input'
+    reason: RegistryClientCreationFailed
+    status: "False"
+    type: LastOperationScanFinished
   syncTime: null

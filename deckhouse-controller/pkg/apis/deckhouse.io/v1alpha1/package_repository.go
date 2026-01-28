@@ -32,6 +32,8 @@ const (
 	PackageRepositoryFinalizerPackageVersionExists = "packages.deckhouse.io/package-version-exists"
 
 	PackageRepositoryAnnotationRegistryChecksum = "packages.deckhouse.io/registry-spec-checksum"
+
+	PackageRepositoryConditionLastOperationScanFinished = "LastOperationScanFinished"
 )
 
 var (
@@ -56,6 +58,7 @@ var _ runtime.Object = (*PackageRepository)(nil)
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Phase,type=string,JSONPath=.status.phase
 // +kubebuilder:printcolumn:name=Sync,type=string,JSONPath=.status.syncTime
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='LastOperationScanFinished')].message
 // +kubebuilder:printcolumn:name=Packages,type=integer,JSONPath=.status.packagesCount,priority=1
 
 // PackageRepository is a source of packages for Deckhouse.
@@ -115,6 +118,12 @@ type PackageRepositoryStatus struct {
 	// Human-readable message about the repository status.
 	// +optional
 	Message string `json:"message,omitempty"`
+
+	// Conditions represent the latest available observations of the repository's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryStatusPackage struct {

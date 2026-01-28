@@ -30,6 +30,29 @@ spec:
               description: |
                 Статус ресурса.
               properties:
+                conditions:
+                  description: |
+                    Условия представляют последние доступные наблюдения за состоянием репозитория.
+                  items:
+                    properties:
+                      lastProbeTime:
+                        description: |
+                          Последнее время проверки условия.
+                      lastTransitionTime:
+                        description: |
+                          Последнее время перехода условия из одного статуса в другой.
+                      message:
+                        description: |
+                          Человеко-читаемое сообщение, указывающее детали перехода.
+                      reason:
+                        description: |
+                          Программный идентификатор, указывающий причину последнего перехода условия.
+                      status:
+                        description: |
+                          Статус условия, один из True, False, Unknown.
+                      type:
+                        description: |
+                          Тип условия репозитория.
                 message:
                   description: |
                     Человеко-читаемое сообщение о статусе репозитория.
