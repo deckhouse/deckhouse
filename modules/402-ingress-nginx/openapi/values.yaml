@@ -135,6 +135,10 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
                     behindL7Proxy:
                       type: boolean
                     realIPHeader:
@@ -156,6 +160,10 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
                     acceptClientIPHeadersFrom:
                       type: array
                       items:
@@ -173,6 +181,10 @@ properties:
                       additionalProperties: true
                     loadBalancerClass:
                       type: string
+                    httpPort:
+                      type: integer
+                    httpsPort:
+                      type: integer
                 hostPort:
                   type: object
                   default: {}
