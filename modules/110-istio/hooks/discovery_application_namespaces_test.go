@@ -141,6 +141,24 @@ metadata:
     sidecar.istio.io/inject: "true"
 spec: {}
 ---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-2
+  namespace: ns-2
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pod-3
+  namespace: ns-3
+  labels:
+    sidecar.istio.io/inject: "true"
+spec: {}
+---
 `))
 
 			f.RunHook()
