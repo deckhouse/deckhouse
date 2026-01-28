@@ -158,9 +158,9 @@ d8 system edit cluster-configuration
    ```
 
    Где:
-   - `<SSH_KEY_FILENAME>` — имя файла вашего приватного SSH-ключа
-   - `<USERNAME>` — SSH-пользователь с правами sudo
-   - `<MASTER-NODE-HOST>` — IP-адрес или имя хоста master-узла
+   - `<SSH_KEY_FILENAME>` — имя файла вашего приватного SSH-ключа,
+   - `<USERNAME>` — SSH-пользователь с правами sudo на целевом  master-узле кластера,
+   - `<MASTER-NODE-HOST>` — IP-адрес или имя хоста master-узла.
 
 4. Отредактируйте конфигурацию в открывшемся редакторе, сохраните и выйдите.
 
