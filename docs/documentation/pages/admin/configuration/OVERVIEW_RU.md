@@ -128,7 +128,7 @@ d8 system edit cluster-configuration
 
 **Шаги:**
 
-1. Получите текущую версию и редакцию DKP из вашего кластера:
+1. Получите текущую версию и редакцию DKP из вашего кластера. Для этого **на локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии:
 
    ```shell
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}')
