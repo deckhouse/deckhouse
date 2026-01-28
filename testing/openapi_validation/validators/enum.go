@@ -230,7 +230,7 @@ var (
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},
-		"modules/030-cloud-provider-vcd/candi/openapi/cluster_configuration.yaml": {
+		"candi/cloud-providers/vcd/openapi/cluster_configuration.yaml": {
 			// ignore enum values "NSX-T" and "NSX-V"
 			"apiVersions[*].openAPISpec.properties.edgeGateway.properties.type",
 			"apiVersions[*].openAPISpec.allOf[*].oneOf[*].properties.edgeGateway.oneOf[*].properties.type",
