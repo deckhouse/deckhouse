@@ -41,7 +41,10 @@ const (
 	cgroupV2SupportValuesKey = "nodeManager:cgroupV2Support"
 )
 
-var cntrdV2UnsupportedMetricName = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
+var (
+	cntrdV2UnsupportedMetricName       = fmt.Sprintf("d8_%s_unsupported", cntrdV2GroupName)
+	nodesCgroupV2UnsupportedMetricName = "d8_node_cgroup_v2_unsupported"
+)
 
 // set nodes_cntrdv2_unsupported=1 if node has label node.deckhouse.io/containerd-v2-unsupported
 // or if node.deckhouse.io/cgroup label has value other than cgroup2fs
@@ -120,15 +123,17 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 		}
 
+		cgroupV2UnsupportedValue := 0.0
 		if nodeInfo.CgroupVersion != cgroupV2Value {
 			allNodesSupportCgroupV2 = false
-			labels := map[string]string{
-				"node":           nodeInfo.Name,
-				"node_group":     nodeInfo.NodeGroup,
-				"cgroup_version": nodeInfo.CgroupVersion,
-			}
-			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
+			cgroupV2UnsupportedValue = 1.0
 		}
+		labelsCgroup := map[string]string{
+			"node":           nodeInfo.Name,
+			"node_group":     nodeInfo.NodeGroup,
+			"cgroup_version": nodeInfo.CgroupVersion,
+		}
+		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labelsCgroup, options...)
 	}
 
 	requirements.SaveValue(cgroupV2SupportValuesKey, allNodesSupportCgroupV2)
