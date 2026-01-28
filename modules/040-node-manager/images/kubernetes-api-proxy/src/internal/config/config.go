@@ -43,10 +43,6 @@ type Config struct {
 
 	LogLevel string
 
-	// Upstream TLS/auth
-	TLSServerName string
-	TLSInsecure   bool
-
 	// Discovery
 	DiscoverPeriod time.Duration
 
@@ -75,10 +71,6 @@ func Parse() Config {
 	proxyHealthListen := flag.String("health-listen", getenvDefault("HEALTH_LISTEN", ":8080"), "address for HTTP health endpoints (e.g., :8080)")
 	logLevel := flag.String("log-level", getenvDefault("LOG_LEVEL", "info"), "Log level: debug|info|warn|error")
 
-	// TLS options (Root CAs and token are auto-loaded from Kubernetes client)
-	tlsServerName := flag.String("upstream-server-name", os.Getenv("UPSTREAM_SERVER_NAME"), "Override TLS ServerName for upstream verification")
-	tlsInsecure := flag.Bool("upstream-insecure-skip-verify", getenvDefault("UPSTREAM_INSECURE_SKIP_VERIFY", "") != "", "Skip TLS verification for upstreams (NOT recommended)")
-
 	// Discovery
 	discoverPeriod := flag.Duration("discover-period", 5*time.Second, "How often to refresh kube-apiserver EndpointSlices")
 
@@ -103,9 +95,6 @@ func Parse() Config {
 	cfg.HealthTimeout = *healthTimeout
 	cfg.HealthJitter = *healthJitter
 	cfg.ProxyHealthListen = *proxyHealthListen
-
-	cfg.TLSServerName = *tlsServerName
-	cfg.TLSInsecure = *tlsInsecure
 
 	cfg.DiscoverPeriod = *discoverPeriod
 

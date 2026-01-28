@@ -1,6 +1,9 @@
 # Kubernetes API Server Load Balancer
 
-A lightweight TCP load balancer for Kubernetes API servers, designed to run as a sidecar or standalone Pod. It proxies raw TCP traffic to healthy upstream `kube-apiserver` instances and exposes simple HTTP health endpoints.
+A lightweight TCP load balancer for Kubernetes API servers, 
+designed to run as a StaticPod (on every machines in cluster) or as DaemonSet. 
+It proxies raw TCP traffic to healthy upstream `kube-apiserver` 
+instances and exposes simple HTTP health endpoints.
 
 ## Overview
 
@@ -22,7 +25,7 @@ The `loadbalancer` package wraps `tcpproxy` and picks upstream records from `ups
 ### Control Path
 The `upstream.List` periodically probes each upstream's `https://<host:port>/readyz` using an `http.Client` configured with optional TLS and Authorization headers. Probes assign a latency-based tier and adjust a score for success/failure. Selection prefers lower latency and non-negative score, with round-robin within a tier.
 
-### Discovery (Required)
+### Discovery
 A background loop reads a Kubernetes `Endpoints` object and reconciles the set of upstream addresses.
 
 ## Getting Started
@@ -46,7 +49,8 @@ go run ./cmd/kubernetes-api-proxy \
 ## Health Endpoints
 
 - `GET /healthz` → always `200 OK`
-- `GET /readyz` → `200 OK` only if at least one upstream is healthy
+- `GET /readyz` → always `200 OK` ('cause in pressure situations it will try to balance traffic into default Kubernetes Service)
+- `GET /upstreams` → returns current statics of balancing upstreams (for debug purposes)
 
 ## CLI Flags and Environment Variables
 
@@ -65,12 +69,6 @@ go run ./cmd/kubernetes-api-proxy \
 - `--health-interval` (default `1s`)
 - `--health-timeout` (default `100ms`)
 - `--health-jitter` (default `0.2`)
-
-### Upstream TLS/Auth
-- CA bundle and bearer token are discovered automatically from the in-cluster ServiceAccount when running in Kubernetes
-- When running out-of-cluster, they are taken from your default kubeconfig
-- `--upstream-server-name` (env `UPSTREAM_SERVER_NAME`) — override SNI/verify name
-- `--upstream-insecure-skip-verify` (env `UPSTREAM_INSECURE_SKIP_VERIFY`) — skip TLS verify (not recommended)
 
 ### Discovery Settings
 - `--discover-period` (default `5s`) controls refresh interval

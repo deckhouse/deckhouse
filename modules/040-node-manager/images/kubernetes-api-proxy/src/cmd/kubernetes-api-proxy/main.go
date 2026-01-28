@@ -85,6 +85,7 @@ func main() {
 		if cfg.ProxyHealthListen == "" {
 			return
 		}
+
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("health server error", slog.String("error", err.Error()))
 		}
@@ -105,13 +106,16 @@ func main() {
 
 	logger.Info("shutting down...")
 	cancel()
+
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer shutdownCancel()
+
 	_ = srv.Shutdown(shutdownCtx)
 	if err := lb.Shutdown(); err != nil {
 		logger.Error("shutdown error", slog.String("error", err.Error()))
 		os.Exit(1)
 	}
+
 	logger.Info("stopped")
 }
 
