@@ -7,8 +7,8 @@ git:
   to: /deckhouse
   includePaths:
   - candi
-  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-localized-%s.yaml" .Env) }}
+  {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 {{ include "installer_and_installer_standalone_generic_imports" (dict "Env" $.Env) }}
 {{ include "installer_and_installer_standalone_terraform_imports" (dict "Env" $.Env "TF" $.TF "Editions" $.Editions) }}

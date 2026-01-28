@@ -14,6 +14,7 @@ git:
 {{ .Files.Get (printf "tools/build_includes/modules-excluded-%s.yaml" .Env) | nindent 2}}
 {{ include "dev_prebuild_git_shell_operator" . }}
 {{ .Files.Get (printf "tools/build_includes/modules-with-exclude-%s.yaml" .Env) }}
+{{ .Files.Get (printf "tools/build_includes/candi-localized-%s.yaml" .Env) }}
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 {{ include "dev_prebuild_images_imports" (dict "Env" .Env) }}
