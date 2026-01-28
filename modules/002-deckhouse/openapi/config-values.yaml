@@ -324,8 +324,8 @@ properties:
     description: |
       Settings for accessing the container registry with Deckhouse images.
 
-      This parameter allows you to configure how Deckhouse connects to the container registry to pull its own component images.
-      You can either rely on pre-configured access on cluster nodes (`Unmanaged` mode) or provide Deckhouse with direct access credentials (`Direct` mode).
+      This parameter allows configuring how DKP connects to the container registry to pull its own component images.
+      Settings are processed by the internal registry module. In clusters where this configuration is not supported, the registry connection setup is done manually using the `change-registry` helper script.
     x-examples:
       - mode: Unmanaged
       - mode: Unmanaged
@@ -336,17 +336,24 @@ properties:
         direct:
           imagesRepo: registry.deckhouse.io/deckhouse/ee
           license: "DECKHOUSE_LICENSE_KEY"
+      - mode: Proxy
+        proxy:
+          imagesRepo: registry.deckhouse.io/deckhouse/ee
+          license: "DECKHOUSE_LICENSE_KEY"
+      - mode: Local
+
     properties:
       mode:
         type: string
         description: |
           The mode for accessing the container registry with Deckhouse images.
 
-          - `Unmanaged` — the default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. In clusters not supported by the `registry` module, configuration is done manually using the `change-registry` helper script. **Important:** changing the registry in Unmanaged mode will result in a full restart of all Deckhouse components.
-          - `Direct` — a mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important:** the first switch to `Direct` mode will result in a full restart of all Deckhouse components.
-        enum: [Unmanaged, Direct]
+          - `Unmanaged`: The default mode. In this mode, the `registry` module does not run an internal registry. To configure it, set the parameters in the `unmanaged` section. **Important.** Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
+          - `Direct`: A mode for direct access to the registry. It uses a "virtual" registry address that is overwritten on the fly to the real registry address. This allows for registry changes without a full component restart. **Important.** The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
+          - `Proxy`: A proxy mode for the registry. It launches static pods with a caching proxy registry. This mode allows for reducing requests to the external registry by caching images. Cached data is stored on master nodes. Access to the proxy registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
+          - `Local`: A local registry mode. It launches static pods with a local registry. This mode allows the cluster to operate in an isolated environment. Data storage is performed on master nodes. Access to the registry is done through a fixed address, similar to `Direct` mode. **Important.** Supported only on static clusters. The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
+        enum: [Unmanaged, Direct, Proxy, Local]
         default: Unmanaged
-        x-doc-default: Direct
       direct:
         type: object
         description: |
@@ -420,10 +427,19 @@ properties:
             description: |
               Mode for checking the container registry:
 
-              - `Default — checks for the presence of all critical components in the container registry.
+              - `Default` — checks for the presence of all critical components in the container registry.
               - `Relax` — checks only for the presence of the Deckhouse image tag in the container registry (used for switching between Deckhouse editions).
             enum: [Default, Relax]
             default: Default
+        x-deckhouse-validations:
+          - expression: "true ? has(self.imagesRepo) : true"
+            message: "registry.direct: 'imagesRepo' is required."
+          - expression: "has(self.username) ? has(self.password) : true"
+            message: "registry.direct: 'password' is required when 'username' is provided."
+          - expression: "has(self.password) ? has(self.username) : true"
+            message: "registry.direct: 'username' is required when 'password' is provided."
+          - expression: "has(self.license) ? (!has(self.username) && !has(self.password)) : true"
+            message: "registry.direct: 'license' and 'username'/'password' are mutually exclusive."
 
       unmanaged:
         type: object
@@ -442,27 +458,74 @@ properties:
               -----END CERTIFICATE-----
         properties:
           <<: *registryDirectProperties
+        x-deckhouse-validations:
+          # Copy from Direct:
+          - expression: "true ? has(self.imagesRepo) : true"
+            message: "registry.unmanaged: 'imagesRepo' is required."
+          - expression: "has(self.username) ? has(self.password) : true"
+            message: "registry.unmanaged: 'password' is required when 'username' is provided."
+          - expression: "has(self.password) ? has(self.username) : true"
+            message: "registry.unmanaged: 'username' is required when 'password' is provided."
+          - expression: "has(self.license) ? (!has(self.username) && !has(self.password)) : true"
+            message: "registry.unmanaged: 'license' and 'username'/'password' are mutually exclusive."
 
-x-deckhouse-validations:
-- expression: "self.registry.mode == 'Direct' ? has(self.registry.direct) : true"
-  message: "When mode is 'Direct', 'direct' section must be specified."
-- expression: "self.registry.mode == 'Direct' ? !has(self.registry.unmanaged) : true"
-  message: "When mode is 'Direct', 'unmanaged' section must be omitted."
-- expression: "self.registry.mode == 'Unmanaged' ? !has(self.registry.direct) : true"
-  message: "When mode is 'Unmanaged', 'direct' section must be omitted."
-- expression: "has(self.registry.direct) ? has(self.registry.direct.imagesRepo) : true"
-  message: "'imagesRepo' is required when 'direct' section is specified."
-- expression: "has(self.registry.direct) ? (has(self.registry.direct.username) ? has(self.registry.direct.password) : true) : true"
-  message: "'password' is required when 'username' is provided in the 'direct' section."
-- expression: "has(self.registry.direct) ? (has(self.registry.direct.password) ? has(self.registry.direct.username) : true) : true"
-  message: "'username' is required when 'password' is provided in the 'direct' section."
-- expression: "has(self.registry.direct) ? !(has(self.registry.direct.license) && (has(self.registry.direct.username) || has(self.registry.direct.password))) : true"
-  message: "'license' and 'username'/'password' are mutually exclusive in the 'direct' section."
-- expression: "has(self.registry.unmanaged) ? has(self.registry.unmanaged.imagesRepo) : true"
-  message: "'imagesRepo' is required when 'unmanaged' section is specified."
-- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.username) ? has(self.registry.unmanaged.password) : true) : true"
-  message: "'password' is required when 'username' is provided in the 'unmanaged' section."
-- expression: "has(self.registry.unmanaged) ? (has(self.registry.unmanaged.password) ? has(self.registry.unmanaged.username) : true) : true"
-  message: "'username' is required when 'password' is provided in the 'unmanaged' section."
-- expression: "has(self.registry.unmanaged) ? !(has(self.registry.unmanaged.license) && (has(self.registry.unmanaged.username) || has(self.registry.unmanaged.password))) : true"
-  message: "'license' and 'username'/'password' are mutually exclusive in the 'unmanaged' section."
+      proxy:
+        type: object
+        description: |
+          Parameters for the `Proxy` access mode.
+          These parameters are required when `mode` is set to `Proxy`.
+        x-example:
+          - imagesRepo: registry.deckhouse.io/deckhouse/ee
+            license: "DECKHOUSE_LICENSE_KEY"
+            ttl: "168h10m5s"
+          - imagesRepo: "my-private-registry.com/deckhouse"
+            username: "user"
+            password: "password"
+            scheme: HTTPS
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              MIIC...
+              -----END CERTIFICATE-----
+            ttl: "168h"
+        properties:
+          <<: *registryDirectProperties
+          ttl:
+            type: string
+            pattern: '^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$'
+            description: |
+              TTL determines the lifetime of cached images. Once the TTL expires, the images will be automatically removed from the cache.
+              If not set, the TTL defaults to 7 days (168 hours).
+
+              Supported units: `h` (hours), `m` (minutes), `s` (seconds). The minimum allowable value is 5 minutes.
+            x-example:
+              - "168h"
+              - "168h10m"
+              - "168h10m5s"
+        x-deckhouse-validations:
+          # Copy from Direct:
+          - expression: "true ? has(self.imagesRepo) : true"
+            message: "registry.proxy: 'imagesRepo' is required."
+          - expression: "has(self.username) ? has(self.password) : true"
+            message: "registry.proxy: 'password' is required when 'username' is provided."
+          - expression: "has(self.password) ? has(self.username) : true"
+            message: "registry.proxy: 'username' is required when 'password' is provided."
+          - expression: "has(self.license) ? (!has(self.username) && !has(self.password)) : true"
+            message: "registry.proxy: 'license' and 'username'/'password' are mutually exclusive."
+          # Proxy mode params
+          - expression: "has(self.ttl) ? duration(self.ttl) >= duration('5m') : true"
+            message: "registry.proxy: 'ttl' should be at least 5 minutes."
+
+    x-deckhouse-validations:
+      # Direct
+      - expression: "self.mode == 'Direct' ? has(self.direct) : true"
+        message: "registry: when mode is 'Direct', 'direct' section must be specified."
+      - expression: "self.mode != 'Direct' ? !has(self.direct) : true"
+        message: "registry: when mode is not 'Direct', 'direct' section must be omitted."
+      # Proxy
+      - expression: "self.mode == 'Proxy' ? has(self.proxy) : true"
+        message: "registry: when mode is 'Proxy', 'proxy' section must be specified."
+      - expression: "self.mode != 'Proxy' ? !has(self.proxy) : true"
+        message: "registry: when mode is not 'Proxy', 'proxy' section must be omitted."
+      # Unmanaged (the 'unmanaged' section is optional. We only need to check for the absence of sections from other modes)
+      - expression: "self.mode != 'Unmanaged' ? !has(self.unmanaged) : true"
+        message: "registry: when mode is not 'Unmanaged', 'unmanaged' section must be omitted."
