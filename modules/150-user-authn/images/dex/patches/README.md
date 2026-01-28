@@ -67,3 +67,15 @@ This patch fixes:
 
 - CVE-2025-47914
 - CVE-2025-58181
+
+### 011-reset-pass-feat-2fa-fix.patch
+
+This patch implements logic with forced password change flag, which can be set externally by some controlller.
+User will be forced to change his password after successfull login. 
+
+Also fixes a 2FA bug where a user’s local account could become broken if they had no TOTP keys configured and Dex had 2FA enabled (users were created before this feature turned active).
+
+### 012-fix-existing-users-2fa-approval.patch
+
+Fixes a regression when enabling `staticUsers2FA` for existing users: old auth flows can end up on `/approval` with `TOTPValidated=false`,
+causing "Login process not yet finalized." error. The patch redirects such requests to `/totp` to complete 2FA instead of failing.
