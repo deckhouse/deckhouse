@@ -84,6 +84,7 @@
  - **[cloud-provider-aws]** fix cve [#17470](https://github.com/deckhouse/deckhouse/pull/17470)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
+ - **[cloud-provider-dvp]** Fixed VM deletion timeout and improved memory validation error reporting [#17587](https://github.com/deckhouse/deckhouse/pull/17587)
  - **[cloud-provider-dvp]** this PR gives a lot more informational errors and messages to user [#17165](https://github.com/deckhouse/deckhouse/pull/17165)
  - **[cloud-provider-dvp]** Fix healthCheckNodePort collisions [#16996](https://github.com/deckhouse/deckhouse/pull/16996)
  - **[cloud-provider-dvp]** fixed CVE [#16810](https://github.com/deckhouse/deckhouse/pull/16810)
@@ -133,6 +134,7 @@
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)
  - **[loki]** Fixed the `LokiDiscardedSamplesWarning` alert. [#16374](https://github.com/deckhouse/deckhouse/pull/16374)
  - **[metallb]** Fixed D8MetallbBGPSessionDown alert false positives caused by duplicate metrics without port information. [#17563](https://github.com/deckhouse/deckhouse/pull/17563)
+ - **[monitoring-kubernetes]** fix kube_persistentvolume_is_local recording rule for not-bound PVCs [#17638](https://github.com/deckhouse/deckhouse/pull/17638)
  - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
     Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
  - **[multitenancy-manager]** Fixed indentation in the manifest of `multitenancy-manager`. [#16471](https://github.com/deckhouse/deckhouse/pull/16471)
