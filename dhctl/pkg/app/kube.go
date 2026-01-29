@@ -23,6 +23,8 @@ var (
 	KubeConfigContext = ""
 
 	KubeConfigInCluster = false
+
+	SkipDhctlVersionCheck = false
 )
 
 func DefineKubeFlags(cmd *kingpin.CmdClause) {
@@ -35,4 +37,7 @@ func DefineKubeFlags(cmd *kingpin.CmdClause) {
 	cmd.Flag("kube-client-from-cluster", "Use in-cluster Kubernetes API access.").
 		Envar(configEnvName("KUBE_CLIENT_FROM_CLUSTER")).
 		BoolVar(&KubeConfigInCluster)
+	cmd.Flag("skip-dhctl-version-check", "Skip dhctl version check with cluster deckhouse version.").
+		Envar(configEnvName("SKIP_DHCTL_VERSION_CHECK")).
+		BoolVar(&SkipDhctlVersionCheck)
 }
