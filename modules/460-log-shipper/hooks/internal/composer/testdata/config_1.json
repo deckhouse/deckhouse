@@ -44,7 +44,7 @@
     }
   },
   "sinks": {
-    "destination/cluster/testoutput": {
+    "KubernetesPods/destination/cluster/testoutput": {
       "type": "loki",
       "inputs": [
         "cluster_logging_config/testsource:baar",
@@ -72,7 +72,6 @@
       },
       "labels": {
         "container": "{{ container }}",
-        "host": "{{ host }}",
         "image": "{{ image }}",
         "namespace": "{{ namespace }}",
         "node": "{{ node }}",
