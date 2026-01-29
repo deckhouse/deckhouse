@@ -333,6 +333,7 @@ func (c *ControllerService) ControllerUnpublishVolume(
 		return nil, msg
 	}
 
+	klog.Infof("detached disk=%s from vm=%s, vmBDA deleted", diskName, vmHostname)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 
