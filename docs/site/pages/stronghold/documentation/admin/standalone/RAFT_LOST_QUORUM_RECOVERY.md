@@ -3,44 +3,59 @@ title: "Recover from lost quorum"
 permalink: en/stronghold/documentation/admin/standalone/raft-lost-quorum-recovery.html
 ---
 
-With Integrated Storage, Raft quorum maintenance is a consideration for configuring and operating your Stronghold environment. A Stronghold cluster permanently loses quorum when there is no way to recover enough servers to reach consensus and elect a leader. Without a quorum of cluster servers, Stronghold can no longer perform read and write operations.
+Quorum is the minimum number of nodes in a cluster required to vote and elect a leader.
+A Raft leader is the active cluster node that performs read and write operations and coordinates the other nodes.
+
+With Integrated Storage, maintaining Raft quorum is an important factor when configuring and operating a Stronghold environment with HA enabled.
+A Stronghold cluster permanently loses quorum when there is no way to recover enough servers to reach consensus and elect a leader. Without a quorum of cluster servers, Stronghold can no longer perform read and write operations.
 
 The cluster quorum is dynamically updated when new servers join the cluster. Stronghold calculates quorum with the formula `(n+1)/2`, where `n` is the number of servers in the cluster. For example, for a 3-server cluster, you will need at least 2 servers operational for the cluster to function properly, `(3+1)/2 = 2`. Specifically, you will need 2 servers always active to perform read and write operations.
 
-> **Note:** There is an exception to this rule if you use the `-non-voter` option while joining the cluster. This feature is available only in Stronghold as a standalone.
+{% alert level="info" %}
+There is an exception to this rule if you use the `-non-voter` option while joining the cluster. This feature is available only in Stronghold as a standalone.
+{% endalert %}
 
-## Scenario overview
+## Quorum loss scenario
 
-When two of the three servers encountered an outage, the cluster loses quorum and becomes inoperable.
+When two of the three servers become unavailable, the cluster loses quorum and becomes inoperable.
 
 Although one of the servers is fully functioning, the cluster won't be able to process read or write requests.
 
 **Example:**
 
-1) Response from console:
-```
-$ stronghold operator raft list-peers
-* local node not active but active cluster node not found
+1. Response from console:
 
-$ stronghold kv get kv/apikey
-* local node not active but active cluster node not found
-```
+    ```text
+    $ stronghold operator raft list-peers
+    * local node not active but active cluster node not found
+    
+    $ stronghold kv get kv/apikey
+    * local node not active but active cluster node not found
+    ```
 
-2) Logs from one of inoperative nodes:
-```
-oct 20 10:54:32 standalone-astra stronghold[647]: {"@level":"info","@message":"attempting to join possible raft leader node","@module":"core","@timestamp":"2025-10-20T10:54:02.578963Z","leader_addr":"https://stronghold-0.stronghold.tld:8201"}
-oct 20 10:54:32 standalone-astra stronghold[647]: {"@level":"error","@message":"failed to get raft challenge","@module":"core","@timestamp":"2025-10-20T10:54:32.597558Z","error":"error during raft bootstrap init call: Put \"https://10.0.101.22:8201/v1/sys/storage/raft/bootstrap/challenge\": dial tcp 10.0.101.22:8201: i/o timeout","leader_addr":"https://stronghold-0.stronghold.tld:8201"}
-```
+1. Logs from one of inoperative nodes:
+
+    ```text
+    oct 20 10:54:32 standalone-astra stronghold[647]: {"@level":"info","@message":"attempting to join possible raft leader node","@module":"core","@timestamp":"2025-10-20T10:54:02.578963Z","leader_addr":"https://stronghold-0.stronghold.tld:8201"}
+    oct 20 10:54:32 standalone-astra stronghold[647]: {"@level":"error","@message":"failed to get raft challenge","@module":"core","@timestamp":"2025-10-20T10:54:32.597558Z","error":"error during raft bootstrap init call: Put \"https://10.0.101.22:8201/v1/sys/storage/raft/bootstrap/challenge\": dial tcp 10.0.101.22:8201: i/o timeout","leader_addr":"https://stronghold-0.stronghold.tld:8201"}
+    ```
 
 In this tutorial, you will recover from the permanent loss of two-of-three Stronghold servers by converting it into a single-server cluster.
 
-The last server must be fully operational to complete this procedure.
+The remaining server must be fully operational to complete this procedure.
 
-> **Note:** Sometimes Stronghold loses quorum due to autopilot and servers marked as unhealthy but the service is still running. On unhealthy server(s), you must stop services before running the peers.json procedure.
->
-> In a 5 server cluster or in the case of non voters, you must stop other healthy before performing the peers.json recovery.
+In a 5-server cluster, or when non-voters are present, you must stop all other healthy servers before performing the peers.json recovery.
 
-## Locate the storage directory
+### Autopilot recovery considerations
+
+Autopilot is a Stronghold mechanism that automatically monitors the state of Raft cluster nodes and manages their participation in quorum.
+
+In some cases, Stronghold may lose quorum due to Autopilot marking servers as unhealthy, while the service is still running.
+In such situations, before performing recovery using peers.json, you must stop Stronghold services on the unhealthy servers.
+
+## Recover from lost quorum
+
+### Locate the storage directory
 
 On the healthy Stronghold server, locate the Raft storage directory. To discover the location of the directory, review your Stronghold configuration file. The `storage` stanza will contain the `path` to the directory.
 
@@ -68,11 +83,11 @@ ui=true
 
 In this example, the `path` is the file system path where Stronghold stores data, and the `server_id` is the identifier for the server in the Raft cluster. The example `server_id` is `stronghold_0`.
 
-## Create the peers.json file
+### Create the peers.json file
 
 Inside the storage directory (`/opt/stronghold/data`), there is a folder named `raft`.
 
-```
+```text
 /opt
 └ stronghold
   └── data
@@ -103,22 +118,25 @@ EOF
 - **non_voter** (bool: \<false\>) - This controls whether the server is a non-voter.
 
 Make sure `stronghold` user has *read* and *edit* permissions on `peers.json` file.
+
 ```bash
 chown stronghold:stronghold /opt/stronghold/data/raft/peers.json
 chmod 600 /opt/stronghold/data/raft/peers.json
 ```
 
-## Restart Stronghold
+### Restart Stronghold
 
 Restart the Stronghold process to enable Stronghold to load the new `peers.json` file.
 
 ```bash
-$ sudo systemctl restart stronghold
+sudo systemctl restart stronghold
 ```
 
-> **Note:** If you use Systemd, a `SIGHUP` signal will not work.
+{% alert level="info" %}
+f you use Systemd, a `SIGHUP` signal will not work.
+{% endalert %}
 
-## Unseal Stronghold
+### Unseal Stronghold
 
 If not configured to use auto-unseal, unseal Stronghold and then check the status.
 
@@ -148,11 +166,11 @@ Raft Committed Index     155344
 Raft Applied Index       155344
 ```
 
-## Verify success
+### Verify recovery success
 
 The recovery procedure is successful when Stronghold starts up and displays these messages in the system logs.
 
-```
+```text
 ...snip...
 [INFO]  core.cluster-listener: serving cluster requests: cluster_listen_address=[::]:8201
 [INFO]  storage.raft: raft recovery initiated: recovery_file=peers.json
@@ -161,7 +179,7 @@ The recovery procedure is successful when Stronghold starts up and displays thes
 ...snip...
 ```
 
-## View the peer list
+### View the peer list
 
 You now have a cluster with one server that can reach the quorum. Verify that there is just one server in the cluster with `stronghold operator raft list-peers` command.
 
@@ -172,7 +190,7 @@ Node            Address                                     State     Voter
 stronghold_0    https://stronghold-0.stronghold.tld:8201    leader    true
 ```
 
-## Next steps
+### Next steps
 
 In this tutorial, you recovered the loss of quorum by converting a 3-server cluster into a single-server cluster using the `peers.json`. The `peers.json` file enabled you to manually overwrite the Raft peer list to the one remaining server, which allowed that server to reach quorum and complete a leader election.
 
