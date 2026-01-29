@@ -4,3 +4,8 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-vcd/candi
+  to: /deckhouse/candi/cloud-providers/vcd
+  stageDependencies:
+    install:
+        - '**/*'
