@@ -201,7 +201,7 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 
 	client, err := sshclient.NewClientFromConfig(ctx, address, config)
 	if err != nil {
-		return fmt.Errorf("cannot create SSH client: %w", err)
+		return fmt.Errorf("Cannot create SSH client: %w", err)
 	}
 
 	if err := client.Start(); err != nil {
