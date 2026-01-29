@@ -1,4 +1,4 @@
-<!-- {{- $module := .module }}
+{{- $module := .module }}
 {{- $channel := .channel }}
 {{- $moduleStageFallBackLegacy := .stageFallBackLegacy }}
 
@@ -24,4 +24,4 @@
     {{- $content := printf "%s: <i data-tippy-content='%s'>%s</i>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
     {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
   {{- end }}
-{{- end }} -->
+{{- end }}
