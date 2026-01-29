@@ -57,10 +57,9 @@ shell:
   - patch -p1 < /patches/016-verbose-maxmind-logs.patch
   - patch -p1 < /patches/017-fix-success-reload-metric.patch
   - patch -p1 < /patches/018-disable-error-logs.patch
-  - patch -p1 < /patches/019-maxmind-alerts.patch
-  - patch -p1 < /patches/020-fix-sorting.patch
-  - patch -p1 < /patches/021-geoip-ver-metric.patch
-  - patch -p1 < /patches/022-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/019-fix-sorting.patch
+  - patch -p1 < /patches/020-geoip-ver-metric.patch
+  - patch -p1 < /patches/021-skip-tls-verification-maxmind.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch

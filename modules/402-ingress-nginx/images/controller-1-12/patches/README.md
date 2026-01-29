@@ -98,19 +98,15 @@ https://github.com/kubernetes/ingress-nginx/pull/13830
 
 Disabling log messages such as "Error obtaining Endpoints for Service...".
 
-### 017-maxmind-alerts.patch
-
-The metric `geoip_errors_total` has been added, which indicates the number of errors related to GeoIP, specifically download errors (`type="download"`).
-
-### 018-fix-sorting.patch
+### 017-fix-sorting.patch
 
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
 
 https://github.com/kubernetes/ingress-nginx/pull/14005
 
-### 019-geoip-ver-metric.patch
+### 018-geoip-ver-metric.patch
 
 This patch adds a metric that reflects current GeoIP version in use (0 - no geoip, 1 - geoip, 2 - geoip2)
 
-### 021-skip-tls-verification-maxmind.patch
+### 019-skip-tls-verification-maxmind.patch
 Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
