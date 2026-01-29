@@ -82,10 +82,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pdCsiPlugin134":            "imageHash-cloudProviderGcp-pdCsiPlugin134",
 	},
 	"cloudProviderHuaweicloud": map[string]interface{}{
-		"caphcControllerManager": "imageHash-cloudProviderHuaweicloud-caphcControllerManager",
-		"cloudControllerManager": "imageHash-cloudProviderHuaweicloud-cloudControllerManager",
-		"cloudDataDiscoverer":    "imageHash-cloudProviderHuaweicloud-cloudDataDiscoverer",
-		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
+		"caphcControllerManager":      "imageHash-cloudProviderHuaweicloud-caphcControllerManager",
+		"cloudControllerManager":      "imageHash-cloudProviderHuaweicloud-cloudControllerManager",
+		"cloudDataDiscoverer":         "imageHash-cloudProviderHuaweicloud-cloudDataDiscoverer",
+		"huaweicloudCsiDriver":        "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
+		"terraformManagerHuaweicloud": "imageHash-cloudProviderHuaweicloud-terraformManagerHuaweicloud",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"cinderCsiPlugin130":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin130",
