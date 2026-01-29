@@ -211,8 +211,11 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 		HasAuth:     hasAuth,
 	}
 
-	if proxyEnvs.hasAny() {
-		model.ProxyEnvs = &proxyEnvs
+	// proxyEnvs only for proxy mode
+	if value.Config.ProxyMode != nil {
+		if proxyEnvs.hasAny() {
+			model.ProxyEnvs = &proxyEnvs
+		}
 	}
 	return model
 }
