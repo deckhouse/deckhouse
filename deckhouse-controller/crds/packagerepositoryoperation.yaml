@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.conditions[?(@.type=='Processed')].status
       name: Processed
       type: string
+    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+      name: MSG
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
