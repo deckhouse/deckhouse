@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package install provides the Install task which mounts a downloaded package
+// to the deployed directory. This task follows the Download task and makes the
+// package available on the filesystem for the Load task to parse.
+// On success, sets ConditionReadyOnFilesystem.
 package install
 
 import (
@@ -61,11 +65,14 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewModuleTask(name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
+// NewAppTask creates an Install task for an Application package.
+// The downloaded path is apps/{repo}/{name}, and deployed path is apps/deployed/{instance}.
+// Instance name allows multiple installations of the same package.
+func NewAppTask(instance, name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
-		downloaded: filepath.Join(modulesDownloadedDir, name),
-		deployed:   filepath.Join(modulesDeployedDir, name),
-		name:       name,
+		downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
+		deployed:   filepath.Join(appsDeployedDir, instance),
+		name:       instance,
 		version:    version,
 		repository: repo,
 		installer:  installer,
@@ -74,11 +81,13 @@ func NewModuleTask(name, version string, repo registry.Remote, status statusServ
 	}
 }
 
-func NewAppTask(instance, name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
+// NewModuleTask creates an Install task for a Module package.
+// The downloaded path is modules/{name}, and deployed path is modules/{name}.
+func NewModuleTask(name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
-		downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
-		deployed:   filepath.Join(appsDeployedDir, instance),
-		name:       instance,
+		downloaded: filepath.Join(modulesDownloadedDir, name),
+		deployed:   filepath.Join(modulesDeployedDir, name),
+		name:       name,
 		version:    version,
 		repository: repo,
 		installer:  installer,

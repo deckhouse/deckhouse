@@ -41,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,8 +55,7 @@ type Manager struct {
 
 	onValuesChanged func(name string)
 
-	loader            *loader.ApplicationLoader // Loads packages from filesystem
-	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	nelm              *nelm.Service // nelm service to install/uninstall releases
 	scheduler         *schedule.Scheduler
 	kubeObjectPatcher *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -76,14 +74,14 @@ type Config struct {
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 }
 
-// New creates a new package manager with the specified apps directory.
+// New creates a new Manager for application packages.
+// The Manager does not use an implicit apps directory; packages are loaded
+// explicitly by path via LoadPackage.
 func New(conf Config, logger *log.Logger) *Manager {
-	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
 		onValuesChanged:   conf.OnValuesChanged,
-		loader:            loader.NewApplicationLoader(appsPath, logger),
 		nelm:              conf.NelmService,
 		scheduler:         conf.Scheduler,
 		kubeEventsManager: conf.KubeEventsManager,
@@ -97,22 +95,29 @@ func New(conf Config, logger *log.Logger) *Manager {
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
-func (m *Manager) LoadPackage(ctx context.Context, repo registry.Remote, namespace, name string) (string, error) {
+func (m *Manager) LoadPackage(ctx context.Context, repo registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("path", packagePath))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	app, err := m.loader.Load(ctx, repo, name)
+	conf, err := loader.LoadAppConf(ctx, packagePath, m.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newLoadFailedErr(err)
+	}
+
+	conf.Repository = repo
+
+	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
 	}
 
 	m.mu.Lock()
-	m.apps[name] = app
+	m.apps[app.GetName()] = app
 	m.scheduler.Add(app)
 	m.mu.Unlock()
 
