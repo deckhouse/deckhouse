@@ -39,31 +39,31 @@ type ConversionWebhook struct {
 
 	// This binding transforms a hook into a handler
 	// for conversions defined in CustomResourceDefinition.
-	// The Shell-operator updates a CRD with .spec.conversion,
+	// The Shell-operator updates a CRD with `.spec.conversion`,
 	// starts HTTPS server, and runs hooks to handle ConversionReview requests.
 	// +required
 	Conversions []Conversions `json:"conversions"`
 
-	// status defines the observed state of ConversionWebhook
+	// Status defines the observed state of ConversionWebhook.
 	// +optional
 	Status ConversionWebhookStatus `json:"status,omitempty,omitzero"`
 }
 
 type Conversions struct {
-	// a version of a custom resource that hook can convert.
+	// A version of a custom resource that hook can convert.
 	From string `json:"from"`
-	// a version of a custom resource that hook can produce.
+	// A version of a custom resource that hook can produce.
 	To string `json:"to"`
-	// an array of names of kubernetes bindings in a hook.
+	// An array of names of kubernetes bindings in a hook.
 	// When specified, a list of monitored objects from
 	// these bindings will be added to the binding context in the snapshots field.
 	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
-	// Code of the conversion handler
+	// Code of the conversion handler.
 	Handler ConversionWebhookHandler `json:"handler"`
 }
 
 type ConversionWebhookHandler struct {
-	// this is a python script handler for object
+	// Python script handler for object.
 	Python string `json:"python,omitempty"`
 }
 
