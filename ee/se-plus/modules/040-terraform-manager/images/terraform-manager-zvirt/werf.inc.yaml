@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "ovirt") }}'
 git:
-  - add: /{{ .ModulePath }}candi/cloud-providers/zvirt
+  - add: /{{ .ModulePath }}modules/030-cloud-provider-zvirt/candi
     to: /deckhouse/candi/cloud-providers/zvirt
 import:
   - image: cloud-provider-zvirt/terraform-manager-zvirt
