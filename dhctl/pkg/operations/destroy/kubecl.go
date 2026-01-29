@@ -22,6 +22,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
@@ -62,7 +63,18 @@ func (p *kubeClientProvider) KubeClientCtx(ctx context.Context) (*client.Kuberne
 	}
 	p.kubeCl = kubeCl
 
-	return kubeCl, err
+	// Validate version compatibility, but allow any error during destroy
+	// (cluster might be partially deleted or Deckhouse might be removed)
+	opts := kubernetes.DefaultVersionCheckOptions()
+	opts.AllowAnyError = true
+	if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, opts); err != nil {
+		log.ErrorF("Deckhouse version check failed: %v\n", err)
+		// Log error but don't fail - destroy operation should proceed
+		// even if version check fails (e.g., Deckhouse already deleted)
+		// Error is already logged by CheckDeckhouseVersionCompatibility
+	}
+
+	return kubeCl, nil
 }
 
 func (p *kubeClientProvider) Cleanup(stopSSH bool) {
