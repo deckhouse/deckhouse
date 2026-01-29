@@ -65,6 +65,8 @@ incorrectPasswordLoginAttempts: 0
 kind: Password
 lockedUntil: '2077-07-12T00:00:00Z'
 metadata:
+  annotations:
+    deckhouse.io/locked-by-administrator: ""
   creationTimestamp: "%s"
   name: mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji
   namespace: d8-user-authn
@@ -286,6 +288,7 @@ status:
 
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
 			Expect(pw.Field("lockedUntil").Time().IsZero()).To(BeTrue())
+			Expect(pw.Field("metadata.annotations").Map()).NotTo(HaveKey("deckhouse.io/locked-by-administrator"))
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
@@ -343,6 +346,19 @@ status:
 				rt := f.KubernetesResource("RefreshToken", "d8-user-authn", rtName)
 				Expect(rt.Exists()).To(BeFalse())
 			}
+
+			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
+			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
+			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
+		})
+
+		It("Reset user's 2FA is idempotent (no objects to delete)", func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				fmt.Sprintf(userOperationReset2FA, nowStr),
+			))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
 			Expect(uo.Field("status.phase").String()).To(Equal("Succeeded"))
@@ -427,17 +443,6 @@ status:
 			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
 		})
 
-		It("Reset user's 2FA w/o offlinesessions entity", func() {
-			f.BindingContexts.Set(f.KubeStateSet(
-				fmt.Sprintf(userOperationReset2FA, nowStr),
-			))
-			f.RunHook()
-
-			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")
-			Expect(uo.Field("status.phase").String()).To(Equal("Failed"))
-			Expect(uo.Field("status.message").String()).NotTo(BeEmpty())
-			Expect(uo.Field("status.completedAt").Time()).To(BeTemporally("~", time.Now(), 5*time.Second))
-		})
 	})
 })
 

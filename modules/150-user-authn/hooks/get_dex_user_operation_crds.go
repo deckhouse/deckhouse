@@ -344,7 +344,18 @@ func executeUnlock(input *go_hook.HookInput, operation UserOperation) error {
 			return nil, err
 		}
 		pass.LockedUntil = nil
-		return sdk.ToUnstructured(&pass)
+		u, err := sdk.ToUnstructured(&pass)
+		if err != nil {
+			return nil, err
+		}
+
+		annotations := u.GetAnnotations()
+		if annotations != nil {
+			delete(annotations, PasswordAnnotationLockedByAdministrator)
+			u.SetAnnotations(annotations)
+		}
+
+		return u, nil
 	}, "dex.coreos.com/v1", "Password", userPassword.Namespace, userPassword.Name)
 
 	return nil
@@ -442,7 +453,8 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 	}
 
 	if !anyDeleted {
-		return fmt.Errorf("cannot find user's 2FA objects: %v", operation.Spec.User)
+		input.Logger.Info("Reset2FA: no 2FA objects found, nothing to delete", "user", operation.Spec.User)
+		return nil
 	}
 
 	return nil
