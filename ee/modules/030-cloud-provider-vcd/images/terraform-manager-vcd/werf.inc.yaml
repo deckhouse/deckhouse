@@ -15,7 +15,7 @@ import:
 {{- range $version := .TF.vcd.versions }}
 - image: terraform-provider-vcd-artifact
   add: /terraform-provider-vcd-v{{ $version }}
-  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
+  to: /terraform-manager/terraform-provider-vcd-v{{ $version }}
   before: setup
 {{- end }}
 
