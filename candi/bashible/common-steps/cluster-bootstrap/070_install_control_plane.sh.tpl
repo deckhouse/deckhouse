@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" -}}
+{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 
 check_container_running() {
   local container_name=$1

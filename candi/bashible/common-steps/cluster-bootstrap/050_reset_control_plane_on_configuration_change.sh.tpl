@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" -}}
+{{ $kubeadmDir := "/var/lib/bashible/kubeadm/v1beta4" }}
 
 current_kubeadm_checksum="$(find {{ $kubeadmDir }} -type f -name '*.yaml' | sort | xargs cat | md5sum - | awk '{print $1}')"
 
