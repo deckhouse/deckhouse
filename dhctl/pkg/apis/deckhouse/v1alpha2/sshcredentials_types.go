@@ -61,7 +61,3 @@ type SSHCredentialsList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []SSHCredentials `json:"items"`
 }
-
-//func init() {
-//	SchemeBuilder.Register(&SSHCredentials{}, &SSHCredentialsList{})
-//}

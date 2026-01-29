@@ -97,16 +97,3 @@ type StaticInstanceList struct {
 	Items           []StaticInstance `json:"items"`
 }
 
-//func init() {
-//	SchemeBuilder.Register(&StaticInstance{}, &StaticInstanceList{})
-//}
-//
-//// GetConditions gets the StaticInstance status conditions
-//func (r *StaticInstance) GetConditions() clusterv1.Conditions {
-//	return r.Status.Conditions
-//}
-//
-//// SetConditions sets the StaticInstance status conditions
-//func (r *StaticInstance) SetConditions(conditions clusterv1.Conditions) {
-//	r.Status.Conditions = conditions
-//}

@@ -191,11 +191,11 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 		BastionKeys:         sshClient.PrivateKeys(),
 	})
 	if err != nil {
-		return fmt.Errorf("cannot create SSH client: %w", err)
+		return fmt.Errorf("Cannot create SSH client: %w", err)
 	}
 
 	if err := client.Start(); err != nil {
-		return fmt.Errorf("cannot connect to SSH host %s: %w", address, err)
+		return fmt.Errorf("Cannot connect to SSH host %s: %w", address, err)
 	}
 	defer client.Stop()
 
@@ -204,7 +204,7 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 
 	if err := cmd.Run(ctx); err != nil {
 		return fmt.Errorf(
-			"sudo check failed: %w\nstderr: %s",
+			"Sudo check failed: %w\nstderr: %s",
 			err,
 			string(cmd.StderrBytes()),
 		)

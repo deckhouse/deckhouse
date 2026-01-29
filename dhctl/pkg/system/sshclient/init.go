@@ -244,12 +244,12 @@ func NewClientFromConfig(ctx context.Context, host string, cred ClientConfig) (n
 	if cred.PrivateSSHKey != "" {
 		tmpFile, err := os.CreateTemp(app.TmpDirName, "sshkey-for-staticinstance-*")
 		if err != nil {
-			return nil, fmt.Errorf("cannot create temp file for SSH key: %w", err)
+			return nil, fmt.Errorf("Cannot create temp file for SSH key: %w", err)
 		}
 		defer tmpFile.Close()
 
 		if _, err = tmpFile.WriteString(cred.PrivateSSHKey); err != nil {
-			return nil, fmt.Errorf("cannot write SSH key to temp file: %w", err)
+			return nil, fmt.Errorf("Cannot write SSH key to temp file: %w", err)
 		}
 
 		keys = append(keys, session.AgentPrivateKey{Key: tmpFile.Name()})
