@@ -229,8 +229,8 @@
 
 
   - alert: GeoIPDownloadErrorDetected
-    expr: max_over_time(geoip_download_error{type="download"}[1m]) == 1
-    for: 1m
+    expr: geoip_download_error{type="download"} == 1
+    for: 30s
     labels:
       severity_level: "4"
     annotations:
