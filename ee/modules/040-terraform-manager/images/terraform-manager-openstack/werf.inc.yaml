@@ -4,8 +4,8 @@ git:
 - add: /{{ .ModulePath }}modules/030-cloud-provider-openstack/candi
   to: /deckhouse/candi/cloud-providers/openstack
 import:
-- image: terraform-provider-openstack
-  add: /terraform-provider-openstack
+- image: cloud-provider-openstack/terraform-manager-openstack
+  add: /terraform-manager/terraform-provider-openstack
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "openstack") }}/{{ .TF.openstack.namespace }}/{{ .TF.openstack.type }}/{{ .TF.openstack.version }}/linux_amd64/terraform-provider-openstack
   before: setup
 
