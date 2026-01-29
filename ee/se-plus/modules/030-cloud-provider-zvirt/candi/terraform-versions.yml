@@ -1,0 +1,12 @@
+opentofu: 1.9.4
+
+ovirt:
+  namespace: terraform-provider-ovirt
+  cloudName: Zvirt
+  type: ovirt
+  version: 2.1.5
+  artifact: terraform-provider-ovirt
+  artifactBinary: terraform-provider-ovirt
+  destinationBinary: terraform-provider-ovirt
+  vmResourceType: ovirt_vm
+  useOpentofu: true
