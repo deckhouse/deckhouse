@@ -258,19 +258,7 @@ func (i *Installer) verifyImage(_ context.Context, imagePath, _ string) error {
 		return fmt.Errorf("stat package image '%s': %w", imagePath, err)
 	}
 
-	// TODO(ipaqsa): wait until all package have root hash
-	// hashPath := fmt.Sprintf("%s.verity", imagePath)
-	// if _, err := os.Stat(hashPath); err != nil {
-	// 	return fmt.Errorf("stat verity hash file '%s': %w", hashPath, err)
-	// }
-
-	// if len(hash) == 0 {
-	// 	return errors.New("empty hash")
-	// }
-
-	// if err := verity.VerifyImage(ctx, imagePath, hash); err != nil {
-	// 	return fmt.Errorf("verify root hash: %w", err)
-	// }
+	// TODO(ipaqsa): before implementing verify mechanism wait until all packages have root hash
 
 	return nil
 }

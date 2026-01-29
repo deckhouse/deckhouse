@@ -75,7 +75,7 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
 func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Remote, name string) (*apps.Application, error) {
-	_, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
+	ctx, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))

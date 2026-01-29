@@ -31,7 +31,6 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
 	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
 	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
@@ -63,7 +62,7 @@ type Operator struct {
 	eventHandler *eventhandler.Handler // Converts events (Kube/schedule) into tasks
 	queueService *queue.Service        // Task queue for hook execution
 	nelmService  *nelm.Service         // Helm release management and monitoring
-	installer    *installer.Installer  // Erofs installer
+	installer    installer             // Symlink or Erofs installer
 
 	manager     *manager.Manager
 	scheduler   *schedule.Scheduler
@@ -78,6 +77,12 @@ type Operator struct {
 	packages map[string]*lifecyclePackage
 
 	logger *log.Logger
+}
+
+type installer interface {
+	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
+	Install(ctx context.Context, downloaded, deployed, name, version string) error
+	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
 type moduleManager interface {
@@ -113,15 +118,13 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 
 	reg := registry.NewService(dc, logger)
 	// Default to symlink backend (works everywhere, including MacOS)
-	var backend installer.Backend = symlinkinstaller.NewInstaller(reg, logger)
+	o.installer = symlinkinstaller.NewInstaller(reg, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		backend = erofsinstaller.NewInstaller(reg, logger)
+		o.installer = erofsinstaller.NewInstaller(reg, logger)
 	}
-
-	o.installer = installer.NewWithBackend(backend)
 
 	// Initialize scheduler with enabling/disabling callbacks
 	o.buildScheduler(moduleManager)
