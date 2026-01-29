@@ -125,10 +125,10 @@ lang: ru
 
 1. Переведите кластер в режим с одним master-узлом:
 
-   - В облачном кластере воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
-   - В статическом кластере выведите лишние master-узлы из роли control-plane по [инструкции](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#удаление-роли-master-с-узла-без-удаления-самого-узла), после чего удалите их из кластера.
+   - В облачном кластере воспользуйтесь [инструкцией](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
+   - В статическом кластере выведите лишние master-узлы из роли control-plane по [инструкции](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#удаление-роли-master-с-узла-без-удаления-самого-узла), после чего удалите их из кластера.
    - В статическом кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла удалите arbiter-узел и лишние master-узлы.
-   - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#уменьшение-числа-master-узлов-в-облачном-кластере) для удаления лишних мастер-узлов и arbiter-узла.
+   - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования) для удаления лишних мастер-узлов и arbiter-узла.
 
 1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-с-одним-control-plane-узлом) для кластера с одним control-plane узлом.
 
@@ -148,7 +148,7 @@ lang: ru
    d8 system queue main
    ```
 
-1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
+1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
 
 После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
 

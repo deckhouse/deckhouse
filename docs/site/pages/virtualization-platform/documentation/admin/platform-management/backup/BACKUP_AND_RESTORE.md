@@ -124,10 +124,10 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Switch the cluster to single master mode:
 
-   - In a cloud cluster, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
-   - In a static cluster, remove any unnecessary master nodes from the control-plane role by following the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself), and then remove them from the cluster.
+   - In a cloud cluster, follow the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
+   - In a static cluster, remove any unnecessary master nodes from the control-plane role by following the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself), and then remove them from the cluster.
    - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
-   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#reducing-the-number-of-master-nodes-in-a-cloud-cluster) to remove the additional master nodes and the arbiter node.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
 
@@ -147,7 +147,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 system queue main
    ```
 
-1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
+1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
 
 Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 
