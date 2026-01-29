@@ -28,7 +28,8 @@ spec:
             apiVersion:
               description: |-
                 APIVersion defines the versioned schema of this representation of an object.
-                Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
                 More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
               type: string
             context:
@@ -45,11 +46,11 @@ spec:
                       apiVersion:
                         description: |-
                           Is an optional group and version of object API.
-                          For example, it is v1 for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
+                          For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
                         type: string
                       executeHookOnEvent:
                         description: |-
-                          The list of events which led to a hook’s execution.
+                          The list of events which led to a hook's execution.
                           By default, all events are used to execute a hook: "Added", "Modified" and "Deleted".
                         items:
                           type: string
@@ -96,34 +97,35 @@ spec:
                         description: |-
                           If not set or `true`, dumps of Kubernetes resources are cached
                           for this binding, and the snapshot includes them as object fields.
-                          Set to false if the hook does not rely on full objects to reduce the memory footprint.
+                          Set to `false` if the hook does not rely on full objects to reduce the memory footprint.
                         type: boolean
                       kind:
                         description: Is the type of a monitored Kubernetes resource. This field is required.
                         type: string
                       labelSelector:
                         description: |-
-                          A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
+                          A label selector is a label query over a set of resources. The result of matchLabels and
+                          matchExpressions are ANDed. An empty label selector matches all objects. A null
+                          label selector matches no objects.
                         properties:
                           matchExpressions:
-                            description: |-
-                              `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
+                            description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
                             items:
                               description: |-
-                                A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
                               properties:
                                 key:
-                                  description: |-
-                                    `key` is the label key that the selector applies to.
+                                  description: key is the label key that the selector applies to.
                                   type: string
                                 operator:
                                   description: |-
-                                    `operator` represents a key's relationship to a set of values.
+                                    operator represents a key's relationship to a set of values.
                                     Valid operators are In, NotIn, Exists and DoesNotExist.
                                   type: string
                                 values:
                                   description: |-
-                                    `values` is an array of string values. If the operator is In or NotIn,
+                                    values is an array of string values. If the operator is In or NotIn,
                                     the values array must be non-empty. If the operator is Exists or DoesNotExist,
                                     the values array must be empty. This array is replaced during a strategic
                                     merge patch.
@@ -141,7 +143,7 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              `matchLabels` is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
                               map is equivalent to an element of matchExpressions, whose key field is "key", the
                               operator is "In", and the values array contains only "value". The requirements are ANDed.
                             type: object
@@ -163,27 +165,28 @@ spec:
                         properties:
                           labelSelector:
                             description: |-
-                              A label selector is a label query over a set of resources. The result of matchLabels and matchExpressions are ANDed. An empty label selector matches all objects. A null label selector matches no objects.
+                              A label selector is a label query over a set of resources. The result of matchLabels and
+                              matchExpressions are ANDed. An empty label selector matches all objects. A null
+                              label selector matches no objects.
                             properties:
                               matchExpressions:
-                                description: |-
-                                  `matchExpressions` is a list of label selector requirements. The requirements are ANDed.
+                                description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
                                 items:
                                   description: |-
-                                    A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                    A label selector requirement is a selector that contains values, a key, and an operator that
+                                    relates the key and values.
                                   properties:
                                     key:
-                                      description: |-
-                                        `key` is the label key that the selector applies to.
+                                      description: key is the label key that the selector applies to.
                                       type: string
                                     operator:
                                       description: |-
-                                        `operator` represents a key's relationship to a set of values.
+                                        operator represents a key's relationship to a set of values.
                                         Valid operators are In, NotIn, Exists and DoesNotExist.
                                       type: string
                                     values:
                                       description: |-
-                                        `values` is an array of string values. If the operator is In or NotIn,
+                                        values is an array of string values. If the operator is In or NotIn,
                                         the values array must be non-empty. If the operator is Exists or DoesNotExist,
                                         the values array must be empty. This array is replaced during a strategic
                                         merge patch.
@@ -201,7 +204,7 @@ spec:
                                 additionalProperties:
                                   type: string
                                 description: |-
-                                  `matchLabels` is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                  matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
                                   map is equivalent to an element of matchExpressions, whose key field is "key", the
                                   operator is "In", and the values array contains only "value". The requirements are ANDed.
                                 type: object
@@ -218,7 +221,7 @@ spec:
                             type: object
                         type: object
                       queue:
-                        description: A name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the main queue.
+                        description: A name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the "main" queue.
                         type: string
                       resynchronizationPeriod:
                         type: string
@@ -240,8 +243,10 @@ spec:
               type: array
             conversions:
               description: |-
-                This binding transforms a hook into a handler for conversions defined in CustomResourceDefinition.
-                The Shell-operator updates a CRD with `.spec.conversion`, starts HTTPS server, and runs hooks to handle ConversionReview requests.
+                This binding transforms a hook into a handler
+                for conversions defined in CustomResourceDefinition.
+                The Shell-operator updates a CRD with `.spec.conversion`,
+                starts HTTPS server, and runs hooks to handle ConversionReview requests.
               items:
                 properties:
                   from:
@@ -251,7 +256,7 @@ spec:
                     description: Code of the conversion handler.
                     properties:
                       python:
-                        description: This is a python script handler for object.
+                        description: Python script handler for object.
                         type: string
                     type: object
                   includeSnapshotsFrom:
@@ -282,8 +287,7 @@ spec:
             metadata:
               type: object
             status:
-              description: |-
-                `status` defines the observed state of ConversionWebhook.
+              description: Status defines the observed state of ConversionWebhook.
               type: object
           required:
             - conversions

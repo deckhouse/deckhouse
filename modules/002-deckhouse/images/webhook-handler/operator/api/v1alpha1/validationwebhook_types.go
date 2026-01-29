@@ -48,39 +48,50 @@ type ValidationWebhook struct {
 	// +required
 	Handler ValidationWebhookHandler `json:"handler"`
 
-	// status defines the observed state of ValidationWebhook
+	// Status defines the observed state of ValidationWebhook.
 	// +optional
 	Status ValidationWebhookStatus `json:"status,omitempty,omitzero"`
 }
 
 type ValidationWebhookHandler struct {
-	// this is a python script handler for object
+	// Python script handler for object.
 	Python string `json:"python,omitempty"`
 
-	// this is a cel rules handler for object
+	// CEL rules handler for object.
 	// TODO: CEL support
 	CEL string `json:"cel,omitempty"`
 }
 
-// version 1 of kubernetes validation configuration
+// AdmissionNamespaceSelector defines namespace filtering for admission webhooks.
+// Note: Only labelSelector is supported for kubernetesValidating webhooks.
+// nameSelector is NOT supported by shell-operator for this section.
+type AdmissionNamespaceSelector struct {
+	// LabelSelector is a selector to filter namespaces by labels.
+	// Use kubernetes.io/metadata.name label to filter by namespace name.
+	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// KubernetesAdmissionConfigV1 is version 1 of kubernetes validation configuration.
 type KubernetesAdmissionConfigV1 struct {
-	//  should be a domain with at least three segments separated by dots.
+	// Name should be a domain with at least three segments separated by dots.
 	Name string `json:"name"`
-	// an array of names of kubernetes bindings in a hook. When specified, a list of monitored objects from these bindings will be added to the binding context in the snapshots field.
+	// An array of names of kubernetes bindings in a hook. When specified, a list of monitored objects from these bindings will be added to the binding context in the snapshots field.
 	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
-	// a key to include snapshots from a group of schedule and kubernetes bindings. See grouping.
+	// A key to include snapshots from a group of schedule and kubernetes bindings. See grouping.
 	Group string `json:"group,omitempty"`
-	// a required list of rules used to determine if a request to the Kubernetes API server should be sent to the hook.
+	// A required list of rules used to determine if a request to the Kubernetes API server should be sent to the hook.
 	Rules []v1.RuleWithOperations `json:"rules,omitempty"`
-	// defines how errors from the hook are handled.
+	// Defines how errors from the hook are handled.
 	FailurePolicy *v1.FailurePolicyType `json:"failurePolicy,omitempty"`
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
-	Namespace     *NamespaceSelector    `json:"namespace,omitempty"`
-	// determine whether the hook is dryRun-aware.
+	// Namespace filtering. Only labelSelector is supported (not nameSelector).
+	// To filter by namespace name, use labelSelector with kubernetes.io/metadata.name label.
+	Namespace *AdmissionNamespaceSelector `json:"namespace,omitempty"`
+	// Determines whether the hook is dryRun-aware.
 	SideEffects *v1.SideEffectClass `json:"sideEffects,omitempty"`
-	// a seconds API server should wait for a hook to respond before treating the call as a failure. Default is 10 (seconds).
+	// Seconds API server should wait for a hook to respond before treating the call as a failure. Default is 10 (seconds).
 	TimeoutSeconds *int32 `json:"timeoutSeconds,omitempty"`
-	// an optional list of match conditions for fine-grained request filtering. Available only since v1.27 of Kubernetes.
+	// An optional list of match conditions for fine-grained request filtering. Available only since v1.27 of Kubernetes.
 	MatchConditions []v1.MatchCondition `json:"matchConditions,omitempty"`
 }
 

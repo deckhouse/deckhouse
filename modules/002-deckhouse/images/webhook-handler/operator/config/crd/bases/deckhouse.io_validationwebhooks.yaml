@@ -36,23 +36,23 @@ spec:
                   properties:
                     allowFailure:
                       description: |-
-                        if true, Shell-operator skips the hook execution errors.
-                        If false or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
+                        If `true`, Shell-operator skips the hook execution errors.
+                        If `false` or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
                       type: boolean
                     apiVersion:
                       description: |-
-                        is an optional group and version of object API.
-                        For example, it is v1 for core objects (Pod, etc.), rbac.authorization.k8s.io/v1beta1 for ClusterRole and monitoring.coreos.com/v1 for prometheus-operator.
+                        Is an optional group and version of object API.
+                        For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
                       type: string
                     executeHookOnEvent:
                       description: |-
-                        the list of events which led to a hook’s execution.
-                        By default, all events are used to execute a hook: “Added”, “Modified” and “Deleted”.
+                        The list of events which led to a hook's execution.
+                        By default, all events are used to execute a hook: "Added", "Modified" and "Deleted".
                       items:
                         type: string
                       type: array
                     executeHookOnSynchronization:
-                      description: if false, Shell-operator skips the hook execution
+                      description: If `false`, Shell-operator skips the hook execution
                         with Synchronization binding context.
                       type: boolean
                     fieldSelector:
@@ -75,12 +75,12 @@ spec:
                       - matchExpressions
                       type: object
                     group:
-                      description: a key to include snapshots from a group of schedule
+                      description: A key to include snapshots from a group of schedule
                         and kubernetes bindings.
                       type: string
                     includeSnapshotsFrom:
                       description: |-
-                        an array of names of kubernetes bindings in a hook.
+                        An array of names of kubernetes bindings in a hook.
                         When specified, a list of monitored objects from that bindings
                         will be added to the binding context in a snapshots field. Self-include is also possible.
                       items:
@@ -88,17 +88,17 @@ spec:
                       type: array
                     jqFilter:
                       description: |-
-                        an optional parameter that specifies event filtering using jq syntax.
-                        The hook will be triggered on the “Modified” event only if the filter result is changed after the last event.
+                        An optional parameter that specifies event filtering using jq syntax.
+                        The hook will be triggered on the "Modified" event only if the filter result is changed after the last event.
                       type: string
                     keepFullObjectsInMemory:
                       description: |-
-                        if not set or true, dumps of Kubernetes resources are cached
+                        If not set or `true`, dumps of Kubernetes resources are cached
                         for this binding, and the snapshot includes them as object fields.
-                        Set to false if the hook does not rely on full objects to reduce the memory footprint.
+                        Set to `false` if the hook does not rely on full objects to reduce the memory footprint.
                       type: boolean
                     kind:
-                      description: is the type of a monitored Kubernetes resource.
+                      description: Is the type of a monitored Kubernetes resource.
                         This field is required.
                       type: string
                     labelSelector:
@@ -162,7 +162,7 @@ spec:
                       - matchNames
                       type: object
                     namespace:
-                      description: filters to choose namespaces.
+                      description: Filters to choose namespaces.
                       properties:
                         labelSelector:
                           description: |-
@@ -224,8 +224,8 @@ spec:
                           type: object
                       type: object
                     queue:
-                      description: a name of a separate queue. It can be used to execute
-                        long-running hooks in parallel with hooks in the “main” queue.
+                      description: A name of a separate queue. It can be used to execute
+                        long-running hooks in parallel with hooks in the "main" queue.
                       type: string
                     resynchronizationPeriod:
                       type: string
@@ -250,10 +250,10 @@ spec:
             description: Code of the ValidatingWebhook handler
             properties:
               cel:
-                description: this is a cel rules handler for object
+                description: CEL rules handler for object.
                 type: string
               python:
-                description: this is a python script handler for object
+                description: Python script handler for object.
                 type: string
             type: object
           kind:
@@ -267,21 +267,21 @@ spec:
           metadata:
             type: object
           status:
-            description: status defines the observed state of ValidationWebhook
+            description: Status defines the observed state of ValidationWebhook.
             type: object
           validationObject:
             description: ValidatingWebhook describes an webhook and the resources
               and operations it applies to.
             properties:
               failurePolicy:
-                description: defines how errors from the hook are handled.
+                description: Defines how errors from the hook are handled.
                 type: string
               group:
-                description: a key to include snapshots from a group of schedule and
+                description: A key to include snapshots from a group of schedule and
                   kubernetes bindings. See grouping.
                 type: string
               includeSnapshotsFrom:
-                description: an array of names of kubernetes bindings in a hook. When
+                description: An array of names of kubernetes bindings in a hook. When
                   specified, a list of monitored objects from these bindings will
                   be added to the binding context in the snapshots field.
                 items:
@@ -337,7 +337,7 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               matchConditions:
-                description: an optional list of match conditions for fine-grained
+                description: An optional list of match conditions for fine-grained
                   request filtering. Available only since v1.27 of Kubernetes.
                 items:
                   description: MatchCondition represents a condition which must by
@@ -377,16 +377,18 @@ spec:
                   type: object
                 type: array
               name:
-                description: ' should be a domain with at least three segments separated
-                  by dots.'
+                description: Name should be a domain with at least three segments
+                  separated by dots.
                 type: string
               namespace:
+                description: |-
+                  Namespace filtering. Only labelSelector is supported (not nameSelector).
+                  To filter by namespace name, use labelSelector with kubernetes.io/metadata.name label.
                 properties:
                   labelSelector:
                     description: |-
-                      A label selector is a label query over a set of resources. The result of matchLabels and
-                      matchExpressions are ANDed. An empty label selector matches all objects. A null
-                      label selector matches no objects.
+                      LabelSelector is a selector to filter namespaces by labels.
+                      Use kubernetes.io/metadata.name label to filter by namespace name.
                     properties:
                       matchExpressions:
                         description: matchExpressions is a list of label selector
@@ -431,18 +433,9 @@ spec:
                         type: object
                     type: object
                     x-kubernetes-map-type: atomic
-                  nameSelector:
-                    properties:
-                      matchNames:
-                        items:
-                          type: string
-                        type: array
-                    required:
-                    - matchNames
-                    type: object
                 type: object
               rules:
-                description: a required list of rules used to determine if a request
+                description: A required list of rules used to determine if a request
                   to the Kubernetes API server should be sent to the hook.
                 items:
                   description: |-
@@ -513,10 +506,10 @@ spec:
                   type: object
                 type: array
               sideEffects:
-                description: determine whether the hook is dryRun-aware.
+                description: Determines whether the hook is dryRun-aware.
                 type: string
               timeoutSeconds:
-                description: a seconds API server should wait for a hook to respond
+                description: Seconds API server should wait for a hook to respond
                   before treating the call as a failure. Default is 10 (seconds).
                 format: int32
                 type: integer
