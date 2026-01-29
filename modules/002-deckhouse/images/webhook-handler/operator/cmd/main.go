@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -46,6 +47,16 @@ import (
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"deckhouse.io/webhook/internal/controller"
 	// +kubebuilder:scaffold:imports
+)
+
+const (
+	// DefaultShellOperatorReloadInterval is the default interval for checking if shell-operator
+	// needs to be reloaded after new webhooks are registered.
+	// This value should be low enough to minimize the delay between webhook registration
+	// and shell-operator becoming aware of the new hook, but high enough to avoid
+	// unnecessary restarts when multiple webhooks are created in quick succession.
+	// Can be overridden via SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS environment variable.
+	DefaultShellOperatorReloadInterval = 5 * time.Second
 )
 
 var (
@@ -256,9 +267,16 @@ func main() {
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
 
-	// go-routine that reloads shell-operator no more than once in 30s
+	// go-routine that reloads shell-operator periodically when new hooks are registered
 	go func() {
-		ticker := time.NewTicker(30 * time.Second)
+		reloadInterval := DefaultShellOperatorReloadInterval
+		if envInterval := os.Getenv("SHELL_OPERATOR_RELOAD_INTERVAL_SECONDS"); envInterval != "" {
+			if seconds, err := strconv.Atoi(envInterval); err == nil && seconds > 0 {
+				reloadInterval = time.Duration(seconds) * time.Second
+				logger.Info("using custom shell-operator reload interval", slog.Duration("interval", reloadInterval))
+			}
+		}
+		ticker := time.NewTicker(reloadInterval)
 
 		for range ticker.C {
 			if isReloadShellNeed.Load() {
