@@ -58,14 +58,14 @@
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
-- add: /ee/modules/cloud-provider-openstack/candi/openapi
+- add: /ee/modules/030-cloud-provider-openstack/candi/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/modules/cloud-provider-openstack/candi/openapi
+- add: /ee/modules/030-cloud-provider-openstack/candi/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/openapi
   owner: jekyll
   group: jekyll
@@ -196,7 +196,7 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/modules/cloud-provider-openstack/candi/docs
+- add: /ee/modules/030-cloud-provider-openstack/candi/docs
   to: /src/ee/modules/030-cloud-provider-openstack/docs
   owner: jekyll
   group: jekyll
