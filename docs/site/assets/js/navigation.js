@@ -52,5 +52,9 @@ $(window).on('load', function() {
         });
 
         window.addEventListener('scroll', scrollHandler);
+
+        if (window.scrollY > 0) {
+            hideNavigation();
+        }
     }
 });
