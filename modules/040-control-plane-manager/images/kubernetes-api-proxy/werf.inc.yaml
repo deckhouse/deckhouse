@@ -41,3 +41,15 @@ git:
     stageDependencies:
       install:
         - '**/*'
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-envoy
+fromImage: common/distroless
+final: true
+import:
+  - image: cni-cilium/agent-binaries-artifact
+    add: /lib64
+    before: install
+  - image: cni-cilium/agent-binaries-artifact
+    add: /usr/bin/cilium-envoy
+    to: /usr/bin/envoy
+    before: install
