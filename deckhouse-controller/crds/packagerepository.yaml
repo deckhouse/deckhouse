@@ -21,6 +21,9 @@ spec:
     - jsonPath: .status.syncTime
       name: Sync
       type: string
+    - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
+      name: MSG
+      type: string
     - jsonPath: .status.packagesCount
       name: Packages
       priority: 1
@@ -74,6 +77,39 @@ spec:
           status:
             description: Status of a PackageRepository.
             properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the repository's state.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of repository condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
               message:
                 description: Human-readable message about the repository status.
                 type: string

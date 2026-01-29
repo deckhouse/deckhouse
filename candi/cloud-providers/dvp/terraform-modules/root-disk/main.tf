@@ -20,6 +20,7 @@ resource "kubernetes_manifest" "root-disk" {
       "name"        = local.root_disk_name
       "namespace"   = var.namespace
       "annotations" = local.root_disk_annotations
+      "labels"      = local.root_disk_labels
     }
     "spec" = {
       "dataSource" = {

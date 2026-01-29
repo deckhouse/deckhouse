@@ -10,9 +10,9 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.24
 	github.com/onsi/gomega v1.19.0
 	github.com/prometheus/prometheus v2.5.0+incompatible
-	github.com/sirupsen/logrus v1.8.1
+	github.com/sirupsen/logrus v1.9.4
 	github.com/spaolacci/murmur3 v1.1.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.9.3
 	go.opentelemetry.io/contrib/exporters/metric/cortex v0.17.0
 	go.uber.org/goleak v1.1.12
@@ -66,12 +66,12 @@ require (
 	go.opentelemetry.io/otel/sdk/export/metric v0.17.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v0.17.0 // indirect
 	go.opentelemetry.io/otel/trace v0.17.0 // indirect
-	golang.org/x/crypto v0.36.0 // indirect
-	golang.org/x/net v0.38.0 // indirect
+	golang.org/x/crypto v0.47.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/term v0.30.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/term v0.39.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
 	google.golang.org/grpc v1.56.3 // indirect

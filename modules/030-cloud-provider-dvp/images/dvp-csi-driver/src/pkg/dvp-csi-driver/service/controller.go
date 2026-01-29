@@ -40,6 +40,7 @@ const (
 type ControllerService struct {
 	csi.UnimplementedControllerServer
 	dvpCloudAPI *dvpapi.DVPCloudAPI
+	clusterUUID string
 }
 
 var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
@@ -50,9 +51,11 @@ var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 
 func NewController(
 	dvpCloudAPI *dvpapi.DVPCloudAPI,
+	clusterUUID string,
 ) *ControllerService {
 	return &ControllerService{
 		dvpCloudAPI: dvpCloudAPI,
+		clusterUUID: clusterUUID,
 	}
 }
 
@@ -129,6 +132,8 @@ func (c *ControllerService) CreateVolume(
 
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
+		c.clusterUUID,
+		"",
 		diskName,
 		requiredSize,
 		dvpStorageClass,
