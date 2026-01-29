@@ -18,6 +18,10 @@ import:
   add: /label-converter
   to: /usr/local/bin/label-converter
   before: setup
+- image: {{ $.ModuleName }}/{{ .ImageName }}-webhook-operator-artifact
+  add: /webhook-operator
+  to: /
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-wheel-artifact
   add: /
   to: /
@@ -52,6 +56,11 @@ git:
       - '**/*'
 - add: /{{ .ModulePath }}python_lib
   to: /frameworks/python
+  stageDependencies:
+    install:
+      - '**/*'
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator/internal/controller/templates
+  to: /internal/controller/templates
   stageDependencies:
     install:
       - '**/*'
@@ -118,3 +127,41 @@ shell:
   - pip3 install -f file:///wheels --no-index -r /requirements.txt
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-artifact
+fromImage: builder/golang-alpine
+final: false
+import:
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-webhook-operator-src-artifact
+    add: /operator
+    before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  install:
+    - cd /operator
+    - export CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+    - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
+    - go build -o /webhook-operator ./cmd/main.go
+    - chown 64535:64535 /webhook-operator
+    - chmod 0700 /webhook-operator
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-webhook-operator-src-artifact
+fromImage: common/src-artifact
+final: false
+shell:
+  install:
+  - cd /operator
+git:
+- add: /{{ .ModulePath }}modules/002-deckhouse/images/webhook-handler/operator
+  to: /operator
+  includePaths:
+  - '**/*.go'
+  - '**/*.mod'
+  - '**/*.sum'
+  stageDependencies:
+    install:
+    - '**/*'
