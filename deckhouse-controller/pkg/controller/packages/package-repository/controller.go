@@ -40,9 +40,8 @@ const (
 
 	maxConcurrentReconciles = 1
 
-	// requeueInterval is the interval at which the controller will requeue the PackageRepository
-	// after successful reconciliation to trigger periodic scanning
-	requeueInterval = 6 * time.Hour
+	defaultScanInterval = 6 * time.Hour
+	minScanInterval     = 3 * time.Minute
 )
 
 type reconciler struct {
@@ -130,6 +129,11 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		return ctrl.Result{}, fmt.Errorf("sync registry settings: %w", err)
 	}
 
+	scanInterval := defaultScanInterval
+	if interval := packageRepository.Spec.ScanInterval; interval != nil {
+		scanInterval = max(interval.Duration, minScanInterval)
+	}
+
 	// Check if there are any existing PackageRepositoryOperations for this repository
 	operationList := &v1alpha1.PackageRepositoryOperationList{}
 	err := r.client.List(ctx, operationList, client.MatchingLabels{
@@ -160,7 +164,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		logger.Debug("skipping operation creation, active operation in progress")
 
 		// Requeue to check again later
-		return ctrl.Result{RequeueAfter: requeueInterval}, nil
+		return ctrl.Result{RequeueAfter: scanInterval}, nil
 	}
 
 	// Determine if we should do a full scan or incremental scan
@@ -210,7 +214,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 		if apierrors.IsAlreadyExists(err) {
 			logger.Debug("operation already exists, skipping creation")
 
-			return ctrl.Result{RequeueAfter: requeueInterval}, nil
+			return ctrl.Result{RequeueAfter: scanInterval}, nil
 		}
 
 		return ctrl.Result{}, fmt.Errorf("create operation %s: %w", operationName, err)
@@ -218,8 +222,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 
 	logger.Info("created package repository operation")
 
-	// Requeue after requeueInterval to trigger the next scan
-	return ctrl.Result{RequeueAfter: requeueInterval}, nil
+	return ctrl.Result{RequeueAfter: scanInterval}, nil
 }
 
 func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.PackageRepository) error {
