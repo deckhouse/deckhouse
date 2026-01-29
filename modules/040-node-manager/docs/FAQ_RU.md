@@ -2045,10 +2045,12 @@ spec:
       customConfigs:
         - index: 0
           slices:
-            - profile: 7g.80gb # count по умолчанию 1
+            - profile: 7g.80gb
+              count: 1 # count может принимать значение от 1 до 7
         - index: 1
           slices:
             - profile: 3g.40gb
+              count: 1
             - profile: 1g.10gb
               count: 4
         # добавьте остальные индексы по необходимости

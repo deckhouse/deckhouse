@@ -45,6 +45,7 @@ spec:
         - index: 1
           slices:
             - profile: 2g.20gb
+			  count: 1
 `
 )
 
@@ -87,10 +88,13 @@ spec:
             - profile: 1g.10gb
               count: 2
             - profile: 2g.20gb
+			  count: 1
         - index: 0
           slices:
             - profile: 2g.20gb
+			  count: 1
             - profile: 1g.10gb
+			  count: 1
 `)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()

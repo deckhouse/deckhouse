@@ -1539,37 +1539,24 @@ spec:
                           description: |
                             MIG configuration name.
                           x-doc-default: all-1g.5gb
-                      oneOf:
-                        - properties:
-                            partedConfig:
-                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
-                          not:
-                            required:
-                              - customConfigs
-                        - properties:
-                            partedConfig:
-                              pattern: "^custom$"
-                          required:
-                            - partedConfig
-                            - customConfigs
-                      customConfigs:
-                        type: array
-                        description: |
-                          Per-GPU MIG layouts for the custom configuration (used only with `partedConfig: custom`).
-                          Array (map by `index`); each item targets a GPU by its 0-based index and enumerates slices to create:
-                            - `index` — GPU index on the node (starting from 0);
-                            - `slices` — list of slices:
-                              - `profile` — MIG profile name;
-                              - `count` — number of slices for that profile (integer, min 1, default 1).
-                          minItems: 1
-                          x-doc-examples:
-                            - profile: 3g.40gb
-                              count: 2
-                            - profile: 1g.10gb.me
-                              count: 1
-                          x-kubernetes-list-type: map
-                          x-kubernetes-list-map-keys:
-                            - index
+                        customConfigs:
+                          type: array
+                          description: |
+                            Per-GPU MIG layouts for the custom configuration (used only with `partedConfig: custom`).
+                            Array (map by `index`); each item targets a GPU by its 0-based index and enumerates slices to create:
+                              - `index` — GPU index on the node (starting from 0);
+                              - `slices` — list of slices:
+                                - `profile` — MIG profile name;
+                                - `count` — number of slices for that profile (integer, min 1, default 1).
+                            minItems: 1
+                            x-doc-examples:
+                              - profile: 3g.40gb
+                                count: 2
+                              - profile: 1g.10gb.me
+                                count: 1
+                            x-kubernetes-list-type: map
+                            x-kubernetes-list-map-keys:
+                              - index
                           items:
                             type: object
                             required:
@@ -1603,6 +1590,19 @@ spec:
                                       maximum: 7
                                       description: Number of slices with the selected profile (1–7 per GPU).
                                       x-doc-default: 1
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
                     timeSlicing:
                       description: |
                         `TimeSlicing` sharing strategy parameters.
@@ -2319,7 +2319,7 @@ spec:
                           type: string
                           description: |
                             Defines how swap memory is handled on the node:
-                            
+
                             * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
                             * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
 
@@ -2334,11 +2334,11 @@ spec:
                           default: 60
                           description: |
                             Defines the kernel's tendency to use the swap.
-                            
+
                             * `0`: Minimal swap usage (only to avoid OOM).
                             * `60`: Default balanced behavior.
                             * `100`: Aggressive swap usage.
-                            
+
                             This value is set via `vm.swappiness` sysctl parameter.
                           x-doc-default: 60
                         limitedSwap:

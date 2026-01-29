@@ -1984,12 +1984,14 @@ spec:
       customConfigs:
         - index: 0
           slices:
-            - profile: 7g.80gb    # count defaults to 1
+            - profile: 7g.80gb
+              count: 1    # count can range from 1 to 7
         - index: 1
           slices:
             - profile: 3g.40gb
               count: 2
             - profile: 1g.10gb
+              count: 1
         # add more indexes as needed
 ```
 
