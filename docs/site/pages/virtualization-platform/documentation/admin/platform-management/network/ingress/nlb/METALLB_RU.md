@@ -97,53 +97,54 @@ lang: ru
      type: L2
    ```
 
-1. Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass одним из следующих способов:
+1. Создайте ресурс Service с аннотацией и именем MetalLoadBalancerClass:
 
    > При создании ресурса Service можно вообще не указывать аннотации `network.deckhouse.io/l2-load-balancer-external-ips-count` и `network.deckhouse.io/load-balancer-ips` из примеров ниже. В таком случае сервису автоматически выделится 1 случайный адрес из пула.
 
-   - С присвоением сервису заданного количества IP-адресов из пула:
+   ```yaml
+   apiVersion: v1
+   kind: Service
+   metadata:
+     name: nginx-deployment
+     annotations:
+       network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+   spec:
+     type: LoadBalancer
+     loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
+     ports:
+     - port: 8000
+       protocol: TCP
+       targetPort: 80
+     selector:
+       app: nginx
+   ```
 
-     ```yaml
-     apiVersion: v1
-     kind: Service
-     metadata:
-       name: nginx-deployment
-       annotations:
-         network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-     spec:
-       type: LoadBalancer
-       loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
-       ports:
-       - port: 8000
-         protocol: TCP
-         targetPort: 80
-       selector:
-         app: nginx
-     ```
+{% offtopic title="Если нужно присвоить сервису определенные IP-адреса из пула..." %}
 
-   - С присвоением сервису определенных IP-адресов из пула:
-     > Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию network.deckhouse.io/load-balancer-ips. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
+Если сервису необходимо выделить определенные IP-адреса из пула, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`).
 
-     ```yaml
-     apiVersion: v1
-     kind: Service
-     metadata:
-       name: nginx-deployment
-       annotations:
-         # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
-         network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
-         # Список адресов из пула, объявленного в MetalLoadBalancerClass, которые будут выделены сервису.
-         network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
-     spec:
-       type: LoadBalancer
-       loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
-       ports:
-       - port: 8000
-         protocol: TCP
-         targetPort: 80
-       selector:
-         app: nginx
-     ```
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deployment
+  annotations:
+    # Количество адресов, которые будут выделены из пула, объявленного в MetalLoadBalancerClass.
+    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+    # Список адресов из пула, объявленного в MetalLoadBalancerClass, которые будут выделены сервису.
+    network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: ingress # Имя MetalLoadBalancerClass.
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+```
+
+{% endofftopic %}
 
 В результате, созданному сервису с типом LoadBalancer будут присвоены адреса в заданном количестве:
 
