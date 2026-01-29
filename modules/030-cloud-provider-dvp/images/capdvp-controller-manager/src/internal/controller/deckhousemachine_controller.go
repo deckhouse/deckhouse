@@ -435,14 +435,22 @@ func (r *DeckhouseMachineReconciler) cleanupVMResources(
 	// Delete cloud-init secret
 	if cloudInitSecretName != "" {
 		if err := r.DVP.ComputeService.DeleteCloudInitProvisioningSecret(ctx, cloudInitSecretName); err != nil {
-			logger.Error(err, "Failed to cleanup cloud-init secret", "secretName", cloudInitSecretName)
+			if apierrors.IsNotFound(err) {
+				logger.Info("Cleanup skipped: cloud-init secret not found (already deleted or never created)", "secretName", cloudInitSecretName)
+			} else {
+				logger.Error(err, "Failed to cleanup cloud-init secret", "secretName", cloudInitSecretName)
+			}
 		}
 	}
 
 	// Delete disks (boot and additional)
 	for _, diskName := range createdDiskNames {
 		if err := r.DVP.DiskService.RemoveDiskByName(ctx, diskName); err != nil {
-			logger.Error(err, "Failed to cleanup disk", "diskName", diskName)
+			if apierrors.IsNotFound(err) {
+				logger.Info("Cleanup skipped: disk not found (already deleted or never created)", "diskName", diskName)
+			} else {
+				logger.Error(err, "Failed to cleanup disk", "diskName", diskName)
+			}
 		}
 	}
 }
