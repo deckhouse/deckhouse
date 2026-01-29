@@ -86,7 +86,7 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
@@ -100,7 +100,7 @@
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-vsphere/openapi
   owner: jekyll
   group: jekyll
@@ -210,7 +210,7 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/docs
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/docs
   to: /src/se-plus/modules/030-cloud-provider-vsphere/docs
   owner: jekyll
   group: jekyll
