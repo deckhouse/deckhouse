@@ -93,7 +93,7 @@
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/openapi
+- add: /ee/ee/modules/030-cloud-provider-dynamix/candi/openapi
   to: /src/ee/modules/030-cloud-provider-dynamix/crds
   owner: jekyll
   group: jekyll
@@ -107,7 +107,7 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/openapi
+- add: /ee/ee/modules/030-cloud-provider-dynamix/candi/openapi
   to: /src/ee/modules/030-cloud-provider-dynamix/openapi
   owner: jekyll
   group: jekyll
@@ -217,7 +217,7 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/docs
+- add: /ee/ee/modules/030-cloud-provider-dynamix/candi/docs
   to: /src/ee/modules/030-cloud-provider-dynamix/docs
   owner: jekyll
   group: jekyll
