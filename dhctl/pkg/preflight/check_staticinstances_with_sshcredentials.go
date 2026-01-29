@@ -179,19 +179,29 @@ func testSSHConnection(ctx context.Context, nodeInterface node.Interface, addres
 	sshClient := nodeInterface.(*ssh.NodeInterfaceWrapper).Client()
 	sess := sshClient.Session()
 
-	client, err := sshclient.NewClientFromConfig(ctx, address, sshclient.ClientConfig{
+	config := sshclient.ClientConfig{
 		User:                cred.User,
 		SSHPort:             cred.SSHPort,
 		PrivateSSHKey:       cred.PrivateSSHKey,
 		SudoPasswordEncoded: cred.SudoPasswordEncoded,
-		BastionHost:         sess.BastionHost,
-		BastionPort:         sess.BastionPort,
-		BastionUser:         sess.BastionUser,
-		BastionPassword:     sess.BastionPassword,
 		BastionKeys:         sshClient.PrivateKeys(),
-	})
+	}
+
+	if sess.BastionHost != "" {
+		config.BastionHost = sess.BastionHost
+		config.BastionPort = sess.BastionPort
+		config.BastionUser = sess.BastionUser
+		config.BastionPassword = sess.BastionPassword
+	} else {
+		config.BastionHost = sess.AvailableHosts()[0].Host
+		config.BastionPort = sess.Port
+		config.BastionUser = sess.User
+		config.BastionPassword = sess.BecomePass
+	}
+
+	client, err := sshclient.NewClientFromConfig(ctx, address, config)
 	if err != nil {
-		return fmt.Errorf("Cannot create SSH client: %w", err)
+		return fmt.Errorf("cannot create SSH client: %w", err)
 	}
 
 	if err := client.Start(); err != nil {
