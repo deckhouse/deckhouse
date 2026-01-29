@@ -1,18 +1,8 @@
 diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
-index f0a8cf28a..a512f6a58 100644
+index f0a8cf28a..37815933e 100644
 --- a/pkg/provider/azure.go
 +++ b/pkg/provider/azure.go
-@@ -156,6 +156,9 @@ type Cloud struct {
- 	endpointSlicesCache                             sync.Map
- 
- 	azureResourceLocker *AzureResourceLocker
-+
-+	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
-+	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
- }
- 
- // NewCloud returns a Cloud with initialized clients
-@@ -343,7 +346,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
+@@ -343,7 +343,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
  	az.Config = *config
  	az.Environment = env
  	az.ResourceRequestBackoff = resourceRequestBackoff
@@ -40,12 +30,11 @@ index 239e95a81..43312c02d 100644
  	if err != nil {
  		return nil, err
  	}
-
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
-index 2ef66bd3dc..64bcc2355e 100644
+index d618b1b31..0afc180c5 100644
 --- a/pkg/provider/azure_vmss.go
 +++ b/pkg/provider/azure_vmss.go
-@@ -446,6 +446,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+@@ -448,6 +448,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
  	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
  	if err != nil {
  		klog.Errorf("Failed to check VM management type: %v", err)
@@ -71,3 +60,17 @@ index 2ef66bd3dc..64bcc2355e 100644
  		return "", err
  	}
  
+diff --git a/pkg/provider/config/azure.go b/pkg/provider/config/azure.go
+index 9d8801b9c..e1586fcda 100644
+--- a/pkg/provider/config/azure.go
++++ b/pkg/provider/config/azure.go
+@@ -165,6 +165,9 @@ type Config struct {
+ 	ClusterServiceSharedLoadBalancerHealthProbePort int32 `json:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty"`
+ 	// ClusterServiceSharedLoadBalancerHealthProbePath defines the target path of the shared health probe. Default to `/healthz`.
+ 	ClusterServiceSharedLoadBalancerHealthProbePath string `json:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty"`
++
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
+ }
+ 
+ // HasExtendedLocation returns true if extendedlocation prop are specified.
