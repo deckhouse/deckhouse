@@ -1,21 +1,19 @@
 diff --git a/cmd/nginx/main.go b/cmd/nginx/main.go
-index cfa633f16..4b1da70b1 100644
+index 82bb86fb5..1ad8162f7 100644
 --- a/cmd/nginx/main.go
 +++ b/cmd/nginx/main.go
-@@ -55,6 +55,12 @@ func main() {
+@@ -54,6 +54,10 @@ func main() {
+ 	klog.InitFlags(nil)
  
  	fmt.Println(version.String())
- 
 +	reg := prometheus.NewRegistry()
-+
 +	reg.MustRegister(nginx.GeoIPErrors)
 +	reg.MustRegister(nginx.GeoIPVersion)
 +	nginx.GeoIPVersion.Set(1)
-+
+ 
  	showVersion, conf, err := ingressflags.ParseFlags()
  	if showVersion {
- 		os.Exit(0)
-@@ -120,9 +126,6 @@ func main() {
+@@ -120,9 +124,6 @@ func main() {
  		klog.Fatalf("Unexpected error obtaining ingress-nginx pod: %v", err)
  	}
  
@@ -26,10 +24,10 @@ index cfa633f16..4b1da70b1 100644
  	reg.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{
  		PidFn:        func() (int, error) { return os.Getpid(), nil },
 diff --git a/internal/nginx/maxmind.go b/internal/nginx/maxmind.go
-index d7ca0f59c..0c94750fa 100644
+index 24c1b10a1..3b4a91bb0 100644
 --- a/internal/nginx/maxmind.go
 +++ b/internal/nginx/maxmind.go
-@@ -65,6 +65,17 @@ var GeoIPErrors = prometheus.NewCounterVec(
+@@ -65,6 +65,17 @@ var GeoIPErrors = prometheus.NewGaugeVec(
  	[]string{"reason", "type"},
  )
  
@@ -47,11 +45,11 @@ index d7ca0f59c..0c94750fa 100644
  const (
  	geoIPPath   = "/etc/ingress-controller/geoip"
  	dbExtension = ".mmdb"
-@@ -140,6 +151,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
+@@ -138,6 +149,7 @@ func DownloadGeoLite2DB(attempts int, period time.Duration) error {
  
  		lastErr = dlError
  		if dlError == nil {
 +			GeoIPVersion.Set(2)
  			klog.Infof("GeoLite2 DBs downloaded successfully")
+ 			GeoIPErrors.Reset()
  			return true, nil
- 		}

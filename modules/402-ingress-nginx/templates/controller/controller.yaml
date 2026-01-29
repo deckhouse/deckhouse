@@ -317,7 +317,7 @@ spec:
       {{- if $geoproxyReady }}
         - --maxmind-mirror=https://geoproxy:4250/download
         - --maxmind-skip-tls-verification=true
-        - --maxmind-retries-count=5
+        - --maxmind-retries-count=3
         - --maxmind-retries-timeout=15s
         {{- if $geoIP2.maxmindEditionIDs }}
         - --maxmind-edition-ids={{ $geoIP2.maxmindEditionIDs | join "," }}
