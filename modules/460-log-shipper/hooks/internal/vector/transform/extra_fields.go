@@ -43,7 +43,7 @@ const (
 //	Example:
 //	  label_name: {{ values.app }} -> .label_name = .values.app
 func ExtraFieldTransform(extraFields map[string]string) *DynamicTransform {
-	keys := loglabels.SortedExtraLabelsKeys(extraFields)
+	keys := loglabels.SortedMapKeys(extraFields)
 	tmpFields := make([]string, 0, len(keys))
 
 	for _, k := range keys {

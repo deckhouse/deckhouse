@@ -59,7 +59,7 @@ func NewLoki(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType s
 	// Asterisk is required here to expand all pod labels
 	// See https://github.com/vectordotdev/vector/pull/12041
 	// Labels are selected based on source type: File -> FilesLabels, KubernetesPods -> K8sLabels
-	labels := loglabels.MergeLabelsForSource(sourceType, cspec.ExtraLabels)
+	labels := loglabels.GetLokiLabels(sourceType, cspec.ExtraLabels)
 
 	tls := CommonTLS{
 		CAFile:            decodeB64(spec.TLS.CAFile),

@@ -99,7 +99,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType 
 			deviceVersion = spec.Encoding.CEF.DeviceVersion
 		}
 		// Get CEF extensions based on source type (uses K8sLabels and FilesLabels)
-		extensions := loglabels.GetCEFExtensionsWithExtraLabels(sourceType, cspec.ExtraLabels)
+		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
 
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{

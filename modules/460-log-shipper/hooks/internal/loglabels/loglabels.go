@@ -69,54 +69,33 @@ var FilesLabels = map[string]string{
 	"file":    "{{ file }}",
 }
 
-// SortedExtraLabelsKeys returns sorted keys from extraLabels map.
-func SortedExtraLabelsKeys(extraLabels map[string]string) []string {
-	keys := make([]string, 0, len(extraLabels))
-	for key := range extraLabels {
-		keys = append(keys, key)
+// SortedMapKeys returns sorted keys from a map for deterministic order.
+func SortedMapKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
 	}
 	slices.Sort(keys)
 	return keys
 }
 
-// NormalizeKey normalizes a key by keeping only letters and numbers, converting to lowercase.
-func NormalizeKey(key string) string {
-	var b strings.Builder
-	for _, c := range key {
-		if unicode.IsLetter(c) || unicode.IsNumber(c) {
-			b.WriteRune(unicode.ToLower(c))
-		}
-	}
-	return b.String()
+// GetLokiLabels returns labels for Loki: source labels (with pod_labels for K8s) + extraLabels.
+func GetLokiLabels(sourceType string, extraLabels map[string]string) map[string]string {
+	return mergeLabels(sourceLabelsForSource(sourceType, true), extraLabels)
 }
 
-// MergeLabels merges source labels and extraLabels into a single map.
-func MergeLabels(sourceLabels map[string]string, extraLabels map[string]string) map[string]string {
-	result := make(map[string]string, len(sourceLabels)+len(extraLabels))
-	maps.Copy(result, sourceLabels)
-	for _, k := range SortedExtraLabelsKeys(extraLabels) {
-		result[k] = fmt.Sprintf("{{ %s }}", k)
-	}
+// GetSplunkLabels returns indexed fields for Splunk: datetime + source labels (K8s without pod_labels) + extraLabels.
+func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[string]string {
+	result := make(map[string]string, 1+len(FilesLabels)+len(extraLabels))
+	result["datetime"] = ""
+	maps.Copy(result, mergeLabels(sourceLabelsForSource(sourceType, false), extraLabels))
 	return result
 }
 
-// MergeLabelsForSource merges labels based on source type and extraLabels.
-func MergeLabelsForSource(sourceType string, extraLabels map[string]string) map[string]string {
-	var sourceLabels map[string]string
-	switch sourceType {
-	case v1alpha1.SourceFile:
-		sourceLabels = FilesLabels
-	case v1alpha1.SourceKubernetesPods:
-		sourceLabels = K8sLabelsWithPodLabels
-	default:
-		sourceLabels = make(map[string]string)
-	}
-	return MergeLabels(sourceLabels, extraLabels)
-}
-
-// GetCEFExtensionsForLabels returns CEF extensions map based on source labels.
-func GetCEFExtensionsForLabels(sourceLabels map[string]string) map[string]string {
-	extensions := make(map[string]string, len(sourceLabels)+3)
+// GetCEFExtensions returns CEF extensions map: source labels (K8s without pod_labels) + extraLabels, with message/timestamp.
+func GetCEFExtensions(sourceType string, extraLabels map[string]string) map[string]string {
+	sourceLabels := sourceLabelsForSource(sourceType, false)
+	extensions := make(map[string]string, len(sourceLabels)+len(extraLabels)+5)
 	extensions["message"] = "message"
 	extensions["timestamp"] = "timestamp"
 	for k := range sourceLabels {
@@ -127,42 +106,47 @@ func GetCEFExtensionsForLabels(sourceLabels map[string]string) map[string]string
 			extensions["node"] = "node"
 			continue
 		}
-		normalized := NormalizeKey(k)
-		extensions[normalized] = k
+		extensions[normalizeKey(k)] = k
 	}
-	return extensions
-}
-
-// GetCEFExtensionsForSource returns CEF extensions map based on source type.
-func GetCEFExtensionsForSource(sourceType string) map[string]string {
-	var sourceLabels map[string]string
-	switch sourceType {
-	case v1alpha1.SourceFile:
-		sourceLabels = FilesLabels
-	case v1alpha1.SourceKubernetesPods:
-		sourceLabels = K8sLabels
-	default:
-		sourceLabels = make(map[string]string)
-	}
-	return GetCEFExtensionsForLabels(sourceLabels)
-}
-
-var (
-	cefSpecialKeys = map[string]struct{}{
-		"cef.name":     {},
-		"cef.severity": {},
-	}
-)
-
-// GetCEFExtensionsWithExtraLabels returns CEF extensions with extraLabels added, excluding special keys.
-func GetCEFExtensionsWithExtraLabels(sourceType string, extraLabels map[string]string) map[string]string {
-	extensions := GetCEFExtensionsForSource(sourceType)
-	for _, k := range SortedExtraLabelsKeys(extraLabels) {
-		normalized := NormalizeKey(k)
-		if _, isSpecial := cefSpecialKeys[normalized]; isSpecial {
+	for _, k := range SortedMapKeys(extraLabels) {
+		n := normalizeKey(k)
+		if n == "cef.name" || n == "cef.severity" {
 			continue
 		}
-		extensions[normalized] = k
+		extensions[n] = k
 	}
 	return extensions
+}
+
+func sourceLabelsForSource(sourceType string, withPodLabels bool) map[string]string {
+	switch sourceType {
+	case v1alpha1.SourceFile:
+		return FilesLabels
+	case v1alpha1.SourceKubernetesPods:
+		if withPodLabels {
+			return K8sLabelsWithPodLabels
+		}
+		return K8sLabels
+	default:
+		return make(map[string]string)
+	}
+}
+
+func mergeLabels(sourceLabels map[string]string, extraLabels map[string]string) map[string]string {
+	result := make(map[string]string, len(sourceLabels)+len(extraLabels))
+	maps.Copy(result, sourceLabels)
+	for _, k := range SortedMapKeys(extraLabels) {
+		result[k] = fmt.Sprintf("{{ %s }}", k)
+	}
+	return result
+}
+
+func normalizeKey(key string) string {
+	var b strings.Builder
+	for _, c := range key {
+		if unicode.IsLetter(c) || unicode.IsNumber(c) {
+			b.WriteRune(unicode.ToLower(c))
+		}
+	}
+	return b.String()
 }

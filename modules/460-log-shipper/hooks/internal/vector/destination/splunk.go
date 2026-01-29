@@ -35,7 +35,7 @@ type Splunk struct {
 
 	Index string `json:"index,omitempty"`
 
-	IndexedFields []string `json:"indexed_fields,omitempty"`
+	IndexedFields IndexedFieldsMap `json:"indexed_fields,omitempty"`
 
 	TLS CommonTLS `json:"tls"`
 }
@@ -58,24 +58,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 		tls.VerifyHostname = *spec.TLS.VerifyHostname
 	}
 
-	indexedFields := []string{ //nolint:prealloc
-		"datetime",
-	}
-	// Add labels based on source type
-	switch sourceType {
-	case v1alpha1.SourceFile:
-		for k := range loglabels.FilesLabels {
-			indexedFields = append(indexedFields, k)
-		}
-	case v1alpha1.SourceKubernetesPods:
-		for k := range loglabels.K8sLabels {
-			indexedFields = append(indexedFields, k)
-		}
-	}
-	// "pod_labels", Splunk does not support objects with dynamic keys for indexes, consider using extraLabels
-
-	// Send extra labels as indexed fields (sorted for consistency)
-	indexedFields = append(indexedFields, loglabels.SortedExtraLabelsKeys(cspec.ExtraLabels)...)
+	indexedFields := loglabels.GetSplunkLabels(sourceType, cspec.ExtraLabels)
 
 	return &Splunk{
 		CommonSettings: CommonSettings{
@@ -91,7 +74,7 @@ func NewSplunk(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 			Codec:           "text",
 			TimestampFormat: "rfc3339",
 		},
-		IndexedFields: indexedFields,
+		IndexedFields: IndexedFieldsMap(indexedFields),
 		Endpoint:      spec.Endpoint,
 		DefaultToken:  spec.Token,
 		Compression:   "gzip",

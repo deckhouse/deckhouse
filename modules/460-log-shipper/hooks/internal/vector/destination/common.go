@@ -18,6 +18,7 @@ package destination
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 
 	"github.com/iancoleman/strcase"
@@ -25,6 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 var _ apis.LogDestination = (*CommonSettings)(nil)
@@ -87,6 +89,14 @@ type Buffer struct {
 	Type      string `json:"type,omitempty"`
 	MaxEvents uint32 `json:"max_events,omitempty"`
 	WhenFull  string `json:"when_full,omitempty"`
+}
+
+// IndexedFieldsMap holds indexed field names; serializes to a sorted array for deterministic order.
+type IndexedFieldsMap map[string]string
+
+// MarshalJSON serializes IndexedFieldsMap as JSON array of sorted keys (for Splunk indexed_fields).
+func (m IndexedFieldsMap) MarshalJSON() ([]byte, error) {
+	return json.Marshal(loglabels.SortedMapKeys(m))
 }
 
 func decodeB64(input string) string {

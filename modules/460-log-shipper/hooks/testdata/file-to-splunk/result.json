@@ -78,11 +78,11 @@
       "endpoint": "192.168.1.1:9200",
       "index": "{{ test }}",
       "indexed_fields": [
+        "app",
         "datetime",
         "file",
         "host",
-        "host_ip",
-        "app"
+        "host_ip"
       ],
       "tls": {
         "verify_hostname": false,

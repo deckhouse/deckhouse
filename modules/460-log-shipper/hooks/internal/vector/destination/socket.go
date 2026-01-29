@@ -95,7 +95,7 @@ func NewSocket(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType
 		if spec.Encoding.CEF.DeviceVersion != "" {
 			deviceVersion = spec.Encoding.CEF.DeviceVersion
 		}
-		extensions := loglabels.GetCEFExtensionsWithExtraLabels(sourceType, cspec.ExtraLabels)
+		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
 
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
