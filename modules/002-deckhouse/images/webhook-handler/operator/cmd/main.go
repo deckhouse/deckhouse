@@ -82,7 +82,7 @@ func main() {
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
 	// healthcheck value
-	var isAlive bool = true
+	var isAlive = true
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -106,11 +106,21 @@ func main() {
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
 
-	soapp.ValidatingWebhookSettings.ConfigurationName = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ConfigurationName, os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
-	soapp.ValidatingWebhookSettings.ServiceName = ReturnNotEmpty("test", "test") //os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME"))
-	soapp.ValidatingWebhookSettings.ServerCertPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ServerCertPath, os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
-	soapp.ValidatingWebhookSettings.ServerKeyPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.ServerKeyPath, os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
-	soapp.ValidatingWebhookSettings.CAPath = ReturnNotEmpty(soapp.ValidatingWebhookSettings.CAPath, os.Getenv("VALIDATING_WEBHOOK_CA"))
+	soapp.ValidatingWebhookSettings.ConfigurationName = ReturnNotEmpty(
+		soapp.ValidatingWebhookSettings.ConfigurationName,
+		os.Getenv("VALIDATING_WEBHOOK_CONFIGURATION_NAME"))
+	// TODO: use env var instead of hardcoded value
+	// os.Getenv("VALIDATING_WEBHOOK_SERVICE_NAME")
+	soapp.ValidatingWebhookSettings.ServiceName = ReturnNotEmpty("test", "test")
+	soapp.ValidatingWebhookSettings.ServerCertPath = ReturnNotEmpty(
+		soapp.ValidatingWebhookSettings.ServerCertPath,
+		os.Getenv("VALIDATING_WEBHOOK_SERVER_CERT"))
+	soapp.ValidatingWebhookSettings.ServerKeyPath = ReturnNotEmpty(
+		soapp.ValidatingWebhookSettings.ServerKeyPath,
+		os.Getenv("VALIDATING_WEBHOOK_SERVER_KEY"))
+	soapp.ValidatingWebhookSettings.CAPath = ReturnNotEmpty(
+		soapp.ValidatingWebhookSettings.CAPath,
+		os.Getenv("VALIDATING_WEBHOOK_CA"))
 	soapp.Namespace = ReturnNotEmpty("default", os.Getenv("SHELL_OPERATOR_NAMESPACE"))
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
@@ -251,7 +261,7 @@ func main() {
 		log.WithHandlerType(log.TextHandlerType))
 
 	setupLog.Info("starting shell-operator")
-	// syncronous run
+	// synchronous run
 	cmd := exec.Command("./shell-operator")
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

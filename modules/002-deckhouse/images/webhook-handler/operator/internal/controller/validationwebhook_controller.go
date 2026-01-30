@@ -137,7 +137,9 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		err = r.Client.Update(ctx, vh)
 		if err != nil {
 			res.Requeue = true
-			os.Remove(webhookDir + vh.Name + ".py")
+			if removeErr := os.Remove(webhookDir + vh.Name + ".py"); removeErr != nil {
+				r.Logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+			}
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
 	}

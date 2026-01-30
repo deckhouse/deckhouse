@@ -36,7 +36,9 @@ import (
 func setupTestConversionReconciler() *ConversionWebhookReconciler {
 	// create fake kubernetes client
 	sch := runtime.NewScheme()
-	deckhouseiov1alpha1.AddToScheme(sch)
+	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
+		panic(err)
+	}
 	k8sClient := fake.NewClientBuilder().WithScheme(sch).Build()
 
 	// init template file

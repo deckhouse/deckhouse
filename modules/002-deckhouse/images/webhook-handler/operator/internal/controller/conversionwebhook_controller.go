@@ -134,7 +134,9 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 		err = r.Client.Update(ctx, cwh)
 		if err != nil {
 			res.Requeue = true
-			os.Remove(webhookDir + cwh.Name + ".py")
+			if removeErr := os.Remove(webhookDir + cwh.Name + ".py"); removeErr != nil {
+				r.Logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+			}
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
 	}
