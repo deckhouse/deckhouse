@@ -40,6 +40,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"ebsCsiPlugin133":           "imageHash-cloudProviderAws-ebsCsiPlugin133",
 		"ebsCsiPlugin134":           "imageHash-cloudProviderAws-ebsCsiPlugin134",
 		"nodeTerminationHandler":    "imageHash-cloudProviderAws-nodeTerminationHandler",
+		"terraformManager":          "imageHash-cloudProviderAws-terraformManager",
 	},
 	"cloudProviderAzure": map[string]interface{}{
 		"azurediskCsi130":           "imageHash-cloudProviderAzure-azurediskCsi130",
