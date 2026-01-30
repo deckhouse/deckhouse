@@ -100,6 +100,11 @@ var (
 			"properties.storageClass.properties.provision.items.properties.type",
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
 		},
+		"modules/030-cloud-provider-azure/openapi/values.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.serviceEndpoints.items",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-aws/openapi/config-values.yaml": {
 			// ignore AWS disk types
 			"properties.storageClass.properties.provision.items.properties.type",
