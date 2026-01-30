@@ -34,7 +34,6 @@ func AddToScheme(scheme *runtime.Scheme) error {
 	return nil
 }
 
-// NodeGroup - упрощенная версия, только нужные поля
 type NodeGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,18 +44,6 @@ type NodeGroupStatus struct {
 	Ready int32 `json:"ready,omitempty"`
 }
 
-// type nodeGroupKind struct{}
-
-// func (in *NodeGroup) GetObjectKind() schema.ObjectKind {
-// 	return &nodeGroupKind{}
-// }
-
-// func (f *nodeGroupKind) SetGroupVersionKind(_ schema.GroupVersionKind) {}
-// func (f *nodeGroupKind) GroupVersionKind() schema.GroupVersionKind {
-// 	return schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}
-// }
-
-// DeepCopyInto - ручная реализация
 func (in *NodeGroup) DeepCopyInto(out *NodeGroup) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
@@ -64,7 +51,6 @@ func (in *NodeGroup) DeepCopyInto(out *NodeGroup) {
 	in.Status.DeepCopyInto(&out.Status)
 }
 
-// DeepCopy
 func (in *NodeGroup) DeepCopy() *NodeGroup {
 	if in == nil {
 		return nil
@@ -74,7 +60,6 @@ func (in *NodeGroup) DeepCopy() *NodeGroup {
 	return out
 }
 
-// DeepCopyObject
 func (in *NodeGroup) DeepCopyObject() runtime.Object {
 	if c := in.DeepCopy(); c != nil {
 		return c
@@ -82,12 +67,10 @@ func (in *NodeGroup) DeepCopyObject() runtime.Object {
 	return nil
 }
 
-// DeepCopyInto для Spec
 func (in *NodeGroupStatus) DeepCopyInto(out *NodeGroupStatus) {
 	*out = *in
 }
 
-// DeepCopy
 func (in *NodeGroupStatus) DeepCopy() *NodeGroupStatus {
 	if in == nil {
 		return nil
