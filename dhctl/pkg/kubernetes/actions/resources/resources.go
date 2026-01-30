@@ -29,6 +29,7 @@ import (
 	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -238,7 +239,6 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 	}
 
 	if len(c.resources) > 0 {
-		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 		return ErrNotAllResourcesCreated
 	}
 
@@ -320,6 +320,84 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	resourceCreator := NewCreator(kubeCl, resources, tasks)
 
 	waiter := NewWaiter(checkers)
+
+	ngExpected := false
+	ngGVK := schema.GroupVersionKind{
+		Kind:    "NodeGroup",
+		Group:   "deckhouse.io",
+		Version: "v1",
+	}
+
+	logger := log.GetDefaultLogger()
+
+	params := constructorParams{
+		kubeProvider:   kubernetes.NewSimpleKubeClientGetter(kubeCl),
+		metaConfig:     nil,
+		loggerProvider: log.SimpleLoggerProvider(logger),
+	}
+
+	gvks := make(map[string]struct{})
+	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
+	for _, resource := range resourceCreator.resources {
+		key := resource.GVK.String()
+		if resource.GVK == ngGVK {
+			ngExpected = true
+		}
+		if _, ok := gvks[key]; !ok {
+			gvks[key] = struct{}{}
+			resourcesToCreate = append(resourcesToCreate, key)
+		}
+	}
+
+	log.Process("Create Resources", "Resources to create", func() error {
+		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
+		return nil
+	})
+
+	// wait for NG first
+	if ngExpected {
+		var ngChecker Checker
+		ngChecker, err := newNodeGroupsChecker(params)
+		if err != nil {
+			return err
+		}
+
+		log.Process("Create Resources", "Create NodeGroups", func() error {
+			for {
+				err := resourceCreator.TryToCreate(ctx)
+				if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {
+					return err
+				}
+
+				ready, errWaiter := ngChecker.IsReady(ctx)
+				if errWaiter != nil {
+					return errWaiter
+				}
+
+				if ready {
+					return nil
+				}
+
+				select {
+				case <-endChannel:
+					if len(resources) > 0 {
+						return fmt.Errorf(
+							"Creating resources timed out after %s: resources cannot become ready. "+
+								"This could be due to lack of worker nodes in the cluster. "+
+								"Add at least one worker node or remove taints from master nodes (for single-node cluster) ",
+							app.ResourcesTimeout,
+						)
+					}
+
+					return fmt.Errorf("Creating resources failed after %s waiting", app.ResourcesTimeout)
+				case <-ticker.C:
+				}
+			}
+		})
+	} else {
+		log.WarnLn("You don't have any NodeGroup resources, bootstrap process may not succeed")
+	}
+
 	for {
 		err := resourceCreator.TryToCreate(ctx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {

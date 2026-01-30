@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	multierr "github.com/hashicorp/go-multierror"
@@ -176,35 +177,35 @@ func (n *clusterIsBootstrapCheck) hasBootstrappedCM(ctx context.Context) (bool, 
 	return hasCm, err
 }
 
-func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) {
+func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) string {
 	if n.attempts%4 != 0 {
-		return
+		return ""
 	}
-
-	logger := n.loggerProvider()
 
 	ngs, err := n.ngGetter.NodeGroups(ctx)
 	if err != nil {
-		logger.LogWarnF("Error while getting node groups: %v", err)
-		return
+		return ""
 	}
 
 	if len(ngs) == 0 {
-		return
+		return ""
 	}
 
 	fs := "%-30s %-8s %-8s %-9s %-8s %-17s\n"
-	logger.LogInfoF(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
+	out := fmt.Sprintf(fs, "NAME", "READY", "NODES", "INSTANCES", "DESIRED", "STATUS")
 	for _, ng := range ngs {
 		stat := ng.Status
-		logger.LogInfoF(fs,
+		o := fmt.Sprintf(fs,
 			ng.Name,
 			fmt.Sprint(stat.Ready),
 			fmt.Sprint(stat.Nodes),
 			fmt.Sprint(stat.Instances),
 			fmt.Sprint(stat.Desired),
 			stat.Error)
+		out = out + o
 	}
+
+	return strings.TrimSuffix(out, "\n")
 }
 
 func (n *clusterIsBootstrapCheck) outputMachineFailures(ctx context.Context) {
@@ -244,10 +245,7 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 
 	defer func() {
 		n.attempts++
-		logger.LogInfoF("\n")
 	}()
-
-	logger.LogInfoF("Waiting for the cluster to be in the 'bootstrapped' state:\n")
 
 	notBootstrappedMsg := "The cluster has not been bootstrapped yet. Waiting for at least one non-master node in Ready status.\n"
 
@@ -259,13 +257,15 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	if ok {
-		logger.LogInfoF("The cluster is bootstrapped. Waiting for the creation of resources.\n")
 		return true, nil
 	}
 
-	logger.LogInfoF(notBootstrappedMsg)
-
-	n.outputNodeGroups(ctx)
+	if len(n.outputNodeGroups(ctx)) > 0 {
+		logger.LogProcess("Create Resources", "NodeGroups status", func() error {
+			logger.LogInfoLn(n.outputNodeGroups(ctx))
+			return nil
+		})
+	}
 
 	n.outputMachineFailures(ctx)
 
