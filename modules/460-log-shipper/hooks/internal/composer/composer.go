@@ -141,7 +141,7 @@ func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDes
 
 // composeDestinations resolves destination references, creates destination instances, and applies transforms.
 func (c *Composer) composeDestinations(destinationRefs []string, sourceType string) ([]PipelineDestination, error) {
-	var destinations []PipelineDestination
+	destinations := make([]PipelineDestination, 0, len(destinationRefs))
 
 	for _, ref := range destinationRefs {
 		// Create destination for this specific source to ensure correct labels
