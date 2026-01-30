@@ -49,7 +49,7 @@ type Context struct {
 type KubernetesContext struct {
 	// Is an optional group and version of object API.
 	// For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
-	ApiVersion string `json:"apiVersion,omitempty"`
+	APIVersion string `json:"apiVersion,omitempty"`
 	// Is the type of a monitored Kubernetes resource. This field is required.
 	Kind          string                `json:"kind"`
 	NameSelector  *NameSelector         `json:"nameSelector,omitempty"`

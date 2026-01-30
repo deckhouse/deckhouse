@@ -30,7 +30,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	soapp "github.com/flant/shell-operator/pkg/app"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,9 +43,10 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"deckhouse.io/webhook/internal/controller"
-	// +kubebuilder:scaffold:imports
 )
 
 const (
@@ -271,7 +271,7 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("new shell-operator PID",
-		slog.Int("PID", cmd.Process.Pid),
+		slog.Int("pid", cmd.Process.Pid),
 	)
 	// non-blocking sync variable to know that we need to reload shell-operator
 	var isReloadShellNeed atomic.Bool
@@ -309,7 +309,7 @@ func main() {
 					log.Error("wait shell-operator: %w", err)
 				}
 				logger.Info("killed shell-operator",
-					slog.Int("PID", cmd.Process.Pid),
+					slog.Int("pid", cmd.Process.Pid),
 					slog.Bool("exited", cmd.ProcessState.Exited()),
 					slog.Int("exitcode", cmd.ProcessState.ExitCode()),
 				)
@@ -324,7 +324,7 @@ func main() {
 					isAlive = false
 				}
 				logger.Info("new shell-operator PID",
-					slog.Int("PID", cmd.Process.Pid),
+					slog.Int("pid", cmd.Process.Pid),
 				)
 			}
 		}

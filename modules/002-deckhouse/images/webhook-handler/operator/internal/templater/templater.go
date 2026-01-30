@@ -21,8 +21,9 @@ import (
 	"strings"
 	"text/template"
 
-	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"sigs.k8s.io/yaml"
+
+	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 )
 
 var defaultFuncMap = template.FuncMap{

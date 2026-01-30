@@ -21,12 +21,13 @@ import (
 	"os"
 	"sync/atomic"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	deckhouseiov1alpha1 "deckhouse.io/webhook/api/v1alpha1"
 	"deckhouse.io/webhook/internal/templater"
