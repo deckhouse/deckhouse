@@ -23,13 +23,13 @@ import (
 )
 
 func AddToScheme(scheme *runtime.Scheme) error {
-	scheme.AddKnownTypeWithName(
-		schema.GroupVersionKind{
+	scheme.AddKnownTypes(
+		schema.GroupVersion{
 			Group:   "deckhouse.io",
 			Version: "v1",
-			Kind:    "NodeGroup",
 		},
 		&NodeGroup{},
+		&NodeGroupList{},
 	)
 	return nil
 }
@@ -42,6 +42,12 @@ type NodeGroup struct {
 
 type NodeGroupStatus struct {
 	Ready int32 `json:"ready,omitempty"`
+}
+
+type NodeGroupList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []NodeGroup `json:"items"`
 }
 
 func (in *NodeGroup) DeepCopyInto(out *NodeGroup) {
@@ -78,4 +84,33 @@ func (in *NodeGroupStatus) DeepCopy() *NodeGroupStatus {
 	out := new(NodeGroupStatus)
 	in.DeepCopyInto(out)
 	return out
+}
+
+func (in *NodeGroupList) DeepCopyInto(out *NodeGroupList) {
+	*out = *in
+	out.TypeMeta = in.TypeMeta
+	in.ListMeta.DeepCopyInto(&out.ListMeta)
+	if in.Items != nil {
+		in, out := &in.Items, &out.Items
+		*out = make([]NodeGroup, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+}
+
+func (in *NodeGroupList) DeepCopy() *NodeGroupList {
+	if in == nil {
+		return nil
+	}
+	out := new(NodeGroupList)
+	in.DeepCopyInto(out)
+	return out
+}
+
+func (in *NodeGroupList) DeepCopyObject() runtime.Object {
+	if c := in.DeepCopy(); c != nil {
+		return c
+	}
+	return nil
 }
