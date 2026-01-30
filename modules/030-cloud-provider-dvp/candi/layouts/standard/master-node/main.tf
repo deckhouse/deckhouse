@@ -33,7 +33,7 @@ resource "kubernetes_owner_references_v1" "root-disk" {
     namespace = local.namespace
   }
 
-  ownerReferences {
+  owner_references {
     api_version = "virtualization.deckhouse.io/v1alpha2"
     kind        = "VirtualMachine"
     name        = module.master.name
@@ -61,7 +61,7 @@ resource "kubernetes_owner_references_v1" "kubernetes-data-disk" {
     namespace = local.namespace
   }
 
-  ownerReferences {
+  owner_references {
     api_version = "virtualization.deckhouse.io/v1alpha2"
     kind        = "VirtualMachine"
     name        = module.master.name
@@ -114,7 +114,7 @@ resource "kubernetes_owner_references_v1" "ipv4-address" {
     namespace = local.namespace
   }
 
-  ownerReferences {
+  owner_references {
     api_version = "virtualization.deckhouse.io/v1alpha2"
     kind        = "VirtualMachine"
     name        = module.master.name
@@ -159,7 +159,7 @@ resource "kubernetes_owner_references_v1" "cloudinit-secret" {
     namespace = local.namespace
   }
 
-  ownerReferences {
+  owner_references {
     api_version = "virtualization.deckhouse.io/v1alpha2"
     kind        = "VirtualMachine"
     name        = module.master.name

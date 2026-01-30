@@ -42,9 +42,9 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/resource_kubernetes_owner_references_v1.go b/kubernetes/resource_kubernetes_owner_references_v1.go
 new file mode 100644
---- /dev/null	(date 1769513265747)
-+++ b/kubernetes/resource_kubernetes_owner_references_v1.go	(date 1769513265747)
-@@ -0,0 +1,298 @@
+--- /dev/null	(date 1770028896055)
++++ b/kubernetes/resource_kubernetes_owner_references_v1.go	(date 1770028896055)
+@@ -0,0 +1,315 @@
 +// Copyright (c) HashiCorp, Inc.
 +// SPDX-License-Identifier: MPL-2.0
 +
@@ -91,7 +91,7 @@ new file mode 100644
 +				ForceNew:    true,
 +			},
 +			"metadata": {
-+				Type:     schema.TypeSet,
++				Type:     schema.TypeList,
 +				Required: true,
 +				MaxItems: 1,
 +				Elem: &schema.Resource{
@@ -111,13 +111,13 @@ new file mode 100644
 +					},
 +				},
 +			},
-+			"ownerReferences": {
++			"owner_references": {
 +				Type:        schema.TypeList,
 +				Description: "A list of ownerReferences to apply to the resource.",
 +				Optional:    true,
 +				Elem: &schema.Resource{
 +					Schema: map[string]*schema.Schema{
-+						"apiVersion": {
++						"api_version": {
 +							Type:        schema.TypeString,
 +							Description: "The apiVersion of the referenced resource.",
 +							Required:    true,
@@ -223,7 +223,16 @@ new file mode 100644
 +	}
 +
 +	ownerReferences := res.GetOwnerReferences()
-+	d.Set("ownerReferences", ownerReferences)
++	ownerReferencesList := make([]interface{}, len(ownerReferences))
++	for _, ownerReference := range ownerReferences {
++		ownerReferencesList = append(ownerReferencesList, map[string]interface{}{
++			"api_version": ownerReference.APIVersion,
++			"kind":        ownerReference.Kind,
++			"name":        ownerReference.Name,
++			"uid":         string(ownerReference.UID),
++		})
++	}
++	d.Set("owner_references", ownerReferencesList)
 +
 +	return nil
 +}
@@ -284,20 +293,28 @@ new file mode 100644
 +	}
 +
 +	// craft the patch to update the ownerReferences
-+	ownerReferences := d.Get("ownerReferences")
++	ownerReferences := []v1.OwnerReference{}
++	if ownerReferencesList, ok := d.GetOk("owner_references"); ok {
++		for i := range ownerReferencesList.([]interface{}) {
++			ownerReferences = append(ownerReferences, v1.OwnerReference{
++				APIVersion: ownerReferencesList.([]interface{})[i].(map[string]interface{})["api_version"].(string),
++				Kind:       ownerReferencesList.([]interface{})[i].(map[string]interface{})["kind"].(string),
++				Name:       ownerReferencesList.([]interface{})[i].(map[string]interface{})["name"].(string),
++				UID:        types.UID(ownerReferencesList.([]interface{})[i].(map[string]interface{})["uid"].(string)),
++			})
++		}
++	}
 +	if d.Id() == "" {
 +		// if we're deleting then just we just patch
 +		// with an empty ownerReferences map
 +		ownerReferences = []v1.OwnerReference{}
 +	}
 +	patchmeta := map[string]interface{}{
-+		"name": name,
++		"name":            name,
++		"ownerReferences": ownerReferences,
 +	}
 +	if namespacedResource {
 +		patchmeta["namespace"] = namespace
-+	}
-+	if _, ok := d.GetOk("ownerReferences"); ok {
-+		patchmeta["ownerReferences"] = ownerReferences
 +	}
 +	patchobj := map[string]interface{}{
 +		"apiVersion": apiVersion,
@@ -309,7 +326,7 @@ new file mode 100644
 +	patch.Object = patchobj
 +	patchbytes, err := patch.MarshalJSON()
 +	if err != nil {
-+		return diag.FromErr(err)
++		return diag.FromErr(fmt.Errorf("%s %v", patchbytes, err))
 +	}
 +	// apply the patch
 +	_, err = r.Patch(ctx,
