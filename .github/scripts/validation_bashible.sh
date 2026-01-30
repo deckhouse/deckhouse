@@ -176,6 +176,7 @@ docker pull ${REGISTRY}/deckhouse/ee/install:stable
 cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/candi/bashible:/deckhouse/candi/bashible \
   -v ${volumesRoot}/candi/cloud-providers:/deckhouse/candi/cloud-providers \
+  -v ${volumesRoot}/candi/cloud-providers/aws:/deckhouse/modules/030-cloud-provider-aws/candi \
   -v ${volumesRoot}/${config}:/${config} \
   -e config=config.yaml \
   --entrypoint=bash \
