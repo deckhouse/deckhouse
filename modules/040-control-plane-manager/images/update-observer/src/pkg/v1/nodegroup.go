@@ -22,15 +22,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+var schemeGroupVersion = schema.GroupVersion{
+	Group:   "deckhouse.io",
+	Version: "v1",
+}
+
 func AddToScheme(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(
-		schema.GroupVersion{
-			Group:   "deckhouse.io",
-			Version: "v1",
-		},
+		schemeGroupVersion,
 		&NodeGroup{},
 		&NodeGroupList{},
 	)
+	metav1.AddToGroupVersion(scheme, schemeGroupVersion)
 	return nil
 }
 
