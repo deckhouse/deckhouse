@@ -21,9 +21,8 @@ context:
       kind: Service
 handler:
   python: |
-    def validate(ctx: DotMap, output: hook.ValidationsCollector):
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
         resource = ctx.review.request.name
         if "test" in resource:
-            output.deny("TEST: service with \"test\" in .metadata.name")
-            return
-        output.allow()
+            return "TEST: service with \"test\" in .metadata.name", False
+        return None, True

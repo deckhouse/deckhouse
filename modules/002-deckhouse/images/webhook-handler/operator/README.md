@@ -27,24 +27,19 @@ validationObject:
 context:
   - name: services
     kubernetes:
-      group: main
-      executeHookOnEvent: []
-      executeHookOnSynchronization: false
-      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
 handler:
   python: |
-    def validate(ctx: DotMap, output: hook.ValidationsCollector):
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
         resource = ctx.review.request.name
         if "test" in resource:
-            output.deny("TEST: service with \"test\" in .metadata.name")
-            return
-        output.allow()
+            return "TEST: service with \"test\" in .metadata.name", False
+        return None, True
 ```
 
 #### ConversionWebhook
-Automatic conversion of CRDs between v1beta1 and v1.
+Automatic conversion of CRDs between v1alpha1 and v1.
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: ConversionWebhook
@@ -54,33 +49,35 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: example.deckhouse.io
 conversions:
-  - from: v1beta1
+  - from: v1alpha1
     to: v1
     handler:
       python: |
-        def v1beta1_to_v1(self, o: dict) -> typing.Tuple[None, dict]:
+        def v1alpha1_to_v1(self, o: dict) -> typing.Tuple[None, dict]:
             obj = DotMap(o)
 
             obj.apiVersion = "deckhouse.io/v1"
-            
+
             obj.spec.host=obj.spec.hostPort
             obj.spec.port=obj.spec.hostPort
             del obj.spec.hostPort
 
             return None, obj.toDict()
   - from: v1
-    to: v1beta1
+    to: v1alpha1
     handler:
       python: |
-        def v1_to_v1beta1(self, o: dict) -> typing.Tuple[None, dict]:
+        def v1_to_v1alpha1(self, o: dict) -> typing.Tuple[None, dict]:
             obj = DotMap(o)
 
-            obj.apiVersion = "deckhouse.io/v1beta1"
+            obj.apiVersion = "deckhouse.io/v1alpha1"
+            if not obj.spec.host:
+              return None, obj.toDict()
 
             hostPort = obj.spec.host+":"+obj.spec.port
-            obj.spec.hostPort=hostPort
-            del obj.spec.host
-            del obj.spec.port
+            del obj.spec
+            if hostPort:
+              obj.spec.hostPort=hostPort
 
             return None, obj.toDict()
 ```
