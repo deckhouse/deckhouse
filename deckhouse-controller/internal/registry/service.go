@@ -316,6 +316,7 @@ type Remote struct {
 	DockerConfig string `json:"dockercfg" yaml:"dockercfg"`
 	Scheme       string `json:"scheme" yaml:"scheme"`
 	CA           string `json:"ca" yaml:"ca"`
+	Credentials  string `json:"credentials" yaml:"credentials"`
 }
 
 func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) Remote {
@@ -335,6 +336,7 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 			DockerConfig: v.Spec.Registry.DockerCFG,
 			CA:           v.Spec.Registry.CA,
 			Scheme:       v.Spec.Registry.Scheme,
+			Credentials:  v.Spec.Registry.Credentials,
 		}
 	}
 
@@ -343,11 +345,17 @@ func BuildRemote[T *v1alpha1.ModuleSource | *v1alpha1.PackageRepository](reg T) 
 
 func (s *Service) buildRegistryClient(remote Remote, segment string) (cr.Client, error) {
 	opts := []cr.Option{
-		cr.WithAuth(remote.DockerConfig),
+		cr.WithAuth(remote.DockerConfig, remote.Credentials),
 		cr.WithUserAgent(s.clusterUUID),
 		cr.WithCA(remote.CA),
 		cr.WithInsecureSchema(strings.ToLower(remote.Scheme) == "http"),
 	}
+
+	s.logger.Debug("build registry client",
+		slog.Bool("with_docker_config", remote.DockerConfig != "" && remote.Credentials == ""),
+		slog.Bool("with_credentials", remote.Credentials != ""),
+		slog.Bool("without_auth", remote.DockerConfig == "" && remote.Credentials == ""),
+		slog.String("cluster_uuid", s.clusterUUID))
 
 	cli, err := s.dc.GetRegistryClient(filepath.Join(remote.Repository, segment), opts...)
 	if err != nil {

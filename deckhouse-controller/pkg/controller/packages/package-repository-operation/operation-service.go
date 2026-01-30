@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,13 +50,13 @@ func NewOperationService(ctx context.Context, client client.Client, repoName str
 	}
 
 	// Create registry service for the packages path
-	svc, err := psm.Service(
-		repo.Spec.Registry.Repo,
-		repo.Spec.Registry.DockerCFG,
-		repo.Spec.Registry.CA,
-		"deckhouse-package-controller",
-		repo.Spec.Registry.Scheme,
-	)
+	svc, err := psm.Service(repo.Spec.Registry.Repo, utils.RegistryConfig{
+		DockerConfig: repo.Spec.Registry.DockerCFG,
+		Credentials:  repo.Spec.Registry.Credentials,
+		CA:           repo.Spec.Registry.CA,
+		Scheme:       repo.Spec.Registry.Scheme,
+		UserAgent:    "deckhouse-package-controller",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create package service: %w", err)
 	}

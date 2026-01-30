@@ -59,6 +59,7 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 
 type RegistryConfig struct {
 	DockerConfig string
+	Credentials  string
 	CA           string
 	Scheme       string
 	UserAgent    string
@@ -74,7 +75,7 @@ func GenerateRegistryOptions(ri *RegistryConfig, logger *log.Logger) []cr.Option
 	}
 
 	opts := []cr.Option{
-		cr.WithAuth(ri.DockerConfig),
+		cr.WithAuth(ri.DockerConfig, ri.Credentials),
 		cr.WithUserAgent(ri.UserAgent),
 		cr.WithCA(ri.CA),
 		cr.WithInsecureSchema(strings.ToLower(ri.Scheme) == "http"),

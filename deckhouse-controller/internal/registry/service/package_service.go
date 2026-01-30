@@ -21,12 +21,15 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"reflect"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/goccy/go-yaml"
+	"github.com/google/go-containerregistry/pkg/authn"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
@@ -42,7 +45,7 @@ const (
 )
 
 type ServiceManagerInterface[T any] interface {
-	Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error)
+	Service(registryURL string, config utils.RegistryConfig) (*T, error)
 }
 
 type ServiceManager[T any] struct {
@@ -56,6 +59,7 @@ type ServiceManager[T any] struct {
 type packageCredentials struct {
 	registryURL string
 	dockerCFG   string
+	credentials string
 	ca          string
 	userAgent   string
 }
@@ -68,7 +72,7 @@ func NewPackageServiceManager(logger *log.Logger) *ServiceManager[PackagesServic
 	}
 }
 
-func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, scheme string) (*T, error) {
+func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryConfig) (*T, error) {
 	if m.services == nil {
 		m.services = make(map[packageCredentials]*T)
 	}
@@ -83,9 +87,10 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 
 	creds := packageCredentials{
 		registryURL: registryURL,
-		dockerCFG:   dockerCFG,
-		ca:          ca,
-		userAgent:   userAgent,
+		dockerCFG:   config.DockerConfig,
+		credentials: config.Credentials,
+		ca:          config.CA,
+		userAgent:   config.UserAgent,
 	}
 
 	// if service with these creds already exists - return it
@@ -94,7 +99,7 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 		return m.services[creds], nil
 	}
 
-	auth, err := client.AuthFromDockerConfig(registryURL, dockerCFG)
+	auth, err := getAuth(registryURL, config.DockerConfig, config.Credentials) // factory method
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 	}
@@ -108,21 +113,43 @@ func (m *ServiceManager[T]) Service(registryURL, dockerCFG, ca, userAgent, schem
 
 	c := client.NewClientWithOptions(registryURL, &client.Options{
 		Auth:      auth,
-		Scheme:    scheme,
-		CA:        ca,
-		UserAgent: userAgent,
+		Scheme:    config.Scheme,
+		CA:        config.CA,
+		UserAgent: config.UserAgent,
 		Logger:    m.logger,
 	})
 
-	// Type switch using reflection to create the appropriate service based on the generic type T
-	switch reflect.TypeOf(*new(T)) {
-	case reflect.TypeOf(PackagesService{}):
+	var zero T
+	switch any(zero).(type) {
+	case PackagesService, *PackagesService:
 		m.services[creds] = any(NewPackagesService(c, m.logger)).(*T)
 	default:
 		return nil, fmt.Errorf("unsupported service type: %s", reflect.TypeOf(*new(T)).String())
 	}
 
 	return m.services[creds], nil
+}
+
+// getAuth determines and returns an authenticator for accessing a container registry based on the provided authorization data.
+// if both dockerCfg and credentials parameters are filled in, credentials is the priority.
+func getAuth(registryURL, dockerCFG, credentials string) (authn.Authenticator, error) {
+	var auth authn.Authenticator
+	var err error
+
+	switch {
+	case credentials != "":
+		if auth, err = client.AuthFromCredentials(registryURL, credentials); err != nil {
+			return nil, fmt.Errorf("failed to get auth from credentials: %w", err)
+		}
+	case dockerCFG != "":
+		if auth, err = client.AuthFromDockerConfig(registryURL, dockerCFG); err != nil {
+			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
+		}
+	default:
+		return nil, errors.New("there is no authorization data")
+	}
+
+	return auth, err
 }
 
 type PackagesService struct {

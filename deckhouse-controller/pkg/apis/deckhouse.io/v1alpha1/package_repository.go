@@ -96,6 +96,10 @@ type PackageRepositorySpecRegistry struct {
 	// Certificate authority data for TLS verification.
 	// +optional
 	CA string `json:"ca,omitempty"`
+
+	// Login password from the repository in user:password format (base64)
+	// +optional
+	Credentials string `json:"credentials,omitempty"`
 }
 
 type PackageRepositoryStatus struct {
