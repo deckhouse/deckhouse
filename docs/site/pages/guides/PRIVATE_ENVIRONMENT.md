@@ -112,7 +112,7 @@ mkdir certs
 Generate certificates for external access using the following commands:
 
 ```bash
-openssl genrsa -out ca.key 4096
+openssl ecparam -name prime256v1 -genkey -out ca.key 4096
 ```
 
 ```bash
@@ -122,7 +122,7 @@ openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=US/ST=California/L=Sa
 Generate certificates for the internal domain name `harbor.local` so that the Bastion host can be accessed securely from within the private network:
 
 ```bash
-openssl genrsa -out harbor.local.key 4096
+openssl ecparam -name prime256v1 -genkey -out harbor.local.key
 ```
 
 ```bash
