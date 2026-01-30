@@ -44,7 +44,7 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```
@@ -96,7 +96,7 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```
@@ -148,7 +148,7 @@ search: deckhouse uninstall, cluster removal, platform uninstall, cleanup, clust
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```

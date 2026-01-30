@@ -58,7 +58,7 @@ team, or configuration management tooling.
     $ d8 stronghold write ssh-client-signer/config/ca generate_signing_key=true
     Key             Value
     ---             -----
-    public_key      ssh-rsa AAAAB3NzaC1yc2EA...
+    public_key      ssh-ed25519 AAAAB3NzaC1yc2EA...
     ```
 
     If you already have a keypair, specify the public and private key parts as
@@ -134,24 +134,24 @@ The following steps are performed by the client (user) that wants to
 authenticate to machines managed by Stronghold. These commands are usually run from
 the client's local workstation.
 
-1. Locate or generate the SSH public key. Usually this is `~/.ssh/id_rsa.pub`.
+1. Locate or generate the SSH public key. Usually this is `~/.ssh/id_ed25519.pub`.
     If you do not have an SSH keypair, generate one:
 
     ```text
-    ssh-keygen -t rsa -C "user@example.com"
+    ssh-keygen -t ed25519 -C "user@example.com"
     ```
 
 1. Ask Stronghold to sign your **public key**. This file usually ends in `.pub` and
-    the contents begin with `ssh-rsa ...`.
+    the contents begin with `ssh-ed25519 ...`.
 
     ```text
     $ d8 stronghold write ssh-client-signer/sign/my-role \
-        public_key=@$HOME/.ssh/id_rsa.pub
+        public_key=@$HOME/.ssh/id_ed25519.pub
 
     Key             Value
     ---             -----
     serial_number   c73f26d2340276aa
-    signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1...
+    signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1...
     ```
 
     The result will include the serial and the signed key. This signed key is
@@ -162,7 +162,7 @@ the client's local workstation.
     ```text
     $ d8 stronghold write ssh-client-signer/sign/my-role -<<"EOH"
     {
-      "public_key": "ssh-rsa AAA...",
+      "public_key": "ssh-ed25519 AAA...",
       "valid_principals": "my-user",
       "key_id": "custom-prefix",
       "extensions": {
@@ -177,11 +177,11 @@ the client's local workstation.
 
     ```text
     $ d8 stronghold write -field=signed_key ssh-client-signer/sign/my-role \
-        public_key=@$HOME/.ssh/id_rsa.pub > signed-cert.pub
+        public_key=@$HOME/.ssh/id_ed25519.pub > signed-cert.pub
     ```
 
     If you are saving the certificate directly beside your SSH keypair, suffix
-    the name with `-cert.pub` (`~/.ssh/id_rsa-cert.pub`). With this naming
+    the name with `-cert.pub` (`~/.ssh/id_ed25519-cert.pub`). With this naming
     scheme, OpenSSH will automatically use it during authentication.
 
 1. (Optional) View enabled extensions, principals, and metadata of the signed
@@ -196,7 +196,7 @@ the client's local workstation.
     authentication to the SSH call.
 
     ```text
-    ssh -i signed-cert.pub -i ~/.ssh/id_rsa username@10.0.23.5
+    ssh -i signed-cert.pub -i ~/.ssh/id_ed25519 username@10.0.23.5
     ```
 
 ## Host key signing
@@ -225,7 +225,7 @@ accidentally SSHing into an unmanaged or malicious machine.
     $ d8 stronghold write ssh-host-signer/config/ca generate_signing_key=true
     Key             Value
     ---             -----
-    public_key      ssh-rsa AAAAB3NzaC1yc2EA...
+    public_key      ssh-ed25519 AAAAB3NzaC1yc2EA...
     ```
 
     If you already have a keypair, specify the public and private key parts as
@@ -268,7 +268,7 @@ accidentally SSHing into an unmanaged or malicious machine.
     Key             Value
     ---             -----
     serial_number   3746eb17371540d9
-    signed_key      ssh-rsa-cert-v01@openssh.com AAAAHHNzaC1y...
+    signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1y...
     ```
 
 1. Set the resulting signed certificate as `HostCertificate` in the SSH
@@ -319,7 +319,7 @@ accidentally SSHing into an unmanaged or malicious machine.
 
     ```text
     # ~/.ssh/known_hosts
-    @cert-authority *.example.com ssh-rsa AAAAB3NzaC1yc2EAAA...
+    @cert-authority *.example.com ssh-ed25519 AAAAB3NzaC1yc2EAAA...
     ```
 
 1. SSH into target machines as usual.
@@ -483,8 +483,8 @@ parameters as per the Stronghold CLI and API steps demonstrated below.
 ```shell-extension
 # Using CLI:
 d8 stronghold secrets enable -path=hosts-ca ssh
-KEY_PRI=$(cat ~/.ssh/id_rsa | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_rsa.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/id_ed25519 | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/id_ed25519.pub | sed -z 's/\n/\\n/g')
 # Create / update keypair in Stronghold
 d8 stronghold write ssh-client-signer/config/ca \
   generate_signing_key=false \
@@ -495,8 +495,8 @@ d8 stronghold write ssh-client-signer/config/ca \
 ```shell-extension
 # Using API:
 curl -X POST -H "X-Vault-Token: ..." -d '{"type":"ssh"}' http://127.0.0.1:8200/v1/sys/mounts/hosts-ca
-KEY_PRI=$(cat ~/.ssh/id_rsa | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_rsa.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/id_ed25519 | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/id_ed25519.pub | sed -z 's/\n/\\n/g')
 tee payload.json <<EOF
 {
   "generate_signing_key" : false,
@@ -534,13 +534,13 @@ Destroy the keypair and `payload.json` from your hosts immediately after they ha
 - On some versions of SSH, you may get the following error on target host:
 
   ```text
-  userauth_pubkey: certificate signature algorithm ssh-rsa: signature algorithm not supported [preauth]
+  userauth_pubkey: certificate signature algorithm ssh-ed25519: signature algorithm not supported [preauth]
   ```
 
   Fix is to add below line to /etc/ssh/sshd_config
 
   ```text
-  CASignatureAlgorithms ^ssh-rsa
+  CASignatureAlgorithms ^ssh-ed25519
   ```
 
-  The ssh-rsa algorithm is no longer supported in [OpenSSH 8.2](https://www.openssh.com/txt/release-8.2)
+  The ssh-ed25519 algorithm is no longer supported in [OpenSSH 8.2](https://www.openssh.com/txt/release-8.2)

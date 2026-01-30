@@ -150,7 +150,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
    ```shell
    dhctl bootstrap \
      --ssh-host=54.43.32.21 \
-     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-user=dvpinstall --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --config=/config.yaml --ask-become-pass
    ```
 
@@ -256,7 +256,7 @@ registry.deckhouse.ru/deckhouse/<REVISION>/install:<RELEASE_CHANNEL>
 
 ```shell
     dhctl bootstrap \
-    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+    --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
     --config=/config.yml \
     --preflight-skip-all-checks 
 ```

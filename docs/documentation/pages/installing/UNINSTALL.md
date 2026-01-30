@@ -43,7 +43,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```
@@ -95,7 +95,7 @@ Follow these steps to delete a hybrid cluster consisting of the nodes that were 
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```
@@ -147,7 +147,7 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+     --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```

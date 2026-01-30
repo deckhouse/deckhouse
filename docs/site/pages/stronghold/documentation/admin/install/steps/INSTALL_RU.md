@@ -230,7 +230,7 @@ docker run -it --pull=always \
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
   --config=/config.yaml --config=/resources.yaml
 ```
 

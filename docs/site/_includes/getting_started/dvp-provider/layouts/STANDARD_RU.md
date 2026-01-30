@@ -8,7 +8,7 @@
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-sshPublicKey: ssh-rsa AAAABBBB
+sshPublicKey: ssh-ed25519 AAAABBBB
 masterNodeGroup:
   replicas: 1
   instanceClass:

@@ -559,7 +559,7 @@ Example of running a DKP installation with cloud cluster deployment:
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
   --config=/config.yml
 ```
 
@@ -653,7 +653,7 @@ Example of using a preflight skip flag:
 
   ```shell
       dhctl bootstrap \
-      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
       --config=/config.yml \
       --preflight-skip-all-checks
   ```

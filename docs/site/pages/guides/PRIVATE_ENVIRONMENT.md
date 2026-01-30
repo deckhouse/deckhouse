@@ -934,7 +934,7 @@ Run the commands as `root` (substitute the public part of your SSH key):
 useradd deckhouse -m -s /bin/bash -G sudo
 echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/deckhouse/.ssh
-export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
+export KEY='ssh-ed25519 AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/deckhouse/.ssh/authorized_keys
 chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
@@ -942,7 +942,7 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="How to obtain the public part of the key..." %}
-You can get the public part of the key by running `cat ~/.ssh/id_rsa.pub`.
+You can get the public part of the key by running `cat ~/.ssh/id_ed25519.pub`.
 {% endofftopic %}
 
 As a result of these commands:
@@ -1207,7 +1207,7 @@ After the image is pulled and the container starts successfully, you will see a 
 Start the DKP installation with the following command (specify the master node’s internal IP address):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
   --config=/config.yml \
   --ask-become-pass
 ```
@@ -1278,7 +1278,7 @@ To do this, follow these steps:
 * Generate an SSH key with an empty passphrase. Run the following command on the master node:
 
   ```bash
-  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
+  ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
   ```
 
 * Create an [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials) resource in the cluster. To do this, run the following command on the master node:

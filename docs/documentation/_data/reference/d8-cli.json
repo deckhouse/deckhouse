@@ -852,7 +852,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -1862,7 +1862,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -3210,7 +3210,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -3603,7 +3603,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -3996,7 +3996,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -4394,7 +4394,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -5411,7 +5411,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -6371,7 +6371,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -8159,7 +8159,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -15765,7 +15765,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -15918,7 +15918,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -16061,7 +16061,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -16426,7 +16426,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -16735,7 +16735,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -17028,7 +17028,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -17321,7 +17321,7 @@
                   "global": false
                 },
                 "ssh-key": {
-                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+                  "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
                   "shorthand": "",
                   "global": false
                 },
@@ -17861,7 +17861,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -18732,7 +18732,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -19095,7 +19095,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
               "shorthand": "",
               "global": false
             },
@@ -41610,7 +41610,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "--identity-file=/home/user/.ssh/id_rsa: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "--identity-file=/home/user/.ssh/id_ed25519: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
               "shorthand": "i",
               "global": false
             },
@@ -41773,7 +41773,7 @@
               "global": true
             },
             "identity-file": {
-              "description": "--identity-file=/home/user/.ssh/id_rsa: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
+              "description": "--identity-file=/home/user/.ssh/id_ed25519: Set the path to a private key used for authenticating to the server; If not provided, the client will try to use the local ssh-agent at $SSH_AUTH_SOCK",
               "shorthand": "i",
               "global": false
             },
