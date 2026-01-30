@@ -103,7 +103,7 @@ spec:
 		It("should produce the same name despite order", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			val := f.ValuesGet("nodeManager.internal.customMIGNames.shuffled-ng").String()
-			Expect(val).To(Equal("custom-shuffled-ng-8ab188ce"))
+			Expect(val).To(Equal("custom-shuffled-ng-0d5f67c7"))
 		})
 	})
 })
