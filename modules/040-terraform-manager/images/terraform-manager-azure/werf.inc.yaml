@@ -4,7 +4,7 @@ git:
 - add: /{{ .ModulePath }}modules/030-cloud-provider-azure/candi
   to: /deckhouse/candi/cloud-providers/azure
 import:
-- image: terraform-provider-azure
+- image: cloud-provider-azure/terraform-manager
   add: /terraform-manager/terraform-provider-azurerm
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "azure") }}/{{ .TF.azure.namespace }}/{{ .TF.azure.type }}/{{ .TF.azure.version }}/linux_amd64/terraform-provider-azurerm
   before: setup
