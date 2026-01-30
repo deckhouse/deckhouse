@@ -189,7 +189,7 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/docs
+- add: /modules/030-cloud-provider-yandex/candi/docs
   to: /src/modules/030-cloud-provider-yandex/docs
   owner: jekyll
   group: jekyll
@@ -266,14 +266,14 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/openapi
+- add: /modules/030-cloud-provider-yandex/candi/openapi
   to: /src/modules/030-cloud-provider-yandex/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/openapi
+- add: /modules/030-cloud-provider-yandex/candi/openapi
   to: /src/modules/030-cloud-provider-yandex/openapi
   owner: jekyll
   group: jekyll

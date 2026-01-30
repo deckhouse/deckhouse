@@ -38,6 +38,14 @@ var (
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 		},
+		// exclude zone - ru-center-1, ru-center-2, ru-center-3
+		"modules/030-cloud-provider-yandex/candi/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.zones.items",
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
+		},
 		// disk types - gp2.,..
 		"candi/cloud-providers/aws/openapi/cluster_configuration.yaml": {
 			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
@@ -50,6 +58,12 @@ var (
 		},
 		// disk types: network-ssd, network-hdd
 		"candi/cloud-providers/yandex/openapi/instance_class.yaml": {
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
+		},
+		// disk types: network-ssd, network-hdd
+		"modules/030-cloud-provider-yandex/candi/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
 			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
