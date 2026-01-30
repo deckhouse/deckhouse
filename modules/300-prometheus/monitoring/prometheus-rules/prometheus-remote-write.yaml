@@ -14,7 +14,7 @@
       plk_markup_format: markdown
       plk_protocol_version: "1"
       for: "10m"
-      summary: Prometheus remote storage is unavailable.
+      summary: Prometheus remote write endpoint is unavailable.
       description: |
         Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
 

@@ -6651,7 +6651,7 @@ alerts:
             d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
             ```
       summary: |
-        Prometheus remote storage is unavailable.
+        Prometheus remote write endpoint is unavailable.
       severity: "7"
       markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
