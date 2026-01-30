@@ -118,3 +118,17 @@ locals {
     }
   } : {}
 }
+
+# Extract locals needed for validation module
+locals {
+  namespace         = var.providerClusterConfiguration.provider.namespace
+  master_node_group = var.providerClusterConfiguration.masterNodeGroup
+  instance_class    = local.master_node_group.instanceClass
+
+  root_disk_image = {
+    kind = local.instance_class.rootDisk.image.kind
+    name = local.instance_class.rootDisk.image.name
+  }
+
+  virtual_machine_class_name = local.instance_class.virtualMachine.virtualMachineClassName
+}

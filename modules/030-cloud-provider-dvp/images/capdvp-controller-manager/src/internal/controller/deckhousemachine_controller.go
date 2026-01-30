@@ -30,7 +30,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
@@ -470,6 +472,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
+	// Validate VirtualMachineClass and image exist before creating VM
+	if err := r.validateVMResources(ctx, dvpMachine); err != nil {
+		return nil, fmt.Errorf("resource validation failed: %w", err)
+	}
+
 	var cloudInitSecretName string
 	var createdDiskNames []string
 
@@ -637,6 +644,102 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	return vm, nil
+}
+
+// validateVMResources validates that VirtualMachineClass and boot image exist in parent DVP cluster
+func (r *DeckhouseMachineReconciler) validateVMResources(
+	ctx context.Context,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) error {
+	logger := log.FromContext(ctx)
+	dvpNamespace := r.DVP.ProjectNamespace()
+
+	// Validate VirtualMachineClass exists
+	vmClassName := dvpMachine.Spec.VMClassName
+	vmClassGVK := schema.GroupVersionKind{
+		Group:   "virtualization.deckhouse.io",
+		Version: "v1alpha2",
+		Kind:    "VirtualMachineClass",
+	}
+
+	vmClass := &unstructured.Unstructured{}
+	vmClass.SetGroupVersionKind(vmClassGVK)
+	err := r.DVP.Service.GetClient().Get(ctx, client.ObjectKey{Name: vmClassName}, vmClass)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Error(err, "VirtualMachineClass not found in parent DVP cluster",
+				"vmClassName", vmClassName)
+			return fmt.Errorf("VirtualMachineClass '%s' not found in parent DVP cluster. "+
+				"Please ensure the VirtualMachineClass exists before creating VMs. "+
+				"Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses",
+				vmClassName)
+		}
+		return fmt.Errorf("failed to validate VirtualMachineClass '%s': %w", vmClassName, err)
+	}
+	logger.V(1).Info("VirtualMachineClass validated successfully", "vmClassName", vmClassName)
+
+	// Validate boot image exists
+	imageKind := dvpMachine.Spec.BootDiskImageRef.Kind
+	imageName := dvpMachine.Spec.BootDiskImageRef.Name
+
+	var imageGVK schema.GroupVersionKind
+	var imageKey client.ObjectKey
+
+	switch imageKind {
+	case "ClusterVirtualImage":
+		imageGVK = schema.GroupVersionKind{
+			Group:   "virtualization.deckhouse.io",
+			Version: "v1alpha2",
+			Kind:    "ClusterVirtualImage",
+		}
+		imageKey = client.ObjectKey{Name: imageName}
+
+		image := &unstructured.Unstructured{}
+		image.SetGroupVersionKind(imageGVK)
+		err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Error(err, "ClusterVirtualImage not found in parent DVP cluster",
+					"imageName", imageName)
+				return fmt.Errorf("ClusterVirtualImage '%s' not found in parent DVP cluster. "+
+					"Please ensure the image exists before creating VMs. "+
+					"Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages",
+					imageName)
+			}
+			return fmt.Errorf("failed to validate ClusterVirtualImage '%s': %w", imageName, err)
+		}
+
+	case "VirtualImage":
+		imageGVK = schema.GroupVersionKind{
+			Group:   "virtualization.deckhouse.io",
+			Version: "v1alpha2",
+			Kind:    "VirtualImage",
+		}
+		imageKey = client.ObjectKey{Name: imageName, Namespace: dvpNamespace}
+
+		image := &unstructured.Unstructured{}
+		image.SetGroupVersionKind(imageGVK)
+		err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				logger.Error(err, "VirtualImage not found in parent DVP cluster",
+					"imageName", imageName, "namespace", dvpNamespace)
+				return fmt.Errorf("VirtualImage '%s' not found in namespace '%s' in parent DVP cluster. "+
+					"Please ensure the image exists before creating VMs. "+
+					"Available VirtualImages can be listed with: kubectl get virtualimages -n %s",
+					imageName, dvpNamespace, dvpNamespace)
+			}
+			return fmt.Errorf("failed to validate VirtualImage '%s' in namespace '%s': %w",
+				imageName, dvpNamespace, err)
+		}
+
+	default:
+		return fmt.Errorf("unsupported boot disk image kind '%s', must be either 'ClusterVirtualImage' or 'VirtualImage'",
+			imageKind)
+	}
+
+	logger.V(1).Info("Boot disk image validated successfully", "imageKind", imageKind, "imageName", imageName)
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
