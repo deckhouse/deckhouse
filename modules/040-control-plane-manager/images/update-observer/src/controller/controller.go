@@ -45,8 +45,6 @@ const (
 	maxConcurrentReconciles = 1
 	cacheSyncTimeout        = 3 * time.Minute
 	requeueInterval         = 1 * time.Minute
-	cronRequeueInterval     = 30 * time.Minute
-	nodeListPageSize        = 50
 )
 
 type ReconcileTrigger string
@@ -141,7 +139,7 @@ func getNodeGroupPredicate() predicate.Predicate {
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			newNodeGroup, ok1 := e.ObjectNew.(*v1.NodeGroup)
-			oldNodeGroup, ok2 := e.ObjectNew.(*v1.NodeGroup)
+			oldNodeGroup, ok2 := e.ObjectOld.(*v1.NodeGroup)
 			if !ok1 || !ok2 {
 				return false
 			}
@@ -165,7 +163,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	configMap, err := r.getConfigMap(ctx)
 	if err != nil {
 		klog.Error("Failed to get configMap", err)
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
 	clusterCfg, err := r.getClusterConfiguration(ctx)
@@ -197,7 +195,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	return reconcile.Result{RequeueAfter: cronRequeueInterval}, nil
+	return reconcile.Result{}, nil
 }
 
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {

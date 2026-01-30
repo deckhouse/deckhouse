@@ -87,6 +87,42 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 						common.KubeSystemNamespace: {},
 					},
 				},
+				&corev1.Node{}: {
+					Transform: func(in any) (any, error) {
+						node, ok := in.(*corev1.Node)
+						if !ok {
+							return in, nil
+						}
+
+						stripped := &corev1.Node{}
+						stripped.Name = node.Name
+						stripped.ResourceVersion = node.ResourceVersion
+						stripped.UID = node.UID
+						stripped.Status = corev1.NodeStatus{
+							NodeInfo: corev1.NodeSystemInfo{
+								KubeletVersion: node.Status.NodeInfo.KubeletVersion,
+							},
+						}
+
+						return stripped, nil
+					},
+				},
+				&v1.NodeGroup{}: {
+					Transform: func(in any) (any, error) {
+						ng, ok := in.(*v1.NodeGroup)
+						if !ok {
+							return in, nil
+						}
+
+						stripped := &v1.NodeGroup{}
+						stripped.Name = ng.Name
+						stripped.ResourceVersion = ng.ResourceVersion
+						stripped.UID = ng.UID
+						stripped.Status.Ready = ng.Status.Ready
+
+						return stripped, nil
+					},
+				},
 			},
 		},
 		Client: client.Options{
