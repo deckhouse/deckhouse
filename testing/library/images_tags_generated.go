@@ -99,7 +99,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager133": "imageHash-cloudProviderOpenstack-cloudControllerManager133",
 		"cloudControllerManager134": "imageHash-cloudProviderOpenstack-cloudControllerManager134",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderOpenstack-cloudDataDiscoverer",
-		"terraformManagerOpenstack": "imageHash-cloudProviderOpenstack-terraformManagerOpenstack",
+		"terraformManager":          "imageHash-cloudProviderOpenstack-terraformManager",
 	},
 	"cloudProviderVcd": map[string]interface{}{
 		"capcdControllerManager":       "imageHash-cloudProviderVcd-capcdControllerManager",
