@@ -1,5 +1,5 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
-fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "aws") }}'
+fromImage: base/distroless
 git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
