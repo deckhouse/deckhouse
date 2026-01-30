@@ -1,7 +1,7 @@
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{ include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "azure") }}'
 git:
-- add: /{{ .ModulePath }}candi/cloud-providers/azure
+- add: /{{ .ModulePath }}modules/030-cloud-provider-azure/candi
   to: /deckhouse/candi/cloud-providers/azure
 import:
 - image: terraform-provider-azure
