@@ -1,0 +1,133 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: clusterobjectsgrants.projects.deckhouse.io
+spec:
+  group: projects.deckhouse.io
+  names:
+    kind: ClusterObjectsGrant
+    listKind: ClusterObjectsGrantList
+    plural: clusterobjectsgrants
+    shortNames:
+    - pgrant
+    - pgrants
+    singular: clusterobjectsgrant
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: ClusterObjectsGrant is the Schema for the clusterobjectsgrants
+          API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of ClusterObjectsGrant
+            properties:
+              clusterObjectGrantPolicies:
+                description: Policies holds a set of policy rules applied to the project
+                  that this grant is related to.
+                items:
+                  description: ApplicablePolicy is a reference to a ClusterObjectGrantPolicy
+                    that is referenced in a ClusterObjectsGrant as applicable to it.
+                  properties:
+                    allowed:
+                      description: Allowed is a list of all resource names that are
+                        granted to the project this ClusterObjectsGrant is related
+                        to.
+                      items:
+                        type: string
+                      type: array
+                    default:
+                      description: Default is an optional default resource name to
+                        apply in case the resource lacks the reference when created.
+                      type: string
+                    name:
+                      description: Name holds the reference to the ClusterObjectGrantPolicy
+                        resource.
+                      type: string
+                  required:
+                  - allowed
+                  - name
+                  type: object
+                type: array
+            required:
+            - clusterObjectGrantPolicies
+            type: object
+          status:
+            description: status defines the observed state of ClusterObjectsGrant
+            properties:
+              available:
+                additionalProperties:
+                  items:
+                    properties:
+                      default:
+                        description: |-
+                          Default is set to `true` for resources that are selected as default cluster-wide
+                          or via the `.spec.clusterObjectGrantPolicies[].default` field.
+                        type: boolean
+                      name:
+                        description: Name is the name of the resource made availeble
+                          in the project.
+                        type: string
+                      statusFields:
+                        description: 'StatusFields TODO: doc'
+                        items:
+                          properties:
+                            description:
+                              description: Descriptions holds a set of human readable
+                                descriptions of a field in diffirent languages.
+                              properties:
+                                en:
+                                  type: string
+                                ru:
+                                  type: string
+                              required:
+                              - en
+                              - ru
+                              type: object
+                            value:
+                              description: Value holds the passed-trough value of
+                                the status field from available resource.
+                              type: string
+                          required:
+                          - description
+                          - value
+                          type: object
+                        type: array
+                    required:
+                    - name
+                    type: object
+                  type: array
+                description: Available is a grouped list of objects available in project,
+                  grouped by resource kind.
+                type: object
+            required:
+            - available
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

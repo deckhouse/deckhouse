@@ -1,0 +1,40 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-objects-controller
+  namespace: d8-{{ .Chart.Name }}
+  annotations:
+    helm.sh/resource-policy: keep
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    heritage: deckhouse
+    module: {{ .Chart.Name }}
+  name: d8:multitenancy-manager:cluster-objects-controller
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: cluster-objects-controller
+    namespace: d8-{{ .Chart.Name }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:cluster-objects-grants-controller
+rules:
+- apiGroups: ["projects.deckhouse.io"]
+  resources: ["clusterobjectsgrants"]
+  verbs: ["*"]
+- apiGroups: ["projects.deckhouse.io"]
+  resources:
+  - clusterobjectsgrants/status
+  - clusterobjectsgrants/finalizers
+  verbs: ["*"]

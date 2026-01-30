@@ -1,0 +1,35 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - projects.deckhouse.io.projects.deckhouse.io
+  resources:
+  - clusterobjectgrantpolicies
+  - clusterobjectsgrants
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - projects.deckhouse.io.projects.deckhouse.io
+  resources:
+  - clusterobjectgrantpolicies/finalizers
+  - clusterobjectsgrants/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - projects.deckhouse.io.projects.deckhouse.io
+  resources:
+  - clusterobjectgrantpolicies/status
+  - clusterobjectsgrants/status
+  verbs:
+  - get
+  - patch
+  - update
