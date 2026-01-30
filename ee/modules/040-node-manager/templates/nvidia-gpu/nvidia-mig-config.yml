@@ -272,6 +272,8 @@ data:
     HOST_KUBELET_SERVICE=""
     NODE_NAME=""
     MIG_CONFIG_FILE=""
+    MIG_CONFIG_FILE_SRC=""
+    MIG_CONFIG_FILE_HOST=""
     SELECTED_MIG_CONFIG=""
     DEFAULT_GPU_CLIENTS_NAMESPACE=""
     CDI_ENABLED="false"
@@ -430,13 +432,15 @@ data:
       fi
     fi
 
+    MIG_CONFIG_FILE_SRC="${MIG_CONFIG_FILE}"
     HOST_GPU_CLIENT_SERVICES=(${HOST_GPU_CLIENT_SERVICES//,/ })
     HOST_GPU_CLIENT_SERVICES_STOPPED=()
 
     if [ "${WITH_SHUTDOWN_HOST_GPU_CLIENTS}" = "true" ]; then
       mkdir -p "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/"
       cp "/usr/bin/nvidia-mig-parted" "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/"
-      cp "${MIG_CONFIG_FILE}" "${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/config.yaml"
+      MIG_CONFIG_FILE_HOST="${HOST_ROOT_MOUNT}/${HOST_NVIDIA_DIR}/mig-manager/config.yaml"
+      cp "${MIG_CONFIG_FILE_SRC}" "${MIG_CONFIG_FILE_HOST}"
       shopt -s expand_aliases
       alias nvidia-mig-parted="chroot ${HOST_ROOT_MOUNT} ${HOST_NVIDIA_DIR}/mig-manager/nvidia-mig-parted"
       MIG_CONFIG_FILE="${HOST_NVIDIA_DIR}/mig-manager/config.yaml"
@@ -656,11 +660,20 @@ data:
 
     function wait_for_mig_config() {
       local attempt=0
-      echo "Waiting for selected MIG config '${SELECTED_MIG_CONFIG}' to appear in ${MIG_CONFIG_FILE}"
+      local cfg_file="${MIG_CONFIG_FILE}"
+      local assert_bin="nvidia-mig-parted"
+      if [ -n "${MIG_CONFIG_FILE_SRC}" ] && [ "${MIG_CONFIG_FILE_SRC}" != "${MIG_CONFIG_FILE}" ]; then
+        cfg_file="${MIG_CONFIG_FILE_SRC}"
+        assert_bin="/usr/bin/nvidia-mig-parted"
+      fi
+      echo "Waiting for selected MIG config '${SELECTED_MIG_CONFIG}' to appear in ${cfg_file}"
       while true; do
-        if [ -f "${MIG_CONFIG_FILE}" ]; then
-          nvidia-mig-parted assert --valid-config -f "${MIG_CONFIG_FILE}" -c "${SELECTED_MIG_CONFIG}" >/dev/null 2>&1
+        if [ -f "${cfg_file}" ]; then
+          ${assert_bin} assert --valid-config -f "${cfg_file}" -c "${SELECTED_MIG_CONFIG}" >/dev/null 2>&1
           if [ "${?}" = "0" ]; then
+            if [ -n "${MIG_CONFIG_FILE_HOST}" ] && [ -f "${cfg_file}" ]; then
+              cp "${cfg_file}" "${MIG_CONFIG_FILE_HOST}"
+            fi
             return 0
           fi
         fi
