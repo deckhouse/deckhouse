@@ -10,13 +10,23 @@ Dashboards are collections of charts and tables that display application perform
 They provide information about CPU usage, memory consumption, disk and network activity,
 as well as the status of Pods, controllers, nodes, and namespaces.
 
-## Built-in dashboards
+## Dashboard types
+
+DKP features preinstalled and custom dashboards, which can be created in several ways.
+
+| Dashboard type | Description |
+| ------ | -------- |
+| [Preinstalled](#preinstalled-dashboards) | Ready-to-use dashboards that are already installed in DKP. Designed to monitor the state of running applications. |
+| [Custom dashboards created using the `observability` module](#using-the-observability-module) | Custom dashboards created using the ObservabilityDashboard resource at the namespace level, with support for access control.<br><br>This is the recommended way to work with dashboards. |
+| [Custom dashboards created using GrafanaDashboardDefinition](#using-grafanadashboarddefinition) | Custom dashboards created using the GrafanaDashboardDefinition resource at the cluster level. They require elevated privileges and do not support access control.<br><br>This is a legacy approach that will be deprecated in future DKP versions. |
+
+## Preinstalled dashboards
 
 DKP users have access to a basic set of dashboards for monitoring the state of running applications.
 Dashboards are available in the [Deckhouse web UI](/modules/console/) under "Monitoring" → "Dashboards".
 
 {% alert level="info" %}
-Built-in dashboards are not available for editing.
+Preinstalled dashboards are not available for editing.
 {% endalert %}
 
 ### Ingress Nginx
@@ -52,14 +62,10 @@ Available dashboards:
 - **Admission policy engine** — metrics of the [`admission-policy-engine`](/modules/admission-policy-engine/) module,
   including information about policy checks and enforcement.
 
-## Creating custom dashboards
+## Custom dashboards
 
-Users can create their own dashboards in two ways:
-
-| Method | Description |
-| ------ | ----------- |
-| [Using the `observability` module](#using-the-observability-module) | The recommended approach. Dashboards are created using the ObservabilityDashboard resource at the namespace level with support for access control. |
-| [Using GrafanaDashboardDefinition](#using-grafanadashboarddefinition) | A deprecated approach. Dashboards are created using the GrafanaDashboardDefinition resource at the cluster level. It requires elevated permissions and does not support access control. Support for this method will be removed in future DKP versions. |
+DKP users can create custom dashboards in several ways,
+depending on the requirements for access control and the dashboard scope.
 
 ### Using the observability module
 
@@ -209,7 +215,7 @@ subjects:
 
 #### Converting dashboards from GrafanaDashboardDefinition
 
-To migrate dashboards created using the deprecated GrafanaDashboardDefinition resource
+To migrate dashboards created using the legacy GrafanaDashboardDefinition resource
 to one of the formats supported by the `observability` module, edit each dashboard manifest manually.
 Pay attention to the following key differences:
 
@@ -257,7 +263,7 @@ Conversion example:
 ### Using GrafanaDashboardDefinition
 
 {% alert level="info" %}
-This is a deprecated approach and is not recommended for new dashboards.
+This is a legacy approach and is not recommended for new dashboards.
 Support for this method will be removed in future DKP versions.
 {% endalert %}
 
