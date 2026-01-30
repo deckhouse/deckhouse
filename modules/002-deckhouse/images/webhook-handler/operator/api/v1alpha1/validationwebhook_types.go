@@ -28,8 +28,7 @@ import (
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=vwhc
 // +kubebuilder:metadata:labels="heritage=deckhouse"
-// +kubebuilder:metadata:labels="app.kubernetes.io/name=webhook-handler"
-// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
+// +kubebuilder:metadata:labels="module=deckhouse"
 
 // ValidationWebhook is the Schema for the validationwebhooks API
 type ValidationWebhook struct {

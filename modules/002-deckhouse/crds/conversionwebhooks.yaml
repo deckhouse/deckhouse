@@ -5,9 +5,8 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.18.0
   labels:
-    app.kubernetes.io/name: webhook-handler
-    app.kubernetes.io/part-of: deckhouse
     heritage: deckhouse
+    module: deckhouse
   name: conversionwebhooks.deckhouse.io
 spec:
   group: deckhouse.io

@@ -17,8 +17,8 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 var (
-	ValidationWebhookFinalizer = "validationwebhooks.deckhouse.io/finalizer"
-	ConversionWebhookFinalizer = "conversionwebhooks.deckhouse.io/finalizer"
+	ValidationWebhookFinalizer = "validationwebhooks.deckhouse.io/exist-on-fs"
+	ConversionWebhookFinalizer = "conversionwebhooks.deckhouse.io/exist-on-fs"
 )
 
 type FieldSelectorRequirement struct {
