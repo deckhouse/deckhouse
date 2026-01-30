@@ -63,11 +63,11 @@ var DefaultImagesDigests = map[string]interface{}{
 		"terraformManagerVexArtifact": "imageHash-cloudProviderDvp-terraformManagerVexArtifact",
 	},
 	"cloudProviderDynamix": map[string]interface{}{
-		"capdControllerManager":   "imageHash-cloudProviderDynamix-capdControllerManager",
-		"cloudControllerManager":  "imageHash-cloudProviderDynamix-cloudControllerManager",
-		"cloudDataDiscoverer":     "imageHash-cloudProviderDynamix-cloudDataDiscoverer",
-		"dynamixCsiDriver":        "imageHash-cloudProviderDynamix-dynamixCsiDriver",
-		"terraformManagerDynamix": "imageHash-cloudProviderDynamix-terraformManagerDynamix",
+		"capdControllerManager":  "imageHash-cloudProviderDynamix-capdControllerManager",
+		"cloudControllerManager": "imageHash-cloudProviderDynamix-cloudControllerManager",
+		"cloudDataDiscoverer":    "imageHash-cloudProviderDynamix-cloudDataDiscoverer",
+		"dynamixCsiDriver":       "imageHash-cloudProviderDynamix-dynamixCsiDriver",
+		"terraformManager":       "imageHash-cloudProviderDynamix-terraformManager",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager130": "imageHash-cloudProviderGcp-cloudControllerManager130",
