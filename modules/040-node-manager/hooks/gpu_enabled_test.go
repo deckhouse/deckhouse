@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -271,6 +272,29 @@ var _ = Describe("Modules :: nodeManager :: hooks :: gpu_enabled ::", func() {
 			Expect(workerGpuCustom.Field("metadata")).To(MatchJSON(expectedWorkerGpuCustomLabels))
 			Expect(worker.Field("metadata")).To(MatchJSON(expectedWorkerLabels))
 
+		})
+	})
+
+	Context("Custom MIG config without resolved name", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(ngsYaml + gpuNodeCustomYaml)
+			f.BindingContexts.Set(f.GenerateAfterHelmContext())
+			f.RunGoHook()
+		})
+
+		It("Must be executed successfully and compute name from custom configs", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			expectedName := resolveCustomMIGConfigName("worker-gpu-custom", []ngv1.MigCustomConfig{
+				{
+					Index: 0,
+					Slices: []ngv1.MigSliceSpec{
+						{Profile: "1g.10gb"},
+					},
+				},
+			})
+			Expect(expectedName).NotTo(BeEmpty())
+			workerGpuCustom := f.KubernetesGlobalResource("Node", "worker-gpu-custom")
+			Expect(workerGpuCustom.Field("metadata.labels.nvidia\\.com/mig\\.config").String()).To(Equal(expectedName))
 		})
 	})
 })

@@ -158,7 +158,13 @@ func setGPULabel(_ context.Context, input *go_hook.HookInput) error {
 				migConfigName := *ng.MIGConfig
 				if migConfigName == "custom" {
 					if ng.ResolvedMIGName == "" {
-						return fmt.Errorf("cannot resolve MIG config name for nodegroup %s", ng.Name)
+						if len(ng.CustomConfigs) == 0 {
+							return fmt.Errorf("cannot resolve MIG config name for nodegroup %s", ng.Name)
+						}
+						ng.ResolvedMIGName = resolveCustomMIGConfigName(ng.Name, ng.CustomConfigs)
+						if ng.ResolvedMIGName == "" {
+							return fmt.Errorf("cannot resolve MIG config name for nodegroup %s", ng.Name)
+						}
 					}
 					migConfigName = ng.ResolvedMIGName
 				}
