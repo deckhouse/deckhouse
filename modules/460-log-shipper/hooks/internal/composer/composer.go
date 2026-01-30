@@ -36,6 +36,8 @@ type Composer struct {
 	Dest   []v1alpha1.ClusterLogDestination
 }
 
+// FromInput collects ClusterLoggingConfig sources from snapshots and combines them with provided destinations.
+// Also records telemetry metrics for each custom resource found.
 func FromInput(input *go_hook.HookInput, destinations []v1alpha1.ClusterLogDestination) (*Composer, error) {
 	sourceSnap := input.Snapshots.Get("cluster_log_source")
 	namespacedSourceSnap := input.Snapshots.Get("namespaced_log_source")
@@ -78,12 +80,8 @@ func customResourceMetric(input *go_hook.HookInput, kind, name, namespace, _type
 	})
 }
 
+// Do composes the Vector configuration file from all sources and destinations.
 func (c *Composer) Do() ([]byte, error) {
-	destinationRefs, err := c.composeDestinations()
-	if err != nil {
-		return nil, err
-	}
-
 	file := NewVectorFile()
 
 	for _, s := range c.Source {
@@ -103,14 +101,9 @@ func (c *Composer) Do() ([]byte, error) {
 			Transforms: transforms,
 		}
 
-		var destinations []PipelineDestination
-
-		for _, ref := range s.Spec.DestinationRefs {
-			dst := destinationRefs[destination.ComposeName(ref)]
-
-			if dst.Destination != nil {
-				destinations = append(destinations, dst)
-			}
+		destinations, err := c.composeDestinations(s.Spec.DestinationRefs, s.Spec.Type)
+		if err != nil {
+			return nil, err
 		}
 
 		if len(destinations) > 0 {
@@ -127,26 +120,6 @@ func (c *Composer) Do() ([]byte, error) {
 	return file.ConvertToJSON()
 }
 
-func (c *Composer) composeDestinations() (map[string]PipelineDestination, error) {
-	destinationByName := make(map[string]PipelineDestination)
-
-	for _, d := range c.Dest {
-		dest := newLogDest(d.Spec.Type, d.Name, d.Spec)
-
-		transforms, err := transform.CreateLogDestinationTransforms(d.Name, d)
-		if err != nil {
-			return nil, err
-		}
-
-		destinationByName[dest.GetName()] = PipelineDestination{
-			Destination: dest,
-			Transforms:  transforms,
-		}
-	}
-
-	return destinationByName, nil
-}
-
 func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis.LogSource {
 	switch typ {
 	case v1alpha1.SourceFile:
@@ -157,22 +130,62 @@ func newLogSource(typ, name string, spec v1alpha1.ClusterLoggingConfigSpec) apis
 	return nil
 }
 
-func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec) apis.LogDestination {
+func (c *Composer) getDestinationSpecByName(name string) *v1alpha1.ClusterLogDestination {
+	for _, d := range c.Dest {
+		if d.Name == name {
+			return &d
+		}
+	}
+	return nil
+}
+
+// composeDestinations resolves destination references, creates destination instances, and applies transforms.
+func (c *Composer) composeDestinations(destinationRefs []string, sourceType string) ([]PipelineDestination, error) {
+	var destinations []PipelineDestination
+
+	for _, ref := range destinationRefs {
+		// Create destination for this specific source to ensure correct labels
+		destSpec := c.getDestinationSpecByName(ref)
+		if destSpec == nil {
+			continue
+		}
+
+		dest := newLogDest(destSpec.Spec.Type, destSpec.Name, destSpec.Spec, sourceType)
+		if dest == nil {
+			continue
+		}
+
+		transforms, err := transform.CreateLogDestinationTransforms(destSpec.Name, *destSpec, sourceType)
+		if err != nil {
+			return nil, err
+		}
+
+		destinations = append(destinations, PipelineDestination{
+			Destination: dest,
+			Transforms:  transforms,
+		})
+	}
+
+	return destinations, nil
+}
+
+// newLogDest creates a log destination instance based on the destination type.
+func newLogDest(typ, name string, spec v1alpha1.ClusterLogDestinationSpec, sourceType string) apis.LogDestination {
 	switch typ {
 	case v1alpha1.DestLoki:
-		return destination.NewLoki(name, spec)
+		return destination.NewLoki(name, spec, sourceType)
 	case v1alpha1.DestElasticsearch:
-		return destination.NewElasticsearch(name, spec)
+		return destination.NewElasticsearch(name, spec, sourceType)
 	case v1alpha1.DestLogstash:
-		return destination.NewLogstash(name, spec)
+		return destination.NewLogstash(name, spec, sourceType)
 	case v1alpha1.DestVector:
-		return destination.NewVector(name, spec)
+		return destination.NewVector(name, spec, sourceType)
 	case v1alpha1.DestKafka:
-		return destination.NewKafka(name, spec)
+		return destination.NewKafka(name, spec, sourceType)
 	case v1alpha1.DestSplunk:
-		return destination.NewSplunk(name, spec)
+		return destination.NewSplunk(name, spec, sourceType)
 	case v1alpha1.DestSocket:
-		return destination.NewSocket(name, spec)
+		return destination.NewSocket(name, spec, sourceType)
 	}
 	return nil
 }
