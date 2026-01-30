@@ -637,6 +637,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/160-multitenancy-manager/images/cluster-objects-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/160-multitenancy-manager/images/multitenancy-manager/src"
   labels:
   - "type/dependencies"
