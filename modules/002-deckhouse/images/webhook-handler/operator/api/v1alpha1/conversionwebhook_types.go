@@ -24,6 +24,9 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,shortName=cwhc
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=webhook-handler"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 
 // ConversionWebhook is the Schema for the conversionwebhooks API
 type ConversionWebhook struct {

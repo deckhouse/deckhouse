@@ -45,10 +45,6 @@ type ConversionWebhookReconciler struct {
 	PythonTemplate string
 }
 
-// +kubebuilder:rbac:groups=deckhouse.io,resources=conversionwebhooks,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=deckhouse.io,resources=conversionwebhooks/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=deckhouse.io,resources=conversionwebhooks/finalizers,verbs=update
-
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:

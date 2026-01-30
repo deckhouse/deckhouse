@@ -47,10 +47,8 @@ manifests: controller-gen yq ## Generate WebhookConfiguration, ClusterRole and C
 	@$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	@echo "Copy and update ValidationWebhook CRD..."
 	@cp ./config/crd/bases/deckhouse.io_validationwebhooks.yaml ./../../../crds/validationwebhooks.yaml
-	@$(YQ) eval '.metadata.labels.heritage = "deckhouse" | .metadata.labels.module = "deckhouse" | .metadata.labels.app = "webhook-handler"' -i ./../../../crds/validationwebhooks.yaml
 	@echo "Copy and update ConversionWebhook CRD..."
 	@cp ./config/crd/bases/deckhouse.io_conversionwebhooks.yaml ./../../../crds/conversionwebhooks.yaml
-	@$(YQ) eval '.metadata.labels.heritage = "deckhouse" | .metadata.labels.module = "deckhouse" | .metadata.labels.app = "webhook-handler"' -i ./../../../crds/conversionwebhooks.yaml
 	
 
 .PHONY: generate
