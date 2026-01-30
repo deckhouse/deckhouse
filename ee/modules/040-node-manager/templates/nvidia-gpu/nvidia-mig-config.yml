@@ -284,7 +284,6 @@ data:
     NVIDIA_CDI_HOOK_PATH=""
 
     MAX_RETRIES=20
-    MIG_CONFIG_WAIT_INTERVAL=5
 
     export SYSTEMD_LOG_LEVEL="info"
 
@@ -654,28 +653,6 @@ data:
       return 0
     }
 
-    function wait_for_mig_config() {
-      local attempt=0
-      echo "Waiting for selected MIG config '${SELECTED_MIG_CONFIG}' to appear in ${MIG_CONFIG_FILE}"
-      while true; do
-        if [ -f "${MIG_CONFIG_FILE}" ]; then
-          nvidia-mig-parted assert --valid-config -f "${MIG_CONFIG_FILE}" -c "${SELECTED_MIG_CONFIG}" >/dev/null 2>&1
-          if [ "${?}" = "0" ]; then
-            return 0
-          fi
-        fi
-
-        attempt=$(( attempt + 1 ))
-        if [ -n "${MAX_RETRIES-}" ] && [ "${attempt}" -ge "${MAX_RETRIES}" ]; then
-          echo "ERROR: selected mig-config not present: ${SELECTED_MIG_CONFIG}"
-          return 1
-        fi
-
-        echo "Selected MIG config not present yet, retry in ${MIG_CONFIG_WAIT_INTERVAL}s..."
-        sleep "${MIG_CONFIG_WAIT_INTERVAL}"
-      done
-    }
-
     function disruptive-update-approval-and-drain() {
       attempt=0
       until
@@ -795,10 +772,6 @@ data:
     fi
     echo "Current value of 'nvidia.com/gpu.deploy.nvsm=${NVSM_DEPLOYED}'"
 
-    if ! wait_for_mig_config; then
-      echo "Unable to validate the selected MIG configuration"
-      exit_failed
-    fi
     echo "Asserting that the requested configuration is present in the configuration file"
     nvidia-mig-parted assert --valid-config -f ${MIG_CONFIG_FILE} -c ${SELECTED_MIG_CONFIG}
     if [ "${?}" != "0" ]; then
