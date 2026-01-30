@@ -24,6 +24,7 @@ const (
 	HeritageLabelKey       = "heritage"
 	DeckhouseLabel         = "deckhouse"
 	K8sVersionLabelKey     = "k8s-version"
+	MaxK8sVersionLabelKey  = "max-k8s-version"
 	LastUpToDateTime       = "lastUpToDateTime"
 	LastReconciliationTime = "lastReconciliationTime"
 	CauseLabelKey          = "cause"

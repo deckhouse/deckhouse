@@ -22,6 +22,7 @@ import (
 	"time"
 	"update-observer/cluster"
 	"update-observer/common"
+	"update-observer/pkg/version"
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -124,6 +125,8 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		}
 	case ReconcileTriggerIdle:
 	}
+
+	labels[common.MaxK8sVersionLabelKey] = version.GetMax(labels[common.MaxK8sVersionLabelKey], labels[common.K8sVersionLabelKey])
 
 	configMap.SetAnnotations(annotations)
 	configMap.SetLabels(labels)

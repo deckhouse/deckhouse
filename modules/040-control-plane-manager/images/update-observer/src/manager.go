@@ -22,11 +22,13 @@ import (
 	"time"
 	"update-observer/common"
 	"update-observer/controller"
+	v1 "update-observer/pkg/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
@@ -50,6 +52,7 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(v1.AddToScheme(scheme))
 }
 
 type Manager struct {
@@ -78,9 +81,6 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		Cache: cache.Options{
 			ReaderFailOnMissingInformer: false,
 			DefaultTransform:            cache.TransformStripManagedFields(),
-			DefaultNamespaces: map[string]cache.Config{
-				common.KubeSystemNamespace: {},
-			},
 			ByObject: map[client.Object]cache.ByObject{
 				&corev1.Secret{}: {
 					Namespaces: map[string]cache.Config{
@@ -92,7 +92,6 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		Client: client.Options{
 			Cache: &client.CacheOptions{
 				DisableFor: []client.Object{
-					&corev1.Node{},
 					&corev1.Pod{},
 					&corev1.ConfigMap{},
 				},

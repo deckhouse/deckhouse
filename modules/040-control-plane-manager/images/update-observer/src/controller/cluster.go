@@ -58,28 +58,13 @@ func (r *reconciler) getClusterConfiguration(ctx context.Context) (*cluster.Conf
 }
 
 func (r *reconciler) getNodesState(ctx context.Context, desiredVersion string) (*cluster.NodesState, error) {
-	var continueToken string
-
-	var nodes []corev1.Node
-	for {
-		list := &corev1.NodeList{}
-		err := r.client.List(ctx, list, &client.ListOptions{
-			Limit:    nodeListPageSize,
-			Continue: continueToken,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to list nodes: %w", err)
-		}
-
-		nodes = append(nodes, list.Items...)
-
-		if list.Continue == "" {
-			break
-		}
-		continueToken = list.Continue
+	list := &corev1.NodeList{}
+	err := r.client.List(ctx, list)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list nodes: %w", err)
 	}
 
-	return cluster.GetNodesState(nodes, desiredVersion)
+	return cluster.GetNodesState(list.Items, desiredVersion)
 }
 
 func (r *reconciler) getControlPlaneState(ctx context.Context, desiredVersion string) (*cluster.ControlPlaneState, error) {

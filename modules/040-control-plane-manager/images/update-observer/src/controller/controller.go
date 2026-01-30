@@ -22,6 +22,8 @@ import (
 	"update-observer/cluster"
 	"update-observer/common"
 
+	v1 "update-observer/pkg/v1"
+
 	"golang.org/x/mod/semver"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
@@ -81,9 +83,24 @@ func RegisterController(manager manager.Manager) error {
 		Watches(
 			&corev1.Secret{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(
-				getSecretPredicate(),
-			),
+			builder.WithPredicates(getSecretPredicate()),
+		).
+		Watches(
+			&corev1.Node{},
+			&handler.Funcs{
+				CreateFunc: func(ctx context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				},
+				UpdateFunc: func(ctx context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				},
+				DeleteFunc: func(ctx context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				},
+				GenericFunc: func(ctx context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+				},
+			}).
+		Watches(
+			&v1.NodeGroup{},
+			&handler.EnqueueRequestForObject{},
+			builder.WithPredicates(getNodeGroupPredicate()),
 		).
 		Complete(r)
 }
@@ -104,6 +121,32 @@ func getSecretPredicate() predicate.Predicate {
 				return false
 			}
 			return secret.Name == common.SecretName
+		},
+
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+func getNodeGroupPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			newNodeGroup, ok1 := e.ObjectNew.(*v1.NodeGroup)
+			oldNodeGroup, ok2 := e.ObjectNew.(*v1.NodeGroup)
+			if !ok1 || !ok2 {
+				return false
+			}
+
+			return newNodeGroup.Status.Ready != oldNodeGroup.Status.Ready
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
