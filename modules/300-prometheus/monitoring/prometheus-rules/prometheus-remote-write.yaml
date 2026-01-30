@@ -1,8 +1,8 @@
-- name: d8.prometheus.remote_storage
+- name: d8.prometheus.remote_write
   rules:
-  - alert: PrometheusRemoteStorageUnavailable
+  - alert: PrometheusRemoteWriteEndpointUnavailable
     expr: |
-      group by(namespace, pod, service, url) (
+      group by(namespace, url) (
         prometheus_remote_storage_samples_pending{job="prometheus"} > 0
           or
         increase(prometheus_remote_storage_samples_failed_total{job="prometheus"}[1h]) > 0
@@ -18,7 +18,18 @@
       description: |
         Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
 
-        Review the Prometheus logs to see the detailed error information:
-        ```shell
-        d8 k -n {{ $labels.namespace }} logs {{ $labels.pod }} -f
-        ```
+        To troubleshoot you can:
+          1. Get list of all Prometheus pods:
+            ```shell
+            d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
+            ```
+
+            Review logs of each prometheus pod to find the detailed error information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
+            ```
+
+          2. Get logs from all Prometheus pods to find detailed information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
+            ```
