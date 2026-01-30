@@ -94,7 +94,9 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 
 		// We are forced to keep such a variable as a workaround in order to pass the tests during the build stage
 		// This variable (and this package) will be removed after the cloud provider modules are externalized
-		additionalOpenAPISchemasPaths := []string{}
+		additionalOpenAPISchemasPaths := []string{
+			"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
+		}
 
 		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
 			err := json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
