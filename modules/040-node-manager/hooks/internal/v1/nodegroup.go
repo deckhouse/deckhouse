@@ -153,7 +153,7 @@ type Mig struct {
 }
 
 type MigCustomConfig struct {
-	Index  int32          `json:"index,omitempty"`
+	Index  int32          `json:"index"`
 	Slices []MigSliceSpec `json:"slices,omitempty"`
 }
 
