@@ -206,7 +206,9 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
 			"properties.internal.properties.providerClusterConfiguration.properties.zones.items",
 			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.zones.items",
+			"properties.internal.properties.providerClusterConfiguration.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
 		},
 		"modules/035-cni-flannel/openapi/values.yaml": {
 			// ignore internal values
