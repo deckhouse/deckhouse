@@ -34,6 +34,8 @@ kind: DaemonSet
 metadata:
   name: nvidia-mig-manager
   namespace: d8-nvidia-gpu
+  annotations:
+    pod-reloader.deckhouse.io/configmap-reload: "mig-parted-config"
   {{- include "helm_lib_module_labels" (list . (dict "app" "nvidia-gpu" "component" "nvidia-mig-manager")) | nindent 2 }}
 spec:
   selector:
