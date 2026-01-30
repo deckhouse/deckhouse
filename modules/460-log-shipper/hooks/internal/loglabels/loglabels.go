@@ -81,20 +81,20 @@ func SortedMapKeys(m map[string]string) []string {
 
 // GetLokiLabels returns labels for Loki: source labels (with pod_labels for K8s) + extraLabels.
 func GetLokiLabels(sourceType string, extraLabels map[string]string) map[string]string {
-	return mergeLabels(sourceLabelsForSource(sourceType, true), extraLabels)
+	return mergeLabels(sourceLabels(sourceType, true), extraLabels)
 }
 
 // GetSplunkLabels returns indexed fields for Splunk: datetime + source labels (K8s without pod_labels) + extraLabels.
 func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[string]string {
 	result := make(map[string]string, 1+len(FilesLabels)+len(extraLabels))
 	result["datetime"] = ""
-	maps.Copy(result, mergeLabels(sourceLabelsForSource(sourceType, false), extraLabels))
+	maps.Copy(result, mergeLabels(sourceLabels(sourceType, false), extraLabels))
 	return result
 }
 
 // GetCEFExtensions returns CEF extensions map: source labels (K8s without pod_labels) + extraLabels, with message/timestamp.
 func GetCEFExtensions(sourceType string, extraLabels map[string]string) map[string]string {
-	sourceLabels := sourceLabelsForSource(sourceType, false)
+	sourceLabels := sourceLabels(sourceType, false)
 	extensions := make(map[string]string, len(sourceLabels)+len(extraLabels)+5)
 	extensions["message"] = "message"
 	extensions["timestamp"] = "timestamp"
@@ -118,7 +118,7 @@ func GetCEFExtensions(sourceType string, extraLabels map[string]string) map[stri
 	return extensions
 }
 
-func sourceLabelsForSource(sourceType string, withPodLabels bool) map[string]string {
+func sourceLabels(sourceType string, withPodLabels bool) map[string]string {
 	switch sourceType {
 	case v1alpha1.SourceFile:
 		return FilesLabels
