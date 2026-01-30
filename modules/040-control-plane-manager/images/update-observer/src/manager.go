@@ -125,12 +125,12 @@ func (c *Manager) Start(ctx context.Context) error {
 			klog.Fatalf("failed to start runtime manager: %v", err)
 		}
 	}()
-	klog.Info("runtime manager started")
+	klog.Info("Runtime manager started")
 
 	if ok := c.runtimeManager.GetCache().WaitForCacheSync(ctx); !ok {
 		return fmt.Errorf("wait for cache sync")
 	}
-	klog.Info("cache synced")
+	klog.Info("Cache synced")
 
 	return nil
 }
