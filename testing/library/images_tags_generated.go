@@ -109,7 +109,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscovererLegacy":    "imageHash-cloudProviderVcd-cloudDataDiscovererLegacy",
 		"infraControllerManager":       "imageHash-cloudProviderVcd-infraControllerManager",
 		"infraControllerManagerLegacy": "imageHash-cloudProviderVcd-infraControllerManagerLegacy",
-		"terraformManagerVcd":          "imageHash-cloudProviderVcd-terraformManagerVcd",
+		"terraformManager":             "imageHash-cloudProviderVcd-terraformManager",
 		"vcdCsiPlugin":                 "imageHash-cloudProviderVcd-vcdCsiPlugin",
 		"vcdCsiPluginLegacy":           "imageHash-cloudProviderVcd-vcdCsiPluginLegacy",
 	},
