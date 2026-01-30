@@ -80,6 +80,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"pdCsiPlugin132":            "imageHash-cloudProviderGcp-pdCsiPlugin132",
 		"pdCsiPlugin133":            "imageHash-cloudProviderGcp-pdCsiPlugin133",
 		"pdCsiPlugin134":            "imageHash-cloudProviderGcp-pdCsiPlugin134",
+		"terraformManager":          "imageHash-cloudProviderGcp-terraformManager",
 	},
 	"cloudProviderHuaweicloud": map[string]interface{}{
 		"caphcControllerManager": "imageHash-cloudProviderHuaweicloud-caphcControllerManager",
