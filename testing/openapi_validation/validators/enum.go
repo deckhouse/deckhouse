@@ -52,6 +52,10 @@ var (
 		"modules/030-cloud-provider-gcp/candi/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
 		},
+		"modules/030-cloud-provider-gcp/openapi/values.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
 		// disk types: network-ssd, network-hdd
 		"candi/cloud-providers/yandex/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
