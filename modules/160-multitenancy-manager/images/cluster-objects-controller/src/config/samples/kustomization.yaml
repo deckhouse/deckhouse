@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- projects.deckhouse.io_v1alpha1_clusterobjectgrantpolicy.yaml
+- projects.deckhouse.io_v1alpha1_clusterobjectsgrant.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
