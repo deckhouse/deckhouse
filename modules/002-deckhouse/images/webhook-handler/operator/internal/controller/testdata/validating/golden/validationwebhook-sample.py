@@ -23,8 +23,11 @@ kubernetesValidating:
     scope: '*'
 kubernetes:
 - name: services
-  apiVersion: v1
   group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: v1
   kind: Service
 """
 

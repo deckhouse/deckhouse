@@ -9,6 +9,10 @@ config = """
 configVersion: v1
 kubernetes:
 - name: cluster_config
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
   apiVersion: v1
   jqFilter: .data."cloud-provider-cluster-configuration.yaml" // ""
   kind: Secret

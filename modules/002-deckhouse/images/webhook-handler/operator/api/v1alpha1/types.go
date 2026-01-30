@@ -21,21 +21,6 @@ var (
 	ConversionWebhookFinalizer = "conversionwebhooks.deckhouse.io/finalizer"
 )
 
-type WatchEventType string
-
-const (
-	WatchEventAdded    WatchEventType = "Added"
-	WatchEventModified WatchEventType = "Modified"
-	WatchEventDeleted  WatchEventType = "Deleted"
-)
-
-type KubeEventMode string
-
-const (
-	ModeV0          KubeEventMode = "v0"          // No first Synchronization, only Event.
-	ModeIncremental KubeEventMode = "Incremental" // Send Synchronization with existed object and Event for each followed event.
-)
-
 type FieldSelectorRequirement struct {
 	Field    string `json:"field"`
 	Operator string `json:"operator"`
@@ -62,18 +47,6 @@ type Context struct {
 }
 
 type KubernetesContext struct {
-	WatchEventTypes []WatchEventType `json:"watchEvent,omitempty"`
-	// The list of events which led to a hook's execution.
-	// By default, all events are used to execute a hook: "Added", "Modified" and "Deleted".
-	ExecuteHookOnEvents []WatchEventType `json:"executeHookOnEvent,omitempty"`
-	// If `false`, Shell-operator skips the hook execution with Synchronization binding context.
-	ExecuteHookOnSynchronization bool   `json:"executeHookOnSynchronization,omitempty"`
-	WaitForSynchronization       string `json:"waitForSynchronization,omitempty"`
-	// If not set or `true`, dumps of Kubernetes resources are cached
-	// for this binding, and the snapshot includes them as object fields.
-	// Set to `false` if the hook does not rely on full objects to reduce the memory footprint.
-	KeepFullObjectsInMemory bool          `json:"keepFullObjectsInMemory,omitempty"`
-	Mode                    KubeEventMode `json:"mode,omitempty"`
 	// Is an optional group and version of object API.
 	// For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
 	ApiVersion string `json:"apiVersion,omitempty"`
@@ -97,8 +70,6 @@ type KubernetesContext struct {
 	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
 	// A name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the "main" queue.
 	Queue string `json:"queue,omitempty"`
-	// A key to include snapshots from a group of schedule and kubernetes bindings.
-	Group string `json:"group,omitempty"`
 }
 
 type JqFilter struct {

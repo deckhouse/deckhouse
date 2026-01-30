@@ -26,13 +26,6 @@ spec:
                         description: |
                           Необязательная группа и версия API объекта.
                           Например, `v1` для основных объектов (Pod и т.д.), `rbac.authorization.k8s.io/v1beta1` для ClusterRole и `monitoring.coreos.com/v1` для prometheus-operator.
-                      executeHookOnEvent:
-                        description: |
-                          Список событий, которые приводят к выполнению хука.
-                          По умолчанию все события используются для выполнения хука: "Added", "Modified" и "Deleted".
-                      executeHookOnSynchronization:
-                        description: |
-                          Если `false`, Shell-operator пропускает выполнение хука с контекстом привязки Synchronization.
                       fieldSelector:
                         properties:
                           matchExpressions:
@@ -47,9 +40,6 @@ spec:
                                 value:
                                   description: |
                                     Значение для сравнения с полем.
-                      group:
-                        description: |
-                          Ключ для включения снимков из группы привязок schedule и kubernetes.
                       includeSnapshotsFrom:
                         description: |
                           Массив имен привязок kubernetes в хуке.
@@ -58,10 +48,6 @@ spec:
                         description: |
                           Необязательный параметр, который указывает фильтрацию событий с использованием синтаксиса jq.
                           Хук будет запущен на событии "Modified" только если результат фильтра изменился после последнего события.
-                      keepFullObjectsInMemory:
-                        description: |
-                          Если не установлено или `true`, дампы ресурсов Kubernetes кешируются для этой привязки, и снимок включает их как поля объекта.
-                          Установите в `false`, если хук не полагается на полные объекты для уменьшения потребления памяти.
                       kind:
                         description: |
                           Тип отслеживаемого ресурса Kubernetes. Это поле обязательно.
@@ -92,9 +78,6 @@ spec:
                           matchLabels:
                             description: |-
                               Карта пар {ключ, значение}. Одна пара {ключ, значение} в карте `matchLabels` эквивалентна элементу `matchExpressions`, ключевое поле которого — `key`,  оператор — `In`, а массив значений содержит только «значение». Требования объединяются оператором `AND`.
-                      mode:
-                        description: |
-                          Режим работы привязки kubernetes.
                       nameSelector:
                         properties:
                           matchNames:
@@ -140,12 +123,6 @@ spec:
                       resynchronizationPeriod:
                         description: |
                           Период ресинхронизации для привязки.
-                      waitForSynchronization:
-                        description: |
-                          Время ожидания синхронизации.
-                      watchEvent:
-                        description: |
-                          Список событий для отслеживания.
                   name:
                     description: |
                       Используется для различения разных привязок во время выполнения.

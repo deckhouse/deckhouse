@@ -8,9 +8,6 @@ context:
       apiVersion: v1
       kind: Secret
       queue: "cache-cluster-config"
-      executeHookOnEvent: []
-      executeHookOnSynchronization: false
-      keepFullObjectsInMemory: false
       namespace:
         nameSelector:
           matchNames: ["kube-system"]

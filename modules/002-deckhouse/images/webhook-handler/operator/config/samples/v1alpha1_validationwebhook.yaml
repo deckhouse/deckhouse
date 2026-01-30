@@ -17,10 +17,6 @@ validationObject: # as-is as validationwebhookconfiguration
 context:
   - name: services
     kubernetes:
-      group: main
-      executeHookOnEvent: []
-      executeHookOnSynchronization: false
-      keepFullObjectsInMemory: false
       apiVersion: v1
       kind: Service
 handler:

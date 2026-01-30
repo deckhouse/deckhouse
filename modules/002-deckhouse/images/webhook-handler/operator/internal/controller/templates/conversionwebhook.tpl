@@ -11,6 +11,10 @@ configVersion: v1
 kubernetes:
 {{- range .Context}}
 - name: {{ .Name }}
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
 {{ toYaml .Kubernetes | indent 2 }}
 {{- end }}
 {{- end }}

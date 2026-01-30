@@ -17,10 +17,6 @@ validationObject:
 context:
   - name: prometheusremotewrites
     kubernetes:
-      group: main
-      executeHookOnEvent: []
-      executeHookOnSynchronization: false
-      keepFullObjectsInMemory: false
       apiVersion: deckhouse.io/v1
       kind: PrometheusRemoteWrite
       jqFilter: |

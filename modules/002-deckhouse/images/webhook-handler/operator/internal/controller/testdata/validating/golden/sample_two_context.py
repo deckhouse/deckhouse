@@ -34,6 +34,10 @@ kubernetesValidating:
     scope: Namespaced
 kubernetes:
 - name: some_node
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
   apiVersion: v1
   jqFilter: |
     { "nodeName": .metadata.name }
@@ -49,6 +53,10 @@ kubernetes:
       matchLabels:
         bar: foo
 - name: some_node
+  group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
   apiVersion: v1
   jqFilter: |
     { "nodeName": .metadata.name }

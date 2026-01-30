@@ -23,8 +23,11 @@ kubernetesValidating:
     scope: Cluster
 kubernetes:
 - name: prometheusremotewrites
-  apiVersion: deckhouse.io/v1
   group: main
+  executeHookOnEvent: []
+  executeHookOnSynchronization: false
+  keepFullObjectsInMemory: false
+  apiVersion: deckhouse.io/v1
   jqFilter: |
     {
       "name": .metadata.name,

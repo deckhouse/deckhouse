@@ -48,16 +48,6 @@ spec:
                           Is an optional group and version of object API.
                           For example, it is `v1` for core objects (Pod, etc.), `rbac.authorization.k8s.io/v1beta1` for ClusterRole and `monitoring.coreos.com/v1` for prometheus-operator.
                         type: string
-                      executeHookOnEvent:
-                        description: |-
-                          The list of events which led to a hook's execution.
-                          By default, all events are used to execute a hook: "Added", "Modified" and "Deleted".
-                        items:
-                          type: string
-                        type: array
-                      executeHookOnSynchronization:
-                        description: If `false`, Shell-operator skips the hook execution with Synchronization binding context.
-                        type: boolean
                       fieldSelector:
                         properties:
                           matchExpressions:
@@ -77,9 +67,6 @@ spec:
                         required:
                           - matchExpressions
                         type: object
-                      group:
-                        description: A key to include snapshots from a group of schedule and kubernetes bindings.
-                        type: string
                       includeSnapshotsFrom:
                         description: |-
                           An array of names of kubernetes bindings in a hook.
@@ -93,12 +80,6 @@ spec:
                           An optional parameter that specifies event filtering using jq syntax.
                           The hook will be triggered on the "Modified" event only if the filter result is changed after the last event.
                         type: string
-                      keepFullObjectsInMemory:
-                        description: |-
-                          If not set or `true`, dumps of Kubernetes resources are cached
-                          for this binding, and the snapshot includes them as object fields.
-                          Set to `false` if the hook does not rely on full objects to reduce the memory footprint.
-                        type: boolean
                       kind:
                         description: Is the type of a monitored Kubernetes resource. This field is required.
                         type: string
@@ -149,8 +130,6 @@ spec:
                             type: object
                         type: object
                         x-kubernetes-map-type: atomic
-                      mode:
-                        type: string
                       nameSelector:
                         properties:
                           matchNames:
@@ -225,12 +204,6 @@ spec:
                         type: string
                       resynchronizationPeriod:
                         type: string
-                      waitForSynchronization:
-                        type: string
-                      watchEvent:
-                        items:
-                          type: string
-                        type: array
                     required:
                       - kind
                     type: object
