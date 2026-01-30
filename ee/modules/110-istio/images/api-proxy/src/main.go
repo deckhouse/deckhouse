@@ -28,8 +28,8 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerReady(p *Proxy) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func httpHandlerReady(p *Proxy) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := p.probeClient.Get("https://kubernetes.default.svc." + os.Getenv("CLUSTER_DOMAIN") + "/version")
 		if err != nil {
 			logger.Printf("[api-proxy] Readiness probe error: %v\n", err)
@@ -38,10 +38,10 @@ func httpHandlerReady(p *Proxy) http.HandlerFunc {
 		}
 		fmt.Fprint(w, "Ok.")
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-	}
+	})
 }
 
-func httpHandlerApiProxy(p *Proxy) http.HandlerFunc {
+func httpHandlerAPIProxy(p *Proxy) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// check if request was passed by ingress
 		if len(r.TLS.PeerCertificates) == 0 {
@@ -85,8 +85,8 @@ func main() {
 
 	router := http.NewServeMux()
 	router.Handle("/healthz", http.HandlerFunc(httpHandlerHealthz))
-	router.Handle("/ready", http.HandlerFunc(httpHandlerReady(proxy)))
-	router.Handle("/", http.HandlerFunc(httpHandlerApiProxy(proxy)))
+	router.Handle("/ready", httpHandlerReady(proxy))
+	router.Handle("/", httpHandlerAPIProxy(proxy))
 
 	kubeCA, err := os.ReadFile("/etc/ssl/kube-rbac-proxy-ca.crt")
 	if err != nil {
@@ -106,7 +106,7 @@ func main() {
 		ErrorLog: logger,
 		TLSConfig: &tls.Config{
 			// Allow unauthenticated requests to probes, but check certificates from ingress.
-			// Additional subject check is in httpHandlerApiProxy func.
+			// Additional subject check is in httpHandlerAPIProxy func.
 			ClientAuth:   tls.VerifyClientCertIfGiven,
 			ClientCAs:    kubeCertPool,
 			Certificates: []tls.Certificate{*proxy.serverCert},
