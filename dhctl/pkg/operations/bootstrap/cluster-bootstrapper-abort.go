@@ -29,7 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
+	preflightnew "github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight_new/suites"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
@@ -265,10 +266,15 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 			return err
 		}
 
-		preflightChecker := preflight.NewChecker(b.NodeInterface, deckhouseInstallConfig, metaConfig, bootstrapState)
-		if err := preflightChecker.StaticSudo(ctx); err != nil {
+		staticAbortSuite := suites.NewStaticAbortSuite(suites.StaticAbortDeps{Node: b.NodeInterface})
+		preflightRunner := preflightnew.New(staticAbortSuite)
+		preflightRunner.UseCache(bootstrapState)
+		preflightRunner.SetCacheSalt(state.ConfigHash(app.ConfigPaths))
+		preflightRunner.DisableChecks(app.DisabledPreflightChecks()...)
+		if err := preflightRunner.Run(ctx, preflightnew.PhasePostInfra); err != nil {
 			return err
 		}
+
 	}
 
 	if govalue.IsNil(destroyer) {

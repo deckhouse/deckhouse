@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,14 +36,9 @@ const (
 	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
 )
 
-type PreflightChecks struct {
-	DVPValidateKubeApi bool
-}
-
 type PreparatorProviderParams struct {
-	logger          log.Logger
-	phase           DhctlPhase
-	PreflightChecks PreflightChecks
+	logger log.Logger
+	phase  DhctlPhase
 }
 
 func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
@@ -52,10 +47,6 @@ func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
 
 func (p *PreparatorProviderParams) WithPhaseBootstrap() {
 	p.WithPhase(DhctlPhaseBootstrap)
-}
-
-func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
-	p.PreflightChecks = checks
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -85,9 +76,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			return config.DummyPreparatorProvider()("")
 		case yandex.ProviderName:
 			yandexPreparator := yandex.NewMetaConfigPreparator(true).WithLogger(logger)
-			if params.phase == DhctlPhaseBootstrap {
-				yandexPreparator.EnableValidateWithNATLayout()
-			}
+			yandexPreparator.EnableValidateWithNATLayout(params.phase == DhctlPhaseBootstrap)
 			return yandexPreparator
 		case vcd.ProviderName:
 			return vcd.NewMetaConfigPreparator(vcd.MetaConfigPreparatorParams{
@@ -96,10 +85,7 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 			}, logger)
 		case dvp.ProviderName:
 			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
-			if params.phase != DhctlPhaseBootstrap {
-				return prep
-			}
-			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeApi)
+			return prep.EnableValidateKubeConfig(params.phase == DhctlPhaseBootstrap)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}
