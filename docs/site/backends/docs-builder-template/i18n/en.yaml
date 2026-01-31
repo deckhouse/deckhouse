@@ -105,7 +105,7 @@ modules_list: Modules list
 filters: Filters
 search_filter: Search by module name
 search_placeholder_text_filter: Search
-editorial_filter: Editorial
+editions_filter: Editions
 statuses_filter: Statuses
 tags_filter: Tags
 core: core
