@@ -137,8 +137,7 @@
             {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
           {{- end }}
         {{- end }}
-        <!--<a class="button-tile" data-editions="{{- $moduleStage }}" href="{{ .url }}">-->
-        <a class="button-tile" data-editions="{{ if eq .module "cert-manager"}}be{{else if eq .module "chrony" }}se{{else}}ce{{end}}" href="{{ .url }}">
+        <a class="button-tile" data-editions="{{ if eq .module "cert-manager"}}be,se-plus,ce{{else if eq .module "chrony" }}ee,cse-lite{{else}}ce{{end}}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- $stageKey := lower $moduleStage }}
