@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function markEmptyCheckboxes() {
     const availableTags = new Set();
     const availableStatuses = new Set();
-    const availableEditorial = new Set();
+    const availableEditions = new Set();
 
     Array.from(articles).forEach(article => {
       article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       });
 
-      const editorial = (article.dataset.editorial || '').trim().toLowerCase();
-      if (editorial) {
-        availableEditorial.add(editorial);
+      const editions = (article.dataset.editions || '').trim().toLowerCase();
+      if (editions) {
+        availableEditions.add(editions);
       }
     });
 
@@ -85,8 +85,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (container?.classList.contains('filter__container--tags')) {
         isAvailable = availableTags.has(checkbox.value);
-      } else if (container?.classList.contains('filter__container--editorial')) {
-        isAvailable = availableEditorial.has((checkbox.value || '').trim().toLowerCase());
+      } else if (container?.classList.contains('filter__container--editions')) {
+        isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--statuses')) {
         isAvailable = availableStatuses.has(checkbox.value);
       }
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createCheckboxes(tag) {
     if (!filterCheckboxesTags) return;
-    
+
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.id = tag;
@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createFilters() {
     if (!filterCheckboxesTags) return;
-    
+
     const tags = getTags();
     tags.forEach(tag => {
       createCheckboxes(tag);
@@ -163,12 +163,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filterCheckboxesTags) {
     createFilters();
   }
-  
+
   function resetAllFilters() {
     if (filterSearch) {
       filterSearch.value = '';
     }
-    
+
     document.querySelectorAll('.filter input[type="checkbox"]:checked').forEach(checkbox => {
       checkbox.checked = false;
     });
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
       title.classList.remove('filter-selected');
       delete title.dataset.selectedCount;
     });
-    
+
     filterArticles();
   }
 
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (selectedFiltersList) {
       selectedFiltersList.innerHTML = '';
     }
-    
+
     const checkedCheckboxes = document.querySelectorAll('.filter input[type="checkbox"]:checked');
     const query = filterSearch ? filterSearch.value.trim() : '';
 
@@ -239,8 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    const checkboxesEditorialChecked = document.querySelectorAll('.filter__container--editorial input[type="checkbox"]:checked');
-    const selectedEditorial = Array.from(checkboxesEditorialChecked).map(checkbox => checkbox.value);
+    const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked');
+    const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
     const checkboxesStatusesChecked = document.querySelectorAll('.filter__container--statuses input[type="checkbox"]:checked');
     const selectedStatuses = Array.from(checkboxesStatusesChecked).map(checkbox => checkbox.value);
@@ -251,18 +251,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const filtered = Array.from(articles).filter(article => {
       const titleElement = article.querySelector('h2');
       if (!titleElement) return false;
-      
+
       const title = titleElement.textContent.toLowerCase();
       if(query && !title.includes(query.toLowerCase())) {
         return false;
       }
 
-      if(selectedEditorial.length > 0) {
-        const articleEditorial = (article.dataset.editorial || '').trim().toLowerCase();
-        const matchesEditorial = selectedEditorial.some(editorial => {
-          return (editorial || '').trim().toLowerCase() === articleEditorial;
+      if(selectedEditions.length > 0) {
+        const articleEditions = (article.dataset.editions || '').trim().toLowerCase();
+        const matchesEditions = selectedEditions.some(editions => {
+          return (editions || '').trim().toLowerCase() === articleEditions;
         });
-        if(!matchesEditorial) {
+        if(!matchesEditions) {
           return false;
         }
       }
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const articleTags = Array.from(
           article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
         ).map(tag => tag.textContent);
-        
+
         if(!selectedTags.every(tag => articleTags.includes(tag))) {
           return false;
         }
@@ -342,20 +342,20 @@ document.addEventListener('DOMContentLoaded', () => {
   function createTooltipContent(titleText, descriptionText) {
     const container = document.createElement('div');
     container.classList.add('statuses-tooltip');
-    
+
     const title = document.createElement('p');
     title.classList.add('statuses-tooltip__title');
     title.textContent = titleText;
-    
+
     const description = document.createElement('p');
     description.classList.add('statuses-tooltip__descr');
     description.textContent = descriptionText;
-    
+
     container.appendChild(title);
     container.appendChild(description);
     return container;
   }
-  
+
   function initTooltip(selector, titleText, descriptionText) {
     const elements = document.querySelectorAll(selector);
     if (elements.length === 0) return;

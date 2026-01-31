@@ -137,7 +137,8 @@
             {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
           {{- end }}
         {{- end }}
-        <a class="button-tile" data-editorial="{{- $moduleStage }}" href="{{ .url }}">
+        <!--<a class="button-tile" data-editions="{{- $moduleStage }}" href="{{ .url }}">-->
+        <a class="button-tile" data-editions="{{ if eq .module "cert-manager"}}be{{else if eq .module "chrony" }}se{{else}}ce{{end}}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- $stageKey := lower $moduleStage }}
@@ -209,7 +210,7 @@
           </div>
         </a>
       {{- end }}
-      
+
       </div>
 
     <script type="text/javascript" src='/assets/js/tile.js?v={{ .Site.Lastmod | time.Format ":date_long" | hash.FNV32a }}'></script>

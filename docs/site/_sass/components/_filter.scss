@@ -18,7 +18,7 @@
             color: #fff;
         }
     }
-    
+
     .statuses-tooltip {
         width: 100%;
         max-width: 310px;
@@ -56,10 +56,10 @@
 
     &__container {
 
-        &--editorial, &--statuses {
+        &--editions, &--statuses {
             border-bottom: 1px solid #5E6697;
         }
-        
+
         &--title {
             color: #00122C;
             font-size: 18px;
