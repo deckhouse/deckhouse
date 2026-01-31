@@ -98,7 +98,7 @@ apiVersions:
           instanceClass:
             type: object
             description: |
-              Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+              Partial contents of the fields of the [YandexInstanceClass](cr.html#yandexinstanceclass).
             additionalProperties: false
             required: [cores, memory, imageID]
             properties:
@@ -296,7 +296,7 @@ apiVersions:
               required: [cores, memory, imageID]
               type: object
               description: |
-                Partial contents of the fields of the [YandexInstanceClass](https://deckhouse.io/modules/cloud-provider-yandex/cr.html#yandexinstanceclass).
+                Partial contents of the fields of the [YandexInstanceClass](cr.html#yandexinstanceclass).
               properties:
                 platform: *instanceClassPlatform
                 cores: *instanceClassCores

@@ -412,6 +412,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubernetesApiProxy":              "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager":        "imageHash-nodeManager-machineControllerManager",
 		"nodeFeatureDiscovery":            "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nodeGroupExporter":               "imageHash-nodeManager-nodeGroupExporter",
 		"nvidiaDcgm":                      "imageHash-nodeManager-nvidiaDcgm",
 		"nvidiaDcgmExporter":              "imageHash-nodeManager-nvidiaDcgmExporter",
 		"nvidiaDevicePlugin":              "imageHash-nodeManager-nvidiaDevicePlugin",

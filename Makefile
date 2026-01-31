@@ -194,14 +194,16 @@ lint-fix: golangci-lint ## Fix lint violations.
 # Generic function to iterate over all directories with go.mod
 # Usage: $(call iterateAllGoModules,message,command)
 define iterateAllGoModules
-	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
+	@FAILED=0; \
+	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
 		echo ""; \
 		echo "============================================================"; \
-		echo "$(1) $$dir"; \
+		echo "$(1) in $$dir"; \
 		echo "============================================================"; \
 		echo ""; \
-		(cd $$dir && $(2)); \
-	done
+		(cd $$dir && $(2)) || FAILED=1; \
+	done; \
+	exit $$FAILED
 endef
 
 .PHONY: lint-all

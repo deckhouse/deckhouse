@@ -451,7 +451,7 @@ func wrapRegex(ln string) string {
 		ln = "^" + ln
 	}
 	if !strings.HasSuffix(ln, "$") {
-		ln = ln + "$"
+		ln += "$"
 	}
 	return ln
 }

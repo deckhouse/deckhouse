@@ -6,6 +6,7 @@ linters:
   default: none
   enable:
     - copyloopvar
+    - depguard
     - dogsled
     - errcheck
     - gocritic
@@ -24,6 +25,16 @@ linters:
     - unused
     - usestdlibvars
   settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          deny:
+            - pkg: github.com/golang/mock
+              desc: "In public archive. Use 'github.com/gojuno/minimock' instead."
+            - pkg: "github.com/samber/lo"
+              desc: "This package must not be used, because of increasing cognitive complexity."
     errcheck:
       exclude-functions:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose

@@ -1,7 +1,7 @@
-{{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" }}
-{{- $subnetID := $cloudProviderValues.subnetId }}
-{{- $securityGroupID := $cloudProviderValues.securityGroupId }}
----
+{{- $cloudProviderValues := .Values.nodeManager.internal.cloudProvider.huaweicloud | required "cloudProvider.huaweicloud is required" -}}
+{{- $subnetID := $cloudProviderValues.subnetId -}}
+{{- $securityGroupID := $cloudProviderValues.securityGroupId -}}
+
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: HuaweiCloudMachineTemplate
 metadata:
@@ -27,7 +27,7 @@ spec:
       {{- end }}
       {{- if .nodeGroup.instanceClass.rootDiskType }}
       rootDiskType: {{ .nodeGroup.instanceClass.rootDiskType | quote }}
-      {{ end }}
+      {{- end }}
 
       {{- $ic := .nodeGroup.instanceClass -}}
 
@@ -35,27 +35,32 @@ spec:
       {{- $nets := list $primary -}}
 
       {{- if $ic.additionalNetworks -}}
-        {{- $nets = concat $nets $ic.additionalNetworks -}}
+      {{- $nets = concat $nets $ic.additionalNetworks -}}
       {{- end -}}
 
       {{- if $ic.subnets -}}
-        {{- $nets = concat $nets $ic.subnets -}}
+      {{- $nets = concat $nets $ic.subnets -}}
       {{- end -}}
 
+      {{- if gt (len $nets) 0 }}
       subnets:
-      {{- range $n := (uniq $nets) }}
-        - {{ $n | quote }}
+      {{- range (uniq $nets) }}
+      - {{ . | quote }}
+      {{- end }}
       {{- end }}
 
+      securityGroups:
       {{- if .nodeGroup.instanceClass.securityGroups }}
-      securityGroups: {{ prepend .nodeGroup.instanceClass.securityGroups $securityGroupID }}
+      {{- range (prepend .nodeGroup.instanceClass.securityGroups $securityGroupID) }}
+      - {{ . | quote }}
+      {{- end }}
       {{- else }}
-      securityGroups: [{{ $securityGroupID }}]
+      - {{ $securityGroupID | quote }}
       {{- end }}
       {{- if .nodeGroup.instanceClass.serverGroupID }}
       serverGroupID: {{ .nodeGroup.instanceClass.serverGroupID | quote }}
       {{- end }}
       availabilityZone: {{ .zoneName | quote }}
-      {{- if .nodeGroup.instanceClass.vipAddress}}
+      {{- if .nodeGroup.instanceClass.vipAddress }}
       vipAddress: {{ .nodeGroup.instanceClass.vipAddress | quote }}
-      {{- end}}
+      {{- end }}
