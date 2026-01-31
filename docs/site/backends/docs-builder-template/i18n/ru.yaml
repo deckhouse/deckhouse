@@ -104,7 +104,7 @@ modules_list: Список модулей
 filters: Фильтры
 search_filter: Поиск по названию модуля
 search_placeholder_text_filter: Поиск
-editorial_filter: Редакции
+editions_filter: Редакции
 statuses_filter: Статусы
 tags_filter: Теги
 core: ядро
