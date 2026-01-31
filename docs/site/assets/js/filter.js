@@ -72,7 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const editions = (article.dataset.editions || '').trim().toLowerCase();
       if (editions) {
-        availableEditions.add(editions);
+        editions.split(',').forEach(edition => {
+          const trimmedEdition = edition.trim();
+          if (trimmedEdition) {
+            availableEditions.add(trimmedEdition);
+          }
+        });
       }
     });
 
@@ -258,9 +263,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       if(selectedEditions.length > 0) {
-        const articleEditions = (article.dataset.editions || '').trim().toLowerCase();
-        const matchesEditions = selectedEditions.some(editions => {
-          return (editions || '').trim().toLowerCase() === articleEditions;
+        const articleEditionsStr = (article.dataset.editions || '').trim().toLowerCase();
+        const articleEditions = articleEditionsStr
+          ? articleEditionsStr.split(',').map(e => e.trim()).filter(e => e)
+          : [];
+        const matchesEditions = selectedEditions.some(selectedEdition => {
+          const normalizedSelected = (selectedEdition || '').trim().toLowerCase();
+          return articleEditions.includes(normalizedSelected);
         });
         if(!matchesEditions) {
           return false;
