@@ -1,5 +1,7 @@
 # fencing-agent
 
+START_MODIFICATION
+
 ## How it works
 
 The agent is designed to control Kubernetes API and to shut down a node in case of its unavailability.
