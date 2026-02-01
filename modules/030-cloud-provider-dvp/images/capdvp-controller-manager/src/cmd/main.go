@@ -226,9 +226,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.DeckhouseMachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		DVP:    cloudAPI,
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		DVP:         cloudAPI,
+		ClusterUUID: cloudConfig.ClusterUUID,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseMachine")
 		os.Exit(1)

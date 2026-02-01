@@ -51,10 +51,11 @@ if err != null {
 }
 `
 
-// SyslogK8sLabelsRule generates VRL rule to create structured-data from k8s labels
-const SyslogK8sLabelsRule Rule = `
+// SyslogLabelsRule generates VRL rule to create structured-data from source labels (k8s/file) and extra labels.
+// sourceLabels are the label keys for the current pipeline source (from loglabels.GetSyslogLabels).
+const SyslogLabelsRule Rule = `
 sd_params = []
-{{ range $label := $.k8sLabels }}
+{{ range $label := $.sourceLabels }}
 if exists(.{{$label}}) && !is_null(.{{$label}}) {
   sd_params = append(sd_params, [{{$label | printf "%q"}} + "=\"" + to_string!(.{{$label}}) + "\""])
 }
@@ -72,10 +73,7 @@ if exists(.pod_labels) && !is_null(.pod_labels) && is_object(.pod_labels) {
 .k8s_labels = if length(sd_params) > 0 {
   join!(sd_params, separator: " ")
 }
-`
 
-// SyslogExtraLabelsRule generates VRL rule to create structured-data from extraLabels
-const SyslogExtraLabelsRule Rule = `
 sd_params = []
 {{ range $key, $value := $.extraLabels }}
 if exists({{$value}}) && !is_null({{$value}}) {

@@ -16,7 +16,9 @@ Exports gauge metric with the count of successfully sent alerts.
 
 ### 003-fix-cve.patch
 
-Update dependencies
+Update dependencies to fix CVEs
+- [CVE-2025-47914](https://github.com/advisories/GHSA-f6x5-jh6r-wrfv)
+- [CVE-2025-58181](https://github.com/advisories/GHSA-j5w8-q4qc-rx2x)
 
 ### 004-hardfix_bug_with_dropped_unknown_samples.patch
 

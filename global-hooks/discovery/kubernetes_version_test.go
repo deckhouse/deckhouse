@@ -729,13 +729,11 @@ status:
 				f.BindingContexts.Set(f.KubeStateSet(podsState + endpointsState))
 				f.RunHook()
 			})
-
+			// simulate empty endpointSlices (cant get endpoints from api server)
 			Context("Removing", func() {
 				BeforeEach(func() {
-					podsState, _ := createAPIServerPodsMultiple(len(initVers)-1, "simple", map[string]string{
-						"simple": "simple",
-					})
-					f.BindingContexts.Set(f.KubeStateSet(podsState + endpointsState))
+					var emptyEndpointsState string
+					f.BindingContexts.Set(f.KubeStateSet(emptyEndpointsState))
 					f.RunHook()
 				})
 

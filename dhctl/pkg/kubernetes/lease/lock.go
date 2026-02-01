@@ -176,7 +176,9 @@ func (l *LeaseLock) startAutoRenew(ctx context.Context) {
 		case <-l.exitRenewCh:
 			return
 		case <-t.C:
+			l.lockLease.Lock()
 			lease, err := l.tryRenew(ctx, l.lease, true)
+			l.lockLease.Unlock()
 			if err == nil {
 				l.lease = lease
 				continue
@@ -254,6 +256,10 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 		return nil, fmt.Errorf("Lease is nil")
 	}
 
+	if lease.Spec.HolderIdentity == nil {
+		return nil, fmt.Errorf("Lease holder identity is nil")
+	}
+
 	if *lease.Spec.HolderIdentity != l.config.Identity {
 		return nil, getCurrentLockerError(lease)
 	}
@@ -263,7 +269,11 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 			return nil, getCurrentLockerError(lease)
 		}
 
-		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", lease.Spec.RenewTime.Time.String()))
+		renewTime := "nil"
+		if lease.Spec.RenewTime != nil {
+			renewTime = lease.Spec.RenewTime.Time.String()
+		}
+		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", renewTime))
 	}
 
 	var newLease *coordinationv1.Lease

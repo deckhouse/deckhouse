@@ -18,61 +18,26 @@ package transform
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-func SyslogK8sLabelsTransform() *DynamicTransform {
-	k8sLabels := []string{
-		"namespace",
-		"container",
-		"image",
-		"pod",
-		"node",
-		"pod_ip",
-		"stream",
-		"node_group",
-		"pod_owner",
-		"host",
-	}
+// SyslogLabelsTransform builds one remap that sets .k8s_labels and .extra_labels for syslog structured-data (RFC 5424).
+// Labels depend on the pipeline source type (KubernetesPods vs File), same as Loki/CEF/Splunk destinations.
+func SyslogLabelsTransform(sourceType string, extraLabels map[string]string) *DynamicTransform {
+	sourceKeys, extraKeys := loglabels.GetSyslogLabels(sourceType, extraLabels)
 
-	rule, err := vrl.SyslogK8sLabelsRule.Render(vrl.Args{
-		"k8sLabels": k8sLabels,
-	})
-	if err != nil {
-		return nil
-	}
-
-	return &DynamicTransform{
-		CommonTransform: CommonTransform{
-			Name:   "syslog_k8s_labels",
-			Type:   "remap",
-			Inputs: set.New(),
-		},
-		DynamicArgsMap: map[string]interface{}{
-			"source":        rule,
-			"drop_on_abort": false,
-		},
-	}
-}
-
-func SyslogExtraLabelsTransform(extraLabels map[string]string) *DynamicTransform {
-	keys := make([]string, 0, len(extraLabels))
-	for k := range extraLabels {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	fields := make(map[string]string)
-	for _, k := range keys {
+	extraFields := make(map[string]string)
+	for _, k := range extraKeys {
 		escapedKey := escapeVectorString(k)
-		fields[k] = fmt.Sprintf(".%s", escapedKey)
+		extraFields[k] = fmt.Sprintf(".%s", escapedKey)
 	}
 
-	rule, err := vrl.SyslogExtraLabelsRule.Render(vrl.Args{
-		"extraLabels": fields,
+	rule, err := vrl.SyslogLabelsRule.Render(vrl.Args{
+		"sourceLabels": sourceKeys,
+		"extraLabels":  extraFields,
 	})
 	if err != nil {
 		return nil
@@ -80,7 +45,7 @@ func SyslogExtraLabelsTransform(extraLabels map[string]string) *DynamicTransform
 
 	return &DynamicTransform{
 		CommonTransform: CommonTransform{
-			Name:   "syslog_extra_labels",
+			Name:   "syslog_labels",
 			Type:   "remap",
 			Inputs: set.New(),
 		},

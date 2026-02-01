@@ -26,7 +26,6 @@ const (
 	ConditionReasonRender           status.ConditionReason = "RenderFailed"
 	ConditionReasonCheckChart       status.ConditionReason = "CheckChart"
 	ConditionReasonCreateValuesFile status.ConditionReason = "CreateValuesFile"
-	ConditionReasonRuntimeValues    status.ConditionReason = "MarshalRuntimeValues"
 	ConditionReasonCheckRelease     status.ConditionReason = "CheckRelease"
 	ConditionReasonInstallChart     status.ConditionReason = "InstallChart"
 )
@@ -67,20 +66,6 @@ func newCreateValuesError(err error) error {
 				Type:    status.ConditionHelmApplied,
 				Status:  metav1.ConditionFalse,
 				Reason:  ConditionReasonCreateValuesFile,
-				Message: err.Error(),
-			},
-		},
-	}
-}
-
-func newMarshalRuntimeValuesError(err error) error {
-	return &status.Error{
-		Err: err,
-		Conditions: []status.Condition{
-			{
-				Type:    status.ConditionHelmApplied,
-				Status:  metav1.ConditionFalse,
-				Reason:  ConditionReasonRuntimeValues,
 				Message: err.Error(),
 			},
 		},

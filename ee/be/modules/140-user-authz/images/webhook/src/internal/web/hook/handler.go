@@ -81,7 +81,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(respData)
+	if _, err := w.Write(respData); err != nil {
+		h.logger.Printf("failed to write response: %v", err)
+	}
 
 	h.logger.Printf("response body: %s", respData)
 }
@@ -424,7 +426,7 @@ func wrapRegex(ln string) string {
 	}
 
 	if !strings.HasSuffix(ln, "$") {
-		ln = ln + "$"
+		ln += "$"
 	}
 
 	return ln

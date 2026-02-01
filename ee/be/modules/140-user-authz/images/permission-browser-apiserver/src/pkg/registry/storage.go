@@ -51,6 +51,7 @@ func NewBulkSARStorage(auth authorizer.Authorizer) *BulkSARStorage {
 	}
 }
 
+//nolint:misspell // Creater is the correct interface name in k8s.io/apiserver
 var _ rest.Creater = &BulkSARStorage{}
 var _ rest.Scoper = &BulkSARStorage{}
 var _ rest.Storage = &BulkSARStorage{}

@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"strings"
 
-	"dvp-common/api"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+
+	"dvp-common/api"
 )
 
 func (c *Cloud) GetLoadBalancer(
@@ -104,6 +105,10 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 		Name:    lbName,
 		Service: service,
 		Nodes:   nodes,
+		ServiceLabels: map[string]string{
+			"deckhouse.io/managed-by":       "deckhouse",
+			"dvp.deckhouse.io/cluster-uuid": c.config.ClusterUUID,
+		},
 	}
 
 	svc, err := c.dvpService.LoadBalancerService.CreateOrUpdateLoadBalancer(ctx, lb)
