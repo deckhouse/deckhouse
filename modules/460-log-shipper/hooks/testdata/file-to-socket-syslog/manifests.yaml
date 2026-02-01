@@ -23,6 +23,5 @@ spec:
     encoding:
       codec: Syslog
   extraLabels:
-    environment: production
-    team: platform
+    env: prod
     test: "{{ test }}"
