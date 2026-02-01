@@ -134,7 +134,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
 
     end
 
-    # This data is a merged data from the repo/editions.yaml, docs/documentation/_data/modules/editions-addition.json and docs/documentation/_data/modules/be-addition.json files.
+    # This data is a merged data from the repo/editions.yaml, docs/documentation/_data/modules/editions-addition.json.
     site.data['editions'].each do |edition, editionData|
       editions = editions | [edition] if editionData.has_key?("includeModules") && editionData['includeModules'].include?(moduleName)
       editions.delete(edition) if editionData.has_key?("excludeModules") && editionData['excludeModules'].include?(moduleName)
