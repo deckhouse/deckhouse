@@ -20,3 +20,42 @@ moduleAllowedStages:
 - Preview
 - General Availability
 - Deprecated
+
+# It is used for sorting editions (e.g. to calculate editions list from minimal available one)
+editions:
+  - id: "ce"
+    name: "CE"
+    title: "Community Edition"
+    weight: 1
+  - id: "be"
+    name: "BE"
+    title: "Basic Edition"
+    weight: 2
+  - id: "se"
+    name: "SE"
+    title: "Standard Edition"
+    weight: 3
+  - id: "se-plus"
+    name: "SE+"
+    title: "Standard Edition+"
+    weight: 4
+  - id: "ee"
+    name: "EE"
+    title: "Enterprise Edition"
+    weight: 7
+  - id: "cse-lite"
+    name: "CSE Lite"
+    name_version: "CSE Lite (1.67)"
+    title: "Certified Security Edition Lite (1.67)"
+    title_version: "Certified Security Edition Lite"
+    weight: 14
+    languages:
+      - "ru"
+  - id: "cse-pro"
+    name: "CSE Pro"
+    name_version: "CSE Pro (1.67)"
+    title: "Certified Security Edition Pro"
+    title_version: "Certified Security Edition Pro (1.67)"
+    weight: 15
+    languages:
+      - "ru"

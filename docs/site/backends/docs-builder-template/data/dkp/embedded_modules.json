@@ -1,35 +1,6 @@
 {
   "entries": [
     {
-      "title": "The csi-vsphere module",
-      "description": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
-      "module": "csi-vsphere",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "storage"
-      ],
-      "editionMinimumAvailable": "se-plus",
-      "url": "csi-vsphere/",
-      "ru": {
-        "title": "Модуль csi-vsphere",
-        "description": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
-      },
-      "metadata": {
-        "name": "csi-vsphere",
-        "stage": "General Availability",
-        "subsystems": [
-          "infrastructure"
-        ],
-        "namespace": "d8-csi-vsphere",
-        "descriptions": {
-            "en": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
-            "ru": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
-        },
-        "oss": []
-      }
-    },
-    {
       "title": "The admission-policy-engine module",
       "description": "Deckhouse admission-policy-engine module enforces the security policies in a Kubernetes cluster according to the Kubernetes Pod Security Standards.",
       "module": "admission-policy-engine",
@@ -52,7 +23,6 @@
           "security"
         ],
         "namespace": "d8-admission-policy-engine",
-        "description": "Admission policy engine module\n",
         "descriptions": {
           "en": "Enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.",
           "ru": "Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes с использованием решения Gatekeeper."
@@ -284,7 +254,7 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-provider-dvp",
-        "stage": "Experimental",
+        "stage": "General Availability",
         "descriptions": {
           "en": "Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.",
           "ru": "Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов."
@@ -316,7 +286,7 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-provider-dynamix",
-        "stage": "Experimental",
+        "stage": "Preview",
         "descriptions": {
           "en": "Manages interaction with Dynamix resources. Allows to use Dynamix resources for provisioning nodes.",
           "ru": "Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов."
@@ -378,7 +348,7 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-provider-huaweicloud",
-        "stage": "Experimental",
+        "stage": "General Availability",
         "descriptions": {
           "en": "Manages interaction with Huawei Cloud resources. Allows to use Huawei Cloud resources for provisioning nodes.",
           "ru": "Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов."
@@ -440,7 +410,7 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-provider-vcd",
-        "stage": "Experimental",
+        "stage": "General Availability",
         "descriptions": {
           "en": "Manages interaction with VMware Cloud Director resources. Allows to use VMware Cloud Director resources for provisioning nodes.",
           "ru": "Управляет взаимодействием с облачными ресурсами VMware Cloud Director. Позволяет использовать ресурсы VMware Cloud Director при создании узлов."
@@ -535,7 +505,7 @@
           "infrastructure"
         ],
         "namespace": "d8-cloud-provider-zvirt",
-        "stage": "Experimental",
+        "stage": "General Availability",
         "descriptions": {
           "en": "Manages interaction with zVirt resources. Allows to use zVirt resources for provisioning nodes.",
           "ru": "Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов."
@@ -697,6 +667,36 @@
             "license": "Apache License 2.0"
           }
         ]
+      }
+    },
+    {
+      "title": "The csi-vsphere module",
+      "description": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
+      "module": "csi-vsphere",
+      "embedded": "true",
+      "tags": [
+        "embedded",
+        "storage"
+      ],
+      "editionMinimumAvailable": "se-plus",
+      "url": "csi-vsphere/",
+      "ru": {
+        "title": "Модуль csi-vsphere",
+        "description": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
+      },
+      "metadata": {
+        "name": "csi-vsphere",
+        "weight": 30,
+        "subsystems": [
+          "infrastructure"
+        ],
+        "namespace": "d8-csi-vsphere",
+        "stage": "General Availability",
+        "descriptions": {
+          "en": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
+          "ru": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
+        },
+        "oss": []
       }
     },
     {
@@ -967,7 +967,7 @@
     },
     {
       "title": "The ingress-nginx module",
-      "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using NGINX Ingress controller.",
+      "description": "HTTP/HTTPS traffic balancing and termination in the Deckhouse Kubernetes Platform cluster using Ingress NGINX Controller.",
       "module": "ingress-nginx",
       "embedded": "true",
       "tags": [
@@ -979,7 +979,7 @@
       "url": "ingress-nginx/",
       "ru": {
         "title": "Модуль ingress-nginx",
-        "description": "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью NGINX Ingress controller."
+        "description": "Балансировка и терминация трафика HTTP/HTTPS в кластере Deckhouse Kubernetes Platform с помощью Ingress NGINX Controller."
       },
       "metadata": {
         "name": "ingress-nginx",
@@ -1375,6 +1375,40 @@
       }
     },
     {
+      "title": "The monitoring-deckhouse module",
+      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+      "module": "monitoring-deckhouse",
+      "embedded": "true",
+      "tags": [
+        "embedded",
+        "observability"
+      ],
+      "editionMinimumAvailable": "ce",
+      "url": "monitoring-deckhouse/",
+      "ru": {
+        "title": "Модуль monitoring-deckhouse",
+        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+      },
+      "metadata": {
+        "name": "monitoring-deckhouse",
+        "stage": "General Availability",
+        "subsystems": [
+          "observability"
+        ],
+        "namespace": "d8-monitoring",
+        "descriptions": {
+          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+        },
+        "requirements": {
+          "modules": {
+            "prometheus": ">= 0.0.0"
+          }
+        },
+        "oss": []
+      }
+    },
+    {
       "title": "The monitoring-kubernetes module",
       "description": "Basic monitoring of cluster nodes in Deckhouse Kubernetes Platform.",
       "module": "monitoring-kubernetes",
@@ -1446,6 +1480,8 @@
         ],
         "namespace": "d8-monitoring",
         "requirements": {
+          "kubernetes": ">= 1.22.0",
+          "deckhouse": ">= 1.22.0",
           "modules": {
             "prometheus": ">= 0.0.0",
             "control-plane-manager": ">= 0.0.0"
@@ -1810,43 +1846,6 @@
       }
     },
     {
-      "title": "The operator-trivy module",
-      "description": "Periodic scanning for vulnerabilities in a Deckhouse Kubernetes Platform cluster.",
-      "module": "operator-trivy",
-      "embedded": "true",
-      "tags": [
-        "embedded",
-        "security"
-      ],
-      "editionMinimumAvailable": "ee",
-      "url": "operator-trivy/",
-      "ru": {
-        "title": "Модуль operator-trivy",
-        "description": "Периодическое сканирование на уязвимости в кластере Deckhouse Kubernetes Platform."
-      },
-      "metadata": {
-        "name": "operator-trivy",
-        "stage": "General Availability",
-        "subsystems": [
-          "security"
-        ],
-        "namespace": "d8-operator-trivy",
-        "descriptions": {
-          "en": "Allows you to run a regular vulnerability scans of user images in runtime on known CVEs.",
-          "ru": "Позволяет запускать регулярную проверку пользовательских образов в runtime на известные CVE, включая уязвимости Astra Linux, Redos и ALT Linux. Для сканирования используются публичные базы уязвимостей, обогащаемые базами Astra Linux, ALT Linux и РЕД ОС."
-        },
-        "oss": [
-          {
-            "name": "Trivy Operator",
-            "link": "https://github.com/aquasecurity/trivy-operator",
-            "description": "The Trivy-Operator leverages trivy security tools by incorporating their outputs into Kubernetes CRDs (Custom Resource Definitions) and from there, making security reports accessible through the Kubernetes API. This way users can find and view the risks that relate to different resources in what we call a Kubernetes-native way.",
-            "logo": "/images/logos/trivy.svg",
-            "license": "<a href=\"https://github.com/aquasecurity/trivy-operator/blob/v0.11.1/LICENSE\" target=\"_blank\">Apache License 2.0</a>"
-          }
-        ]
-      }
-    },
-    {
       "title": "The Prometheus monitoring module",
       "type": [
         "instruction"
@@ -2077,6 +2076,37 @@
             "license": "Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)"
           }
         ]
+      }
+    },
+    {
+      "title": "The registry-packages-proxy module",
+      "description": "Internal registry packages proxy for optimizing access to registry packages.",
+      "module": "registry-packages-proxy",
+      "embedded": "true",
+      "tags": [
+        "core",
+        "embedded"
+      ],
+      "editionMinimumAvailable": "ce",
+      "url": "registry-packages-proxy/",
+      "ru": {
+        "title": "Модуль registry-packages-proxy",
+        "description": "Внутренний прокси-сервер пакетов registry."
+      },
+      "metadata": {
+        "name": "registry-packages-proxy",
+        "critical": true,
+        "weight": 39,
+        "subsystems": [
+          "infrastructure"
+        ],
+        "namespace": "d8-cloud-instance-manager",
+        "descriptions": {
+          "en": "Internal registry packages proxy.",
+          "ru": "Внутренний прокси-сервер пакетов registry."
+        },
+        "stage": "General Availability",
+        "oss": []
       }
     },
     {
