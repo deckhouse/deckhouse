@@ -55,7 +55,6 @@
 {{- $channelsInfo := .Site.Data.channels.info }}
 {{- $modulesList := slice }}
 {{- $embeddedModulesList := .Site.Data.dkp.embedded_modules.entries }}
-{{/*- $embeddedModulesMetadata := .Site.Data.dkp.embedded_modules_metadata.modules */}}
 {{- $embeddedModulesEditionsGlobal := .Site.Data.dkp.editions }}
 {{- $modulesEditions := .Site.Data.modules_all }}
 {{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
@@ -142,7 +141,6 @@
           {{- end }}
         {{- end }}
 
-        {{/* add commercial or community edition tag */}}
         {{- $tags := .tags }}
 
         {{- $moduleEditionsData := slice }}
