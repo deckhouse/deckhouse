@@ -92,16 +92,10 @@ func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[strin
 	return result
 }
 
-// GetSyslogLabelKeys returns sorted label keys for syslog structured-data (source labels without pod_labels; pod_labels are expanded in VRL).
-func GetSyslogLabelKeys(sourceType string) []string {
-	return SortedMapKeys(sourceLabels(sourceType, false))
-}
-
-// GetSyslogLabels returns label keys for syslog structured-data depending on source type and extraLabels.
-// Same pattern as GetLokiLabels/GetCEFExtensions: source labels (K8s or File) + extra labels.
-// Returns sourceKeys (for .k8s_labels, from source) and extraKeys (for .extra_labels), both sorted.
-func GetSyslogLabels(sourceType string, extraLabels map[string]string) (sourceKeys []string, extraKeys []string) {
-	return GetSyslogLabelKeys(sourceType), SortedMapKeys(extraLabels)
+// GetSyslogLabels returns sorted label keys for syslog (for deterministic VRL order).
+// Same pattern as GetLokiLabels/GetSplunkLabels: uses mergeLabels(source + extra).
+func GetSyslogLabels(sourceType string, extraLabels map[string]string) []string {
+	return SortedMapKeys(mergeLabels(sourceLabels(sourceType, false), extraLabels))
 }
 
 // GetCEFExtensions returns CEF extensions map: source labels (K8s without pod_labels) + extraLabels, with message/timestamp.

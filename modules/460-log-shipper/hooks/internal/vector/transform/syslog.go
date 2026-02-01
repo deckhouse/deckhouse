@@ -17,27 +17,18 @@ limitations under the License.
 package transform
 
 import (
-	"fmt"
-
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/vrl"
 )
 
-// SyslogLabelsTransform builds one remap that sets .k8s_labels and .extra_labels for syslog structured-data (RFC 5424).
-// Labels depend on the pipeline source type (KubernetesPods vs File), same as Loki/CEF/Splunk destinations.
+// SyslogLabelsTransform builds one remap that sets .sd_labels [name="value" ...] for syslog RFC 5424.
+// Uses loglabels.GetSyslogLabels (mergeLabels + sorted keys, like other destinations).
 func SyslogLabelsTransform(sourceType string, extraLabels map[string]string) *DynamicTransform {
-	sourceKeys, extraKeys := loglabels.GetSyslogLabels(sourceType, extraLabels)
-
-	extraFields := make(map[string]string)
-	for _, k := range extraKeys {
-		escapedKey := escapeVectorString(k)
-		extraFields[k] = fmt.Sprintf(".%s", escapedKey)
-	}
+	labels := loglabels.GetSyslogLabels(sourceType, extraLabels)
 
 	rule, err := vrl.SyslogLabelsRule.Render(vrl.Args{
-		"sourceLabels": sourceKeys,
-		"extraLabels":  extraFields,
+		"labels": labels,
 	})
 	if err != nil {
 		return nil
