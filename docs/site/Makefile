@@ -50,7 +50,6 @@ regenerate-metadata: ## Regenerate embedded modules metadata file
 		docker cp d8-docs-artifacts:/export/embedded_modules_metadata.json backends/docs-builder-template/data/dkp/
 		docker rm -f d8-docs-artifacts
 
-
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
