@@ -107,6 +107,7 @@
 {{- end}}
 
 {{- warnf "Found %d modules from sources." ($modulesList | len) }}
+
 {{- if $embeddedModulesList }}
   {{- warnf "Found %d embedded modules." ( $embeddedModulesList | len) }}
   {{- $filteredEmbeddedModules := slice }}
@@ -123,8 +124,12 @@
   {{- warnf "No embedded modules found!" }}
 {{- end }}
 
+{{- warnf "$modulesList - %s" ($modulesList | jsonify ) }}
+modulesList-
+<pre>{{- $modulesList | jsonify }}</pre>
+
       <div class="block__tile">
-        {{- range (sort $modulesList "module" "asc") }}
+      {{- range (sort $modulesList "module" "asc") }}
         {{- $moduleStage := "" }}
         {{- $moduleDescription := default "" .description }}
 
@@ -137,7 +142,45 @@
             {{- $moduleDescription = index $moduleMetadataDescriptions $lang }}
           {{- end }}
         {{- end }}
-        <a class="button-tile" data-editions="{{ if eq .module "cert-manager"}}be,se-plus,ce{{else if eq .module "chrony" }}ee,cse-lite{{else}}ce{{end}}" href="{{ .url }}">
+
+        {{/* add commercial or community edition tag */}}
+        {{- $tags := .tags }}
+
+        {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
+        {{- $editionTagTitle := "" }}
+
+        {{- $moduleEditionsData := slice }}
+
+        {{- if gt (where $embeddedModulesList "module" .module | len ) 0 }}
+          {{- $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
+          {{- if or
+             (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+             (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+             (in (index $moduleEditionsData "editions") "ce")
+          }}
+            {{- $editionTagTitle = T "community_edition_en" }}
+          {{- else }}
+            {{- $editionTagTitle = T "commercial_editions_en" }}
+          {{- end }}
+        {{- else if isset $modulesEditions .module }}
+          {{- $moduleEditionsData := index $modulesEditions .module }}
+          {{- if or
+               (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
+               (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
+               (in (index $moduleEditionsData "editions") "ce")
+          }}
+            {{- $editionTagTitle = T "community_edition_en" }}
+          {{- else }}
+            {{- $editionTagTitle = T "commercial_editions_en" }}
+          {{- end }}
+        {{- end }}
+
+        {{- if gt ($editionTagTitle | len ) 0 }}
+          {{/* $tags = $tags | append $editionTagTitle */}}
+        {{- end }}
+
+        <a class="button-tile" data-editions="{{ .editions }}" href="{{ .url }}">
+        <!-- <a class="button-tile" data-editions="{{ if eq .module "cert-manager"}}be,se-plus,ce{{else if eq .module "chrony" }}ee,cse-lite{{else}}ce{{end}}" href="{{ .url }}"> -->
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- $stageKey := lower $moduleStage }}
@@ -158,43 +201,10 @@
           <div class="button-tile__bottom">
             <div class="button-tile__tags">
 
-              {{/* add commercial or community edition tag */}}
-              {{- $tags := .tags }}
-
-              {{/* Maybe we need to set community editions by default instead of not setting any edition tag */}}
-              {{- $editionTagTitle := "" }}
-
-              {{- $moduleEditionsData := slice }}
-
-              {{- if gt (where $embeddedModulesList "module" .module | len ) 0 }}
-                {{- $moduleEditionsData = index (where $embeddedModulesList "module" .module ) 0 }}
-                {{- if or
-                   (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
-                   (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
-                   (in (index $moduleEditionsData "editions") "ce")
-                }}
-                  {{- $editionTagTitle = T "community_edition_en" }}
-                {{- else }}
-                  {{- $editionTagTitle = T "commercial_editions_en" }}
-                {{- end }}
-              {{- else if isset $modulesEditions .module }}
-                {{- $moduleEditionsData := index $modulesEditions .module }}
-                {{- if or
-                     (eq (index $moduleEditionsData "editionMinimumAvailable") "ce")
-                     (in (index $moduleEditionsData "editionsWithRestrictions") "ce")
-                     (in (index $moduleEditionsData "editions") "ce")
-                }}
-                  {{- $editionTagTitle = T "community_edition_en" }}
-                {{- else }}
-                  {{- $editionTagTitle = T "commercial_editions_en" }}
-                {{- end }}
-              {{- end }}
-
-              {{- if gt ($editionTagTitle | len ) 0 }}
-                {{- $tags = $tags | append $editionTagTitle }}
-              {{- end }}
-
               {{- range $tags }}
+                {{ if eq . "embedded" }}
+                  {{ continue }}
+                {{ end }}
                 <span class="sidebar__badge--container"><span class="sidebar__badge_v2">{{ . }}</span></span>
               {{- end }}
 

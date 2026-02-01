@@ -4,7 +4,7 @@
 @use "components/common/_variables.scss";
 
 
-.navigation__container { 
+.navigation__container {
   position: sticky;
   display: flex;
   flex-direction: row;
@@ -492,7 +492,7 @@
               color: #fff;
           }
       }
-      
+
       .statuses-tooltip {
           width: 100%;
           max-width: 310px;
@@ -544,7 +544,7 @@
             font-weight: 400;
             line-height: 24px;
             letter-spacing: 0.3px;
-            text-transform: capitalize;
+            //text-transform: capitalize;
 
             .remove__filter {
               width: 16px;
@@ -1867,7 +1867,7 @@ ul .resources__prop_name.deprecated {
 
     &-download {
       margin-left: auto;
-      
+
       & svg {
         fill: none;
         stroke: #3C4043;
