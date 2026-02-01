@@ -11,8 +11,11 @@ import:
   to: /app/server
   before: setup
 - image: d8-docs-artifacts
-  add: /export/embedded_modules.json
-  to: /app/hugo-init/data/dkp/embedded_modules.json
+  add: /export
+  to: /app/hugo-init/data/dkp
+  includePaths:
+    - embedded_modules.json
+    - editions.json
   before: setup
 imageSpec:
   config:
@@ -25,6 +28,7 @@ git:
     excludePaths:
     - config/production/
     - data/dkp/embedded_modules.json
+    - data/dkp/editions.json
   - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/modules-docs/hugo.yaml
     to: /app/hugo-init/config/production/hugo.yaml
 {{- include "image mount points" . | nindent 2 }}
@@ -83,6 +87,10 @@ shell:
       echo "Got ${MODULES_COUNT} DKP embedded modules."
       echo
     fi
+
+    cd /rawdata/docs
+    {{ .Files.Get (printf "%sdocs/documentation/werf-editions-convert-partials.inc.yaml" .ModulePath) | indent 4 }}
+    cp /rawdata/docs/editions.json /export/editions.json
 import:
 - image: tools/jq
   add: /usr/bin/jq
@@ -108,6 +116,10 @@ git:
   - ee/**/module.yaml
   - modules/**/oss.yaml
   - ee/**/oss.yaml
+- add: /editions.yaml
+  to: /rawdata/docs/editions-repo-data.yaml
+  stageDependencies:
+    setup: ['**/*']
 - add: /{{ .ModulePath }}/docs/documentation/_data/modules
   to: /rawdata/docs/modules
   stageDependencies:
@@ -115,6 +127,7 @@ git:
   includePaths:
   - embedded_modules_tags.json
   - excluded_modules.json
+  - editions-addition.json
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 fromImage: builder/golang-alpine

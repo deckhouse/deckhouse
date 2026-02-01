@@ -7,7 +7,12 @@
     "name": "BE",
     "title": "Basic Edition",
     "excludeModules": [
-      "sds-replicated-volume"
+      "sds-replicated-volume",
+      "sds-node-configurator",
+      "sds-local-volume",
+      "virtualization",
+      "csi-ceph",
+      "csi-nfs"
     ]
   },
   "se": {
