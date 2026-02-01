@@ -2379,6 +2379,7 @@ spec:
                       type: string
                       enum:
                         - "Watchdog"
+                        - "Dryrun"
                       description: |
                         Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
 
@@ -2391,8 +2392,13 @@ spec:
                           A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
 
                         - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
-
-
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                      required:
+                        - timeout
               oneOf:
                 - properties:
                     nodeType:

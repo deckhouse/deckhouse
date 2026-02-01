@@ -75,8 +75,12 @@ spec:
           env:
             - name: LOG_LEVEL
               value: info
+            - name: FENCING_MODE
+              value: {{ $ng.fencing.mode | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
+            - name: WATCHDOG_TIMEOUT
+              value: {{ $ng.fencing.watchdog.timeout | default "1m" }}
             - name: NODE_NAME
               valueFrom:
                 fieldRef:

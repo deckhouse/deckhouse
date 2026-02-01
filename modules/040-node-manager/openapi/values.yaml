@@ -395,8 +395,11 @@ properties:
               properties:
                 mode:
                   type: string
-                  enum:
-                    - "Watchdog"
+                watchdog:
+                  type: object
+                  properties:
+                    timeout:
+                      type: string
         x-examples:
           - - name: worker
               instanceClass: # minimum
