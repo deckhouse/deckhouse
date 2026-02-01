@@ -434,11 +434,16 @@ func (k Kubelet) IsEmpty() bool {
 
 type Fencing struct {
 	// Set custom settings for fencing controller
-	Mode string `json:"mode,omitempty"`
+	Mode     string           `json:"mode,omitempty"`
+	Watchdog *FencingWatchdog `json:"watchdog,omitempty"`
 }
 
 func (f Fencing) IsEmpty() bool {
 	return f.Mode == ""
+}
+
+type FencingWatchdog struct {
+	Timeout string `json:"timeout,omitempty"`
 }
 
 type NodeGroupConditionType string
