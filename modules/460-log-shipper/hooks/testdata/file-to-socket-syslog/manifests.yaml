@@ -25,4 +25,4 @@ spec:
   extraLabels:
     environment: production
     team: platform
-    required_id: "{{ request_id }}"
+    test: "{{ test }}"

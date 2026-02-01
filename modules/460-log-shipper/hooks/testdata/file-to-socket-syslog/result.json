@@ -13,7 +13,7 @@
       "inputs": [
         "transform/File/source/test-source/02_clean_up_file"
       ],
-      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.environment=\"production\" \n if exists(.parsed_data.request_id) { .required_id=.parsed_data.request_id } \n .team=\"platform\"",
+      "source": "if !exists(.parsed_data) {\n    structured, err = parse_json(.message)\n    if err == null {\n        .parsed_data = structured\n    } else {\n        .parsed_data = .message\n    }\n}\n\n.environment=\"production\" \n .team=\"platform\" \n if exists(.parsed_data.test) { .test=.parsed_data.test }",
       "type": "remap"
     },
     "transform/File/destination/syslog-dest/01_syslog_labels": {
@@ -21,7 +21,7 @@
       "inputs": [
         "transform/File/destination/syslog-dest/00_extra_fields"
       ],
-      "source": "sd_params = []\n\nif exists(.environment) \u0026\u0026 !is_null(.environment) {\n  sd_params = append(sd_params, [\"environment\" + \"=\\\"\" + to_string!(.environment) + \"\\\"\"])\n}\nif exists(.file) \u0026\u0026 !is_null(.file) {\n  sd_params = append(sd_params, [\"file\" + \"=\\\"\" + to_string!(.file) + \"\\\"\"])\n}\nif exists(.host) \u0026\u0026 !is_null(.host) {\n  sd_params = append(sd_params, [\"host\" + \"=\\\"\" + to_string!(.host) + \"\\\"\"])\n}\nif exists(.host_ip) \u0026\u0026 !is_null(.host_ip) {\n  sd_params = append(sd_params, [\"host_ip\" + \"=\\\"\" + to_string!(.host_ip) + \"\\\"\"])\n}\nif exists(.required_id) \u0026\u0026 !is_null(.required_id) {\n  sd_params = append(sd_params, [\"required_id\" + \"=\\\"\" + to_string!(.required_id) + \"\\\"\"])\n}\nif exists(.team) \u0026\u0026 !is_null(.team) {\n  sd_params = append(sd_params, [\"team\" + \"=\\\"\" + to_string!(.team) + \"\\\"\"])\n}\n.sd_labels = if length(sd_params) \u003e 0 { \"[\" + join!(sd_params, separator: \" \") + \"]\" }",
+      "source": "sd_params = []\n\nif exists(.environment) \u0026\u0026 !is_null(.environment) {\n  sd_params = append(sd_params, [\"environment\" + \"=\\\"\" + to_string!(.environment) + \"\\\"\"])\n}\nif exists(.file) \u0026\u0026 !is_null(.file) {\n  sd_params = append(sd_params, [\"file\" + \"=\\\"\" + to_string!(.file) + \"\\\"\"])\n}\nif exists(.host) \u0026\u0026 !is_null(.host) {\n  sd_params = append(sd_params, [\"host\" + \"=\\\"\" + to_string!(.host) + \"\\\"\"])\n}\nif exists(.host_ip) \u0026\u0026 !is_null(.host_ip) {\n  sd_params = append(sd_params, [\"host_ip\" + \"=\\\"\" + to_string!(.host_ip) + \"\\\"\"])\n}\nif exists(.team) \u0026\u0026 !is_null(.team) {\n  sd_params = append(sd_params, [\"team\" + \"=\\\"\" + to_string!(.team) + \"\\\"\"])\n}\nif exists(.test) \u0026\u0026 !is_null(.test) {\n  sd_params = append(sd_params, [\"test\" + \"=\\\"\" + to_string!(.test) + \"\\\"\"])\n}\n.sd_labels = if length(sd_params) \u003e 0 { \"[\" + join!(sd_params, separator: \" \") + \"]\" }",
       "type": "remap"
     },
     "transform/File/destination/syslog-dest/02_syslog_encoding": {
