@@ -93,7 +93,6 @@ func GetSplunkLabels(sourceType string, extraLabels map[string]string) map[strin
 }
 
 // GetSyslogLabels returns sorted label keys for syslog (for deterministic VRL order).
-// Same pattern as GetLokiLabels/GetSplunkLabels: uses mergeLabels(source + extra).
 func GetSyslogLabels(sourceType string, extraLabels map[string]string) []string {
 	return SortedMapKeys(mergeLabels(sourceLabels(sourceType, false), extraLabels))
 }
