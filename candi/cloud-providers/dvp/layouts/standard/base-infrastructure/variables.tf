@@ -20,6 +20,10 @@ variable "clusterConfiguration" {
   type = any
 }
 
+variable "clusterUUID" {
+  type = string
+}
+
 locals {
   project_namespace = try(var.providerClusterConfiguration.provider.namespace, "")
 
@@ -30,9 +34,9 @@ locals {
 
   should_check_project = local.project_namespace != "" && local.network_policy_mode == "Isolated"
 
-  cluster_prefix = try(var.clusterConfiguration.cloud.prefix, "")
+  cluster_uuid = var.clusterUUID
 
-  should_manage_np = local.should_check_project && local.cluster_prefix != ""
+  should_manage_np = local.should_check_project && local.cluster_uuid != ""
 }
 
 locals {
@@ -106,9 +110,9 @@ locals {
 
 locals {
   targets = local.should_manage_np ? {
-    isolated_cluster_prefix = {
+    isolated_cluster_uuid = {
       namespace = local.project_namespace
-      name      = "isolated-${local.cluster_prefix}"
+      name      = "isolated-${local.cluster_uuid}"
     }
   } : {}
 }
