@@ -1219,12 +1219,16 @@
     "user-authn": {
       "name": "user-authn",
       "critical": true,
-      "stage": "Preview",
+      "stage": "General Availability",
       "subsystems": [
         "security"
       ],
       "namespace": "d8-user-authn",
       "weight": 150,
+      "descriptions": {
+        "en": "Provides unified authentication system integrated with Kubernetes and web interfaces. Supports static users and external identity providers.",
+        "ru": "Предоставляет единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами. Поддерживает статических пользователей и внешние провайдеры идентификации."
+      },
       "oss": [
         {
           "name": "Dex",
@@ -1267,12 +1271,20 @@
           "prometheus-metrics-adapter": ">= 0.0.0"
         }
       },
-      "stage": "Deprecated",
+      "stage": "General Availability",
       "descriptions": {
         "en": "Automatically calculates and sets resource request parameters for pods based on actual consumption. Can recommend resource values or automatically adjust CPU and memory reservations.",
         "ru": "Автоматически рассчитывает и устанавливает параметры resource requests для подов на основе фактического потребления. Может рекомендовать значения ресурсов или автоматически корректировать резервирование CPU и памяти."
       },
-      "oss": []
+      "oss": [
+        {
+          "name": "Kubernetes Autoscaler",
+          "link": "https://github.com/kubernetes/autoscaler",
+          "description": "A autoscaling-related components for Kubernetes.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
     }
   },
   "oss": {
@@ -1490,6 +1502,15 @@
       "license": "Apache License 2.0",
       "modules": [
         "control-plane-manager"
+      ]
+    },
+    "Kubernetes Autoscaler": {
+      "link": "https://github.com/kubernetes/autoscaler",
+      "description": "A autoscaling-related components for Kubernetes.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "vertical-pod-autoscaler"
       ]
     },
     "Kubernetes Dashboard": {
