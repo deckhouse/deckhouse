@@ -36,7 +36,9 @@ locals {
 
   cluster_uuid = var.clusterUUID
 
-  should_manage_np = local.should_check_project && local.cluster_uuid != ""
+  cluster_prefix = try(var.clusterConfiguration.cloud.prefix, "")
+
+  should_manage_np = local.should_check_project && local.cluster_prefix != ""
 }
 
 locals {
@@ -110,9 +112,9 @@ locals {
 
 locals {
   targets = local.should_manage_np ? {
-    isolated_cluster_uuid = {
+    isolated_cluster_prefix = {
       namespace = local.project_namespace
-      name      = "isolated-${local.cluster_uuid}"
+      name      = "isolated-${local.cluster_prefix}"
     }
   } : {}
 }

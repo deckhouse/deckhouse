@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-resource "kubernetes_manifest" "isolated_cluster_uuid_network_policy" {
+resource "kubernetes_manifest" "isolated_cluster_prefix_network_policy" {
   for_each = local.targets
 
   field_manager {
