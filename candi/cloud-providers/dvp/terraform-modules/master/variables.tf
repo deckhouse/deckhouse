@@ -93,9 +93,9 @@ variable "kubernetes_data_disk" {
 
 variable "additional_disks" {
   type = list(object({
-    name          = string
-    hash          = string
-    md5_id        = string
+    name   = string
+    hash   = string
+    md5_id = string
   }))
   default = []
 }
@@ -138,6 +138,27 @@ variable "virtual_machine_class_name" {
   default = "generic"
 }
 
+variable "live_migration_policy" {
+  type        = string
+  default     = null
+  description = "Live migration policy for VirtualMachine (masters only)."
+
+  validation {
+    condition = var.live_migration_policy == null || contains(["Manual", "Never", "AlwaysSafe", "PreferSafe", "AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: Manual, Never, AlwaysSafe, PreferSafe, AlwaysForced, PreferForced."
+  }
+}
+variable "run_policy" {
+  type        = string
+  default     = null
+  description = "Run policy for VirtualMachine."
+
+  validation {
+    condition = var.run_policy == null || contains(["AlwaysOn", "AlwaysOff", "Manual", "AlwaysOnUnlessStoppedManually"], var.run_policy)
+    error_message = "run_policy must be one of: AlwaysOn, AlwaysOff, Manual, AlwaysOnUnlessStoppedManually."
+  }
+}
+
 variable "timeouts" {
   default = { "create" = "30m", "update" = "5m", "delete" = "5m" }
   type = object({
@@ -176,8 +197,8 @@ locals {
       }
     },
     {
-      "rootDiskHash" = var.root_disk.hash,
-      "etcDiskHash"  = var.kubernetes_data_disk.hash
+      "rootDiskHash"        = var.root_disk.hash,
+      "etcDiskHash"         = var.kubernetes_data_disk.hash
       "additionalDisksHash" = local.additional_disks_hashes
     },
   )
@@ -190,6 +211,7 @@ locals {
 
   vm_merged_labels = merge(
     {
+      "deckhouse.io/managed-by"         = "deckhouse"
       "dvp.deckhouse.io/cluster-prefix" = var.prefix
       "dvp.deckhouse.io/cluster-uuid"   = var.cluster_uuid
       "dvp.deckhouse.io/node-group"     = var.node_group

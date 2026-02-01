@@ -121,22 +121,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
-	// ensure operation trigger label
-	res, err := r.EnsureLabelOperationTrigger(ctx, operation)
+	// ensure operation labels
+	res, err := r.ensureOperationLabels(ctx, operation)
 	if err != nil {
 		logger.Warn("failed to ensure operation trigger label", log.Err(err))
-
-		return res, err
-	}
-
-	if res.Requeue {
-		return res, nil
-	}
-
-	// ensure operation type label
-	res, err = r.EnsureLabelOperationType(ctx, operation)
-	if err != nil {
-		logger.Warn("failed to ensure operation type label", log.Err(err))
 
 		return res, err
 	}
@@ -156,53 +144,44 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return res, nil
 }
 
-func (r *reconciler) EnsureLabelOperationTrigger(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
-	if operation.Labels == nil {
-		operation.Labels = make(map[string]string)
+// ensureOperationLabels ensures that operation has all required labels set correctly.
+// It sets default trigger (manual), syncs operation type with spec, and adds repository label for filtering.
+// Returns Requeue=true if labels were updated to allow fresh object retrieval in next reconciliation.
+func (r *reconciler) ensureOperationLabels(ctx context.Context, op *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
+	if len(op.Labels) == 0 {
+		op.Labels = make(map[string]string)
 	}
 
-	if _, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
-		original := operation.DeepCopy()
-		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+	var update bool
+	original := op.DeepCopy()
 
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return res, fmt.Errorf("patch operation trigger label: %w", err)
+	// Set default trigger to manual if not already set
+	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger]; !ok {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationTrigger] = v1alpha1.PackagesRepositoryTriggerManual
+	}
+
+	// Ensure operation type label matches spec (sync on every reconcile)
+	if label, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || label != op.Spec.Type {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = op.Spec.Type
+	}
+
+	// Set repository label for efficient filtering/querying
+	if _, ok := op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository]; !ok {
+		update = true
+		op.Labels[v1alpha1.PackagesRepositoryOperationLabelRepository] = op.Spec.PackageRepositoryName
+	}
+
+	if update {
+		if err := r.client.Patch(ctx, op, client.MergeFrom(original)); err != nil {
+			return ctrl.Result{}, fmt.Errorf("patch operation labels: %w", err)
 		}
 
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	return res, nil
-}
-
-func (r *reconciler) EnsureLabelOperationType(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
-	if operation.Labels == nil {
-		operation.Labels = make(map[string]string)
-	}
-
-	var opType string
-	if operation.Spec.Type != "" {
-		opType = operation.Spec.Type
-	} else {
-		opType = ""
-	}
-
-	if existing, ok := operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType]; !ok || existing != opType {
-		original := operation.DeepCopy()
-		operation.Labels[v1alpha1.PackagesRepositoryOperationLabelOperationType] = opType
-
-		if err := r.client.Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-			return res, fmt.Errorf("patch operation type label: %w", err)
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	return res, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *reconciler) handle(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation) (ctrl.Result, error) {
@@ -273,7 +252,7 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 	logger.Debug("handling discover state")
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -312,6 +291,10 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{}, patchErr
 		}
 
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
+		}
+
 		logger.Warn("operation failed", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
@@ -334,6 +317,10 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
+		}
+
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
 		logger.Warn("operation failed", slog.String("message", message))
@@ -364,7 +351,7 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 		}
 	}
 
-	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepository, r.psm, r.logger)
+	opService, err := NewOperationService(ctx, r.client, operation.Spec.PackageRepositoryName, r.psm, r.logger)
 	if err != nil {
 		// Handle specific error cases with status updates
 		original := operation.DeepCopy()
@@ -402,6 +389,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			return ctrl.Result{}, patchErr
 		}
 
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
+		}
+
 		logger.Warn("operation failed", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
@@ -430,6 +421,11 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		successMessage := fmt.Sprintf("Successfully scanned repository, found %d package(s)", operation.Status.Packages.Total)
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, "", successMessage); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
 		r.logger.Info("operation completed", slog.String("name", operation.Name))
@@ -541,7 +537,7 @@ func (r *reconciler) handleCompletedState(ctx context.Context, operation *v1alph
 	// List all operations for the same repository
 	operations := new(v1alpha1.PackageRepositoryOperationList)
 	err := r.client.List(ctx, operations, client.MatchingLabels{
-		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepository,
+		v1alpha1.PackagesRepositoryOperationLabelRepository: operation.Spec.PackageRepositoryName,
 	})
 	if err != nil {
 		return fmt.Errorf("list operations: %w", err)
@@ -677,6 +673,56 @@ func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alp
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: repoName}, repo); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get package repository: %w", err)
+	}
+
+	original := repo.DeepCopy()
+	now := metav1.NewTime(r.dc.GetClock().Now())
+
+	status := metav1.ConditionTrue
+	if !success {
+		status = metav1.ConditionFalse
+	}
+
+	conditionExists := false
+	for idx, cond := range repo.Status.Conditions {
+		if cond.Type == v1alpha1.PackageRepositoryConditionLastOperationScanFinished {
+			conditionExists = true
+
+			if cond.Status != status {
+				repo.Status.Conditions[idx].LastTransitionTime = now
+				repo.Status.Conditions[idx].Status = status
+			}
+
+			repo.Status.Conditions[idx].Reason = reason
+			repo.Status.Conditions[idx].Message = message
+			break
+		}
+	}
+
+	if !conditionExists {
+		repo.Status.Conditions = append(repo.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryConditionLastOperationScanFinished,
+			Status:             status,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: now,
+		})
+	}
+
+	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update package repository status: %w", err)
 	}
 
 	return nil

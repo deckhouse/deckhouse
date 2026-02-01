@@ -216,7 +216,39 @@ Removing this parameter will trigger a check for the presence of critical compon
        type: Ready
    ```
 
-1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` your previous edition name:
+1. Check for any pods in the `d8-*` namespaces that are in an error state and unable to load images. This must be done manually, as Deckhouse modules currently do not automatically reinitialize after the changes described above.
+
+   Get a list of pods:
+
+   ```shell
+   d8 k get po -A
+   ```
+
+   Get detailed information about problematic pods:
+
+   ```shell
+   d8 k describe po <pod_name> <namespace>
+   ```
+
+   Re-download the modules corresponding to the problematic pods by running the following command on all master nodes:
+
+   ```shell
+   rm -rf /var/lib/deckhouse/downloaded/<module-name>/
+   ```
+
+   To get `<module-name>`, run the command:
+
+   ```shell
+   d8 k get modules
+   ```
+
+   After  removing the data of the required modules, restart Deckhouse:
+
+   ```shell
+   d8 k rollout restart deploy -n d8-system deckhouse
+   ```
+
+1. Check if there are any pods with the Deckhouse old edition address left in the cluster, where `<YOUR-PREVIOUS-EDITION>` is your previous edition name:
 
    For Unmanaged mode:
 

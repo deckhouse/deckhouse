@@ -310,9 +310,17 @@ func WithTimeout(timeout time.Duration) Option {
 // if we pass url without scheme ve've got url back with two leading slashes
 func parse(rawURL string) (*url.URL, error) {
 	if strings.HasPrefix(rawURL, "http://") || strings.HasPrefix(rawURL, "https://") {
-		return url.ParseRequestURI(rawURL)
+		result, err := url.ParseRequestURI(rawURL)
+		if err != nil {
+			return nil, fmt.Errorf("parse request uri: %w", err)
+		}
+		return result, nil
 	}
-	return url.Parse("//" + rawURL)
+	result, err := url.Parse("//" + rawURL)
+	if err != nil {
+		return nil, fmt.Errorf("parse: %w", err)
+	}
+	return result, nil
 }
 
 // Extract flattens the image to a single layer and returns ReadCloser for fetching the content

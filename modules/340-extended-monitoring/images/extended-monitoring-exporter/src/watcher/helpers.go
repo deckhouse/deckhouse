@@ -19,10 +19,9 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"k8s.io/client-go/tools/cache"
 
 	met "extended-monitoring/metrics"
-
-	"k8s.io/client-go/tools/cache"
 )
 
 func boolToFloat64(b bool) float64 {
@@ -94,6 +93,7 @@ func (w *Watcher) updateMetrics(
 	enabledVec *prometheus.GaugeVec,
 	thresholdVec *prometheus.GaugeVec,
 	resourceLabels map[string]string,
+	namespaceLabels map[string]string,
 	thresholds map[string]float64,
 	labels prometheus.Labels,
 ) {
@@ -103,7 +103,11 @@ func (w *Watcher) updateMetrics(
 	if enabled {
 		for key, defaultValue := range thresholds {
 			labels["threshold"] = key
-			thresholdVec.With(labels).Set(thresholdValue(resourceLabels, key, defaultValue))
+			value := thresholdValue(resourceLabels, key, defaultValue)
+			if value == defaultValue && namespaceLabels != nil {
+				value = thresholdValue(namespaceLabels, key, defaultValue)
+			}
+			thresholdVec.With(labels).Set(value)
 		}
 	} else {
 		thresholdVec.DeletePartialMatch(labels)
@@ -128,4 +132,21 @@ func (w *Watcher) cleanupNamespaceResources(ns string) {
 	w.metrics.IngressThreshold.DeletePartialMatch(prometheus.Labels{"namespace": ns})
 
 	w.metrics.CronJobEnabled.DeletePartialMatch(prometheus.Labels{"namespace": ns})
+}
+
+func thresholdLabelsChangedForMap(oldLabels, newLabels map[string]string, thresholdMap map[string]float64) bool {
+	if oldLabels == nil {
+		return false
+	}
+
+	for key := range thresholdMap {
+		labelKey := labelThresholdPrefix + key
+		oldVal, oldExists := oldLabels[labelKey]
+		newVal, newExists := newLabels[labelKey]
+
+		if oldExists != newExists || oldVal != newVal {
+			return true
+		}
+	}
+	return false
 }

@@ -43,7 +43,7 @@ type healthCheckServer struct {
 
 // handler processes a single http request
 func (s *healthCheckServer) handler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" && r.URL.Path == "/.kube-apiserver-healthcheck/healthz" {
+	if r.Method == http.MethodGet && r.URL.Path == "/.kube-apiserver-healthcheck/healthz" {
 		// This is a check for our own health
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("ok"))
@@ -67,7 +67,7 @@ func (s *healthCheckServer) httpClient() *http.Client {
 // mapToProxyRequest returns the request we should make to the apiserver,
 // or nil if the query is not on the safelist
 func mapToProxyRequest(r *http.Request) *http.Request {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		switch r.URL.Path {
 		case "/livez", "/healthz", "/readyz":
 			// This is a health-check we will proxy
@@ -127,7 +127,7 @@ func (s *healthCheckServer) proxyRequest(w http.ResponseWriter, forwardRequest *
 	}
 
 	switch resp.StatusCode {
-	case 200:
+	case http.StatusOK:
 		klog.V(2).Infof("proxied to %s %s: %s", forwardRequest.Method, forwardRequest.URL, resp.Status)
 	default:
 		klog.Infof("proxied to %s %s: %s", forwardRequest.Method, forwardRequest.URL, resp.Status)

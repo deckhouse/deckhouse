@@ -57,10 +57,11 @@ shell:
   - patch -p1 < /patches/016-verbose-maxmind-logs.patch
   - patch -p1 < /patches/017-fix-success-reload-metric.patch
   - patch -p1 < /patches/018-disable-error-logs.patch
-  - patch -p1 < /patches/019-maxmind-alerts.patch
-  - patch -p1 < /patches/020-fix-sorting.patch
-  - patch -p1 < /patches/021-geoip-ver-metric.patch
-  - patch -p1 < /patches/022-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/019-fix-sorting.patch
+  - patch -p1 < /patches/020-geoip-ver-metric.patch
+  - patch -p1 < /patches/021-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/022-ingress-update-status.patch
+  - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
@@ -319,6 +320,15 @@ import:
   add: /src/rootfs/bin/amd64/wait-shutdown
   to: /wait-shutdown
   before: setup
+# required by the wait-shutdown utility
+- image: tools/procps
+  add: /bin/pkill
+  to: /usr/bin/pkill
+  before: setup
+- image: tools/procps
+  add: /bin/pgrep
+  to: /usr/bin/pgrep
+  before: setup
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
   add: /src/curl-chroot-wrapper.sh
   to: /usr/bin/curl
@@ -387,8 +397,16 @@ shell:
 # remove ruby from libs because it has cve's but not using in image
 # ruby install with grpc-plugins packet it needs for building nginx
   - rm -rf /chroot/usr/lib64/ruby
-# remove owasp-modsecurity-crs/util because of bash scripts cve
-  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/util
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/tests
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/plugins
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/regex-assembly
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/renovate.json
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/LICENSE
+  - rm -rf /chroot/etc/nginx/owasp-modsecurity-crs/.[^.]*
 # takes ~1GB
   - rm -rf /chroot/usr/lib64/locale
 imageSpec:

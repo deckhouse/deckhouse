@@ -18,10 +18,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -29,20 +31,29 @@ const (
 	taskTracer = "package-install"
 )
 
+var (
+	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
+	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
+	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
+)
+
 type installer interface {
-	Install(ctx context.Context, registry, instance, packageName, version string) error
+	Install(ctx context.Context, downloaded, deployed, name, version string) error
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 }
 
 type task struct {
-	instance    string
-	packageName string
-	version     string
-	registry    registry.Registry
+	downloaded string
+	deployed   string
+	name       string
+	version    string
+
+	repository registry.Remote
 
 	installer installer
 	status    statusService
@@ -50,37 +61,52 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(name, pack, version string, reg registry.Registry, status statusService, installer installer, logger *log.Logger) queue.Task {
+func NewModuleTask(name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
 	return &task{
-		instance:    name,
-		packageName: pack,
-		version:     version,
-		registry:    reg,
-		installer:   installer,
-		status:      status,
-		logger:      logger.Named(taskTracer),
+		downloaded: filepath.Join(modulesDownloadedDir, name),
+		deployed:   filepath.Join(modulesDeployedDir, name),
+		name:       name,
+		version:    version,
+		repository: repo,
+		installer:  installer,
+		status:     status,
+		logger:     logger.Named(taskTracer),
+	}
+}
+
+func NewAppTask(instance, name, version string, repo registry.Remote, status statusService, installer installer, logger *log.Logger) queue.Task {
+	return &task{
+		downloaded: filepath.Join(appsDownloadedDir, repo.Name, name),
+		deployed:   filepath.Join(appsDeployedDir, instance),
+		name:       instance,
+		version:    version,
+		repository: repo,
+		installer:  installer,
+		status:     status,
+		logger:     logger.Named(taskTracer),
 	}
 }
 
 func (t *task) String() string {
-	return "Install"
+	return fmt.Sprintf("Install:%s", t.version)
 }
 
 func (t *task) Execute(ctx context.Context) error {
 	logger := t.logger.With(
-		slog.String("name", t.instance),
-		slog.String("package", t.packageName),
-		slog.String("registry", t.registry.Name),
+		slog.String("name", t.name),
+		slog.String("downloaded", t.downloaded),
+		slog.String("deployed", t.deployed),
+		slog.String("repository", t.repository.Name),
 		slog.String("version", t.version))
 
-	// Install (mount) package to apps directory
-	logger.Debug("install application")
-	if err := t.installer.Install(ctx, t.registry.Name, t.instance, t.packageName, t.version); err != nil {
-		t.status.HandleError(t.instance, err)
-		return fmt.Errorf("install application: %w", err)
+	// install (mount) package
+	logger.Debug("install package")
+	if err := t.installer.Install(ctx, t.downloaded, t.deployed, t.name, t.version); err != nil {
+		t.status.HandleError(t.name, err)
+		return fmt.Errorf("install package: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.instance, status.ConditionReadyOnFilesystem)
+	t.status.SetConditionTrue(t.name, status.ConditionReadyOnFilesystem)
 
 	return nil
 }

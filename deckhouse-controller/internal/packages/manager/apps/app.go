@@ -18,12 +18,14 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
+	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
@@ -31,6 +33,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/values"
@@ -56,10 +60,11 @@ type Application struct {
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
-	registry   registry.Registry // Application registry
+	repository registry.Remote   // Application repository
 
-	hooks  *hooks.Storage  // Hook storage with indices
-	values *values.Storage // Values storage with layering
+	hooks         *hooks.Storage      // Hook storage with indices
+	values        *values.Storage     // Values storage with layering
+	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
 // ApplicationConfig holds configuration for creating a new Application instance.
@@ -68,13 +73,15 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
-	Digests  map[string]string // Package images digests
-	Registry registry.Registry
+	Digests    map[string]string // Package images digests(images_digests.json)
+	Repository registry.Remote   // Package repository options
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
 
 	Hooks []*addonhooks.ModuleHook // Discovered hooks
+
+	SettingsCheck *kind.SettingsCheck
 }
 
 // NewApplication creates a new Application instance with the specified configuration.
@@ -97,7 +104,8 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
-	a.registry = cfg.Registry
+	a.repository = cfg.Repository
+	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
 	if err := a.addHooks(cfg.Hooks...); err != nil {
@@ -140,14 +148,38 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 	return nil
 }
 
-// GetRuntimeValues returns values that is not part of schema(name, namespace, version)
-func (a *Application) GetRuntimeValues() addonutils.Values {
-	return addonutils.Values{
-		"Name":      a.instance,
-		"Namespace": a.namespace,
-		"Digests":   a.digests,
-		"Registry":  a.registry,
+// RuntimeValues holds runtime values that are not part of schema.
+// These values are passed to helm templates under .Runtime prefix.
+type RuntimeValues struct {
+	Instance addonutils.Values
+	Package  addonutils.Values
+}
+
+// GetRuntimeValues returns values that are not part of schema.
+// Instance contains name and namespace of the running instance.
+// Package contains package metadata (name, version, digests, registry).
+func (a *Application) GetRuntimeValues() RuntimeValues {
+	return RuntimeValues{
+		Instance: addonutils.Values{
+			"Name":      a.instance,
+			"Namespace": a.namespace,
+		},
+		Package: addonutils.Values{
+			"Name":     a.definition.Name,
+			"Digests":  a.digests,
+			"Registry": a.repository,
+			"Version":  a.definition.Version,
+		},
 	}
+}
+
+// GetExtraNelmValues returns runtime values in string format
+func (a *Application) GetExtraNelmValues() string {
+	runtimeValues := a.GetRuntimeValues()
+	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
+	packageJSON, _ := json.Marshal(runtimeValues.Package)
+
+	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
@@ -185,6 +217,29 @@ func (a *Application) GetValuesChecksum() string {
 // Used to detect if settings changed.
 func (a *Application) GetSettingsChecksum() string {
 	return a.values.GetConfigChecksum()
+}
+
+// ValidateSettings validates settings against openAPI and call setting check if exists
+func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+	if err := a.values.ValidateConfigValues(settings); err != nil {
+		return settingscheck.Result{}, err
+	}
+
+	// apply defaults from config values spec
+	settings = a.values.ApplyDefaultsConfigValues(settings)
+
+	// no need to call the settings check if nothing changed
+	if a.values.GetConfigChecksum() == settings.Checksum() {
+		return settingscheck.Result{Valid: true}, nil
+	}
+
+	if a.settingsCheck != nil {
+		return a.settingsCheck.Check(ctx, settings)
+	}
+
+	return settingscheck.Result{
+		Valid: true,
+	}, nil
 }
 
 // GetValues returns values for rendering
@@ -302,7 +357,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 			}
 		}
 
-		return fmt.Errorf("exec hook: %w", err)
+		return fmt.Errorf("exec hook '%s': %w", h.GetName(), err)
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
@@ -312,7 +367,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = a.values.ApplyPatch(*valuesPatch); err != nil {
+		if err = a.values.ApplyValuesPatch(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

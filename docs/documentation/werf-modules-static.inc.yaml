@@ -144,7 +144,6 @@ git:
     - documentation/*.png
     - documentation/*.ico
     - documentation/*.svg
-    - documentation/browserconfig.xml
     - documentation/site.webmanifest
   stageDependencies:
     install: ['site/Gemfile','site/Gemfile.lock']

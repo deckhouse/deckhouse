@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/name212/govalue"
 
 	ssh "github.com/deckhouse/lib-gossh"
 
@@ -128,35 +129,39 @@ func (c *SSHCommand) OnCommandStart(fn func()) {
 
 func (c *SSHCommand) Start() error {
 	// setup stream handlers
-	command := c.cmd + " " + strings.Join(c.Args, " ")
-	log.DebugF("executor: start '%s'\n", command)
+	c.logDebugF("Call start")
 	if c.session == nil {
 		return fmt.Errorf("ssh session not started")
 	}
 
 	err := c.SetupStreamHandlers()
 	if err != nil {
-		log.DebugF("could not set up stream handlers: %s\n", err)
+		c.logDebugF("Could not set up stream handlers: %s", err)
 		return err
 	}
 
 	err = c.start()
 	if err != nil {
-		log.DebugF("could not start\n")
+		c.logDebugF("Could not start: %v", err)
 		return err
 	}
 
-	// if c.WaitHandler != nil {
 	if c.WaitHandler != nil || c.timeout > 0 {
 		c.ProcessWait()
+		// wait only with timeout because WaitHandler run in long time commands like kube proxy
+		if c.timeout > 0 {
+			if c.waitCh != nil {
+				<-c.waitCh
+			} else {
+				c.logDebugF("Wait channel is nil. Possible bug. Returns immediately")
+			}
+		}
 	} else {
 		err = c.wait()
 		if err != nil {
 			return err
 		}
 	}
-
-	log.DebugF("Register stoppable: '%s'\n", command)
 
 	return nil
 }
@@ -236,10 +241,25 @@ func (c *SSHCommand) ProcessWait() {
 		waitErrCh <- c.wait()
 	}()
 
+	// todo need investigation for get rid of this gorutine. we need check to channel is stopped
+	// and gourutine does not exit if we use timeout and command stopped before timeout exited
+	// probably we can use timer or context instead of this goroutine
 	go func() {
 		if c.timeout > 0 {
 			time.Sleep(c.timeout)
-			if c.stopCh != nil {
+			if !c.stop && c.stopCh != nil {
+				// todo ugly solution
+				// here we check that channel is closed it is not correct
+				select {
+				case _, ok := <-c.stopCh:
+					if !ok {
+						c.logDebugF("StopCh was closed and '%s' timeout exceeded. Possible goroutine not closed.", c.timeout)
+						return
+					}
+				default:
+					c.logDebugF("StopCh is not close and '%s' timeout exceeded. Send stop", c.timeout)
+				}
+
 				c.stopCh <- struct{}{}
 			}
 		}
@@ -280,8 +300,17 @@ func (c *SSHCommand) ProcessWait() {
 	}()
 }
 
+func (c *SSHCommand) clientString() string {
+	sessionString := "unknown"
+	if c.sshClient != nil && c.sshClient.Settings != nil {
+		sessionString = c.sshClient.Settings.String()
+	}
+
+	return sessionString
+}
+
 func (c *SSHCommand) Run(ctx context.Context) error {
-	log.DebugF("executor: run '%s'\n", c.cmd)
+	c.logDebugF("Call run")
 	c.Cmd(ctx)
 
 	if c.session == nil {
@@ -369,7 +398,7 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 	passSent := false
 	c.WithMatchHandler(func(pattern string) string {
 		if pattern == "SudoPassword" {
-			log.DebugLn("Send become pass to cmd")
+			c.logDebugF("Send become pass to cmd")
 			var becomePass string
 
 			if c.sshClient.Settings.BecomePass != "" {
@@ -380,7 +409,7 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 			var err error
 			_, err = c.Stdin.Write([]byte(becomePass + "\n"))
 			if err != nil {
-				log.ErrorLn("got error from sending pass to stdin")
+				log.ErrorF("Got error from sending pass to stdin for '%s': %v\n", c.clientString(), err)
 			}
 			if !passSent {
 				passSent = true
@@ -391,7 +420,7 @@ func (c *SSHCommand) Sudo(ctx context.Context) {
 			return "reset"
 		}
 		if pattern == "SUDO-SUCCESS" {
-			log.DebugLn("Got SUCCESS")
+			c.logDebugF("Got SUCCESS for sudo password")
 			if c.onCommandStart != nil {
 				c.onCommandStart()
 			}
@@ -619,10 +648,11 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 
 	go func() {
 		if c.stdoutHandler == nil {
+			c.logDebugF("stdout read pipe not set. Consumer does not start")
 			return
 		}
 		c.ConsumeLines(stdoutHandlerReadPipe, c.stdoutHandler)
-		log.DebugF("stop line consumer for '%s'\n", c.cmd)
+		c.logDebugF("Stop lines consumer")
 	}()
 
 	// Start reading from stderr of a command.
@@ -631,11 +661,12 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	// Copy to pipe if StderrHandler is set
 	go func() {
 		if stderrReadPipe == nil {
+			c.logDebugF("stdterr read pipe not set. Pipe reader does not start")
 			return
 		}
 
-		log.DebugLn("Start reading from stderr pipe")
-		defer log.DebugLn("Stop reading from stderr pipe")
+		c.logDebugF("Start reading from stderr pipe")
+		defer c.logDebugF("Stop reading from stderr pipe")
 
 		buf := make([]byte, 16)
 		for {
@@ -660,25 +691,26 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 
 	go func() {
 		if c.stderrHandler == nil {
+			c.logDebugF("stdterr line consumer not set. Consumer does not start")
 			return
 		}
 		c.ConsumeLines(stderrHandlerReadPipe, c.stderrHandler)
-		log.DebugF("stop sdterr line consumer for '%s'\n", c.cmd)
+		c.logDebugF("Stop stdterr line consumer")
 	}()
 
 	return nil
 }
 
 func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWritePipe io.Writer, isError bool) {
-	defer log.DebugLn("stop readFromStreams")
+	defer c.logDebugF("readFromStreams stopped")
 	defer c.wg.Done()
 
-	if stdoutReadPipe == nil || reflect.ValueOf(stdoutReadPipe).IsNil() {
-		log.DebugLn("pipe is nil")
+	if govalue.IsNil(stdoutReadPipe) {
+		c.logDebugF("stdout pipe is nil")
 		return
 	}
 
-	log.DebugLn("Start read from streams for command: ", c.cmd)
+	c.logDebugF("Start read from streams")
 
 	buf := make([]byte, 16)
 	matchersDone := false
@@ -686,7 +718,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 	for {
 		n, err := stdoutReadPipe.Read(buf)
 		if err != nil && err != io.EOF {
-			log.DebugF("Error reading from stdout: %s\n", err)
+			c.logDebugF("Error reading from stdout: %v", err)
 			errorsCount++
 			if errorsCount > 1000 {
 				panic(fmt.Errorf("readFromStreams: too many errors, last error %v", err))
@@ -699,7 +731,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 			for _, matcher := range c.Matchers {
 				m = matcher.Analyze(buf[:n])
 				if matcher.IsMatched() {
-					log.DebugF("Trigger matcher '%s'\n", matcher.Pattern)
+					c.logDebugF("Triggered match for '%s'", matcher.Pattern)
 					// matcher is triggered
 					if c.MatchHandler != nil {
 						res := c.MatchHandler(matcher.Pattern)
@@ -739,7 +771,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 		}
 
 		if err == io.EOF {
-			log.DebugLn("readFromStreams: EOF")
+			c.logDebugF("readFromStreams: EOF")
 			break
 		}
 	}
@@ -758,34 +790,36 @@ func (c *SSHCommand) ConsumeLines(r io.Reader, fn func(l string)) {
 		}
 
 		if text != "" {
-			log.DebugF("%s: %s\n", c.cmd, text)
+			c.logDebugF("Line consumed: '%s'", text)
 		}
 	}
 }
 
 func (c *SSHCommand) Stop() {
+	c.logDebugF("Running stop")
+
 	if c.stop {
-		log.DebugF("Stop '%s': already stopped\n", c.cmd)
+		c.logDebugF("Already stopped")
 		return
 	}
 	if c.session == nil {
-		log.DebugF("Stop '%s': session not started yet\n", c.cmd)
+		c.logDebugF("Session not started yet")
 		return
 	}
 	if c.cmd == "" {
-		log.DebugF("Possible BUG: Call Executor.Stop with Cmd==nil\n")
+		c.logDebugF("Possible BUG: Call Executor.Stop with Cmd==nil")
 		return
 	}
 
 	c.stop = true
-	log.DebugF("Stop '%s'\n", c.cmd)
 	if c.stopCh != nil {
+		c.logDebugF("Send stop signal")
 		close(c.stopCh)
 	}
-	log.DebugF("Stopped '%s' \n", c.cmd)
-	log.DebugF("Sending SIGINT to process '%s'\n", c.cmd)
+	c.logDebugF("Stopped")
+	c.logDebugF("Sending SIGINT...")
 	c.session.Signal(ssh.SIGINT)
-	log.DebugF("Signal sent\n")
+	c.logDebugF("Signal SIGINT sent")
 	c.session.Signal(ssh.SIGKILL)
 }
 
@@ -798,4 +832,12 @@ func (c *SSHCommand) setWaitError(err error) {
 func (c *SSHCommand) closeSession() {
 	c.session.Close()
 	c.sshClient.UnregisterSession(c.session)
+}
+func (c *SSHCommand) logDebugF(format string, v ...interface{}) {
+	msg := fmt.Sprintf(format, v...)
+	args := ""
+	if len(c.Args) > 0 {
+		args = strings.Join(c.Args, " ")
+	}
+	log.DebugF("'%s' for cmd '%s' with args '%s' with client '%s'\n", msg, c.cmd, args, c.clientString())
 }

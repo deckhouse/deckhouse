@@ -57,7 +57,7 @@ var (
 )
 
 func init() {
-	flag.BoolVar(&golden, "golden", true, "generate golden files")
+	flag.BoolVar(&golden, "golden", false, "generate golden files")
 	mDelimiter = regexp.MustCompile("(?m)^---$")
 }
 
@@ -376,7 +376,7 @@ func (m *moduleManagerStub) AreModulesInited() bool {
 type operatorStub struct {
 }
 
-func (o *operatorStub) Update(_ registry.Registry, _ packageoperator.Instance) {
+func (o *operatorStub) Update(_ registry.Remote, _ packageoperator.Instance) {
 	return
 }
 

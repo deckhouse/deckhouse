@@ -32,7 +32,7 @@
   }
 
   .breadcrumbs__container {
-    min-width: calc(1000px - 260px - 40px);
+    min-width: calc(1000px - 150px - 260px - 40px);
   }
 
   .searchV3 {
@@ -458,7 +458,7 @@
 }
 
 .layout-sidebar__content {
-    min-width: calc(1000px - 260px - 40px);
+    min-width: calc(1000px - 150px - 260px - 40px);
     flex: 1;
 
     @media screen and (max-width: 1000px) {
@@ -1368,7 +1368,8 @@ a.comparison-table__module-proprietaryOkmeter::after {
             border-bottom: 1px solid #C4CAD4;
         }
 
-        &.supported_versions {
+        &.supported_versions,
+        &.table-wrapper__shadow {
             th {
                 padding: 1em;
             }
@@ -1797,7 +1798,7 @@ ul .resources__prop_name.deprecated {
 
     & .form__row {
       margin-bottom: 0;
-      flex: 1;
+      min-width: 383px;
     }
 
     & a.button {
@@ -1820,7 +1821,6 @@ ul .resources__prop_name.deprecated {
     color: #dc3545;
     height: 43px;
     margin-left: 30px;
-    max-width: 320px;
   }
 
   &-request {

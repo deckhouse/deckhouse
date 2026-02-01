@@ -1666,7 +1666,7 @@ spec:
                     Parameter for provisioning static machines to the cluster.
                   type: object
                   x-kubernetes-validations:
-                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                    - message: "spec.staticInstances.labelSelector can be added but cannot be modified once set. To change it, create a new NodeGroup."
                       rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
@@ -2256,7 +2256,6 @@ spec:
                           type: string
                           description: |
                             Defines how swap memory is handled on the node:
-                            
                             * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
                             * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
 
@@ -2271,11 +2270,9 @@ spec:
                           default: 60
                           description: |
                             Defines the kernel's tendency to use the swap.
-                            
                             * `0`: Minimal swap usage (only to avoid OOM).
                             * `60`: Default balanced behavior.
                             * `100`: Aggressive swap usage.
-                            
                             This value is set via `vm.swappiness` sysctl parameter.
                           x-doc-default: 60
                         limitedSwap:
@@ -2315,6 +2312,7 @@ spec:
                       type: string
                       enum:
                         - "Watchdog"
+                        - "Dryrun"
                       description: |
                         Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
 
@@ -2327,8 +2325,13 @@ spec:
                           A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
 
                         - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
-
-
+                    watchdog:
+                      type: object
+                      properties:
+                        timeout:
+                          type: string
+                      required:
+                        - timeout
               oneOf:
                 - properties:
                     nodeType:

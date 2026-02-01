@@ -371,6 +371,7 @@ spec:
 
                     * `LoadBalancer` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`;
                     * `LoadBalancerWithProxyProtocol` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Ingress-контроллер использует proxy-protocol для получения настоящего IP-адреса клиента;
+                      > **Важно.** HTTP/3 (`enableHTTP3`) нельзя включать с этим инлетом, так как QUIC несовместим с PROXY protocol.
                     * `LoadBalancerWithSSLPassthrough` — устанавливается Ingress-контроллер, и заказывается сервис с типом `LoadBalancer`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
 
                       > Функция SSL Passthrough реализована путем перехвата всего трафика на настроенном HTTPS-порту (по умолчанию: `443`) и передачи его локальному TCP-прокси. Это полностью обходит NGINX и приводит к существенному снижению производительности.
@@ -387,6 +388,8 @@ spec:
                     * `HostPortWithProxyProtocol` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort` и использует proxy-protocol для получения настоящего IP-адреса клиента.
 
                       > **Важно.** Перед использованием этого инлета убедитесь, что запросы к Ingress будут направляться только от доверенных источников. Для настройки ограничений воспользуйтесь параметром `acceptRequestsFrom`.
+                      >
+                      > **Важно.** HTTP/3 (`enableHTTP3`) нельзя включать с этим инлетом, так как QUIC несовместим с PROXY protocol.
 
                     * `HostPortWithSSLPassthrough` — устанавливается Ingress-контроллер, который доступен на портах узлов через `hostPort`. Этот инлет включает функцию SSL Passthrough, которая позволяет настроить бэкенды на приём SSL-трафика напрямую, без терминации на Ingress-контроллере.
 
@@ -411,6 +414,8 @@ spec:
                       > Чтобы поменять инлет, удалите правила iptables и перезапустите поды `kube-proxy` или перезагрузите узлы, на которых размещались Ingress-контроллеры.
                       >
                       > Данный инлет не может быть использован, если параметр `enableIstioSidecar` включен.
+                      >
+                      > **Замечание.** При включении HTTP/3 (`enableHTTP3`) он применяется только к основному контроллеру; резервный контроллер всегда работает без HTTP/3.
                 controllerVersion:
                   description: |
                     Версия Ingress NGINX Controller.
@@ -491,6 +496,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включении `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithProxyProtocol:
                   description: |
                     Секция настроек инлета `LoadBalancerWithProxyProtocol`.
@@ -515,6 +523,9 @@ spec:
                     loadBalancerClass:
                       description: |
                         Класс балансировщика входящих сетевых запросов (пробрасывается в параметр `spec.loadBalancerClass` заказанного сервиса с типом `LoadBalancer`).
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 loadBalancerWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `LoadBalancerWithSSLPassthrough`.
@@ -567,6 +578,9 @@ spec:
                         Заголовок, из которого будет получен настоящий IP-адрес клиента.
 
                         > Работает только при включенной опции `behindL7Proxy`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithProxyProtocol:
                   description: |
                     Секция настроек инлета `HostPortWithProxyProtocol`.
@@ -586,6 +600,9 @@ spec:
                         Если параметр не указан, подключение по HTTPS невозможно.
 
                         > Параметр обязателен в случае, если не задан `httpPort`.
+                    acceptClientIPHeadersFrom:
+                      description: |
+                        Определяет список доверенных подсетей в формате CIDR, запросы от которых содержат корректные заголовки `X-Forwarded-*`/`ProxyProtocol`.
                 hostPortWithSSLPassthrough:
                   description: |
                     Секция настроек инлета `HostPortWithSSLPassthrough`.
@@ -686,7 +703,11 @@ spec:
                   description: |
                     Включает HTTP/3.
 
-                    > HTTP/3 доступен только в контролере версии 1.10.
+                    > HTTP/3 доступен только в контролере версии 1.10 и 1.12.
+                    >
+                    > HTTP/3 нельзя включить, если выбран инлет `HostPortWithProxyProtocol` или `LoadBalancerWithProxyProtocol`.
+                    >
+                    > В случае инлета `HostWithFailover` HTTP/3 включается только для основного контроллера; резервный контроллер всегда работает без HTTP/3.
                 config:
                   description: |
                     Секция настроек Ingress-контроллера, в которую в формате `ключ: значение(строка)` можно записать [любые возможные опции](https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/).

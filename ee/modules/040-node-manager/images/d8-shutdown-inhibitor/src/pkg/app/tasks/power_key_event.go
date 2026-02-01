@@ -7,11 +7,12 @@ package tasks
 
 import (
 	"context"
-	"d8_shutdown_inhibitor/pkg/inputdev"
 	"fmt"
 	"os/exec"
 
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/inputdev"
 )
 
 // PowerKeyEvent is a task that listens for power key events.

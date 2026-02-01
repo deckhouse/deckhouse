@@ -20,12 +20,11 @@ import (
 	"errors"
 	"sync"
 
+	dvpapi "dvp-common/api"
+	"github.com/container-storage-interface/spec/lib/go/csi"
+
 	"dvp-csi-driver/internal/config"
 	"dvp-csi-driver/pkg/dvp-csi-driver/service"
-
-	dvpapi "dvp-common/api"
-
-	"github.com/container-storage-interface/spec/lib/go/csi"
 )
 
 type csiDriver struct {
@@ -73,7 +72,7 @@ func (d *csiDriver) Run() error {
 			d.config.VendorVersion,
 			d.client,
 		),
-		service.NewController(d.client),
+		service.NewController(d.client, d.config.ClusterUUID),
 		service.NewNode(d.config.NodeName, d.client),
 		d,
 	)

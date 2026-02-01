@@ -18,6 +18,7 @@ be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
 ee: Enterprise Edition
+cse: Certified Security Edition
 kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold

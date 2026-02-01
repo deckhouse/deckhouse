@@ -18,17 +18,20 @@ package service
 
 import (
 	"context"
-	"dvp-csi-driver/pkg/utils"
 	"errors"
 	"fmt"
 
 	dvpapi "dvp-common/api"
 
 	"github.com/container-storage-interface/spec/lib/go/csi"
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 const (
@@ -38,6 +41,7 @@ const (
 type ControllerService struct {
 	csi.UnimplementedControllerServer
 	dvpCloudAPI *dvpapi.DVPCloudAPI
+	clusterUUID string
 }
 
 var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
@@ -48,9 +52,11 @@ var ControllerCaps = []csi.ControllerServiceCapability_RPC_Type{
 
 func NewController(
 	dvpCloudAPI *dvpapi.DVPCloudAPI,
+	clusterUUID string,
 ) *ControllerService {
 	return &ControllerService{
 		dvpCloudAPI: dvpCloudAPI,
+		clusterUUID: clusterUUID,
 	}
 }
 
@@ -127,6 +133,8 @@ func (c *ControllerService) CreateVolume(
 
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
+		c.clusterUUID,
+		"",
 		diskName,
 		requiredSize,
 		dvpStorageClass,
@@ -181,25 +189,54 @@ func (c *ControllerService) ControllerPublishVolume(
 	}
 
 	diskName := req.VolumeId
+	vmHostname := req.NodeId
 
-	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
+	_, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname)
 	if err != nil {
-		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", req.NodeId, err)
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
+			klog.Infof("VM %v not found in parent DVP cluster, cannot publish disk %v", vmHostname, diskName)
+			return nil, status.Error(codes.NotFound, "VM not found in parent DVP cluster")
+		}
+		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", vmHostname, err)
 	}
 
-	attached, err := c.hasDiskAttachedToVM(diskName, vm)
+	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
 	if err != nil {
 		klog.Error(err.Error())
 		return nil, err
 	}
 
 	if attached {
-		klog.Infof("Disk %v is already attached to VM %v, returning OK", diskName, req.NodeId)
+		klog.Infof("Disk %v is already attached to VM %v, returning OK", diskName, vmHostname)
 		return &csi.ControllerPublishVolumeResponse{}, nil
 	}
 
-	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, req.NodeId)
+	if exists {
+		klog.Errorf("Publish requested but vmBDA exists for disk=%s vm=%s and is not Attached yet; retry later",
+			diskName, vmHostname,
+		)
+		return nil, status.Error(codes.Aborted, "disk attachment exists but not yet attached; retry later")
+	}
+
+	err = c.dvpCloudAPI.ComputeService.AttachDiskToVM(ctx, diskName, vmHostname)
 	if err != nil {
+		sExists, sAttached, sErr := c.getDiskAttachState(ctx, diskName, vmHostname)
+		if sErr != nil {
+			klog.Errorf("Publish: failed to get vmBDA state after attach error: disk=%s vm=%s: %v", diskName, vmHostname, sErr)
+		}
+
+		if errors.Is(err, context.DeadlineExceeded) {
+			klog.Errorf(
+				"Publish: timeout while attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t: %v",
+				diskName, vmHostname, sExists, sAttached, err,
+			)
+			return nil, status.Errorf(
+				codes.DeadlineExceeded,
+				"timeout attaching disk (Kubernetes will retry): disk=%s vm=%s exists=%t attached=%t",
+				diskName, vmHostname, sExists, sAttached,
+			)
+		}
+
 		msg := fmt.Errorf("error from parent DVP cluster while creating disk attachment: %v", err)
 		klog.Error(msg.Error())
 		return nil, msg
@@ -209,17 +246,30 @@ func (c *ControllerService) ControllerPublishVolume(
 	return &csi.ControllerPublishVolumeResponse{}, nil
 }
 
-func (c *ControllerService) hasDiskAttachedToVM(
+func (c *ControllerService) getDiskAttachState(
+	ctx context.Context,
 	diskName string,
-	vm *v1alpha2.VirtualMachine,
-) (bool, error) {
-	for _, diskRef := range vm.Status.BlockDeviceRefs {
-		if diskRef.Name == diskName {
-			return true, nil
+	vmHostname string,
+) (exists bool, attached bool, err error) {
+	vmbda, err := c.dvpCloudAPI.ComputeService.GetVMBDA(ctx, diskName, vmHostname)
+	if err != nil {
+		if errors.Is(err, dvpapi.ErrNotFound) {
+			return false, false, nil
 		}
+		return false, false, fmt.Errorf("failed to get vmBDA for disk=%s vm=%s: %w", diskName, vmHostname, err)
 	}
 
-	return false, nil
+	exists = true
+	attached = vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached
+
+	if vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
+		return exists, attached, fmt.Errorf(
+			"vmBDA %s is Failed for disk=%s vm=%s",
+			vmbda.Name, diskName, vmHostname,
+		)
+	}
+
+	return exists, attached, nil
 }
 
 func (c *ControllerService) ControllerUnpublishVolume(
@@ -234,31 +284,61 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	}
 
 	diskName := req.VolumeId
-
-	vm, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, req.NodeId)
-	if err != nil {
-		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", req.NodeId, err)
-	}
-
 	vmHostname := req.NodeId
 
-	attached, err := c.hasDiskAttachedToVM(diskName, vm)
+	if _, err := c.dvpCloudAPI.ComputeService.GetVMByHostname(ctx, vmHostname); err != nil {
+		if errors.Is(err, dvpapi.ErrNotFound) || errors.Is(err, cloudprovider.InstanceNotFound) {
+			klog.Infof(
+				"VM %v not found in parent DVP cluster, will try to cleanup disk %v attachment anyway",
+				vmHostname, diskName,
+			)
+		} else {
+			return nil, fmt.Errorf(
+				"error from parent DVP cluster while finding VM: %v: %v",
+				vmHostname, err,
+			)
+		}
+	}
+
+	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
 	if err != nil {
 		klog.Error(err.Error())
 		return nil, err
 	}
 
-	if !attached {
-		klog.Infof("Disk attachment %v for VM %v already detached, returning OK", diskName, vmHostname)
+	if !exists {
+		klog.Infof(
+			"Disk attachment %v for VM %v detached, OK",
+			diskName, vmHostname,
+		)
 		return &csi.ControllerUnpublishVolumeResponse{}, nil
 	}
 
-	err = c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname)
-	if err != nil {
-		msg := fmt.Errorf("error from parent DVP cluster while removing disk %v from VM %v: %v", diskName, vmHostname, err)
+	if !attached {
+		klog.Errorf(
+			"vmBDA exists for disk=%s vm=%s but is not Attached; still trying to unpublish(detach)",
+			diskName, vmHostname,
+		)
+	}
+
+	if err := c.dvpCloudAPI.ComputeService.DetachDiskFromVM(ctx, diskName, vmHostname); err != nil {
+		if errors.Is(err, dvpapi.ErrNotFound) {
+			klog.Infof(
+				"disk attachment %v for VM %v already detached (not found), OK",
+				diskName, vmHostname,
+			)
+			return &csi.ControllerUnpublishVolumeResponse{}, nil
+		}
+
+		msg := fmt.Errorf(
+			"error from parent DVP cluster while removing disk %v from VM %v: %v",
+			diskName, vmHostname, err,
+		)
 		klog.Error(msg.Error())
 		return nil, msg
 	}
+
+	klog.Infof("detached disk=%s from vm=%s, vmBDA deleted", diskName, vmHostname)
 	return &csi.ControllerUnpublishVolumeResponse{}, nil
 }
 

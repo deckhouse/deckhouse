@@ -34,12 +34,12 @@ const (
 )
 
 type manager interface {
-	LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error)
-	ApplySettings(name string, settings addonutils.Values) error
+	LoadPackage(ctx context.Context, registry registry.Remote, namespace, name string) (string, error)
+	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
 type statusService interface {
-	SetConditionTrue(name string, conditionName status.ConditionName)
+	SetConditionTrue(name string, cond status.ConditionType)
 	HandleError(name string, err error)
 	SetVersion(name string, version string)
 }
@@ -47,7 +47,7 @@ type statusService interface {
 type task struct {
 	packageName string
 	namespace   string
-	registry    registry.Registry
+	repository  registry.Remote
 	settings    addonutils.Values
 
 	manager manager
@@ -56,11 +56,11 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(reg registry.Registry, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
+func NewTask(repo registry.Remote, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
 		packageName: name,
 		namespace:   namespace,
-		registry:    reg,
+		repository:  repo,
 		settings:    settings,
 		manager:     manager,
 		status:      status,
@@ -75,27 +75,27 @@ func (t *task) String() string {
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
 	t.logger.Debug("load package", slog.String("name", t.packageName))
-	version, err := t.manager.LoadPackage(ctx, t.registry, t.namespace, t.packageName)
+	version, err := t.manager.LoadPackage(ctx, t.repository, t.namespace, t.packageName)
 	if err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("load package: %w", err)
 	}
 
 	t.logger.Debug("apply initial settings", slog.String("name", t.packageName))
-	if err = t.manager.ApplySettings(t.packageName, t.settings); err != nil {
+	if err = t.manager.ApplySettings(ctx, t.packageName, t.settings); err != nil {
 		t.status.HandleError(t.packageName, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsIsValid)
+	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
 	t.status.SetVersion(t.packageName, version)
 
 	t.status.HandleError(t.packageName, &status.Error{
 		Err: errors.New("wait for converge done"),
 		Conditions: []status.Condition{
 			{
-				Name:    status.ConditionReadyInRuntime,
-				Status:  metav1.ConditionFalse,
+				Type:    status.ConditionWaitConverge,
+				Status:  metav1.ConditionTrue,
 				Reason:  "WaitConverge",
 				Message: "wait for converge done",
 			},

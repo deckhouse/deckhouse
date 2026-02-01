@@ -43,6 +43,10 @@ func SafeProvideLoggerOrSilent(provider LoggerProvider) Logger {
 	return provideSafe(provider, silentLoggerInstance)
 }
 
+func SilentLoggerProvider() LoggerProvider {
+	return SimpleLoggerProvider(silentLoggerInstance)
+}
+
 func provideSafe(provider LoggerProvider, defaultLogger Logger) Logger {
 	if provider != nil {
 		logger := provider()

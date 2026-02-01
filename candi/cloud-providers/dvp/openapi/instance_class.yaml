@@ -26,6 +26,9 @@ spec:
                   type: object
                   description: |
                     Virtual machine settings for the created node.
+
+                    > The `runPolicy: AlwaysOnUnlessStoppedManually` policy is used for virtual machines of nodes.
+                    > This allows the virtual machine to be stopped manually (for example, for maintenance) without triggering an automatic restart.
                   required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
@@ -80,6 +83,42 @@ spec:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with the Secure Boot support.
+                    runPolicy:
+                      type: string
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOff
+                        - Manual
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      description: |
+                        Virtual machine run policy.
+
+                        * `AlwaysOn`: The virtual machine should always be running.
+                        * `AlwaysOff`: The virtual machine should always be stopped.
+                        * `Manual`: The virtual machine state is controlled manually.
+                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (for example, for maintenance), but it will automatically start after a host reboot.
+                      x-doc-example: AlwaysOnUnlessStoppedManually
+                    liveMigrationPolicy:
+                      type: string
+                      enum:
+                        - Manual
+                        - Never
+                        - AlwaysSafe
+                        - PreferSafe
+                        - AlwaysForced
+                        - PreferForced
+                      default: PreferForced
+                      description: |
+                        Live migration policy for the virtual machine.
+
+                        * `Manual`: Migration is controlled manually.
+                        * `Never`: Migration is disabled.
+                        * `AlwaysSafe`: Always use safe migration (may fail if VM has a high rate of memory changes).
+                        * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
+                        * `AlwaysForced`: Always use forced migration with VM slowdown.
+                        * `PreferForced`: Prefer forced migration (recommended for master nodes due to high memory activity).
+                      x-doc-example: PreferForced
                 rootDisk:
                   type: object
                   description: |

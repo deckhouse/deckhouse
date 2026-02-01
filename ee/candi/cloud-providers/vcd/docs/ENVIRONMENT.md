@@ -304,6 +304,14 @@ shutdown -P now
 
    ![Setting up the template, Guest Properties 2](images/template/GuestProperties2.png)
 
+   For **each** field in the add/edit form, set the following:
+
+   * "Type": `Text` (text value)
+   * "User access": `Read/Write`
+   * "Value": A single space
+
+   > The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
+
    ![Setting up the template, Guest Properties 3](images/template/GuestProperties3.png)
 
 1. In the vCenter management panel for the template, enable the `disk.EnableUUID` parameter:

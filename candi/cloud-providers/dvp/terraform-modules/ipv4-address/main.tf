@@ -20,6 +20,7 @@ resource "kubernetes_manifest" "ipv4_address" {
     "metadata" = {
       "name"      = local.ip_address_name
       "namespace" = var.namespace
+      "labels"      = local.ipv4_address_labels
     }
     "spec" = {
       "staticIP" = local.ipv4_address

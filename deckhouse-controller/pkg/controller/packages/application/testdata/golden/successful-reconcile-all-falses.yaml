@@ -23,8 +23,8 @@ metadata:
   resourceVersion: "3"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.3
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.3
 status:
   resourceConditions:
   - lastProbeTime: "2019-10-17T15:33:00Z"
@@ -57,10 +57,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.3
   resourceVersion: "2"
-spec:
-  packageName: test
-  packageRepository: deckhouse
-  version: v1.0.3
+spec: {}
 status:
   conditions:
   - lastProbeTime: null
@@ -76,12 +73,10 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
   usedBy:
   - name: test-app
     namespace: foobar
   usedByCount: 1
-  version: v1.0.3
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

@@ -221,10 +221,12 @@ The provider supports working with only one disk in the virtual machine template
        vmware_cust_file_max_wait: 10
    ```
 
-1. Before creating the VM template, reset identifiers and the `cloud-init` state:
+1. Before creating the VM template, reset the `cloud-init` identifiers and state using the following commands:
 
    ```shell
-   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   truncate -s 0 /etc/machine-id &&
+   rm /var/lib/dbus/machine-id &&
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
 
 1. Clear `cloud-init` event logs:
