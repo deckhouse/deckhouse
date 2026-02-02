@@ -55,5 +55,5 @@ if exists(.{{$key}}) && !is_null(.{{$key}}) {
   sd_params = append(sd_params, [{{$key | printf "%q"}} + "=\"" + to_string!(.{{$key}}) + "\""])
 }
 {{- end }}
-.sd_labels = if length(sd_params) > 0 { "[" + join!(sd_params, separator: " ") + "]" }
+.sd_labels = if length(sd_params) > 0 { "[" + "deckhouse@0" + " " + join!(sd_params, separator: " ") + "]" }
 `

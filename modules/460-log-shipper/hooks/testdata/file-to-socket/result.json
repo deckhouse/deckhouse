@@ -21,7 +21,7 @@
       "inputs": [
         "transform/File/source/test-source/02_clean_up_file"
       ],
-      "source": "sd_params = []\n\nif exists(.file) \u0026\u0026 !is_null(.file) {\n  sd_params = append(sd_params, [\"file\" + \"=\\\"\" + to_string!(.file) + \"\\\"\"])\n}\nif exists(.host) \u0026\u0026 !is_null(.host) {\n  sd_params = append(sd_params, [\"host\" + \"=\\\"\" + to_string!(.host) + \"\\\"\"])\n}\nif exists(.host_ip) \u0026\u0026 !is_null(.host_ip) {\n  sd_params = append(sd_params, [\"host_ip\" + \"=\\\"\" + to_string!(.host_ip) + \"\\\"\"])\n}\n.sd_labels = if length(sd_params) \u003e 0 { \"[\" + join!(sd_params, separator: \" \") + \"]\" }",
+      "source": "sd_params = []\n\nif exists(.file) \u0026\u0026 !is_null(.file) {\n  sd_params = append(sd_params, [\"file\" + \"=\\\"\" + to_string!(.file) + \"\\\"\"])\n}\nif exists(.host) \u0026\u0026 !is_null(.host) {\n  sd_params = append(sd_params, [\"host\" + \"=\\\"\" + to_string!(.host) + \"\\\"\"])\n}\nif exists(.host_ip) \u0026\u0026 !is_null(.host_ip) {\n  sd_params = append(sd_params, [\"host_ip\" + \"=\\\"\" + to_string!(.host_ip) + \"\\\"\"])\n}\n.sd_labels = if length(sd_params) \u003e 0 { \"[\" + \"deckhouse@0\" + \" \" + join!(sd_params, separator: \" \") + \"]\" }",
       "type": "remap"
     },
     "transform/File/destination/test-socket2-dest/01_syslog_encoding": {
