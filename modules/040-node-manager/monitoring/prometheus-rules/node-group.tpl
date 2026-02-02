@@ -138,4 +138,4 @@
       plk_markup_format: "markdown"
       summary: Node {{`{{ $labels.node }}`}} does not use cgroup v2.
       description: |
-        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using cgroup v2.
+        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1].
