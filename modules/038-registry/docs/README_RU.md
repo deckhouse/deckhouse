@@ -68,7 +68,7 @@ description: "Управление конфигурацией registry комп�
 В случае таких компонентов, как `operator-trivy`, `image-availability-exporter`, `deckhouse-controller` и ряда других, обращающихся к registry напрямую, запросы будут идти через кеширующий proxy registry.
 
 <!--- Source: mermaid code from docs/internal/PROXY.md --->
-![direct](images/proxy-en.png)
+![direct](images/proxy-ru.png)
 
 ## Архитектура режима Local
 
@@ -83,4 +83,4 @@ description: "Управление конфигурацией registry комп�
 Локальный registry наполняется с помощью инструмента [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) (команды `d8 mirror push/pull`). Подробнее — в разделе [«Модуль registry: пример использования»](examples.html)
 
 <!--- Source: mermaid code from docs/internal/LOCAL.md --->
-![direct](images/local-en.png)
+![direct](images/local-ru.png)
