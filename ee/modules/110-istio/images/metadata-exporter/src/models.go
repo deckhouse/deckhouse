@@ -65,12 +65,11 @@ type MulticlusterPrivateMetadata struct {
 // map[custerUUID]pubilcMetadata
 type RemotePublicMetadata map[string]AlliancePublicMetadata
 
-// tagging have to be checked by codeowner to ensure correctness of omitted or not property or/and key-naming.
 type JwtPayload struct {
-	Iss   string `json:"iss,omitempty"`
-	Sub   string `json:"sub,omitempty"`
-	Aud   string `json:"aud,omitempty"`
-	Scope string `json:"scope,omitempty"`
-	Nbf   int64  `json:"nbf,omitempty"`
-	Exp   int64  `json:"exp,omitempty"`
+	Iss   string `json:"iss"`
+	Sub   string `json:"sub"`
+	Aud   string `json:"aud"`
+	Scope string `json:"scope"`
+	Nbf   int64  `json:"nbf"`
+	Exp   int64  `json:"exp"`
 }
