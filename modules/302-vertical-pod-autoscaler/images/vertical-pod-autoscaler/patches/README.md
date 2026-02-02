@@ -29,3 +29,5 @@ As we use Prometheus storage, will not move this patch.
    The patch separates two concerns:
    Protection from eviction when replica count is low — still enforced (eviction is blocked when belowMinReplicas).
    Allowing in-place regardless of replica count — now possible: groups below minReplicas are included in the maps with the flag; in-place is allowed for them, eviction is not. If in-place is not possible, fallback to recreate does not result in an eviction. Thus, “VPA cannot apply recommendations to a singleton or small group” is addressed without introducing extra evictions.
+
+Upstream issue: https://github.com/kubernetes/autoscaler/issues/9157
