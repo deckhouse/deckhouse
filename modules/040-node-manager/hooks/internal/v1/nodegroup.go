@@ -17,6 +17,7 @@ limitations under the License.
 package v1
 
 import (
+	"fmt"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -426,6 +427,7 @@ type Fencing struct {
 }
 
 func (f Fencing) IsEmpty() bool {
+	fmt.Println("TODO")
 	return f.Mode == ""
 }
 
