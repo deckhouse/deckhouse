@@ -13,73 +13,76 @@
 # limitations under the License.
 
 # This module validates that required DVP resources exist before attempting to create VMs.
-# It uses data sources to query the parent DVP cluster and will fail fast with clear error messages
-# if VirtualMachineClass or images are not found.
+# It uses null_resource with local-exec to validate resources in parent DVP cluster.
+# Will fail fast with clear error messages if VirtualMachineClass or images are not found.
 
-# Validate VirtualMachineClass exists
-data "kubernetes_resource" "virtual_machine_class" {
-  api_version = var.api_version
-  kind        = "VirtualMachineClass"
-
-  metadata {
-    name = var.virtual_machine_class_name
+# Validate VirtualMachineClass exists using kubectl
+resource "null_resource" "validate_vm_class" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      if ! kubectl get virtualmachineclass ${var.virtual_machine_class_name} >/dev/null 2>&1; then
+        echo "ERROR: VirtualMachineClass '${var.virtual_machine_class_name}' not found in parent DVP cluster."
+        echo "Please ensure the VirtualMachineClass exists before creating VMs."
+        echo "Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses"
+        exit 1
+      fi
+      echo "✓ VirtualMachineClass '${var.virtual_machine_class_name}' validated successfully"
+    EOT
   }
 }
 
 # Validate ClusterVirtualImage exists (if specified)
-data "kubernetes_resource" "cluster_virtual_image" {
+resource "null_resource" "validate_cluster_image" {
   count = var.image_kind == "ClusterVirtualImage" ? 1 : 0
 
-  api_version = var.api_version
-  kind        = "ClusterVirtualImage"
-
-  metadata {
-    name = var.image_name
+  provisioner "local-exec" {
+    command = <<-EOT
+      if ! kubectl get clustervirtualimage ${var.image_name} >/dev/null 2>&1; then
+        echo "ERROR: ClusterVirtualImage '${var.image_name}' not found in parent DVP cluster."
+        echo "Please ensure the image exists before creating VMs."
+        echo "Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages"
+        exit 1
+      fi
+      echo "✓ ClusterVirtualImage '${var.image_name}' validated successfully"
+    EOT
   }
+
+  depends_on = [null_resource.validate_vm_class]
 }
 
 # Validate VirtualImage exists in namespace (if specified)
-data "kubernetes_resource" "virtual_image" {
+resource "null_resource" "validate_virtual_image" {
   count = var.image_kind == "VirtualImage" ? 1 : 0
 
-  api_version = var.api_version
-  kind        = "VirtualImage"
-
-  metadata {
-    name      = var.image_name
-    namespace = var.namespace
+  provisioner "local-exec" {
+    command = <<-EOT
+      if ! kubectl get virtualimage ${var.image_name} -n ${var.namespace} >/dev/null 2>&1; then
+        echo "ERROR: VirtualImage '${var.image_name}' not found in namespace '${var.namespace}' in parent DVP cluster."
+        echo "Please ensure the image exists before creating VMs."
+        echo "Available VirtualImages can be listed with: kubectl get virtualimages -n ${var.namespace}"
+        exit 1
+      fi
+      echo "✓ VirtualImage '${var.image_name}' validated successfully in namespace '${var.namespace}'"
+    EOT
   }
-}
 
-# Validation checks using check blocks
-check "virtual_machine_class_exists" {
-  assert {
-    condition     = data.kubernetes_resource.virtual_machine_class.object != null
-    error_message = "VirtualMachineClass '${var.virtual_machine_class_name}' not found in parent DVP cluster. Please ensure the VirtualMachineClass exists before creating VMs. Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses"
-  }
-}
-
-check "cluster_virtual_image_exists" {
-  assert {
-    condition     = var.image_kind != "ClusterVirtualImage" || (length(data.kubernetes_resource.cluster_virtual_image) > 0 && data.kubernetes_resource.cluster_virtual_image[0].object != null)
-    error_message = "ClusterVirtualImage '${var.image_name}' not found in parent DVP cluster. Please ensure the image exists before creating VMs. Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages"
-  }
-}
-
-check "virtual_image_exists" {
-  assert {
-    condition     = var.image_kind != "VirtualImage" || (length(data.kubernetes_resource.virtual_image) > 0 && data.kubernetes_resource.virtual_image[0].object != null)
-    error_message = "VirtualImage '${var.image_name}' not found in namespace '${var.namespace}' in parent DVP cluster. Please ensure the image exists before creating VMs. Available VirtualImages can be listed with: kubectl get virtualimages -n ${var.namespace}"
-  }
+  depends_on = [null_resource.validate_vm_class]
 }
 
 # Output validation results for logging
 output "validation_status" {
   value = {
-    virtual_machine_class_validated = try(data.kubernetes_resource.virtual_machine_class.object.metadata.name, "not-found")
-    image_kind                      = var.image_kind
-    image_name                      = var.image_name
-    image_validated                 = true
+    virtual_machine_class_name = var.virtual_machine_class_name
+    image_kind                 = var.image_kind
+    image_name                 = var.image_name
+    namespace                  = var.namespace
+    validation_completed       = true
   }
   description = "Validation status of DVP resources"
+
+  depends_on = [
+    null_resource.validate_vm_class,
+    null_resource.validate_cluster_image,
+    null_resource.validate_virtual_image
+  ]
 }
