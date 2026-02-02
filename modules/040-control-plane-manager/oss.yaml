@@ -9,4 +9,6 @@
   description: A distributed reliable key-value store for the most critical data of a distributed system.
   logo: /images/logos/etcd-icon-color.svg
   license: Apache License 2.0
+  id: etcd
+  version: 3.6.7
 
