@@ -117,13 +117,13 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 
 		metricValue := 1.0
 		if nodeInfo.HasUnsupportedLabel {
-			labels := map[string]string{
-				"node":       nodeInfo.Name,
-				"node_group": nodeInfo.NodeGroup,
-			}
-			input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 			hasUnsupportedContainerdV1 = true
 		}
+		labels := map[string]string{
+			"node":       nodeInfo.Name,
+			"node_group": nodeInfo.NodeGroup,
+		}
+		input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
 
 		cgroupV2UnsupportedValue := 0.0
 		if nodeInfo.CgroupVersion != cgroupV2Value {
