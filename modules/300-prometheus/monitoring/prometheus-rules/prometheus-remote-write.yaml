@@ -19,7 +19,7 @@
         Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
 
         To troubleshoot you can:
-          1. Get list of all Prometheus pods:
+         1. Get list of all Prometheus pods:
             ```shell
             d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
             ```
@@ -29,7 +29,7 @@
             d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
             ```
 
-          2. Get logs from all Prometheus pods to find detailed information:
+         2. Get logs from all Prometheus pods to find detailed information:
             ```shell
             d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
             ```
