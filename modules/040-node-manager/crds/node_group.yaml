@@ -2378,7 +2378,7 @@ spec:
                         - "Watchdog"
                         - "Dryrun"
                       description: |
-                        Fencing supports a single mode: `Watchdog`. In this mode, the watchdog kernel module (watchdog timer) is used.
+                        Fencing supports modes: `Watchdog`, 'Dryrun'. In 'Watchdog` mode, the watchdog kernel module (watchdog timer) is used.
 
                         The Watchdog implementation includes the following components:
 
