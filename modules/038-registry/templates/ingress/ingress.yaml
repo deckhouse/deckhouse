@@ -12,7 +12,6 @@ metadata:
   annotations:
     registry.deckhouse.io/config-hash: {{ $orchestrator.hash | quote }}
 spec:
-  clusterIP: None
   selector:
     component: registry-service
     type: node-services

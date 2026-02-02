@@ -35,7 +35,7 @@ spec:
     kind: DaemonSet
     name: registry-nodeservices-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: registry-nodeservices-manager
@@ -89,6 +89,7 @@ spec:
                 - Static
       {{- include "helm_lib_node_selector" (tuple . "master") | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_root" . | nindent 6 }}
+      {{- include "helm_lib_priority_class" (tuple . "system-cluster-critical") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "any-node" "uninitialized") | nindent 6 }}
       imagePullSecrets:
       - name: deckhouse-registry
@@ -147,10 +148,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 50 | nindent 12 }}
-{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "registry_nodeservices_manager_resources" . | nindent 12 }}
-{{- end }}
-{{- range $name, $imageRef := $images }}
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "registry_nodeservices_manager_resources" . | nindent 12 }}
+            {{- end }}
+      {{- range $name, $imageRef := $images }}
       - name: image-holder-{{ $name | kebabcase }}
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" . | nindent 8 }}
         image: "{{ $imageRef }}"
@@ -159,11 +160,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
-          {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "image_holder_resources" $ | nindent 12 }}
-          {{- end }}
-{{- end }}
-      priorityClassName: system-cluster-critical
+            {{- if not ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+              {{- include "image_holder_resources" $ | nindent 12 }}
+            {{- end }}
+      {{- end }}
       volumes:
       - name: etc-kubernetes
         hostPath:
