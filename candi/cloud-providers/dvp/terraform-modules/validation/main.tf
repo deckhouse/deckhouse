@@ -24,6 +24,13 @@ data "kubernetes_resource" "virtual_machine_class" {
   metadata {
     name = var.virtual_machine_class_name
   }
+
+  lifecycle {
+    postcondition {
+      condition     = self.object != null
+      error_message = "VirtualMachineClass '${var.virtual_machine_class_name}' not found in parent DVP cluster. Please ensure the VirtualMachineClass exists before creating VMs. Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses"
+    }
+  }
 }
 
 # Validate ClusterVirtualImage exists (if specified)
@@ -35,6 +42,13 @@ data "kubernetes_resource" "cluster_virtual_image" {
 
   metadata {
     name = var.image_name
+  }
+
+  lifecycle {
+    postcondition {
+      condition     = self.object != null
+      error_message = "ClusterVirtualImage '${var.image_name}' not found in parent DVP cluster. Please ensure the image exists before creating VMs. Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages"
+    }
   }
 }
 
@@ -48,6 +62,13 @@ data "kubernetes_resource" "virtual_image" {
   metadata {
     name      = var.image_name
     namespace = var.namespace
+  }
+
+  lifecycle {
+    postcondition {
+      condition     = self.object != null
+      error_message = "VirtualImage '${var.image_name}' not found in namespace '${var.namespace}' in parent DVP cluster. Please ensure the image exists before creating VMs. Available VirtualImages can be listed with: kubectl get virtualimages -n ${var.namespace}"
+    }
   }
 }
 
