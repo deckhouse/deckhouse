@@ -27,10 +27,10 @@ import (
 	"log/slog"
 	"reflect"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-containerregistry/pkg/authn"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/deckhouse/deckhouse/pkg/registry"
 	"github.com/deckhouse/deckhouse/pkg/registry/client"
@@ -99,7 +99,7 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 		return m.services[creds], nil
 	}
 
-	auth, err := getAuth(registryURL, config.DockerConfig, config.Credentials) // factory method
+	auth, err := m.getAuth(registryURL, config.DockerConfig, config.Credentials) // factory method
 	if err != nil {
 		return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 	}
@@ -132,19 +132,23 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 
 // getAuth determines and returns an authenticator for accessing a container registry based on the provided authorization data.
 // if both dockerCfg and credentials parameters are filled in, credentials is the priority.
-func getAuth(registryURL, dockerCFG, credentials string) (authn.Authenticator, error) {
+func (m *ServiceManager[T]) getAuth(registryURL, dockerCFG, credentials string) (authn.Authenticator, error) {
 	var auth authn.Authenticator
 	var err error
 
 	switch {
 	case credentials != "":
-		if auth, err = client.AuthFromCredentials(registryURL, credentials); err != nil {
+		if auth, err = client.AuthFromCredentials(credentials); err != nil {
 			return nil, fmt.Errorf("failed to get auth from credentials: %w", err)
 		}
+
+		m.logger.Debug("init auth from credentials")
 	case dockerCFG != "":
 		if auth, err = client.AuthFromDockerConfig(registryURL, dockerCFG); err != nil {
 			return nil, fmt.Errorf("failed to get auth from docker config: %w", err)
 		}
+
+		m.logger.Debug("init auth from docker config")
 	default:
 		return nil, errors.New("there is no authorization data")
 	}

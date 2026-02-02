@@ -27,8 +27,7 @@ status:
   - lastProbeTime: "2019-10-17T15:33:00Z"
     lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to create registry client: create package service: failed to
-      get auth from docker config: read auth config: unmarshal docker config: unexpected
-      end of JSON input'
+      get auth from docker config: there is no authorization data'
     reason: RegistryClientCreationFailed
     status: "False"
     type: Processed
@@ -48,8 +47,7 @@ status:
   conditions:
   - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'Failed to create registry client: create package service: failed to
-      get auth from docker config: read auth config: unmarshal docker config: unexpected
-      end of JSON input'
+      get auth from docker config: there is no authorization data'
     reason: RegistryClientCreationFailed
     status: "False"
     type: LastOperationScanFinished

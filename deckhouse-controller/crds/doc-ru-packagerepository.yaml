@@ -20,6 +20,9 @@ spec:
                     dockerCfg:
                       description: |
                         Конфигурация Docker для аутентификации.
+                    credentials:
+                      description: |
+                        Логин пароль для аутентификации в формате username:password в base64
                     repo:
                       description: |
                         Путь к репозиторию в реестре.
