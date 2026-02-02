@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"mirrorer/internal/config"
-	"mirrorer/internal/mirrorer"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	"mirrorer/internal/config"
+	"mirrorer/internal/mirrorer"
 )
 
 var (

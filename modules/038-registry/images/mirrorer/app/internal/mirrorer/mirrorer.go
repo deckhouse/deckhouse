@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"mirrorer/internal/config"
-	"mirrorer/internal/syncer"
-	"mirrorer/internal/transport"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"mirrorer/internal/config"
+	"mirrorer/internal/syncer"
+	"mirrorer/internal/transport"
 )
 
 type Mirrorer = *mirrorer
