@@ -18,56 +18,30 @@ package main
 
 import (
 	"context"
-	"os"
 	"os/signal"
 	"syscall"
-
-	_ "github.com/jpfuentes2/go-env/autoload"
-	"go.uber.org/zap"
-
-	"fencing-agent/internal/agent"
-	"fencing-agent/internal/common"
-	"fencing-agent/internal/watchdog/softdog"
 )
 
 func main() {
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()
 
-	logger := common.NewLogger()
-	defer func() { _ = logger.Sync() }()
+	// Init block
+	// config
 
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan,
-		syscall.SIGHUP,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT)
-	go func() {
-		s := <-sigChan
-		close(sigChan)
-		logger.Info("Got a signal", zap.String("signal", s.String()))
-		cancel()
-	}()
+	// logger
 
-	var config agent.Config
-	err := config.Load()
-	if err != nil {
-		logger.Fatal("Unable to read env vars", zap.Error(err))
-	}
+	// Get all nodes (kubeapi-client creation and usage)
 
-	logger.Debug("Current config", zap.Reflect("config", config))
+	// Connect to memberlist
 
-	kubeClient, err := common.GetClientset(config.KubernetesAPITimeout)
-	if err != nil {
-		logger.Fatal("Unable to create a kubernetes clientSet", zap.Error(err))
-	}
+	// Start watch dog
 
-	wd := softdog.NewWatchdog(config.WatchdogDevice)
-	fencingAgent := agent.NewFencingAgent(logger, config, kubeClient, wd)
-	err = fencingAgent.Run(ctx)
-	if err != nil {
-		logger.Fatal("Unable run the fencing-agent", zap.Error(err))
-	}
+	// Start grpc server
+
+	// Start health check server
+
+	// Wait for interupt signal
+
+	<-ctx.Done()
 }
