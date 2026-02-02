@@ -43,10 +43,10 @@ func main() {
 	log = log.With("node", settings.NodeName)
 
 	settings.PodName = getEnvOrExit("POD_NAME")
-	log = log.With("pod.name", settings.PodName)
+	log = log.With("pod_name", settings.PodName)
 
 	settings.PodNamespace = getEnvOrExit("POD_NAMESPACE")
-	log = log.With("pod.namespace", settings.PodNamespace)
+	log = log.With("pod_namespace", settings.PodNamespace)
 
 	// Images
 	settings.Images = staticpod.ImagesSettings{
