@@ -1,5 +1,5 @@
 ---
-title: "Подготовка кластера к использованию SDN"
+title: "Preparing the cluster for SDN use"
 permalink: en/admin/configuration/network/sdn/cluster-preparing.html
 description: |
   Preparing the cluster for use with software defined networking
