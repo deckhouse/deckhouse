@@ -57,10 +57,7 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.3
   resourceVersion: "2"
-spec:
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.3
+spec: {}
 status:
   conditions:
   - lastProbeTime: null
@@ -76,9 +73,6 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.3
   usedBy:
   - name: test-app
     namespace: foobar

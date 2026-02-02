@@ -18,6 +18,7 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -59,7 +60,7 @@ type Application struct {
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
-	registry   registry.Registry // Application registry
+	repository registry.Remote   // Application repository
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
@@ -72,8 +73,8 @@ type ApplicationConfig struct {
 
 	Definition Definition // Application definition
 
-	Digests  map[string]string // Package images digests
-	Registry registry.Registry
+	Digests    map[string]string // Package images digests(images_digests.json)
+	Repository registry.Remote   // Package repository options
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -103,7 +104,7 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
-	a.registry = cfg.Registry
+	a.repository = cfg.Repository
 	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
@@ -166,10 +167,19 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 		Package: addonutils.Values{
 			"Name":     a.definition.Name,
 			"Digests":  a.digests,
-			"Registry": a.registry,
+			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
 	}
+}
+
+// GetExtraNelmValues returns runtime values in string format
+func (a *Application) GetExtraNelmValues() string {
+	runtimeValues := a.GetRuntimeValues()
+	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
+	packageJSON, _ := json.Marshal(runtimeValues.Package)
+
+	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
@@ -214,6 +224,9 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 	if err := a.values.ValidateConfigValues(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
+
+	// apply defaults from config values spec
+	settings = a.values.ApplyDefaultsConfigValues(settings)
 
 	// no need to call the settings check if nothing changed
 	if a.values.GetConfigChecksum() == settings.Checksum() {
@@ -354,7 +367,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = a.values.ApplyPatch(*valuesPatch); err != nil {
+		if err = a.values.ApplyValuesPatch(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}

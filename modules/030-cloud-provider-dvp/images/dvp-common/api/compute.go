@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -39,6 +40,11 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+)
+
+const (
+	// DefaultVMDeletionTimeout is the maximum time to wait for VM deletion
+	DefaultVMDeletionTimeout = 10 * time.Minute
 )
 
 type ComputeService struct {
@@ -164,11 +170,32 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 		return fmt.Errorf("delete VirtualMachine resource: %w", err)
 	}
 
-	err = c.Wait(ctx, name, vm, func(obj client.Object) (bool, error) { return obj == nil, nil })
+	// Create context with timeout for waiting
+	waitCtx, cancel := context.WithTimeout(ctx, DefaultVMDeletionTimeout)
+	defer cancel()
+
+	klog.Infof("Waiting for VirtualMachine %s deletion (timeout: %v)", name, DefaultVMDeletionTimeout)
+
+	// Wait for VM to be deleted with timeout
+	err = c.Wait(waitCtx, name, vm, func(obj client.Object) (bool, error) {
+		return obj == nil, nil
+	})
+
 	if err != nil {
+		// Check if timeout exceeded
+		if errors.Is(err, context.DeadlineExceeded) {
+			klog.Warningf("VirtualMachine %s deletion timed out after %v, VM may still be terminating in parent DVP cluster", name, DefaultVMDeletionTimeout)
+			return fmt.Errorf("VM deletion timeout after %v, VM may still be terminating in parent DVP cluster: %w", DefaultVMDeletionTimeout, err)
+		}
+		// Check if operation was canceled
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("VM deletion was canceled: %w", err)
+		}
+		// Other errors
 		return fmt.Errorf("await VirtualMachine deletion: %w", err)
 	}
 
+	klog.Infof("VirtualMachine %s deleted successfully", name)
 	return nil
 }
 
@@ -305,8 +332,11 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 			Name:      vmBDAName,
 			Namespace: c.namespace,
 			Labels: map[string]string{
-				attachmentDiskNameLabel:    diskName,
-				attachmentMachineNameLabel: vmHostname,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": vm.Labels["dvp.deckhouse.io/cluster-uuid"],
+				"dvp.deckhouse.io/hostname":     vmHostname,
+				attachmentDiskNameLabel:         diskName,
+				attachmentMachineNameLabel:      vmHostname,
 			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
@@ -402,11 +432,16 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
-func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
+			Labels: map[string]string{
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
+				"dvp.deckhouse.io/hostname":     vmHostname,
+			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},

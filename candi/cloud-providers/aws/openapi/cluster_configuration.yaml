@@ -84,7 +84,7 @@ apiVersions:
             type: object
             required: [instanceType, ami]
             description: |
-              Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+              Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
             properties:
               instanceType:
                 type: string
@@ -224,7 +224,7 @@ apiVersions:
               required: [instanceType, ami]
               type: object
               description: |
-                Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
               properties:
                 instanceType:
                   type: string
@@ -322,7 +322,7 @@ apiVersions:
                 type: object
                 required: [instanceType, ami]
                 description: |
-                  Partial contents of the fields of the [AWSInstanceClass](https://deckhouse.io/modules/cloud-provider-aws/cr.html#awsinstanceclass).
+                  Partial contents of the fields of the [AWSInstanceClass](cr.html#awsinstanceclass).
                 properties:
                   instanceType:
                     type: string

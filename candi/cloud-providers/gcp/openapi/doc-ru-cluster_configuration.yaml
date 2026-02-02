@@ -51,7 +51,7 @@ apiVersions:
 
               Для обеспечения кворума важно, чтобы оно было нечетным.
           instanceClass:
-            description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+            description: Частичное содержимое полей [GCPInstanceClass](cr.html#gcpinstanceclass).
             properties: &instanceClassProperties_ru
               machineType:
                 description: |
@@ -127,7 +127,7 @@ apiVersions:
 
                 Подробно про label'ы можно прочитать в [официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
             instanceClass:
-              description: Частичное содержимое полей [GCPInstanceClass](https://deckhouse.ru/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+              description: Частичное содержимое полей [GCPInstanceClass](cr.html#gcpinstanceclass).
               properties:
                 <<: *instanceClassProperties_ru
             zones: *NodeGroupZones_ru

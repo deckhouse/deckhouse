@@ -72,7 +72,7 @@ func (d *csiDriver) Run() error {
 			d.config.VendorVersion,
 			d.client,
 		),
-		service.NewController(d.client),
+		service.NewController(d.client, d.config.ClusterUUID),
 		service.NewNode(d.config.NodeName, d.client),
 		d,
 	)

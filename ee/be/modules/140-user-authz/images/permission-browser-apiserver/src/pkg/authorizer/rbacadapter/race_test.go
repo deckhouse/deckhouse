@@ -130,4 +130,3 @@ func TestRBACAuthorizer_ConcurrentAccess(t *testing.T) {
 }
 
 // Mock types are defined in rbac_test.go
-

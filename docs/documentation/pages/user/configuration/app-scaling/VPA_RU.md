@@ -111,7 +111,7 @@ VPA рассчитывает рекомендуемые значения на о
       kind: Deployment
       name: my-app
     updatePolicy:
-      updateMode: "Auto"
+      updateMode: "InPlaceOrRecreate"
     resourcePolicy:
       containerPolicies:
       - containerName: hamster
@@ -190,7 +190,7 @@ Grafana предоставляет несколько уровней детал�
        kind: Deployment
        name: my-app
      updatePolicy:
-       updateMode: "Auto"
+       updateMode: "InPlaceOrRecreate"
      resourcePolicy:
        containerPolicies:
        - containerName: hamster

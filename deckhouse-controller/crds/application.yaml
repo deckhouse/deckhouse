@@ -20,9 +20,6 @@ spec:
     - jsonPath: .spec.packageName
       name: Package
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
     - jsonPath: .spec.packageVersion
       name: Version
       type: string
@@ -30,18 +27,18 @@ spec:
       name: Repository
       priority: 1
       type: string
-    - jsonPath: .status.conditions[?(@.type=='Ready')].status
-      name: Ready
-      type: string
     - jsonPath: .status.conditions[?(@.type=='Installed')].status
       name: Installed
       type: string
-    - jsonPath: .status.resourceConditions[?(@.type=='Processed')].status
-      name: Processed
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].message
       name: Message
       type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
     name: v1alpha1
     schema:
       openAPIV3Schema:
