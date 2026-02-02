@@ -36,7 +36,7 @@ shell:
   install:
   - git clone --depth 1 --branch {{ $gatekeeperVersion }} $(cat /run/secrets/SOURCE_REPO)/open-policy-agent/gatekeeper.git /src
   - cd /src
-  #- git apply /patches/*.patch --verbose
+  - git apply /patches/*.patch --verbose
   - rm -rf website
   - rm -rf .git
   # check if module crds/gatekeeper are the same as gatekeeper crds
