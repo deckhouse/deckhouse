@@ -116,7 +116,8 @@ func KubernetsConfig(name string) []go_hook.KubernetesConfig {
 
 				isReady := false
 				for _, cond := range pod.Status.Conditions {
-					if cond.Type == "Ready" && cond.Status == "True" {
+					if cond.Type == v1core.PodReady &&
+						cond.Status == v1core.ConditionTrue {
 						isReady = true
 						break
 					}
