@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package fencing.v1;
+option go_package = "fencing-agent/pkg/api/v1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+
+
+message Node {
+  string name = 1;
+  string address = 2;
+}
+
+message NodesInNetwork {
+  // NodeName to Node
+  map<string,Node> nodes = 1;
+}
+
+message NodeGroup {
+  // NetworkInterfaceName to Node in this network
+  map<string, NodesInNetwork> networks = 1;
+}
+
+enum EventType {
+  UNDEFINED = 0;
+  LEFT = 1;
+  JOIN = 2;
+}
+
+message Event {
+  Node node = 1;
+  string network_interface = 2;
+  EventType type = 3;
+  google.protobuf.Timestamp time = 4;
+}
+
+service Fencing {
+  rpc GetAll(google.protobuf.Empty) returns (NodeGroup);
+  rpc StreamEvents(google.protobuf.Empty) returns (stream Event);
+}
