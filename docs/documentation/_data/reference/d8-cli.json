@@ -852,7 +852,7 @@
               "global": false
             },
             "ssh-key": {
-              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_ed25519|id_dsa}",
+              "description": "Use only specific ssh key(s).\nCan be specified with $WERF_SSH_KEY_* (e.g. $WERF_SSH_KEY_REPO=~/.ssh/repo_rsa, $WERF_SSH_KEY_NODEJS=~/.ssh/nodejs_rsa).\nDefaults to $WERF_SSH_KEY_*, system ssh-agent or ~/.ssh/{id_rsa|id_dsa}",
               "shorthand": "",
               "global": false
             },
