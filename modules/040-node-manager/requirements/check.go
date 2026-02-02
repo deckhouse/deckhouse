@@ -27,14 +27,16 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey           = "nodeManager:nodesMinimalOSVersionUbuntu"
-	minDebianVersionValuesKey           = "nodeManager:nodesMinimalOSVersionDebian"
-	requirementsUbuntuKey               = "nodesMinimalOSVersionUbuntu"
-	requirementsDebianKey               = "nodesMinimalOSVersionDebian"
-	unmetCloudConditionsKey             = "nodeManager:unmetCloudConditions"
-	unmetCloudConditionsRequirementsKey = "unmetCloudConditions"
-	cgroupV2SupportValuesKey            = "nodeManager:cgroupV2Support"
-	cgroupV2SupportRequirementsKey      = "cgroupV2Support"
+	minUbuntuVersionValuesKey              = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey              = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey                  = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey                  = "nodesMinimalOSVersionDebian"
+	unmetCloudConditionsKey                = "nodeManager:unmetCloudConditions"
+	unmetCloudConditionsRequirementsKey    = "unmetCloudConditions"
+	cgroupV2SupportValuesKey               = "nodeManager:cgroupV2Support"
+	cgroupV2SupportRequirementsKey         = "cgroupV2Support"
+	unsupportedContainerdV1ValuesKey       = "nodeManager:unsupportedContainerdV1"
+	unsupportedContainerdV1RequirementsKey = "checkUnsupportedContainerdV1"
 )
 
 // normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
@@ -95,24 +97,24 @@ func init() {
 		return true, nil
 	}
 
-	checkCgroupV2SupportFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+	checkUnsupportedContainerdV1 := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
-		if requirementValue == "" || requirementValue == "false" {
+		if requirementValue == "false" || requirementValue == "" {
 			return true, nil
 		}
 
-		cgroupV2Supported, exists := getter.Get(cgroupV2SupportValuesKey)
+		unsupportedContainerdV1, exists := getter.Get(unsupportedContainerdV1ValuesKey)
 		if !exists {
 			return true, nil
 		}
 
-		supported, ok := cgroupV2Supported.(bool)
+		hasUnsupportedContainerdV1, ok := unsupportedContainerdV1.(bool)
 		if !ok {
-			return false, fmt.Errorf("invalid cgroupV2Support value type")
+			return false, fmt.Errorf("invalid unsupportedContainerdV1 value type")
 		}
 
-		if requirementValue == "true" && !supported {
-			return false, errors.New("CGroup V2 support is required on all nodes, but some nodes have label node.deckhouse.io/containerd-v2-unsupported")
+		if requirementValue == "true" && hasUnsupportedContainerdV1 {
+			return false, errors.New("has unsupported containerd v1, see clusteralerts for details")
 		}
 
 		return true, nil
@@ -121,7 +123,7 @@ func init() {
 	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
-	requirements.RegisterCheck(cgroupV2SupportRequirementsKey, checkCgroupV2SupportFunc)
+	requirements.RegisterCheck(unsupportedContainerdV1RequirementsKey, checkUnsupportedContainerdV1)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {
