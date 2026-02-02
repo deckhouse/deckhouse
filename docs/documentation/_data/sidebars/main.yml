@@ -610,6 +610,26 @@ entries:
                      ru: Настройка сетевых политик
                   url: /admin/configuration/network/policy/configuration.html
                 - title:
+                    en: SDN
+                    ru: SDN
+                  folders:
+                    - title:
+                        en: Cluster preparation and SDN enablement
+                        ru: Подготовка кластера и включение SDN
+                      url: /admin/configuration/network/sdn/cluster-preparing.html
+                    - title:
+                        en: Node network interfaces configuration
+                        ru: Управление конфигурацией сети на узлах
+                      url: /admin/configuration/network/sdn/node-network-configuration-management.html
+                    - title:
+                        en: Additional networks
+                        ru: Дополнительные сети
+                      url: /admin/configuration/network/sdn/additional-networks.html
+                    - title:
+                        en: Underlay networks for hardware device passthrough
+                        ru: Underlay-сети для проброса аппаратных устройств
+                      url: /admin/configuration/network/sdn/underlay-networks.html 
+                - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
                   folders:
@@ -912,6 +932,22 @@ entries:
                     en: ALB
                     ru: ALB
                   url: /user/network/ingress/alb.html
+            - title:
+                en: SDN
+                ru: SDN
+              folders:
+                - title:
+                    en: Creating a network for a project
+                    ru: Создание выделенной сети для проекта
+                  url: /user/network/sdn/dedicated-network-creating.html
+                - title:
+                    en: Connecting additional networks to pods
+                    ru: Подключение дополнительных сетей к подам
+                  url: /user/network/sdn/pod-connecting-dedicated-networks.html
+                - title:
+                    en: Connecting physical network interfaces to DPDK application pods
+                    ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
+                  url: /user/network/sdn/underlay-network-dpdk.html
             - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие
