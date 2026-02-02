@@ -118,7 +118,7 @@ func checker(w http.ResponseWriter, pid int) {
 	if err := isNginxMasterRunning(pid); err != nil {
 		log.Printf("could not find nginx master process: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("500 - nginx master process not found"))
+		_, _ = w.Write([]byte("500 - nginx master process not found"))
 		return
 	}
 
@@ -126,19 +126,19 @@ func checker(w http.ResponseWriter, pid int) {
 	if err != nil {
 		log.Printf("could not request nginx /healthz: %v", err)
 		w.WriteHeader(http.StatusServiceUnavailable)
-		w.Write([]byte("503 - nginx server unavailable"))
+		_, _ = w.Write([]byte("503 - nginx server unavailable"))
 		return
 	}
 
 	if res.StatusCode != http.StatusOK {
 		log.Printf("could not get 200 response code from nginx: %v", err)
 		w.WriteHeader(res.StatusCode)
-		w.Write([]byte("fail"))
+		_, _ = w.Write([]byte("fail"))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("ping"))
+	_, _ = w.Write([]byte("ping"))
 }
 
 func main() {
@@ -151,10 +151,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("could not create watch: %v", err)
 	}
-	defer watcher.Close()
 
 	err = watcher.Add(additionalConfigPath)
 	if err != nil {
+		watcher.Close()
 		log.Fatalf("could not add file to watcher: %v", err)
 	}
 
@@ -187,8 +187,7 @@ loop:
 					log.Fatalf("could not add file to watcher: %v", err)
 				}
 
-				switch event.Name {
-				case additionalConfigPath:
+				if event.Name == additionalConfigPath {
 					log.Println("nginx config has been updated and will be reloaded")
 					if output, err := testConfig(); err != nil {
 						log.Printf("nginx test config failed: %s", output)
