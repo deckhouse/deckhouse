@@ -20,8 +20,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +31,8 @@ import (
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/deckhouse/virtualization/api/core/v1alpha2"
 )
 
 const (
@@ -38,6 +40,11 @@ const (
 	attachmentDiskNameLabel    = "virtualMachineDiskName"
 	attachmentMachineNameLabel = "virtualMachineName"
 	DVPLoadBalancerLabelPrefix = "dvp.deckhouse.io/"
+)
+
+const (
+	// DefaultVMDeletionTimeout is the maximum time to wait for VM deletion
+	DefaultVMDeletionTimeout = 10 * time.Minute
 )
 
 type ComputeService struct {
@@ -163,11 +170,32 @@ func (c *ComputeService) DeleteVM(ctx context.Context, name string) error {
 		return fmt.Errorf("delete VirtualMachine resource: %w", err)
 	}
 
-	err = c.Wait(ctx, name, vm, func(obj client.Object) (bool, error) { return obj == nil, nil })
+	// Create context with timeout for waiting
+	waitCtx, cancel := context.WithTimeout(ctx, DefaultVMDeletionTimeout)
+	defer cancel()
+
+	klog.Infof("Waiting for VirtualMachine %s deletion (timeout: %v)", name, DefaultVMDeletionTimeout)
+
+	// Wait for VM to be deleted with timeout
+	err = c.Wait(waitCtx, name, vm, func(obj client.Object) (bool, error) {
+		return obj == nil, nil
+	})
+
 	if err != nil {
+		// Check if timeout exceeded
+		if errors.Is(err, context.DeadlineExceeded) {
+			klog.Warningf("VirtualMachine %s deletion timed out after %v, VM may still be terminating in parent DVP cluster", name, DefaultVMDeletionTimeout)
+			return fmt.Errorf("VM deletion timeout after %v, VM may still be terminating in parent DVP cluster: %w", DefaultVMDeletionTimeout, err)
+		}
+		// Check if operation was canceled
+		if errors.Is(err, context.Canceled) {
+			return fmt.Errorf("VM deletion was canceled: %w", err)
+		}
+		// Other errors
 		return fmt.Errorf("await VirtualMachine deletion: %w", err)
 	}
 
+	klog.Infof("VirtualMachine %s deleted successfully", name)
 	return nil
 }
 
@@ -304,8 +332,11 @@ func (c *ComputeService) AttachDiskToVM(ctx context.Context, diskName string, vm
 			Name:      vmBDAName,
 			Namespace: c.namespace,
 			Labels: map[string]string{
-				attachmentDiskNameLabel:    diskName,
-				attachmentMachineNameLabel: vmHostname,
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": vm.Labels["dvp.deckhouse.io/cluster-uuid"],
+				"dvp.deckhouse.io/hostname":     vmHostname,
+				attachmentDiskNameLabel:         diskName,
+				attachmentMachineNameLabel:      vmHostname,
 			},
 		},
 		Spec: v1alpha2.VirtualMachineBlockDeviceAttachmentSpec{
@@ -401,17 +432,35 @@ func (c *ComputeService) listVMBDAByHostname(ctx context.Context, vmHostname str
 	return vmbdas.Items, nil
 }
 
-func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, name string, userData []byte) error {
+func (c *ComputeService) CreateCloudInitProvisioningSecret(ctx context.Context, clusterUUID, vmHostname, name string, userData []byte) error {
 	s := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: c.namespace,
+			Labels: map[string]string{
+				"deckhouse.io/managed-by":       "deckhouse",
+				"dvp.deckhouse.io/cluster-uuid": clusterUUID,
+				"dvp.deckhouse.io/hostname":     vmHostname,
+			},
 		},
 		Type:       v1alpha2.SecretTypeCloudInit,
 		StringData: map[string]string{"userData": string(userData)},
 	}
 
+	// Try to create, if already exists then update
 	if _, err := c.clientset.CoreV1().Secrets(c.namespace).Create(ctx, s, metav1.CreateOptions{}); err != nil {
+		if k8serrors.IsAlreadyExists(err) {
+			// Secret already exists, update it instead
+			existing, getErr := c.clientset.CoreV1().Secrets(c.namespace).Get(ctx, name, metav1.GetOptions{})
+			if getErr != nil {
+				return fmt.Errorf("get existing '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, getErr)
+			}
+			existing.StringData = map[string]string{"userData": string(userData)}
+			if _, updateErr := c.clientset.CoreV1().Secrets(c.namespace).Update(ctx, existing, metav1.UpdateOptions{}); updateErr != nil {
+				return fmt.Errorf("update '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, updateErr)
+			}
+			return nil
+		}
 		return fmt.Errorf("create '%s[%s]' secret: %w", name, v1alpha2.SecretTypeCloudInit, err)
 	}
 	return nil
@@ -463,17 +512,37 @@ func (c *ComputeService) RemoveVMLabelByHostname(ctx context.Context, hostname, 
 
 func (c *ComputeService) WaitDiskAttaching(ctx context.Context, vmBDAName string) error {
 	klog.Infof("WaitDiskAttaching vmBDA %s", vmBDAName)
+
 	return c.Wait(ctx, vmBDAName, &v1alpha2.VirtualMachineBlockDeviceAttachment{}, func(obj client.Object) (bool, error) {
+		if obj == nil {
+			klog.Infof("vmBDA %s not found yet; still waiting for creation", vmBDAName)
+			return false, nil
+		}
+
 		vmBDA, ok := obj.(*v1alpha2.VirtualMachineBlockDeviceAttachment)
-		if !ok {
+		if !ok || vmBDA == nil {
 			return false, fmt.Errorf("expected a VirtualMachineBlockDeviceAttachment but got a %T", obj)
 		}
-		klog.Infof("Phase vmBDA %s: %s", vmBDAName, vmBDA.Status.Phase)
 
-		if vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
-			return false, fmt.Errorf("disk attaching error to the vm, please check status VirtualMachineBlockDeviceAttachment %s in the parent cluster", vmBDAName)
+		phase := vmBDA.Status.Phase
+
+		if phase == v1alpha2.BlockDeviceAttachmentPhaseAttached {
+			klog.Infof("vmBDA %s is Attached", vmBDAName)
+		} else {
+			klog.Infof("vmBDA %s exists but still not attached: phase=%s", vmBDAName, phase)
 		}
 
-		return vmBDA.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
+		if phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
+			return false, fmt.Errorf(
+				"disk attaching error to the vm, please check status VirtualMachineBlockDeviceAttachment %s in the parent cluster",
+				vmBDAName,
+			)
+		}
+
+		return phase == v1alpha2.BlockDeviceAttachmentPhaseAttached, nil
 	})
+}
+
+func (c *ComputeService) GetVMBDA(ctx context.Context, diskName, vmHostname string) (*v1alpha2.VirtualMachineBlockDeviceAttachment, error) {
+	return c.getVMBDA(ctx, diskName, vmHostname)
 }

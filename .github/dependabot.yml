@@ -43,6 +43,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/ee/be/modules/140-user-authz/images/permission-browser-apiserver/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/ee/be/modules/140-user-authz/images/webhook/src"
   labels:
   - "type/dependencies"
@@ -539,6 +548,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/node-group-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

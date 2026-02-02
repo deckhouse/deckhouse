@@ -16,12 +16,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/go-jose/go-jose/v3"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/cache"
 	"math/big"
 	"net"
 	"net/http"
@@ -29,6 +23,13 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/go-jose/go-jose/v3"
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/cache"
 )
 
 type Proxy struct {
@@ -42,7 +43,6 @@ type Proxy struct {
 }
 
 func NewProxy(namespace string) (*Proxy, error) {
-
 	// Create config for Kubernetes-client
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -249,15 +249,13 @@ func (p *Proxy) CheckAuthn(header http.Header, scope string) error {
 }
 
 func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
-
-
 	proxyDirector := func(req *http.Request) {
 		// impersonate as current ServiceAccount
 		saToken, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 		if err != nil {
 			logger.Printf("[api-proxy] Error reading SA token: %v", err)
 		}
-		
+
 		req.Header.Del("Authorization")
 		req.Header.Add("Authorization", "Bearer "+string(saToken))
 		req.URL.Scheme = "https"
@@ -280,7 +278,6 @@ func (p *Proxy) NewReverseProxyHTTP() (*httputil.ReverseProxy, error) {
 
 // ExtractRemotePublicMetadata extract remote-public-metadata.json fom Secret d8-remote-clusters-public-metadata
 func (p *Proxy) extractRemotePublicMetadata() (RemotePublicMetadata, error) {
-
 	items := p.remoteClustersPublicMetadataInformer.GetStore().List()
 	if len(items) == 0 {
 		return nil, fmt.Errorf("no secrets found in d8-remote-clusters-public-metadata")

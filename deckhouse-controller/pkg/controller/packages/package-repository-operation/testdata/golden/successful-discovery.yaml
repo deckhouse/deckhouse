@@ -14,9 +14,9 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "8"
+  resourceVersion: "7"
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true
@@ -41,11 +41,17 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "2"
+  resourceVersion: "3"
 spec:
   registry:
     repo: registry.example.com/test
 status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: Successfully scanned repository, found 1 package(s)
+    reason: ""
+    status: "True"
+    type: LastOperationScanFinished
   packages:
   - name: test-package
     type: Application

@@ -1,4 +1,3 @@
-{{- define "module-stage-badge" }}
 {{- $module := .module }}
 {{- $channel := .channel }}
 {{- $moduleStageFallBackLegacy := .stageFallBackLegacy }}
@@ -11,7 +10,7 @@
     {{- $moduleStage = humanize $moduleStageFallBackLegacy }}
   {{- end }}
 
-  {{- if and $moduleStage (in (slice "Preview" "Experimental" "Deprecated") $moduleStage) }}
+  {{- if in .ctx.Site.Data.helpers.moduleAllowedStages $moduleStage }}
 
     {{- $statusKey := replace (lower $moduleStage) " " "_" -}}
 
@@ -22,7 +21,7 @@
        {{- $alertLevel = "danger" }}
     {{- end }}
 
-    {{- partial "alert" ( dict "level" $alertLevel "content" (T (printf "module_alert_%s_long" $statusKey )) ) }}
+    {{- $content := printf "%s: <i data-tippy-content='%s'>%s</i>" (T "module_lifecycle_stage") (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
+    {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
   {{- end }}
-{{- end }}
 {{- end }}

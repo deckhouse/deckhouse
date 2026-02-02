@@ -48,6 +48,7 @@ func NewReleaseNotifier(settings *Settings) *ReleaseNotifier {
 
 type WebhookData struct {
 	Subject       string            `json:"subject"`
+	ModuleName    string            `json:"moduleName,omitempty"`
 	Version       string            `json:"version"`
 	Requirements  map[string]string `json:"requirements,omitempty"`
 	ChangelogLink string            `json:"changelogLink,omitempty"`
@@ -111,7 +112,14 @@ func (u *ReleaseNotifier) sendReleaseNotification(ctx context.Context, release v
 		ChangelogLink: release.GetChangelogLink(),
 		ApplyTime:     applyTime.Format(time.RFC3339),
 		Subject:       u.settings.Subject,
-		Message:       fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
+		// set deckhouse release message by default
+		Message: fmt.Sprintf("New Deckhouse Release %s is available. Release will be applied at: %s", release.GetVersion().String(), applyTime.Format(time.RFC850)),
+	}
+
+	// using module-specific message if subject is module
+	if u.settings.Subject == SubjectModule {
+		data.ModuleName = release.GetModuleName()
+		data.Message = fmt.Sprintf("New %s Release %s is available. Release will be applied at: %s", release.GetModuleName(), release.GetVersion().String(), applyTime.Format(time.RFC850))
 	}
 
 	err := sendWebhookNotification(ctx, u.settings.NotificationConfig, data)
@@ -147,13 +155,13 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		err := json.NewEncoder(buf).Encode(data)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("encode: %w", err)
 		}
 
 		var req *http.Request
 		req, err = http.NewRequestWithContext(ctx, http.MethodPost, config.WebhookURL, buf)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new request with context: %w", err)
 		}
 
 		req.Header.Add("Content-Type", "application/json")
@@ -161,7 +169,7 @@ func sendWebhookNotification(ctx context.Context, config NotificationConfig, dat
 
 		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("do: %w", err)
 		}
 		defer resp.Body.Close()
 

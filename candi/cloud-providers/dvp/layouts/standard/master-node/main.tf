@@ -21,6 +21,8 @@ module "root-disk" {
   image         = local.root_disk_image
   size          = local.root_disk_size
   storage_class = local.root_disk_storage_class
+  hostname      = local.hostname
+  cluster_uuid  = local.cluster_uuid
 }
 
 module "kubernetes-data-disk" {
@@ -31,6 +33,8 @@ module "kubernetes-data-disk" {
   namespace     = local.namespace
   storage_class = local.kubernetes_data_disk_storage_class
   size          = local.kubernetes_data_disk_size
+  hostname      = local.hostname
+  cluster_uuid  = local.cluster_uuid
 }
 
 module "additional-disk" {
@@ -48,6 +52,8 @@ module "additional-disk" {
   namespace     = local.namespace
   storage_class = try(each.value.storage_class, null)
   size          = each.value.size
+  hostname      = local.hostname
+  cluster_uuid  = local.cluster_uuid
 }
 
 locals {
@@ -65,6 +71,7 @@ module "ipv4-address" {
   namespace    = local.namespace
   hostname     = local.hostname
   ipv4_address = local.ipv4_address
+  cluster_uuid = local.cluster_uuid
 }
 
 module "master" {
@@ -78,6 +85,8 @@ module "master" {
   ipv4_address               = module.ipv4-address
   memory_size                = local.memory_size
   virtual_machine_class_name = local.virtual_machine_class_name
+  live_migration_policy      = local.live_migration_policy
+  run_policy                 = local.run_policy
   bootloader                 = local.bootloader
   cpu                        = local.cpu
   ssh_public_key             = local.ssh_public_key

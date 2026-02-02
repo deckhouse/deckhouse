@@ -17,9 +17,10 @@ limitations under the License.
 package config
 
 import (
-	"dvp-common/config"
 	"flag"
 	"fmt"
+
+	"dvp-common/config"
 )
 
 type CSIConfig struct {
@@ -27,6 +28,7 @@ type CSIConfig struct {
 	Endpoint      string
 	NodeName      string
 	VendorVersion string
+	ClusterUUID   string
 	config.CloudConfig
 }
 
@@ -38,6 +40,7 @@ func NewCSIConfig(version string) (*CSIConfig, error) {
 	flag.StringVar(&cfg.Endpoint, "endpoint", "unix://tmp/csi.sock", "CSI endpoint")
 	flag.StringVar(&cfg.DriverName, "drivername", "csi.dvp.deckhouse.io", "name of the driver")
 	flag.StringVar(&cfg.NodeName, "node-name", "", "node name")
+	flag.StringVar(&cfg.ClusterUUID, "cluster-uuid", "", "clusterUUID (for PV disks label)")
 
 	cloudConfig, err := config.NewCloudConfig()
 	if err != nil {

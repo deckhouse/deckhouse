@@ -18,8 +18,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	ssh "github.com/deckhouse/lib-gossh"
 	"sigs.k8s.io/yaml"
+
+	ssh "github.com/deckhouse/lib-gossh"
 )
 
 const (
@@ -136,33 +137,9 @@ func UpdateMasterImageRule(oldRaw, newRaw json.RawMessage) error {
 		return err
 	}
 
-	for _, images := range []struct {
-		old   string
-		new   string
-		field string
-	}{
-		{old: oldConfig.InstanceClass.AMI, new: newConfig.InstanceClass.AMI, field: "ami"},
-		{old: oldConfig.InstanceClass.URN, new: newConfig.InstanceClass.URN, field: "urn"},
-		{old: oldConfig.InstanceClass.Image, new: newConfig.InstanceClass.Image, field: "image"},
-		{old: oldConfig.InstanceClass.ImageID, new: newConfig.InstanceClass.ImageID, field: "imageID"},
-		{old: oldConfig.InstanceClass.ImageName, new: newConfig.InstanceClass.ImageName, field: "imageName"},
-		{old: oldConfig.InstanceClass.Template, new: newConfig.InstanceClass.Template, field: "template"},
-	} {
-		if images.new != "" && images.old != images.new {
-			if oldConfig.Replicas > 1 && newConfig.Replicas > 1 {
-				return fmt.Errorf(
-					"%w: can't update .masterNodeGroup.%s in multi-master cluster, functionality will be available in future versions",
-					ErrValidationRuleFailed, images.field,
-				)
-			}
-
-			return fmt.Errorf(
-				"%w: can't update .masterNodeGroup.%s in single-master cluster, functionality will be available in future versions",
-				ErrValidationRuleFailed, images.field,
-			)
-		}
-	}
-
+	// Image update is now allowed for both single-master and multi-master clusters.
+	// dhctl converge handles image updates correctly by automatically scaling to 3 replicas
+	// and back to 1 for single-master clusters if needed.
 	return nil
 }
 

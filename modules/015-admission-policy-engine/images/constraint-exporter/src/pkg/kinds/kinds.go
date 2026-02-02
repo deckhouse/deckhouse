@@ -23,7 +23,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -33,6 +32,8 @@ import (
 	"k8s.io/client-go/restmapper"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/yaml"
+
+	"github.com/flant/constraint_exporter/pkg/gatekeeper"
 )
 
 const (
@@ -323,7 +324,7 @@ func (rm resourceMatcher) convertKindsToResource(kinds []gatekeeper.MatchKind) (
 
 		groups := make([]string, 0, len(mk.APIGroups))
 		resources := make([]string, 0, len(mk.Kinds))
-		operations := make([]string, 0)
+		operations := make([]string, 0, len(uniqOperations))
 
 		for k := range uniqGroups {
 			groups = append(groups, k)

@@ -25,7 +25,7 @@ properties:
     enum: ["Alpha", "Beta", "EarlyAccess", "Stable", "RockSolid"]
     x-examples: ["Stable"]
     description: |
-      Desirable Deckhouse release channel (Deckhouse will [switch](https://deckhouse.ru//products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
+      Target Deckhouse release channel (Deckhouse will [switch](/products/kubernetes-platform/documentation/v1/architecture/updating.html) to it when such an opportunity appears).
 
       The order in which the stability of the release channel increases (from **less** stable to **more** stable): `Alpha`, `Beta`, `EarlyAccess`, `Stable`, `RockSolid`.
 
@@ -293,6 +293,7 @@ properties:
   allowExperimentalModules:
     type: boolean
     x-examples: [false]
+    default: false
     description: |
       Allows the use of experimental modules (modules in the `Experimental` lifecycle stage).
 
@@ -365,6 +366,7 @@ properties:
         properties: &registryDirectProperties
           imagesRepo:
             type: string
+            default: registry.deckhouse.io/deckhouse/ce
             x-doc-required: true
             pattern: '^[0-9a-zA-Z\.\-]+(\:[0-9]{1,5})?(\/[0-9a-zA-Z\.\-\_\/]+)?$'
             description: |

@@ -28,12 +28,9 @@ shell:
         echo "Render global OpenAPI DKP schemas..."
         bash _tools/prepare_resources.sh
 
-        echo '[] Extracting the default Kubernetes version...'
-        echo "default: \"$(grep "DefaultKubernetesVersion" -m 1 _data/dhctl-base.go | grep -Eo '[0-9.]+')\"" > _data/version_kubernetes.yml
-
         echo '[] Filling in the array of supported OS & K8S versions...'
         cd _data
-        yq eval-all 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s}' supported_versions.yml version_map.yml > supported_versions.yml.tmp && mv supported_versions.yml.tmp supported_versions.yml && rm version_map.yml
+        yq eval-all -i 'select(fileIndex == 0) * {"k8s": select(fileIndex == 1).k8s, "d8": select(fileIndex == 1).d8}' supported_versions.yml version_map.yml
 
         echo '[] Converting editions structure...'
         yq e -o json editions-repo-data.yaml | jq -M 'reduce .editions[] as $item ({}; .[$item.name | ascii_downcase] = $item)' | jq -Ms '.[0] * .[1]' - modules/editions-addition.json | jq '. as $editions | input as $be | .["be"].excludeModules += $be.excludeModules' - modules/be-addition.json > editions.json

@@ -35,5 +35,40 @@ metadata:
 spec:
   policyName: {{ $policyName }}
   validationActions: [Deny]
+---
+{{- $policyName := "resource-quota-overrides.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods", "persistentvolumeclaims"]
+  matchConditions:
+  - name: has-resource-quota-override-labels
+    expression: |
+      has(object.metadata.labels) &&
+      object.metadata.labels.exists(k, k.startsWith("resource-quota-overrides.deckhouse.io/"))
+  validations:
+  - expression: |
+      request.userInfo.username.startsWith("system:serviceaccount:d8-") ||
+      request.userInfo.username.startsWith("system:serviceaccount:kube-system:") ||
+      request.userInfo.username == "system:kube-scheduler"
+    message: "Labels with prefix 'resource-quota-overrides.deckhouse.io/' can only be set by system controllers"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
 {{- end }}
-

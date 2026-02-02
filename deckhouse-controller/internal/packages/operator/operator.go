@@ -31,7 +31,8 @@ import (
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer"
+	erofsinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/erofs"
+	symlinkinstaller "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/installer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
@@ -42,6 +43,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -59,7 +62,7 @@ type Operator struct {
 	eventHandler *eventhandler.Handler // Converts events (Kube/schedule) into tasks
 	queueService *queue.Service        // Task queue for hook execution
 	nelmService  *nelm.Service         // Helm release management and monitoring
-	installer    *installer.Installer  // Erofs installer
+	installer    installer             // Symlink or Erofs installer
 
 	manager     *manager.Manager
 	scheduler   *schedule.Scheduler
@@ -74,6 +77,12 @@ type Operator struct {
 	packages map[string]*lifecyclePackage
 
 	logger *log.Logger
+}
+
+type installer interface {
+	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error
+	Install(ctx context.Context, downloaded, deployed, name, version string) error
+	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
 type moduleManager interface {
@@ -105,8 +114,17 @@ func New(moduleManager moduleManager, dc dependency.Container, logger *log.Logge
 	o.logger = logger.Named(operatorTracer)
 	o.scheduleManager = cron.NewManager(o.logger)
 	o.queueService = queue.NewService(o.logger)
-	o.installer = installer.New(dc, o.logger)
 	o.status = status.NewService()
+
+	reg := registry.NewService(dc, logger)
+	// Default to symlink backend (works everywhere, including MacOS)
+	o.installer = symlinkinstaller.NewInstaller(reg, logger)
+
+	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
+	if verity.IsSupported() {
+		logger.Info("erofs supported")
+		o.installer = erofsinstaller.NewInstaller(reg, logger)
+	}
 
 	// Initialize scheduler with enabling/disabling callbacks
 	o.buildScheduler(moduleManager)
@@ -190,9 +208,14 @@ func (o *Operator) Status() *status.Service {
 	return o.status
 }
 
-// Scheduler return the scheduler for external access
+// Scheduler returns the scheduler for external access
 func (o *Operator) Scheduler() *schedule.Scheduler {
 	return o.scheduler
+}
+
+// Manager returns the manager for external access
+func (o *Operator) Manager() *manager.Manager {
+	return o.manager
 }
 
 // Stop performs graceful shutdown of all operator subsystems.
@@ -214,7 +237,7 @@ func (o *Operator) Stop() {
 
 	// Stop generating new events
 	o.scheduleManager.Stop()
-	o.kubeEventsManager.PauseHandleEvents()
+	o.kubeEventsManager.Stop()
 
 	// Stop accepting and processing new tasks
 	o.eventHandler.Stop()

@@ -19,15 +19,14 @@ package main
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
-
-	"go/ast"
-	"go/parser"
-	"go/token"
 
 	"gopkg.in/yaml.v2"
 )
@@ -95,7 +94,7 @@ func RunReleaseRequirementsValidation(info *DiffInfo) (exitCode int) {
 			}
 		} else {
 			fmt.Print("New requirements found: ")
-			for k, _ := range newRequirements {
+			for k := range newRequirements {
 				fmt.Printf("%s ", k)
 			}
 			fmt.Println("")
@@ -106,7 +105,7 @@ func RunReleaseRequirementsValidation(info *DiffInfo) (exitCode int) {
 					continue
 				}
 				// Check only added or modified files
-				if !(fileInfo.IsAdded() || fileInfo.IsModified()) {
+				if !fileInfo.IsAdded() && !fileInfo.IsModified() {
 					continue
 				}
 
@@ -165,7 +164,7 @@ func RunReleaseRequirementsValidation(info *DiffInfo) (exitCode int) {
 
 		if len(allRequirements) > 0 {
 			output := []string{}
-			for requirement, _ := range allRequirements {
+			for requirement := range allRequirements {
 				output = append(output, requirement)
 			}
 			msgs.Add(NewError("release.yaml", "found requirements for non-existent module checks, please review release requirements in release.yaml", strings.Join(output, ", ")))
@@ -227,7 +226,7 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 						var ok bool
 						value, ok = decls[parentFunction][v.Name]
 						if !ok {
-							value, _ = decls[generalDecls][v.Name]
+							value = decls[generalDecls][v.Name]
 						}
 
 					default:
@@ -255,7 +254,7 @@ func checksAndRequirements(newRequirements map[string]struct{}, fileName, packag
 									var ok bool
 									value, ok = decls[parentFunction][v.Name]
 									if !ok {
-										value, _ = decls[generalDecls][v.Name]
+										value = decls[generalDecls][v.Name]
 									}
 								}
 							}
@@ -347,7 +346,7 @@ func getRequirements(newlines []string, releaseFile string) ( /* all requirement
 	allRequirements := make(map[string]struct{})
 	newRequirements := make(map[string]struct{})
 
-	for requirement, _ := range releaseSettings.Requirements {
+	for requirement := range releaseSettings.Requirements {
 		allRequirements[requirement] = struct{}{}
 		requirementRegex := regexp.MustCompile(fmt.Sprintf("^  \"%s\":", requirement))
 		for _, line := range newlines {
@@ -366,7 +365,6 @@ func getAllChecks(roots []string) ([]string, error) {
 	allChecks := make([]string, 0)
 
 	for _, root := range roots {
-
 		err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

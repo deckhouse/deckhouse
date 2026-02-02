@@ -104,6 +104,11 @@ spec:
               secretKeyRef:
                 name: dvp-credentials
                 key: kubernetesConfigBase64
+          - name: CLUSTER_UUID
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials
+                key: clusterUUID
           - name: DVP_NAMESPACE
             valueFrom:
               secretKeyRef:

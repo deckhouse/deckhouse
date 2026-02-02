@@ -6,6 +6,7 @@ linters:
   default: none
   enable:
     - copyloopvar
+    - depguard
     - dogsled
     - errcheck
     - gocritic
@@ -24,10 +25,21 @@ linters:
     - unused
     - usestdlibvars
   settings:
+    depguard:
+      rules:
+        main:
+          files:
+            - $all
+          deny:
+            - pkg: github.com/golang/mock
+              desc: "In public archive. Use 'github.com/gojuno/minimock' instead."
+            - pkg: "github.com/samber/lo"
+              desc: "This package must not be used, because of increasing cognitive complexity."
     errcheck:
       exclude-functions:
         - fmt:.*[rR]ead|[wW]rite|[cC]lose
         - io:Copy
+        - (io.Writer).Write
     nonamedreturns:
       report-error-in-defer: false
     sloglint:
@@ -61,6 +73,20 @@ linters:
         - all
         - '-ST1003' # waiting for package name will be fixed (underscores)
         - '-QF1008' # not need to fix; we understand how to call nested structs
+    revive:
+      rules:
+        - name: var-naming # waiting for package name will be fixed (incorrect naming)
+          severity: warning
+          disabled: false
+          exclude: [""]
+          arguments:
+            - ["ID"] # AllowList
+            - ["VM"] # DenyList
+            - - skip-initialism-name-checks: false
+                upper-case-const: false
+                skip-package-name-checks: true
+                skip-package-name-collision-with-go-std: false
+                extra-bad-package-names: []
   exclusions:
     generated: lax
     presets:
@@ -91,6 +117,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
+      - ^tools/
       - _test\.go$
 formatters:
   enable:
@@ -115,3 +142,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+      - ^tools$

@@ -18,13 +18,14 @@ package dvp
 
 import (
 	"context"
-	"dvp-common/api"
 	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+
+	"dvp-common/api"
 )
 
 func (c *Cloud) GetLoadBalancer(
@@ -84,7 +85,7 @@ func (c *Cloud) EnsureLoadBalancerDeleted(
 func defaultLoadBalancerName(service *v1.Service) string {
 	name := "a" + string(service.UID)
 
-	name = strings.Replace(name, "-", "", -1)
+	name = strings.ReplaceAll(name, "-", "")
 
 	if len(name) > 32 {
 		name = name[:32]
@@ -104,6 +105,10 @@ func (c *Cloud) ensureLB(ctx context.Context, service *v1.Service, nodes []*v1.N
 		Name:    lbName,
 		Service: service,
 		Nodes:   nodes,
+		ServiceLabels: map[string]string{
+			"deckhouse.io/managed-by":       "deckhouse",
+			"dvp.deckhouse.io/cluster-uuid": c.config.ClusterUUID,
+		},
 	}
 
 	svc, err := c.dvpService.LoadBalancerService.CreateOrUpdateLoadBalancer(ctx, lb)

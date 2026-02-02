@@ -139,7 +139,32 @@ variable "timeouts" {
   })
 }
 
+variable "live_migration_policy" {
+  type        = string
+  default     = null
+  description = "Live migration policy for VirtualMachine."
+
+  validation {
+    condition = var.live_migration_policy == null || contains(["Manual", "Never", "AlwaysSafe", "PreferSafe", "AlwaysForced", "PreferForced"], var.live_migration_policy)
+    error_message = "live_migration_policy must be one of: Manual, Never, AlwaysSafe, PreferSafe, AlwaysForced, PreferForced."
+  }
+}
+
+variable "run_policy" {
+  type        = string
+  default     = null
+  description = "Run policy for VirtualMachine."
+
+  validation {
+    condition = var.run_policy == null || contains(["AlwaysOn", "AlwaysOff", "Manual", "AlwaysOnUnlessStoppedManually"], var.run_policy)
+    error_message = "run_policy must be one of: AlwaysOn, AlwaysOff, Manual, AlwaysOnUnlessStoppedManually."
+  }
+}
+
 locals {
+  additional_disks_hashes = [
+    for d in var.additional_disks : d.hash
+  ]
   vm_merged_node_selector = merge(
     {
       for k, v in {
@@ -168,7 +193,7 @@ locals {
       }
     },
     {
-      "rootDiskHash" = var.root_disk.hash,
+      "rootDiskHash"        = var.root_disk.hash,
       "additionalDisksHash" = local.additional_disks_hashes
     },
   )
@@ -181,6 +206,7 @@ locals {
 
   vm_merged_labels = merge(
     {
+      "deckhouse.io/managed-by"         = "deckhouse"
       "dvp.deckhouse.io/cluster-prefix" = var.prefix
       "dvp.deckhouse.io/cluster-uuid"   = var.cluster_uuid
       "dvp.deckhouse.io/node-group"     = var.node_group

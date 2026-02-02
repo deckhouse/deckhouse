@@ -37,7 +37,7 @@ type VectorKeepalive struct {
 	TimeSecs int `json:"time_secs"`
 }
 
-func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
+func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Vector {
 	spec := cspec.Vector
 
 	tls := CommonTLS{
@@ -60,7 +60,7 @@ func NewVector(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Vector {
 
 	return &Vector{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "vector",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

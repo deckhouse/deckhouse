@@ -10,18 +10,18 @@ import (
 )
 
 const (
-	appLabel                   = "app"
-	moduleLabel                = "module"
-	k8sAppLabel                = "k8s-app"
-	PprofBindAddress           = ":4265"
-	HealthProbeBindAddress     = ":4264"
-	NodeLocalDNSDaemonSet      = "node-local-dns"
-	NodeLocalDNSNamespace      = "kube-system"
-	CiliumDaemonSet            = "agent"
-	CiliumModuleName           = "cni-cilium"
-	CiliumNamespace            = "d8-cni-cilium"
-	ControllerName             = "node-local-dns-safe-updater"
-	PodTemplateGenerationLabel = "pod-template-generation"
+	appLabel                    = "app"
+	moduleLabel                 = "module"
+	k8sAppLabel                 = "k8s-app"
+	PprofBindAddress            = ":4265"
+	HealthProbeBindAddress      = ":4264"
+	NodeLocalDNSDaemonSet       = "node-local-dns"
+	NodeLocalDNSNamespace       = "kube-system"
+	CiliumDaemonSet             = "agent"
+	CiliumModuleName            = "cni-cilium"
+	CiliumNamespace             = "d8-cni-cilium"
+	ControllerName              = "node-local-dns-safe-updater"
+	ControllerRevisionHashLabel = "controller-revision-hash"
 )
 
 var (

@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,6 +35,7 @@ import (
 	toolsWatch "k8s.io/client-go/tools/watch"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Watcher struct {

@@ -73,7 +73,7 @@ func (lo *LogOutput) MarshalJSON() ([]byte, error) {
 
 	if lo.Stacktrace != "" {
 		if json.Valid([]byte(lo.Stacktrace)) {
-			render.RawJsonKeyValue(StacktraceKey, lo.Stacktrace)
+			render.RawJSONKeyValue(StacktraceKey, lo.Stacktrace)
 		} else {
 			render.JSONKeyValue(StacktraceKey, lo.Stacktrace)
 		}
@@ -113,7 +113,7 @@ func (r *Render) JSONKeyValue(key, value string) {
 	r.buf = append(r.buf, '"')
 }
 
-func (r *Render) RawJsonKeyValue(key, value string) {
+func (r *Render) RawJSONKeyValue(key, value string) {
 	r.buf = append(r.buf, '"')
 	r.string(key)
 	r.buf = append(r.buf, '"', ':')

@@ -1,12 +1,13 @@
 {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <!-- favicon -->
-<link rel="apple-touch-icon" sizes="180x180" href="{{ site.baseurl }}/apple-touch-icon.png">
-<link rel="icon" type="image/png" sizes="32x32" href="{{ site.baseurl }}/favicon-32x32.png">
-<link rel="icon" type="image/png" sizes="16x16" href="{{ site.baseurl }}/favicon-16x16.png">
-<link rel="shortcut icon" href="{{ site.baseurl }}/favicon.ico">
-<link rel="manifest" href="{{ site.baseurl }}/site.webmanifest">
-<link rel="mask-icon" href="{{ site.baseurl }}/safari-pinned-tab.svg" color="#5bbad5">
-<meta name="msapplication-TileColor" content="#603cba">
+<link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}/images/favicon/logo-180.png">
+<link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}/images/favicon/logo.svg">
+<link rel="icon" type="image/svg+xml" media="(prefers-color-scheme: dark)" href="{{ site.urls[page.lang] }}/images/favicon/logo-on-white.svg">
+
+<link rel="shortcut icon" href="{{ site.urls[page.lang] }}/images/favicon/favicon.ico">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="mask-icon" href="{{ site.urls[page.lang] }}/safari-pinned-tab.svg" color="#004DF2">
+<meta name="msapplication-TileColor" content="#004DF2">
 <meta name="theme-color" content="#ffffff">
 
 <!-- fonts -->

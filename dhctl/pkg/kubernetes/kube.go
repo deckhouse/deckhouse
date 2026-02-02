@@ -19,6 +19,9 @@ import (
 	"fmt"
 	"time"
 
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -26,6 +29,16 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
+
+func GetLabelSelector(label string, operator selection.Operator, vals []string) (string, error) {
+	selector := labels.NewSelector()
+	r, err := labels.NewRequirement(label, operator, vals)
+	if err != nil {
+		return "", err
+	}
+	selector = selector.Add(*r)
+	return selector.String(), nil
+}
 
 func ConnectToKubernetesAPI(ctx context.Context, nodeInterface node.Interface) (*client.KubernetesClient, error) {
 	var kubeCl *client.KubernetesClient

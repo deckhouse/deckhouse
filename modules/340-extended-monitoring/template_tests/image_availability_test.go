@@ -104,7 +104,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.1").String()
+				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
 
 				Expect(ignoredImagesArg).To(Equal("--ignored-images=.*upmeter-nonexistent.*"))
 			})
@@ -126,7 +126,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.1").String()
+				ignoredImagesArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
 
 				Expect(ignoredImagesArg).To(Equal("--ignored-images=.*upmeter-nonexistent.*~a.b.com/zzz:9.7.1~cr.k8s.io/xx-yy:4.3.1"))
 			})
@@ -146,7 +146,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(insecureSkipVerifyArg).To(Equal("--skip-registry-cert-verification"))
 			})
@@ -164,7 +164,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(insecureSkipVerifyArg).To(BeEmpty())
 			})
@@ -185,7 +185,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				allowPlainHTTPArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				allowPlainHTTPArg := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(allowPlainHTTPArg).To(Equal("--allow-plain-http"))
 			})
@@ -204,7 +204,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				insecureSkipVerifyArg := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(insecureSkipVerifyArg).To(BeEmpty())
 			})
@@ -225,7 +225,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(forceCheckDisabledControllers).To(BeEmpty())
 			})
@@ -247,7 +247,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(forceCheckDisabledControllers).To(Equal("--force-check-disabled-controllers=Deployment,DaemonSet"))
 			})
@@ -268,7 +268,7 @@ serviceSubnetCIDR: 10.222.0.0/16
 				Expect(hec.RenderError).ShouldNot(HaveOccurred())
 
 				deploy := hec.KubernetesResource("Deployment", "d8-monitoring", "image-availability-exporter")
-				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.3").String()
+				forceCheckDisabledControllers := deploy.Field("spec.template.spec.containers.0.args.5").String()
 
 				Expect(forceCheckDisabledControllers).To(Equal("--force-check-disabled-controllers=*"))
 			})

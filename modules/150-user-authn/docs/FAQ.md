@@ -109,8 +109,8 @@ Make sure your application Ingress has TLS configured before integrating with De
 2. DexAuthenticator sets the cookie with the whole refresh token (instead of storing it in Redis like an id token) because Redis does not persist data.
 If there is no id token by the id token ticket in Redis, the user will be able to get the new id token by providing the refresh token from the cookie.
 
-3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](../upmeter/), because permissions to Upmeter entities are not highly grained.
-On the other hand, for the [Kubernetes Dashboard](../dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
+3. DexAuthenticator sets the `Authorization` HTTP header to the ID token value from Redis. It is not required for services like [Upmeter](/modules/upmeter/), because permissions to Upmeter entities are not highly grained.
+On the other hand, for the [Kubernetes Dashboard](/modules/dashboard/), it is a crucial functionality because it sends the ID token further to access Kubernetes API.
 
 ## How to generate a kubeconfig and access Kubernetes API?
 
@@ -136,7 +136,7 @@ The name `kubeconfig` is reserved for accessing the web interface that allows ge
 
 ### Configuring kube-apiserver
 
-With the functional of the [control-plane-manager](../../modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
+With the functional of the [control-plane-manager](/modules/control-plane-manager/) module, Deckhouse automatically configures kube-apiserver by providing the following flags, so that dashboard and kubeconfig-generator modules can work in the cluster.
 
 {% offtopic title="kube-apiserver arguments that will be configured" %}
 
@@ -161,6 +161,32 @@ If self-signed certificates are used, Dex will get one more argument. At the sam
 2. Kubeconfig generator stores id token and refresh token to the kubeconfig file.
 
 3. After receiving request with an id token, kube-apiserver goes to validate, that the token is signed by the provider configured on the first step by getting keys from the JWKS endpoint. As the next step, it compares `iss` and `aud` claims values of the token with the values from configuration.
+
+## How to enable Kerberos (SPNEGO) SSO for LDAP?
+
+If clients run in a corporate SSO environment (browser trusts the Dex host), Dex can accept Kerberos tickets via `Authorization: Negotiate` and log in without the password form.
+
+Enabling Kerberos (SPNEGO) SSO for LDAP:
+
+1. In AD/KDC, create/provision an SPN `HTTP/<dex-fqdn>` for a service account and generate a keytab.
+1. In the cluster, create a Secret in the `d8-user-authn` namespace with the `krb5.keytab` data key.
+1. In the LDAP DexProvider resource, enable `spec.ldap.kerberos`:
+   - `enabled: true`
+   - `keytabSecretName: <secret name>`
+   - optional: `expectedRealm`, `usernameFromPrincipal`, `fallbackToPassword`
+
+Dex will mount the keytab automatically and start accepting SPNEGO. A server‑side `krb5.conf` is not required — tickets are validated using the keytab.
+
+## How to configure Basic Authentication for accessing Kubernetes API via LDAP?
+
+1. Enable the [`publishAPI`](configuration.html#parameters-publishapi) parameter in the `user-authn` module configuration.
+1. Create a [DexProvider](cr.html#dexprovider) resource of type `LDAP` and set [`enableBasicAuth: true`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) field.
+1. Configure [RBAC](/modules/user-authz/cr.html#clusterauthorizationrule) for user groups from LDAP.
+1. Provide users with a `kubeconfig` configured for Basic Authentication (LDAP username and password).
+
+> **Warning**. Only one provider in the cluster can have [`enableBasicAuth`](/modules/user-authn/cr.html#dexprovider-v1-spec-oidc-enablebasicauth) enabled.
+
+For a detailed configuration example, see the [Usage](usage.html#configuring-basic-authentication) section.
 
 ## How secure is Dex from brute-forcing my credentials?
 

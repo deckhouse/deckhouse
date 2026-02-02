@@ -56,7 +56,13 @@ data:
           "deckhouse.ru"   "ru";
           "*.deckhouse.ru"   "ru";
           # for test environments
-          "deckhouse.ru.*" "ru";
+          "deckhouse-ru.*" "ru";
+          "deckhouse-ru-2.*" "ru";
+          "deckhouse-ru-3.*" "ru";
+          "deckhouse-ru-4.*" "ru";
+          "deckhouse-ru-5.*" "ru";
+          "deckhouse-ru-6.*" "ru";
+          "deckhouse-ru-7.*" "ru";
           default       "en";
       }
 

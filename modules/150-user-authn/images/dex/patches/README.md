@@ -43,3 +43,31 @@ This patch changes the Internal Error message to a human-readable 'Access Denied
 In the latest go versions (1.25.2, 1.24.8) the bug was fixed, and without this patch Dex fails with an error
 
 Upstream PR: https://github.com/dexidp/dex/pull/4363
+
+### 008-hide-internal-500-error-details.patch
+
+This patch prevents internal server error details from being exposed to end users in HTTP responses.
+It replaces detailed error messages (including stack traces, database errors, and internal implementation details)
+with safe, user-friendly messages while ensuring all error details are properly logged server-side.
+
+Key changes:
+- Centralized safe error messages in `server/errors.go`
+- Replaced `err.Error()` calls in HTTP responses with generic messages
+- Added proper logging for all internal errors
+- Added comprehensive tests to prevent future regressions
+- Maintained OAuth2/OIDC protocol compliance
+
+### 009-kerberos-ldap-spnego.patch
+
+Adds optional Kerberos (SPNEGO) SSO to the LDAP connector with an opt-in SPNEGOAware hook in the password handler. Server-side validation uses `gokrb5` and a keytab only (no `krb5.conf` required). Includes principal mapping strategies and preserves the existing LDAP identity building and groups logic. Backward compatible when disabled.
+
+### 010-fix-cves.patch
+
+This patch fixes:
+
+- CVE-2025-47914
+- CVE-2025-58181
+
+### 011-provide-custom-CA-to-gitlab-connector.patch
+
+This patch allows Gitlab connector to use custom CA for HTTPS connections.

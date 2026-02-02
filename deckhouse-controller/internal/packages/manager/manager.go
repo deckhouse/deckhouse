@@ -34,6 +34,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/module-sdk/pkg/settingscheck"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
@@ -76,7 +78,7 @@ type Config struct {
 
 // New creates a new package manager with the specified apps directory.
 func New(conf Config, logger *log.Logger) *Manager {
-	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
@@ -95,15 +97,15 @@ func New(conf Config, logger *log.Logger) *Manager {
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
-func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
+func (m *Manager) LoadPackage(ctx context.Context, repo registry.Remote, namespace, name string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
-	span.SetAttributes(attribute.String("registry", registry.Name))
+	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	app, err := m.loader.Load(ctx, registry, name)
+	app, err := m.loader.Load(ctx, repo, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
@@ -117,8 +119,27 @@ func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, n
 	return app.GetVersion(), nil
 }
 
-// ApplySettings validates and apply setting to application
-func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
+// ValidateSettings validates settings against openAPI and setting check
+func (m *Manager) ValidateSettings(ctx context.Context, name string, settings addonutils.Values) (settingscheck.Result, error) {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ValidateSettings")
+	defer span.End()
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	app, ok := m.apps[name]
+	if !ok {
+		return settingscheck.Result{Valid: true}, nil
+	}
+
+	return app.ValidateSettings(ctx, settings)
+}
+
+// ApplySettings validates and applies settings to application
+func (m *Manager) ApplySettings(ctx context.Context, name string, settings addonutils.Values) error {
+	ctx, span := otel.Tracer(managerTracer).Start(ctx, "ApplySettings")
+	defer span.End()
+
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -127,7 +148,18 @@ func (m *Manager) ApplySettings(name string, settings addonutils.Values) error {
 		return nil
 	}
 
-	if err := app.ApplySettings(settings); err != nil {
+	m.logger.Debug("apply settings", slog.String("name", name))
+
+	res, err := app.ValidateSettings(ctx, settings)
+	if err != nil {
+		return newApplySettingsErr(err)
+	}
+
+	if !res.Valid {
+		return newApplySettingsErr(errors.New(res.Message))
+	}
+
+	if err = app.ApplySettings(settings); err != nil {
 		return newApplySettingsErr(err)
 	}
 
@@ -142,8 +174,6 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	span.SetAttributes(attribute.String("name", name))
 
-	m.logger.Debug("startup package", slog.String("name", name))
-
 	m.mu.Lock()
 	app := m.apps[name]
 	m.mu.Unlock()
@@ -151,6 +181,8 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 		// package can be disabled and removed before
 		return nil
 	}
+
+	m.logger.Debug("run on startup hooks", slog.String("name", name))
 
 	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -185,20 +217,27 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	// monitor may not be created by this time
 	if m.nelm.HasMonitor(name) {
+		m.logger.Debug("pause helm monitor", slog.String("name", name))
 		// Hooks can delete release resources, so pause resources monitor before run hooks.
 		m.nelm.PauseMonitor(name)
 		defer m.nelm.ResumeMonitor(name)
 	}
+
+	m.logger.Debug("run before helm hooks", slog.String("name", name))
 
 	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newBeforeHelmHookErr(err)
 	}
 
-	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	m.logger.Debug("run nelm upgrade", slog.String("name", name))
+
+	if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		return newHelmUpgradeErr(err)
 	}
+
+	m.logger.Debug("run after helm hooks", slog.String("name", name))
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
@@ -208,7 +247,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			return newHelmUpgradeErr(err)
 		}
@@ -248,10 +287,12 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	if !keep {
 		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err := m.nelm.Delete(ctx, app); err != nil {
+		if err := m.nelm.Delete(ctx, app.GetNamespace(), app.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
+
+		m.logger.Debug("run after delete helm hooks", slog.String("name", name))
 
 		// Run after delete helm hooks
 		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {

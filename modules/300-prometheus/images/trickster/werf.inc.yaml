@@ -52,7 +52,7 @@ shell:
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster
@@ -76,7 +76,10 @@ shell:
   - go mod tidy
   - go mod vendor
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go`) | indent 6 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown -R 64535:64535 /src
   - chmod 0700 /src/OPATH/trickster
 ---

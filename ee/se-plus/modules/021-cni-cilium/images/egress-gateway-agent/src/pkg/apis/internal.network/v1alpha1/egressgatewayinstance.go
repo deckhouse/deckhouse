@@ -17,9 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
-	. "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	. "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/common"
 )
 
 type SDNInternalEgressGatewaySourceIP struct {

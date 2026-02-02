@@ -75,7 +75,7 @@ type Instance struct {
 //   - If settings changed, apply new settings and trigger hook re-execution
 //
 // Cancels any in-flight tasks from previous Update calls via context renewal.
-func (o *Operator) Update(reg registry.Registry, inst Instance) {
+func (o *Operator) Update(repo registry.Remote, inst Instance) {
 	if inst.Namespace == "" {
 		inst.Namespace = "default"
 	}
@@ -106,9 +106,9 @@ func (o *Operator) Update(reg registry.Registry, inst Instance) {
 		o.logger.Debug("update package", slog.String("name", name), slog.String("version", packageVersion))
 
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger))
-		o.queueService.Enqueue(ctx, name, taskdownload.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskinstall.NewTask(name, packageName, packageVersion, reg, o.status, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(reg, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
+		o.queueService.Enqueue(ctx, name, taskdownload.NewAppTask(name, packageName, packageVersion, repo, o.status, o.installer, o.logger))
+		o.queueService.Enqueue(ctx, name, taskinstall.NewAppTask(name, packageName, packageVersion, repo, o.status, o.installer, o.logger))
+		o.queueService.Enqueue(ctx, name, taskload.NewTask(repo, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
 
 		return
 	}
@@ -148,10 +148,11 @@ func (o *Operator) Remove(namespace, instance string) {
 		for _, q := range queues {
 			o.logger.Debug("remove package queue", slog.String("name", name), slog.String("queue", q))
 			o.queueService.Remove(fmt.Sprintf("%s/%s", name, q))
+			o.queueService.Remove(fmt.Sprintf("%s/%s/sync", name, q))
 		}
 	}))
 
-	o.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, o.installer, o.logger), queue.WithOnDone(func() {
+	o.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, o.installer, o.logger), queue.WithOnDone(func() {
 		// Remove package's main queue after uninstall completes
 		o.queueService.Remove(fmt.Sprintf("%s/sync", name))
 		go o.queueService.Remove(name)

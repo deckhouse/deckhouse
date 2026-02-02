@@ -29,6 +29,10 @@ variable "ipv4_address" {
   type = string
 }
 
+variable "cluster_uuid" {
+  type = string
+}
+
 variable "timeouts" {
   default = { "create" = "10m", "update" = "5m", "delete" = "5m" }
   type = object({
@@ -43,4 +47,10 @@ locals {
   ipv4_address_type = var.ipv4_address == "Auto" ? "Auto" : "Static"
   ipv4_address      = var.ipv4_address == "Auto" ? "" : var.ipv4_address
   ip_address_name   = lower(join("-", [var.hostname, replace(var.ipv4_address, ".", "-")]))
+
+  ipv4_address_labels = {
+    "deckhouse.io/managed-by"       = "deckhouse"
+    "dvp.deckhouse.io/cluster-uuid" = var.cluster_uuid
+    "dvp.deckhouse.io/hostname"     = var.hostname
+  }
 }

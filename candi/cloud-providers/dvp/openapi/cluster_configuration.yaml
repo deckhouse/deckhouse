@@ -152,6 +152,9 @@ apiVersions:
                   type: object
                   description: |
                     Virtual machine settings for the created master node.
+
+                    > The `runPolicy: AlwaysOnUnlessStoppedManually` policy is used for virtual machines of nodes.
+                    > This allows the virtual machine to be stopped manually (for example, for maintenance) without triggering an automatic restart.
                   required: [cpu, memory, virtualMachineClassName]
                   properties:
                     cpu:
@@ -206,6 +209,40 @@ apiVersions:
                         * `BIOS`: Use BIOS.
                         * `EFI`: Use Unified Extensible Firmware (EFI/UEFI).
                         * `EFIWithSecureBoot`: Use UEFI/EFI with Secure Boot support.
+                    runPolicy:
+                      type: string
+                      enum:
+                        - AlwaysOn
+                        - AlwaysOff
+                        - Manual
+                        - AlwaysOnUnlessStoppedManually
+                      default: AlwaysOnUnlessStoppedManually
+                      description: |
+                        Virtual machine run policy.
+
+                        * `AlwaysOn`: The virtual machine should always be running.
+                        * `AlwaysOff`: The virtual machine should always be stopped.
+                        * `Manual`: The virtual machine state is controlled manually.
+                        * `AlwaysOnUnlessStoppedManually`: The virtual machine can be stopped manually (for example, for maintenance), but it will automatically start after a host reboot.
+                    liveMigrationPolicy:
+                      type: string
+                      enum:
+                        - Manual
+                        - Never
+                        - AlwaysSafe
+                        - PreferSafe
+                        - AlwaysForced
+                        - PreferForced
+                      default: PreferForced
+                      description: |
+                        Live migration policy for the virtual machine.
+
+                        * `Manual`: Migration is controlled manually.
+                        * `Never`: Migration is disabled.
+                        * `AlwaysSafe`: Always use safe migration (may fail if VM has a high rate of memory changes).
+                        * `PreferSafe`: Prefer safe migration, fallback to forced if needed.
+                        * `AlwaysForced`: Always use forced migration with VM slowdown.
+                        * `PreferForced`: Prefer forced migration (recommended for master nodes due to high memory activity).
                     ipAddresses:
                       type: array
                       description: |
@@ -490,7 +527,7 @@ apiVersions:
           description: |
             Layout name.
 
-            [Read more about possible provider layouts](/modules/cloud-provider-aws/dvp/layouts.html).
+            [Read more about possible provider layouts](/modules/cloud-provider-dvp/layouts.html).
           enum: [Standard]
 
         region:
@@ -532,6 +569,17 @@ apiVersions:
 
                 > If not explicitly specified, the default namespace for kubeconfig will be used.
               type: string
+            networkPolicy:
+              type: string
+              description: |
+                Control rules for network traffic to and from workloads running in the Project resource.
+
+                * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
+                * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+              enum:
+                - Isolated
+                - None
+              default: Isolated
           required:
             - kubeconfigDataBase64
             - namespace

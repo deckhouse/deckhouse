@@ -22,17 +22,15 @@ import (
 	"os"
 	"path/filepath"
 
+	dvpapi "dvp-common/api"
+	"dvp-common/config"
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
-	dvpapi "dvp-common/api"
-	"dvp-common/config"
-
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -43,7 +41,6 @@ import (
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
 	"cluster-api-provider-dvp/internal/controller"
-	// +kubebuilder:scaffold:imports
 )
 
 var (
@@ -229,9 +226,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err = (&controller.DeckhouseMachineReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-		DVP:    cloudAPI,
+		Client:      mgr.GetClient(),
+		Scheme:      mgr.GetScheme(),
+		DVP:         cloudAPI,
+		ClusterUUID: cloudConfig.ClusterUUID,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseMachine")
 		os.Exit(1)

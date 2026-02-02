@@ -37,17 +37,17 @@ k8s:
     clusterAutoscalerPatch: '2'
     crictlPatch: 1
     ccm:
-      openstack: v1.30.2
+      openstack: v1.30.3
       aws: v1.30.8
       vsphere: v1.30.2
-      azure: v1.30.7
+      azure: v1.30.15
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
-      azure: v1.30.7
+      aws: v1.54.0
+      azure: v1.30.12
       gcp: v1.15.4
       vsphere: v3.0.3
-      openstack: v1.30.2
+      openstack: v1.30.3
       provisioner: v5.2.0
       attacher: v4.6.1
       resizer: v1.11.0
@@ -61,14 +61,14 @@ k8s:
     clusterAutoscalerPatch: '0'
     crictlPatch: 1
     ccm:
-      openstack: v1.31.2
+      openstack: v1.31.4
       aws: v1.31.6
       vsphere: v1.31.1
-      azure: v1.31.1
+      azure: v1.31.12
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
-      azure: v1.31.2
+      aws: v1.54.0
+      azure: v1.31.12
       gcp: v1.15.4
       vsphere: v3.0.3
       openstack: v1.31.2
@@ -81,22 +81,22 @@ k8s:
   "1.32":
     default: true
     status: available
-    patch: 10
+    patch: 11
     bashible: *bashible
     clusterAutoscalerPatch: '2'
     crictlPatch: 0
     ccm:
-      openstack: v1.31.2
+      openstack: v1.32.1
       aws: v1.32.3
-      vsphere: v1.32.2
-      azure: v1.32.0
+      vsphere: v1.32.3
+      azure: v1.32.11
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
-      azure: v1.31.2
+      aws: v1.54.0
+      azure: v1.32.10
       gcp: v1.15.4
       vsphere: v3.0.3
-      openstack: v1.31.2
+      openstack: v1.32.1
       provisioner: v5.2.0
       attacher: v4.8.0
       resizer: v1.13.0
@@ -105,22 +105,22 @@ k8s:
       livenessprobe: v2.15.0
   "1.33":
     status: available
-    patch: 6
+    patch: 7
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
     ccm:
-      openstack: v1.31.2
+      openstack: v1.33.1
       aws: v1.32.0
-      vsphere: v1.32.2
-      azure: v1.32.0
+      vsphere: v1.33.1
+      azure: v1.33.6
       gcp: ccm/v30.1.4
     csi:
-      aws: v1.53.0
-      azure: v1.31.2
+      aws: v1.54.0
+      azure: v1.33.7
       gcp: v1.15.4
       vsphere: v3.0.3
-      openstack: v1.31.2
+      openstack: v1.33.1
       provisioner: v5.2.0
       attacher: v4.8.1
       resizer: v1.13.2
@@ -129,7 +129,7 @@ k8s:
       livenessprobe: v2.15.0
   "1.34":
     status: preview
-    patch: 2
+    patch: 3
     bashible: *bashible
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
@@ -137,14 +137,14 @@ k8s:
       openstack: v1.34.1
       aws: v1.34.1
       vsphere: v1.34.0
-      azure: v1.34.1
+      azure: v1.34.3
       gcp: ccm/v34.0.0
     csi:
-      aws: v1.53.0
-      azure: v1.31.2
+      aws: v1.54.0
+      azure: v1.33.7
       gcp: v1.15.4
       vsphere: v3.0.3
-      openstack: v1.31.2
+      openstack: v1.34.1
       provisioner: v5.2.0
       attacher: v4.8.1
       resizer: v1.13.2
@@ -152,7 +152,7 @@ k8s:
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
 d8:
-  d8CliVersion: v0.25.0
+  d8CliVersion: v0.26.3
 jq:
   version: 1.7.1
 yq:

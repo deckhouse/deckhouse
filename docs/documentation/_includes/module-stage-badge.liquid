@@ -2,7 +2,7 @@
 {%- assign stage_long = stage | downcase | replace: " ", "_" | append: "_long" %}
 {%- if stage and site.data.i18n.features[stage_long][page.lang] %}
   {%- capture alert_content %}
-{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <i data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}<i>
+{{ site.data.i18n.features['module_lifecycle_stage'][page.lang] }}: <i data-tippy-content='{{ site.data.i18n.features[stage_long][page.lang] }}'>{{ stage }}</i>
   {% endcapture %}
   {%- if stage == "Experimental" or stage == "Preview" %}
 {% alert level="warning" %}
