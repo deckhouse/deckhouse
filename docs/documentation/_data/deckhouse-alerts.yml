@@ -2378,6 +2378,17 @@ alerts:
         Node {{ $labels.node }} does not use cgroup v2.
       severity: "8"
       markupFormat: markdown
+    - name: D8NodeContainerdV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node `{{ $labels.node }}` in NodeGroup `{{ $labels.node_group }}` is not using containerd v2, but in 1.36 support for [containerd v1.y will be dropped](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+      summary: |
+        Node {{ $labels.node }} does not use containerd v2.
+      severity: "8"
+      markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-update.yaml
       moduleUrl: 040-node-manager
