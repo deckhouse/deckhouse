@@ -164,16 +164,21 @@ func (r *EgressGatewayInstanceReconciler) cleanupAnouncerWithFinalizer(ctx conte
 	return nil
 }
 
-func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition eeCommon.ExtendedCondition) (changed bool) {
+func getMetaTime(time time.Time) metav1.Time {
+	return metav1.NewTime(time)
+}
+
+func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition eeCommon.ExtendedCondition) bool {
 	if conditions == nil {
 		return false
 	}
+	var changed = false
 	existingCondition := findStatusCondition(*conditions, newCondition.Type)
 	if existingCondition == nil {
 		if newCondition.LastTransitionTime.IsZero() {
-			newCondition.LastTransitionTime = metav1.NewTime(time.Now())
+			newCondition.LastTransitionTime = getMetaTime(time.Now())
 		}
-		newCondition.LastHeartbeatTime = metav1.NewTime(time.Now())
+		newCondition.LastHeartbeatTime = getMetaTime(time.Now())
 		*conditions = append(*conditions, newCondition)
 		return true
 	}
@@ -183,7 +188,7 @@ func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition e
 		if !newCondition.LastTransitionTime.IsZero() {
 			existingCondition.LastTransitionTime = newCondition.LastTransitionTime
 		} else {
-			existingCondition.LastTransitionTime = metav1.NewTime(time.Now())
+			existingCondition.LastTransitionTime = getMetaTime(time.Now())
 		}
 		changed = true
 	}
@@ -201,7 +206,7 @@ func setStatusCondition(conditions *[]eeCommon.ExtendedCondition, newCondition e
 		changed = true
 	}
 
-	existingCondition.LastHeartbeatTime = metav1.NewTime(time.Now())
+	existingCondition.LastHeartbeatTime = getMetaTime(time.Now())
 
 	return changed
 }
