@@ -62,13 +62,17 @@ func main() {
 		os.Exit(2)
 	}
 
-	log.Info("Starting mirrorer")
-	defer log.Info("Stopped")
-
+	log.Info("Setup signal handler")
 	ctx := setupSignalHandler()
-	err = worker.Run(ctx)
-	if err != nil {
+
+	log.Info("Starting mirrorer")
+	if err = worker.Run(ctx); err != nil {
 		log.Error("Mirrorer error", "error", err)
+	}
+
+	log.Info("Bye!")
+
+	if err != nil {
 		os.Exit(3)
 	}
 }

@@ -186,7 +186,16 @@ func (rs *syncer) handleTag(ctx context.Context, src name.Tag) {
 	)
 }
 
-func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (srcManifest *remote.Descriptor, copyNeeded bool) {
+// isTagCopyNeeded checks if an image needs copying from source to destination registry.
+// Parameters:
+//   - ctx: context for cancellation and timeouts
+//   - src: source image tag to check
+//   - dst: destination image tag to check against
+//
+// Returns:
+//   - *remote.Descriptor: source manifest descriptor (nil if no exists)
+//   - bool: true if image should be copied, false otherwise
+func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (*remote.Descriptor, bool) {
 	log := rs.Log.With(
 		"op", "isTagCopyNeeded",
 		"src", src.String(),
@@ -196,40 +205,39 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (srcMa
 	srcManifest, err := rs.srcPuller.Get(ctx, src)
 	if err != nil {
 		log.Error("Cannot get src manifest", "error", err)
-		return
+		return nil, false
 	}
 
 	dstManifest, err := rs.dstPuller.Get(ctx, dst)
 	if err != nil {
 		var tErr *transport.Error
 		if errors.As(err, &tErr) &&
-			tErr.StatusCode == http.StatusNotFound || tErr.StatusCode == http.StatusForbidden {
+			(tErr.StatusCode == http.StatusNotFound || tErr.StatusCode == http.StatusForbidden) {
 			// Some registries create repository on first push, so listing tags will fail.
 			// If we see 404 or 403, assume we failed because the repository hasn't been created yet.
 
-			copyNeeded = true
-			return
-		} else {
-			log.Error("Cannot get dst manifest", "error", err)
-			return
+			return srcManifest, true
 		}
+
+		log.Error("Cannot get dst manifest", "error", err)
+		return srcManifest, false
 	}
 
 	if dstManifest.Digest == srcManifest.Digest {
-		return
+		return srcManifest, false
 	}
 
 	if srcManifest.MediaType.IsImage() && dstManifest.MediaType.IsImage() {
 		srcCfg, err := getImageConfigFile(srcManifest)
 		if err != nil {
 			log.Error("Cannot get src image config file", "error", err)
-			return
+			return srcManifest, false
 		}
 
 		dstCfg, err := getImageConfigFile(dstManifest)
 		if err != nil {
 			log.Error("Cannot get dst image config file", "error", err)
-			return
+			return srcManifest, false
 		}
 
 		if dstCfg.Created.Time.After(srcCfg.Created.Time) {
@@ -239,10 +247,9 @@ func (rs *syncer) isTagCopyNeeded(ctx context.Context, src, dst name.Tag) (srcMa
 				"dst_created", dstCfg.Created.Time,
 			)
 
-			return
+			return srcManifest, false
 		}
 	}
 
-	copyNeeded = true
-	return
+	return srcManifest, true
 }
