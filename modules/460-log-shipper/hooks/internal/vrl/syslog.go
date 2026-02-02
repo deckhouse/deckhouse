@@ -37,7 +37,7 @@ pri = 1 * 8 + .syslog.severity;
   "<" + to_string(pri) + ">" + "1",     # <pri>version
   to_string!(.timestamp),
   to_string!(.pod_name || .host || "${VECTOR_SELF_NODE_NAME}"),  # hostname
-  to_string!(.app || .kubernetes.labels.app || .syslog.app || "-"), # app-name
+  to_string!(.app || .pod_labels.app || .syslog.app || "-"), # app-name
   "-", # procid
   to_string!(.syslog.message_id || "-"), # msgid
   to_string!(.sd_labels || "-"), # structured-data
