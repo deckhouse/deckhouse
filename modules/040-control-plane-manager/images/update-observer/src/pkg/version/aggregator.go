@@ -22,7 +22,7 @@ type UniqueAggregator struct {
 	sortFunc    func([]string)
 }
 
-func New(sortFunc func([]string)) *UniqueAggregator {
+func NewUniqueAggregator(sortFunc func([]string)) *UniqueAggregator {
 	return &UniqueAggregator{
 		set:         make(map[string]struct{}),
 		uniqueItems: make([]string, 0),

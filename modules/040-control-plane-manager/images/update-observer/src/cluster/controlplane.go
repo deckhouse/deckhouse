@@ -18,7 +18,9 @@ package cluster
 
 import (
 	"fmt"
+	"update-observer/pkg/version"
 
+	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -29,6 +31,7 @@ type ControlPlaneState struct {
 	UpToDateComponentCount int
 	Phase                  ControlPlanePhase
 	MasterNodes            map[string]*MasterNode
+	versions               *version.UniqueAggregator
 }
 
 type ControlPlanePhase string
@@ -49,6 +52,7 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 	res := &ControlPlaneState{
 		DesiredCount: len(masterNodes),
 		MasterNodes:  masterNodes,
+		versions: version.NewUniqueAggregator(semver.Sort),
 	}
 
 	res.aggregateNodesState(desiredVersion)
@@ -66,6 +70,7 @@ func (s *ControlPlaneState) aggregateNodesState(desiredVersion string) {
 		desiredCount++
 		for _, component := range masterNode.Components {
 			desiredComponentsCount++
+			s.versions.Set(component.Version)
 
 			switch component.getState(desiredVersion) {
 			case ControlPlaneComponentFailed:

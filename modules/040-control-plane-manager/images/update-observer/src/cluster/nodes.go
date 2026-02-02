@@ -32,7 +32,7 @@ type NodesState struct {
 
 func GetNodesState(nodes []corev1.Node, desiredVersion string) (*NodesState, error) {
 	res := &NodesState{
-		versions: version.New(semver.Sort),
+		versions: version.NewUniqueAggregator(semver.Sort),
 	}
 
 	var err error

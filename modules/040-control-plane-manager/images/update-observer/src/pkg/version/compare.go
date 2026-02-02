@@ -31,3 +31,15 @@ func GetMax(v, w string) string {
 	}
 	return v
 }
+
+func GetMin(v, w string) string {
+	switch semver.Compare(v, w) {
+	case -1:
+		return v
+	case 0:
+		return w
+	case 1:
+		return w
+	}
+	return v
+}

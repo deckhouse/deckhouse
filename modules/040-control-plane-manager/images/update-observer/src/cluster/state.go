@@ -33,7 +33,7 @@ func GetState(cfg *Configuration, nodes *NodesState, controlPlane *ControlPlaneS
 			UpdateMode:     cfg.UpdateMode,
 		},
 		Status: Status{
-			CurrentVersion:    determineCurrentVersion(nodes.versions, downgradeInProgress),
+			CurrentVersion:    determineCurrentVersion(nodes.versions, controlPlane.versions, downgradeInProgress),
 			ControlPlaneState: *controlPlane,
 			NodesState:        *nodes,
 		},
@@ -82,11 +82,11 @@ func (s *State) calculateProgress() {
 		s.ControlPlaneState.DesiredComponentCount+s.NodesState.DesiredCount)
 }
 
-func determineCurrentVersion(versions *version.UniqueAggregator, downgradeInProgress bool) string {
+func determineCurrentVersion(nodes *version.UniqueAggregator, controlPlane *version.UniqueAggregator, downgradeInProgress bool) string {
 	if downgradeInProgress {
-		return versions.GetMax()
+		return version.GetMax(nodes.GetMax(), controlPlane.GetMax())
 	}
-	return versions.GetMin()
+	return version.GetMin(nodes.GetMin(), controlPlane.GetMin())
 }
 
 type Spec struct {
