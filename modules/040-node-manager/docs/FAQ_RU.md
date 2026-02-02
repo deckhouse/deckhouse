@@ -2034,7 +2034,7 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 
 ## Как задать свой MIG-профиль для каждой карты на узле?
 
-Используйте встроенный конфиг `custom` и опишите партиции по индексам GPU:
+Используйте значение `custom` в [параметре `partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) ресурса NodeGroup и опишите разбиение MIG по индексам GPU:
 
 ```yaml
 spec:
@@ -2046,22 +2046,22 @@ spec:
         - index: 0
           slices:
             - profile: 7g.80gb
-              count: 1 # count может принимать значение от 1 до 7
+              count: 1 # Может принимать значение от 1 до 7.
         - index: 1
           slices:
             - profile: 3g.40gb
               count: 1
             - profile: 1g.10gb
               count: 4
-        # добавьте остальные индексы по необходимости
+        # Добавьте остальные индексы по необходимости.
 ```
 
-Модуль `node-manager` автоматически:
+В результате модуль `node-manager` автоматически:
 
-- добавит в ConfigMap `mig-parted-config` конфиг с именем `custom-<node-group-name>-<hash>` (hash вычисляется из схемы; длинные имена групп сокращаются с хешом, чтобы умещаться в label);
-- проставит на узлах этой группы label `nvidia.com/mig.config=custom-<node-group-name>-<hash>`.
+- добавит в ConfigMap конфигурацию `mig-parted-config` с именем `custom-<node-group-name>-<hash>`, где `<hash>` вычисляется на основе схемы разбиения (длинные имена групп сокращаются с добавлением хеша, чтобы имя уместилось в лейбл);
+- проставит на узлах этой группы лейбл `nvidia.com/mig.config=custom-<node-group-name>-<hash>`.
 
-Для каждой NodeGroup создаётся свой `custom-<ng>-<hash>`, имена не пересекаются.
+Для каждой группы узлов создаётся собственная конфигурация вида `custom-<ng>-<hash>`, при этом имена конфигураций не пересекаются.
 
 ## Для GPU не активируется MIG-профиль — что проверить?
 

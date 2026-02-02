@@ -1971,9 +1971,9 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
 Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
 
-## How to set a per-GPU custom MIG layout?
+## How to set a custom per-GPU MIG layout on a node?
 
-Use the built-in `custom` config and describe slices per GPU index:
+Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
 
 ```yaml
 spec:
@@ -1985,22 +1985,22 @@ spec:
         - index: 0
           slices:
             - profile: 7g.80gb
-              count: 1    # count can range from 1 to 7
+              count: 1    # Can be in the range from 1 to 7.
         - index: 1
           slices:
             - profile: 3g.40gb
               count: 2
             - profile: 1g.10gb
               count: 1
-        # add more indexes as needed
+        # Add more indexes as needed.
 ```
 
-The `node-manager` module automatically:
+As a result, the `node-manager` module automatically:
 
-- appends a MIG config named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap (hash is derived from the layout; long NodeGroup names are truncated with a hash suffix to fit label limits);
-- sets the node label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` for nodes of this NodeGroup.
+- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
+- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
 
-Each NodeGroup gets its own `custom-<ng>-<hash>`; names do not collide across groups.
+A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
 
 ## MIG profile does not activate — what to check?
 

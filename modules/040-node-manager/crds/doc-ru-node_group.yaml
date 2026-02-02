@@ -509,8 +509,32 @@ spec:
                           description: |
                             Имя используемой конфигурации MIG.
 
-                            Поддерживаются стандартные профили `all-*` (одинаковое разбиение для всех GPU) или значение `custom`, позволяющее задать разбиение отдельно для каждой карты.
+                            Поддерживаются стандартные профили вида `all-*` (одинаковое разбиение для всех GPU) или значение `custom`, позволяющее задать разбиение отдельно для каждой видеокарты.
                           x-doc-default: all-1g.5gb
+                        customConfigs:
+                          description: |
+                            Кастомное разбиение MIG по индексам GPU.
+                            
+                            Используется только при значении `partedConfig: custom`.
+
+                            Представляет собой массив устройств (map по `index`), где каждый элемент указывает на GPU по его индексу и описывает создаваемые срезы.
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          items:
+                            properties:
+                              index:
+                                description: Индекс GPU на узле.
+                              slices:
+                                description: Список создаваемых MIG-срезов.
+                                items:
+                                  properties:
+                                    profile:
+                                      description: Имя MIG-профиля.
+                                    count:
+                                      description: Количество срезов выбранного профиля.
                       oneOf:
                         - properties:
                             partedConfig:
@@ -524,19 +548,6 @@ spec:
                           required:
                             - partedConfig
                             - customConfigs
-                      customConfigs:
-                        description: |
-                          Кастомное разбиение MIG по индексам GPU (используется только при `partedConfig: custom`).
-                          Массив устройств (map по `index`), каждый элемент указывает на GPU по индексу и перечисляет создаваемые срезы:
-                          - `index` — индекс GPU на узле (начиная с 0);
-                          - `slices` — список срезов:
-                            - `profile` — имя MIG-профиля;
-                            - `count` — количество срезов выбранного профиля (целое, минимум 1, максимум 7, по умолчанию 1).
-                        x-doc-examples:
-                          - profile: 3g.40gb
-                            count: 2
-                          - profile: 1g.10gb.me
-                            count: 1
                     timeSlicing:
                       description: |
                         Параметры для стратегии `TimeSlicing`.

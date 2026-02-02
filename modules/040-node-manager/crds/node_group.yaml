@@ -1538,25 +1538,26 @@ spec:
                           type: string
                           description: |
                             MIG configuration name.
+                            
+                            Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
                           x-doc-default: all-1g.5gb
                         customConfigs:
                           type: array
                           description: |
-                            Per-GPU MIG layouts for the custom configuration (used only with `partedConfig: custom`).
-                            Array (map by `index`); each item targets a GPU by its 0-based index and enumerates slices to create:
-                              - `index` — GPU index on the node (starting from 0);
-                              - `slices` — list of slices:
-                                - `profile` — MIG profile name;
-                                - `count` — number of slices for that profile (integer, min 1, default 1).
-                            minItems: 1
-                            x-doc-examples:
-                              - profile: 3g.40gb
-                                count: 2
-                              - profile: 1g.10gb.me
-                                count: 1
-                            x-kubernetes-list-type: map
-                            x-kubernetes-list-map-keys:
-                              - index
+                            Custom MIG partitioning by GPU index.
+
+                            Used only when `partedConfig: custom` is set.
+
+                            Represents an array of devices (a map keyed by `index`), where each entry refers to a GPU by its index and describes the slices to be created.
+                          minItems: 1
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          x-kubernetes-list-type: map
+                          x-kubernetes-list-map-keys:
+                            - index
                           items:
                             type: object
                             required:
@@ -1566,10 +1567,10 @@ spec:
                               index:
                                 type: integer
                                 minimum: 0
-                                description: GPU index in the node (0-based).
+                                description: GPU index on the node.
                               slices:
                                 type: array
-                                description: List of MIG slices to create on the indexed GPU.
+                                description: List of MIG slices to create.
                                 items:
                                   type: object
                                   required:
@@ -1588,7 +1589,7 @@ spec:
                                       type: integer
                                       minimum: 1
                                       maximum: 7
-                                      description: Number of slices with the selected profile (1–7 per GPU).
+                                      description: Number of slices in the selected profile.
                                       x-doc-default: 1
                       oneOf:
                         - properties:
