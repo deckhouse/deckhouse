@@ -97,13 +97,8 @@ func init() {
 
 	checkCgroupV2SupportFunc := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
 		requirementValue = strings.TrimSpace(requirementValue)
-		if requirementValue == "" {
+		if requirementValue == "" || requirementValue == "false" {
 			return true, nil
-		}
-
-		minVersionRequiringCgroupV2, err := semver.NewVersion(requirementValue)
-		if err != nil {
-			return false, fmt.Errorf("invalid requirement version: %w", err)
 		}
 
 		cgroupV2Supported, exists := getter.Get(cgroupV2SupportValuesKey)
@@ -116,8 +111,8 @@ func init() {
 			return false, fmt.Errorf("invalid cgroupV2Support value type")
 		}
 
-		if !supported {
-			return false, fmt.Errorf("upgrading to version %s requires CGroup V2 support on all nodes, but some nodes have label node.deckhouse.io/containerd-v2-unsupported", minVersionRequiringCgroupV2.String())
+		if requirementValue == "true" && !supported {
+			return false, errors.New("CGroup V2 support is required on all nodes, but some nodes have label node.deckhouse.io/containerd-v2-unsupported")
 		}
 
 		return true, nil
