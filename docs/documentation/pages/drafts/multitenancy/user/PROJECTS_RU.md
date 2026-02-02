@@ -23,9 +23,13 @@ lang: ru
 При создании [ProjectNamespace](TODO) происходит следующее:
 
 1. Поле [spec.project](TODO) проверяется на наличие родительского Project;
-1. Проверяется имя ресурса — значение `metadata.name` должно начинаться с <project>- и не превышать 61 символ;
+1. Проверяется имя ресурса — значение `metadata.name` должно начинаться с `<project>-` и не превышать 61 символ (с учётом ограничения 63 символа для итогового namespace);
 1. Создаётся [пространство имён](../concepts/glossary.html#пространство-имён) Kubernetes с именем из `metadata.name`;
 1. К созданному пространству имён применяются унаследованные из Project квоты (ResourceQuota), RoleBinding и LimitRange, если они не были заданы в [ProjectNamespace](TODO).
+
+{% alert level="info" %}
+Ресурс `ProjectNamespace` можно создавать только в основном пространстве имён проекта. В дополнительных пространствах имён создание `ProjectNamespace` запрещено.
+{% endalert %}
 
 ### Web UI
 
