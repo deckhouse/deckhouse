@@ -119,11 +119,6 @@ type ProbeTask struct {
 	probes  []Prober
 }
 
-type ProbeTaskIdentity struct {
-	host    string
-	swhName types.NamespacedName
-}
-
 type TaskQueue struct {
 	items []*ProbeTask
 	lock  sync.Mutex
@@ -169,9 +164,13 @@ func (q *TaskQueue) Dequeue() *ProbeTask {
 func ProbeDialer() *net.Dialer {
 	dialer := &net.Dialer{
 		Control: func(network, address string, c syscall.RawConn) error {
-			return c.Control(func(fd uintptr) {
-				syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 1})
-			})
+			var setsockoptErr error
+			if err := c.Control(func(fd uintptr) {
+				setsockoptErr = syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 1})
+			}); err != nil {
+				return err
+			}
+			return setsockoptErr
 		},
 	}
 	return dialer
