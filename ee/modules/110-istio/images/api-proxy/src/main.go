@@ -28,7 +28,7 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
 }
 
-func httpHandlerReady(p *Proxy) http.Handler {
+func httpHandlerReady(p *Proxy) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_, err := p.probeClient.Get("https://kubernetes.default.svc." + os.Getenv("CLUSTER_DOMAIN") + "/version")
 		if err != nil {
@@ -42,7 +42,7 @@ func httpHandlerReady(p *Proxy) http.Handler {
 }
 
 func httpHandlerAPIProxy(p *Proxy) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// check if request was passed by ingress
 		if len(r.TLS.PeerCertificates) == 0 {
 			errstring := "[api-proxy] Only requests with client certificate are allowed."
@@ -68,7 +68,7 @@ func httpHandlerAPIProxy(p *Proxy) http.HandlerFunc {
 
 		p.reverseProxy.ServeHTTP(w, r)
 		logger.Println(r.RemoteAddr, r.Method, r.UserAgent(), r.URL.Path)
-	}
+	})
 }
 
 func main() {
