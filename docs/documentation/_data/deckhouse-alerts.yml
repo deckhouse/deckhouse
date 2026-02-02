@@ -6610,6 +6610,33 @@ alerts:
         Prometheus-main data is rotating earlier than the configured retention period.
       severity: "4"
       markupFormat: markdown
+    - name: PrometheusRemoteWriteEndpointUnavailable
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-remote-write.yaml
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |
+        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
+
+        To troubleshoot you can:
+         1. Get list of all Prometheus pods:
+            ```shell
+            d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
+            ```
+
+            Review logs of each prometheus pod to find the detailed error information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
+            ```
+
+         2. Get logs from all Prometheus pods to find detailed information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
+            ```
+      summary: |
+        Prometheus remote write endpoint is unavailable.
+      severity: "7"
+      markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
