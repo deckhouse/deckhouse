@@ -848,7 +848,15 @@ entries:
             - title:
                 en: Multitenancy
                 ru: Мультенантность
-              url: /admin/multitenancy.html
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/multitenancy.html
+                - title:
+                    en: Project management
+                    ru: Управление проектами
+                  url: /admin/multitenancy/project-management.html
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
