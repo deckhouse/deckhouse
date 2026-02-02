@@ -138,7 +138,7 @@
       plk_markup_format: "markdown"
       summary: Node {{`{{ $labels.node }}`}} does not use cgroup v2.
       description: |
-        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1].
+        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1]. Cgroup v2 must be used.
 
   - alert: D8NodeContainerdV2NotSupported
     expr: |
@@ -152,4 +152,4 @@
       plk_markup_format: "markdown"
       summary: Node {{`{{ $labels.node }}`}} does not use containerd v2.
       description: |
-        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using containerd v2, but in 1.36 support for [containerd v1.y will be dropped](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using containerd v2, but in 1.36 support for [containerd v1.y is dropped](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support). Containerd v2 must be used.
