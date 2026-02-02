@@ -1167,17 +1167,31 @@ func (state *State) processCheckerNodes(
 	ca *x509.Certificate,
 ) (bool, error) {
 	checkMode := registry_const.CheckModeDefault
+
 	checkerRegistry := checker.RegistryParams{
 		Scheme:   "HTTPS",
 		Username: user.UserName,
 		Password: user.Password,
+		CA:       string(encodeCertificateIfExist(ca)),
 	}
 
-	if ca != nil {
-		checkerRegistry.CA = string(registry_pki.EncodeCertificate(ca))
+	nodeAddresses := make(map[string]string, len(nodeServicesResult))
+	sortedAddresses := make([]string, 0, len(nodeServicesResult))
+
+	for node, result := range nodeServicesResult {
+		address := result.Address
+		if address == "" {
+			continue
+		}
+
+		nodeAddresses[node] = address
+		sortedAddresses = append(sortedAddresses, address)
 	}
+
+	sort.Strings(sortedAddresses)
 
 	version, err := registry_pki.ComputeHash(
+		sortedAddresses,
 		checkerRegistry,
 		state.TargetMode,
 		checkMode,
@@ -1187,18 +1201,14 @@ func (state *State) processCheckerNodes(
 	}
 
 	state.CheckerParams = checker.Params{
-		Registries: make(map[string]checker.RegistryParams),
+		Registries: make(map[string]checker.RegistryParams, len(nodeAddresses)),
 		Version:    version,
 		CheckMode:  checkMode,
 	}
 
-	for node, result := range nodeServicesResult {
-		if result.Address == "" {
-			continue
-		}
-
+	for node, address := range nodeAddresses {
 		params := checkerRegistry
-		params.Address = registry_const.NodeRegistryAddr(result.Address)
+		params.Address = registry_const.NodeRegistryAddr(address)
 		state.CheckerParams.Registries[node] = params
 	}
 
