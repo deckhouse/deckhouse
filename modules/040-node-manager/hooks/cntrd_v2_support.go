@@ -115,7 +115,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 
 		metricValue := 1.0
 		if nodeInfo.HasUnsupportedLabel {
-			allNodesSupportCgroupV2 = false
 			labels := map[string]string{
 				"node":       nodeInfo.Name,
 				"node_group": nodeInfo.NodeGroup,
