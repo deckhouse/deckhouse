@@ -429,7 +429,7 @@ properties:
                 description: |
                   Control rules for network traffic to and from workloads running in the Project resource.
                 
-                  * `Isolated`: Applies a restrictive allowlist NetworkPolicy. It permits only explicitly allowed traffic, including access required for platform components and configured external access (SSH/HTTP(S)/NodePort).
+                  * `Isolated`: Applies a restrictive allowlist NetworkPolicy. It permits only explicitly allowed traffic, including access required for system components.
                   * `NotRestricted`: Neither network policies nor any additional network restrictions are applied.
 
                 enum:
