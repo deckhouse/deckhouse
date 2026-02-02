@@ -115,27 +115,25 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 			return fmt.Errorf("failed to iterate over 'nodes_cntrdv2_unsupported snapshot': %w", err)
 		}
 
-		metricValue := 1.0
+		labels := map[string]string{
+			"node":           nodeInfo.Name,
+			"node_group":     nodeInfo.NodeGroup,
+			"cgroup_version": nodeInfo.CgroupVersion,
+		}
+
+		unsupportedContainerdV1Value := 0.0
 		if nodeInfo.HasUnsupportedLabel {
 			hasUnsupportedContainerdV1 = true
+			unsupportedContainerdV1Value = 1.0
 		}
-		labels := map[string]string{
-			"node":       nodeInfo.Name,
-			"node_group": nodeInfo.NodeGroup,
-		}
-		input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, metricValue, labels, options...)
+		input.MetricsCollector.Set(cntrdV2UnsupportedMetricName, unsupportedContainerdV1Value, labels, options...)
 
 		cgroupV2UnsupportedValue := 0.0
 		if nodeInfo.CgroupVersion != cgroupV2Value {
 			allNodesSupportCgroupV2 = false
 			cgroupV2UnsupportedValue = 1.0
 		}
-		labelsCgroup := map[string]string{
-			"node":           nodeInfo.Name,
-			"node_group":     nodeInfo.NodeGroup,
-			"cgroup_version": nodeInfo.CgroupVersion,
-		}
-		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labelsCgroup, options...)
+		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labels, options...)
 	}
 
 	requirements.SaveValue(cgroupV2SupportValuesKey, allNodesSupportCgroupV2)
