@@ -569,6 +569,17 @@ apiVersions:
 
                 > If not explicitly specified, the default namespace for kubeconfig will be used.
               type: string
+            networkPolicy:
+              type: string
+              description: |
+                Control rules for network traffic to and from workloads running in the Project resource.
+
+                * `Isolated`: Applies a restrictive NetworkPolicy that allows only network traffic required for platform system components to function. All other traffic is denied.
+                * `None`: The cluster does not request any network policies. Existing project-level restrictions still apply.
+              enum:
+                - Isolated
+                - None
+              default: Isolated
           required:
             - kubeconfigDataBase64
             - namespace
