@@ -74,6 +74,9 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: update-observer
       liveness-probe:
         - kind: DaemonSet
           name: d8-control-plane-manager
@@ -93,6 +96,9 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
+        - kind: DaemonSet
+          name: d8-control-plane-manager
+          container: update-observer
   templates:
     exclude-rules:
       pdb:

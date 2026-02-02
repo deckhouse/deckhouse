@@ -8,6 +8,11 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- define "update_observer_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- $profiles := list "main" }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
@@ -214,6 +219,12 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
+    - containerName: update-observer
+      minAllowed:
+        {{- include "update_observer_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 80Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -326,6 +337,43 @@ spec:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}
 {{- end }}
+      - name: update-observer
+        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "updateObserver") }}
+        command:
+        - /update-observer
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 4264
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 4264
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "update_observer_resources" $ | nindent 12 }}
+  {{- end }}
+        env:
+        - name: LEADER_ELECTION_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical
