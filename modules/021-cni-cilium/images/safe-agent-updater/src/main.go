@@ -149,7 +149,7 @@ func isCiliumCNIVersionAlreadyUpToDate() (bool, string) {
 	return semver.Compare("v"+version, "v1.17.0") >= 0, version
 }
 
-func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (currentAgentPodName string, currentAgentImageHash string, isCurrentAgentPodGenerationDesired bool, err error) {
+func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (string, string, bool, error) {
 	ciliumAgentDS, err := kubeClient.AppsV1().DaemonSets(ciliumNS).Get(
 		context.TODO(),
 		"agent",
@@ -229,7 +229,7 @@ func checkAgentPodGeneration(kubeClient kubernetes.Interface, nodeName string) (
 		return currentPod.Name, currentPod.Spec.Containers[0].Image, true, nil
 	}
 	log.Infof(
-		"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconsile is needed",
+		"[SafeAgentUpdater] Desired agent generation(%s) and current(%s) are not the same. Reconcile is needed",
 		desiredAgentGeneration,
 		currentAgentGeneration,
 	)
@@ -310,6 +310,7 @@ func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName strin
 		)
 		if err != nil {
 			log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
+			return err
 		} else if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
 			return nil
 		}
@@ -384,7 +385,7 @@ func waitUntilNewPodCreatedAndBecomeReady(kubeClient kubernetes.Interface, nodeN
 		log.Infof("[SafeAgentUpdater] Waiting until new pod %s become Ready", newPod.Name)
 
 		if isPodReady(newPod) {
-			log.Infof("[SafeAgentUpdater] Pod %s id Ready", newPod.Name)
+			log.Infof("[SafeAgentUpdater] Pod %s is Ready", newPod.Name)
 			break
 		} else if i == scanIterations-1 {
 			return fmt.Errorf(
