@@ -847,7 +847,7 @@ entries:
                   url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
+                ru: Мультитенантность
               folders:
                 - title:
                     en: Overview

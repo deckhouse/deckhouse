@@ -13,20 +13,14 @@ Deckhouse Kubernetes Platform includes a set of templates for creating projects:
   - selecting a security profile
   - configuring project administrators
 
-  Template description [in GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/default.yaml).
-
 - `secure` includes all capabilities of the `default` template and adds:
   - configuring allowed UID/GID ranges for the project
   - audit rules for Linux users’ interactions with the kernel
   - scanning container images at runtime for known vulnerabilities (CVEs)
 
-  Template description [in GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure.yaml).
-
 - `secure-with-dedicated-nodes` includes all capabilities of the `secure` template and adds:
   - defining a node selector for all pods in the project: when a pod is created, its node selector is automatically **replaced** with the project’s node selector
   - defining default tolerations for all pods in the project: when a pod is created, the default tolerations are automatically **added** to it
-
-  Template description [in GitHub](https://github.com/deckhouse/deckhouse/blob/main/modules/160-multitenancy-manager/images/multitenancy-manager/src/default/secure-with-dedicated-nodes.yaml).
 
 To list all available parameters for a project template, run:
 
