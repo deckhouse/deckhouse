@@ -1,6 +1,7 @@
 module github.com/flant/docs-builder
 
 go 1.24.9
+toolchain go1.25.6
 
 require (
 	github.com/bep/clocks v0.5.0
