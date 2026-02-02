@@ -169,12 +169,24 @@ func (s *socketConn) SendPacket(host string) error {
 
 	// Build ICMP Echo Request packet
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, uint8(8))         // Type: Echo Request
-	binary.Write(&buf, binary.BigEndian, uint8(0))         // Code: 0
-	binary.Write(&buf, binary.BigEndian, uint16(0))        // Checksum placeholder
-	binary.Write(&buf, binary.BigEndian, uint16(s.id))     // Identifier
-	binary.Write(&buf, binary.BigEndian, uint16(seq))      // Sequence number
-	binary.Write(&buf, binary.BigEndian, uint64(sentTime)) // Payload: timestamp in nanoseconds
+	if err := binary.Write(&buf, binary.BigEndian, uint8(8)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
+	if err := binary.Write(&buf, binary.BigEndian, uint8(0)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
+	if err := binary.Write(&buf, binary.BigEndian, uint16(0)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
+	if err := binary.Write(&buf, binary.BigEndian, uint16(s.id)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
+	if err := binary.Write(&buf, binary.BigEndian, uint16(seq)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
+	if err := binary.Write(&buf, binary.BigEndian, uint64(sentTime)); err != nil {
+		return fmt.Errorf("error while building ICMP packet: %w", err)
+	}
 
 	pkt := buf.Bytes()
 	checksum := computeChecksum(pkt)

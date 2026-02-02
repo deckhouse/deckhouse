@@ -103,10 +103,10 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 // If the host is an IP address, the stats are returned directly from the maps.
 // If the host is a domain name (that resolved to multiple IPs), it aggregates `sentCount`
 // across all IPs that were resolved for this domain.
-func (p *Pinger) StatsForHost(host string) (sent int, recv int) {
+func (p *Pinger) StatsForHost(host string) (int, int) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-
+	var sent, recv int
 	// Fast path: if host is an IP that was pinged directly, return its stats
 	if sentVal, ok := p.sentCount[host]; ok {
 		sent = sentVal
