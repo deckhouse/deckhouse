@@ -4,6 +4,7 @@ permalink: ru/architecture/system-requirements/
 lang: ru
 search: system requirements, системные требования
 ---
+
 Deckhouse Kubernetes Platform (DKP) может устанавливаться в следующих вариантах:
 
 * **В поддерживаемом облаке**, включая [публичные](/products/kubernetes-platform/documentation/v1/admin/integrations/public/overview.html) и [частные облака](/products/kubernetes-platform/documentation/v1/admin/integrations/private/overview.html), а также [системы виртуализации](/products/kubernetes-platform/documentation/v1/admin/integrations/virtualization/overview.html). Установщик автоматически создает и настраивает все необходимые ресурсы (включая виртуальные машины, сетевые объекты и т.д.), разворачивает кластер Kubernetes и устанавливает DKP. Для каждого облачного провайдера и системы виртуализации необходимо соблюсти ряд требований. С полным списком требований для каждого варианта интеграции с **IaaS** можно ознакомиться в разделе [Интеграция с IaaS](/products/kubernetes-platform/documentation/v1/admin/integrations/integrations-overview.html) документации.

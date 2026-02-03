@@ -1088,6 +1088,7 @@ entries:
         - title:
             en: System requirements
             ru: Системные требования
+          draft: true            
           url: /architecture/system-requirements/
         - title:
             en: C4 model
@@ -1193,6 +1194,38 @@ entries:
                 en: Node management
                 ru: Управление узлами
               url: /architecture/node.html
+            - title:
+                en: Bashible
+                ru: Bashible
+              url: /architecture/cluster-and-infrastructure/bashible/
+            - title:
+                en: node-manager module
+                ru: Модуль node-manager
+              url: /architecture/cluster-and-infrastructure/node-manager/
+            - title:
+                en: CloudEphemeral nodes management
+                ru: Управление CloudEphemeral-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes/              
+            - title:
+                en: CloudPermanent nodes management
+                ru: Управление CloudPermanent-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-permanent-nodes/
+            - title:
+                en: CloudStatic nodes management
+                ru: Управление CloudStatic-узлами
+              url: /architecture/cluster-and-infrastructure/cloud-static-nodes/
+            - title:
+                en: Static nodes management
+                ru: Управление Static-узлами
+              url: /architecture/cluster-and-infrastructure/static-nodes/
+            - title:
+                en: Hybrid nodegroups and clusters management
+                ru: Управление гибридными группами узлов и кластерами
+              url: /architecture/cluster-and-infrastructure/hybrid-nodegroups-and-clusters/
+            - title:
+                en: terraform-manager module
+                ru: Модуль terraform-manager
+              url: /architecture/cluster-and-infrastructure/terraform-manager/
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1286,7 +1319,7 @@ entries:
         - title:
             en: Updating
             ru: Обновление
-          url: /architecture/updating.html
+          url: /architecture/updating.html       
 
     - title:
         en: Reference
