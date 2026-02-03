@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'cse-pro': 'CSE Pro'
   };
 
-  const statusTitles = {
+  const stageTitles = {
     'experimental': 'Experimental',
     'preview': 'Preview',
     'generalAvailability': 'General Availability',
@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function markEmptyCheckboxes() {
     const availableTags = new Set();
-    const availableStatuses = new Set();
+    const availableStages = new Set();
     const availableEditions = new Set();
 
     Array.from(articles).forEach(article => {
@@ -82,7 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
       article.querySelectorAll('[class*="button-tile__stage-"]').forEach(el => {
         el.classList.forEach(cls => {
           if (cls.startsWith('button-tile__stage-')) {
-            availableStatuses.add(cls.replace('button-tile__stage-', ''));
+            availableStages.add(cls.replace('button-tile__stage-', ''));
           }
         });
       });
@@ -109,8 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isAvailable = availableTags.has(checkbox.value);
       } else if (container?.classList.contains('filter__container--editions')) {
         isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
-      } else if (container?.classList.contains('filter__container--statuses')) {
-        isAvailable = availableStatuses.has(checkbox.value);
+      } else if (container?.classList.contains('filter__container--stages')) {
+        isAvailable = availableStages.has(checkbox.value);
       }
 
       if (!isAvailable) {
@@ -228,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedFilters.forEach((entry, filterName) => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
-        const isStatusesFilter = filterContainer?.classList.contains('filter__container--statuses');
+        const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
         
         let valuesText;
         if (isEditionsFilter) {
@@ -236,10 +236,10 @@ document.addEventListener('DOMContentLoaded', () => {
           valuesText = Array.from(entry.values)
             .map(code => editionTitles[code] || code)
             .join(', ');
-        } else if (isStatusesFilter) {
-          // Convert status codes to titles
+        } else if (isStagesFilter) {
+          // Convert stage codes to titles
           valuesText = Array.from(entry.values)
-            .map(code => statusTitles[code] || code)
+            .map(code => stageTitles[code] || code)
             .join(', ');
         } else {
           valuesText = Array.from(entry.values).join(', ');
@@ -282,8 +282,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked');
     const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
-    const checkboxesStatusesChecked = document.querySelectorAll('.filter__container--statuses input[type="checkbox"]:checked');
-    const selectedStatuses = Array.from(checkboxesStatusesChecked).map(checkbox => checkbox.value);
+    const checkboxesStagesChecked = document.querySelectorAll('.filter__container--stages input[type="checkbox"]:checked');
+    const selectedStages = Array.from(checkboxesStagesChecked).map(checkbox => checkbox.value);
 
     const checkboxesTagsChecked = document.querySelectorAll('.filter__container--tags input[type="checkbox"]:checked');
     const selectedTags = Array.from(checkboxesTagsChecked).map(checkbox => checkbox.value);
@@ -311,11 +311,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      if(selectedStatuses.length > 0) {
-        const hasAllStatuses = selectedStatuses.every(status => {
-          return article.querySelector(`.button-tile__stage-${status}`) !== null;
+      if(selectedStages.length > 0) {
+        const hasAllStages = selectedStages.every(stage => {
+          return article.querySelector(`.button-tile__stage-${stage}`) !== null;
         });
-        if(!hasAllStatuses) {
+        if(!hasAllStages) {
           return false;
         }
       }
@@ -385,14 +385,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function createTooltipContent(titleText, descriptionText) {
     const container = document.createElement('div');
-    container.classList.add('statuses-tooltip');
+    container.classList.add('stages-tooltip');
 
     const title = document.createElement('p');
-    title.classList.add('statuses-tooltip__title');
+    title.classList.add('stages-tooltip__title');
     title.textContent = titleText;
 
     const description = document.createElement('p');
-    description.classList.add('statuses-tooltip__descr');
+    description.classList.add('stages-tooltip__descr');
     description.textContent = descriptionText;
 
     container.appendChild(title);
