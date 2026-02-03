@@ -82,7 +82,7 @@ type Operator struct {
 	logger *log.Logger
 }
 
-//go:generate mockgen -source=$GOFILE -package=operatormock -destination=./mock/operator_mock.go
+//go:generate minimock -i github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator.moduleManager -o ./mock/module_manager_minimock.go -n ModuleManagerMock -p operatormock
 
 type installer interface {
 	Download(ctx context.Context, repo registry.Remote, downloaded, name, version string) error

@@ -20,25 +20,22 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	operator_mock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/mock"
+	operatormock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/mock"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker/dependency"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/golang/mock/gomock"
+	"github.com/gojuno/minimock/v3"
 	"github.com/stretchr/testify/assert"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func Test_buildScheduler(t *testing.T) {
-	c := gomock.NewController(t)
-	defer c.Finish()
+	c := minimock.NewController(t)
 
 	t.Run("scheduler.Check", func(t *testing.T) {
-		mm := operator_mock.NewMockmoduleManager(c)
-
 		cluster := func(ctx context.Context, moduleName string) (string, error) {
 			return "test", nil
 		}
@@ -47,12 +44,14 @@ func Test_buildScheduler(t *testing.T) {
 		o.logger = log.NewLogger()
 
 		t.Run("kubernetes check", func(t *testing.T) {
+			mm := operatormock.NewModuleManagerMock(c)
+
 			o.buildScheduler(cluster, mm)
 			t.Run("not found in global values", func(t *testing.T) {
 				gm, _ := modules.NewGlobalModule("", map[string]interface{}{}, nil, nil, nil, false)
 
 				o.buildScheduler(cluster, mm)
-				mm.EXPECT().GetGlobal().Return(gm)
+				mm.GetGlobalMock.Return(gm)
 
 				constraint, _ := semver.NewConstraint(">=1.21")
 				err := o.scheduler.Check(schedule.Checks{
@@ -67,6 +66,8 @@ func Test_buildScheduler(t *testing.T) {
 		})
 		t.Run("module check", func(t *testing.T) {
 			t.Run("error receiving module information from the cluster", func(t *testing.T) {
+				mm := operatormock.NewModuleManagerMock(c)
+
 				cluster := func(ctx context.Context, moduleName string) (string, error) {
 					return "test", &apierrors.StatusError{ErrStatus: metav1.Status{
 						Reason:  metav1.StatusReasonInternalError,
@@ -92,6 +93,8 @@ func Test_buildScheduler(t *testing.T) {
 				}
 			})
 			t.Run("StatusReasonNotFound optional", func(t *testing.T) {
+				mm := operatormock.NewModuleManagerMock(c)
+
 				cluster := func(ctx context.Context, moduleName string) (string, error) {
 					return "test", &apierrors.StatusError{ErrStatus: metav1.Status{
 						Reason: metav1.StatusReasonNotFound,
@@ -113,6 +116,8 @@ func Test_buildScheduler(t *testing.T) {
 				assert.NoError(t, err)
 			})
 			t.Run("StatusReasonNotFound not optional", func(t *testing.T) {
+				mm := operatormock.NewModuleManagerMock(c)
+
 				cluster := func(ctx context.Context, moduleName string) (string, error) {
 					return "test", &apierrors.StatusError{ErrStatus: metav1.Status{
 						Reason: metav1.StatusReasonNotFound,
@@ -138,6 +143,8 @@ func Test_buildScheduler(t *testing.T) {
 				}
 			})
 			t.Run("1.20.0 is less than 1.21", func(t *testing.T) {
+				mm := operatormock.NewModuleManagerMock(c)
+
 				cluster := func(ctx context.Context, moduleName string) (string, error) {
 					return "1.20", nil
 				}
@@ -145,7 +152,7 @@ func Test_buildScheduler(t *testing.T) {
 				o.buildScheduler(cluster, mm)
 				schedule.WithBootstrapCondition(func() bool { return true })(o.scheduler)
 
-				mm.EXPECT().IsModuleEnabled("test").Return(true)
+				mm.IsModuleEnabledMock.When("test").Then(true)
 
 				constraint, _ := semver.NewConstraint(">=1.21")
 				err := o.scheduler.Check(schedule.Checks{
@@ -163,6 +170,7 @@ func Test_buildScheduler(t *testing.T) {
 				}
 			})
 			t.Run("StatusSuccess", func(t *testing.T) {
+				mm := operatormock.NewModuleManagerMock(c)
 				cluster := func(ctx context.Context, moduleName string) (string, error) {
 					return "1.22", nil
 				}
@@ -170,7 +178,7 @@ func Test_buildScheduler(t *testing.T) {
 				o.buildScheduler(cluster, mm)
 				schedule.WithBootstrapCondition(func() bool { return true })(o.scheduler)
 
-				mm.EXPECT().IsModuleEnabled("test").Return(true)
+				mm.IsModuleEnabledMock.When("test").Then(true)
 
 				constraint, _ := semver.NewConstraint(">=1.21")
 				err := o.scheduler.Check(schedule.Checks{
