@@ -99,7 +99,7 @@ Be careful: these actions completely erase the previous data and form a new etcd
 
 ### Recovering etcd after panic: unexpected removal of unknown remote peer error
 
-1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/ \
@@ -116,8 +116,8 @@ Be careful: these actions completely erase the previous data and form a new etcd
 
    where:
 
-* `<HOSTNAME>` — the name of the master node;
-* `<ADDRESS>` — the address of the master node.
+   * `<HOSTNAME>`: Name of the master node.
+   * `<ADDRESS>`: Address of the master node.
 
 1. Execute the following commands to use the new snapshot:
 

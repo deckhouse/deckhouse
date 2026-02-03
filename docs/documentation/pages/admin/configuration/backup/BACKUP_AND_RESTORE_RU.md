@@ -14,8 +14,7 @@ lang: ru
 1. Подготовьте утилиту `etcdutl`. Найдите и скопируйте исполняемый файл на узле:
 
    ```shell
-   cp $(find /var/lib/containerd/ \
-   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   cp $(find /var/lib/containerd/ -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl`:
@@ -127,7 +126,7 @@ lang: ru
 1. Переведите кластер в режим с одним master-узлом:
 
    - В облачном кластере воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
-   - В статическом кластере выведите лишние master-узлы из роли control-plane по [инструкции](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#удаление-роли-master-с-узла-без-удаления-самого-узла), после чего удалите их из кластера.
+   - В статическом кластере выведите лишние master-узлы из роли `control-plane` по [инструкции](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#удаление-роли-master-с-узла-без-удаления-самого-узла), после чего удалите их из кластера.
    - В статическом кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла удалите arbiter-узел и лишние master-узлы.
    - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](../platform-scaling/control-plane/scaling-and-changing-master-nodes.html#уменьшение-числа-master-узлов-в-облачном-кластере) для удаления лишних мастер-узлов и arbiter-узла.
 
@@ -139,7 +138,7 @@ lang: ru
    d8 k delete node <ИМЯ_MASTER_УЗЛА>
    ```
 
-   > **Внимание.** При недоступности команд `d8 k` или `kubectl` на узле проверьте конфиг `/etc/kubernetes/kubernetes-api-proxy/nginx.conf`, в нем должен быть указан только ваш текущий API-сервер. Если в конфиге содержатся IP-адреса старых мастеров, то удалите строчки содержащие их, в этом случае конфиг так же нужно исправить на всех остальных узлах.
+   > **Внимание.** При недоступности команд `d8 k` или `kubectl` на узле проверьте файл конфигурации `/etc/kubernetes/kubernetes-api-proxy/nginx.conf`. В нем должен быть указан только ваш текущий API-сервер. Если в конфигурации содержатся строки с IP-адресами старых master-узлов, удалите их. Аналогичным образом исправьте конфигурацию на всех остальных узлах.
 
 1. Перезапустите master-узел. Убедитесь, что остальные узлы перешли в состояние `Ready`.
 

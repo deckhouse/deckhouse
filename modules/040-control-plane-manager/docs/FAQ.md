@@ -509,7 +509,7 @@ This operation is unsafe and breaks the guarantees given by the consensus protoc
 
 This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
 
-1. Find `etcdutl` utility on the master-node and copy the executable to `/usr/local/bin/`:
+1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
 
    ```shell
    cp $(find /var/lib/containerd/ \
@@ -526,8 +526,8 @@ This method may be necessary if the `--force-new-cluster` option doesn't restore
 
    where:
 
-* `<HOSTNAME>` — the name of the master node;
-* `<ADDRESS>` — the address of the master node.
+   * `<HOSTNAME>`: Name of the master node.
+   * `<ADDRESS>`: Address of the master node.
 
 1. Execute the following commands to use the new snapshot:
 
@@ -981,14 +981,14 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
-1. Switch the cluster to single master mode:
+1. Switch the cluster to single-master mode:
 
    - In a cloud cluster, follow the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master).
-   - In a static cluster, remove any unnecessary master nodes from the control-plane role by following the [instructions](#how-do-i-dismiss-the-master-role-while-keeping-the-node), and then remove them from the cluster.
+   - In a static cluster, remove any unnecessary master nodes from the `control-plane` role by following the [instructions](#how-do-i-dismiss-the-master-role-while-keeping-the-node) and then remove them from the cluster.
    - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
    - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) to remove the additional master nodes and the arbiter node.
 
-1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-single-master-cluster) for restoring a cluster with a single control-plane node.
+1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-single-master-cluster) for restoring a cluster with a single master node.
 
 1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
@@ -996,7 +996,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-   > **Attention.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration. It should only  specify your current API server. If the configuration contains IP addresses of old masters, remove the lines containing them. You will also need to correct the configuration  on all other nodes.
+   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
 
 1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
 
@@ -1006,7 +1006,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 system queue main
    ```
 
-1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master). For static clusters, use the [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster).
+1. Switch the cluster back to multi-master mode. Follow the respective instructions for [cloud clusters](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) and [static clusters](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster).
 
 Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 

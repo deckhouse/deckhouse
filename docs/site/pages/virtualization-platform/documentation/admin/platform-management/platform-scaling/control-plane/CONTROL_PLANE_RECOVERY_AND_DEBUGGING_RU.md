@@ -108,7 +108,7 @@ done
    -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
-1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
+1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
 
    ```shell
    etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
@@ -118,10 +118,10 @@ done
 
    где:
 
-- `<HOSTNAME>` — название master-узла;
-- `<ADDRESS>` — адрес master-узла.
+   - `<HOSTNAME>` — имя master-узла;
+   - `<ADDRESS>` — адрес master-узла.
 
-1. Выполните следующие команды для использования нового снапшота:
+1. Выполните следующие команды для использования нового снимка:
 
    ```shell
    cp -r /var/lib/etcd /tmp/etcd-backup
