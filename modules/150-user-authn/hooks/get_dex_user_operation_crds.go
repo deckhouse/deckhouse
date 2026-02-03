@@ -21,12 +21,14 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	"github.com/samber/lo"
+	"golang.org/x/crypto/bcrypt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -366,6 +368,17 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 		return errors.New("resetPassword spec is nil")
 	}
 
+	// Password.hash in Dex Password CR is base64-encoded bcrypt hash.
+	// UserOperation.resetPassword.newPasswordHash must be a *raw* bcrypt hash, otherwise we risk
+	// double-encoding and breaking logins.
+	rawHash := operation.Spec.ResetPassword.NewPasswordHash
+	if !strings.HasPrefix(rawHash, "$2") {
+		return fmt.Errorf("resetPassword.newPasswordHash must be a raw bcrypt hash (starting with $2*), got: %q", rawHash)
+	}
+	if _, err := bcrypt.Cost([]byte(rawHash)); err != nil {
+		return fmt.Errorf("resetPassword.newPasswordHash must be a valid bcrypt hash: %v", err)
+	}
+
 	var userPassword *Password
 	for password, err := range sdkobjectpatch.SnapshotIter[Password](input.Snapshots.Get("passwords")) {
 		if err != nil {
@@ -388,7 +401,7 @@ func executeResetPassword(input *go_hook.HookInput, operation UserOperation) err
 			return nil, err
 		}
 		pass.Hash = base64.StdEncoding.EncodeToString(
-			[]byte(operation.Spec.ResetPassword.NewPasswordHash),
+			[]byte(rawHash),
 		)
 		pass.RequireResetHashOnNextSuccLogin = true
 		return sdk.ToUnstructured(&pass)

@@ -125,7 +125,7 @@ spec:
   initiatorType: Admin
   type: ResetPassword
   resetPassword:
-    newPasswordHash: '$newHash'
+    newPasswordHash: '$2y$10$9fdmv4ewdvzVCTQ01BnAZ.Cy27fdnfNkl.dLIge2YS2gSF4czqXUy'
   user: admin
 `
 		userOperationInvalidResetPassword = `
@@ -304,8 +304,8 @@ status:
 			Expect(f).To(ExecuteSuccessfully())
 
 			pw := f.KubernetesResource("Password", "d8-user-authn", "mfsg22loib4w65lsmnxw24dbnz4s4y3pnxf7fhheqqrcgji")
-			// JG5ld0hhc2g= - base64 encoded `$newHash` string
-			Expect(pw.Field("hash").String()).To(Equal("JG5ld0hhc2g="))
+			// base64 encoded bcrypt hash from userOperationResetPassword.newPasswordHash
+			Expect(pw.Field("hash").String()).To(Equal("JDJ5JDEwJDlmZG12NGV3ZHZ6VkNUUTAxQm5BWi5DeTI3ZmRuZk5rbC5kTElnZTJZUzJnU0Y0Y3pxWFV5"))
 			Expect(pw.Field("requireResetHashOnNextSuccLogin").Bool()).To(BeTrue())
 
 			uo := f.KubernetesGlobalResource("UserOperation", "user-operation-01")

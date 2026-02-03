@@ -240,7 +240,16 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 			}
 		} else if _, ok = password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
 			// In this case we have expired or unexisted lock and saved from previous lock annotation.
-			// For sure we need to delete it.
+			// For sure we need to delete it (and persist the change to the cluster).
+			input.PatchCollector.PatchWithMutatingFunc(func(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
+				annotations := obj.GetAnnotations()
+				if annotations == nil {
+					return obj, nil
+				}
+				delete(annotations, PasswordAnnotationLockedByAdministrator)
+				obj.SetAnnotations(annotations)
+				return obj, nil
+			}, "dex.coreos.com/v1", "Password", password.Namespace, password.Name)
 			delete(password.Annotations, PasswordAnnotationLockedByAdministrator)
 		}
 		dexUser.Status.Lock = lock
