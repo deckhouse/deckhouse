@@ -324,7 +324,7 @@ Linux:
 - очистить `machine-id` с помощью команды `sudo truncate -s 0 /etc/machine-id` (для systemd) или удалить файл `/var/lib/dbus/machine-id`;
 - удалить SSH-ключи хоста: `sudo rm -f /etc/ssh/ssh_host_*`;
 - очистить конфигурации сетевых интерфейсов (если используются статические настройки);
-- очистить кэш Cloud-Init (если используется): `sudo cloud-init clean`.
+- очистить кэеш Cloud-Init (если используется): `sudo cloud-init clean`.
 
 Windows:
 

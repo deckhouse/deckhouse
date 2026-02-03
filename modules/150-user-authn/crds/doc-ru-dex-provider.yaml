@@ -225,7 +225,7 @@ spec:
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
 
-                        Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
+                        Полученные от IdP данные авторизации и групп сохраняются в кеш на 10 секунд.
                 ldap: &ldap
                   description: |
                     Параметры провайдера LDAP.
@@ -307,7 +307,7 @@ spec:
                       description: |
                         Включает возможность базовой аутентификации (Basic Authentication) для Kubernetes API server с использованием этого LDAP-провайдера.
 
-                        В качестве учетных данных используются логин и пароль пользователя из LDAP. 
+                        В качестве учетных данных используются логин и пароль пользователя из LDAP.
                         Эта функция недоступна если в кластере присутствует более одного провайдера аутентификации (IdP) типа `OIDC`, `Crowd` или `LDAP`.
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).

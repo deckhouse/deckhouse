@@ -31,7 +31,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Поднять пиринговое соединение по инструкции [выше](#как-поднять-пиринговое-соединение--между-vpc).
 
-3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...
@@ -47,7 +47,7 @@ title: "Cloud provider — AWS: FAQ"
 
 2. Запустить вручную bastion-хост в subnet <prefix>-public-0.
 
-3. Продолжить установку кластера. На вопрос про кэш Terraform ответить `y`:
+3. Продолжить установку кластера. На вопрос про кеш Terraform ответить `y`:
 
    ```shell
    dhctl bootstrap --config config --ssh-...

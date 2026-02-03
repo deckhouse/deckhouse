@@ -623,7 +623,7 @@ entries:
                       url: /admin/configuration/network/other/dns.html
                     - title:
                         en: Caching DNS requests on cluster nodes
-                        ru: Кэширование DNS-запросов на узлах кластера
+                        ru: кеширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
                         en: BpfLB operation modes for external traffic processing
@@ -930,7 +930,7 @@ entries:
               url: /user/network/app_istio_activation.html
             - title:
                 en: Managing request balancing between service endpoints with Istio
-                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
+                ru: Управление балансировкой запросов между эндпоинтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
                 en: Locality failover with Istio
@@ -1193,7 +1193,7 @@ entries:
             url: /architecture/network/service-with-istio.html
           - title:
               en: Caching DNS server in a cluster
-              ru: Кэширующий DNS-сервер в кластере
+              ru: кеширующий DNS-сервер в кластере
             url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy
