@@ -175,6 +175,16 @@ properties:
         x-examples:
           - worker: mytoken
 
+      customMIGNames:
+        type: object
+        default: {}
+        description: |
+          Resolved MIG configuration names for node groups with custom MIG partitions.
+        additionalProperties:
+          type: string
+        x-examples:
+          - worker-gpu-custom: custom-worker-gpu-custom-12345678
+
       instancePrefix:
         type: string
         x-examples:

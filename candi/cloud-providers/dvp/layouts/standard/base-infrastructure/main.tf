@@ -1,4 +1,4 @@
-# Copyright 2025 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,3 +12,32 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource "kubernetes_manifest" "isolated_cluster_prefix_network_policy" {
+  for_each = local.targets
+
+  field_manager {
+    force_conflicts = true
+  }
+
+  manifest = {
+    apiVersion = "networking.k8s.io/v1"
+    kind       = "NetworkPolicy"
+
+    metadata = {
+      name      = each.value.name
+      namespace = each.value.namespace
+    }
+
+    spec = {
+      podSelector = {
+        matchLabels = {
+          "dvp.deckhouse.io/cluster-uuid" = local.cluster_uuid
+        }
+      }
+
+      policyTypes = ["Ingress", "Egress"]
+      ingress     = local.template_ingress
+      egress      = local.template_egress
+    }
+  }
+}

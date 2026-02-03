@@ -67,3 +67,7 @@ This patch fixes:
 
 - CVE-2025-47914
 - CVE-2025-58181
+
+### 011-provide-custom-CA-to-gitlab-connector.patch
+
+This patch allows Gitlab connector to use custom CA for HTTPS connections.
