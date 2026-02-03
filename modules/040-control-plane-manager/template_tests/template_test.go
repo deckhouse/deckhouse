@@ -917,6 +917,7 @@ internal:
 			testTerminatedPodGcThreshold(300, "6000")
 			testTerminatedPodGcThreshold(500, "6000")
 		})
+<<<<<<< HEAD
 	})
 
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
@@ -1031,5 +1032,7 @@ internal:
 				Expect(supCR.Exists()).To(BeTrue())
 			})
 		})
+=======
+>>>>>>> 92d070bf84 (control-plane-manager global refactor)
 	})
 })
