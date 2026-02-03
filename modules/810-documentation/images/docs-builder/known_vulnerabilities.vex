@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-documentation-docsbuilder-stdlib",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61726",
+        "description": "Issues related to archive/zip processing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "The application does not make use of the archive/zip package or any ZIP compression functionality provided by the Go standard library. The vulnerable code path is never invoked during the application's runtime lifecycle.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61728",
+        "description": "Potential memory overflow via malformed GET requests"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "The service operates within a containerized orchestration environment that enforces strict resource limits and automatic health recovery. Any potential denial-of-service resulting from memory exhaustion is mitigated by the platform's automatic restart capabilities, ensuring no persistent access, data corruption, or privilege escalation occurs.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61730",
+        "description": "TLS information disclosure"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Exploiting this TLS vulnerability requires a high level of complexity and specific preconditions that are not present in the default deployment configuration. The attack vector is considered impractical, and the vulnerable code path is effectively shielded from adversary control.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    }
+  ],
+  "timestamp": "2026-02-03T10:00:00Z"
+}
