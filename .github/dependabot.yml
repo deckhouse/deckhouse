@@ -511,7 +511,16 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/control-plane-manager/controller"
+  directory: "/modules/040-control-plane-manager/images/control-plane-manager/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/control-plane-manager-old/controller"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
