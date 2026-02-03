@@ -70,7 +70,7 @@ spec:
           && object.metadata.labels["gatekeeper.sh/operation"] == "webhook"
         )
       reason: Forbidden
-      message: "Setting label 'gatekeeper.sh/operation=webhook' on Pods is forbidden for non-Deckhouse users"
+      message: "Pods with label 'gatekeeper.sh/operation=webhook' are not allowed" 
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
