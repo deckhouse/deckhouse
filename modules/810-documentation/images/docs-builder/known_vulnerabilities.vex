@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-3a4f910385960098934503700078170889218760057250688085605068848460",
+  "@id": "urn:deckhouse:vex:3a4f910385960098934503700078170889218760057250688085605068848460",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 2,
   "statements": [
@@ -16,7 +16,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "The application does not make use of the archive/zip package or any ZIP compression functionality provided by the Go standard library. The vulnerable code path is never invoked during the application's runtime lifecycle.",
+      "impact_statement": "Archive/zip processing - Функционал обработки и сжатия ZIP-архивов в стандартной библиотеке Go (stdlib) версии 1.25.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Приложение docs-builder не обращается к пакету archive/zip в процессе своего выполнения, что исключает возможность эксплуатации уязвимости.",
       "timestamp": "2026-02-03T10:00:00Z"
     },
     {
@@ -31,7 +31,7 @@
       ],
       "status": "not_affected",
       "justification": "inline_mitigations_already_exist",
-      "impact_statement": "The service operates within a containerized orchestration environment that enforces strict resource limits and automatic health recovery. Any potential denial-of-service resulting from memory exhaustion is mitigated by the platform's automatic restart capabilities, ensuring no persistent access, data corruption, or privilege escalation occurs.",
+      "impact_statement": "Memory overflow via GET requests - Риск исчерпания памяти при обработке некорректных GET-запросов в библиотеке Go stdlib версии 1.25.5 нивелируется архитектурой среды исполнения. Сервис функционирует в контейнеризированной среде с жесткими лимитами ресурсов и автоматическим восстановлением (health recovery), что исключает возможность персистентного отказа в обслуживании, повреждения данных или эскалации привилегий.",
       "timestamp": "2026-02-03T10:00:00Z"
     },
     {
@@ -46,7 +46,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "Exploiting this TLS vulnerability requires a high level of complexity and specific preconditions that are not present in the default deployment configuration. The attack vector is considered impractical, and the vulnerable code path is effectively shielded from adversary control.",
+      "impact_statement": "TLS information disclosure - Эксплуатация уязвимости раскрытия информации в TLS-стеке библиотеки Go stdlib версии 1.25.5 требует специфических условий и высокой сложности атаки, которые отсутствуют в рамках текущей конфигурации развертывания. Вектор атаки признан непрактичным, так как уязвимый код эффективно изолирован от контроля со стороны злоумышленника.",
       "timestamp": "2026-02-03T10:00:00Z"
     }
   ],
