@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-documentation-docsbuilder-stdlib",
+  "@id": "https://openvex.dev/docs/public/vex-3a4f910385960098934503700078170889218760057250688085605068848460",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 2,
   "statements": [
