@@ -65,29 +65,18 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	// Process the templates with the given data and create the static pod and configuration files
 
 	// Auth config
-	auth := config.toAuthConfig()
-	hasAuth := auth != nil
-
-	if hasAuth {
-		if changes.Auth, hash, err = processTemplate(
-			auth,
-			authConfigPath,
-		); err != nil {
-			err = fmt.Errorf("error processing Auth template: %w", err)
-			return changes, err
-		}
-		sum.Write([]byte(hash))
-	} else {
-		// Delete the auth config file
-		if changes.Auth, err = deleteFile(authConfigPath); err != nil {
-			err = fmt.Errorf("error deleting Auth config file: %w", err)
-			return changes, err
-		}
+	if changes.Auth, hash, err = processTemplate(
+		config.toAuthConfig(),
+		authConfigPath,
+	); err != nil {
+		err = fmt.Errorf("error processing Auth template: %w", err)
+		return changes, err
 	}
+	sum.Write([]byte(hash))
 
 	// Distribution config
 	if changes.Distribution, hash, err = processTemplate(
-		config.toDistributionConfig(manager.settings.HostIP, hasAuth),
+		config.toDistributionConfig(manager.settings.HostIP),
 		distributionConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing Distribution template: %w", err)
@@ -133,7 +122,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 	}
 
 	if changes.Pod, _, err = processTemplate(
-		config.toStaticPodConfig(images, proxyEnvs, hash, hasMirrorer, hasAuth),
+		config.toStaticPodConfig(images, proxyEnvs, hash, hasMirrorer),
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)
