@@ -129,6 +129,37 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
+		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
+		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
+		return template.PrepareBootstrap(templateController, "127.0.0.1", metaConfig, app.GetDirConfig())
+	}
+
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return log.Process("bootstrap", "Prepare Bashible Bundle", runFunc)
+	})
+
+	return cmd
+}
+
+func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+	app.DefineConfigFlags(cmd)
+	app.DefineRenderConfigFlags(cmd)
+
+	runFunc := func() error {
+		logger := log.GetDefaultLogger()
+
+		metaConfig, err := config.LoadConfigFromFile(
+			context.TODO(),
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+			app.GetDirConfig(),
+		)
+		if err != nil {
+			return err
+		}
+
 		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
