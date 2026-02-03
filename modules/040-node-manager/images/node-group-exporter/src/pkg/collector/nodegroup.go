@@ -25,7 +25,7 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/deckhouse/deckhouse/pkg/log" // gci: deckhouse before localmodule
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"node-group-exporter/pkg/entity"
 	"node-group-exporter/pkg/watcher"
@@ -365,8 +365,7 @@ func (c *NodeGroupCollector) updateMetrics() {
 		// Fallback for totalNodes if status is not available
 		if totalNodes == 0 && countNodes > 0 {
 			totalNodes = countNodes
-			// sloglint: keys in snake_case (NodeGroup->node_group, Count->count)
-		c.logger.Warn("NodeGroup status.nodes is 0, using index count",
+			c.logger.Warn("NodeGroup status.nodes is 0, using index count",
 				slog.String("node_group", nodeGroup.Name),
 				slog.Int("count", countNodes))
 		}
@@ -391,7 +390,6 @@ func (c *NodeGroupCollector) updateMetrics() {
 		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Standby))
 		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(nodeGroup.HasErrors)
 
-		// sloglint: keys in snake_case
 		c.logger.Debug("Metrics set for",
 			slog.String("node_group", nodeGroup.Name),
 			slog.Int("total_nodes", totalNodes),
@@ -412,7 +410,6 @@ func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *entity.NodeGroupD
 		c.nodeGroups[nodegroup.Name] = nodegroup
 		c.updateMetrics()
 	}
-	// sloglint: keys in snake_case
 	c.logger.Debug("Add or Update NodeGroup",
 		slog.String("node_group", nodegroup.Name),
 		slog.String("type", nodegroup.NodeType),
@@ -425,7 +422,6 @@ func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *entity.NodeGroupData) 
 
 	delete(c.nodeGroups, nodegroup.Name)
 	c.updateMetrics()
-	// sloglint: keys in snake_case
 	c.logger.Debug("Deleted NodeGroup",
 		slog.String("node_group", nodegroup.Name))
 }
@@ -438,7 +434,6 @@ func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *entity.NodeData) {
 	if updated {
 		c.updateMetrics()
 	}
-	// sloglint: keys in snake_case
 	c.logger.Debug("Add or Updated Node",
 		slog.String("node", node.Name),
 		slog.String("node_group", node.NodeGroup),
@@ -452,7 +447,6 @@ func (c *NodeGroupCollector) OnNodeDelete(node *entity.NodeData) {
 
 	c.removeNodeFromIndex(node)
 	c.updateMetrics()
-	// sloglint: keys in snake_case
 	c.logger.Debug("Deleted Node",
 		slog.String("node", node.Name),
 		slog.String("node_group", node.NodeGroup))

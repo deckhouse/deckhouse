@@ -29,7 +29,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/deckhouse/deckhouse/pkg/log" // gci: deckhouse before localmodule
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"node-group-exporter/pkg/entity"
 )
@@ -86,7 +86,6 @@ func (w *Watcher) Start(ctx context.Context) error {
 	w.logger.Debug("Starting resource watchers...")
 
 	// Add event handlers to Node informer
-	// errcheck: explicitly ignore AddEventHandler return value (informer handles errors internally)
 	_, _ = w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			node, err := ConvertToNode(obj)
@@ -115,7 +114,6 @@ func (w *Watcher) Start(ctx context.Context) error {
 	})
 
 	// Add event handlers to NodeGroup informer
-	// errcheck: explicitly ignore AddEventHandler return value
 	_, _ = w.nodeGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			nodeGroup, err := ConvertToNodeGroup(obj)
