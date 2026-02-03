@@ -17,15 +17,17 @@ limitations under the License.
 package constants
 
 const (
-	ControllerName = "control-plane-manager"
+	ControllerName                      = "control-plane-manager"
+	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
+	PkiSecretName                       = "d8-pki"
+	ControlPlaneConfigurationName       = "control-plane"
+	KubernetesConfigPath                = "/etc/kubernetes"
+	ManifestsPath                       = KubernetesConfigPath + "/manifests"
+	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
+	ConfigPath                          = "/config"
+	PkiPath                             = "/pki"
+	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
+	KubeadmPath                         = "/kubeadm"
 
-	KubernetesConfigPath  = "/etc/kubernetes"
-	ManifestsPath         = KubernetesConfigPath + "/manifests"
-	DeckhousePath         = KubernetesConfigPath + "/deckhouse"
-	ConfigPath            = "/config"
-	PkiPath               = "/pki"
-	KubernetesPkiPath     = KubernetesConfigPath + "/pki"
-	KubeadmPath           = "/kubeadm"
-	
 	KubeSystemNamespace = "kube-system"
 )
