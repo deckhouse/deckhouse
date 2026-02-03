@@ -623,7 +623,7 @@ entries:
                       url: /admin/configuration/network/other/dns.html
                     - title:
                         en: Caching DNS requests on cluster nodes
-                        ru: кеширование DNS-запросов на узлах кластера
+                        ru: Кеширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
                         en: BpfLB operation modes for external traffic processing
@@ -1193,7 +1193,7 @@ entries:
             url: /architecture/network/service-with-istio.html
           - title:
               en: Caching DNS server in a cluster
-              ru: кеширующий DNS-сервер в кластере
+              ru: Кеширующий DNS-сервер в кластере
             url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy

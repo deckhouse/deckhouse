@@ -1,5 +1,5 @@
 ---
-title: "кеширование DNS-запросов на узлах кластера"
+title: "Кеширование DNS-запросов на узлах кластера"
 permalink: ru/admin/configuration/network/other/dns-caching.html
 lang: ru
 ---
