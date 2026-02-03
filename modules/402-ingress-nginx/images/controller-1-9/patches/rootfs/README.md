@@ -21,3 +21,12 @@ Without always option toggled, ingress-nginx does not set the cookie in case if 
 Annotation `nginx.ingress.kubernetes.io/auth-always-set-cookie` does not work. Anyway, we can't use it, because we need this behavior for all ingresses.
 
 https://github.com/kubernetes/ingress-nginx/pull/8213
+
+### 004-cve-03022026.patch
+
+Fixes the following CVEs:
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
