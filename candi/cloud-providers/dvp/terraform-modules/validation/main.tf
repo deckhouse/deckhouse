@@ -13,44 +13,27 @@
 # limitations under the License.
 
 # This module validates that required DVP resources exist before attempting to create VMs.
-# Uses terraform_data resource with local-exec provisioner to run validation.
-# Will fail fast with clear error messages if VirtualMachineClass or images are not found.
+# Uses kubernetes_resource data sources to query parent DVP cluster.
+# Will fail with clear error messages if VirtualMachineClass or images are not found.
 
-# Validate VirtualMachineClass and image using local-exec
-resource "terraform_data" "validate_resources" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      set -e
+# Validate VirtualMachineClass exists
+data "kubernetes_resource" "virtual_machine_class" {
+  api_version = var.api_version
+  kind        = "VirtualMachineClass"
 
-      # Validate VirtualMachineClass
-      if ! kubectl get virtualmachineclass ${var.virtual_machine_class_name} >/dev/null 2>&1; then
-        echo "ERROR: VirtualMachineClass '${var.virtual_machine_class_name}' not found in parent DVP cluster." >&2
-        echo "Please ensure the VirtualMachineClass exists before creating VMs." >&2
-        echo "Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses" >&2
-        exit 1
-      fi
+  metadata {
+    name = var.virtual_machine_class_name
+  }
+}
 
-      echo "✓ VirtualMachineClass '${var.virtual_machine_class_name}' validated successfully"
+# Validate image exists based on kind
+data "kubernetes_resource" "image" {
+  api_version = var.api_version
+  kind        = var.image_kind
 
-      # Validate image based on kind
-      if [ "${var.image_kind}" = "ClusterVirtualImage" ]; then
-        if ! kubectl get clustervirtualimage ${var.image_name} >/dev/null 2>&1; then
-          echo "ERROR: ClusterVirtualImage '${var.image_name}' not found in parent DVP cluster." >&2
-          echo "Please ensure the image exists before creating VMs." >&2
-          echo "Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages" >&2
-          exit 1
-        fi
-        echo "✓ ClusterVirtualImage '${var.image_name}' validated successfully"
-      elif [ "${var.image_kind}" = "VirtualImage" ]; then
-        if ! kubectl get virtualimage ${var.image_name} -n ${var.namespace} >/dev/null 2>&1; then
-          echo "ERROR: VirtualImage '${var.image_name}' not found in namespace '${var.namespace}' in parent DVP cluster." >&2
-          echo "Please ensure the image exists before creating VMs." >&2
-          echo "Available VirtualImages can be listed with: kubectl get virtualimages -n ${var.namespace}" >&2
-          exit 1
-        fi
-        echo "✓ VirtualImage '${var.image_name}' validated successfully in namespace '${var.namespace}'"
-      fi
-    EOT
+  metadata {
+    name      = var.image_name
+    namespace = var.image_kind == "VirtualImage" ? var.namespace : null
   }
 }
 
@@ -58,11 +41,12 @@ resource "terraform_data" "validate_resources" {
 output "validation_status" {
   value = {
     virtual_machine_class_name = var.virtual_machine_class_name
+    virtual_machine_class_uid  = data.kubernetes_resource.virtual_machine_class.object.metadata.uid
     image_kind                 = var.image_kind
     image_name                 = var.image_name
+    image_uid                  = data.kubernetes_resource.image.object.metadata.uid
     namespace                  = var.namespace
     validation_completed       = "true"
   }
   description = "Validation status of DVP resources"
-  depends_on  = [terraform_data.validate_resources]
 }
