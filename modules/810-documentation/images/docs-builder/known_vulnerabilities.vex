@@ -1,0 +1,54 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "urn:deckhouse:vex:3a4f910385960098934503700078170889218760057250688085605068848460",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61726",
+        "description": "Issues related to archive/zip processing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Archive/zip processing - Функционал обработки и сжатия ZIP-архивов в стандартной библиотеке Go (stdlib) версии 1.25.5 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Приложение docs-builder не обращается к пакету archive/zip в процессе своего выполнения, что исключает возможность эксплуатации уязвимости.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61728",
+        "description": "Potential memory overflow via malformed GET requests"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "inline_mitigations_already_exist",
+      "impact_statement": "Memory overflow via GET requests - Риск исчерпания памяти при обработке некорректных GET-запросов в библиотеке Go stdlib версии 1.25.5 нивелируется архитектурой среды исполнения. Сервис функционирует в контейнеризированной среде с жесткими лимитами ресурсов и автоматическим восстановлением (health recovery), что исключает возможность персистентного отказа в обслуживании, повреждения данных или эскалации привилегий.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61730",
+        "description": "TLS information disclosure"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "TLS information disclosure - Эксплуатация уязвимости раскрытия информации в TLS-стеке библиотеки Go stdlib версии 1.25.5 требует специфических условий и высокой сложности атаки, которые отсутствуют в рамках текущей конфигурации развертывания. Вектор атаки признан непрактичным, так как уязвимый код эффективно изолирован от контроля со стороны злоумышленника.",
+      "timestamp": "2026-02-03T10:00:00Z"
+    }
+  ],
+  "timestamp": "2026-02-03T10:00:00Z"
+}
