@@ -118,6 +118,3 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 ### 021-use-proxy-real-ip-cidr-v2.patch
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
-
-
-some fake change
