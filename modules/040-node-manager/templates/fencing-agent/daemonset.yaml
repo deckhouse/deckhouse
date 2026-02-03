@@ -80,7 +80,7 @@ spec:
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
             - name: WATCHDOG_TIMEOUT
-              value: {{ ((($ng.fencing).watchdog).timeout) | default "1m" }}
+              value: {{ ((($ng.fencing).watchdog).timeout) | default 60 | toString | quote }}
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
