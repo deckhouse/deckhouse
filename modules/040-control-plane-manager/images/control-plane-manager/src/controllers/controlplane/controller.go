@@ -18,15 +18,18 @@ package controlplane
 
 import (
 	"context"
-	"time"
 	"control-plane-manager/pkg/constants"
+	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"reflect"
+	"time"
 
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"golang.org/x/time/rate"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
-	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -70,7 +73,39 @@ func Register(mgr manager.Manager) error {
 			&handler.EnqueueRequestForObject{},
 			builder.WithPredicates(getControlPlaneConfigurationPredicate()),
 		).
+		Watches(&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.mapSecretToControlPlaneConfigurations),
+			builder.WithPredicates(getSecretPredicate()),
+		).
 		Complete(r)
+}
+
+func getSecretPredicate() predicate.Predicate {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return isClusterConfigurationSecret(e.Object)
+		},
+
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return isClusterConfigurationSecret(e.ObjectNew)
+		},
+
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return isClusterConfigurationSecret(e.Object)
+		},
+
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+func isClusterConfigurationSecret(o client.Object) bool {
+	secret, ok := o.(*corev1.Secret)
+	if !ok {
+		return false
+	}
+	return (secret.Name == constants.ControlPlaneManagerConfigSecretName || secret.Name == constants.PkiSecretName) && secret.Namespace == constants.KubeSystemNamespace
 }
 
 func getControlPlaneConfigurationPredicate() predicate.Predicate {
@@ -93,11 +128,78 @@ func getControlPlaneConfigurationPredicate() predicate.Predicate {
 	}
 }
 
+func (r *Reconciler) getSecret(ctx context.Context, name string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	err := r.client.Get(ctx, client.ObjectKey{
+		Name:      name,
+		Namespace: constants.KubeSystemNamespace,
+	}, secret)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
+
 func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reconcile.Result, error) {
 	klog.Infof("Reconcile started for request: %v", req)
 
-	// TODO: Implement control plane management logic here
+	cmpSecret, err := r.getSecret(ctx, constants.ControlPlaneManagerConfigSecretName)
+	// TODO (trofimovdals): Add errors to status conditions.
+	if err != nil {
+		klog.Error("Error occurred while getting secret",
+			"secret", constants.ControlPlaneManagerConfigSecretName,
+			"namespace", constants.KubeSystemNamespace,
+			err,
+		)
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
+	}
+
+	pkiSecret, err := r.getSecret(ctx, constants.PkiSecretName)
+	if err != nil {
+		klog.Error("Error occurred while getting secret",
+			"secret", constants.ControlPlaneManagerConfigSecretName,
+			"namespace", constants.KubeSystemNamespace,
+			err,
+		)
+		return reconcile.Result{RequeueAfter: requeueInterval}, nil
+	}
+
+	desired := buildDesiredControlPlaneConfiguration(cmpSecret, pkiSecret)
+	current := &controlplanev1alpha1.ControlPlaneConfiguration{}
+	err = r.client.Get(ctx, req.NamespacedName, current)
+	if apierrors.IsNotFound(err) {
+		err = r.client.Create(ctx, desired)
+	}
+	if err == nil && !reflect.DeepEqual(current.Spec, desired.Spec) {
+		current.Spec = desired.Spec
+		err = r.client.Update(ctx, current)
+	}
 
 	klog.Info("Reconcile completed successfully")
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
+}
+
+func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) *controlplanev1alpha1.ControlPlaneConfiguration {
+	return &controlplanev1alpha1.ControlPlaneConfiguration{
+		ObjectMeta: ctrl.ObjectMeta{
+			Name: constants.ControlPlaneConfigurationName,
+		},
+		Spec: controlplanev1alpha1.ControlPlaneConfigurationSpec{},
+	}
+}
+
+func (r *Reconciler) mapSecretToControlPlaneConfigurations(ctx context.Context, object client.Object) []reconcile.Request {
+	_, ok := object.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+	return []reconcile.Request{
+		{
+			NamespacedName: client.ObjectKey{
+				Name: constants.ControlPlaneConfigurationName,
+			},
+		},
+	}
 }

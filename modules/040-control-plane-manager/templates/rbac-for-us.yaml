@@ -58,6 +58,12 @@ rules:
   - apiGroups: ["deckhouse.io"]
     resources: ["nodegroups"]
     verbs: ["get", "list", "watch"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplaneconfigurations"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+  - apiGroups: ["control-plane.deckhouse.io"]
+    resources: ["controlplaneconfigurations/status"]
+    verbs: ["get", "update", "patch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1

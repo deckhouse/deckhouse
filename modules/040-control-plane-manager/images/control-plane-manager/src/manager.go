@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 	"time"
-	
+
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	"control-plane-manager/controllers/controlplane"
 
@@ -28,6 +28,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 
+	"control-plane-manager/pkg/constants"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
@@ -35,7 +36,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	"control-plane-manager/pkg/constants"
 )
 
 const (
