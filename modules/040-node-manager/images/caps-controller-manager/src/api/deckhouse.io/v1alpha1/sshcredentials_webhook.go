@@ -56,6 +56,14 @@ var _ webhook.Validator = &SSHCredentials{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 	sshcredentialslog.Info("validate create", "name", r.Name)
+	var passphrase []byte
+	if r.Spec.PrivateSSHKeyPassphrase != "" {
+		decodedPassphrase, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKeyPassphrase)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "PrivateSSHKeyPassphrase"), "******", "PrivateSSHKeyPassphrase must be a valid base64 encoded string")
+		}
+		passphrase = decodedPassphrase
+	}
 
 	if len(r.Spec.PrivateSSHKey) > 0 {
 		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
@@ -63,10 +71,18 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
 		}
 
-		_, err = ssh.ParseRawPrivateKey(privateSSHKey)
-		if err != nil {
-			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		if len(passphrase) == 0 {
+			_, err = ssh.ParseRawPrivateKey(privateSSHKey)
+			if err != nil {
+				return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "could not parse SSH key from field: privateSSHKey must be a valid private key encoded as base64 string")
+			}
+		} else {
+			_, err = ssh.ParseRawPrivateKeyWithPassphrase(privateSSHKey, passphrase)
+			if err != nil {
+				return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "could not parse SSH key from field with passphrase: privateSSHKey must be a valid private key encoded as base64 string")
+			}
 		}
+
 	}
 
 	return nil, nil
@@ -75,6 +91,14 @@ func (r *SSHCredentials) ValidateCreate() (admission.Warnings, error) {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	sshcredentialslog.Info("validate update", "name", r.Name)
+	var passphrase []byte
+	if r.Spec.PrivateSSHKeyPassphrase != "" {
+		decodedPassphrase, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKeyPassphrase)
+		if err != nil {
+			return nil, field.Invalid(field.NewPath("spec", "PrivateSSHKeyPassphrase"), "******", "PrivateSSHKeyPassphrase must be a valid base64 encoded string")
+		}
+		passphrase = decodedPassphrase
+	}
 
 	if len(r.Spec.PrivateSSHKey) > 0 {
 		privateSSHKey, err := base64.StdEncoding.DecodeString(r.Spec.PrivateSSHKey)
@@ -82,10 +106,18 @@ func (r *SSHCredentials) ValidateUpdate(old runtime.Object) (admission.Warnings,
 			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid base64 encoded string")
 		}
 
-		_, err = ssh.ParseRawPrivateKey(privateSSHKey)
-		if err != nil {
-			return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "privateSSHKey must be a valid private key encoded as base64 string")
+		if len(passphrase) == 0 {
+			_, err = ssh.ParseRawPrivateKey(privateSSHKey)
+			if err != nil {
+				return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "could not parse SSH key from field: privateSSHKey must be a valid private key encoded as base64 string")
+			}
+		} else {
+			_, err = ssh.ParseRawPrivateKeyWithPassphrase(privateSSHKey, passphrase)
+			if err != nil {
+				return nil, field.Invalid(field.NewPath("spec", "privateSSHKey"), "******", "could not parse SSH key from field with passphrase: privateSSHKey must be a valid private key encoded as base64 string")
+			}
 		}
+
 	}
 
 	return nil, nil
