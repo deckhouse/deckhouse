@@ -11,6 +11,10 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Integration with IaaS providers"
     url: ../admin/integrations/integrations-overview.html
+  - title: "Installing DKP in a private environment"
+    url: /products/kubernetes-platform/guides/private-environment.html
+  - title: "Going to Production"
+    url: /products/kubernetes-platform/guides/production.html 
 ---
 
 {% alert %}

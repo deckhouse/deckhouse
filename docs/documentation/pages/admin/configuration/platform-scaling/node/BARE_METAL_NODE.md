@@ -4,6 +4,8 @@ permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
 description: "Manage bare-metal nodes in Deckhouse Kubernetes Platform. Node addition, configuration, and lifecycle management."
 ---
 
+For more details on sizing resources for a bare-metal cluster, see the [“Hardware requirements for bare-metal cluster”](/products/kubernetes-platform/guides/hardware-requirements.html) section.
+
 ## Adding nodes to a bare-metal cluster
 
 ### Manual method

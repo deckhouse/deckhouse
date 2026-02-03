@@ -13,6 +13,10 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Интеграция с инфраструктурой"
     url: ../admin/integrations/integrations-overview.html
+  - title: "Установка DKP в закрытом окружении"
+    url: /products/kubernetes-platform/guides/private-environment.html
+  - title: "Подготовка к Production"
+    url: /products/kubernetes-platform/guides/production.html   
 ---
 
 {% alert %}
