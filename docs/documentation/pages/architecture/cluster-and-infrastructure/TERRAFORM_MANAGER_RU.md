@@ -19,7 +19,7 @@ search: terraform manager, terraform
 * Поды могут быть запущены несколькими репликами. На схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [terraform-manager](/modules/terraform-manager/) на уровне 2 модели C4 и его взаимодействия с другими компоненами платформы изображены на следующей диаграмме:
+Архитектура модуля [terraform-manager](/modules/terraform-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами платформы изображены на следующей диаграмме:
 
 <!--- Source: structurizr code from https://fox.flant.com/team/d8-system-design/doc/-/tree/main/architecture/diagrams/C4 --->
 ![c4 l2 terraform-manager](../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.png)

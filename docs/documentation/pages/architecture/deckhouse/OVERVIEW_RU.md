@@ -5,4 +5,4 @@ lang: ru
 search: подсистема deckhouse, deckhouse subsystem, deckhouse controller, контроллер deckhouse, container registry, registry
 ---
 
-В данном подразделе описывается архитектура **Deckhouse Сontroller** и сопутствующих модулей, входящих в подсистему **Deckhouse** DKP.
+В данном подразделе описывается архитектура **Deckhouse Controller** и сопутствующих модулей, входящих в подсистему **Deckhouse** DKP.
