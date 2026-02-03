@@ -69,3 +69,5 @@ shell:
   - cd /src/kiali/frontend
   - yarn install --frozen-lockfile
   - yarn run build
+---
+{{- include "trivy mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

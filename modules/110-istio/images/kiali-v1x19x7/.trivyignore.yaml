@@ -1,0 +1,8 @@
+licenses:
+- id: GPL-2.0
+  paths:
+  - "usr/share/groff/1.22.3/tmac/hyphen.cs"
+  - "usr/share/libtool-2.4/build-aux/ltmain.sh"
+
+
+
