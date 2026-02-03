@@ -64,8 +64,8 @@ func NewController(
 func checkRequiredParams(params map[string]string) error {
 	for _, paramName := range []string{ParameterDVPStorageClass} {
 		if len(params[paramName]) == 0 {
-			return fmt.Errorf("error required storageClass paramater %s wasn't set",
-				paramName)
+			return status.Errorf(codes.InvalidArgument, "missing required parameter %q", paramName)
+
 		}
 	}
 	return nil
@@ -110,7 +110,7 @@ func (c *ControllerService) CreateVolume(
 	}
 	if len(disks.Items) > 1 {
 		msg := fmt.Errorf(
-			"found more then one disk with the name %s,"+
+			"found more than one disk with the name %s,"+
 				"please contanct the DVP admin to check the name duplication", diskName)
 		klog.Error(msg.Error())
 		return nil, msg
