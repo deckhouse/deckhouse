@@ -28,7 +28,7 @@ _Deckhouse Platform [has passed](https://landscape.cncf.io/?view-mode=card&item=
 
 A brief overview of essential Deckhouse Platform features, from infrastructure level to the platform:
 
-<img src="https://raw.githubusercontent.com/deckhouse/deckhouse/main/docs/site/images/diagrams/structure.svg">
+![Deckhouse Kubernetes Platform Architecture](docs/site/images/diagrams/structure.png)
 
 ## CE vs. EE
 
