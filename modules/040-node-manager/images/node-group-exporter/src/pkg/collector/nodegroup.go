@@ -21,10 +21,11 @@ import (
 	"log/slog"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log" // gci: deckhouse before localmodule
 
 	"node-group-exporter/pkg/entity"
 	"node-group-exporter/pkg/watcher"
@@ -364,9 +365,10 @@ func (c *NodeGroupCollector) updateMetrics() {
 		// Fallback for totalNodes if status is not available
 		if totalNodes == 0 && countNodes > 0 {
 			totalNodes = countNodes
-			c.logger.Warn("NodeGroup status.nodes is 0, using index count",
-				slog.String("NodeGroup", nodeGroup.Name),
-				slog.Int("Count", countNodes))
+			// sloglint: keys in snake_case (NodeGroup->node_group, Count->count)
+		c.logger.Warn("NodeGroup status.nodes is 0, using index count",
+				slog.String("node_group", nodeGroup.Name),
+				slog.Int("count", countNodes))
 		}
 
 		if maxNodes == 0 {
@@ -389,12 +391,13 @@ func (c *NodeGroupCollector) updateMetrics() {
 		c.d8NodeGroupStandby.WithLabelValues(nodeGroup.Name).Set(float64(nodeGroup.Standby))
 		c.d8NodeGroupHasErrors.WithLabelValues(nodeGroup.Name).Set(nodeGroup.HasErrors)
 
+		// sloglint: keys in snake_case
 		c.logger.Debug("Metrics set for",
-			slog.String("NodeGroup", nodeGroup.Name),
-			slog.Int("TotalNodes", totalNodes),
-			slog.Int("ReadyNodes", readyNodes),
-			slog.Int("maxNodes", maxNodes),
-			slog.Int("CountNodes", countNodes))
+			slog.String("node_group", nodeGroup.Name),
+			slog.Int("total_nodes", totalNodes),
+			slog.Int("ready_nodes", readyNodes),
+			slog.Int("max_nodes", maxNodes),
+			slog.Int("count_nodes", countNodes))
 	}
 }
 
@@ -409,10 +412,11 @@ func (c *NodeGroupCollector) OnNodeGroupAddOrUpdate(nodegroup *entity.NodeGroupD
 		c.nodeGroups[nodegroup.Name] = nodegroup
 		c.updateMetrics()
 	}
+	// sloglint: keys in snake_case
 	c.logger.Debug("Add or Update NodeGroup",
-		slog.String("NodeGroup", nodegroup.Name),
-		slog.String("Type", nodegroup.NodeType),
-		slog.Int("Nodes", len(c.nodeGroups)))
+		slog.String("node_group", nodegroup.Name),
+		slog.String("type", nodegroup.NodeType),
+		slog.Int("nodes", len(c.nodeGroups)))
 }
 
 func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *entity.NodeGroupData) {
@@ -421,8 +425,9 @@ func (c *NodeGroupCollector) OnNodeGroupDelete(nodegroup *entity.NodeGroupData) 
 
 	delete(c.nodeGroups, nodegroup.Name)
 	c.updateMetrics()
+	// sloglint: keys in snake_case
 	c.logger.Debug("Deleted NodeGroup",
-		slog.String("NodeGroup", nodegroup.Name))
+		slog.String("node_group", nodegroup.Name))
 }
 
 func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *entity.NodeData) {
@@ -433,11 +438,12 @@ func (c *NodeGroupCollector) OnNodeAddOrUpdate(node *entity.NodeData) {
 	if updated {
 		c.updateMetrics()
 	}
+	// sloglint: keys in snake_case
 	c.logger.Debug("Add or Updated Node",
-		slog.String("Node", node.Name),
-		slog.String("NodeGroup", node.NodeGroup),
-		slog.Float64("Ready", node.IsReady),
-		slog.Bool("Updated", updated))
+		slog.String("node", node.Name),
+		slog.String("node_group", node.NodeGroup),
+		slog.Float64("ready", node.IsReady),
+		slog.Bool("updated", updated))
 }
 
 func (c *NodeGroupCollector) OnNodeDelete(node *entity.NodeData) {
@@ -446,7 +452,8 @@ func (c *NodeGroupCollector) OnNodeDelete(node *entity.NodeData) {
 
 	c.removeNodeFromIndex(node)
 	c.updateMetrics()
+	// sloglint: keys in snake_case
 	c.logger.Debug("Deleted Node",
-		slog.String("Node", node.Name),
-		slog.String("NodeGroup", node.NodeGroup))
+		slog.String("node", node.Name),
+		slog.String("node_group", node.NodeGroup))
 }
