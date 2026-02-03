@@ -38,13 +38,14 @@ memory: 10Mi
 
 {{- $tpl_context := (.Files.Get "candi/version_map.yml" | fromYaml) }}
 {{- $_ := set $tpl_context "nodeIP" "$MY_IP" }}
+{{- $_ := set $tpl_context "nodeName" "$NODE_NAME" }}
 {{- $_ := set $tpl_context "runType" "Normal" }}
 {{- $_ := set $tpl_context "etcd" (dict "existingCluster" true) }}
 {{- $_ := set $tpl_context "images" (dict "controlPlaneManager" $images) }}
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
-{{- $_ := set $tpl_context "kubeadmDir" "kubeadm/v1beta4" -}}
+{{- $_ := set $tpl_context "controlPlaneTemplatesDir" "control-plane-templates" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
@@ -140,10 +141,13 @@ memory: 10Mi
 {{- define "control_plane_config" }}
   {{- $context := index . 0 }}
   {{- $tpl_context := index . 1 }}
-kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tpl_context.kubeadmDir)) $tpl_context | b64enc }}
-{{- range $path, $_ := $context.Files.Glob (printf "%s/patches/*" $tpl_context.kubeadmDir) }}
+{{- range $path, $_ := $context.Files.Glob (printf "%s/*" $tpl_context.controlPlaneTemplatesDir) }}
 {{ base $path }}: {{ tpl ($context.Files.Get $path) $tpl_context | b64enc }}
 {{- end }}
+  {{- if hasKey $tpl_context.apiserver "certSANs" }}
+cert-sans: {{ $tpl_context.apiserver.certSANs | join "," | b64enc }}
+  {{- end }}
+encryption-algorithm: {{ $tpl_context.clusterConfiguration.encryptionAlgorithm | b64enc }}
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
@@ -245,10 +249,6 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
-      annotations:
-        checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
-        checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ $.Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
@@ -309,10 +309,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        {{- if eq $profile "etcd-arbiter" }}
-        - name: ETCD_ARBITER
-          value: "true"
-        {{- end }}
+        - name: CLUSTER_DOMAIN
+          value: {{ $.Values.global.clusterConfiguration.clusterDomain | quote }}
+        - name: SERVICE_SUBNET_CIDR
+          value: {{ $.Values.global.clusterConfiguration.serviceSubnetCIDR | quote }}
         livenessProbe:
           httpGet:
             host: 127.0.0.1
