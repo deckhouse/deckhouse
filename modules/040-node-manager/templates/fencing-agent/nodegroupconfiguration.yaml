@@ -1,23 +1,18 @@
 {{ $ctx := . }}
-{{- $nodeGroupsList := list }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{ if eq $mode "Watchdog" }}
-    {{- $nodeGroupsList = append $nodeGroupsList $ng.name }}
-  {{- end }}
-{{- end }}
-
-{{ if not (eq (len $nodeGroupsList) 0) }}
+  {{- $mode := dig "fencing" "mode" "" $ng }}
+  {{- if eq $mode "Watchdog" }}
+    {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: enable-watchdog-for-nodegroup.sh
+  name: enable-watchdog-for-nodegroup-{{ $ng.name }}.sh
   labels:
     app: fencing-agent
 spec:
   weight: 99
-  nodeGroups: {{ $nodeGroupsList | toJson }}
+  nodeGroups: ["{{ $ng.name }}"]
   bundles: ["*"]
   content: |
     bb-sync-file /etc/udev/rules.d/60-watchdog.rules - <<"EOF"
@@ -56,7 +51,7 @@ spec:
         ls -lha /dev/watchdog* 2>/dev/null
         rm -rf "${WD}"
       fi
-      modprobe softdog soft_margin=60 soft_panic=1
+      modprobe softdog soft_margin={{ $timeout }} soft_panic=1
     }
 
     stop_wd() {
@@ -83,4 +78,5 @@ spec:
     EOF
 
     chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
-{{ end }}
+  {{- end }}
+{{- end }}

@@ -370,7 +370,7 @@ properties:
                   type: object
                   properties:
                     timeout:
-                      type: string
+                      type: integer
         x-examples:
           - - name: worker
               instanceClass: # minimum
