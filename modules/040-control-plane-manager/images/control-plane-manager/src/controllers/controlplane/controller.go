@@ -83,15 +83,15 @@ func Register(mgr manager.Manager) error {
 func getSecretPredicate() predicate.Predicate {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return isClusterConfigurationSecret(e.Object)
+			return isControlPlaneManagerConfigSecret(e.Object)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return isClusterConfigurationSecret(e.ObjectNew)
+			return isControlPlaneManagerConfigSecret(e.ObjectNew)
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			return isClusterConfigurationSecret(e.Object)
+			return isControlPlaneManagerConfigSecret(e.Object)
 		},
 
 		GenericFunc: func(e event.GenericEvent) bool {
@@ -100,7 +100,7 @@ func getSecretPredicate() predicate.Predicate {
 	}
 }
 
-func isClusterConfigurationSecret(o client.Object) bool {
+func isControlPlaneManagerConfigSecret(o client.Object) bool {
 	secret, ok := o.(*corev1.Secret)
 	if !ok {
 		return false
