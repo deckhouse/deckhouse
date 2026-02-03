@@ -84,6 +84,7 @@ network.deckhouse.io/networks-spec: |
     }
   ]
 ```
+
 {% endalert %}
 
 После создания пода убедитесь, что устройство было выделено, проверив аннотацию `network.deckhouse.io/networks-status`:
