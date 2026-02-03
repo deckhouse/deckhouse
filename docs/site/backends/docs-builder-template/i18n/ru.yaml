@@ -104,9 +104,9 @@ modules_list: Список модулей
 filters: Фильтры
 search_filter: Поиск по названию модуля
 search_placeholder_text_filter: Поиск
-editions_filter: Редакции
-statuses_filter: Статусы
-tags_filter: Теги
+editions_filter: Редакция
+statuses_filter: Статус
+tags_filter: Тег
 core: ядро
 community_edition_en: community edition
 commercial_editions_en: commercial editions
