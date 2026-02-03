@@ -136,9 +136,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Node {{`{{ $labels.node }}`}} does not use cgroup v2.
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
       description: |
-        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1]. Cgroup v2 must be used.
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1]. To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
 
   - alert: D8NodeContainerdV2NotSupported
     expr: |
@@ -150,6 +150,6 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      summary: Node {{`{{ $labels.node }}`}} does not use containerd v2.
+      summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
       description: |
-        Node `{{`{{ $labels.node }}`}}` in NodeGroup `{{`{{ $labels.node_group }}`}}` is not using containerd v2, but in 1.36 support for [containerd v1.y is dropped](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support). Containerd v2 must be used.
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} is running containerd v1, which will no longer be supported in future Kubernetes releases. Starting from version 1.36, support for containerd v1.y will be removed. Please migrate to containerd v2 to ensure continued compatibility.
