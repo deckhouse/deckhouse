@@ -46,6 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     'cse-pro': 'CSE Pro'
   };
 
+  const statusTitles = {
+    'experimental': 'Experimental',
+    'preview': 'Preview',
+    'generalAvailability': 'General Availability',
+    'deprecated': 'Deprecated'
+  };
+
   function updateContainerTitleState(container) {
     if (!container) return null;
     const title = container.querySelector('.filter__container--title');
@@ -221,12 +228,18 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedFilters.forEach((entry, filterName) => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
+        const isStatusesFilter = filterContainer?.classList.contains('filter__container--statuses');
         
         let valuesText;
         if (isEditionsFilter) {
           // Convert edition codes to titles
           valuesText = Array.from(entry.values)
             .map(code => editionTitles[code] || code)
+            .join(', ');
+        } else if (isStatusesFilter) {
+          // Convert status codes to titles
+          valuesText = Array.from(entry.values)
+            .map(code => statusTitles[code] || code)
             .join(', ');
         } else {
           valuesText = Array.from(entry.values).join(', ');
