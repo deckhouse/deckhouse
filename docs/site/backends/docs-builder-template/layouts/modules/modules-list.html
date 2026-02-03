@@ -191,7 +191,7 @@
           {{- $moduleEditionsString = delimit $_editions "," }}
         {{- end }}
 
-        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">editions-{{ $moduleEditionsString }}
+        <a class="button-tile" data-editions="{{ $moduleEditionsString }}" href="{{ .url }}">
 
         {{- if and $moduleStage (in (slice "Preview" "Experimental" "General Availability" "Deprecated" ) $moduleStage) }}
           {{- $stageKey := lower $moduleStage }}
