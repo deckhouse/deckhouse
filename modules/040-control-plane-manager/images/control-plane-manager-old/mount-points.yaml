@@ -1,0 +1,7 @@
+dirs:
+  - /var/lib/etcd
+  - /pki
+  - /config
+  - /etc/kubernetes
+  - /root/.kube/
+  - /var/lib/kubelet/pki
