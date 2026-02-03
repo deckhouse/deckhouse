@@ -128,7 +128,7 @@
         "embedded",
         "network",
         "observability",
-        "web-interface"
+        "web ui"
       ],
       "editionMinimumAvailable": "ce",
       "url": "cilium-hubble/",
@@ -712,7 +712,7 @@
       "tags": [
         "embedded",
         "observability",
-        "web-interface"
+        "web ui"
       ],
       "editionMinimumAvailable": "ce",
       "url": "dashboard/",
@@ -834,7 +834,7 @@
       "tags": [
         "embedded",
         "tools",
-        "web-interface"
+        "web ui"
       ],
       "editionMinimumAvailable": "ce",
       "url": "deckhouse-tools/",
@@ -907,7 +907,7 @@
       "embedded": "true",
       "tags": [
         "embedded",
-        "web-interface"
+        "web ui"
       ],
       "editionMinimumAvailable": "ce",
       "url": "documentation/",
