@@ -275,11 +275,6 @@ Available in DVP Enterprise Edition only.
      isDefault: false
      nodeSelector:
        node-role.deckhouse.io/frontend: "" # Load balancer node selector.
-     tolerations:
-          - effect: NoExecute
-            key: dedicated.deckhouse.io
-            value: frontend
-            operator: Equal
      type: L2
    ```
 

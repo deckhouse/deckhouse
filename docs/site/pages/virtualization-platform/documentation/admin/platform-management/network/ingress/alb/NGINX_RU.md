@@ -261,12 +261,7 @@ metallb:
      isDefault: false
      nodeSelector:
        node-role.deckhouse.io/frontend: "" # Селектор узлов-балансировщиков.
-     tolerations:
-          - effect: NoExecute
-            key: dedicated.deckhouse.io
-            value: frontend
-            operator: Equal
-      type: L2
+     type: L2
    ```
 
 1. Создайте ресурс IngressNginxController:

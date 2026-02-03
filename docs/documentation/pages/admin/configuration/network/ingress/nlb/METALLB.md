@@ -85,7 +85,6 @@ This approach means:
 
 1. Create a [MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass) resource:
 
-
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
