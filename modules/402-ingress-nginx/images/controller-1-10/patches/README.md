@@ -132,7 +132,7 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
 
-### 024-cve-03022026.patch
+### 024-cve-03022026-controller.patch
 
 Fixes the following CVEs:
 CVE-2026-1580
