@@ -136,7 +136,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labels, options...)
 	}
 
-	requirements.SaveValue(cgroupV2SupportValuesKey, allNodesSupportCgroupV2)
 	requirements.SaveValue(unsupportedContainerdV1ValuesKey, hasUnsupportedContainerdV1)
 
 	return nil
