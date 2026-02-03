@@ -70,6 +70,12 @@ webhooks:
       operator: NotIn
       values:
         - deckhouse
+  objectSelector:
+    matchExpressions:
+    - key: gatekeeper.sh/operation
+      operator: NotIn
+      values:
+        - webhook
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
   {{/* Always validate CONNECT for exec/attach subresources */}}
@@ -115,6 +121,12 @@ webhooks:
     - key: security.deckhouse.io/trivy-provider
       operator: DoesNotExist
   {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
+  objectSelector:
+    matchExpressions:
+    - key: gatekeeper.sh/operation
+      operator: NotIn
+      values:
+        - webhook
   rules:
   {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
   {{/* Always validate CONNECT for exec/attach subresources */}}
