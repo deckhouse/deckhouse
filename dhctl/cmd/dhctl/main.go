@@ -184,10 +184,10 @@ var (
 			Parent:     "render",
 		},
 		{
-			Name:       "kubeadm-config",
-			Help:       "Render kubeadm config.",
-			DefineFunc: commands.DefineRenderKubeadmConfig,
-			Parent:     "render",
+			Name:       "control-plane-manifests",
+			Help:       "Render control-plane manifests and pki.",
+			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
+			Parrent:    "render",
 		},
 		{
 			Name:       "master-bootstrap-scripts",

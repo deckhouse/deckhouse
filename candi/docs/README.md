@@ -5,7 +5,6 @@ permalink: /candi/
 
 CandI subsystem consists of the following components:
 * [**bashible**](/candi/bashible/) — framework for dynamic configuration and updates.
-* kubeadm – TODO
 * cloud-providers (layouts for terraform + extra bashible) – TODO
 * **Deckhouse** modules:
   * [**control-plane-manager**](https://deckhouse.io/modules/control-plane-manager/) — `control-plane` maintaining.
@@ -51,7 +50,6 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 | GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
 
@@ -105,7 +103,7 @@ Bundle is a tar archive with required steps, bashbooster framework, and bashible
 
 Bundle includes:
 1. Rendered steps (you can read more about steps from the [bashible documentation](/candi/bashible/)).
-2. Rendered kubeadm configuration file (you can read more about kubeadm from the [control-plane-kubeadm documentation](/candi//control-plane-kubeadm/)).
+2. Rendered control-plane manifests.
 3. Archive all files.
 
 After this, archive will be uploaded to the remote host by scp, unarchived and executed with the following command `/var/lib/bashible/bashible.sh --local`.

@@ -1,0 +1,25 @@
+apiVersion: control-plane.deckhouse.io/v1alpha1
+kind: ControlPlaneNode
+metadata:
+  name: master-1
+  labels:
+    control-plane.deckhouse.io/node: master-1
+spec:
+  components:
+    etcd:
+      checksums:
+        pki: aaa111000000000000000000000000000000000000000000000000000000aaa1
+        config: 215dfa8dd684c54dea814c09d0f2912d640fc870a68bb9542705fafffedd9faf
+    kube-apiserver:
+      checksums:
+        config: ""
+    kube-controller-manager:
+      checksums:
+        config: ""
+    kube-scheduler:
+      checksums:
+        config: ""
+  configVersion: "999.999"
+  caChecksum: b69a6eefae92af11da29871fc3c214e1482f5dce2851a98b4cb79a50d7b54558
+status:
+  components: {}

@@ -372,7 +372,7 @@ func (m *MetaConfig) StaticClusterConfigYAML() ([]byte, error) {
 	return yaml.Marshal(m.StaticClusterConfig)
 }
 
-func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interface{}, error) {
+func (m *MetaConfig) ConfigForControlPlaneTemplates(nodeIP string) (map[string]interface{}, error) {
 	data := make(map[string]interface{}, len(m.ClusterConfig))
 
 	for key, value := range m.ClusterConfig {
@@ -402,6 +402,8 @@ func (m *MetaConfig) ConfigForKubeadmTemplates(nodeIP string) (map[string]interf
 	if nodeIP != "" {
 		result["nodeIP"] = nodeIP
 	}
+
+	result["nodeName"] = "$MY_NODENAME"
 
 	// Registry
 	result["registry"] = m.Registry.

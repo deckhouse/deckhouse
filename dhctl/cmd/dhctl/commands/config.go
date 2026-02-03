@@ -32,8 +32,7 @@ import (
 )
 
 var (
-	deckhouseDir           = "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
+	deckhouseDir = "/deckhouse"
 )
 
 func DefineRenderBashibleBundle(cmd *kingpin.CmdClause) *kingpin.CmdClause {
@@ -111,26 +110,43 @@ func DefineRenderMasterBootstrap(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	})
 }
 
-func DefineRenderKubeadmConfig(cmd *kingpin.CmdClause) *kingpin.CmdClause {
+func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 	app.DefineConfigFlags(cmd)
 	app.DefineRenderConfigFlags(cmd)
 
-	runFunc := func(ctx context.Context) error {
-		templateData := make(map[string]interface{})
-		var err error
-		templateData["clusterConfiguration"], err = config.ParseBashibleConfig(app.ConfigPaths, kubeadmTemplateOpenAPI)
+	runFunc := func() error {
+		logger := log.GetDefaultLogger()
+
+		metaConfig, err := config.LoadConfigFromFile(
+			context.TODO(),
+			app.ConfigPaths,
+			infrastructureprovider.MetaConfigPreparatorProvider(
+				infrastructureprovider.NewPreparatorProviderParams(logger),
+			),
+			app.GetDirConfig(),
+		)
+		if err != nil {
+			return err
+		}
+
+		templateData, err := metaConfig.ConfigForControlPlaneTemplates("")
 		if err != nil {
 			return err
 		}
 
 		templateController := template.NewTemplateController(app.RenderBashibleBundleDir)
 		log.InfoF("Bundle Dir: %q\n\n", templateController.TmpDir)
-
-		return template.PrepareKubeadmConfig(ctx, templateController, templateData, app.GetDirConfig())
+		if err := template.PrepareControlPlaneManifests(templateController, templateData, app.GetDirConfig()); err != nil {
+			return err
+		}
+		// "localhost"/"127.0.0.1" are placeholders for the render-only command;
+		// the resulting PKI is not used to start a real cluster.
+		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
 	}
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return log.Process("bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
+	})
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare Kubeadm Config", runFunc)
 	})
@@ -235,5 +251,4 @@ func DefineCommandParseCloudDiscoveryData(cmd *kingpin.CmdClause) *kingpin.CmdCl
 
 func InitGlobalVars(pwd string) {
 	deckhouseDir = pwd + "/deckhouse"
-	kubeadmTemplateOpenAPI = deckhouseDir + "/candi/control-plane-kubeadm/openapi.yaml"
 }

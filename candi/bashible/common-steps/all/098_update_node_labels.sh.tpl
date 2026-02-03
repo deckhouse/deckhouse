@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{ if eq .runType "Normal" }}
 check_python
 function fetch-local-labels() {
   cat - <<EOF | $python_binary
@@ -145,3 +146,4 @@ if [[ -z $LABELS ]]
     bb-kubectl-exec label node $(bb-d8-node-name) "${LABELS}" --overwrite
     kubectl --request-timeout 60s --kubeconfig=/etc/kubernetes/kubelet.conf annotate node $(bb-d8-node-name) --overwrite node.deckhouse.io/last-applied-local-labels="${LABELS_ANNOTATION}"
 fi
+{{- end }}
