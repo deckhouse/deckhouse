@@ -68,6 +68,7 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
 		Scheme:         scheme,
 		LeaderElection: true,
+		LeaderElectionID: constants.ControllerName,
 		BaseContext: func() context.Context {
 			return ctx
 		},
