@@ -57,7 +57,6 @@ func Register(mgr manager.Manager) error {
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 			CacheSyncTimeout:        cacheSyncTimeout,
 			NeedLeaderElection:      ptr.To(true),
-			LeaderElectionID:        constants.ControllerName,
 			RateLimiter: workqueue.NewTypedMaxOfRateLimiter(
 				workqueue.NewTypedItemExponentialFailureRateLimiter[reconcile.Request](100*time.Millisecond, 3*time.Second),
 				&workqueue.TypedBucketRateLimiter[reconcile.Request]{
