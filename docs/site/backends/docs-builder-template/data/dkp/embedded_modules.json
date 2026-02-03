@@ -268,7 +268,7 @@
       "module": "cloud-provider-dynamix",
       "embedded": "true",
       "tags": [
-        "bare-metal",
+        "bare metal",
         "cloud",
         "embedded"
       ],
@@ -424,7 +424,7 @@
       "module": "cloud-provider-vsphere",
       "embedded": "true",
       "tags": [
-        "bare-metal",
+        "bare metal",
         "cloud",
         "embedded"
       ],
@@ -487,7 +487,7 @@
       "module": "cloud-provider-zvirt",
       "embedded": "true",
       "tags": [
-        "bare-metal",
+        "bare metal",
         "cloud",
         "embedded"
       ],
@@ -1074,7 +1074,7 @@
       "embedded": "true",
       "tags": [
         "balancing",
-        "bare-metal",
+        "bare metal",
         "embedded",
         "network"
       ],
@@ -1300,7 +1300,7 @@
       "embedded": "true",
       "tags": [
         "balancing",
-        "bare-metal",
+        "bare metal",
         "embedded",
         "network"
       ],

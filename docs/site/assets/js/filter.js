@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(selectedTags.length > 0) {
         const articleTags = Array.from(
           article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
-        ).map(tag => tag.textContent.capitalize().replace('-', ' ').replace(/ ui$/g, ' UI').trim());
+        ).map(tag => tag.textContent);
 
         if(!selectedTags.every(tag => articleTags.includes(tag))) {
           return false;
