@@ -47,12 +47,11 @@ type LoopsParams struct {
 }
 
 type DestroyerParams struct {
-	SSHClientProvider      sshclient.SSHProvider
-	KubeProvider           kube.ClientProviderWithCleanup
-	State                  *State
-	LoggerProvider         log.LoggerProvider
-	PhasedActionProvider   phases.DefaultActionProvider
-	PhasedExecutionContext phases.DefaultPhasedExecutionContext
+	SSHClientProvider    sshclient.SSHProvider
+	KubeProvider         kube.ClientProviderWithCleanup
+	State                *State
+	LoggerProvider       log.LoggerProvider
+	PhasedActionProvider phases.DefaultActionProvider
 
 	TmpDir string
 
@@ -138,16 +137,17 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		return errors.New("Internal error. SSH provider did not pass")
 	}
 
-	if d.params.PhasedExecutionContext != nil {
-		if shouldStop, err := d.params.PhasedExecutionContext.StartPhase(
-			phases.AllNodesPhase, true, d.params.State.cache,
-		); err != nil {
-			return err
-		} else if shouldStop {
-			return nil
+	return d.params.PhasedActionProvider().Run(phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
+		err := d.destroyCluster(ctx, autoApprove)
+		if err != nil {
+			return nil, err
 		}
-	}
 
+		return nil, nil
+	})
+}
+
+func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
