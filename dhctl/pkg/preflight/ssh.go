@@ -212,7 +212,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 
 	client := &http.Client{}
 
-	err = retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 50, 100*time.Millisecond).RunContext(ctx, func() error {
+	err = retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 5, 100*time.Millisecond).RunContext(ctx, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel() // Ensure the context is canceled to release resources
 
