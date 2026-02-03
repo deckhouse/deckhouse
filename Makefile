@@ -509,7 +509,6 @@ YQ = $(LOCALBIN)/yq
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
-GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
 GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.27.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
@@ -653,7 +652,7 @@ set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
 rm -f $(1) || true ;\
-GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
 mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)
