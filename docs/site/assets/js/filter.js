@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const filterSearch = document.getElementById('search-filter');
   let fullResetHandler = null;
 
+  const editionTitles = {
+    'ce': 'Community Edition',
+    'be': 'Basic Edition',
+    'se': 'Standard Edition',
+    'se-plus': 'Standard Edition+',
+    'ee': 'Enterprise Edition',
+    'cse-lite': 'CSE Lite',
+    'cse-pro': 'CSE Pro'
+  };
+
   function updateContainerTitleState(container) {
     if (!container) return null;
     const title = container.querySelector('.filter__container--title');
@@ -209,7 +219,19 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       groupedFilters.forEach((entry, filterName) => {
-        const valuesText = Array.from(entry.values).join(', ');
+        const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
+        const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
+        
+        let valuesText;
+        if (isEditionsFilter) {
+          // Convert edition codes to titles
+          valuesText = Array.from(entry.values)
+            .map(code => editionTitles[code] || code)
+            .join(', ');
+        } else {
+          valuesText = Array.from(entry.values).join(', ');
+        }
+        
         const checkboxText = `${filterName}: ${valuesText}`;
 
         const selectedElement = createSelectedFilterElement(checkboxText, () => {
