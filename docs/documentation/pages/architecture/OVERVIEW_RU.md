@@ -45,7 +45,7 @@ DKP —  это платформа для управления кластера�
 
 * **deckhouse** - это, собственно, сам контроллер Deckhouse.  
 * [control-plane-manager](kubernetes-and-scheduling/control-plane-management/) - управляет компонентами control plane кластера.
-* **node-manager** - управляет узлами кластера.
+* [node-manager](cluster-and-infrastructure/node-manager/) - управляет узлами кластера.
 
 {% alert level="info" %}
 Модули [control-plane-manager](/modules/control-plane-manager/) и [node-manager](/modules/node-manager/) отсутствуют при установке платформы в существующий Managed Kubernetes-кластер.
