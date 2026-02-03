@@ -266,6 +266,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"deckhouse": map[string]interface{}{
 		"init":                      "imageHash-deckhouse-init",
+		"initTrivyIgnoreArtifact":   "imageHash-deckhouse-initTrivyIgnoreArtifact",
 		"initVexArtifact":           "imageHash-deckhouse-initVexArtifact",
 		"webhookHandler":            "imageHash-deckhouse-webhookHandler",
 		"webhookHandlerVexArtifact": "imageHash-deckhouse-webhookHandlerVexArtifact",
