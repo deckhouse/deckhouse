@@ -107,3 +107,12 @@ The metric `geoip_errors_total` has been added, which indicates the number of er
 There is a sorting issue in a couple of files that causes unnecessary config reloads.
 
 https://github.com/kubernetes/ingress-nginx/pull/14005
+
+### 022-cve-03022026.patch
+
+Fixes the following CVEs:
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
