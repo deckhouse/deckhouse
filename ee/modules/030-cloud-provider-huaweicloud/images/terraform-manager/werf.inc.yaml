@@ -4,12 +4,12 @@ git:
 - add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi
   to: /candi
   excludePaths:
-  - '**/terraform-versions.yml'
+  - '**/terraform_versions.yml'
   stageDependencies:
     install:
     - '**/*'
-- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform-versions.yml
-  to: /terraform-manager/terraform-versions.yml
+- add: /{{ $.ModulePath }}modules/030-{{ $.ModuleName }}/candi/terraform_versions.yml
+  to: /terraform-manager/terraform_versions.yml
 import:
   - image: terraform-provider-huaweicloud
     add: /terraform-provider-huaweicloud
