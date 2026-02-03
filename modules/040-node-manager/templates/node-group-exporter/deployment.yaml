@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: node-group-exporter
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "node-group-exporter"
