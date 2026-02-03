@@ -221,6 +221,7 @@ func (r *reconciler) handle(ctx context.Context, packageRepository *v1alpha1.Pac
 	}
 
 	logger.Info("created package repository operation")
+	logger.Debug("package repository reconciled", slog.String("interval", scanInterval.String()))
 
 	return ctrl.Result{RequeueAfter: scanInterval}, nil
 }
