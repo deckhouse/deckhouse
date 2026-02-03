@@ -24,50 +24,12 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/yaml"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
-
-type ArgV4 struct {
-	Name  string `yaml:"name"`
-	Value string `yaml:"value"`
-}
-
-type ControlPlaneComponentV4 struct {
-	ExtraArgs []ArgV4 `yaml:"extraArgs,omitempty"`
-}
-type APIServerV4 struct {
-	ControlPlaneComponentV4 `yaml:",inline"`
-}
-
-type ClusterConfigurationV4 struct {
-	APIVersion          string      `yaml:"apiVersion"`
-	Kind                string      `yaml:"kind"`
-	EncryptionAlgorithm string      `yaml:"encryptionAlgorithm,omitempty"`
-	APIServer           APIServerV4 `yaml:"apiServer"`
-}
-
-type ArgV3 struct {
-	Name  string
-	Value string
-}
-
-type ControlPlaneComponentV3 struct {
-	ExtraArgs map[string]string `yaml:"extraArgs,omitempty"`
-}
-
-type APIServer struct {
-	ControlPlaneComponentV3 `yaml:",inline"`
-}
-
-type ClusterConfigurationV3 struct {
-	APIVersion string    `yaml:"apiVersion"`
-	Kind       string    `yaml:"kind"`
-	APIServer  APIServer `yaml:"apiServer"`
-}
 
 type PrefixedClaimOrExpression struct {
 	Claim  string  `yaml:"claim"`
@@ -103,6 +65,17 @@ type AuthenticationConfigurationV1beta1 struct {
 			Path string `yaml:"path"`
 		} `yaml:"conditions"`
 	} `yaml:"anonymous"`
+}
+
+func CountLinesContaining(content []byte, substring string) int {
+	lines := strings.Split(string(content), "\n")
+	count := 0
+	for _, line := range lines {
+		if strings.Contains(line, substring) {
+			count++
+		}
+	}
+	return count
 }
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
@@ -148,7 +121,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     kubeSchedulerExtenders: []
 `
 
-	const defultAudience = "https://kubernetes.default.svc.cluster.local"
+	const defaultAudience = "https://kubernetes.default.svc.cluster.local"
 
 	const moduleValuesOnlyIssuer = `
 internal:
@@ -410,23 +383,29 @@ resources:
 				f.HelmRender()
 			})
 
-			It("should set issuer and default api-audiencesr", func() {
+			It("should set issuer and default api-audiences", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
-				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
+
+				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(data, &config)
+				var pod corev1.Pod
+				expectedCommands := []string{
+					"--service-account-issuer=https://api.example.com",
+					fmt.Sprintf("--api-audiences=https://api.example.com,%s", defaultAudience),
+				}
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://api.example.com",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://api.example.com,%s", defultAudience),
-				}))
+
+				serviceAccountEntries := 0
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries++
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(serviceAccountEntries).To(BeNumerically("<", 2))
 			})
 		})
 
@@ -440,25 +419,26 @@ resources:
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
-				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(data, &config)
-				Expect(err).ShouldNot(HaveOccurred())
 
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://api.example.com",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://api.example.com,https://bob.com,%s", defultAudience),
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).ToNot(ContainSubstring("--service-account-issuer"))
+				var pod corev1.Pod
+				expectedCommands := []string{
+					"--service-account-issuer=https://api.example.com",
+					fmt.Sprintf("--api-audiences=https://api.example.com,https://bob.com,%s", defaultAudience),
+				}
+				err = yaml.Unmarshal(kubeApiserver, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				serviceAccountEntries := 0
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries++
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(serviceAccountEntries).To(BeNumerically("==", 1))
+
 			})
 		})
 
@@ -473,34 +453,26 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(data, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://api.example.com",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://api.example.com,https://api.bob.com,%s", defultAudience),
-				}))
-
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
-				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(7))
-				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
-				expectedServiceAccountIssuers := []string{
+				expectedCommands := []string{
+					"--service-account-issuer=https://api.example.com",
 					"--service-account-issuer=https://api.bob.com",
+					fmt.Sprintf("--api-audiences=https://api.example.com,https://api.bob.com,%s", defaultAudience),
 				}
-				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+
+				serviceAccountEntries := 0
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries++
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(serviceAccountEntries).To(BeNumerically("==", 2))
+
 			})
 		})
 
@@ -515,35 +487,30 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				data, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(data, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: defultAudience,
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://api.example.com,https://bob.com,https://flant.com,%s", defultAudience),
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
-				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(7))
-				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
-				expectedServiceAccountIssuers := []string{
+				defaultServiceAccountIssuer := fmt.Sprintf("--service-account-issuer=%s", defaultAudience)
+				expectedCommands := []string{
+					defaultServiceAccountIssuer,
 					"--service-account-issuer=https://api.example.com",
 					"--service-account-issuer=https://bob.com",
+					fmt.Sprintf("--api-audiences=https://api.example.com,https://bob.com,https://flant.com,%s", defaultAudience),
 				}
-				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+
+				var serviceAccountEntries []string
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries = append(serviceAccountEntries, item)
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(len(serviceAccountEntries)).To(BeNumerically("==", 3))
+				// service-account-issuer order matters, the first one must be the one we want to use to generate tokens
+				Expect(serviceAccountEntries[0]).To(Equal(defaultServiceAccountIssuer))
+
 			})
 		})
 
@@ -558,37 +525,29 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				// kubeadm-config.yaml
-				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(kubeadmConfig, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://api.example.com",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://api.example.com,https://flant.ru,%s", defultAudience),
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
-				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(7))
-				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
-				expectedServiceAccountIssuers := []string{
-					"--service-account-issuer=https://kubernetes.default.svc.cluster.local",
+				defaultServiceAccountIssuer := fmt.Sprintf("--service-account-issuer=%s", defaultAudience)
+				expectedCommands := []string{
+					"--service-account-issuer=https://api.example.com",
+					defaultServiceAccountIssuer,
 					"--service-account-issuer=https://flant.ru",
+					fmt.Sprintf("--api-audiences=https://api.example.com,https://flant.ru,%s", defaultAudience),
 				}
-				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+
+				var serviceAccountEntries []string
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries = append(serviceAccountEntries, item)
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(len(serviceAccountEntries)).To(BeNumerically("==", 3))
+				// service-account-issuer order matters, the first one must be the one we want to use to generate tokens
+				Expect(serviceAccountEntries[0]).To(Equal("--service-account-issuer=https://api.example.com"))
 			})
 		})
 
@@ -603,38 +562,30 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				// kubeadm-config.yaml
-				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(kubeadmConfig, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://kubernetes.default.svc.cluster.local",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://flant.ru,%s", defultAudience),
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
-				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(7))
-				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
-				expectedServiceAccountIssuers := []string{
+				expectedCommands := []string{
+					"--service-account-issuer=https://kubernetes.default.svc.cluster.local",
 					"--service-account-issuer=https://flant.ru",
+					fmt.Sprintf("--api-audiences=https://flant.ru,%s", defaultAudience),
 				}
-				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+
+				var serviceAccountEntries []string
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries = append(serviceAccountEntries, item)
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(len(serviceAccountEntries)).To(BeNumerically("==", 2))
+				// service-account-issuer order matters, the first one must be the one we want to use to generate tokens
+				Expect(serviceAccountEntries[0]).To(Equal("--service-account-issuer=https://kubernetes.default.svc.cluster.local"))
 			})
 		})
+
 		Context("duplicate handling scenario: B", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", additionalAPIIssuersSuperComboWithDublicates2)
@@ -646,38 +597,30 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				// kubeadm-config.yaml
-				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(kubeadmConfig, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://kubernetes.default.svc.cluster.local",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: fmt.Sprintf("https://flant.com,%s", defultAudience),
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).To(ContainSubstring("--service-account-issuer"))
-				documents := strings.Split(string(kubeApiserver), "---")
-				Expect(documents).To(HaveLen(7))
-				podWithExtraArgs := []byte(documents[6])
 				var pod corev1.Pod
-				expectedServiceAccountIssuers := []string{
+				expectedCommands := []string{
+					"--service-account-issuer=https://kubernetes.default.svc.cluster.local",
 					"--service-account-issuer=https://flant.com",
+					fmt.Sprintf("--api-audiences=https://flant.com,%s", defaultAudience),
 				}
-				err = yaml.Unmarshal(podWithExtraArgs, &pod)
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(pod.Spec.Containers[0].Args).To(Equal(expectedServiceAccountIssuers))
+
+				var serviceAccountEntries []string
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries = append(serviceAccountEntries, item)
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(len(serviceAccountEntries)).To(BeNumerically("==", 2))
+				// service-account-issuer order matters, the first one must be the one we want to use to generate tokens
+				Expect(serviceAccountEntries[0]).To(Equal("--service-account-issuer=https://kubernetes.default.svc.cluster.local"))
 			})
 		})
+
 		Context("empty apiserver configuration", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", emptyApiserverConfig)
@@ -689,28 +632,29 @@ resources:
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 
-				// kubeadm-config.yaml
-				kubeadmConfig, err := base64.StdEncoding.DecodeString(s.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(kubeadmConfig, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "service-account-issuer",
-					Value: "https://kubernetes.default.svc.cluster.local",
-				}))
-				Expect(config.APIServer.ExtraArgs).To(ContainElement(ArgV4{
-					Name:  "api-audiences",
-					Value: "https://kubernetes.default.svc.cluster.local",
-				}))
-
-				// kube-apiserver.yaml.tpl - contains patches for kube-api pod, including patches for adding additional service-account-issuer
 				kubeApiserver, err := base64.StdEncoding.DecodeString(s.Field("data.kube-apiserver\\.yaml\\.tpl").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(kubeApiserver).ToNot(ContainSubstring("--service-account-issuer"))
+				var pod corev1.Pod
+				expectedCommands := []string{
+					"--service-account-issuer=https://kubernetes.default.svc.cluster.local",
+					fmt.Sprintf("--api-audiences=%s", defaultAudience),
+				}
+				err = yaml.Unmarshal(kubeApiserver, &pod)
+				Expect(err).ShouldNot(HaveOccurred())
+
+				var serviceAccountEntries []string
+				for _, item := range pod.Spec.Containers[0].Command {
+					if strings.HasPrefix(item, "--service-account-issuer=") {
+						serviceAccountEntries = append(serviceAccountEntries, item)
+					}
+				}
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(len(serviceAccountEntries)).To(BeNumerically("==", 1))
+				// service-account-issuer order matters, the first one must be the one we want to use to generate tokens
+				Expect(serviceAccountEntries[0]).To(Equal("--service-account-issuer=https://kubernetes.default.svc.cluster.local"))
 			})
 		})
+
 		Context("cluster is bootstrapped", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)
@@ -824,52 +768,7 @@ resources:
 		})
 	})
 
-	Context("kubeadm config version selection", func() {
-		testKubeadmVersion := func(k8sVersion, expectedApiVersion string) {
-			testValues := fmt.Sprintf(`
-internal:
-  effectiveKubernetesVersion: "%s"
-  etcdServers:
-    - https://192.168.199.186:2379
-  mastersNode:
-    - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
-`, k8sVersion)
-
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", testValues)
-				f.HelmRender()
-			})
-
-			It(fmt.Sprintf("should use %s for Kubernetes %s", expectedApiVersion, k8sVersion), func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
-				Expect(secret.Exists()).To(BeTrue())
-
-				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
-
-				var config ClusterConfigurationV4
-				err = yaml.Unmarshal(kubeadmConfigData, &config)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
-				Expect(config.Kind).To(Equal("ClusterConfiguration"))
-			})
-		}
-
-		Context("Kubernetes 1.31", func() {
-			testKubeadmVersion("1.31", "v1beta4")
-		})
-
-		Context("Kubernetes 1.32", func() {
-			testKubeadmVersion("1.32", "v1beta4")
-		})
-	})
-
-	Context("webhook configuration in v1beta4", func() {
+	Context("webhook configuration in apiserver", func() {
 		const webhookTestValues = `
 internal:
   effectiveKubernetesVersion: "1.31"
@@ -906,35 +805,13 @@ apiserver:
     webhookURL: "https://authz.example.com"
 `
 
-		const webhookTestValuesV1Beta4 = `
-internal:
-  effectiveKubernetesVersion: "1.31"
-  etcdServers:
-    - https://192.168.199.186:2379
-  mastersNode:
-    - master-0
-  pkiChecksum: checksum
-  rolloutEpoch: 1857
-  audit:
-    webhookURL: "https://audit.example.com"
-    webhookCA: "LS0tLS1CRUdJTi..."
-apiserver:
-  authz:
-    webhookURL: "https://authz.example.com"
-    webhookCA: "LS0tLS1CRUdJTi..."
-  authn:
-    webhookURL: "https://authn.example.com"
-    webhookCA: "LS0tLS1CRUdJTi..."
-    webhookCacheTTL: "5m"
-`
-
-		Context("v1beta4 with webhook parameters", func() {
+		Context("apiserver with webhook parameters", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValues)
 				f.HelmRender()
 			})
 
-			It("should include webhook parameters in v1beta4 configuration using array syntax", func() {
+			It("should include webhook parameters apiserver manifest and authorization config", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
@@ -953,31 +830,29 @@ apiserver:
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
 				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
 
-				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
+				kubeApiserver, err := base64.StdEncoding.DecodeString(secret.Field("data.kube-apiserver\\.yaml\\.tpl").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var pod corev1.Pod
+				expectedCommands := []string{
+					"--authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml",
+					"--authentication-token-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml",
+					"--authentication-token-webhook-cache-ttl=5m",
+					"--audit-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml",
+				}
+				unexpectedCommands := []string{
+					"authorization-mode",
+					"authorization-webhook-config-file",
+				}
+				err = yaml.Unmarshal(kubeApiserver, &pod)
 				Expect(err).ShouldNot(HaveOccurred())
 
-				configYaml := string(kubeadmConfigData)
-				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+				Expect(pod.Spec.Containers[0].Command).ToNot(ContainElements(unexpectedCommands))
 
-				// v1beta4 uses array syntax with name/value pairs.
-				// Kubernetes >= 1.30 uses structured authorization config.
-				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
-				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
-				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
-				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
-
-				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
-				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
-				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
-
-				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
-
-				// v1beta4 should NOT have the map syntax
-				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
 			})
 		})
 
-		Context("v1beta4 with authz webhookURL but without webhookCA", func() {
+		Context("apiserver with authz webhookURL but without webhookCA", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("controlPlaneManager", webhookAuthzMissingCATestValues)
 				f.HelmRender()
@@ -989,58 +864,10 @@ apiserver:
 			})
 		})
 
-		Context("v1beta4 uses array syntax for webhook parameters", func() {
-			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValuesV1Beta4)
-				f.HelmRender()
-			})
-
-			It("should include webhook parameters in v1beta4", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
-				Expect(secret.Exists()).To(BeTrue())
-
-				// structured authorization config file should be present in extra-files secret
-				authzConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.extra-file-authorization-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-				authzConfigYaml := string(authzConfigData)
-				Expect(authzConfigYaml).To(ContainSubstring("kind: AuthorizationConfiguration"))
-				Expect(authzConfigYaml).To(ContainSubstring("failurePolicy: Deny"))
-				Expect(authzConfigYaml).To(ContainSubstring("matchConditions:"))
-				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user in ["system:aggregator", "system:kube-aggregator", "system:kube-controller-manager", "system:kube-scheduler", "kubernetes-admin", "kube-apiserver-kubelet-client", "capi-controller-manager", "system:volume-scheduler"])'`))
-				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:node:"))'`))
-				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:kube-system:"))'`))
-				Expect(authzConfigYaml).To(ContainSubstring(`expression: '!(request.user.startsWith("system:serviceaccount:d8-"))'`))
-
-				kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
-				Expect(err).ShouldNot(HaveOccurred())
-
-				configYaml := string(kubeadmConfigData)
-				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
-
-				// v1beta4 uses array syntax (name: value) instead of map syntax
-				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
-				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
-				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
-				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
-				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
-				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
-				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
-				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
-
-				// v1beta4 should NOT have the map syntax
-				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
-			})
-		})
-
-	})
-
-	Context("terminated-pod-gc-threshold based on node count", func() {
-		testTerminatedPodGcThreshold := func(nodesCount int, expectedThreshold string) {
-			Context(fmt.Sprintf("with %d nodes", nodesCount), func() {
-				const testValuesTemplate = `
+		Context("terminated-pod-gc-threshold based on node count", func() {
+			testTerminatedPodGcThreshold := func(nodesCount int, expectedThreshold string) {
+				Context(fmt.Sprintf("with %d nodes", nodesCount), func() {
+					const testValuesTemplate = `
 internal:
   effectiveKubernetesVersion: "1.32"
   etcdServers:
@@ -1053,40 +880,43 @@ internal:
   kubeSchedulerExtenders: []
 `
 
-				testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
+					testValues := fmt.Sprintf(testValuesTemplate, nodesCount)
 
-				BeforeEach(func() {
-					f.ValuesSetFromYaml("controlPlaneManager", testValues)
-					f.HelmRender()
+					BeforeEach(func() {
+						f.ValuesSetFromYaml("controlPlaneManager", testValues)
+						f.HelmRender()
+					})
+
+					It(fmt.Sprintf("should set terminated-pod-gc-threshold to %s", expectedThreshold), func() {
+						Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+						secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+						Expect(secret.Exists()).To(BeTrue())
+						kubeApiserver, err := base64.StdEncoding.DecodeString(secret.Field("data.kube-controller-manager\\.yaml\\.tpl").String())
+						Expect(err).ShouldNot(HaveOccurred())
+						var pod corev1.Pod
+						expectedCommands := []string{
+							fmt.Sprintf("--terminated-pod-gc-threshold=%s", expectedThreshold),
+						}
+						err = yaml.Unmarshal(kubeApiserver, &pod)
+						Expect(err).ShouldNot(HaveOccurred())
+
+						Expect(pod.Spec.Containers[0].Command).To(ContainElements(expectedCommands))
+
+					})
 				})
+			}
 
-				It(fmt.Sprintf("should set terminated-pod-gc-threshold to %s", expectedThreshold), func() {
-					Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-					secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
-					Expect(secret.Exists()).To(BeTrue())
-
-					kubeadmConfigData, err := base64.StdEncoding.DecodeString(secret.Field("data.kubeadm-config\\.yaml").String())
-					Expect(err).ShouldNot(HaveOccurred())
-
-					configYaml := string(kubeadmConfigData)
-
-					// Check for the correct value in YAML
-					Expect(configYaml).To(ContainSubstring("terminated-pod-gc-threshold"))
-					Expect(configYaml).To(ContainSubstring(fmt.Sprintf("\"%s\"", expectedThreshold)))
-				})
-			})
-		}
-
-		// Test cases for different node counts with Kubernetes-1.32
-		testTerminatedPodGcThreshold(0, "1000") // default value
-		testTerminatedPodGcThreshold(50, "1000")
-		testTerminatedPodGcThreshold(99, "1000")
-		testTerminatedPodGcThreshold(100, "3000")
-		testTerminatedPodGcThreshold(150, "3000")
-		testTerminatedPodGcThreshold(299, "3000")
-		testTerminatedPodGcThreshold(300, "6000")
-		testTerminatedPodGcThreshold(500, "6000")
+			// Test cases for different node counts with Kubernetes-1.32
+			testTerminatedPodGcThreshold(0, "1000") // default value
+			testTerminatedPodGcThreshold(50, "1000")
+			testTerminatedPodGcThreshold(99, "1000")
+			testTerminatedPodGcThreshold(100, "3000")
+			testTerminatedPodGcThreshold(150, "3000")
+			testTerminatedPodGcThreshold(299, "3000")
+			testTerminatedPodGcThreshold(300, "6000")
+			testTerminatedPodGcThreshold(500, "6000")
+		})
 	})
 
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
