@@ -124,10 +124,10 @@ func (c *MasterNodeGroupController) run(ctx *context.Context) (err error) {
 
 		err = c.runWithReplicas(ctx, replicas)
 		if err != nil {
-			return fmt.Errorf("failed to converge with 3 replicas: %w", err)
+			return fmt.Errorf("failed to converge with %d replicas: %w", replicas, err)
 		}
 
-		log.DebugF("to multi master scaled. saving state...\n")
+		log.DebugF("scaled to multi master. saving state...\n")
 
 		c.convergeState.Phase = phases.ScaleToSingleMasterPhase
 
