@@ -28,7 +28,7 @@
     "cloud"
   ],
   "cloud-provider-dynamix": [
-    "bare-metal",
+    "bare metal",
     "cloud"
   ],
   "cloud-provider-gcp": [
@@ -45,14 +45,14 @@
   ],
   "cloud-provider-vsphere": [
     "cloud",
-    "bare-metal"
+    "bare metal"
   ],
   "cloud-provider-yandex": [
     "cloud"
   ],
   "cloud-provider-zvirt": [
     "cloud",
-    "bare-metal"
+    "bare metal"
   ],
   "cni-cilium": [
     "network",
@@ -102,7 +102,7 @@
   "keepalived": [
     "network",
     "balancing",
-    "bare-metal"
+    "bare metal"
   ],
   "kube-dns": [
     "network"
@@ -124,7 +124,7 @@
   "metallb": [
     "network",
     "balancing",
-    "bare-metal"
+    "bare metal"
   ],
   "monitoring-applications": [
     "observability"
