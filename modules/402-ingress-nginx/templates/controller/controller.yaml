@@ -304,6 +304,9 @@ spec:
         {{- end }}
         {{- if $crd.spec.annotationValidationEnabled }}
         - --enable-annotation-validation=true
+        {{- else if eq $controllerVersion "1.12" }}
+        # In controller v1.12 annotation validation is enabled by default.
+        - --enable-annotation-validation=false
         {{- end }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
