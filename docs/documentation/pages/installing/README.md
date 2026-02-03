@@ -675,6 +675,10 @@ The configuration file provided through the `--config` parameter when running th
 
 <div id="installing-deckhouse-kubernetes-platform-from-an-external-registry"></div>
 
+{% alert level="warning" %}
+For more details on installing and updating DKP in an air-gapped environment, see the [“Installing DKP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DKP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) sections.
+{% endalert %}
+
 ### Installing from an external (third-party) registry
 
 {% alert level="warning" %}
