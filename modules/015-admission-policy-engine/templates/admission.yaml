@@ -15,6 +15,14 @@ spec:
   matchConditions:
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+    - name: 'exclude-gatekeeper-webhook-pods'
+      expression: >-
+        !(
+          has(object.metadata)
+          && has(object.metadata.labels)
+          && "gatekeeper.sh/operation" in object.metadata.labels
+          && object.metadata.labels["gatekeeper.sh/operation"] == "webhook"
+        )
     - name: exclude-existing-label
       expression: >
         (
@@ -44,4 +52,39 @@ spec:
   policyName: "deny-pods-with-skip-pss-label"
   matchResources:
     namespaceSelector: {}  # Applies to all namespaces
+  validationActions: [Deny]
+
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-gatekeeper-webhook-operation-label"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["pods"]
+  validations:
+    - expression: >-
+        request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || !(
+          has(object.metadata)
+          && has(object.metadata.labels)
+          && "gatekeeper.sh/operation" in object.metadata.labels
+          && object.metadata.labels["gatekeeper.sh/operation"] == "webhook"
+        )
+      reason: Forbidden
+      message: "Setting label 'gatekeeper.sh/operation=webhook' on Pods is forbidden for non-Deckhouse users"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-gatekeeper-webhook-operation-label-binding"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-gatekeeper-webhook-operation-label"
   validationActions: [Deny]
