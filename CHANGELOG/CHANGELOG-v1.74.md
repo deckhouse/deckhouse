@@ -58,6 +58,8 @@
  - **[node-manager]** Added Kubernetes feature gate management via the `control-plane-manager` module. [#16185](https://github.com/deckhouse/deckhouse/pull/16185)
  - **[node-manager]** Denied applying of CAPS StaticInstance resources whose address is similar to any node in the Deckhouse cluster. [#15991](https://github.com/deckhouse/deckhouse/pull/15991)
  - **[node-manager]** Prevented user workload deployment during the node's first Bashible run. [#14828](https://github.com/deckhouse/deckhouse/pull/14828)
+ - **[prometheus]** improve redirects from Grafana to the Deckhouse UI when Grafana is disabled [#16988](https://github.com/deckhouse/deckhouse/pull/16988)
+    no impact
  - **[prometheus]** Add prometheus configuration reload failed alert [#17128](https://github.com/deckhouse/deckhouse/pull/17128)
  - **[prometheus]** Replace PrometheusRules with ClusterObservabilityMetricsRulesGroups or ClusterObservabilityPropagatedMetricsRulesGroups when deployed using helm_lib_prometheus_rules helper and the observability module is enabled [#17329](https://github.com/deckhouse/deckhouse/pull/17329)
  - **[prometheus]** Replace PrometheusRules with ClusterObservabilityMetricsRulesGroups or ClusterObservabilityPropagatedMetricsRulesGroups when deployed using helm_lib_prometheus_rules helper and the observability module is enabled [#16405](https://github.com/deckhouse/deckhouse/pull/16405)
@@ -83,12 +85,16 @@
     In HA cluster mode hubble-ui and hubble-relay will be restarted
  - **[cloud-provider-aws]** fix cve [#17470](https://github.com/deckhouse/deckhouse/pull/17470)
  - **[cloud-provider-aws]** fix cve [#16843](https://github.com/deckhouse/deckhouse/pull/16843)
+ - **[cloud-provider-azure]** fixed patch in azure [#17696](https://github.com/deckhouse/deckhouse/pull/17696)
  - **[cloud-provider-azure]** fixed cve [#16839](https://github.com/deckhouse/deckhouse/pull/16839)
+ - **[cloud-provider-dvp]** Fixed VM deletion timeout and improved memory validation error reporting [#17587](https://github.com/deckhouse/deckhouse/pull/17587)
+ - **[cloud-provider-dvp]** Cleanup orphaned resources when VM creation fails [#17533](https://github.com/deckhouse/deckhouse/pull/17533)
  - **[cloud-provider-dvp]** this PR gives a lot more informational errors and messages to user [#17165](https://github.com/deckhouse/deckhouse/pull/17165)
  - **[cloud-provider-dvp]** Fix healthCheckNodePort collisions [#16996](https://github.com/deckhouse/deckhouse/pull/16996)
  - **[cloud-provider-dvp]** fixed CVE [#16810](https://github.com/deckhouse/deckhouse/pull/16810)
  - **[cloud-provider-dvp]** this changes fix some of cases when pods stuck in Completed/Error [#16741](https://github.com/deckhouse/deckhouse/pull/16741)
  - **[cloud-provider-dvp]** Stopped preferring FQDN to hostname in cloud-init configurations. [#16124](https://github.com/deckhouse/deckhouse/pull/16124)
+ - **[cloud-provider-huaweicloud]** fix cve [#17171](https://github.com/deckhouse/deckhouse/pull/17171)
  - **[cloud-provider-huaweicloud]** Updated the `caphc-controller-manager` component for the Huawei Cloud provider. [#16679](https://github.com/deckhouse/deckhouse/pull/16679)
  - **[cloud-provider-huaweicloud]** Added `enterpriseProjectID` support for Cinder-based (<10Gi) volumes. [#16618](https://github.com/deckhouse/deckhouse/pull/16618)
  - **[cloud-provider-openstack]** fix cve [#17082](https://github.com/deckhouse/deckhouse/pull/17082)
@@ -96,8 +102,11 @@
  - **[cloud-provider-vcd]** fix cve [#17136](https://github.com/deckhouse/deckhouse/pull/17136)
  - **[cloud-provider-vcd]** Implemented a hack to migrate etcd disk to VCD independent disk to prevent deletion of etcd data. [#16302](https://github.com/deckhouse/deckhouse/pull/16302)
     To migrate, you must perform a `converge`, which causes the master server to be recreated. If you are using only one master server with the manual address assignment via the `mainNetworkIPAddresses` parameter, add two more IP addresses for the migration process.
+ - **[cloud-provider-vsphere]** fix cve [#17106](https://github.com/deckhouse/deckhouse/pull/17106)
  - **[cloud-provider-yandex]** fix cve [#17469](https://github.com/deckhouse/deckhouse/pull/17469)
  - **[cloud-provider-zvirt]** fix cve [#17093](https://github.com/deckhouse/deckhouse/pull/17093)
+ - **[cni-cilium]** Fix hook discovery_cni_exclusive.go [#17719](https://github.com/deckhouse/deckhouse/pull/17719)
+    If the SDN module is used in the cluster, the Cilium agent pods will be restarted.
  - **[cni-cilium]** Fixed egress-gateway-agent controller logic for deleted resources and disable dev logging. [#17378](https://github.com/deckhouse/deckhouse/pull/17378)
  - **[common]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
@@ -133,6 +142,7 @@
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)
  - **[loki]** Fixed the `LokiDiscardedSamplesWarning` alert. [#16374](https://github.com/deckhouse/deckhouse/pull/16374)
  - **[metallb]** Fixed D8MetallbBGPSessionDown alert false positives caused by duplicate metrics without port information. [#17563](https://github.com/deckhouse/deckhouse/pull/17563)
+ - **[monitoring-kubernetes]** fix kube_persistentvolume_is_local recording rule for not-bound PVCs [#17638](https://github.com/deckhouse/deckhouse/pull/17638)
  - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
     Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
  - **[multitenancy-manager]** Fixed indentation in the manifest of `multitenancy-manager`. [#16471](https://github.com/deckhouse/deckhouse/pull/16471)
@@ -163,6 +173,8 @@
  - **[dhctl]** Set default ssh port to 22, to backward compatibility with cli ssh behavior in dhctl. [#16947](https://github.com/deckhouse/deckhouse/pull/16947)
  - **[dhctl]** Fixed `gossh` client reconnections. [#16709](https://github.com/deckhouse/deckhouse/pull/16709)
  - **[dhctl]** Disabled Bashible debug console when launched via `commander` and capped retries to 10 restarts and 5 attempts per step. [#15738](https://github.com/deckhouse/deckhouse/pull/15738)
+ - **[ingress-nginx]** removed deprecated alert GeoIPDownloadErrorDetected. [#17711](https://github.com/deckhouse/deckhouse/pull/17711)
+    All instances will be restarted.
  - **[ingress-nginx]** Improved documentation for the ModSecurity (WAF). [#16268](https://github.com/deckhouse/deckhouse/pull/16268)
  - **[loki]** Added alerts and graphs for discarded log samples. [#16137](https://github.com/deckhouse/deckhouse/pull/16137)
  - **[node-local-dns]** Added logging of slow upstream queries and a new coredns_kubeforward_slow_requests_total metric for tracking them. [#16808](https://github.com/deckhouse/deckhouse/pull/16808)

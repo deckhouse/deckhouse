@@ -375,6 +375,7 @@ update-lib-helm: yq ## Update lib-helm.
 update-base-images-versions:
 	##~ Options: version=vMAJOR.MINOR.PATCH
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
+	$(MAKE) render-workflow
 
 ##@ Build
 .PHONY: build
@@ -510,7 +511,7 @@ YQ = $(LOCALBIN)/yq
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.26.3
+DECKHOUSE_CLI_VERSION ?= v0.27.0
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2
@@ -532,7 +533,7 @@ generate-werf: yq ## Generate changes in werf files.
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@DECKHOUSE_PLUGINS_ENABLED=false $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
