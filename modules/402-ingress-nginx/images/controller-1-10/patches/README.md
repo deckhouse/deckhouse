@@ -131,3 +131,21 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 ### 023-use-proxy-real-ip-cidr-v2.patch
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
+
+### 024-cve-03022026.patch
+
+Fixes the following CVEs:
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+### 025-cve-03022026-rootfs.patch
+
+Fixes the following CVEs (rootfs part):
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
