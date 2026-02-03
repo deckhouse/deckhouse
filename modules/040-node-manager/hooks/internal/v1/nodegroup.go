@@ -448,14 +448,18 @@ type FencingWatchdog struct {
 }
 
 func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
-	var timeout string
+	type Alias struct {
+		Timeout string `json:"timeout,omitempty"`
+	}
 
-	err := json.Unmarshal(data, &timeout)
+	var aux Alias
+
+	err := json.Unmarshal(data, &aux)
 	if err != nil {
 		return err
 	}
 
-	duration, err := time.ParseDuration(timeout)
+	duration, err := time.ParseDuration(aux.Timeout)
 	if err != nil {
 		return err
 	}
