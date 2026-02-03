@@ -59,6 +59,10 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 
 ## Proxy Mode Architecture
 
+{% alert level="warning" %}
+It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
+{% endalert %}
+
 The `Proxy` mode allows the registry to act as an intermediate proxy server between the client and the remote registry.
 
 The caching proxy registry is launched as static pods on control-plane (master) nodes. Cached data is stored on the control-plane (master) nodes in the `/opt/deckhouse/registry` directory.
@@ -71,6 +75,10 @@ For components such as `operator-trivy`, `image-availability-exporter`, `deckhou
 ![direct](images/proxy-en.png)
 
 ## Local Mode Architecture
+
+{% alert level="warning" %}
+It is recommended to use separate disks for storing registry (`/opt/deckhouse/registry`) and etcd data. Using a single disk may lead to etcd performance degradation during registry operations.
+{% endalert %}
 
 The `Local` mode allows creating a local copy of the registry inside the cluster. Images from the remote registry are fully copied to local storage and synchronized between replicas of the local registry.
 
