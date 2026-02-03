@@ -136,8 +136,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=~tier,severity_level=~severity_level"
+      plk_grouped_by__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=~tier,severity_level=~severity_level"
       plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
       description: |
@@ -153,8 +153,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=~tier,severity_level=~severity_level"
+      plk_grouped_by__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=~tier,severity_level=~severity_level"
       plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
       description: |
