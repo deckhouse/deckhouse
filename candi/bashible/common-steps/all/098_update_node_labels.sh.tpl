@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{ if eq .runType "Normal" }}
 check_python
 function fetch-local-labels() {
   cat - <<EOF | $python_binary
@@ -145,3 +146,4 @@ if [[ -z $LABELS ]]
     bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "labels" ${LABELS}
     bb-curl-helper-patch-node-metadata "$(bb-d8-node-name)" "annotations" "node.deckhouse.io/last-applied-local-labels=${LABELS_ANNOTATION}"
 fi
+{{- end }}

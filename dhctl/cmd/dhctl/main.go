@@ -185,9 +185,9 @@ var (
 			Parent:     "render",
 		},
 		{
-			Name:       "kubeadm-config",
-			Help:       "Render kubeadm config.",
-			DefineFunc: commands.DefineRenderKubeadmConfig,
+			Name:       "control-plane-manifests",
+			Help:       "Render control-plane manifests and pki.",
+			DefineFunc: commands.DefineRenderControlPlaneAndPKI,
 			Parent:     "render",
 		},
 		{
