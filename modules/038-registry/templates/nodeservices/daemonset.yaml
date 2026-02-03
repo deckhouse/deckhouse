@@ -35,7 +35,7 @@ spec:
     kind: DaemonSet
     name: registry-nodeservices-manager
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Recreate"
   resourcePolicy:
     containerPolicies:
     - containerName: registry-nodeservices-manager
