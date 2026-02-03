@@ -6,4 +6,4 @@ lang: ru
 search: open source software, third party software, software components, OSS information, used software, стороннее ПО, используемое ПО
 ---
 
-{% include modules_oss.liquid %}
+{% include modules-oss.liquid %}
