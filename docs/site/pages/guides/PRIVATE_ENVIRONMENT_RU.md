@@ -23,6 +23,10 @@ layout: sidebar-guides
 
 Взаимодействие с внешними ресурсами выполняется через отдельный физический сервер или виртуальную машину Bastion (bastion-хост). На bastion-хосте разворачиваются container registry и прокси-сервер, а также выполняются все операции по управлению кластером.
 
+{% alert level="info" %}
+В зависимости от политик безопасности в компании доступа к внещним ресурсам может не быть вообще. В таком случае проекси-сервер на bastion-хосте не разворачивается, а все необходимые внешние зависимотсти, такие как архив с образами контейнеров DKP, могут быть доставлены на машину любым разрешённым в компании способом (например, на флеш-накопителе).
+{% endalert %}
+
 Общая схема закрытого окружения:
 
 <img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
@@ -50,9 +54,11 @@ layout: sidebar-guides
 
 {% alert level="warning" %}
 DKP поддерживает только Bearer token-схему авторизации в container registry.
-
-Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 {% endalert %}
+
+В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
+
+В рамках этого руководства будет для примера использован Harbor.
 
 ### Установка Harbor
 
@@ -109,10 +115,10 @@ cd harbor/
 mkdir certs
 ```
 
-Сгенерируйте сертификаты для внешнего доступа следующими командами:
+Перейдите в созданную директорию и сгенерируйте сертификаты для внешнего доступа следующими командами:
 
 ```bash
-openssl ecparam -name prime256v1 -genkey -out ca.key
+openssl genrsa -out ca.key 4096
 ```
 
 ```bash
@@ -122,7 +128,7 @@ openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow
 Сгенерируйте сертификаты для внутреннего доменного имени `harbor.local`, чтобы внутри приватной сети обращаться к серверу Bastion по защищённому соединению:
 
 ```bash
-openssl ecparam -name prime256v1 -genkey -out harbor.local.key
+openssl genrsa -out harbor.local.key 4096
 ```
 
 ```bash
@@ -232,8 +238,8 @@ https:
   # https port for harbor, default is 443
   port: 443
   # The path of cert and key files for nginx
-  certificate: /home.ubuntu/harbor/certs/harbor.local.crt
-  private_key: /home.ubuntu/harbor/certs/harbor.local.key
+  certificate: /home/ubuntu/harbor/certs/harbor.local.crt
+  private_key: /home/ubuntu/harbor/certs/harbor.local.key
   # enable strong ssl ciphers (default: false)
   # strong_ssl_ciphers: false
 
@@ -654,28 +660,30 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_new_project_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Создайте нового пользователя для этого проекта. Перейдите на вкладку «Пользователи» в левом меню и нажмите «Новый пользователь»:
+Создайте [robot-account](https://goharbor.io/docs/1.10/working-with-projects/project-configuration/create-robot-accounts/) для этого проекта. Это специальный типа аккаунта, привязанного к проекту, для выполнения автоматических операций. Он не имеет доступа в веб-интерфейс и может быть использован только с Helm CLI или Docker.
+
+Перейдите в созданный проект и откройте вкладку «Аккаунты роботов». Нажмите кнопку «Создать новый аккаунт робота»:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_new_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Укажите имя пользователя, адрес электронной почты и пароль:
+Укажите имя аккаунта, краткое описание (если нужно) и срок жизни (можно выбрать в днях или поставить бесспрочный):
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_creating_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Добавьте созданного пользователя в проект `deckhouse`: перейдите в «Проекты», откройте проект `deckhouse`, затем вкладку «Участники» и нажмите «Пользователь», чтобы добавить участника.
+Укажите необходимые разрешения. Обязатлеьно укажите полный доступ в строке «Repository», чтобы были доступ все операции с образами контейнеров.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Оставьте роль по умолчанию: «Администратор проекта».
+После создания аккаунта будет отображён секрет доступа. Сохраните его, т.к. больше Harbor его показывать не будет!
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_new_project_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Главная страница Harbor...">
 </div>
 
 На этом настройка Harbor завершена! 🎉
@@ -762,8 +770,13 @@ drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
 Загрузите скачанные образы в приватный registry (укажите редакцию DKP и учётные данные пользователя, созданного в Harbor):
 
 ```bash
-d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
+
+Здесь:
+
+* `<ROBOT_ACCOUNT_NAME>` — имя robot-аккаунта;
+* `<PASSWORD>` — токен, полученный по завершении создания robot-аккаунта.
 
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
 
@@ -943,7 +956,7 @@ Login Succeeded
 useradd deckhouse -m -s /bin/bash -G sudo
 echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 mkdir /home/deckhouse/.ssh
-export KEY='ssh-ed25519 AAAAB3NzaC1yc2EAAAADA...'
+export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
 echo $KEY >> /home/deckhouse/.ssh/authorized_keys
 chown -R deckhouse:deckhouse /home/deckhouse
 chmod 700 /home/deckhouse/.ssh
@@ -951,10 +964,8 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="Как узнать публичную часть ключа..." %}
-Узнать публичную часть ключа можно командой `cat ~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
+Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
 {% endofftopic %}
-
-> Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
 
 В результате этих команд:
 
@@ -1031,6 +1042,54 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
   settings:
   controlPlaneConfigurator:
     dexCAMode: FromIngressSecret
+  ```
+
+* После `user-authn` можно сразу добавить конфигурацию пользователя, под которым будет осуществляться вход в веб-интерфейсы DKP:
+
+  ```yaml
+  apiVersion: deckhouse.io/v1
+  kind: User
+  metadata:
+    name: admin
+  spec:
+    email: admin@deckhouse.io
+    password: JDJiJDEwJHZhRjJzbFJTQm9iMU44Uk1ybXlGUnVlVGM3c2wwb0NGaVJxM3BWTEhTSC44VUp3NnFPdGJT
+  ---
+  apiVersion: deckhouse.io/v1
+  kind: ClusterAuthorizationRule
+  metadata:
+    name: admin
+  spec:
+    accessLevel: SuperAdmin
+    allowScale: true
+    portForwarding: true
+    subjects:
+      - kind: User
+        name: admin@deckhouse.io
+  ```
+
+  > В поле `password` указывается хэш-сумма пароля пользователя. Сгенерирвать её можно командой `echo -n 'mivrk22l77' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`, где пароль `mivrk22l77`.
+
+* Добавьте конфигурацию Ingress-контроллера, чтобы веб-интерфейсы стали доступны по адресу, указанному в шаблоне `publicDomainTemplate`:
+
+  ```yaml
+  ---
+  apiVersion: deckhouse.io/v1
+  kind: IngressNginxController
+  metadata:
+    name: main
+  spec:
+    ingressClass: nginx
+    inlet: HostPort
+    hostPort:
+      httpPort: 80
+      httpsPort: 443
+    nodeSelector:
+      node-role.kubernetes.io/control-plane: ""
+      node-role.kubernetes.io/master: ""
+    tolerations:
+      - effect: NoSchedule
+        key: node-role.kubernetes.io/control-plane
   ```
 
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
@@ -1152,6 +1211,42 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  email: admin@deckhouse.io
+  password: JDJiJDEwJHZhRjJzbFJTQm9iMU44Uk1ybXlGUnVlVGM3c2wwb0NGaVJxM3BWTEhTSC44VUp3NnFPdGJT
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  accessLevel: SuperAdmin
+  allowScale: true
+  portForwarding: true
+  subjects:
+    - kind: User
+      name: admin@deckhouse.io
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+    node-role.kubernetes.io/master: ""
+  tolerations:
+    - effect: NoSchedule
+      key: node-role.kubernetes.io/control-plane
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1218,12 +1313,10 @@ docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/t
 Запустите установку DKP командой (укажите внутренний IP-адрес master-узла):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_rsa \
   --config=/config.yml \
   --ask-become-pass
 ```
-
-> Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это может быть `id_rsa`, а для ключа с ED25519-шифрованием — `id_ed25519`.
 
 Процесс установки может занять до 30 минут в зависимости от скорости сетевого соединения.
 
@@ -1291,7 +1384,7 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
 * Сгенерируйте SSH-ключ с пустой парольной фразой. Для этого выполните на master-узле следующую команду:
 
   ```bash
-  ssh-keygen -t ed25519 -f /dev/shm/caps-id -C "" -N ""
+  ssh-keygen -t rsa -f /dev/shm/caps-id -C "" -N ""
   ```
 
 * Создайте в кластере ресурс [SSHCredentials](../../../../modules/node-manager/cr.html#sshcredentials). Для этого выполните на master-узле следующую команду:
@@ -1387,102 +1480,6 @@ pdpl-user -i 63 caps
 
   Запуск всех компонентов DKP после завершения установки может занять некоторое время.
 
-## Настройка Ingress-контроллера и создание пользователя
-
-### Установка ingress-контроллера
-
-Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
-
-```bash
-$ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
-NAME                                         READY   STATUS    RESTARTS    AGE
-kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
-```
-
-Создайте на master-узле файл `ingress-nginx-controller.yml`, содержащий конфигурацию Ingress-контроллера:
-
-```yaml
-# Секция, описывающая параметры Ingress NGINX controller.
-# https://deckhouse.ru/modules/ingress-nginx/cr.html
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: nginx
-spec:
-  # Имя Ingress-класса для обслуживания Ingress NGINX controller.
-  ingressClass: nginx
-  # Способ поступления трафика из внешнего мира.
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-  # Описывает, на каких узлах будет находиться компонент.
-  # Возможно, захотите изменить.
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-  tolerations:
-  - effect: NoSchedule
-    key: node-role.kubernetes.io/control-plane
-    operator: Exists
-```
-
-Примените его, выполнив на master-узле следующую команду:
-
-```bash
-sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
-```
-
-Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
-
-```console
-$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
-NAME                                       READY   STATUS    RESTARTS   AGE
-controller-nginx-r6hxc                     3/3     Running   0          5m
-```
-
-### Создание пользователя для доступа в веб-интерфейсы кластера
-
-Создайте на master-узле файл `user.yml`, содержащий описание учётной записи пользователя и прав доступа:
-
-```yaml
-# Настройки RBAC и авторизации.
-# https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  # Список учётных записей Kubernetes RBAC.
-  subjects:
-  - kind: User
-    name: admin@deckhouse.io
-  # Предустановленный шаблон уровня доступа.
-  accessLevel: SuperAdmin
-  # Разрешить пользователю делать kubectl port-forward.
-  portForwarding: true
----
-# Данные статического пользователя.
-# https://deckhouse.ru/modules/user-authn/cr.html#user
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: admin
-spec:
-  # E-mail пользователя.
-  email: admin@deckhouse.io
-  # Это хеш пароля 3xqgv2auys, сгенерированного сейчас.
-  # Сгенерируйте свой или используйте этот, но только для тестирования:
-  # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # Возможно, захотите изменить.
-  password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
-```
-
-Примените его, выполнив на master-узле следующую команду:
-
-```console
-sudo -i d8 k create -f $PWD/user.yml
-```
-
 ## Настройка DNS-записей
 
 Для доступа к веб-интерфейсам кластера настройте соответствие следующих доменных имён внутреннему IP-адресу master-узла (используйте DNS имена, в соответствии с шаблоном DNS-имен, указанным в параметре [publicDomainTemplate](../documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate)). Пример для шаблона DNS-имён `%s.example.com`:
@@ -1500,7 +1497,6 @@ istio.example.com
 istio-api-proxy.example.com
 kubeconfig.example.com
 openvpn-admin.example.com
-registry.example.com
 prometheus.example.com
 status.example.com
 tools.example.com
