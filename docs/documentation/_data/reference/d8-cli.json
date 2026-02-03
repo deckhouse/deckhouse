@@ -1,9 +1,7 @@
-{"level":"warn","logger":"d8.system-command.plugins-command","msg":"use homedir instead of default d8 plugins path in '/opt/deckhouse/lib/deckhouse-cli'","error":"mkdir /opt/deckhouse/lib: permission denied","new_path":"/opt/deckhouse/lib/deckhouse-cli","time":"2026-02-03T16:19:07+03:00"}
-{"level":"warn","logger":"d8.package-command.plugins-command","msg":"use homedir instead of default d8 plugins path in '/opt/deckhouse/lib/deckhouse-cli'","error":"mkdir /opt/deckhouse/lib: permission denied","new_path":"/opt/deckhouse/lib/deckhouse-cli","time":"2026-02-03T16:19:07+03:00"}
 {
   "name": "d8",
   "description": "d8 controls the Deckhouse Kubernetes Platform",
-  "version": "v0.25.3",
+  "version": "v0.27.1",
   "aliases": null,
   "flags": {
     "help": {
@@ -39643,6 +39641,11 @@
               "shorthand": "",
               "global": false
             },
+            "ignore-suspend": {
+              "description": "Ignore suspended release channels and continue mirroring. Use with caution.",
+              "shorthand": "",
+              "global": false
+            },
             "images-bundle-chunk-size": {
               "description": "Split resulting bundle file into chunks of at most N gigabytes",
               "shorthand": "c",
@@ -39767,13 +39770,6 @@
       ]
     },
     {
-      "name": "package",
-      "description": "Package swiss tool",
-      "aliases": [],
-      "flags": {},
-      "subcommands": null
-    },
-    {
       "name": "status",
       "description": "Get cluster status information",
       "aliases": null,
@@ -39797,6 +39793,13 @@
       "aliases": null,
       "flags": {},
       "subcommands": [
+        {
+          "name": "agent",
+          "description": "Start a Stronghold agent",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
         {
           "name": "auth",
           "description": "Interact with auth methods",
@@ -39889,6 +39892,13 @@
           "subcommands": null
         },
         {
+          "name": "proxy",
+          "description": "Start a Stronghold Proxy",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "read",
           "description": "Read data and retrieves secrets",
           "aliases": null,
@@ -39938,6 +39948,13 @@
           "subcommands": null
         },
         {
+          "name": "version-history",
+          "description": "Prints the version history of the target Stronghold server",
+          "aliases": null,
+          "flags": {},
+          "subcommands": null
+        },
+        {
           "name": "write",
           "description": "Write data, configuration, and secrets",
           "aliases": null,
@@ -39948,14 +39965,483 @@
     },
     {
       "name": "system",
-      "description": "Operate system options in DKP",
+      "description": "Operate system options. Aliases: s, p, platform",
       "aliases": [
         "s",
         "p",
         "platform"
       ],
-      "flags": {},
-      "subcommands": null
+      "flags": {
+        "context": {
+          "description": "The name of the kubeconfig context to use",
+          "shorthand": "",
+          "global": false
+        },
+        "kubeconfig": {
+          "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+          "shorthand": "k",
+          "global": false
+        }
+      },
+      "subcommands": [
+        {
+          "name": "collect-debug-info",
+          "description": "Collect debug info.",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "exclude": {
+              "description": "Exclude specific files from the debug archive. Use comma-separated values",
+              "shorthand": "",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "list-exclude": {
+              "description": "List all files that can be excluded from the debug archive",
+              "shorthand": "l",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "edit",
+          "description": "Edit configuration files",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "editor": {
+              "description": "Your favourite editor.",
+              "shorthand": "e",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "cluster-configuration",
+              "description": "Edit cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "editor": {
+                  "description": "Your favourite editor.",
+                  "shorthand": "e",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "provider-cluster-configuration",
+              "description": "Edit provider-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "editor": {
+                  "description": "Your favourite editor.",
+                  "shorthand": "e",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "static-cluster-configuration",
+              "description": "Edit static-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "editor": {
+                  "description": "Your favourite editor.",
+                  "shorthand": "e",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "get",
+          "description": "Get configuration files",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "cluster-configuration",
+              "description": "Get cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "provider-cluster-configuration",
+              "description": "Get provider-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "static-cluster-configuration",
+              "description": "Get static-cluster-configuration.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "logs",
+          "description": "Inspect deckhouse-controller logs.",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "follow": {
+              "description": "Specify if the logs should be streamed.",
+              "shorthand": "f",
+              "global": false
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            },
+            "since": {
+              "description": "Show logs newer than a relative duration like 5s, 2m, or 1h. Only one of since-time / since may be used.",
+              "shorthand": "",
+              "global": false
+            },
+            "since-time": {
+              "description": "Show logs after a specific timestamp, e.g. --since-time='2025-05-19 12:00:00'. Only one of since-time / since may be used.",
+              "shorthand": "",
+              "global": false
+            },
+            "tail": {
+              "description": "Limit the number of lines in the output to the last N lines. Defaults to -1 with no limit.",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "module",
+          "description": "Operate the Deckhouse Kubernetes Platform modules",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "apply-now \u003cmodule-name\u003e \u003cversion\u003e",
+              "description": "Apply a module release immediately, bypassing update windows.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "approve \u003cmodule-name\u003e \u003cversion\u003e",
+              "description": "Approve a pending module release for Manual update policy.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "disable",
+              "description": "Disable module.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "enable",
+              "description": "Enable module.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "list",
+              "description": "List enabled modules.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "editor": {
+                  "description": "Your favourite editor.",
+                  "shorthand": "e",
+                  "global": false
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "snapshots",
+              "description": "Dump shapshots.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "values",
+              "description": "Dump values.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        },
+        {
+          "name": "queue",
+          "description": "Dump queues.",
+          "aliases": null,
+          "flags": {
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+              "shorthand": "k",
+              "global": true
+            }
+          },
+          "subcommands": [
+            {
+              "name": "list",
+              "description": "Dump all queues.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: json|yaml|text.",
+                  "shorthand": "o",
+                  "global": false
+                },
+                "show-empty": {
+                  "description": "Show empty queues.",
+                  "shorthand": "e",
+                  "global": false
+                },
+                "watch": {
+                  "description": "Watch for changes to the queue list.",
+                  "shorthand": "w",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "main",
+              "description": "Dump main queue.",
+              "aliases": null,
+              "flags": {
+                "context": {
+                  "description": "The name of the kubeconfig context to use",
+                  "shorthand": "",
+                  "global": true
+                },
+                "kubeconfig": {
+                  "description": "KubeConfig of the cluster. (default is $KUBECONFIG when it is set, $HOME/.kube/config otherwise)",
+                  "shorthand": "k",
+                  "global": true
+                },
+                "output": {
+                  "description": "Output format: json|yaml|text.",
+                  "shorthand": "o",
+                  "global": false
+                }
+              },
+              "subcommands": null
+            }
+          ]
+        }
+      ]
     },
     {
       "name": "tools",
@@ -39984,6 +40470,127 @@
             }
           },
           "subcommands": null
+        },
+        {
+          "name": "imagedigest",
+          "description": "",
+          "aliases": null,
+          "flags": {
+            "debug": {
+              "description": "Enable debug logging",
+              "shorthand": "d",
+              "global": false
+            },
+            "insecure": {
+              "description": "Allow insecure connections to registries (skip TLS verification)",
+              "shorthand": "i",
+              "global": false
+            },
+            "json": {
+              "description": "Use JSON formatter for output logs",
+              "shorthand": "",
+              "global": false
+            }
+          },
+          "subcommands": [
+            {
+              "name": "add \u003cimage\u003e",
+              "description": "Calculating and adding the image digest to the image metadata according to the GOST standard Streebog (GOST R 34.11-2012)",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug logging",
+                  "shorthand": "d",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow insecure connections to registries (skip TLS verification)",
+                  "shorthand": "i",
+                  "global": true
+                },
+                "json": {
+                  "description": "Use JSON formatter for output logs",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "calculate \u003cimage\u003e",
+              "description": "Calculating the image digest according to the GOST standard Streebog (GOST R 34.11-2012)",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug logging",
+                  "shorthand": "d",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow insecure connections to registries (skip TLS verification)",
+                  "shorthand": "i",
+                  "global": true
+                },
+                "json": {
+                  "description": "Use JSON formatter for output logs",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "calculate-from-file \u003cfile\u003e",
+              "description": "Calculating the file digest according to the GOST standard Streebog (GOST R 34.11-2012). For stdin use '-'",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug logging",
+                  "shorthand": "d",
+                  "global": true
+                },
+                "insecure": {
+                  "description": "Allow insecure connections to registries (skip TLS verification)",
+                  "shorthand": "i",
+                  "global": true
+                },
+                "json": {
+                  "description": "Use JSON formatter for output logs",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            },
+            {
+              "name": "validate \u003cimage\u003e",
+              "description": "Validating the image digest in the image metadata calculated according to the GOST standard Streebog (GOST R 34.11-2012)",
+              "aliases": null,
+              "flags": {
+                "debug": {
+                  "description": "Enable debug logging",
+                  "shorthand": "d",
+                  "global": true
+                },
+                "fix": {
+                  "description": "Fix GOST Image Digest if it is incorrect",
+                  "shorthand": "",
+                  "global": false
+                },
+                "insecure": {
+                  "description": "Allow insecure connections to registries (skip TLS verification)",
+                  "shorthand": "i",
+                  "global": true
+                },
+                "json": {
+                  "description": "Use JSON formatter for output logs",
+                  "shorthand": "",
+                  "global": true
+                }
+              },
+              "subcommands": null
+            }
+          ]
         },
         {
           "name": "sig-migrate",
@@ -40144,6 +40751,267 @@
         }
       },
       "subcommands": [
+        {
+          "name": "ansible-inventory",
+          "description": "Generate ansible inventory from virtual machines (ansible inventory script compatible).",
+          "aliases": null,
+          "flags": {
+            "as": {
+              "description": "Username to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "as-group": {
+              "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-uid": {
+              "description": "UID to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "certificate-authority": {
+              "description": "Path to a cert file for the certificate authority",
+              "shorthand": "",
+              "global": true
+            },
+            "client-certificate": {
+              "description": "Path to a client certificate file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "client-key": {
+              "description": "Path to a client key file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "cluster": {
+              "description": "The name of the kubeconfig cluster to use",
+              "shorthand": "",
+              "global": true
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "disable-compression": {
+              "description": "If true, opt-out of response compression for all requests to the server",
+              "shorthand": "",
+              "global": true
+            },
+            "host": {
+              "description": "Return variables for specific host",
+              "shorthand": "",
+              "global": false
+            },
+            "insecure-skip-tls-verify": {
+              "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "list": {
+              "description": "Return all hosts (default behavior if no arguments)",
+              "shorthand": "",
+              "global": false
+            },
+            "log-flush-frequency": {
+              "description": "Maximum number of seconds between log flushes",
+              "shorthand": "",
+              "global": true
+            },
+            "namespace": {
+              "description": "Namespace to list virtual machines from (overrides kubeconfig context namespace)",
+              "shorthand": "n",
+              "global": false
+            },
+            "output": {
+              "description": "Output format: json, ini, or yaml (default: json)",
+              "shorthand": "o",
+              "global": false
+            },
+            "password": {
+              "description": "Password for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "proxy-url": {
+              "description": "If provided, this URL will be used to connect via proxy",
+              "shorthand": "",
+              "global": true
+            },
+            "request-timeout": {
+              "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "server": {
+              "description": "The address and port of the Kubernetes API server",
+              "shorthand": "s",
+              "global": true
+            },
+            "tls-server-name": {
+              "description": "If provided, this name will be used to validate server certificate. If this is not provided, hostname used to contact the server is used.",
+              "shorthand": "",
+              "global": true
+            },
+            "token": {
+              "description": "Bearer token for authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "user": {
+              "description": "The name of the kubeconfig user to use",
+              "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Username for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "v": {
+              "description": "number for the log level verbosity",
+              "shorthand": "v",
+              "global": true
+            },
+            "vmodule": {
+              "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
+        {
+          "name": "collect-debug-info (VirtualMachine)",
+          "description": "Collect debug information for VM: configuration, events, and logs. Output is written as compressed archive to stdout.",
+          "aliases": null,
+          "flags": {
+            "as": {
+              "description": "Username to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "as-group": {
+              "description": "Group to impersonate for the operation, this flag can be repeated to specify multiple groups.",
+              "shorthand": "",
+              "global": true
+            },
+            "as-uid": {
+              "description": "UID to impersonate for the operation",
+              "shorthand": "",
+              "global": true
+            },
+            "certificate-authority": {
+              "description": "Path to a cert file for the certificate authority",
+              "shorthand": "",
+              "global": true
+            },
+            "client-certificate": {
+              "description": "Path to a client certificate file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "client-key": {
+              "description": "Path to a client key file for TLS",
+              "shorthand": "",
+              "global": true
+            },
+            "cluster": {
+              "description": "The name of the kubeconfig cluster to use",
+              "shorthand": "",
+              "global": true
+            },
+            "context": {
+              "description": "The name of the kubeconfig context to use",
+              "shorthand": "",
+              "global": true
+            },
+            "disable-compression": {
+              "description": "If true, opt-out of response compression for all requests to the server",
+              "shorthand": "",
+              "global": true
+            },
+            "insecure-skip-tls-verify": {
+              "description": "If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure",
+              "shorthand": "",
+              "global": true
+            },
+            "kubeconfig": {
+              "description": "Path to the kubeconfig file to use for CLI requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "log-flush-frequency": {
+              "description": "Maximum number of seconds between log flushes",
+              "shorthand": "",
+              "global": true
+            },
+            "namespace": {
+              "description": "If present, the namespace scope for this CLI request",
+              "shorthand": "n",
+              "global": true
+            },
+            "password": {
+              "description": "Password for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "proxy-url": {
+              "description": "If provided, this URL will be used to connect via proxy",
+              "shorthand": "",
+              "global": true
+            },
+            "request-timeout": {
+              "description": "The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests.",
+              "shorthand": "",
+              "global": true
+            },
+            "server": {
+              "description": "The address and port of the Kubernetes API server",
+              "shorthand": "s",
+              "global": true
+            },
+            "tls-server-name": {
+              "description": "If provided, this name will be used to validate server certificate. If this is not provided, hostname used to contact the server is used.",
+              "shorthand": "",
+              "global": true
+            },
+            "token": {
+              "description": "Bearer token for authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "user": {
+              "description": "The name of the kubeconfig user to use",
+              "shorthand": "",
+              "global": true
+            },
+            "username": {
+              "description": "Username for basic authentication to the API server",
+              "shorthand": "",
+              "global": true
+            },
+            "v": {
+              "description": "number for the log level verbosity",
+              "shorthand": "v",
+              "global": true
+            },
+            "vmodule": {
+              "description": "comma-separated list of pattern=N settings for file-filtered logging (only works for the default text log format)",
+              "shorthand": "",
+              "global": true
+            }
+          },
+          "subcommands": null
+        },
         {
           "name": "console (VirtualMachine)",
           "description": "Connect to a console of a virtual machine.",
