@@ -268,9 +268,6 @@ func (list *List) Up(upstream *Upstream) {
 }
 
 func (list *List) upWithTier(upstream *Upstream, newTier Tier) {
-	list.mu.Lock()
-	defer list.mu.Unlock()
-
 	for i := range list.nodes {
 		if list.cmp(list.nodes[i].backend, upstream) {
 			list.nodes[i].score += successScoreDelta
@@ -303,9 +300,6 @@ func (list *List) Down(upstream *Upstream) {
 }
 
 func (list *List) downWithTier(upstream *Upstream, newTier Tier) {
-	list.mu.Lock()
-	defer list.mu.Unlock()
-
 	for i := range list.nodes {
 		if list.cmp(list.nodes[i].backend, upstream) {
 			list.nodes[i].score += failScoreDelta
