@@ -33,8 +33,6 @@ const (
 	requirementsDebianKey                  = "nodesMinimalOSVersionDebian"
 	unmetCloudConditionsKey                = "nodeManager:unmetCloudConditions"
 	unmetCloudConditionsRequirementsKey    = "unmetCloudConditions"
-	cgroupV2SupportValuesKey               = "nodeManager:cgroupV2Support"
-	cgroupV2SupportRequirementsKey         = "cgroupV2Support"
 	unsupportedContainerdV1ValuesKey       = "nodeManager:unsupportedContainerdV1"
 	unsupportedContainerdV1RequirementsKey = "checkUnsupportedContainerdV1"
 )
