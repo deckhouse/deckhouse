@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
-        
+
         let valuesText;
         if (isEditionsFilter) {
           // Convert edition codes to titles
@@ -244,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           valuesText = Array.from(entry.values).join(', ');
         }
-        
+
         const checkboxText = `${filterName}: ${valuesText}`;
 
         const selectedElement = createSelectedFilterElement(checkboxText, () => {
@@ -323,7 +323,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if(selectedTags.length > 0) {
         const articleTags = Array.from(
           article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
-        ).map(tag => tag.textContent);
+        ).map(tag => tag.textContent.capitalize().replace('-', ' ').replace(/ ui$/g, ' UI').trim());
 
         if(!selectedTags.every(tag => articleTags.includes(tag))) {
           return false;
