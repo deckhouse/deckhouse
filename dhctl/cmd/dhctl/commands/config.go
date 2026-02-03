@@ -144,8 +144,9 @@ func DefineRenderControlPlaneAndPKI(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		return template.PreparePKI(templateController, "localhost", "127.0.0.1", "127.0.0.1", templateData)
 	}
 
-	return cmd.Action(func(c *kingpin.ParseContext) error {
-		ctx := kpcontext.ExtractContext(c)
+	cmd.Action(func(c *kingpin.ParseContext) error {
+		return log.Process("bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
+	})
 
 		return log.ProcessCtx(ctx, "bootstrap", "Prepare ControlPlaneManifest and PKI", runFunc)
 	})
