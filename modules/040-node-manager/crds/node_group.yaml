@@ -2394,6 +2394,11 @@ spec:
                       properties:
                         timeout:
                           type: string
+                          pattern: "^[0-9]+[smh]{1}$"
+                          default: 60s
+                          description: |
+                            Watchdog timeout duration. Should be specified in seconds, minutes or hours.
+                          x-doc-default: 60s
                       required:
                         - timeout
               oneOf:

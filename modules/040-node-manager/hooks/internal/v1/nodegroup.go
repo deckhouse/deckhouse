@@ -17,7 +17,7 @@ limitations under the License.
 package v1
 
 import (
-	"fmt"
+	"encoding/json"
 	"time"
 
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -440,12 +440,29 @@ type Fencing struct {
 }
 
 func (f Fencing) IsEmpty() bool {
-	fmt.Println("TODO")
 	return f.Mode == ""
 }
 
 type FencingWatchdog struct {
-	Timeout string `json:"timeout,omitempty"`
+	Timeout int64 `json:"timeout,omitempty"`
+}
+
+func (f *FencingWatchdog) UnmarshalJSON(data []byte) error {
+	var timeout string
+
+	err := json.Unmarshal(data, &timeout)
+	if err != nil {
+		return err
+	}
+
+	duration, err := time.ParseDuration(timeout)
+	if err != nil {
+		return err
+	}
+
+	f.Timeout = int64(duration.Seconds())
+
+	return nil
 }
 
 type NodeGroupConditionType string
