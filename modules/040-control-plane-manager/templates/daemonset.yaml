@@ -238,10 +238,6 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
-      annotations:
-        checksum/config: {{ include "control_plane_config" (list $ $tpl_context) | sha256sum }}
-        checksum/pki: {{ $.Values.controlPlaneManager.internal.pkiChecksum | quote }}
-        rollout-epoch: {{ $.Values.controlPlaneManager.internal.rolloutEpoch | quote }}
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
