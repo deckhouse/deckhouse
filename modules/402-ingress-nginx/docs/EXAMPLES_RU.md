@@ -167,11 +167,6 @@ metallb:
      isDefault: false
      nodeSelector:
        node-role.deckhouse.io/frontend: ""
-     tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
      type: L2
    ```
 
