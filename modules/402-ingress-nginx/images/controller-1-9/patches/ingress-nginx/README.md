@@ -91,3 +91,12 @@ This patch adds a metric that reflects current GeoIP version in use (0 - no geoi
 
 ### 018-skip-tls-verification-maxmind.patch
 Adds a flag to disable TLS verification when downloading from the MaxMind mirror.
+
+### 021-cve-03022026.patch
+
+Fixes the following CVEs:
+CVE-2026-1580
+CVE-2026-24512
+CVE-2026-24513
+CVE-2026-24514
+https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts

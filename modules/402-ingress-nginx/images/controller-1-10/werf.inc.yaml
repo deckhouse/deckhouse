@@ -60,10 +60,12 @@ shell:
   - patch -p1 < /patches/019-fix-sorting.patch
   - patch -p1 < /patches/020-geoip-ver-metric.patch
   - patch -p1 < /patches/021-skip-tls-verification-maxmind.patch
+  - patch -p1 < /patches/024-cve-03022026-controller.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
   - patch -p1 < /patches/007-auth-cookie-always.patch
+  - patch -p1 < /patches/025-cve-03022026-rootfs.patch
   # pass env for build
   - cd /src/ingress-nginx
   - echo "export COMMIT_SHA=git-$(git rev-parse --short HEAD)" > .env_pass
