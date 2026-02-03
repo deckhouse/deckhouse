@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,16 +34,52 @@ import (
 	"deckhouse.io/webhook/internal/templater"
 )
 
+const (
+	hooksBaseDir         = "hooks"
+	webhooksSubDir       = "webhooks"
+	conversionSubDir     = "conversion"
+	webhookFileExtension = ".py"
+	directoryPermissions = 0755
+	filePermissions      = 0755
+)
+
 // ConversionWebhookReconciler reconciles a ConversionWebhook object
 type ConversionWebhookReconciler struct {
-	// Set to true if shell operator needs to be reloaded
-	IsReloadShellNeed *atomic.Bool
-	Client            client.Client
-	Scheme            *runtime.Scheme
-	// Slog logger
-	Logger *log.Logger
-	// Go template with python conversion webhook
-	PythonTemplate string
+	isReloadShellNeed *atomic.Bool
+	client            client.Client
+	scheme            *runtime.Scheme
+	logger            *log.Logger
+	pythonTemplate    string
+}
+
+// NewConversionWebhookReconciler creates a new ConversionWebhookReconciler.
+// The isReloadShellNeed flag is shared between reconcilers to signal shell-operator reload.
+func NewConversionWebhookReconciler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	logger *log.Logger,
+	pythonTemplate string,
+	isReloadShellNeed *atomic.Bool,
+) *ConversionWebhookReconciler {
+	return &ConversionWebhookReconciler{
+		isReloadShellNeed: isReloadShellNeed,
+		client:            k8sClient,
+		scheme:            scheme,
+		logger:            logger.Named("conversion-webhook"),
+		pythonTemplate:    pythonTemplate,
+	}
+}
+
+// webhookDir returns the directory path for a webhook's files.
+// Example: hooks/deckhouse/webhooks/conversion
+func (r *ConversionWebhookReconciler) webhookDir(webhookName string) string {
+	return filepath.Join(hooksBaseDir, webhookName, webhooksSubDir, conversionSubDir)
+}
+
+// webhookFilePath returns the full path to a webhook's Python file.
+// Example: hooks/deckhouse/webhooks/conversion/deckhouse.py
+func (r *ConversionWebhookReconciler) webhookFilePath(webhookName string) string {
+	return filepath.Join(r.webhookDir(webhookName), webhookName+webhookFileExtension)
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -52,34 +89,34 @@ type ConversionWebhookReconciler struct {
 func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	r.Logger.Debug("conversion webhook processing started", slog.String("resource_name", req.Name))
+	r.logger.Debug("conversion webhook processing started", slog.String("resource_name", req.Name))
 	defer func() {
-		r.Logger.Debug("conversion webhook processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
+		r.logger.Debug("conversion webhook processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
 	}()
 
 	webhook := new(deckhouseiov1alpha1.ConversionWebhook)
-	err := r.Client.Get(ctx, req.NamespacedName, webhook)
+	err := r.client.Get(ctx, req.NamespacedName, webhook)
 	if err != nil {
-		r.Logger.Warn("error get resource", slog.String("name", req.Name))
+		r.logger.Warn("error get resource", slog.String("name", req.Name))
 		// resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
 			return res, nil
 		}
 
-		r.Logger.Debug("get conversion webhook", log.Err(err))
+		r.logger.Debug("get conversion webhook", log.Err(err))
 
 		return res, err
 	}
 
 	// resource marked as "to delete"
-	r.Logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
+	r.logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
 	if !webhook.DeletionTimestamp.IsZero() {
-		r.Logger.Debug("conversion webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
+		r.logger.Debug("conversion webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
 		res, err := r.handleDeleteConversionWebhook(ctx, webhook)
 		if err != nil {
-			r.Logger.Warn("delete conversion webhook", log.Err(err))
+			r.logger.Warn("delete conversion webhook", log.Err(err))
 
 			return res, err
 		}
@@ -88,7 +125,7 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	res, err = r.handleProcessConversionWebhook(ctx, webhook)
 	if err != nil {
-		r.Logger.Warn("process conversion webhook", log.Err(err))
+		r.logger.Warn("process conversion webhook", log.Err(err))
 
 		return res, err
 	}
@@ -99,40 +136,35 @@ func (r *ConversionWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	_, _ = ctx, cwh
-
-	// example path: hooks/002-deckhouse/webhooks/conversion/
-	webhookDir := "hooks/" + cwh.Name + "/webhooks/conversion/"
-	err := os.MkdirAll(webhookDir, 0777)
-	if err != nil {
-		log.Error("create dir: %w", err)
+	webhookDir := r.webhookDir(cwh.Name)
+	if err := os.MkdirAll(webhookDir, directoryPermissions); err != nil {
 		res.Requeue = true
+		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
-	buf, err := templater.RenderConversionTemplate(r.PythonTemplate, cwh)
+	buf, err := templater.RenderConversionTemplate(r.pythonTemplate, cwh)
 	if err != nil {
 		return res, fmt.Errorf("render template: %w", err)
 	}
 
-	// filepath example: hooks/002-deckhouse/webhooks/conversion/deckhouse.py
-	err = os.WriteFile(webhookDir+cwh.Name+".py", buf.Bytes(), 0755)
-	if err != nil {
-		log.Error("create file: %w", err)
+	webhookFile := r.webhookFilePath(cwh.Name)
+	if err := os.WriteFile(webhookFile, buf.Bytes(), filePermissions); err != nil {
+		r.logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
-	r.IsReloadShellNeed.Store(true)
+	r.isReloadShellNeed.Store(true)
 
 	// add finalizer
 	if !controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
-		r.Logger.Debug("add finalizer")
+		r.logger.Debug("add finalizer")
 		controllerutil.AddFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
-		err = r.Client.Update(ctx, cwh)
-		if err != nil {
+		if err := r.client.Update(ctx, cwh); err != nil {
 			res.Requeue = true
-			if removeErr := os.Remove(webhookDir + cwh.Name + ".py"); removeErr != nil {
-				r.Logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+			if removeErr := os.Remove(webhookFile); removeErr != nil {
+				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
@@ -144,25 +176,20 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	_, _ = ctx, cwh
-
-	// filepath example: hooks/deckhouse/webhooks/conversion/deckhouse.py
-	filePath := "hooks/" + cwh.Name + "/webhooks/conversion/" + cwh.Name + ".py"
-	err := os.Remove(filePath)
-	if err != nil && !os.IsNotExist(err) {
+	webhookFile := r.webhookFilePath(cwh.Name)
+	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
 		res.Requeue = true
-		return res, fmt.Errorf("error delete webhook file %s: %w", filePath, err)
+		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
-	r.IsReloadShellNeed.Store(true)
+	r.isReloadShellNeed.Store(true)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
-		r.Logger.Debug("remove finalizer")
+		r.logger.Debug("remove finalizer")
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
-		err = r.Client.Update(ctx, cwh)
-		if err != nil {
+		if err := r.client.Update(ctx, cwh); err != nil {
 			res.Requeue = true
 			return res, fmt.Errorf("remove finalizer for %s: %w", cwh.Name, err)
 		}

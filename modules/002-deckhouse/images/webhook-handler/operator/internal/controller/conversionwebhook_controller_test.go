@@ -28,12 +28,13 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/yaml"
 )
 
-func setupTestConversionReconciler() *ConversionWebhookReconciler {
+func setupTestConversionReconciler() (*ConversionWebhookReconciler, client.Client) {
 	// create fake kubernetes client
 	sch := runtime.NewScheme()
 	if err := deckhouseiov1alpha1.AddToScheme(sch); err != nil {
@@ -50,13 +51,15 @@ func setupTestConversionReconciler() *ConversionWebhookReconciler {
 	var isReloadShellNeed atomic.Bool
 	isReloadShellNeed.Store(false)
 
-	return &ConversionWebhookReconciler{
-		IsReloadShellNeed: &isReloadShellNeed,
-		Client:            k8sClient,
-		Scheme:            sch,
-		Logger:            log.NewLogger(log.WithLevel(slog.LevelDebug)),
-		PythonTemplate:    string(tpl),
-	}
+	reconciler := NewConversionWebhookReconciler(
+		k8sClient,
+		sch,
+		log.NewLogger(log.WithLevel(slog.LevelDebug)),
+		string(tpl),
+		&isReloadShellNeed,
+	)
+
+	return reconciler, k8sClient
 }
 
 func getConversionStructFromYamlFile(filename string) (*deckhouseiov1alpha1.ConversionWebhook, error) {
@@ -89,13 +92,13 @@ func getConversionStructFromYamlFile(filename string) (*deckhouseiov1alpha1.Conv
 
 func TestConversionTemplateNoError(t *testing.T) {
 	// setup
-	r := setupTestConversionReconciler()
+	r, k8sClient := setupTestConversionReconciler()
 	ctx := context.TODO()
 
 	cwh, err := getConversionStructFromYamlFile("testdata/conversion/example.deckhouse.io.yaml")
 	assert.NoError(t, err)
 
-	err = r.Client.Create(ctx, cwh)
+	err = k8sClient.Create(ctx, cwh)
 	assert.NoError(t, err)
 
 	_, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
@@ -110,16 +113,16 @@ func TestConversionTemplateNoError(t *testing.T) {
 	assert.Equal(t, string(ref), string(res))
 
 	// test delete
-	err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
 	assert.NoError(t, err)
 
-	err = r.Client.Delete(ctx, cwh)
+	err = k8sClient.Delete(ctx, cwh)
 	assert.NoError(t, err)
 
 	_, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})
 	assert.NoError(t, err)
 
-	err = r.Client.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
+	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}, cwh)
 	assert.True(t, apierrors.IsNotFound(err))
 
 	_, err = os.ReadFile("hooks/example.deckhouse.io/webhooks/conversion/example.deckhouse.io.py")
@@ -128,13 +131,13 @@ func TestConversionTemplateNoError(t *testing.T) {
 
 func TestConversionTemplateEqual(t *testing.T) {
 	// setup
-	r := setupTestConversionReconciler()
+	r, k8sClient := setupTestConversionReconciler()
 	ctx := context.TODO()
 
 	cwh, err := getConversionStructFromYamlFile("testdata/conversion/nodegroups.deckhouse.io.yaml")
 	assert.NoError(t, err)
 
-	err = r.Client.Create(ctx, cwh)
+	err = k8sClient.Create(ctx, cwh)
 	assert.NoError(t, err)
 
 	_, err = r.Reconcile(ctx, reconcile.Request{NamespacedName: types.NamespacedName{Namespace: cwh.Namespace, Name: cwh.Name}})

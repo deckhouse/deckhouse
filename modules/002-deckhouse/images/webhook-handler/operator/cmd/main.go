@@ -330,24 +330,27 @@ func main() {
 		}
 	}()
 
-	if err := (&controller.ValidationWebhookReconciler{
-		IsReloadShellNeed: &isReloadShellNeed,
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		Logger:            logger,
-		PythonTemplate:    string(validationTpl),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ValidationWebhook")
+	validationReconciler := controller.NewValidationWebhookReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		logger,
+		string(validationTpl),
+		&isReloadShellNeed,
+	)
+	if err := validationReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "ValidationWebhook")
 		os.Exit(1)
 	}
-	if err := (&controller.ConversionWebhookReconciler{
-		IsReloadShellNeed: &isReloadShellNeed,
-		Client:            mgr.GetClient(),
-		Scheme:            mgr.GetScheme(),
-		Logger:            logger,
-		PythonTemplate:    string(conversionTpl),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "ConversionWebhook")
+
+	conversionReconciler := controller.NewConversionWebhookReconciler(
+		mgr.GetClient(),
+		mgr.GetScheme(),
+		logger,
+		string(conversionTpl),
+		&isReloadShellNeed,
+	)
+	if err := conversionReconciler.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to setup controller", "controller", "ConversionWebhook")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

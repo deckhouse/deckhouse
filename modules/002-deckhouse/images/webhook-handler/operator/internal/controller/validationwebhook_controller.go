@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"sync/atomic"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -35,16 +36,52 @@ import (
 	"deckhouse.io/webhook/internal/templater"
 )
 
+const (
+	validationHooksBaseDir   = "hooks"
+	validationWebhooksSubDir = "webhooks"
+	validatingSubDir         = "validating"
+	validationWebhookFileExt = ".py"
+	validationWebhookDirectoryPerms = 0755
+	validationWebhookFilePerms      = 0755
+)
+
 // ValidationWebhookReconciler reconciles a ValidationWebhook object
 type ValidationWebhookReconciler struct {
-	// Set to true if shell operator needs to be reloaded
-	IsReloadShellNeed *atomic.Bool
-	Client            client.Client
-	Scheme            *runtime.Scheme
-	// Slog logger
-	Logger *log.Logger
-	// Go template with python validating webhook
-	PythonTemplate string
+	isReloadShellNeed *atomic.Bool
+	client            client.Client
+	scheme            *runtime.Scheme
+	logger            *log.Logger
+	pythonTemplate    string
+}
+
+// NewValidationWebhookReconciler creates a new ValidationWebhookReconciler.
+// The isReloadShellNeed flag is shared between reconcilers to signal shell-operator reload.
+func NewValidationWebhookReconciler(
+	k8sClient client.Client,
+	scheme *runtime.Scheme,
+	logger *log.Logger,
+	pythonTemplate string,
+	isReloadShellNeed *atomic.Bool,
+) *ValidationWebhookReconciler {
+	return &ValidationWebhookReconciler{
+		isReloadShellNeed: isReloadShellNeed,
+		client:            k8sClient,
+		scheme:            scheme,
+		logger:            logger.Named("validation-webhook"),
+		pythonTemplate:    pythonTemplate,
+	}
+}
+
+// webhookDir returns the directory path for a webhook's files.
+// Example: hooks/deckhouse/webhooks/validating
+func (r *ValidationWebhookReconciler) webhookDir(webhookName string) string {
+	return filepath.Join(validationHooksBaseDir, webhookName, validationWebhooksSubDir, validatingSubDir)
+}
+
+// webhookFilePath returns the full path to a webhook's Python file.
+// Example: hooks/deckhouse/webhooks/validating/deckhouse.py
+func (r *ValidationWebhookReconciler) webhookFilePath(webhookName string) string {
+	return filepath.Join(r.webhookDir(webhookName), webhookName+validationWebhookFileExt)
 }
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -54,35 +91,35 @@ type ValidationWebhookReconciler struct {
 func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	r.Logger.Debug("validating webhook processing started", slog.String("resource_name", req.Name))
+	r.logger.Debug("validating webhook processing started", slog.String("resource_name", req.Name))
 	defer func() {
-		r.Logger.Debug("validating webhook processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
+		r.logger.Debug("validating webhook processing complete", slog.String("resource_name", req.Name), slog.Any("reconcile_result", res))
 	}()
 
 	webhook := new(deckhouseiov1alpha1.ValidationWebhook)
-	err := r.Client.Get(ctx, req.NamespacedName, webhook)
+	err := r.client.Get(ctx, req.NamespacedName, webhook)
 	if err != nil {
-		r.Logger.Warn("error get resource", slog.String("name", req.Name))
+		r.logger.Warn("error get resource", slog.String("name", req.Name))
 		// resource may no longer exist, in which case we stop
 		// processing.
 		if apierrors.IsNotFound(err) {
 			return res, nil
 		}
 
-		r.Logger.Debug("get validating webhook", log.Err(err))
+		r.logger.Debug("get validating webhook", log.Err(err))
 
 		return res, err
 	}
 
 	// resource marked as "to delete"
-	r.Logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
+	r.logger.Debug("debug deletion timestamp", slog.Any("timestamp", webhook.DeletionTimestamp))
 	if !webhook.DeletionTimestamp.IsZero() {
-		r.Logger.Debug("validating webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
+		r.logger.Debug("validating webhook deletion", slog.String("deletion_timestamp", webhook.DeletionTimestamp.String()))
 
 		// TODO: retries
 		res, err := r.handleDeleteValidatingWebhook(ctx, webhook)
 		if err != nil {
-			r.Logger.Warn("delete validating webhook", log.Err(err))
+			r.logger.Warn("delete validating webhook", log.Err(err))
 
 			return res, err
 		}
@@ -91,7 +128,7 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	res, err = r.handleProcessValidatingWebhook(ctx, webhook)
 	if err != nil {
-		r.Logger.Warn("process validating webhook", log.Err(err))
+		r.logger.Warn("process validating webhook", log.Err(err))
 
 		return res, err
 	}
@@ -99,43 +136,38 @@ func (r *ValidationWebhookReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return res, nil
 }
 
-func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
+func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context.Context, vwh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	_, _ = ctx, vh
-
-	// example path: hooks/002-deckhouse/webhooks/validating/
-	webhookDir := "hooks/" + vh.Name + "/webhooks/validating/"
-	err := os.MkdirAll(webhookDir, 0777)
-	if err != nil {
-		log.Error("create dir: %w", err)
+	webhookDir := r.webhookDir(vwh.Name)
+	if err := os.MkdirAll(webhookDir, validationWebhookDirectoryPerms); err != nil {
 		res.Requeue = true
+		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
 
-	buf, err := templater.RenderValidationTemplate(r.PythonTemplate, vh)
+	buf, err := templater.RenderValidationTemplate(r.pythonTemplate, vwh)
 	if err != nil {
 		return res, fmt.Errorf("render template: %w", err)
 	}
 
-	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py
-	err = os.WriteFile(webhookDir+vh.Name+".py", buf.Bytes(), 0755)
-	if err != nil {
-		log.Error("create file: %w", err)
+	webhookFile := r.webhookFilePath(vwh.Name)
+	if err := os.WriteFile(webhookFile, buf.Bytes(), validationWebhookFilePerms); err != nil {
+		r.logger.Error("failed to write webhook file", slog.String("path", webhookFile), log.Err(err))
+		return res, fmt.Errorf("write file %s: %w", webhookFile, err)
 	}
 
-	r.IsReloadShellNeed.Store(true)
+	r.isReloadShellNeed.Store(true)
 
 	// add finalizer
-	if !controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
-		r.Logger.Debug("add finalizer")
-		controllerutil.AddFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
+	if !controllerutil.ContainsFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
+		r.logger.Debug("add finalizer")
+		controllerutil.AddFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
-		err = r.Client.Update(ctx, vh)
-		if err != nil {
+		if err := r.client.Update(ctx, vwh); err != nil {
 			res.Requeue = true
-			if removeErr := os.Remove(webhookDir + vh.Name + ".py"); removeErr != nil {
-				r.Logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
+			if removeErr := os.Remove(webhookFile); removeErr != nil {
+				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
 			return res, fmt.Errorf("add finalizer: %w", err)
 		}
@@ -147,25 +179,20 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.Context, vh *deckhouseiov1alpha1.ValidationWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
-	_, _ = ctx, vh
-
-	// filepath example: hooks/deckhouse/webhooks/validating/deckhouse.py
-	webhookDir := "hooks/" + vh.Name + "/webhooks/validating/"
-	err := os.Remove(webhookDir + vh.Name + ".py")
-	if err != nil && !os.IsNotExist(err) {
+	webhookFile := r.webhookFilePath(vh.Name)
+	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
 		res.Requeue = true
-		return res, fmt.Errorf("error delete webhook file %s: %w", webhookDir+vh.Name+".py", err)
+		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
-	r.IsReloadShellNeed.Store(true)
+	r.isReloadShellNeed.Store(true)
 
 	// remove finalizer
 	if controllerutil.ContainsFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer) {
-		r.Logger.Debug("remove finalizer")
+		r.logger.Debug("remove finalizer")
 		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
-		err = r.Client.Update(ctx, vh)
-		if err != nil {
+		if err := r.client.Update(ctx, vh); err != nil {
 			res.Requeue = true
 			return res, fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
 		}
