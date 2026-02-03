@@ -108,10 +108,11 @@ func main() {
 
 				// Waiting SIGTERM signal
 				<-stopCh
-				cancel()
 				log.Println("Received shutdown signal. Exiting.")
+				cancel()
 				return
 			}
 		}
 	}
+
 }

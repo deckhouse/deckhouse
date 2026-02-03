@@ -164,13 +164,9 @@ func (q *TaskQueue) Dequeue() *ProbeTask {
 func ProbeDialer() *net.Dialer {
 	dialer := &net.Dialer{
 		Control: func(network, address string, c syscall.RawConn) error {
-			var setsockoptErr error
-			if err := c.Control(func(fd uintptr) {
-				setsockoptErr = syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 1})
-			}); err != nil {
-				return err
-			}
-			return setsockoptErr
+			return c.Control(func(fd uintptr) {
+				_ = syscall.SetsockoptLinger(int(fd), syscall.SOL_SOCKET, syscall.SO_LINGER, &syscall.Linger{Onoff: 1, Linger: 1})
+			})
 		},
 	}
 	return dialer

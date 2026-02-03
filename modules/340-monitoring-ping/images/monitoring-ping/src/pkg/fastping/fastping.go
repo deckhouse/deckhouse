@@ -51,11 +51,7 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 
 	go func() {
 		defer wg.Done()
-
-		if err := p.listenReplies(listenCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
-			log.Warn(fmt.Sprintf("listenReplies error: %v", err))
-			errCh <- err
-		}
+		p.listenReplies(listenCtx, conn)
 		log.Debug("listenReplies goroutine stopped")
 	}()
 
@@ -67,15 +63,6 @@ func (p *Pinger) RunWithContext(ctx context.Context) error {
 		}
 		log.Debug("sendEventLoop goroutine stopped")
 	}()
-
-	// go func() {
-	// 	defer wg.Done()
-	// 	if err := p.sendPings(sendCtx, conn); err != nil && !errors.Is(err, context.Canceled) {
-	// 		log.Warn(fmt.Sprintf("sendPings error: %v", err))
-	// 		errCh <- err
-	// 	}
-	// 	log.Debug("sendPings goroutine stopped")
-	// }()
 
 	// Wait for goroutines to finish
 	go func() {

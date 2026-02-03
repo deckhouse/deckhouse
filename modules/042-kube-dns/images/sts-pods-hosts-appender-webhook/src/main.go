@@ -166,7 +166,6 @@ func main() {
 	cfg, err := initFlags()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while init flags: %s", err)
-		os.Exit(1)
 	}
 
 	mt := kwhmutating.MutatorFunc(addInitContainerToPod)

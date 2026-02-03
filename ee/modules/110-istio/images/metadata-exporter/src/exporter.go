@@ -587,7 +587,6 @@ func (exp *Exporter) CheckAuthn(header http.Header, scope string) error {
 	payloadBytes := reqToken.UnsafePayloadWithoutVerification()
 
 	var payload JwtPayload
-	// the given JwtPayload struct ABOVE should be annotated with the `json` tag in models.go
 	err = json.Unmarshal(payloadBytes, &payload)
 	if err != nil {
 		return err

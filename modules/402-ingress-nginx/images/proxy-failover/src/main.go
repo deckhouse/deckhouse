@@ -160,6 +160,7 @@ func main() {
 
 	pid, err := startNginx()
 	if err != nil {
+		watcher.Close()
 		log.Fatalf("could not start nginx process: %v", err)
 	}
 
@@ -172,6 +173,7 @@ func main() {
 		})
 
 		if err := http.ListenAndServe(listenAddr, nil); err != nil && err != http.ErrServerClosed {
+			watcher.Close()
 			log.Fatalf("could not listen on %s: %v", listenAddr, err)
 		}
 	}()
@@ -184,6 +186,7 @@ loop:
 			if event.Op == fsnotify.Remove {
 				_ = watcher.Remove(event.Name)
 				if err := watcher.Add(event.Name); err != nil {
+					watcher.Close()
 					log.Fatalf("could not add file to watcher: %v", err)
 				}
 
@@ -214,6 +217,7 @@ loop:
 
 	output, err := stopNginx()
 	if err != nil {
+		watcher.Close()
 		log.Fatalf("stopping nginx: %v", err)
 	}
 
@@ -223,6 +227,7 @@ loop:
 
 	for {
 		if err := isNginxMasterRunning(pid); err != nil {
+			watcher.Close()
 			return
 		}
 		time.Sleep(time.Second * 1)

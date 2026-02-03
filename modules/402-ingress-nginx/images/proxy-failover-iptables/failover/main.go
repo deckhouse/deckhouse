@@ -127,6 +127,7 @@ func main() {
 		select {
 		case sig := <-sigs:
 			log.Printf("caught %s signal, terminating...", sig)
+			ticker.Stop()
 			return
 
 		case <-ticker.C:

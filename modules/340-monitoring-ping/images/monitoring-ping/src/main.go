@@ -93,4 +93,5 @@ func main() {
 	log.Info("main: context canceled (SIGINT/SIGTERM), waiting for goroutines...")
 	wg.Wait()
 	log.Info("main: shutdown complete")
+	stop()
 }
