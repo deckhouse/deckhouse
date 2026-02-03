@@ -108,7 +108,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 		metrics.WithGroup(cntrdV2GroupName),
 	}
 
-	allNodesSupportCgroupV2 := true
 	hasUnsupportedContainerdV1 := false
 	for nodeInfo, err := range sdkobjectpatch.SnapshotIter[cgroupV2SupportNode](snaps) {
 		if err != nil {
@@ -130,7 +129,6 @@ func handlecntrdV2SupportMetrics(_ context.Context, input *go_hook.HookInput) er
 
 		cgroupV2UnsupportedValue := 0.0
 		if nodeInfo.CgroupVersion != cgroupV2Value {
-			allNodesSupportCgroupV2 = false
 			cgroupV2UnsupportedValue = 1.0
 		}
 		input.MetricsCollector.Set(nodesCgroupV2UnsupportedMetricName, cgroupV2UnsupportedValue, labels, options...)
