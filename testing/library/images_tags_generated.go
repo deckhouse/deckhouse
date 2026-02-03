@@ -281,8 +281,9 @@ var DefaultImagesDigests = map[string]interface{}{
 		"deschedulerVexArtifact": "imageHash-descheduler-deschedulerVexArtifact",
 	},
 	"documentation": map[string]interface{}{
-		"docsBuilder": "imageHash-documentation-docsBuilder",
-		"web":         "imageHash-documentation-web",
+		"docsBuilder":            "imageHash-documentation-docsBuilder",
+		"docsBuilderVexArtifact": "imageHash-documentation-docsBuilderVexArtifact",
+		"web":                    "imageHash-documentation-web",
 	},
 	"extendedMonitoring": map[string]interface{}{
 		"eventsExporter":             "imageHash-extendedMonitoring-eventsExporter",
