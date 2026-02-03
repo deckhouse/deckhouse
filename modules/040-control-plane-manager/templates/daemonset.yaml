@@ -342,26 +342,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list $ "updateObserver") }}
         command:
         - /update-observer
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 4264
-            scheme: HTTP
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: 4264
-            scheme: HTTP
-          initialDelaySeconds: 30
-          periodSeconds: 10
-          timeoutSeconds: 5
-          successThreshold: 1
-          failureThreshold: 3
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}

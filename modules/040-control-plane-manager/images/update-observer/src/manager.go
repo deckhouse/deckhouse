@@ -35,15 +35,8 @@ import (
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-)
-
-const (
-	healthProbeBindAddress   = ":4264"
-	pprofBindAddress         = ":4265"
-	metricsserverBindAddress = ":4266"
 )
 
 var (
@@ -63,8 +56,6 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 	cfg := controllerruntime.GetConfigOrDie()
 	controllerruntime.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
 
-	// TODO: pprof flag?
-
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
 		Scheme:           scheme,
 		LeaderElection:   true,
@@ -73,10 +64,10 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 			return ctx
 		},
 		Metrics: metricsserver.Options{
-			BindAddress: metricsserverBindAddress,
+			BindAddress: "0",
 		},
-		HealthProbeBindAddress:  healthProbeBindAddress,
-		PprofBindAddress:        "",
+		HealthProbeBindAddress:  "0",
+		PprofBindAddress:        "0",
 		GracefulShutdownTimeout: ptr.To(10 * time.Second),
 		Cache: cache.Options{
 			ReaderFailOnMissingInformer: false,
@@ -138,13 +129,13 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		return nil, fmt.Errorf("create controller runtime manager: %w", err)
 	}
 
-	if err = runtimeManager.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-		return nil, fmt.Errorf("add health check: %w", err)
-	}
+	// if err = runtimeManager.AddHealthzCheck("healthz", healthz.Ping); err != nil {
+	// 	return nil, fmt.Errorf("add health check: %w", err)
+	// }
 
-	if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-		return nil, fmt.Errorf("add ready check: %w", err)
-	}
+	// if err = runtimeManager.AddReadyzCheck("readyz", healthz.Ping); err != nil {
+	// 	return nil, fmt.Errorf("add ready check: %w", err)
+	// }
 
 	if err = controller.RegisterController(runtimeManager); err != nil {
 		return nil, fmt.Errorf("add controller: %w", err)
