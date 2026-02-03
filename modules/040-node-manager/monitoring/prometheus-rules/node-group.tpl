@@ -136,6 +136,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_cgroup_v1: "ClusterHasNodesWithCgroupV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
       description: |
         Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support cgroup v2, but in 1.35 cgroup v1 is (deprecated)[https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1]. To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
@@ -150,6 +153,9 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_cluster_has_nodes_with_containerd_v1: "ClusterHasNodesWithContainerdV1,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
       description: |
         Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} is running containerd v1, which will no longer be supported in future Kubernetes releases. Starting from version 1.36, support for containerd v1.y will be removed. Please migrate to containerd v2 to ensure continued compatibility.
