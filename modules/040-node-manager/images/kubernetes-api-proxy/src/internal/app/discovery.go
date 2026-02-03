@@ -129,9 +129,7 @@ func discovery(
 	mainList.Reconcile(
 		utils.Map(
 			addrs,
-			func(addr string) *upstream.Upstream {
-				return upstream.NewUpstream(addr)
-			},
+			upstream.NewUpstream,
 		),
 	)
 

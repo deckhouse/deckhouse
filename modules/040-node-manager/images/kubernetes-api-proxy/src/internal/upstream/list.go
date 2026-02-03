@@ -105,7 +105,7 @@ type List struct { //nolint:govet
 	cmp func(*Upstream, *Upstream) bool
 
 	// The following fields are protected by mutex
-	mu      sync.Mutex
+	mu      sync.RWMutex
 	nodes   []node
 	current int
 }
@@ -323,8 +323,8 @@ func (list *List) downWithTier(upstream *Upstream, newTier Tier) {
 // The default policy is to pick a healthy (non-negative score) backend in
 // round-robin fashion.
 func (list *List) Pick() (*Upstream, error) {
-	list.mu.Lock()
-	defer list.mu.Unlock()
+	list.mu.RLock()
+	defer list.mu.RUnlock()
 
 	nodes := list.nodes
 
@@ -353,10 +353,10 @@ func (list *List) PickAsString() (string, error) {
 }
 
 func (list *List) ListFullAddresses() []string {
-	list.mu.Lock()
-	defer list.mu.Unlock()
+	list.mu.RLock()
+	defer list.mu.RUnlock()
 
-	var nodes []string
+	nodes := make([]string, 0, len(list.nodes))
 	for _, node := range list.nodes {
 		nodes = append(nodes, node.backend.Address())
 	}
@@ -365,8 +365,8 @@ func (list *List) ListFullAddresses() []string {
 }
 
 func (list *List) ExportNodes() ([]ExportNode, error) {
-	list.mu.Lock()
-	defer list.mu.Unlock()
+	list.mu.RLock()
+	defer list.mu.RUnlock()
 
 	nodes := list.nodes
 
@@ -411,9 +411,9 @@ func (list *List) healthcheck(ctx context.Context) {
 }
 
 func (list *List) doHealthCheck(ctx context.Context) {
-	list.mu.Lock()
+	list.mu.RLock()
 	backends := utils.Map(list.nodes, func(n node) *Upstream { return n.backend })
-	list.mu.Unlock()
+	list.mu.RUnlock()
 
 	for _, backend := range backends {
 		if ctx.Err() != nil {

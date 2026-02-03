@@ -132,7 +132,7 @@ func (fb *FallbackList) Reconcile(newList []*Upstream, triggerWrite bool) {
 	if fb.logger != nil {
 		fb.logger.Debug(
 			"fallback list: reconciled new fallback options",
-			slog.Int("upstream count", len(newNodes)),
+			slog.Int("upstream_count", len(newNodes)),
 		)
 	}
 
@@ -152,7 +152,9 @@ func (fb *FallbackList) Reconcile(newList []*Upstream, triggerWrite bool) {
 }
 
 func (fb *FallbackList) UpdateFromList(list *List) {
+	list.mu.RLock()
 	nodes := list.nodes
+	list.mu.RUnlock()
 
 	upstreams := make([]*Upstream, 0, len(nodes))
 	for _, node := range nodes {
@@ -167,8 +169,8 @@ func (fb *FallbackList) UpdateFromList(list *List) {
 }
 
 func (fb *FallbackList) Pick() (*Upstream, error) {
-	fb.mu.Lock()
-	defer fb.mu.Unlock()
+	fb.mu.RLock()
+	defer fb.mu.RUnlock()
 
 	if len(fb.nodes) == 0 {
 		return nil, fmt.Errorf("no upstreams available")
