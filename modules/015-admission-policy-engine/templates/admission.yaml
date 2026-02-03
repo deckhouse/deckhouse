@@ -15,14 +15,6 @@ spec:
   matchConditions:
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
-    - name: 'exclude-gatekeeper-webhook-pods'
-      expression: >-
-        !(
-          has(object.metadata)
-          && has(object.metadata.labels)
-          && "gatekeeper.sh/operation" in object.metadata.labels
-          && object.metadata.labels["gatekeeper.sh/operation"] == "webhook"
-        )
     - name: exclude-existing-label
       expression: >
         (
