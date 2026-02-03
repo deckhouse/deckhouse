@@ -19,7 +19,7 @@
         }
     }
 
-    .statuses-tooltip {
+    .stages-tooltip {
         width: 100%;
         max-width: 310px;
         height: 100%;
@@ -56,7 +56,7 @@
 
     &__container {
 
-        &--editions, &--statuses {
+        &--editions, &--stages {
             border-bottom: 1px solid #5E6697;
         }
 
