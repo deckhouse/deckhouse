@@ -113,10 +113,9 @@ func (r *RESTBootstrap) Get(ctx context.Context, name string, options *metav1.Ge
 		return nil, err // TODO form status error
 	}
 
-	runtimeObj := obj
-	requestlog.LogRenderResult(ctx, runtimeObj, false, nil)
+	requestlog.LogRenderResult(ctx, obj, false, nil)
 
-	return runtimeObj, nil
+	return obj, nil
 }
 
 func (r *REST) List(ctx context.Context, options *metainternalversion.ListOptions) (runtime.Object, error) {
