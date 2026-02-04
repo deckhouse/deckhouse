@@ -13,6 +13,10 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Интеграция с инфраструктурой"
     url: ../admin/integrations/integrations-overview.html
+  - title: "Установка DKP в закрытом окружении"
+    url: /products/kubernetes-platform/guides/private-environment.html
+  - title: "Подготовка к Production"
+    url: /products/kubernetes-platform/guides/production.html   
 ---
 
 {% alert %}
@@ -500,6 +504,10 @@ dhctl bootstrap-phase abort
 ## Закрытое окружение, работа через прокси-сервер и стороннее хранилище образов контейнеров
 
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
+
+{% alert level="info" %}
+Подробнее с установкой и обновлением DKP в закрытом окружении можно ознакомиться в руководствах [«Установка DKP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DKP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+{% endalert %}
 
 ### Установка из стороннего хранилища образов контейнеров
 
