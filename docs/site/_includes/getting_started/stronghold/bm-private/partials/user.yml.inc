@@ -12,7 +12,7 @@ spec:
   # [<ru>] E-mail пользователя.
   # [<en>] User e-mail.
   email: admin@deckhouse.io
-  # [<ru>] Хэш пароля <GENERATED_PASSWORD>.
+  # [<ru>] Хеш пароля <GENERATED_PASSWORD>.
   # [<ru>] Сгенерируйте свой пароль или используйте этот, но только для тестирования.
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] Hash of the password <GENERATED_PASSWORD>.

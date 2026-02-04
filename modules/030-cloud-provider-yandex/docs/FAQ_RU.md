@@ -87,7 +87,7 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --public-address 178.154.226.159
    ```
 
-3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кэш Terraform ответьте `y`:
+3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
