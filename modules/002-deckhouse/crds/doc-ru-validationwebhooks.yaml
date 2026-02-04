@@ -133,7 +133,8 @@ spec:
                     Ключ для включения снимков из группы привязок schedule и kubernetes.
                 includeSnapshotsFrom:
                   description: |
-                    Массив имен привязок kubernetes в хуке.
+                    Массив имен привязок Kubernetes в хуке.
+                    
                     При указании, список отслеживаемых объектов из этих привязок будет добавлен в контекст привязки в поле snapshots. Возможно само-включение.
                 labelSelector:
                   description: |
