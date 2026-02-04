@@ -30,9 +30,9 @@ type EventHandler interface {
 }
 
 type Memberlist struct {
-	list *memberlist.Memberlist
-
-	logger *log.Logger
+	list     *memberlist.Memberlist
+	delegate *Delegate
+	logger   *log.Logger
 }
 
 func New(
@@ -47,20 +47,33 @@ func New(
 	config.Name = nodeName
 	config.AdvertiseAddr = nodeIP
 
-	// TODO eventHandler
-
 	config.BindPort = int(cfg.MemberListPort)
 	config.AdvertisePort = int(cfg.MemberListPort)
+
+	// Create a temporary memberlist reference for delegate's NumNodes function
+	var ml *Memberlist
+
+	delegate := NewDelegate(logger, nodeName, func() int {
+		if ml != nil && ml.list != nil {
+			return ml.list.NumMembers()
+		}
+		return 1
+	})
+
+	config.Delegate = delegate
 
 	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Memberlist{
-		list:   list,
-		logger: logger,
-	}, nil
+	ml = &Memberlist{
+		list:     list,
+		delegate: delegate,
+		logger:   logger,
+	}
+
+	return ml, nil
 }
 
 func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
@@ -83,7 +96,21 @@ func (ml *Memberlist) Start(peers ips) error {
 		return err
 	}
 	ml.logger.Info("joined cluster", "numJoined", numJoined)
+
+	// Broadcast current member count to all peers
+	ml.BroadcastMemberCount()
+
 	return nil
+}
+
+// BroadcastMemberCount sends current member count to all cluster members
+func (ml *Memberlist) BroadcastMemberCount() {
+	ml.delegate.BroadcastMemberCount(ml.list.NumMembers())
+}
+
+// OnMessage registers a handler to be called when a broadcast message is received
+func (ml *Memberlist) OnMessage(handler MessageHandler) {
+	ml.delegate.OnMessage(handler)
 }
 
 func (ml *Memberlist) Stop() error {
