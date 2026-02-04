@@ -481,7 +481,7 @@ YQ = $(LOCALBIN)/yq
 
 ## Tool Versions
 GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
-DECKHOUSE_CLI_VERSION ?= v0.25.0
+DECKHOUSE_CLI_VERSION ?= v0.27.1
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2
@@ -489,8 +489,9 @@ YQ_VERSION ?= v4.47.2
 ## Generate tools documentation
 .PHONY: generate-docs
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
+	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@$(DECKHOUSE_CLI) help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
