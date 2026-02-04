@@ -42,10 +42,6 @@ func (SudoAllowedCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (SudoAllowedCheck) Enabled() bool {
-	return true
-}
-
 func (c SudoAllowedCheck) Run(ctx context.Context) error {
 	cmd := c.Node.Command("echo")
 	cmd.Sudo(ctx)
@@ -68,7 +64,6 @@ func SudoAllowed(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

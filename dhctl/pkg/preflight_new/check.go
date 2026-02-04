@@ -32,11 +32,13 @@ type Check struct {
 	Description string
 	Phase       Phase
 	Run         func(ctx context.Context) error
-	Enabled     EnabledFunc
 	Retry       RetryPolicy
+	Disabled    bool
 }
 
-type EnabledFunc func() bool
+func (c *Check) Disable() {
+	c.Disabled = true
+}
 
 type RetryPolicy struct {
 	Attempts int

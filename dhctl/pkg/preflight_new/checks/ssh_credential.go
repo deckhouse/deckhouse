@@ -41,10 +41,6 @@ func (SSHCredentialCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (SSHCredentialCheck) Enabled() bool {
-	return true
-}
-
 func (c SSHCredentialCheck) Run(ctx context.Context) error {
 	wrapper, ok := c.Node.(*ssh.NodeInterfaceWrapper)
 	if !ok {
@@ -63,7 +59,6 @@ func SSHCredential(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

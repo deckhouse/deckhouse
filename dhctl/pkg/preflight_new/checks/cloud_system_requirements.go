@@ -51,10 +51,6 @@ func (CloudSystemRequirementsCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.RetryPolicy{Attempts: 1}
 }
 
-func (CloudSystemRequirementsCheck) Enabled() bool {
-	return true
-}
-
 func (c CloudSystemRequirementsCheck) Run(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, preflightnew.DefaultPreflightCheckTimeout)
 	defer cancel()
@@ -133,7 +129,6 @@ func CloudSystemRequirements(installConfig *config.DeckhouseInstaller) preflight
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

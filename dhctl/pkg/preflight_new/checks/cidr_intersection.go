@@ -39,10 +39,6 @@ func (CidrIntersectionCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.RetryPolicy{Attempts: 1}
 }
 
-func (CidrIntersectionCheck) Enabled() bool {
-	return true
-}
-
 func (c CidrIntersectionCheck) Run(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, preflightnew.DefaultPreflightCheckTimeout)
 	defer cancel()
@@ -70,7 +66,6 @@ func CidrIntersection(meta *config.MetaConfig) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

@@ -68,10 +68,6 @@ func (DhctlEditionCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.RetryPolicy{Attempts: 1}
 }
 
-func (DhctlEditionCheck) Enabled() bool {
-	return app.AppVersion != "local" && app.AppEdition != "local"
-}
-
 func (c DhctlEditionCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil || c.Installer == nil {
 		return fmt.Errorf("metaConfig and installConfig are required")
@@ -169,12 +165,15 @@ func DhctlEdition(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) prefl
 		MetaConfig: meta,
 		Installer:  cfg,
 	}
-	return preflightnew.Check{
+	preflightCheck := preflightnew.Check{
 		Name:        DhctlEditionCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
+	if app.AppVersion == "local" || app.AppEdition == "local" {
+		preflightCheck.Disable()
+	}
+	return preflightCheck
 }

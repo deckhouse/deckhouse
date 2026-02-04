@@ -76,10 +76,6 @@ func (registryAuthCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (registryAuthCheck) Enabled() bool {
-	return true
-}
-
 var ErrAuthRegistryFailed = errors.New("authentication failed")
 
 func (c registryAuthCheck) Run(ctx context.Context) error {
@@ -239,7 +235,6 @@ func RegistryProxyAuth(meta *config.MetaConfig) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

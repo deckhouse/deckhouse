@@ -44,10 +44,6 @@ func (DeckhouseUserCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (DeckhouseUserCheck) Enabled() bool {
-	return true
-}
-
 func (c DeckhouseUserCheck) Run(ctx context.Context) error {
 	file, err := template.RenderAndSavePreflightCheckDeckhouseUserScript()
 	if err != nil {
@@ -75,7 +71,6 @@ func DeckhouseUser(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

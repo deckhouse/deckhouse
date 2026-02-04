@@ -43,14 +43,13 @@ const SSHTunnelCheckName preflightnew.CheckName = "static-ssh-tunnel"
 func (SSHTunnelCheck) Description() string {
 	return "ssh tunnel between installer and node is possible"
 }
+
 func (SSHTunnelCheck) Phase() preflightnew.Phase {
 	return preflightnew.PhasePostInfra
 }
+
 func (SSHTunnelCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
-}
-func (SSHTunnelCheck) Enabled() bool {
-	return true
 }
 
 func (c SSHTunnelCheck) Run(ctx context.Context) error {
@@ -132,7 +131,6 @@ func SSHTunnel(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }
