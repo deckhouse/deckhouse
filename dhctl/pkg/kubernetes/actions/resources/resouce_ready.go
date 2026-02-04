@@ -79,13 +79,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	gvr, doc, err := resourceToGVR(c.resource, *apiRes)
-	if err != nil {
-		c.logNotReadyYet(logger)
-		logger.LogDebugF("Resource %s to GVR failed: %s\n", c.resourceName, err)
-		return false, nil
-	}
-
+	gvr, doc := resourceToGVR(c.resource, *apiRes)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

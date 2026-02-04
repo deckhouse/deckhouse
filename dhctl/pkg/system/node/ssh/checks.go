@@ -68,7 +68,7 @@ func CheckSSHHosts(userPassedHosts []session.Host, nodesNames []string, phase st
 		warnMsg = tooManyWarn
 	}
 
-	var nodesSorted []string
+	nodesSorted := make([]string, 0, 4)
 	nodesSorted = append(nodesSorted, nodesNames...)
 	sort.Strings(nodesSorted)
 

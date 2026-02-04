@@ -137,7 +137,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -154,15 +154,16 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result *pb.BootstrapResult) {
+func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {
+	var result *pb.BootstrapResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.BootstrapResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
-	return s.bootstrap(ctx, p)
+	result = s.bootstrap(ctx, p)
+	return result
 }
 
 func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {

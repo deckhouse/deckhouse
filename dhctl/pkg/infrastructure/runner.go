@@ -304,7 +304,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 
 				if !isConfirm {
-					return fmt.Errorf(infrastructurePipelineAbortedMessage)
+					return fmt.Errorf("%s", infrastructurePipelineAbortedMessage)
 				}
 			}
 
@@ -376,7 +376,7 @@ func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 	return nil
 }
 
-func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
+func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 	// first verify destructive change
 	if r.changesInPlan == plan.HasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -401,7 +401,7 @@ func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady(ctx)
+	err := r.runBeforeActionAndWaitReady(ctx)
 
 	return false, err
 }

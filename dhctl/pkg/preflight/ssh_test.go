@@ -210,6 +210,6 @@ func TestGetTunnelPreflightCheckFailedError(t *testing.T) {
 func TestHealthUrl(t *testing.T) {
 	port := 8080
 	expected := "http://127.0.0.1:8080/healthz"
-	actual := healthUrl(port)
+	actual := healthURL(port)
 	assert.Equal(t, expected, actual)
 }

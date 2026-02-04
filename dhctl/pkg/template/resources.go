@@ -173,7 +173,7 @@ func ParseResourcesContent(content string, data map[string]interface{}) (Resourc
 }
 
 func (r Resources) String() string {
-	s := make([]string, 0)
+	s := make([]string, 0, 4)
 	for _, rr := range r {
 		s = append(s, fmt.Sprintf("%v", rr.Object.Object))
 	}

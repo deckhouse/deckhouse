@@ -135,7 +135,8 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
+func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
+	var result *pb.CommanderDetachResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -143,7 +144,8 @@ func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (resu
 		}
 	}()
 
-	return s.commanderDetach(ctx, p)
+	result = s.commanderDetach(ctx, p)
+	return result
 }
 
 func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {

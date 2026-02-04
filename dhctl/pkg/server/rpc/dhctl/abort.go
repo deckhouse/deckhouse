@@ -135,7 +135,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -152,15 +152,16 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
+func (s *Service) abortSafe(ctx context.Context, p abortParams) *pb.AbortResult {
+	var result *pb.AbortResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.AbortResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
-	return s.abort(ctx, p)
+	result = s.abort(ctx, p)
+	return result
 }
 
 func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {

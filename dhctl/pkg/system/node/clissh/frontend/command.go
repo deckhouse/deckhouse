@@ -81,7 +81,7 @@ func (c *Command) Sudo(ctx context.Context) {
 		cmdLine,
 	)
 
-	var args []string
+	args := make([]string, 0, len(c.SSHArgs)+2)
 	args = append(args, c.SSHArgs...)
 	args = append(args, []string{
 		"-t", // allocate tty to auto kill remote process when ssh process is killed

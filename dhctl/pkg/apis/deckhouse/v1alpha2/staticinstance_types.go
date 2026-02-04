@@ -49,7 +49,7 @@ type StaticInstanceStatus struct {
 
 	// Conditions defines current service state of the StaticInstance.
 	// +optional
-	//Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	// Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 type StaticInstanceStatusCurrentStatus struct {
@@ -96,4 +96,3 @@ type StaticInstanceList struct {
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []StaticInstance `json:"items"`
 }
-

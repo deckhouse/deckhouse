@@ -138,7 +138,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -155,7 +155,8 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
+func (s *Service) destroySafe(ctx context.Context, p destroyParams) *pb.DestroyResult {
+	var result *pb.DestroyResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -163,7 +164,8 @@ func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.
 		}
 	}()
 
-	return s.destroy(ctx, p)
+	result = s.destroy(ctx, p)
+	return result
 }
 
 func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {

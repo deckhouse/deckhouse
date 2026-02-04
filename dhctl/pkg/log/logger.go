@@ -65,7 +65,7 @@ func newKlogWriterWrapper(logger Logger) *klogWriterWrapper {
 	return &klogWriterWrapper{logger: logger}
 }
 
-func (l *klogWriterWrapper) Write(p []byte) (n int, err error) {
+func (l *klogWriterWrapper) Write(p []byte) (int, error) {
 	l.logger.LogDebugF("klog: %s", string(p))
 
 	return len(p), nil
@@ -94,14 +94,14 @@ func initKlog(logger Logger) {
 	flags := &flag.FlagSet{}
 	klog.InitFlags(flags)
 	klog.SetLogFilter(&LogSanitizer{}) // filter sensitive keywords
-	flags.Set("logtostderr", "false")
-	flags.Set("v", "10")
+	_ = flags.Set("logtostderr", "false")
+	_ = flags.Set("v", "10")
 
 	klog.SetOutput(newKlogWriterWrapper(logger))
 }
 
 func InitLoggerWithOptions(loggerType string, opts LoggerOptions) {
-	l := defaultLogger
+	var l Logger
 	switch loggerType {
 	case "pretty":
 		l = NewPrettyLogger(opts)
@@ -373,11 +373,10 @@ func NewSimpleLogger(opts LoggerOptions) *SimpleLogger {
 		logger:  l,
 		isDebug: opts.IsDebug,
 	}
-
 }
 
 func NewJSONLogger(opts LoggerOptions) *SimpleLogger {
-	//json is default formatter for our slog implementation
+	// json is default formatter for our slog implementation
 	l := log.NewLogger()
 
 	if opts.OutStream != nil {
@@ -416,30 +415,30 @@ func (d *SimpleLogger) LogProcess(p, t string, run func() error) error {
 }
 
 func (d *SimpleLogger) LogInfoF(format string, a ...interface{}) {
-	d.logger.Infof(format, a...)
+	d.logger.Info(format, a...)
 }
 
 func (d *SimpleLogger) LogInfoLn(a ...interface{}) {
-	d.logger.Infof("%v", a)
+	d.logger.Info(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogErrorF(format string, a ...interface{}) {
-	d.logger.Errorf(format, a...)
+	d.logger.Error(format, a...)
 }
 
 func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
-	d.logger.Errorf("%v", a)
+	d.logger.Error("%v", a)
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {
 	if d.isDebug {
-		d.logger.Debugf(format, a...)
+		d.logger.Debug(format, a...)
 	}
 }
 
 func (d *SimpleLogger) LogDebugLn(a ...interface{}) {
 	if d.isDebug {
-		d.logger.Debugf("%v", a)
+		d.logger.Debug(fmt.Sprintf("%v", a))
 	}
 }
 
@@ -457,11 +456,11 @@ func (d *SimpleLogger) LogFailRetry(l string) {
 }
 
 func (d *SimpleLogger) LogWarnF(format string, a ...interface{}) {
-	d.logger.Warnf(format, a...)
+	d.logger.Warn(format, a...)
 }
 
 func (d *SimpleLogger) LogWarnLn(a ...interface{}) {
-	d.logger.Warnf("%v", a)
+	d.logger.Warn(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogJSON(content []byte) {
@@ -469,7 +468,7 @@ func (d *SimpleLogger) LogJSON(content []byte) {
 }
 
 func (d *SimpleLogger) Write(content []byte) (int, error) {
-	d.logger.Infof("%s", string(content))
+	d.logger.Info(string(content))
 	return len(content), nil
 }
 
@@ -924,5 +923,4 @@ func (d *TeeLogger) writeToFile(content string) {
 	if _, err := d.buf.Write([]byte(contentWithTimestamp)); err != nil {
 		d.l.LogDebugF("Cannot write to TeeLog: %v", err)
 	}
-
 }

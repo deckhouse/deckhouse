@@ -117,14 +117,12 @@ func (t *Tunnel) acceptTunnelConnection(id int, remoteAddress string, listener n
 				if err != nil {
 					t.errorCh <- err
 				}
-
 			}()
 
 			_, err := io.Copy(localConn, remoteConn)
 			if err != nil {
 				t.errorCh <- err
 			}
-
 		}()
 	}
 }

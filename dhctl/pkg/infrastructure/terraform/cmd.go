@@ -65,8 +65,9 @@ func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string)
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
-	envs := append(
-		cmd.Env,
+	envs := cmd.Env
+	envs = append(
+		envs,
 		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
 		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),

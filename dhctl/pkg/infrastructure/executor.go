@@ -123,11 +123,11 @@ func (e *fakeExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
 	return nil
 }
 
-func (e *fakeExecutor) Plan(ctx context.Context, opts PlanOpts) (exitCode int, err error) {
+func (e *fakeExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
 	return e.planResp.code, e.planResp.err
 }
 
-func (e *fakeExecutor) Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error) {
+func (e *fakeExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
 	return e.outputResp.resp, e.outputResp.err
 }
 
@@ -135,11 +135,11 @@ func (e *fakeExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 	return e.destroyResp.err
 }
 
-func (e *fakeExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *fakeExecutor) Show(ctx context.Context, planPath string) ([]byte, error) {
 	return e.showResp.resp, e.showResp.err
 }
 
-func (e *fakeExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+func (e *fakeExecutor) GetActions(ctx context.Context, planPath string) ([]string, error) {
 	return []string{}, nil
 }
 
@@ -186,13 +186,13 @@ func (e *DummyExecutor) Apply(ctx context.Context, opts ApplyOpts) error {
 	return nil
 }
 
-func (e *DummyExecutor) Plan(ctx context.Context, opts PlanOpts) (exitCode int, err error) {
+func (e *DummyExecutor) Plan(ctx context.Context, opts PlanOpts) (int, error) {
 	e.logger.LogWarnLn("Call Plan on dummy executor")
 
 	return 0, nil
 }
 
-func (e *DummyExecutor) Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error) {
+func (e *DummyExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
 	e.logger.LogWarnLn("Call Output on dummy executor")
 
 	return nil, nil
@@ -204,13 +204,13 @@ func (e *DummyExecutor) Destroy(ctx context.Context, opts DestroyOpts) error {
 	return nil
 }
 
-func (e *DummyExecutor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *DummyExecutor) Show(ctx context.Context, planPath string) ([]byte, error) {
 	e.logger.LogWarnLn("Call Show on dummy executor")
 
 	return nil, nil
 }
 
-func (e *DummyExecutor) GetActions(ctx context.Context, planPath string) (action []string, err error) {
+func (e *DummyExecutor) GetActions(ctx context.Context, planPath string) ([]string, error) {
 	e.logger.LogWarnLn("Call GetActions on dummy executor")
 
 	return nil, nil
@@ -234,13 +234,13 @@ func NewDummyOutputExecutor(logger log.Logger) *DummyOutputExecutor {
 	}
 }
 
-func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outFields ...string) (result []byte, err error) {
+func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outFields ...string) ([]byte, error) {
 	e.logger.LogWarnLn("Call Output on dummy output executor")
 
 	return nil, nil
 }
 
-func GetActions(ctx context.Context, cmd *exec.Cmd) (actions []string, err error) {
+func GetActions(ctx context.Context, cmd *exec.Cmd) ([]string, error) {
 	type state struct {
 		ResourceChanges []struct {
 			Change struct {
@@ -251,13 +251,14 @@ func GetActions(ctx context.Context, cmd *exec.Cmd) (actions []string, err error
 
 	buf := bytes.NewBuffer(make([]byte, 0, 5000))
 	cmd.Stdout = buf
+	actions := make([]string, 0, 5)
 
 	if err := cmd.Run(); err != nil {
 		return actions, fmt.Errorf("failed to start terraform: %w", err)
 	}
 
 	var res state
-	err = json.Unmarshal(buf.Bytes(), &res)
+	err := json.Unmarshal(buf.Bytes(), &res)
 	if err != nil {
 		return actions, fmt.Errorf("failed to unmarshal json: %w", err)
 	}

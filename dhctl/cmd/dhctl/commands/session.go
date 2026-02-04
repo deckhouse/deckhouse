@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/name212/govalue"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
@@ -58,7 +59,7 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			return err
 		}
 
-		if sshClient == nil {
+		if govalue.IsNil(sshClient) {
 			return fmt.Errorf("Not enough flags were provided to perform the operation.\nUse dhctl session --help to get available flags.")
 		}
 
@@ -75,17 +76,16 @@ func DefineSessionCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 		}
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
-		select {
-		case sig := <-sigChan:
-			fmt.Println("Received signal:", sig)
-			fmt.Println("Exiting SSH tunnel...")
-		}
+		sig := <-sigChan
+		fmt.Println("Received signal:", sig)
+		fmt.Println("Exiting SSH tunnel...")
+
 		return nil
 	})
 	return cmd
 }
 
-func localKubeConfig(apiServerUrl string) error {
+func localKubeConfig(apiServerURL string) error {
 	kubeconfigDir, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Errorf("failed to open home directory: %w", err)
@@ -98,7 +98,7 @@ func localKubeConfig(apiServerUrl string) error {
 
 	kubeConfig := api.NewConfig()
 	kubeConfig.Clusters[clusterName] = &api.Cluster{
-		Server:                apiServerUrl,
+		Server:                apiServerURL,
 		InsecureSkipTLSVerify: true,
 	}
 	kubeConfig.AuthInfos[userName] = &api.AuthInfo{}

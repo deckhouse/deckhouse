@@ -81,6 +81,7 @@ func (d *StreamDirector) Wait() {
 	d.wg.Wait()
 }
 
+//nolint:sloglint
 func (d *StreamDirector) Director() proxy.StreamDirector {
 	return func(ctx context.Context, fullMethodName string) (context.Context, *grpc.ClientConn, error) {
 		// Copy the inbound metadata explicitly.
@@ -257,7 +258,7 @@ type syncWriter struct {
 	mx     sync.Mutex
 }
 
-func (sw *syncWriter) Write(p []byte) (n int, err error) {
+func (sw *syncWriter) Write(p []byte) (int, error) {
 	sw.mx.Lock()
 	defer sw.mx.Unlock()
 	return sw.writer.Write(p)

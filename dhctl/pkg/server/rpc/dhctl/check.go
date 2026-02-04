@@ -133,15 +133,16 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
+func (s *Service) checkSafe(ctx context.Context, p checkParams) *pb.CheckResult {
+	var result *pb.CheckResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
-	return s.check(ctx, p)
+	result = s.check(ctx, p)
+	return result
 }
 
 func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
@@ -244,8 +245,8 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: p.request.Options.CommanderMode,
-		ApiServerUrl:  p.request.Options.ApiServerUrl,
-		ApiServerOptions: helper.ApiServerOptions{
+		APIServerURL:  p.request.Options.ApiServerUrl,
+		APIServerOptions: helper.APIServerOptions{
 			Token:                    p.request.Options.ApiServerToken,
 			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
 			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),

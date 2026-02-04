@@ -216,6 +216,9 @@ func (c *ConvergeExporter) registerMetrics() {
 	c.CounterMetrics["errors"] = errorsVec
 }
 
+// false positive linter issue
+//
+//nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
 	log.InfoLn("Start exporter")
 	log.InfoLn("Address: ", app.ListenAddress)

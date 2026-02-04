@@ -134,7 +134,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -151,7 +151,8 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
+func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) *pb.CommanderAttachResult {
+	var result *pb.CommanderAttachResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -159,7 +160,8 @@ func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (resu
 		}
 	}()
 
-	return s.commanderAttach(ctx, p)
+	result = s.commanderAttach(ctx, p)
+	return result
 }
 
 func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.CommanderAttachResult {

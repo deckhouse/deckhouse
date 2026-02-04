@@ -181,8 +181,8 @@ func prepareGlobalMC(ctx context.Context, mc *config.ModuleConfig, res *Manifest
 		return
 	}
 
-	httpsRaw, hasHttps := modules["https"]
-	if !hasHttps {
+	httpsRaw, hasHTTPS := modules["https"]
+	if !hasHTTPS {
 		log.DebugLn("Not found https in global mc. Finish preparing")
 		return
 	}

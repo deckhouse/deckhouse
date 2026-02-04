@@ -140,7 +140,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -157,7 +157,8 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
+func (s *Service) convergeSafe(ctx context.Context, p convergeParams) *pb.ConvergeResult {
+	var result *pb.ConvergeResult
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -165,7 +166,8 @@ func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *p
 		}
 	}()
 
-	return s.converge(ctx, p)
+	result = s.converge(ctx, p)
+	return result
 }
 
 func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeResult {
@@ -298,8 +300,8 @@ func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeRe
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: p.request.Options.CommanderMode,
-		ApiServerUrl:  p.request.Options.ApiServerUrl,
-		ApiServerOptions: helper.ApiServerOptions{
+		APIServerURL:  p.request.Options.ApiServerUrl,
+		APIServerOptions: helper.APIServerOptions{
 			Token:                    p.request.Options.ApiServerToken,
 			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
 			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),

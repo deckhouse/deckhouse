@@ -171,7 +171,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 
 		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
 		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
-
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,

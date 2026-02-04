@@ -45,15 +45,15 @@ var emptySecret = &v1.Secret{
 }
 
 func SecretEdit(
-	kubeCl *client.KubernetesClient, name string, Namespace string, secret string, dataKey string,
+	kubeCl *client.KubernetesClient, name string, namespace string, secret string, dataKey string,
 	labels map[string]string,
 ) error {
-	config, err := kubeCl.CoreV1().Secrets(Namespace).Get(context.TODO(), secret, metav1.GetOptions{})
+	config, err := kubeCl.CoreV1().Secrets(namespace).Get(context.TODO(), secret, metav1.GetOptions{})
 	switch {
 	case errors.IsNotFound(err):
-		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, Namespace)
+		log.DebugF("Secret %s in namespace %s was not found, and will be created\n", secret, namespace)
 		config = emptySecret.DeepCopy()
-		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, Namespace
+		config.ObjectMeta.Name, config.ObjectMeta.Namespace = secret, namespace
 	case err != nil:
 		return err
 	}
@@ -92,11 +92,11 @@ func SecretEdit(
 			return retry.
 				NewLoop(fmt.Sprintf("Apply %s secret", secret), 5, 5*time.Second).
 				Run(func() error {
-					_, err = kubeCl.CoreV1().Secrets(Namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
+					_, err = kubeCl.CoreV1().Secrets(namespace).Update(context.TODO(), config, metav1.UpdateOptions{})
 					switch {
 					case errors.IsNotFound(err):
-						log.DebugF("Creating new Secret %s in namespace %s\n", secret, Namespace)
-						if _, err = kubeCl.CoreV1().Secrets(Namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
+						log.DebugF("Creating new Secret %s in namespace %s\n", secret, namespace)
+						if _, err = kubeCl.CoreV1().Secrets(namespace).Create(context.TODO(), config, metav1.CreateOptions{}); err != nil {
 							return err
 						}
 					case err != nil:
@@ -108,14 +108,13 @@ func SecretEdit(
 						removeUnsafeAnnotation(config)
 
 						_, err = kubeCl.CoreV1().
-							Secrets(Namespace).
+							Secrets(namespace).
 							Update(context.TODO(), config, metav1.UpdateOptions{})
 					}
 
 					return err
 				})
 		})
-
 }
 
 func addUnsafeAnnotation(doc *v1.Secret) {
