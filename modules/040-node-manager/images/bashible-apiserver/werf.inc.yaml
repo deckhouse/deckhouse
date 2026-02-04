@@ -78,13 +78,6 @@ git:
 
   excludePaths:
   - "**/cluster-bootstrap"
-- add: /{{ .ModulePath }}candi/cloud-providers
-  to: /deckhouse/candi/cloud-providers
-  stageDependencies:
-    beforeSetup:
-    - "*"
-  includePaths:
-  - "*/bashible"
 {{- include "image mount points" . }}
 imageSpec:
   config:
