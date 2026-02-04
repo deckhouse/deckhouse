@@ -1308,6 +1308,11 @@ function get_bootstrap_logs() {
   jq -r 'reverse | .[] | .data | .[] | .msg' <<< "$cluster_bootstrap_logs"
 }
 
+function set_containerd_with_integrity_check() {
+  echo "Setting containerd with integrity check..."
+  echo "TEST INTEGRITY CHECK"
+}
+
 function run-test() {
   local payload
   local response
@@ -1471,6 +1476,8 @@ function run-test() {
   if [[ "$PROVIDER" == "Static" ]] || [[ "$PROVIDER" == "Static-cse" ]]; then
     system_node_register || return $?
   fi
+
+  set_containerd_with_integrity_check || return $?
 
   wait_upmeter_green || return $?
 
