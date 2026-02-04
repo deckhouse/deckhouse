@@ -123,6 +123,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager133": "imageHash-cloudProviderVsphere-cloudControllerManager133",
 		"cloudControllerManager134": "imageHash-cloudProviderVsphere-cloudControllerManager134",
 		"cloudDataDiscoverer":       "imageHash-cloudProviderVsphere-cloudDataDiscoverer",
+		"terraformManager":          "imageHash-cloudProviderVsphere-terraformManager",
 		"vsphereCsiPlugin130":       "imageHash-cloudProviderVsphere-vsphereCsiPlugin130",
 		"vsphereCsiPlugin131":       "imageHash-cloudProviderVsphere-vsphereCsiPlugin131",
 		"vsphereCsiPlugin132":       "imageHash-cloudProviderVsphere-vsphereCsiPlugin132",

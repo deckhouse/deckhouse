@@ -4,6 +4,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi
+  to: /deckhouse/candi/cloud-providers/vsphere
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi
   to: /deckhouse/candi/cloud-providers/zvirt
   stageDependencies:
