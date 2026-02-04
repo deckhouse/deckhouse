@@ -4,8 +4,3 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/se-plus/candi/cloud-providers/zvirt
-  to: /deckhouse/candi/cloud-providers/zvirt
-  stageDependencies:
-    install:
-        - '**/*'
