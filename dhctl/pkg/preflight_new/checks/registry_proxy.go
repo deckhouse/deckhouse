@@ -36,9 +36,7 @@ type RegistryProxyCheck struct {
 	Node       node.Interface
 }
 
-var (
-	ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
-)
+var ErrRegistryUnreachable = errors.New("Could not reach registry over proxy")
 
 const (
 	registryPath         = "/v2/"
@@ -62,10 +60,6 @@ func (RegistryProxyCheck) Phase() preflightnew.Phase {
 
 func (RegistryProxyCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
-}
-
-func (RegistryProxyCheck) Enabled() bool {
-	return true
 }
 
 func (c RegistryProxyCheck) Run(ctx context.Context) error {
@@ -151,7 +145,6 @@ func RegistryProxy(meta *config.MetaConfig, nodeInterface node.Interface) prefli
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

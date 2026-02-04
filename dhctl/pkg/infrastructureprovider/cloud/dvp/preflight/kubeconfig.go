@@ -59,10 +59,6 @@ func (kubeconfigCheck) RetryPolicy() preflightnew.RetryPolicy {
 }
 
 func (c kubeconfigCheck) Run(ctx context.Context) error {
-	if !c.deps.ValidateKubeConfig {
-		return nil
-	}
-
 	client, err := BuildKubeClient(c.deps.MetaConfig)
 	if err != nil {
 		return fmt.Errorf("build kube client: %w", err)
@@ -76,13 +72,17 @@ func (c kubeconfigCheck) Run(ctx context.Context) error {
 
 func KubeconfigCheck(deps KubeconfigDeps) preflightnew.Check {
 	check := kubeconfigCheck{deps: deps}
-	return preflightnew.Check{
+	preflightCheck := preflightnew.Check{
 		Name:        kubeconfigCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
 		Run:         check.Run,
 	}
+	if !deps.ValidateKubeConfig {
+		preflightCheck.Disable()
+	}
+	return preflightCheck
 }
 
 func BuildKubeClient(metaConfig *config.MetaConfig) (*kubernetes.Clientset, error) {

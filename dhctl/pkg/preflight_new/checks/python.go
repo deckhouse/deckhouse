@@ -42,10 +42,6 @@ func (PythonCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (PythonCheck) Enabled() bool {
-	return true
-}
-
 func (c PythonCheck) Run(ctx context.Context) error {
 	pythonBinary, err := detectPythonBinary(ctx, c.Node)
 	if err != nil {
@@ -108,7 +104,7 @@ func Python(nodeInterface node.Interface) preflightnew.Check {
 		Name:        PythonCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
-		Enabled:     check.Enabled,
-		Run:         check.Run,
+
+		Run: check.Run,
 	}
 }

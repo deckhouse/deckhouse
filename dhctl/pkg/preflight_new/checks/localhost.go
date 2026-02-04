@@ -44,10 +44,6 @@ func (LocalhostDomainCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (LocalhostDomainCheck) Enabled() bool {
-	return true
-}
-
 func (c LocalhostDomainCheck) Run(ctx context.Context) error {
 	file, err := template.RenderAndSavePreflightCheckLocalhostScript()
 	if err != nil {
@@ -75,7 +71,6 @@ func LocalhostDomain(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

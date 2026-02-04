@@ -131,5 +131,6 @@ func TestCheckDisable(t *testing.T) {
 	app.AppVersion = "local"
 	app.AppEdition = "local"
 
-	assert.False(t, DhctlEditionCheck{}.Enabled())
+	check := DhctlEdition(nil, nil)
+	assert.True(t, check.Disabled)
 }

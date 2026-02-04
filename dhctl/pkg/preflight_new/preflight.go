@@ -70,22 +70,22 @@ func (p *Preflight) DisableChecks(names ...string) {
 }
 
 func (p *Preflight) IsDisabled(name string) bool {
-	_, ok := p.disabled[CheckName(name)]
-	return ok
+	return p.isDisabled(CheckName(name))
 }
 
 func (p *Preflight) Run(ctx context.Context, phase Phase) error {
-	checks := p.checksForPhase(phase)
-	return log.Process("preflight", fmt.Sprintf("(%s)", phase), func() error { return p.runChecks(ctx, checks) })
+	checks := p.prepareChecks(phase)
+	phaseLabel := fmt.Sprintf("(%s)", phase)
+	runFunc := func() error {
+		return p.runChecks(ctx, checks)
+	}
+	return log.Process("preflight", phaseLabel, runFunc)
 }
 
 func (p *Preflight) runChecks(ctx context.Context, checks []Check) error {
 	for _, check := range checks {
-		if _, ok := p.disabled[check.Name]; ok {
+		if check.Disabled {
 			log.InfoF("✓ %s: %s (skipped)\n", check.Name, check.Description)
-			continue
-		}
-		if check.Enabled != nil && !check.Enabled() {
 			continue
 		}
 		if err := p.runCheck(ctx, check); err != nil {
@@ -117,7 +117,7 @@ func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	return nil
 }
 
-func (p *Preflight) checksForPhase(phase Phase) []Check {
+func (p *Preflight) prepareChecks(phase Phase) []Check {
 	var checks []Check
 	for _, suite := range p.suites {
 		if suite == nil {
@@ -127,10 +127,18 @@ func (p *Preflight) checksForPhase(phase Phase) []Check {
 			if check.Phase != phase {
 				continue
 			}
+			if p.isDisabled(check.Name) {
+				check.Disable()
+			}
 			checks = append(checks, check)
 		}
 	}
 	return checks
+}
+
+func (p *Preflight) isDisabled(name CheckName) bool {
+	_, ok := p.disabled[name]
+	return ok
 }
 
 func (p *Preflight) retry(ctx context.Context, check Check) error {

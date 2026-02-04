@@ -53,10 +53,6 @@ func (StaticInstancesIPDuplicationCheck) RetryPolicy() preflightnew.RetryPolicy 
 	return preflightnew.RetryPolicy{Attempts: 1}
 }
 
-func (StaticInstancesIPDuplicationCheck) Enabled() bool {
-	return true
-}
-
 func (c StaticInstancesIPDuplicationCheck) Run(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, preflightnew.DefaultPreflightCheckTimeout)
 	defer cancel()
@@ -105,7 +101,6 @@ func StaticInstancesIPDuplication(meta *config.MetaConfig) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

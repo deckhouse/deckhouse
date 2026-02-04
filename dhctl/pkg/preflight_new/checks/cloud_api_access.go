@@ -56,10 +56,6 @@ func (CloudAPICheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (CloudAPICheck) Enabled() bool {
-	return true
-}
-
 func (c CloudAPICheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil {
 		return nil
@@ -209,7 +205,7 @@ func CloudAPIAccess(meta *config.MetaConfig, nodeInterface node.Interface) prefl
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
-		Run:         check.Run,
+
+		Run: check.Run,
 	}
 }

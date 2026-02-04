@@ -44,9 +44,6 @@ func (StaticSystemRequirementsCheck) Phase() preflightnew.Phase {
 func (StaticSystemRequirementsCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
-func (StaticSystemRequirementsCheck) Enabled() bool {
-	return true
-}
 
 func (c StaticSystemRequirementsCheck) Run(ctx context.Context) error {
 	ramKb, err := extractRAMCapacityFromNode(ctx, c.Node)
@@ -143,7 +140,6 @@ func StaticSystemRequirements(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

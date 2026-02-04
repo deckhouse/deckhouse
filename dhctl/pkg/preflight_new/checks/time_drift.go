@@ -49,10 +49,6 @@ func (TimeDriftCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (TimeDriftCheck) Enabled() bool {
-	return true
-}
-
 func (c TimeDriftCheck) Run(ctx context.Context) error {
 	remote, err := getRemoteTimeStamp(ctx, c.Node)
 	if err != nil {
@@ -99,7 +95,6 @@ func TimeDrift(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

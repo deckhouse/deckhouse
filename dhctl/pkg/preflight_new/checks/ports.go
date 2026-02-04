@@ -44,10 +44,6 @@ func (PortsCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (PortsCheck) Enabled() bool {
-	return true
-}
-
 func (c PortsCheck) Run(ctx context.Context) error {
 	if c.Node == nil {
 		return fmt.Errorf("ports check: node interface is nil")
@@ -86,7 +82,6 @@ func Ports(nodeInterface node.Interface) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

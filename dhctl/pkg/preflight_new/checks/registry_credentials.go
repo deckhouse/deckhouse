@@ -43,10 +43,6 @@ func (RegistryCredentialsCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.DefaultRetryPolicy
 }
 
-func (RegistryCredentialsCheck) Enabled() bool {
-	return true
-}
-
 func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil || c.InstallConfig == nil {
 		return fmt.Errorf("metaConfig and installConfig are required")
@@ -85,7 +81,6 @@ func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }

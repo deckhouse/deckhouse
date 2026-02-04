@@ -41,10 +41,6 @@ func (CloudPrefixCheck) RetryPolicy() preflightnew.RetryPolicy {
 	return preflightnew.RetryPolicy{Attempts: 1}
 }
 
-func (CloudPrefixCheck) Enabled() bool {
-	return true
-}
-
 func (c CloudPrefixCheck) Run(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, preflightnew.DefaultPreflightCheckTimeout)
 	defer cancel()
@@ -69,7 +65,6 @@ func CloudPrefix(metaConfig *config.MetaConfig) preflightnew.Check {
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
-		Enabled:     check.Enabled,
 		Run:         check.Run,
 	}
 }
