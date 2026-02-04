@@ -68,8 +68,6 @@ rules:
 - apiGroups: ["authorization.deckhouse.io"]
   resources: ["accessiblenamespaces"]
   verbs: ["get", "list"]
-{{- $useAccessibleNamespaces := and (ne .Values.global.deckhouseEdition "CE") (.Values.userAuthz.enableMultiTenancy | default false) -}}
-{{- if $useAccessibleNamespaces }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -84,7 +82,6 @@ subjects:
   - kind: Group
     apiGroup: rbac.authorization.k8s.io
     name: system:authenticated
-{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
