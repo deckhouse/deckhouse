@@ -19,7 +19,7 @@ import (
 	"log/slog"
 	"strings"
 
-	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -103,10 +103,32 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 	versionChanged := app.Status.CurrentVersion.Version != "" && app.Status.CurrentVersion.Version != packageStatus.Version
 	mapperStatus := s.buildMapperStatus(versionChanged, app.Status.Conditions, packageStatus.Conditions)
 
-	now := metav1.Now()
-	mappedConditions := s.mapper.Map(mapperStatus)
-	setMapperConditions(app, now, mappedConditions...)
-	setInternalConditions(app, now, packageStatus.Conditions...)
+	// Apply mapped conditions (external user-facing conditions)
+	for _, cond := range s.mapper.Map(mapperStatus) {
+		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
+			Type:               cond.Type,
+			Status:             cond.Status,
+			Reason:             cond.Reason,
+			Message:            cond.Message,
+			ObservedGeneration: app.Generation,
+		})
+	}
+
+	// Apply internal conditions from the operator
+	for _, cond := range packageStatus.Conditions {
+		reason := string(cond.Reason)
+		if reason == "" {
+			reason = string(cond.Type)
+		}
+
+		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
+			Type:               string(cond.Type),
+			Status:             cond.Status,
+			Reason:             reason,
+			Message:            cond.Message,
+			ObservedGeneration: app.Generation,
+		})
+	}
 
 	// We can lose versionChanged=true during different events processing.
 	//
@@ -121,7 +143,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 }
 
 // buildMapperStatus creates mapper input from Application and internal conditions.
-func (s *Service) buildMapperStatus(versionChanged bool, external []v1alpha1.ApplicationStatusCondition, internal []status.Condition) condmapper.State {
+func (s *Service) buildMapperStatus(versionChanged bool, external []metav1.Condition, internal []status.Condition) condmapper.State {
 	mapperStatus := condmapper.State{
 		External: make(map[string]metav1.Condition, len(external)),
 		Internal: make(map[string]metav1.Condition, len(internal)),
@@ -139,7 +161,7 @@ func (s *Service) buildMapperStatus(versionChanged bool, external []v1alpha1.App
 	for _, cond := range external {
 		mapperStatus.External[cond.Type] = metav1.Condition{
 			Type:    cond.Type,
-			Status:  metav1.ConditionStatus(cond.Status),
+			Status:  cond.Status,
 			Reason:  cond.Reason,
 			Message: cond.Message,
 		}
@@ -148,66 +170,6 @@ func (s *Service) buildMapperStatus(versionChanged bool, external []v1alpha1.App
 	mapperStatus.VersionChanged = versionChanged
 
 	return mapperStatus
-}
-
-// setMapperConditions creates or updates conditions, preserving LastTransitionTime if unchanged.
-func setMapperConditions(app *v1alpha1.Application, now metav1.Time, conds ...metav1.Condition) {
-	for _, cond := range conds {
-		newCond := v1alpha1.ApplicationStatusCondition{
-			Type:               cond.Type,
-			Status:             corev1.ConditionStatus(cond.Status),
-			Reason:             cond.Reason,
-			Message:            cond.Message,
-			LastTransitionTime: now,
-			LastProbeTime:      now,
-		}
-
-		found := false
-		for i, oldCond := range app.Status.Conditions {
-			if oldCond.Type == cond.Type {
-				if oldCond.Status == corev1.ConditionStatus(cond.Status) {
-					newCond.LastTransitionTime = oldCond.LastTransitionTime
-				}
-				app.Status.Conditions[i] = newCond
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			app.Status.Conditions = append(app.Status.Conditions, newCond)
-		}
-	}
-}
-
-// setInternalConditions creates or updates internal conditions, preserving LastTransitionTime if unchanged.
-func setInternalConditions(app *v1alpha1.Application, now metav1.Time, conds ...status.Condition) {
-	for _, cond := range conds {
-		newCond := v1alpha1.ApplicationStatusInternalCondition{
-			Type:               string(cond.Type),
-			Status:             corev1.ConditionStatus(cond.Status),
-			Reason:             string(cond.Reason),
-			Message:            cond.Message,
-			LastTransitionTime: now,
-			LastProbeTime:      now,
-		}
-
-		found := false
-		for i, oldCond := range app.Status.InternalConditions {
-			if oldCond.Type == string(cond.Type) {
-				if oldCond.Status == corev1.ConditionStatus(cond.Status) {
-					newCond.LastTransitionTime = oldCond.LastTransitionTime
-				}
-				app.Status.InternalConditions[i] = newCond
-				found = true
-				break
-			}
-		}
-
-		if !found {
-			app.Status.InternalConditions = append(app.Status.InternalConditions, newCond)
-		}
-	}
 }
 
 // internalConditionIsTrue checks if an internal condition with the given name has status True.

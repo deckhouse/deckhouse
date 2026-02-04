@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -28,7 +27,8 @@ const (
 	ApplicationKind     = "Application"
 
 	// ApplicationConditionTypeProcessed changes only by application controller
-	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionTypeProcessed   = "Processed"
+	ApplicationConditionReasonReconciled = "Reconciled"
 	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
 	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
 	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
@@ -112,19 +112,9 @@ type ApplicationStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []ApplicationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// InternalConditions represent internal conditions of the application.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	InternalConditions []ApplicationStatusInternalCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-
-	// ResourceConditions represent conditions related to application resources.
-	// +optional
-	// +patchMergeKey=type
-	// +patchStrategy=merge
-	ResourceConditions []ApplicationStatusResourceCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
@@ -135,78 +125,6 @@ type ApplicationStatusVersion struct {
 	// Release channel from which the version was installed.
 	// +optional
 	Channel string `json:"channel,omitempty"`
-}
-
-type ApplicationStatusCondition struct {
-	// Type of application condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-type ApplicationStatusInternalCondition struct {
-	// Type of internal application condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// The last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-type ApplicationStatusResourceCondition struct {
-	// Type of resource condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

@@ -26,9 +26,10 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
 status:
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Reconciled
     status: "True"
     type: Processed
 ---
