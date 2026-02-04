@@ -46,6 +46,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-simple-bridge/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/035-cni-simple-bridge/requirements"
 	_ "github.com/deckhouse/deckhouse/modules/036-kube-proxy/hooks"
+	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/checker"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 	_ "github.com/deckhouse/deckhouse/modules/038-registry/hooks/https"
