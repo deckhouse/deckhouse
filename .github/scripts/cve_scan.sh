@@ -44,7 +44,60 @@ login_dev_registry() {
 }
 
 trivy_scan() {
-  ${WORKDIR}/bin/trivy i --vex oci --show-suppressed --config-check "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json ${1} --output ${2} --quiet ${3} --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+  local trivy_opts="$1"
+  local report_file="$2"
+  local image_ref="$3"
+
+  local tmp_ignore=""
+  local ignore_arg=""
+
+  tmp_ignore="$(mktemp)"
+
+  if trivy_prepare_ignore_from_cosign "${image_ref}" "${tmp_ignore}"; then
+    ignore_arg="--ignorefile ${tmp_ignore}"
+  fi
+
+  ${WORKDIR}/bin/trivy i \
+    --vex oci \
+    --show-suppressed \
+    --config-check "${TRIVY_POLICY_URL}" \
+    --cache-dir "${WORKDIR}/bin/trivy_cache" \
+    --skip-db-update \
+    --skip-java-db-update \
+    --exit-code 0 \
+    --severity "${SEVERITY}" \
+    --format json \
+    ${trivy_opts} \
+    --output "${report_file}" \
+    --quiet \
+    --username "${trivy_registry_user}" \
+    --password "${trivy_registry_pass}" \
+    --image-src remote \
+    ${ignore_arg} \
+    "${image_ref}"
+
+  rm -f "${tmp_ignore}"
+}
+
+
+trivy_prepare_ignore_from_cosign() {
+  local image_ref="$1"
+  local ignore_file="$2"
+
+  cosign download attestation "${image_ref}" 2>/dev/null \
+  | jq -r '
+      select(.payloadType=="application/vnd.in-toto+json")
+      | .payload
+      | @base64d
+      | fromjson
+      | select(.predicateType=="https://cosign.sigstore.dev/attestation/v1")
+      | .predicate.Data
+    ' > "${ignore_file}"
+
+  [[ -s "${ignore_file}" ]] || return 1
+  echo ${image_ref}
+  cat ${ignore_file}
+  return 0
 }
 
 function send_report() {
