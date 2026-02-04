@@ -137,7 +137,7 @@ func convertEnv() error {
 		if !strings.HasSuffix(splitedParam[0], paramSuffix) {
 			continue
 		}
-		newParamName := strings.TrimRight(splitedParam[0], paramSuffix)
+		newParamName := strings.TrimSuffix(splitedParam[0], paramSuffix)
 		_, ok := os.LookupEnv(newParamName)
 		if ok {
 			return fmt.Errorf("error: both %s and %s are set (but are exclusive)", newParamName, splitedParam[0])
