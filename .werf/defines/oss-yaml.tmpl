@@ -1,7 +1,12 @@
 {{- define "get_oss_version_by_id" -}}
   {{- $id := index . 0 -}}
   {{- $ctx := index . 1 -}}
-  {{- $version := "" -}}
+  {{- $mode := "single" -}}
+  {{- $versions := list -}}
+
+  {{- if ge (len .) 3 -}}
+    {{- $mode = index . 2 -}}
+  {{- end -}}
 
   {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
     {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
@@ -10,14 +15,21 @@
   {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
   {{- range $raw.data -}}
     {{- if eq .id $id -}}
-      {{- $version = .version | default "" -}}
-      {{- break -}}
+      {{- $v := .version | default "" -}}
+      {{- if eq $v "" -}}
+        {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+      {{- $versions = append $versions $v -}}
     {{- end -}}
   {{- end -}}
 
-  {{- if eq $version "" -}}
+  {{- if eq (len $versions) 0 -}}
     {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
   {{- end -}}
 
-  {{- $version -}}
+  {{- if eq $mode "single" -}}
+    {{- index $versions 0 -}}
+  {{- else if eq $mode "multi" -}}
+    {{- join "," $versions -}}
+  {{- end -}}
 {{- end -}}
