@@ -20,4 +20,4 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/hooks/change_host_address"
 )
 
-var _ = change_host_address.RegisterHook("registry", "d8-system")
+var _ = change_host_address.RegisterHook("registry-nodeservices-manager", "d8-system")

@@ -26,17 +26,17 @@ import (
 var _ = Describe("Modules :: registry :: hooks :: change host ip ::", func() {
 	f := HookExecutionConfigInit(`{}`, `{}`)
 
-	Context("With registry pod", func() {
+	Context("With registry-nodeservices-manager pod", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSetAndWaitForBindingContexts(`
 ---
 apiVersion: v1
 kind: Pod
 metadata:
-  name: registry
+  name: registry-nodeservices-manager
   namespace: d8-system
   labels:
-    app: registry
+    app: registry-nodeservices-manager
 status:
   hostIP: 1.2.3.4
 `, 1))
@@ -45,7 +45,7 @@ status:
 
 		It("Should run", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			pod := f.KubernetesResource("Pod", "d8-system", "registry")
+			pod := f.KubernetesResource("Pod", "d8-system", "registry-nodeservices-manager")
 			Expect(pod.Exists()).To(BeTrue())
 			Expect(pod.Field(`metadata.annotations.node\.deckhouse\.io\/initial-host-ip`).String()).To(Equal("1.2.3.4"))
 		})
@@ -57,10 +57,10 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: registry
+  name: registry-nodeservices-manager
   namespace: d8-system
   labels:
-    app: registry
+    app: registry-nodeservices-manager
   annotations:
     node.deckhouse.io/initial-host-ip: "1.2.3.4"
 status:
@@ -71,7 +71,7 @@ status:
 
 			It("Should delete the pod", func() {
 				Expect(f).To(ExecuteSuccessfully())
-				Expect(f.KubernetesResource("Pod", "d8-system", "registry").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Pod", "d8-system", "registry-nodeservices-manager").Exists()).To(BeFalse())
 			})
 		})
 	})
@@ -83,10 +83,10 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: registry
+  name: registry-nodeservices-manager
   namespace: d8-system
   labels:
-    app: registry
+    app: registry-nodeservices-manager
   annotations:
     node.deckhouse.io/initial-host-ip: "1.2.3.4"
 status:
@@ -97,7 +97,7 @@ status:
 
 		It("Should leave the pod as it is", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			pod := f.KubernetesResource("Pod", "d8-system", "registry")
+			pod := f.KubernetesResource("Pod", "d8-system", "registry-nodeservices-manager")
 			Expect(pod.Exists()).To(BeTrue())
 			Expect(pod.Field(`metadata.annotations.node\.deckhouse\.io\/initial-host-ip`).String()).To(Equal("1.2.3.4"))
 		})
@@ -110,10 +110,10 @@ status:
 apiVersion: v1
 kind: Pod
 metadata:
-  name: registry
+  name: registry-nodeservices-manager
   namespace: d8-system
   labels:
-    app: registry
+    app: registry-nodeservices-manager
   annotations:
     node.deckhouse.io/initial-host-ip: "1.2.3.4"
 status: {}
@@ -123,7 +123,7 @@ status: {}
 
 		It("Should leave the pod as it is", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			pod := f.KubernetesResource("Pod", "d8-system", "registry")
+			pod := f.KubernetesResource("Pod", "d8-system", "registry-nodeservices-manager")
 			Expect(pod.Exists()).To(BeTrue())
 			Expect(pod.Field(`metadata.annotations.node\.deckhouse\.io\/initial-host-ip`).String()).To(Equal("1.2.3.4"))
 		})
