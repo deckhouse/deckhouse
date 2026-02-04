@@ -43,8 +43,8 @@ type AppSettings struct {
 	PodName      string
 	PodNamespace string
 
-	Images    ImagesSettings
-	ProxyEnvs ProxyEnvsSettings
+	Images ImagesSettings
+	Proxy  ProxySettings
 }
 
 type ImagesSettings struct {
@@ -53,7 +53,7 @@ type ImagesSettings struct {
 	Mirrorer     string
 }
 
-type ProxyEnvsSettings struct {
+type ProxySettings struct {
 	HTTP    string
 	HTTPS   string
 	NoProxy string

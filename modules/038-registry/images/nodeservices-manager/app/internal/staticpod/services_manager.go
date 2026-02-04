@@ -115,14 +115,14 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		Mirrorer:     manager.settings.Images.Mirrorer,
 	}
 
-	proxyEnvs := staticPodProxyModel{
-		HTTP:    manager.settings.ProxyEnvs.HTTP,
-		HTTPS:   manager.settings.ProxyEnvs.HTTPS,
-		NoProxy: manager.settings.ProxyEnvs.NoProxy,
+	proxyModel := staticPodProxyModel{
+		HTTP:    manager.settings.Proxy.HTTP,
+		HTTPS:   manager.settings.Proxy.HTTPS,
+		NoProxy: manager.settings.Proxy.NoProxy,
 	}
 
 	if changes.Pod, _, err = processTemplate(
-		config.toStaticPodConfig(images, proxyEnvs, hash, hasMirrorer),
+		config.toStaticPodConfig(images, proxyModel, hash, hasMirrorer),
 		registryStaticPodConfigPath,
 	); err != nil {
 		err = fmt.Errorf("error processing static pod template: %w", err)

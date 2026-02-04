@@ -55,8 +55,8 @@ func main() {
 		Mirrorer:     getEnvOrExit("IMAGE_MIRRORER"),
 	}
 
-	// Proxy envs
-	settings.ProxyEnvs = staticpod.ProxyEnvsSettings{
+	// Proxy
+	settings.Proxy = staticpod.ProxySettings{
 		HTTP:    os.Getenv("HTTP_PROXY"),
 		HTTPS:   os.Getenv("HTTPS_PROXY"),
 		NoProxy: os.Getenv("NO_PROXY"),
