@@ -114,14 +114,15 @@ watch -n 1 "kubectl get cnimigration migration-to-cilium -o yaml"
 
 ```bash
 kubectl get cninodemigrations
-kubectl get cninodemigration <node-name> -o yaml
+kubectl get cninodemigration NODE_NAME -o yaml
 ```
 
 Для просмотра логов контроллеров миграции в кластере выполните следующие команды:
 
 ```bash
 kubectl -n d8-system get pods -o wide | grep cni-migration
-kubectl -n d8-system logs <node-name>
+kubectl -n d8-system logs cni-migration-manager-HASH
+kubectl -n d8-system logs cni-migration-agent-HASH
 ```
 
 ### 3. Завершение и очистка
@@ -151,7 +152,7 @@ kubectl delete cnimigration migration-to-cilium
 Проверьте логи pod агента на соответствующем узле:
 
 ```bash
-kubectl -n d8-system logs <node-name>
+kubectl -n d8-system logs cni-migration-agent-HASH
 ```
 
 Возможная причина: невозможность удалить файлы конфигурации CNI из-за прав доступа, зависших процессов, невозможности пройти процедуру проверки Webhooks.

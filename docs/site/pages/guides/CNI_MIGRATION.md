@@ -6,20 +6,20 @@ lang: en
 layout: sidebar-guides
 ---
 
-This document describes the procedure for changing the network plugin (CNI) in a Kubernetes cluster managed by Deckhouse. The tool used in Deckhouse allows performing the migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
+This document describes the procedure for changing the network plugin (CNI) in a Kubernetes cluster managed by Deckhouse. The tool used in Deckhouse allows performing the automated migration (e.g., from Flannel to Cilium) with minimal application downtime and without a full restart of the cluster nodes.
 
 {% alert level="danger" %}
 
 * The tool is NOT intended for switching to any (third-party) CNI.
-* During the migration process, the target CNI module will be automatically enabled, which must be pre-configured by the user/administrator.
+* During the migration process, the target CNI module (`ModuleConfig.spec.enabled: true`) will be automatically enabled, which must be pre-configured by the user/administrator.
 
 {% endalert %}
 
 {% alert level="warning" %}
 
-* During the migration process, all pods in the cluster using the network (in PodNetwork) created by the current CNI will be restarted. This will cause an interruption in service availability. To minimize the risks of losing critical data, it is highly recommended to stop the operation of the most critical services yourself before carrying out the work.
+* During the migration process, all pods in the cluster using the network (in PodNetwork) created by the current CNI will be restarted. This will cause an interruption in service availability. To minimize the risks of losing critical data, it is highly recommended to stop the operation of the most critical application services yourself before carrying out the work.
 * It is recommended to carry out work during an agreed maintenance window.
-* Before carrying out work, it is necessary to disable external cluster management systems (CI/CD, GitOps, ArgoCD, etc.) that may conflict with the process (e.g., trying to restore deleted pods prematurely or rolling back settings).
+* Before carrying out work, it is necessary to disable external cluster management systems (CI/CD, GitOps, ArgoCD, etc.) that may conflict with the process (e.g., trying to restore deleted pods prematurely or rolling back settings). Also, ensure that the cluster management system does not enable the old CNI module.
 
 {% endalert %}
 
@@ -114,14 +114,15 @@ For detailed diagnostics of a specific node, you can check its local resource:
 
 ```bash
 kubectl get cninodemigrations
-kubectl get cninodemigration <node-name> -o yaml
+kubectl get cninodemigration NODE_NAME -o yaml
 ```
 
 To view the logs of migration controllers in the cluster, execute the following commands:
 
 ```bash
 kubectl -n d8-system get pods -o wide | grep cni-migration
-kubectl -n d8-system logs <node-name>
+kubectl -n d8-system logs cni-migration-manager-HASH
+kubectl -n d8-system logs cni-migration-agent-HASH
 ```
 
 ### 3. Completion and cleanup
@@ -151,7 +152,7 @@ Check the status of the `cni-migration-agent` DaemonSet in the `d8-system` names
 Check the logs of the agent pod on the corresponding node:
 
 ```bash
-kubectl -n d8-system logs <node-name>
+kubectl -n d8-system logs cni-migration-agent-HASH
 ```
 
 Possible reason: inability to delete CNI configuration files due to permissions, stuck processes, or failure to pass Webhooks verification.
