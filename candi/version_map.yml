@@ -138,7 +138,7 @@ k8s:
       aws: v1.34.1
       vsphere: v1.34.0
       azure: v1.34.3
-      gcp: ccm/v34.0.0
+      gcp: ccm/v35.0.1
     csi:
       aws: v1.54.0
       azure: v1.33.7
