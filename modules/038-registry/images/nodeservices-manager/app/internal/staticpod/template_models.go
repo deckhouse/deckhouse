@@ -32,13 +32,14 @@ func (model authConfigModel) Render() ([]byte, error) {
 }
 
 func (value NodeServicesConfigModel) toAuthConfig() authConfigModel {
-	config := value.Config
 	mapUser := func(user nodeservices.User) authConfigUserModel {
 		return authConfigUserModel{
 			Name:         user.Name,
 			PasswordHash: user.PasswordHash,
 		}
 	}
+
+	config := value.Config
 
 	model := authConfigModel{
 		RO: mapUser(config.UserRO),
@@ -200,5 +201,6 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 			model.Proxy = &proxyModel
 		}
 	}
+
 	return model
 }

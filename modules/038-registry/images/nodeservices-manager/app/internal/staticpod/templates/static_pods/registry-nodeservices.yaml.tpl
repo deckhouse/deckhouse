@@ -136,13 +136,13 @@ spec:
       path: /etc/kubernetes/registry/pki
       type: Directory
   # Configuration
-  - name: distribution-config
-    hostPath:
-      path: /etc/kubernetes/registry/distribution
-      type: DirectoryOrCreate
   - name: auth-config
     hostPath:
       path: /etc/kubernetes/registry/auth
+      type: DirectoryOrCreate
+  - name: distribution-config
+    hostPath:
+      path: /etc/kubernetes/registry/distribution
       type: DirectoryOrCreate
   {{- if .HasMirrorer }}
   - name: mirrorer-config
