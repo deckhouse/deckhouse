@@ -4,6 +4,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-openstack/candi
+  to: /deckhouse/candi/cloud-providers/openstack
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-vcd/candi
   to: /deckhouse/candi/cloud-providers/vcd
   stageDependencies:
