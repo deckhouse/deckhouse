@@ -361,7 +361,7 @@ spec:
                 properties:
                   labelSelector:
                     description: |-
-                      LabelSelector is a selector to filter namespaces by labels.
+                      `labelSelector` is a selector to filter namespaces by labels.
                       Use kubernetes.io/metadata.name label to filter by namespace name.
                     properties:
                       matchExpressions:
