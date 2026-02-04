@@ -281,8 +281,8 @@ spec:
                           type: string
                         operator:
                           description: |-
-                            operator represents a key's relationship to a set of values.
-                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                            `operator` represents a key's relationship to a set of values.
+                            Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
                           type: string
                         values:
                           description: |-
