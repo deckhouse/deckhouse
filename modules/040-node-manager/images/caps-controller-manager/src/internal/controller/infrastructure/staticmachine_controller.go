@@ -87,7 +87,7 @@ type StaticMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
-func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachine", req.NamespacedName.String())
 	ctx = ctrl.LoggerInto(ctx, logger)
 
@@ -95,8 +95,8 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Fetch the StaticMachine.
 	staticMachine := &infrav1.StaticMachine{}
-	err = r.Get(ctx, req.NamespacedName, staticMachine)
-	if err != nil {
+	var err error
+	if err = r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}

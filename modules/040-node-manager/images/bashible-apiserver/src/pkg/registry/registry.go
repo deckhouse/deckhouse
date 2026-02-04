@@ -113,7 +113,7 @@ func (r *RESTBootstrap) Get(ctx context.Context, name string, options *metav1.Ge
 		return nil, err // TODO form status error
 	}
 
-	runtimeObj := obj.(runtime.Object)
+	runtimeObj := obj
 	requestlog.LogRenderResult(ctx, runtimeObj, false, nil)
 
 	return runtimeObj, nil
@@ -135,16 +135,4 @@ func (r *REST) Destroy() {}
 
 func (r *REST) NamespaceScoped() bool {
 	return false
-}
-
-// --------------------------------------------------------------------------------
-// Helper methods
-//
-
-func (r *REST) forbidden() (runtime.Object, error) {
-	return nil, fmt.Errorf("forbidden")
-}
-
-func (r *REST) forbiddenBool() (runtime.Object, bool, error) {
-	return nil, false, fmt.Errorf("forbidden")
 }
