@@ -89,7 +89,7 @@ func runHTTPServer(addr string) *http.Server {
 	http.Handle("/metrics", promhttp.Handler())
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	go func() {
@@ -115,11 +115,11 @@ func shutdown(sig os.Signal, server *http.Server) {
 	log.Printf("Caught signal %s, exiting", sig.String())
 
 	ctx, cancel := context.WithTimeout(context.Background(), shutdownDurationSeconds*time.Second)
-	defer cancel()
 
 	if err := server.Shutdown(ctx); err != nil {
 		log.Printf("Failed to gracefully shutdown http server: %s", err)
 	}
 
+	cancel()
 	os.Exit(0)
 }
