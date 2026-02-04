@@ -134,7 +134,7 @@ k8s:
     clusterAutoscalerPatch: '0'
     crictlPatch: 0
     ccm:
-      openstack: v1.34.1
+      openstack: v1.35.0
       aws: v1.35.0
       vsphere: v1.35.0
       azure: v1.34.3
