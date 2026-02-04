@@ -753,6 +753,13 @@ func (r *CNIMigrationReconciler) ensurePodsRestarted(
 		), nil
 	}
 
+	// After all pods are restarted, ensure that critical webhook pods are Ready
+	if ready, msg, err := r.checkWebhookPodsReady(ctx); err != nil {
+		return false, "", err
+	} else if !ready {
+		return false, msg, nil
+	}
+
 	return true, "", nil
 }
 
@@ -827,4 +834,131 @@ func (r *CNIMigrationReconciler) checkWebhooksDisabled(ctx context.Context) (boo
 	}
 
 	return true, "", nil
+}
+
+func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (bool, string, error) {
+	if r.WaitForWebhooks == "" {
+		return true, "", nil
+	}
+
+	for name := range strings.SplitSeq(r.WaitForWebhooks, ",") {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+
+		// Check both Validating and Mutating
+		kinds := []string{"ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"}
+		for _, kind := range kinds {
+			obj := &unstructured.Unstructured{}
+			obj.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   "admissionregistration.k8s.io",
+				Version: "v1",
+				Kind:    kind,
+			})
+
+			err := r.Get(ctx, types.NamespacedName{Name: name}, obj)
+			if err != nil {
+				if errors.IsNotFound(err) {
+					continue
+				}
+				return false, "", fmt.Errorf("failed to get %s %s: %w", kind, name, err)
+			}
+
+			webhooks, found, err := unstructured.NestedSlice(obj.Object, "webhooks")
+			if err != nil || !found {
+				continue
+			}
+
+			for _, w := range webhooks {
+				webhook, ok := w.(map[string]any)
+				if !ok {
+					continue
+				}
+
+				clientConfig, found, _ := unstructured.NestedMap(webhook, "clientConfig")
+				if !found {
+					continue
+				}
+
+				svcRef, found, _ := unstructured.NestedMap(clientConfig, "service")
+				if !found {
+					// URL-based webhook, cannot check pod readiness
+					continue
+				}
+
+				ns, _, _ := unstructured.NestedString(svcRef, "namespace")
+				svcName, _, _ := unstructured.NestedString(svcRef, "name")
+
+				if ns == "" || svcName == "" {
+					continue
+				}
+
+				// Get Service to find selector
+				svc := &corev1.Service{}
+				if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ns}, svc); err != nil {
+					if errors.IsNotFound(err) {
+						ctrl.Log.Info("Webhook service not found, skipping check", "webhook", name, "service", svcName)
+						continue
+					}
+					return false, "", err
+				}
+
+				if len(svc.Spec.Selector) == 0 {
+					// No selector
+					continue
+				}
+
+				// Check Pods
+				pods := &corev1.PodList{}
+				if err := r.List(
+					ctx,
+					pods,
+					client.InNamespace(ns),
+					client.MatchingLabels(svc.Spec.Selector),
+				); err != nil {
+					return false, "", err
+				}
+
+				if len(pods.Items) == 0 {
+					return false, fmt.Sprintf(
+						"Waiting for pods for webhook %s (service %s/%s)...",
+						name,
+						ns,
+						svcName,
+					), nil
+				}
+
+				anyReady := false
+				for _, pod := range pods.Items {
+					if isPodReady(&pod) {
+						anyReady = true
+						break
+					}
+				}
+
+				if !anyReady {
+					return false, fmt.Sprintf(
+						"Waiting for ready pods for webhook %s (service %s/%s)...",
+						name,
+						ns,
+						svcName,
+					), nil
+				}
+			}
+		}
+	}
+	return true, "", nil
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	if pod.Status.Phase != corev1.PodRunning {
+		return false
+	}
+	for _, c := range pod.Status.Conditions {
+		if c.Type == corev1.PodReady && c.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
