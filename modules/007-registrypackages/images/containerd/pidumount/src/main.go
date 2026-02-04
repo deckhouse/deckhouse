@@ -57,9 +57,10 @@ import "C"
 
 import (
 	"fmt"
-	"golang.org/x/sys/unix"
 	"log"
 	"os"
+
+	"golang.org/x/sys/unix"
 )
 
 func main() {
