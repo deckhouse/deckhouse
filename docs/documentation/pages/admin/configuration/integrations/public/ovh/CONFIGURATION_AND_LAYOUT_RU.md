@@ -1,5 +1,5 @@
 ---
-title: Конфигурация и схема размещения
+title: Схемы размещения и настройка OVH Cloud
 permalink: ru/admin/integrations/public/ovh/configuration-and-layout-scheme.html
 cloud_type: ovh
 lang: ru

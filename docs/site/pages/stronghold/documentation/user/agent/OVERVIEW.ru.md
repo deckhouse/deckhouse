@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Stronghold Agent"
 permalink: ru/stronghold/documentation/agent/overview.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Мониторинг"
 permalink: ru/user/monitoring/
 lang: ru
 search: monitoring overview, cluster monitoring, metrics collection, monitoring setup, observability, обзор мониторинга, мониторинг кластера, сбор метрик, наблюдаемость

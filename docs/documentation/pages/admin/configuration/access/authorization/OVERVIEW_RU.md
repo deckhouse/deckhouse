@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Авторизация"
 permalink: ru/admin/configuration/access/authorization/
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Настройка узлов для программно-определяемых хранилищ"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/about.html
 lang: ru
 ---

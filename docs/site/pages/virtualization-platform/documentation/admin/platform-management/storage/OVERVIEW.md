@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Storage management"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/
 ---
 

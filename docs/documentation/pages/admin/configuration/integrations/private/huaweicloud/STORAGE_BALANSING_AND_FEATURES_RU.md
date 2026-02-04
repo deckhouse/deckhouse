@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/storage.html
 lang: ru
 ---

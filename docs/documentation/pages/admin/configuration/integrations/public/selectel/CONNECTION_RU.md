@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Selectel Cloud
 permalink: ru/admin/integrations/public/selectel/connection-and-authorization.html
 cloud_type: selectel
 lang: ru

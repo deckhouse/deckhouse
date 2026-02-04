@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/layout.html
 ---
 

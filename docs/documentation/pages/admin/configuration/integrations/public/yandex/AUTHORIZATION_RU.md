@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Yandex Cloud
 permalink: ru/admin/integrations/public/yandex/authorization.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в Amazon Web Services
 permalink: ru/admin/integrations/public/amazon/storage.html
 lang: ru
 ---

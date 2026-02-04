@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Аутентификация"
 permalink: ru/admin/configuration/access/authentication/
 description: "Настройка аутентификации для платформы Deckhouse Kubernetes Platform с локальными и внешними провайдерами. Поддержка LDAP, OIDC, GitHub, GitLab и других. Руководство по настройке аутентификации."
 lang: ru

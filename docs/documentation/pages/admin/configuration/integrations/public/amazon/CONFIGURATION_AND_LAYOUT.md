@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Amazon Web Services
 permalink: en/admin/integrations/public/amazon/layout.html
 ---
 

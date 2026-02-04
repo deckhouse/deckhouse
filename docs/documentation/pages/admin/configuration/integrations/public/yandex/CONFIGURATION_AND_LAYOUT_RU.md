@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Yandex Cloud
 permalink: ru/admin/integrations/public/yandex/layout.html
 lang: ru
 ---

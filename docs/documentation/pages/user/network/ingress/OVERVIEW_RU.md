@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Обработка входящего трафика"
 permalink: ru/user/network/ingress/
 lang: ru
 ---

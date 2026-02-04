@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Хранилища"
 permalink: ru/admin/configuration/storage/
 description: "Настройка решений хранения данных в Deckhouse Kubernetes Platform включая SDS, внешние хранилища, снапшоты и поддерживаемые типы хранилищ."
 lang: ru
