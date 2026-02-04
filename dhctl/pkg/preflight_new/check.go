@@ -16,6 +16,8 @@ package preflightnew
 
 import (
 	"context"
+	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -25,6 +27,16 @@ type CheckName string
 
 func (n CheckName) String() string {
 	return string(n)
+}
+
+// examles: dvp-kubeconfig, dhctl-edition
+var checkNamePattern = regexp.MustCompile("^[a-z][a-z-]*$")
+
+func (n CheckName) Validate() error {
+	if checkNamePattern.MatchString(n.String()) {
+		return nil
+	}
+	return fmt.Errorf("invalid preflight check name %q: must match %s", n, checkNamePattern.String())
 }
 
 type Check struct {
