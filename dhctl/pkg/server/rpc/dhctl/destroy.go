@@ -155,8 +155,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) destroySafe(ctx context.Context, p destroyParams) *pb.DestroyResult {
-	var result *pb.DestroyResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -164,8 +166,7 @@ func (s *Service) destroySafe(ctx context.Context, p destroyParams) *pb.DestroyR
 		}
 	}()
 
-	result = s.destroy(ctx, p)
-	return result
+	return s.destroy(ctx, p)
 }
 
 func (s *Service) destroy(ctx context.Context, p destroyParams) *pb.DestroyResult {

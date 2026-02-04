@@ -151,8 +151,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) *pb.CommanderAttachResult {
-	var result *pb.CommanderAttachResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) (result *pb.CommanderAttachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -160,8 +162,7 @@ func (s *Service) commanderAttachSafe(ctx context.Context, p attachParams) *pb.C
 		}
 	}()
 
-	result = s.commanderAttach(ctx, p)
-	return result
+	return s.commanderAttach(ctx, p)
 }
 
 func (s *Service) commanderAttach(ctx context.Context, p attachParams) *pb.CommanderAttachResult {

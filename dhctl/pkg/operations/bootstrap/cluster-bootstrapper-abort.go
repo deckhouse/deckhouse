@@ -124,7 +124,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
-	defer b.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {
@@ -281,13 +283,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
-
-	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return err
-	}
-	defer func() {
-		_ = b.PhasedExecutionContext.Finalize(stateCache)
-	}()
 
 	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {

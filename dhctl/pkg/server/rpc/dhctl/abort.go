@@ -152,16 +152,18 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) abortSafe(ctx context.Context, p abortParams) *pb.AbortResult {
-	var result *pb.AbortResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) abortSafe(ctx context.Context, p abortParams) (result *pb.AbortResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.AbortResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-	result = s.abort(ctx, p)
-	return result
+
+	return s.abort(ctx, p)
 }
 
 func (s *Service) abort(ctx context.Context, p abortParams) *pb.AbortResult {

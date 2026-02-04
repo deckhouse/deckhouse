@@ -486,8 +486,7 @@ func DeleteCAPIMachineDeployments(ctx context.Context, kubeCl *client.Kubernetes
 			log.DebugF("Patch nodeDrainTimeout for machine %s\n", machine.GetName())
 			m := machine
 			// we delete cluster anyway and we can force delete machine (without drain)
-			err = unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout")
-			if err != nil {
+			if err = unstructured.SetNestedField(m.Object, "10s", "spec", "nodeDrainTimeout"); err != nil {
 				return err
 			}
 

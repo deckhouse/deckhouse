@@ -47,6 +47,7 @@ func (p *RunExecutorParams) validateRunParams() error {
 	return nil
 }
 
+//nolint:gocritic
 func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, params.TerraformBinPath, args...)
 	cmd.Dir = filepath.Dir(params.TerraformBinPath)
@@ -65,9 +66,8 @@ func terraformCmd(ctx context.Context, params RunExecutorParams, args ...string)
 	// always use dug log for write its to debug log file
 	cmd.Env = append(cmd.Env, "TF_LOG=DEBUG")
 
-	envs := cmd.Env
-	envs = append(
-		envs,
+	envs := append(
+		cmd.Env,
 		fmt.Sprintf("HTTP_PROXY=%s", os.Getenv("HTTP_PROXY")),
 		fmt.Sprintf("HTTPS_PROXY=%s", os.Getenv("HTTPS_PROXY")),
 		fmt.Sprintf("NO_PROXY=%s", os.Getenv("NO_PROXY")),

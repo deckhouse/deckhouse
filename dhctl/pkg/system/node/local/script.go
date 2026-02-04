@@ -70,10 +70,10 @@ func (s *Script) Execute(ctx context.Context) ([]byte, error) {
 			exitErr.Stderr = cmd.StderrBytes()
 		}
 
-		return nil, fmt.Errorf("execute locally: %w", err)
+		err = fmt.Errorf("execute locally: %w", err)
 	}
 
-	return cmd.StdoutBytes(), nil
+	return cmd.StdoutBytes(), err
 }
 
 func (s *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) ([]byte, error) {

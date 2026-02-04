@@ -135,8 +135,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) *pb.CommanderDetachResult {
-	var result *pb.CommanderDetachResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -144,8 +146,7 @@ func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) *pb.C
 		}
 	}()
 
-	result = s.commanderDetach(ctx, p)
-	return result
+	return s.commanderDetach(ctx, p)
 }
 
 func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.CommanderDetachResult {

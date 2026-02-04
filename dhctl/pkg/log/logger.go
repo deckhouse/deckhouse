@@ -427,7 +427,7 @@ func (d *SimpleLogger) LogErrorF(format string, a ...interface{}) {
 }
 
 func (d *SimpleLogger) LogErrorLn(a ...interface{}) {
-	d.logger.Error("%v", a)
+	d.logger.Error(fmt.Sprintf("%v", a))
 }
 
 func (d *SimpleLogger) LogDebugF(format string, a ...interface{}) {

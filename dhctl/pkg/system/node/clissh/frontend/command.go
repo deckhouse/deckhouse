@@ -74,6 +74,7 @@ func (c *Command) OnCommandStart(fn func()) {
 	c.onCommandStart = fn
 }
 
+//nolint:prealloc
 func (c *Command) Sudo(ctx context.Context) {
 	cmdLine := c.Name + " " + strings.Join(c.Args, " ")
 	sudoCmdLine := fmt.Sprintf(
@@ -81,7 +82,7 @@ func (c *Command) Sudo(ctx context.Context) {
 		cmdLine,
 	)
 
-	args := make([]string, 0, len(c.SSHArgs)+2)
+	var args []string
 	args = append(args, c.SSHArgs...)
 	args = append(args, []string{
 		"-t", // allocate tty to auto kill remote process when ssh process is killed

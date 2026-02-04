@@ -42,16 +42,15 @@ const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
-
-	infrastructurePipelineAbortedMessage = `
-Infrastructure pipeline aborted.
-If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
-`
 )
 
 var (
-	ErrRunnerStopped              = errors.New("Infrastructure runner was stopped.")
-	ErrInfrastructureApplyAborted = errors.New("Infrastructure apply aborted.")
+	ErrRunnerStopped                 = errors.New("Infrastructure runner was stopped.")
+	ErrInfrastructureApplyAborted    = errors.New("Infrastructure apply aborted.")
+	ErrInfrastructurePipelineAborted = errors.New(`
+Infrastructure pipeline aborted.
+If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
+`)
 )
 
 type (
@@ -304,7 +303,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 
 				if !isConfirm {
-					return fmt.Errorf("%s", infrastructurePipelineAbortedMessage)
+					return ErrInfrastructurePipelineAborted
 				}
 			}
 
@@ -401,9 +400,7 @@ func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 		}
 	}
 
-	err := r.runBeforeActionAndWaitReady(ctx)
-
-	return false, err
+	return false, r.runBeforeActionAndWaitReady(ctx)
 }
 
 func (r *Runner) Apply(ctx context.Context) error {

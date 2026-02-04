@@ -157,8 +157,10 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) convergeSafe(ctx context.Context, p convergeParams) *pb.ConvergeResult {
-	var result *pb.ConvergeResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) convergeSafe(ctx context.Context, p convergeParams) (result *pb.ConvergeResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
@@ -166,8 +168,7 @@ func (s *Service) convergeSafe(ctx context.Context, p convergeParams) *pb.Conver
 		}
 	}()
 
-	result = s.converge(ctx, p)
-	return result
+	return s.converge(ctx, p)
 }
 
 func (s *Service) converge(ctx context.Context, p convergeParams) *pb.ConvergeResult {

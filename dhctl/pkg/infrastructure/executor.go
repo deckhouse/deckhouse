@@ -258,8 +258,7 @@ func GetActions(ctx context.Context, cmd *exec.Cmd) ([]string, error) {
 	}
 
 	var res state
-	err := json.Unmarshal(buf.Bytes(), &res)
-	if err != nil {
+	if err := json.Unmarshal(buf.Bytes(), &res); err != nil {
 		return actions, fmt.Errorf("failed to unmarshal json: %w", err)
 	}
 	for _, i := range res.ResourceChanges {

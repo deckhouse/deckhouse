@@ -137,16 +137,17 @@ func GetSystemDirectories() []string {
 }
 
 // IsSystemDirOrUserHome dir must be absolute and cleaned
+//
+//nolint:gocritic
 func IsSystemDirOrUserHome(dir string) (bool, []string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return false, nil, err
 	}
 
-	all := make([]string, 0, len(systemDirectories)+3)
-	all = append(all, homeDir, "/home", "/media")
-	all = append(all, systemDirectories...)
+	additionalSystems := []string{homeDir, "/home", "/media"}
 
+	all := append(additionalSystems, systemDirectories...)
 	return slices.Contains(all, dir), all, nil
 }
 

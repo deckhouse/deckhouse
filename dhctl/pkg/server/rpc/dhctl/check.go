@@ -133,16 +133,17 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) checkSafe(ctx context.Context, p checkParams) *pb.CheckResult {
-	var result *pb.CheckResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-	result = s.check(ctx, p)
-	return result
+	return s.check(ctx, p)
 }
 
 func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {

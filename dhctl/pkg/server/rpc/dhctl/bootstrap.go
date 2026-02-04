@@ -154,16 +154,18 @@ connectionProcessor:
 	}
 }
 
-func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {
-	var result *pb.BootstrapResult
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
+func (s *Service) bootstrapSafe(ctx context.Context, p bootstrapParams) (result *pb.BootstrapResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			lastState, err := panicResult(ctx, r)
 			result = &pb.BootstrapResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-	result = s.bootstrap(ctx, p)
-	return result
+
+	return s.bootstrap(ctx, p)
 }
 
 func (s *Service) bootstrap(ctx context.Context, p bootstrapParams) *pb.BootstrapResult {
