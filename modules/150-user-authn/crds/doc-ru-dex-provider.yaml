@@ -223,7 +223,7 @@ spec:
 
                         Работает **только** при включенном параметре [publishAPI](https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi).
 
-                        Полученные от IdP данные авторизации и групп сохраняются в кэш на 10 секунд.
+                        Полученные от IdP данные авторизации и групп сохраняются в кеш на 10 секунд.
                 ldap: &ldap
                   description: |
                     Параметры провайдера LDAP.

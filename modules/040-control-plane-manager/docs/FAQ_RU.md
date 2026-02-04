@@ -1124,7 +1124,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 * Использование TLS.
 * Доступность через сервис внутри кластера.
 * Поддержка стандартных `Verbs` (`filterVerb = filter`, `prioritizeVerb = prioritize`).
-* Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
+* Также, предполагается что все подключаемые плагины могут кешировать информацию об узле (`nodeCacheCapable: true`).
 
 Подключить `extender` можно при помощи ресурса [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration).
 
