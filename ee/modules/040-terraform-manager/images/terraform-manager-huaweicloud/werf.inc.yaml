@@ -1,3 +1,4 @@
+{{- $providerVersion := include "get_oss_version_by_id" (list "terraform-provider-huaweicloud" $ )  -}}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "huaweicloud") }}'
 git:
@@ -6,7 +7,7 @@ git:
 import:
   - image: cloud-provider-huaweicloud/terraform-manager
     add: /terraform-manager/terraform-provider-huaweicloud
-    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ .TF.huaweicloud.version }}/linux_amd64/terraform-provider-huaweicloud
+    to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "huaweicloud") }}/{{ .TF.huaweicloud.namespace }}/{{ .TF.huaweicloud.type }}/{{ $providerVersion }}/linux_amd64/terraform-provider-huaweicloud
     before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}

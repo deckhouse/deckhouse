@@ -1,0 +1,29 @@
+- name: Terraform Provider Decort
+  link: https://github.com/BASIS/terraform-provider-decort
+  description: Terraform provider for Dynamix (Decort).
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-decort
+  version: 4.7.3
+
+- name: Terraform Provider Huaweicloud
+  link: https://github.com/huaweicloud/terraform-provider-huaweicloud
+  description: Terraform provider for Huawei Cloud.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-huaweicloud
+  version: 1.69.0
+
+- name: Terraform Provider OpenStack
+  link: https://github.com/terraform-provider-openstack/terraform-provider-openstack
+  description: Terraform provider for OpenStack.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-openstack
+  version: 1.54.1
+
+- name: Terraform Provider VCD
+  link: https://github.com/vmware/terraform-provider-vcd
+  description: Terraform provider for VMware Cloud Director.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0

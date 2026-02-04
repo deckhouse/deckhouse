@@ -227,24 +227,28 @@
   before: setup
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
+    {{- $ossCtx := dict "Files" $.Files "OssYamlPath" (printf "%s/040-terraform-manager/oss.yaml" $edition.modulesDir) }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $context.TF $tfProvider }}
+      {{- $ossId := printf "terraform-provider-%s" $tf.type }}
 
         {{- if not $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
-
         {{- if eq $tf.type "vcd" }}
-          {{- range $version := $tf.versions }}
+          {{/* oss-yaml.tmpl currently works poorly in cases when a component has multiple versions, such components are left for the future */}}
+          {{ $versions := (list "3.10.0" "3.14.1") }}
+          {{- range $version := $versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
   to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
           {{- end }}
         {{- else }}
+          {{- $version := include "get_oss_version_by_id" (list $ossId $ossCtx) }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
-  to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  to: /plugins/registry.opentofu.org/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
         {{- end }}
     {{- end }}
@@ -271,24 +275,28 @@
   before: setup
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
+    {{- $ossCtx := dict "Files" $.Files "OssYamlPath" (printf "%s/040-terraform-manager/oss.yaml" $edition.modulesDir) }}
     {{- range $_, $tfProvider := $edition.terraformProviders }}
       {{- $tf := index $context.TF $tfProvider }}
+      {{- $ossId := printf "terraform-provider-%s" $tf.type }}
 
         {{- if $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
-
         {{- if eq $tf.type "vcd" }}
-          {{- range $version := $tf.versions }}
+          {{/* oss-yaml.tmpl currently works poorly in cases when a component has multiple versions, such components are left for the future */}}
+          {{ $versions := (list "3.10.0" "3.14.1") }}
+          {{- range $version := $versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
   to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
           {{- end }}
         {{- else }}
+          {{- $version := include "get_oss_version_by_id" (list $ossId $ossCtx) }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}
-  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $tf.version }}/linux_amd64/{{ $tf.destinationBinary }}
+  to: /plugins/registry.terraform.io/{{ $tf.namespace }}/{{ $tf.type }}/{{ $version }}/linux_amd64/{{ $tf.destinationBinary }}
   before: setup
         {{- end }}
     {{- end }}

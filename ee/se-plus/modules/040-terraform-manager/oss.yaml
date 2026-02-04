@@ -1,0 +1,15 @@
+- name: Terraform Provider vSphere
+  link: https://github.com/hashicorp/terraform-provider-vsphere
+  description: Terraform provider for vSphere.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-vsphere
+  version: "2.0.2"
+
+- name: Terraform Provider oVirt
+  link: https://github.com/oVirt/terraform-provider-ovirt
+  description: Terraform provider for oVirt/Zvirt.
+  logo: /images/logos/terraform.png
+  license: Apache License 2.0
+  id: terraform-provider-ovirt
+  version: "2.1.5"

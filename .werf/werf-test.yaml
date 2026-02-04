@@ -78,6 +78,9 @@ imageSpec:
 image: tests
 fromImage: tests-prebuild
 import:
+{{ $ossCtx := dict "Files" $.Files "OssYamlPath" "modules/040-terraform-manager/oss.yaml" }}
+{{ $yandexVersion := include "get_oss_version_by_id" (list "terraform-provider-yandex" $ossCtx) }}
+{{ $gcpVersion := include "get_oss_version_by_id" (list "terraform-provider-google" $ossCtx) }}
 - image: terraform # from modules/040-terraform-manager/images/terraform-manager-base/werf.inc.yaml
   add: /terraform/terraform
   to: /dhctl-tests/bin/terraform
@@ -88,11 +91,11 @@ import:
   before: setup
 - image: {{ .TF.yandex.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ .TF.yandex.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $.TF.yandex.version }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
+  to: /dhctl-tests/plugins/registry.opentofu.org/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $yandexVersion }}/linux_amd64/{{ .TF.yandex.destinationBinary }}
   before: setup
 - image: {{ .TF.gcp.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ .TF.gcp.artifactBinary }}
-  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $.TF.gcp.version }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
+  to: /dhctl-tests/plugins/registry.terraform.io/{{ .TF.gcp.namespace }}/{{ .TF.gcp.type }}/{{ $gcpVersion }}/linux_amd64/{{ .TF.gcp.destinationBinary }}
   before: setup
 - image: images-digests
   add: /images_digests.json
