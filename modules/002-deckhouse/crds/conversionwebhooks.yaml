@@ -66,14 +66,6 @@ spec:
                       required:
                       - matchExpressions
                       type: object
-                    includeSnapshotsFrom:
-                      description: |-
-                        An array of names of kubernetes bindings in a hook.
-                        When specified, a list of monitored objects from that bindings
-                        will be added to the binding context in a snapshots field. Self-include is also possible.
-                      items:
-                        type: string
-                      type: array
                     jqFilter:
                       description: |-
                         An optional parameter that specifies event filtering using jq syntax.
@@ -207,8 +199,6 @@ spec:
                     queue:
                       description: A name of a separate queue. It can be used to execute
                         long-running hooks in parallel with hooks in the "main" queue.
-                      type: string
-                    resynchronizationPeriod:
                       type: string
                   required:
                   - kind

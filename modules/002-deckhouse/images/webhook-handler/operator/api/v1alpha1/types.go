@@ -62,12 +62,7 @@ type KubernetesContext struct {
 	JqFilter string `json:"jqFilter,omitempty"`
 	// If `true`, Shell-operator skips the hook execution errors.
 	// If `false` or the parameter is not set, the hook is restarted after a 5 seconds delay in case of an error.
-	AllowFailure            bool   `json:"allowFailure,omitempty"`
-	ResynchronizationPeriod string `json:"resynchronizationPeriod,omitempty"`
-	// An array of names of kubernetes bindings in a hook.
-	// When specified, a list of monitored objects from that bindings
-	// will be added to the binding context in a snapshots field. Self-include is also possible.
-	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
+	AllowFailure bool `json:"allowFailure,omitempty"`
 	// A name of a separate queue. It can be used to execute long-running hooks in parallel with hooks in the "main" queue.
 	Queue string `json:"queue,omitempty"`
 }
