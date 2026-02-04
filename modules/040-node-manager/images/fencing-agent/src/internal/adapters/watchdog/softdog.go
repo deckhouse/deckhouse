@@ -9,7 +9,7 @@ import (
 
 type Config struct {
 	WatchdogDevice  string `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
-	WathcdogTimeout int    `env:"WATCHDOG_TIMEOUT" env-default:"10"`
+	WathcdogTimeout int    `env:"WATCHDOG_TIMEOUT" env-default:"100"`
 }
 
 func (c *Config) Validate() error {

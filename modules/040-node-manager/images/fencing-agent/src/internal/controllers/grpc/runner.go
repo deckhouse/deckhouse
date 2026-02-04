@@ -2,10 +2,14 @@ package grpc
 
 import (
 	"context"
+	"errors"
+	"fencing-agent/internal/helper/logger/sl"
+	"fencing-agent/internal/helper/validators"
 	pb "fencing-agent/pkg/api/v1"
 	"fmt"
 	"net"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -16,6 +20,29 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type Config struct {
+	SocketPath  string `env:"GRPC_SOCKET_PATH" env-default:"/var/run/fencing-agent.sock"`
+	UnaryRPS    int    `env:"REQUEST_RPS" env-default:"10"`
+	UnaryBurst  int    `env:"REQUEST_BURST" env-default:"100"`
+	StreamRPS   int    `env:"STREAM_RPS" env-default:"5"`
+	StreamBurst int    `env:"STREAM_BURST" env-default:"100"`
+}
+
+func (c *Config) Validate() error {
+	if unaryErr := validators.ValidateRateLimit(c.UnaryRPS, c.UnaryBurst, "Unary"); unaryErr != nil {
+		return unaryErr
+	}
+
+	if streamErr := validators.ValidateRateLimit(c.StreamRPS, c.StreamBurst, "Stream"); streamErr != nil {
+		return streamErr
+	}
+
+	if strings.TrimSpace(c.SocketPath) == "" {
+		return errors.New("GRPC_SOCKET_PATH is empty")
+	}
+	return nil
+}
+
 type Runner struct {
 	logger     *log.Logger
 	grpcServer *grpc.Server
@@ -24,19 +51,22 @@ type Runner struct {
 	cleanOnce  sync.Once
 }
 
-func NewRunner(socketPath string, logger *log.Logger, handler *Server, unaryLimiter *rate.Limiter, streamLimiter *rate.Limiter) (*Runner, error) {
-	if err := os.RemoveAll(socketPath); err != nil {
+func NewRunner(cfg Config, logger *log.Logger, handler *Server) (*Runner, error) {
+	if err := os.RemoveAll(cfg.SocketPath); err != nil {
 		return nil, fmt.Errorf("failed to remove existing socket: %w", err)
 	}
 
-	listener, err := net.Listen("unix", socketPath)
+	listener, err := net.Listen("unix", cfg.SocketPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create listener on %s: %w", socketPath, err)
+		return nil, fmt.Errorf("failed to create listener on %s: %w", cfg.SocketPath, err)
 	}
 
+	unaryRateLimit := rate.NewLimiter(rate.Limit(cfg.UnaryRPS), cfg.UnaryBurst)
+	streamRateLimit := rate.NewLimiter(rate.Limit(cfg.StreamRPS), cfg.StreamBurst)
+
 	grpcServer := grpc.NewServer(
-		grpc.UnaryInterceptor(UnaryRateLimiterInterceptor(unaryLimiter, logger)),
-		grpc.StreamInterceptor(StreamServerInterceptor(streamLimiter, logger)),
+		grpc.UnaryInterceptor(UnaryRateLimiterInterceptor(unaryRateLimit, logger)),
+		grpc.StreamInterceptor(StreamServerInterceptor(streamRateLimit, logger)),
 	)
 
 	pb.RegisterFencingServer(grpcServer, handler)
@@ -46,17 +76,17 @@ func NewRunner(socketPath string, logger *log.Logger, handler *Server, unaryLimi
 	return &Runner{
 		grpcServer: grpcServer,
 		listener:   listener,
-		socketPath: socketPath,
 		logger:     logger,
 		cleanOnce:  sync.Once{},
 	}, nil
 }
 
-func (r *Runner) Run() error {
-	if err := r.grpcServer.Serve(r.listener); err != nil {
-		return fmt.Errorf("gRPC server failed: %w", err)
-	}
-	return nil
+func (r *Runner) Start() {
+	go func() {
+		if err := r.grpcServer.Serve(r.listener); err != nil {
+			r.logger.Error("gRPC server failed", sl.Err(err))
+		}
+	}()
 }
 
 func (r *Runner) Stop(ctx context.Context) error {

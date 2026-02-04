@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/controllers/grpc"
 	"fencing-agent/internal/controllers/http"
 
 	//"fencing-agent/internal/adapters/memberlist"
@@ -93,12 +94,27 @@ func main() {
 		log,
 	)
 
+	// get_nodes usecase
+	nodesGetter := usecase.NewGetNodes(mblist)
+
+	// eventbus usecase
+
+	eventBus := usecase.NewEventsBus()
+
+	grpcSrv := grpc.NewServer(eventBus, nodesGetter)
+
+	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)
+	if err != nil {
+		panic(err)
+	}
+
 	healthzSrv := http.New(log, cfg.HealthProbeBindAddress)
 
 	kubeClient.Start(ctx)
 	fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
-
 	healthzSrv.Start()
+	grpcSrvRunner.Start()
+
 	<-ctx.Done()
 
 	healthzSrv.Stop()

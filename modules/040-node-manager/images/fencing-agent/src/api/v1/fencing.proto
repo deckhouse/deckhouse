@@ -13,15 +13,10 @@ message Node {
   string address = 2;
 }
 
-message NodesInNetwork {
-  // NodeName to Node
-  map<string,Node> nodes = 1;
+message Nodes {
+  repeated Node nodes = 1;
 }
 
-message NodeGroup {
-  // NetworkInterfaceName to Node in this network
-  map<string, NodesInNetwork> networks = 1;
-}
 
 enum EventType {
   UNDEFINED = 0;
@@ -37,6 +32,6 @@ message Event {
 }
 
 service Fencing {
-  rpc GetAll(google.protobuf.Empty) returns (NodeGroup);
+  rpc GetAll(google.protobuf.Empty) returns (Nodes);
   rpc StreamEvents(google.protobuf.Empty) returns (stream Event);
 }

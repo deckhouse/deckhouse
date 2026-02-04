@@ -8,8 +8,7 @@ const (
 )
 
 type Event struct {
-	Node             Node
-	EventType        EventType
-	Timestamp        int64 // Unix timestamp
-	NetworkInterface NetworkInterface
+	Node      Node
+	EventType EventType
+	Timestamp int64 // Unix timestamp
 }
