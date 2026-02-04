@@ -32,7 +32,7 @@ lang: ru
 d8 k get nodenetworkinterface
 ```
 
-> Ресурс `nodenetworkinterface` в командах может быть сокращён до `nni`.
+> Ресурс NodeNetworkInterface в командах может быть сокращён до `nni`.
 
 Пример вывода:
 

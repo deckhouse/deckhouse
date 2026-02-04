@@ -25,7 +25,7 @@ Example configuring Bond interface:
 
 1. Set custom labels for interfaces that can be combined to create a Bond interface.
 
-   > The `nodenetworkinterface` resource can  in commands be abbreviated to `nni`.
+   > The NodeNetworkInterface resource can  in commands be abbreviated to `nni`.
 
    ```shell
    d8 k label nni node-0-nic-fa163efbde48 nni.example.com/bond-group=bond0

@@ -26,7 +26,7 @@ lang: ru
    d8 k -n my-namespace get network my-network -o yaml
    ```
 
-   Пример статуса ресурса Network
+   Пример статуса ресурса Network:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1

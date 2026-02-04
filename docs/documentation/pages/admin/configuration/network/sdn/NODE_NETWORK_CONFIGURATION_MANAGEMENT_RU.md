@@ -26,7 +26,7 @@ lang: ru
 
 1. Установите на интерфейсы, предназначенные для объединения в Bond-интерфейс, пользовательские лейблы:
 
-   > Ресурс `nodenetworkinterface` в командах может быть сокращён до `nni`.
+   > Ресурс NodeNetworkInterface в командах может быть сокращён до `nni`.
 
    ```shell
    d8 k label nni node-0-nic-fa163efbde48 nni.example.com/bond-group=bond0

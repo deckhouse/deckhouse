@@ -32,7 +32,7 @@ To check for resources, use the command:
 d8 k get nodenetworkinterface
 ```
 
-> The `nodenetworkinterface` resource can  in commands be abbreviated to `nni`.
+> The NodeNetworkInterface resource can in commands be abbreviated to `nni`.
 
 Example output:
 
@@ -71,4 +71,4 @@ d8 k label nodenetworkinterface virtlab-ap-1-nic-1c61b4a6a0e7 nic-group=extra
 d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
 ```
 
-To increase bandwidth or provide redundancy, it is also possible to combine several physical interfaces into a Bond. For more details, see the section [Creating a Bond Interface](node-network-configuration-management.html#example-of-creating-a-bond-interface).
+To increase bandwidth or provide redundancy, it is also possible to combine several physical interfaces into a Bond. For more details, see the section ["Creating a Bond Interface"](node-network-configuration-management.html#example-of-creating-a-bond-interface).

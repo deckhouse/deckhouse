@@ -170,7 +170,7 @@ spec:
 ### Creating a project network (user network)
 
 In order for users to be able to create their own dedicated networks based on tagged traffic, it is necessary to first describe the range of tags available to them and define the network interfaces on which they can be configured.
-To do this, use the custom resource [NetworkClass]((/modules/sdn/cr.html#clusternetworkclass)).
+To do this, use the custom resource [NetworkClass](/modules/sdn/cr.html#clusternetworkclass).
 
 Example:
 
@@ -190,4 +190,4 @@ spec:
           nic-group: extra
 ```
 
-An example of creating a custom network using the NetworkClass resource administrator is described in the section [Creating a network for a specific project](../../../../user/network/sdn/dedicated-network-creating.html).
+An example of creating a custom network using the NetworkClass resource administrator is described in the section ["Creating a network for a specific project"](../../../../user/network/sdn/dedicated-network-creating.html).

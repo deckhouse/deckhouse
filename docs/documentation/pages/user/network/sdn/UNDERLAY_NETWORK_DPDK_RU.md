@@ -7,7 +7,7 @@ lang: ru
 Для подключения физических сетевых интерфейсов (PF/VF) напрямую в поды для DPDK-приложений необходимо:
 
 1. Убедиться, что администратор добавил на ваш неймспейс [лейбл](../../../admin/configuration/network/sdn/underlay-networks.html#подготовка-неймспейса-для-использования-underlaynetwork) для использования UnderlayNetwork.
-1. Создать под c аннотацией, запрашивающей устройство из UnderlayNetwork
+1. Создать под c аннотацией, запрашивающей устройство из UnderlayNetwork.
 
 ## Создание пода c устройством из UnderlayNetwork
 
@@ -66,8 +66,8 @@ spec:
 {% alert level="info" %}
 Для DPDK-приложений важно:
 
-* Настроить `capabilities` (NET_ADMIN, NET_RAW, IPC_LOCK) для запуска в непривилегированном режиме вместо использования `privileged: true`
-* Подключить volumes с hugepages, так как DPDK требует hugepages для эффективного управления памятью
+* Настроить `capabilities` (NET_ADMIN, NET_RAW, IPC_LOCK) для запуска в непривилегированном режиме вместо использования `privileged: true`;
+* Подключить volumes с hugepages, так как DPDK требует hugepages для эффективного управления памятью.
 {% endalert %}
 
 {% alert level="info" %}

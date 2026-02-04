@@ -98,7 +98,7 @@ You can also check the ResourceClaim that was automatically created:
 d8 k -n mydpdk get resourceclaim
 ```
 
-Example pod status with allocated UnderlayNetwork device
+Example pod status with allocated UnderlayNetwork device:
 
 ```yaml
 apiVersion: v1
