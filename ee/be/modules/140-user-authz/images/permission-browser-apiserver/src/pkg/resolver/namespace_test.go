@@ -492,7 +492,7 @@ func TestIsResourceNamespaced_WithDiscovery(t *testing.T) {
 	assert.False(t, r.isResourceNamespaced("rbac.authorization.k8s.io", "clusterroles"), "clusterroles should be cluster-scoped")
 }
 
-// TestIsResourceNamespaced_NilDiscovery tests fail-open behavior without discovery
+// TestIsResourceNamespaced_NilDiscovery tests fail-closed behavior without discovery
 func TestIsResourceNamespaced_NilDiscovery(t *testing.T) {
 	r := &NamespaceResolver{discoveryClient: nil}
 
@@ -500,9 +500,17 @@ func TestIsResourceNamespaced_NilDiscovery(t *testing.T) {
 	assert.True(t, r.isResourceNamespaced("", "pods"))
 	assert.False(t, r.isResourceNamespaced("", "namespaces"))
 
-	// Unknown resources should return true (fail-open)
-	assert.True(t, r.isResourceNamespaced("custom.example.com", "unknownresource"),
-		"unknown resource should be assumed namespaced when discovery is nil")
+	// Unknown resources should return false (fail-closed)
+	assert.False(t, r.isResourceNamespaced("custom.example.com", "unknownresource"),
+		"unknown resource should be assumed cluster-scoped when discovery is nil")
+}
+
+func TestIsResourceNamespaced_UnknownGroup_WithDiscovery(t *testing.T) {
+	client := fake.NewSimpleClientset()
+	r := &NamespaceResolver{discoveryClient: client.Discovery()}
+
+	// Unknown group should return false (fail-closed).
+	assert.False(t, r.isResourceNamespaced("unknown.example.com", "unknownresource"))
 }
 
 // Helper functions

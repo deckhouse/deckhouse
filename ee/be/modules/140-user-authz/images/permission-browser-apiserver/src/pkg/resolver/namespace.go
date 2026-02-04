@@ -317,7 +317,11 @@ func (r *NamespaceResolver) hasNamespacedRules(rules []rbacv1.PolicyRule) bool {
 }
 
 // isResourceNamespaced checks if a resource is namespaced using discovery.
-// Returns true if the resource is namespaced or if we can't determine (fail-open for this check).
+//
+// IMPORTANT: This function is used to decide whether the user has ANY namespaced access
+// via ClusterRoleBindings / RoleBindings. A false positive here results in listing
+// *all* namespaces as accessible (info leak). Therefore, for unknown resources or
+// discovery errors we fail CLOSED (assume cluster-scoped).
 func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 	// Build fully qualified resource key (group/resource) to avoid collisions
 	// between resources with the same name in different API groups.
@@ -327,11 +331,17 @@ func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 	// Key format: "apiGroup/resource" where core API group is empty string.
 	commonNamespaced := map[string]struct{}{
 		"/pods": {}, "/services": {}, "/configmaps": {}, "/secrets": {},
-		"/serviceaccounts": {}, "/endpoints": {}, "/events": {},
+		"/serviceaccounts": {}, "/endpoints": {}, "/events": {}, "events.k8s.io/events": {},
+		"/limitranges": {}, "/resourcequotas": {},
 		"/persistentvolumeclaims": {}, "/replicationcontrollers": {},
-		"apps/deployments": {}, "apps/replicasets": {}, "apps/statefulsets": {},
+		"apps/deployments": {}, "apps/replicasets": {}, "apps/statefulsets": {}, "apps/controllerrevisions": {},
 		"apps/daemonsets": {}, "batch/jobs": {}, "batch/cronjobs": {},
 		"networking.k8s.io/ingresses": {}, "networking.k8s.io/networkpolicies": {},
+		"discovery.k8s.io/endpointslices": {}, "coordination.k8s.io/leases": {},
+		"autoscaling/horizontalpodautoscalers": {}, "autoscaling.k8s.io/verticalpodautoscalers": {},
+		"policy/poddisruptionbudgets": {},
+		"snapshot.storage.k8s.io/volumesnapshots": {},
+		"metrics.k8s.io/pods": {},
 		"rbac.authorization.k8s.io/roles": {}, "rbac.authorization.k8s.io/rolebindings": {},
 	}
 	if _, known := commonNamespaced[fqKey]; known {
@@ -342,31 +352,32 @@ func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 	commonClusterScoped := map[string]struct{}{
 		"/namespaces": {}, "/nodes": {}, "/persistentvolumes": {},
 		"rbac.authorization.k8s.io/clusterroles": {}, "rbac.authorization.k8s.io/clusterrolebindings": {},
+		"metrics.k8s.io/nodes": {},
 		"storage.k8s.io/storageclasses": {}, "scheduling.k8s.io/priorityclasses": {},
 	}
 	if _, known := commonClusterScoped[fqKey]; known {
 		return false
 	}
 
-	// Without discovery client, assume unknown resources could be namespaced
+	// Without discovery client, we cannot determine reliably.
 	if r.discoveryClient == nil {
-		klog.V(5).Infof("No discovery client, assuming %s/%s is namespaced", group, resource)
-		return true
+		klog.V(5).Infof("No discovery client, assuming %s/%s is cluster-scoped", group, resource)
+		return false
 	}
 
 	// Determine the GroupVersion to query
 	gv, err := r.getPreferredGroupVersion(group)
 	if err != nil {
-		// Discovery error: fail-open, assume namespaced
-		klog.V(4).Infof("Failed to get preferred version for group %q: %v, assuming namespaced", group, err)
-		return true
+		// Discovery error: fail-closed, assume cluster-scoped
+		klog.V(4).Infof("Failed to get preferred version for group %q: %v, assuming cluster-scoped", group, err)
+		return false
 	}
 
 	resourceList, err := r.discoveryClient.ServerResourcesForGroupVersion(gv)
 	if err != nil {
-		// If discovery fails, assume it could be namespaced (fail-open)
-		klog.V(5).Infof("Discovery failed for %s/%s: %v, assuming namespaced", group, resource, err)
-		return true
+		// If discovery fails, assume cluster-scoped (fail-closed)
+		klog.V(5).Infof("Discovery failed for %s/%s: %v, assuming cluster-scoped", group, resource, err)
+		return false
 	}
 
 	for _, res := range resourceList.APIResources {
@@ -375,9 +386,9 @@ func (r *NamespaceResolver) isResourceNamespaced(group, resource string) bool {
 		}
 	}
 
-	// Resource not found in discovery, assume it could be namespaced
-	klog.V(5).Infof("Resource %s/%s not found in discovery, assuming namespaced", group, resource)
-	return true
+	// Resource not found in discovery, assume cluster-scoped (fail-closed)
+	klog.V(5).Infof("Resource %s/%s not found in discovery, assuming cluster-scoped", group, resource)
+	return false
 }
 
 // getPreferredGroupVersion returns the preferred GroupVersion string for an API group.
