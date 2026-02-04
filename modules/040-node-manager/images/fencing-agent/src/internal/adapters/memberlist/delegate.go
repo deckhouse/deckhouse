@@ -2,24 +2,19 @@ package memberlist
 
 import (
 	"encoding/json"
+	"fencing-agent/internal/domain"
 	"fencing-agent/internal/helper/logger/sl"
 	"log/slog"
-	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/hashicorp/memberlist"
 )
 
-// BroadcastMessage is the message structure sent between cluster members
-type BroadcastMessage struct {
-	MemberCount int    `json:"member_count"`
-	TimestampMs int64  `json:"timestamp_ms"`
-	NodeName    string `json:"node_name"`
+// NodesNumberReceiver is called when a NodesNumber message is received
+type NodesNumberReceiver interface {
+	SetTotalNodes(nodesNumber domain.NodesNumber)
 }
-
-// MessageHandler is called when a broadcast message is received from another node
-type MessageHandler func(msg BroadcastMessage)
 
 // simpleBroadcast implements memberlist.Broadcast interface
 type simpleBroadcast struct {
@@ -47,21 +42,17 @@ func (b *simpleBroadcast) Finished() {
 // Delegate implements memberlist.Delegate interface for custom message handling
 type Delegate struct {
 	logger     *log.Logger
-	nodeName   string
 	broadcasts *memberlist.TransmitLimitedQueue
 	numNodes   func() int
-
-	mu       sync.RWMutex
-	handlers []MessageHandler
+	receiver   NodesNumberReceiver
 }
 
 // NewDelegate creates a new Delegate for handling memberlist broadcasts
-func NewDelegate(logger *log.Logger, nodeName string, numNodes func() int) *Delegate {
+func NewDelegate(logger *log.Logger, numNodes func() int, receiver NodesNumberReceiver) *Delegate {
 	d := &Delegate{
 		logger:   logger,
-		nodeName: nodeName,
 		numNodes: numNodes,
-		handlers: make([]MessageHandler, 0),
+		receiver: receiver,
 	}
 
 	d.broadcasts = &memberlist.TransmitLimitedQueue{
@@ -72,19 +63,11 @@ func NewDelegate(logger *log.Logger, nodeName string, numNodes func() int) *Dele
 	return d
 }
 
-// OnMessage registers a handler that will be called when a message is received
-func (d *Delegate) OnMessage(handler MessageHandler) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	d.handlers = append(d.handlers, handler)
-}
-
-// BroadcastMemberCount queues a broadcast message with current member count
-func (d *Delegate) BroadcastMemberCount(memberCount int) {
-	msg := BroadcastMessage{
-		MemberCount: memberCount,
-		TimestampMs: time.Now().UnixMilli(),
-		NodeName:    d.nodeName,
+// BroadcastNodesNumber queues a broadcast message with current nodes count
+func (d *Delegate) BroadcastNodesNumber(totalNodes int) {
+	msg := domain.NodesNumber{
+		TotalNodes: totalNodes,
+		Timestamp:  time.Now().UnixMilli(),
 	}
 
 	data, err := json.Marshal(msg)
@@ -98,8 +81,8 @@ func (d *Delegate) BroadcastMemberCount(memberCount int) {
 	})
 
 	d.logger.Debug("broadcast message queued",
-		slog.Int("member_count", memberCount),
-		slog.Int64("timestamp_ms", msg.TimestampMs))
+		slog.Int("total_nodes", totalNodes),
+		slog.Int64("timestamp", msg.Timestamp))
 }
 
 // NodeMeta returns metadata about this node (not used)
@@ -113,23 +96,18 @@ func (d *Delegate) NotifyMsg(data []byte) {
 		return
 	}
 
-	var msg BroadcastMessage
+	var msg domain.NodesNumber
 	if err := json.Unmarshal(data, &msg); err != nil {
 		d.logger.Warn("failed to unmarshal broadcast message", sl.Err(err))
 		return
 	}
 
 	d.logger.Debug("broadcast message received",
-		slog.String("from_node", msg.NodeName),
-		slog.Int("member_count", msg.MemberCount),
-		slog.Int64("timestamp_ms", msg.TimestampMs))
+		slog.Int("total_nodes", msg.TotalNodes),
+		slog.Int64("timestamp", msg.Timestamp))
 
-	d.mu.RLock()
-	handlers := d.handlers
-	d.mu.RUnlock()
-
-	for _, handler := range handlers {
-		handler(msg)
+	if d.receiver != nil {
+		d.receiver.SetTotalNodes(msg)
 	}
 }
 
@@ -138,9 +116,11 @@ func (d *Delegate) GetBroadcasts(overhead, limit int) [][]byte {
 	return d.broadcasts.GetBroadcasts(overhead, limit)
 }
 
+// LocalState is used for TCP push/pull state exchange (not used)
 func (d *Delegate) LocalState(join bool) []byte {
 	return nil
 }
 
+// MergeRemoteState handles state received from remote nodes (not used)
 func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
 }

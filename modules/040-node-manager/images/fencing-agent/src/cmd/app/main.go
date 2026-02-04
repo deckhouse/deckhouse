@@ -19,6 +19,8 @@ package main
 import (
 	"context"
 	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/adapters/memberlist"
+	"fencing-agent/internal/controllers/event"
 	"fencing-agent/internal/controllers/grpc"
 	"fencing-agent/internal/controllers/http"
 
@@ -56,16 +58,23 @@ func main() {
 		panic(err)
 	}
 	log.Info("current node IP", ip)
-	//mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName)
-	mblist, err := local.NewMemberlist(log)
-	if err != nil {
-		log.Error("failed to create memberlist", sl.Err(err))
-		panic(err)
-	}
 
 	ips, err := kubeClient.GetNodesIP(ctx)
 	if err != nil {
 		log.Error("failed to get nodes IPs", sl.Err(err))
+		panic(err)
+	}
+	totalNodes := len(ips)
+	log.Info("total nodes", "totalNodes", totalNodes)
+
+	decider := domain.NewQuorumDecider(totalNodes)
+
+	eventBus := usecase.NewEventsBus()
+	eventHandler := event.NewEventHandler(log, eventBus)
+	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, decider)
+	//mblist, err := local.NewMemberlist(log)
+	if err != nil {
+		log.Error("failed to create memberlist", sl.Err(err))
 		panic(err)
 	}
 
@@ -75,14 +84,11 @@ func main() {
 		panic(err)
 	}
 
+	mblist.BroadcastNodesNumber(totalNodes)
+
 	//softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
 	var s []byte
 	softdog := local.NewWatchdog(&s)
-
-	totalNodes := len(ips)
-	log.Info("total nodes", "totalNodes", totalNodes)
-
-	decider := domain.NewQuorumDecider(totalNodes)
 
 	fencingAgent := usecase.NewHealthMonitor(
 		kubeClient,
@@ -98,10 +104,7 @@ func main() {
 	nodesGetter := usecase.NewGetNodes(mblist)
 
 	// eventbus usecase
-
-	eventBus := usecase.NewEventsBus()
-
-	grpcSrv := grpc.NewServer(eventBus, nodesGetter)
+	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
 
 	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)
 	if err != nil {
