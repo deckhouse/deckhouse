@@ -128,6 +128,11 @@ var (
 			"properties.storageClass.properties.provision.items.properties.type",
 			"properties.storageClass.properties.provision.items.oneOf[*].properties.type",
 		},
+		"modules/030-cloud-provider-azure/openapi/values.yaml": {
+			"properties.internal.properties.providerClusterConfiguration.properties.apiVersion",
+			"properties.internal.properties.providerClusterConfiguration.properties.serviceEndpoints.items",
+			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",
+		},
 		"modules/030-cloud-provider-aws/openapi/config-values.yaml": {
 			// ignore AWS disk types
 			"properties.storageClass.properties.provision.items.properties.type",
@@ -257,6 +262,10 @@ var (
 			"properties.addressPools.items.properties.protocol",
 		},
 		"candi/cloud-providers/azure/openapi/cluster_configuration.yaml": {
+			// ignore enum values
+			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
+		},
+		"modules/030-cloud-provider-azure/candi/openapi/cluster_configuration.yaml": {
 			// ignore enum values
 			"apiVersions[*].openAPISpec.properties.serviceEndpoints.items",
 		},

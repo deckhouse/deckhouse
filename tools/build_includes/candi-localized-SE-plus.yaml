@@ -4,6 +4,11 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/030-cloud-provider-azure/candi
+  to: /deckhouse/candi/cloud-providers/azure
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-dvp/candi
   to: /deckhouse/candi/cloud-providers/dvp
   stageDependencies:
