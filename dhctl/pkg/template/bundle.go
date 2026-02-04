@@ -91,8 +91,9 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
+//nolint:prealloc
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
-	saveInfo := make([]saveFromTo, 0, 5)
+	saveInfo := make([]saveFromTo, 0)
 	saveInfo = append(saveInfo, saveFromTo{
 		from: candiBashibleDir,
 		to:   bashibleDir,
