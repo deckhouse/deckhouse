@@ -154,21 +154,21 @@
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
-- add: /candi/cloud-providers/aws/openapi
+- add: /modules/030-cloud-provider-aws/candi/openapi
   to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/aws/openapi
+- add: /modules/030-cloud-provider-aws/candi/openapi
   to: /src/modules/030-cloud-provider-aws/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/aws/docs
+- add: /modules/030-cloud-provider-aws/candi/docs
   to: /src/modules/030-cloud-provider-aws/docs
   owner: jekyll
   group: jekyll

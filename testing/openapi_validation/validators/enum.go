@@ -44,6 +44,12 @@ var (
 			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
 			"apiVersions[0].openAPISpec.properties.withNAT.properties.bastionInstance.properties.instanceClass.properties.diskType",
 		},
+		// disk types - gp2.,..
+		"modules/030-cloud-provider-aws/candi/openapi/cluster_configuration.yaml": {
+			"apiVersions[0].openAPISpec.properties.masterNodeGroup.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.nodeGroups.items.properties.instanceClass.properties.diskType",
+			"apiVersions[0].openAPISpec.properties.withNAT.properties.bastionInstance.properties.instanceClass.properties.diskType",
+		},
 		// disk types: pd-standard, pd-ssd, ...
 		"candi/cloud-providers/gcp/openapi/instance_class.yaml": {
 			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
