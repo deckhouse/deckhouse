@@ -589,6 +589,24 @@ function bootstrap_static() {
 
     IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
     D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
+
+    ssh_check_max_attempts=100
+    ssh_check_sleep_sec=10
+    for ((i=1; i<=ssh_check_max_attempts; i++)); do
+      if $ssh_command "$ssh_user@$bastion_ip" "true" >/dev/null 2>&1; then
+        echo "Bastion SSH is reachable (attempt $i/$ssh_check_max_attempts)"
+        break
+      fi
+
+      if [ "$i" -eq "$ssh_check_max_attempts" ]; then
+          echo "ERROR: bastion SSH not reachable after $ssh_check_max_attempts attempts (sleep ${ssh_check_sleep_sec}s)"
+          exit 1
+      fi
+
+      echo "Waiting for bastion SSH... ($i/$ssh_check_max_attempts). Sleeping ${ssh_check_sleep_sec}s"
+      sleep "$ssh_check_sleep_sec"
+    done
+
     testRunAttempts=20
     for ((i=1; i<=$testRunAttempts; i++)); do
       # Install http/https proxy on bastion node
