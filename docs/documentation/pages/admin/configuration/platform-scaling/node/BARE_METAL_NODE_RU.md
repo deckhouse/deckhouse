@@ -5,7 +5,7 @@ description: "Управление узлами в кластере bare-metal. 
 lang: ru
 ---
 
-Подробнее с подбором ресурсов для кластера на bare-metal можно ознакомиться [в разделе «Требования к кластеру на bare-metal»](/products/kubernetes-platform/guides/hardware-requirements.html).
+Подробнее с подбором ресурсов для кластера на bare-metal можно ознакомиться [в руководстве «Требования к кластеру на bare-metal»](/products/kubernetes-platform/guides/hardware-requirements.html).
 
 ## Добавление узлов в bare-metal кластере
 

@@ -27,4 +27,4 @@ The following features are supported:
 - [Checking dependencies before update](../../../architecture/updating.html#checking-dependencies-before-update):
   Checks for component dependencies before proceeding with an update to prevent conflicts.
 
-For more details on updating DKP in air-gapped environment, see the ["Updating DKP in air-gapped environment"](/products/kubernetes-platform/guides/airgapped-update.html) section.
+For more details on updating DKP in air-gapped environment, see the ["Updating DKP in air-gapped environment"](/products/kubernetes-platform/guides/airgapped-update.html) guide.

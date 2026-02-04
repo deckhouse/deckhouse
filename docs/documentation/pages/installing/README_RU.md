@@ -688,8 +688,8 @@ dhctl bootstrap-phase abort
 
 <div id="установка-deckhouse-kubernetes-platform-из-стороннего-registry"></div>
 
-{% alert level="warning" %}
-Подробнее с установкой и обновлением DKP в закрытом окружении можно ознакомиться в разделах [«Установка DKP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DKP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
+{% alert level="info" %}
+Подробнее с установкой и обновлением DKP в закрытом окружении можно ознакомиться в руководствах [«Установка DKP в закрытом окружении»](/products/kubernetes-platform/guides/private-environment.html) и [«Обновление DKP в закрытом окружении»](/products/kubernetes-platform/guides/airgapped-update.html).
 {% endalert %}
 
 ### Установка из стороннего хранилища образов контейнеров
