@@ -682,60 +682,55 @@ func (r *DeckhouseMachineReconciler) validateVMResources(
 	imageKind := dvpMachine.Spec.BootDiskImageRef.Kind
 	imageName := dvpMachine.Spec.BootDiskImageRef.Name
 
-	var imageGVK schema.GroupVersionKind
-	var imageKey client.ObjectKey
-
-	switch imageKind {
-	case "ClusterVirtualImage":
-		imageGVK = schema.GroupVersionKind{
-			Group:   "virtualization.deckhouse.io",
-			Version: "v1alpha2",
-			Kind:    "ClusterVirtualImage",
-		}
-		imageKey = client.ObjectKey{Name: imageName}
-
-		image := &unstructured.Unstructured{}
-		image.SetGroupVersionKind(imageGVK)
-		err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "ClusterVirtualImage not found in parent DVP cluster",
-					"imageName", imageName)
-				return fmt.Errorf("ClusterVirtualImage '%s' not found in parent DVP cluster. "+
-					"Please ensure the image exists before creating VMs. "+
-					"Available ClusterVirtualImages can be listed with: kubectl get clustervirtualimages",
-					imageName)
-			}
-			return fmt.Errorf("failed to validate ClusterVirtualImage '%s': %w", imageName, err)
-		}
-
-	case "VirtualImage":
-		imageGVK = schema.GroupVersionKind{
-			Group:   "virtualization.deckhouse.io",
-			Version: "v1alpha2",
-			Kind:    "VirtualImage",
-		}
-		imageKey = client.ObjectKey{Name: imageName, Namespace: dvpNamespace}
-
-		image := &unstructured.Unstructured{}
-		image.SetGroupVersionKind(imageGVK)
-		err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
-		if err != nil {
-			if apierrors.IsNotFound(err) {
-				logger.Error(err, "VirtualImage not found in parent DVP cluster",
-					"imageName", imageName, "namespace", dvpNamespace)
-				return fmt.Errorf("VirtualImage '%s' not found in namespace '%s' in parent DVP cluster. "+
-					"Please ensure the image exists before creating VMs. "+
-					"Available VirtualImages can be listed with: kubectl get virtualimages -n %s",
-					imageName, dvpNamespace, dvpNamespace)
-			}
-			return fmt.Errorf("failed to validate VirtualImage '%s' in namespace '%s': %w",
-				imageName, dvpNamespace, err)
-		}
-
-	default:
+	// Validate image kind
+	if imageKind != "ClusterVirtualImage" && imageKind != "VirtualImage" {
 		return fmt.Errorf("unsupported boot disk image kind '%s', must be either 'ClusterVirtualImage' or 'VirtualImage'",
 			imageKind)
+	}
+
+	// Build image GVK and ObjectKey
+	imageGVK := schema.GroupVersionKind{
+		Group:   "virtualization.deckhouse.io",
+		Version: "v1alpha2",
+		Kind:    imageKind,
+	}
+
+	imageKey := client.ObjectKey{Name: imageName}
+	if imageKind == "VirtualImage" {
+		imageKey.Namespace = dvpNamespace
+	}
+
+	// Validate image exists
+	image := &unstructured.Unstructured{}
+	image.SetGroupVersionKind(imageGVK)
+	err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			namespaceInfo := ""
+			if imageKind == "VirtualImage" {
+				namespaceInfo = fmt.Sprintf(" in namespace '%s'", dvpNamespace)
+			}
+
+			logger.Error(err, fmt.Sprintf("%s not found in parent DVP cluster", imageKind),
+				"imageName", imageName, "namespace", dvpNamespace)
+
+			resourceName := strings.ToLower(imageKind) + "s"
+			kubectlCmd := fmt.Sprintf("kubectl get %s", resourceName)
+			if imageKind == "VirtualImage" {
+				kubectlCmd += fmt.Sprintf(" -n %s", dvpNamespace)
+			}
+
+			return fmt.Errorf("%s '%s' not found%s in parent DVP cluster. "+
+				"Please ensure the image exists before creating VMs. "+
+				"Available %ss can be listed with: %s",
+				imageKind, imageName, namespaceInfo, imageKind, kubectlCmd)
+		}
+
+		namespaceInfo := ""
+		if imageKind == "VirtualImage" {
+			namespaceInfo = fmt.Sprintf(" in namespace '%s'", dvpNamespace)
+		}
+		return fmt.Errorf("failed to validate %s '%s'%s: %w", imageKind, imageName, namespaceInfo, err)
 	}
 
 	logger.V(1).Info("Boot disk image validated successfully", "imageKind", imageKind, "imageName", imageName)
