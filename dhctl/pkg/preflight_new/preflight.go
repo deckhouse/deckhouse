@@ -17,7 +17,6 @@ package preflightnew
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff/v4"
@@ -74,7 +73,10 @@ func (p *Preflight) IsDisabled(name string) bool {
 }
 
 func (p *Preflight) Run(ctx context.Context, phase Phase) error {
-	checks := p.prepareChecks(phase)
+	checks, err := p.prepareChecks(phase)
+	if err != nil {
+		return err
+	}
 	phaseLabel := fmt.Sprintf("(%s)", phase)
 	runFunc := func() error {
 		return p.runChecks(ctx, checks)
@@ -117,13 +119,16 @@ func (p *Preflight) runCheck(ctx context.Context, check Check) error {
 	return nil
 }
 
-func (p *Preflight) prepareChecks(phase Phase) []Check {
+func (p *Preflight) prepareChecks(phase Phase) ([]Check, error) {
 	var checks []Check
 	for _, suite := range p.suites {
 		if suite == nil {
 			continue
 		}
 		for _, check := range suite.Checks() {
+			if err := check.Name.Validate(); err != nil {
+				return nil, err
+			}
 			if check.Phase != phase {
 				continue
 			}
@@ -133,7 +138,7 @@ func (p *Preflight) prepareChecks(phase Phase) []Check {
 			checks = append(checks, check)
 		}
 	}
-	return checks
+	return checks, nil
 }
 
 func (p *Preflight) isDisabled(name CheckName) bool {
@@ -165,9 +170,8 @@ func (p *Preflight) retry(ctx context.Context, check Check) error {
 }
 
 func (p *Preflight) cacheKey(name CheckName) string {
-	safe := strings.NewReplacer("/", "-", "\\", "-", " ", "-", "\t", "-", "\n", "-").Replace(name.String())
 	if p.cacheSalt == "" {
-		return fmt.Sprintf("preflight-%s", safe)
+		return fmt.Sprintf("preflight-%s", name)
 	}
-	return fmt.Sprintf("preflight-%s-%s", p.cacheSalt, safe)
+	return fmt.Sprintf("preflight-%s-%s", p.cacheSalt, name)
 }
