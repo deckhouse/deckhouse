@@ -36,13 +36,14 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesFileName            = "modules-%s.yaml"
-	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
-	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
-	candiFileName              = "candi-%s.yaml"
-	candiLocalized             = "candi-localized-%s.yaml"
-	modulesExcluded            = "modules-excluded-%s.yaml"
-	cloudProviderGlob          = "030-cloud-provider-*"
+	modulesFileName             = "modules-%s.yaml"
+	modulesWithExcludeFileName  = "modules-with-exclude-%s.yaml"
+	modulesWithDependencies     = "modules-with-dependencies-%s.yaml"
+	candiFileName               = "candi-%s.yaml"
+	candiCloudProviders         = "candi-cloud-providers-%s.yaml"
+	candiCloudProvidersBashible = "candi-cloud-providers-bashible-%s.yaml"
+	modulesExcluded             = "modules-excluded-%s.yaml"
+	cloudProviderGlob           = "030-cloud-provider-*"
 )
 
 var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
@@ -94,12 +95,19 @@ var stageDependenciesFile = map[string][]string{
 	},
 }
 
+var stageDependenciesBeforeSetup = map[string][]string{
+	"beforeSetup": {
+		"*",
+	},
+}
+
 type writeSettings struct {
 	Edition           string
 	Prefix            string
 	Dir               string
 	SaveTo            string
 	ExcludePaths      []string
+	IncludePaths      []string
 	StageDependencies map[string][]string
 	ExcludedModules   map[string]struct{}
 }
@@ -260,7 +268,7 @@ func deleteRevisionFiles(edition string) {
 	}
 }
 
-func writeCandiLocalizedSections(settings writeSettings) {
+func writeCandiCloudProvidersSections(settings writeSettings) {
 	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
 
 	prefix := filepath.Join(workDir, settings.Prefix)
@@ -286,9 +294,10 @@ func writeCandiLocalizedSections(settings writeSettings) {
 		cloudProviderName := extractCloudProviderName(file)
 
 		addEntries = append(addEntries, addEntry{
-			Add: strings.TrimPrefix(candiPath, workDir),
+			Add:               strings.TrimPrefix(candiPath, workDir),
 			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
 			ExcludePaths:      settings.ExcludePaths,
+			IncludePaths:      settings.IncludePaths,
 			StageDependencies: settings.StageDependencies,
 		})
 	}
@@ -323,6 +332,7 @@ type addEntry struct {
 	Add               string              `yaml:"add"`
 	To                string              `yaml:"to"`
 	ExcludePaths      []string            `yaml:"excludePaths,omitempty"`
+	IncludePaths      []string            `yaml:"includePaths,omitempty"`
 	StageDependencies map[string][]string `yaml:"stageDependencies,omitempty"`
 }
 
@@ -452,12 +462,23 @@ func (e *executor) executeEdition(editionName string) {
 
 		prefix := strings.TrimPrefix(strings.TrimSuffix(ed.ModulesDir, "modules"), "/")
 
-		writeSettingCandiLocalized := writeSettings{
+		writeSettingCandiCloudProviders := writeSettings{
 			Edition:           editionName,
-			SaveTo:            candiLocalized,
+			SaveTo:            candiCloudProviders,
 			Dir:               "modules",
 			Prefix:            prefix,
 			StageDependencies: stageDependenciesFile,
+		}
+
+		writeSettingCandiCloudProvidersBashible := writeSettings{
+			Edition: editionName,
+			SaveTo:  candiCloudProvidersBashible,
+			Dir:     "modules",
+			Prefix:  prefix,
+			IncludePaths: []string{
+				"*/bashible",
+			},
+			StageDependencies: stageDependenciesBeforeSetup,
 		}
 
 		writeSettingCandi := writeSettings{
@@ -507,7 +528,8 @@ func (e *executor) executeEdition(editionName string) {
 		writeSections(writeSettingsExcludeFileName)
 		writeSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
-		writeCandiLocalizedSections(writeSettingCandiLocalized)
+		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
+		writeCandiCloudProvidersSections(writeSettingCandiCloudProvidersBashible)
 
 		if ed.Name == editionName {
 			// only for one edition
