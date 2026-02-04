@@ -206,8 +206,8 @@ func (suite *ControllerTestSuite) TestReconcileComponentChecksumChange() {
 		}, configSecret)
 		require.NoError(suite.T(), err)
 
-		// Modify etcd.yaml
-		configSecret.Data["etcd.yaml"] = []byte("YXBpVmVyc2lvbjogdjIKa2luZDogUG9kCm1ldGFkYXRhOgogIG5hbWU6IGV0Y2QtdXBkYXRlZA==")
+		// Modify etcd.yaml.tpl (kubeadm patch)
+		configSecret.Data["etcd.yaml.tpl"] = []byte("YXBpVmVyc2lvbjogdjIKa2luZDogUG9kCm1ldGFkYXRhOgogIG5hbWU6IGV0Y2QtdXBkYXRlZA==")
 		err = suite.client.Update(suite.ctx, configSecret)
 		require.NoError(suite.T(), err)
 
