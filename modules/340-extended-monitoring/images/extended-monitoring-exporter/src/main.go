@@ -36,7 +36,6 @@ func main() {
 	var listenAddr = "127.0.0.1:8080"
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
@@ -57,6 +56,8 @@ func main() {
 		cancel()
 		log.Fatal("Error getting kubernetes config: %v\n", err)
 	}
+
+	defer cancel()
 
 	registry := prometheus.NewRegistry()
 
