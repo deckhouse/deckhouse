@@ -18,30 +18,93 @@ package main
 
 import (
 	"context"
+	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/controllers/http"
+
+	//"fencing-agent/internal/adapters/memberlist"
+	//"fencing-agent/internal/adapters/watchdog"
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/helper/logger/sl"
+	"fencing-agent/internal/local"
+	"fencing-agent/internal/usecase"
 	"os/signal"
 	"syscall"
+
+	"fencing-agent/internal/config"
+	"fencing-agent/internal/helper/logger"
 )
 
 func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 	defer cancel()
 
-	// Init block
-	// config
+	var cfg config.Config
+	cfg.MustLoad()
 
-	// logger
+	log := logger.NewLogger(cfg.LogLevel)
 
-	// Get all nodes (kubeapi-client creation and usage)
+	kubeClient, err := kubeclient.New(cfg.KubeClient, log, cfg.NodeName, cfg.NodeGroup)
+	if err != nil {
+		log.Error("failed to create KubernetesClient", sl.Err(err))
+		panic(err)
+	}
 
-	// Connect to memberlist
+	ip, err := kubeClient.GetCurrentNodeIP(ctx)
+	if err != nil {
+		log.Error("failed to get current node IP", sl.Err(err))
+		panic(err)
+	}
+	log.Info("current node IP", ip)
+	//mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName)
+	mblist, err := local.NewMemberlist(log)
+	if err != nil {
+		log.Error("failed to create memberlist", sl.Err(err))
+		panic(err)
+	}
 
-	// Start watch dog
+	ips, err := kubeClient.GetNodesIP(ctx)
+	if err != nil {
+		log.Error("failed to get nodes IPs", sl.Err(err))
+		panic(err)
+	}
 
+	err = mblist.Start(ips)
+	if err != nil {
+		log.Error("failed to start memberlist", sl.Err(err))
+		panic(err)
+	}
+
+	//softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
+	var s []byte
+	softdog := local.NewWatchdog(&s)
+
+	totalNodes := len(ips)
+	log.Info("total nodes", "totalNodes", totalNodes)
+
+	decider := domain.NewQuorumDecider(totalNodes)
+
+	fencingAgent := usecase.NewHealthMonitor(
+		kubeClient,
+		kubeClient,
+		mblist,
+		softdog,
+		decider,
+		kubeClient,
+		log,
+	)
+
+	healthzSrv := http.New(log, cfg.HealthProbeBindAddress)
+
+	kubeClient.Start(ctx)
+	fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
+
+	healthzSrv.Start()
+	<-ctx.Done()
+
+	healthzSrv.Stop()
+	fencingAgent.Stop()
+	kubeClient.Stop()
+	mblist.Stop()
 	// Start grpc server
 
-	// Start health check server
-
-	// Wait for interupt signal
-
-	<-ctx.Done()
 }

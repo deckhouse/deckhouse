@@ -4,11 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Config struct {
 	WatchdogDevice  string `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
 	WathcdogTimeout int    `env:"WATCHDOG_TIMEOUT" env-default:"10"`
+}
+
+func (c *Config) Validate() error {
+	if strings.TrimSpace(c.WatchdogDevice) == "" {
+		return errors.New("WATCHDOG_DEVICE env var is empty")
+	}
+	return nil
 }
 
 type WatchDog struct {
@@ -17,7 +25,7 @@ type WatchDog struct {
 	isArmed            bool
 }
 
-func NewWatchdog(device string) *WatchDog {
+func New(device string) *WatchDog {
 	return &WatchDog{
 		isArmed:            false,
 		watchdogDeviceName: device,
