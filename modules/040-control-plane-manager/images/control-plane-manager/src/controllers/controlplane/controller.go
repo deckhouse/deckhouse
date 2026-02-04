@@ -19,9 +19,13 @@ package controlplane
 import (
 	"context"
 	"control-plane-manager/pkg/constants"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"reflect"
+	"sort"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
@@ -166,28 +170,90 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	desired := buildDesiredControlPlaneConfiguration(cmpSecret, pkiSecret)
-	current := &controlplanev1alpha1.ControlPlaneConfiguration{}
-	err = r.client.Get(ctx, req.NamespacedName, current)
-	if apierrors.IsNotFound(err) {
-		err = r.client.Create(ctx, desired)
+	desired, err := buildDesiredControlPlaneConfiguration(cmpSecret, pkiSecret)
+	if err != nil {
+		klog.Error("Error occurred while building desired ControlPlaneConfiguration", err)
+		return reconcile.Result{}, err
 	}
-	if err == nil && !reflect.DeepEqual(current.Spec, desired.Spec) {
-		current.Spec = desired.Spec
-		err = r.client.Update(ctx, current)
+	if err := r.applyControlPlaneConfiguration(ctx, desired); err != nil {
+		klog.Error("Error occurred while reconciling ControlPlaneConfiguration", err)
+		return reconcile.Result{}, err
 	}
 
 	klog.Info("Reconcile completed successfully")
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
-func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) *controlplanev1alpha1.ControlPlaneConfiguration {
+func (r *Reconciler) applyControlPlaneConfiguration(ctx context.Context, desired *controlplanev1alpha1.ControlPlaneConfiguration) error {
+	current := &controlplanev1alpha1.ControlPlaneConfiguration{}
+	key := client.ObjectKeyFromObject(desired)
+	err := r.client.Get(ctx, key, current)
+	if apierrors.IsNotFound(err) {
+		klog.Info("ControlPlaneConfiguration not found, creating")
+		return r.client.Create(ctx, desired)
+	}
+	if err != nil {
+		return err
+	}
+	if !equality.Semantic.DeepEqual(desired.Spec, current.Spec) {
+		klog.Info("ControlPlaneConfiguration spec differs from desired, updating")
+		current.Spec = desired.Spec
+		return r.client.Update(ctx, current)
+	}
+	return nil
+}
+
+func calculateSimpleComponentChecksum(manifestData []byte) string {
+	hash := sha256.New()
+	hash.Write(manifestData)
+	return hex.EncodeToString(hash.Sum(nil))
+}
+
+func calculatePKIChecksum(pkiSecret *corev1.Secret) (string, error) {
+	h := sha256.New()
+
+	keys := make([]string, 0, len(pkiSecret.Data))
+	for key := range pkiSecret.Data {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		h.Write([]byte(key))
+		h.Write(pkiSecret.Data[key])
+	}
+
+	return fmt.Sprintf("%x", h.Sum(nil)), nil
+}
+
+func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneConfiguration, error) {
+	pkiChecksum, err := calculatePKIChecksum(pkiSecret)
+	if err != nil {
+		return &controlplanev1alpha1.ControlPlaneConfiguration{}, err
+	}
 	return &controlplanev1alpha1.ControlPlaneConfiguration{
 		ObjectMeta: ctrl.ObjectMeta{
 			Name: constants.ControlPlaneConfigurationName,
 		},
-		Spec: controlplanev1alpha1.ControlPlaneConfigurationSpec{},
-	}
+		Spec: controlplanev1alpha1.ControlPlaneConfigurationSpec{
+			PKIChecksum: pkiChecksum,
+			Components: &controlplanev1alpha1.ControlPlaneComponents{
+				Etcd: &controlplanev1alpha1.ComponentChecksum{
+					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["etcd.yaml.tpl"]),
+				},
+				KubeAPIServer: &controlplanev1alpha1.ComponentChecksum{
+					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-apiserver.yaml.tpl"]),
+				},
+				KubeControllerManager: &controlplanev1alpha1.ComponentChecksum{
+					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-controller-manager.yaml.tpl"]),
+				},
+				KubeScheduler: &controlplanev1alpha1.ComponentChecksum{
+					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-scheduler.yaml.tpl"]),
+				},
+			},
+		},
+	}, nil
 }
 
 func (r *Reconciler) mapSecretToControlPlaneConfigurations(ctx context.Context, object client.Object) []reconcile.Request {
