@@ -46,7 +46,6 @@ type ClusterProvider interface {
 
 type MemberlistProvider interface {
 	NumMembers() int
-	IsAlone() bool
 }
 
 type HealthMonitor struct {

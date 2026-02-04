@@ -40,6 +40,9 @@ func New(
 	logger *log.Logger,
 	nodeIP string,
 	nodeName string,
+	numNodes int,
+	eventHandler EventHandler,
+	receiver NodesNumberReceiver,
 ) (*Memberlist, error) {
 
 	config := memberlist.DefaultLANConfig()
@@ -50,24 +53,20 @@ func New(
 	config.BindPort = int(cfg.MemberListPort)
 	config.AdvertisePort = int(cfg.MemberListPort)
 
-	// Create a temporary memberlist reference for delegate's NumNodes function
-	var ml *Memberlist
-
-	delegate := NewDelegate(logger, nodeName, func() int {
-		if ml != nil && ml.list != nil {
-			return ml.list.NumMembers()
-		}
-		return 1
-	})
+	delegate := NewDelegate(logger, func() int {
+		return numNodes
+	}, receiver)
 
 	config.Delegate = delegate
+
+	config.Events = eventHandler
 
 	list, err := memberlist.Create(config)
 	if err != nil {
 		return nil, err
 	}
 
-	ml = &Memberlist{
+	ml := &Memberlist{
 		list:     list,
 		delegate: delegate,
 		logger:   logger,
@@ -97,20 +96,12 @@ func (ml *Memberlist) Start(peers ips) error {
 	}
 	ml.logger.Info("joined cluster", "numJoined", numJoined)
 
-	// Broadcast current member count to all peers
-	ml.BroadcastMemberCount()
-
 	return nil
 }
 
-// BroadcastMemberCount sends current member count to all cluster members
-func (ml *Memberlist) BroadcastMemberCount() {
-	ml.delegate.BroadcastMemberCount(ml.list.NumMembers())
-}
-
-// OnMessage registers a handler to be called when a broadcast message is received
-func (ml *Memberlist) OnMessage(handler MessageHandler) {
-	ml.delegate.OnMessage(handler)
+// BroadcastNodesNumber sends current total nodes count to all cluster members
+func (ml *Memberlist) BroadcastNodesNumber(nodesNumber int) {
+	ml.delegate.BroadcastNodesNumber(nodesNumber)
 }
 
 func (ml *Memberlist) Stop() error {
@@ -130,9 +121,4 @@ func (ml *Memberlist) Stop() error {
 
 func (ml *Memberlist) NumMembers() int {
 	return ml.list.NumMembers()
-}
-
-func (ml *Memberlist) IsAlone() bool {
-	// TODO think about it later
-	return false
 }

@@ -25,12 +25,10 @@ func NewEventHandler(logger *log.Logger, eventBus Producer) *EventHandler {
 func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 	h.logger.Debug("Node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false joining?
-	ips := make(map[string]string)
-	ips[domain.InterfaceName] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
-			Name:      node.Name,
-			Addresses: ips,
+			Name: node.Name,
+			Addr: node.Addr.String(),
 		},
 		EventType: domain.EventTypeJoin,
 		Timestamp: time.Now().Unix(),
@@ -41,12 +39,10 @@ func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
 	h.logger.Debug("Node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
-	ips := make(map[string]string)
-	ips[domain.InterfaceName] = node.Addr.String()
 	event := domain.Event{
 		Node: domain.Node{
-			Name:      node.Name,
-			Addresses: ips,
+			Name: node.Name,
+			Addr: node.Addr.String(),
 		},
 		EventType: domain.EventTypeLeave,
 		Timestamp: time.Now().Unix(),
