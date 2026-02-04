@@ -484,7 +484,7 @@ Doing so may disrupt cluster functionality.
 {% endalert %}
 
 Below are general guidelines for configuring security groups.
-Misconfiguring security group rules may negatively impact on cluster operation.
+Incorrectly configured security group rules may negatively impact on cluster operation.
 Read through the [security group specifics in Yandex Cloud](https://yandex.cloud/en/docs/vpc/concepts/security-groups#security-groups-notes) before using them in production environments.
 
 1. Identify the cloud network used by the DKP cluster.

@@ -11,7 +11,7 @@ lang: ru
 - [Мультикластер](../alliance/multicluster.html);
 - [Федерация](../alliance/federation.html).
 
-Обе схемы могут быть реализованы средствами Istio (модуль [`istio`](/modules/istio/)) или Cilium (модуль [`cni-cilium`](/modules/cni-cilium/)). Оба инструмента обеспечивают равёртывание service mesh (далее — сервис-меш) для контроля и настройки сетевых взаимодействий между приложениями внутри кластера.
+Обе схемы могут быть реализованы средствами Istio (модуль [`istio`](/modules/istio/)) или Cilium (модуль [`cni-cilium`](/modules/cni-cilium/)). Оба инструмента обеспечивают развёртывание service mesh (далее — сервис-меш) для контроля и настройки сетевых взаимодействий между приложениями внутри кластера.
 
 ## Особенности использования service mesh DKP
 
@@ -19,7 +19,7 @@ lang: ru
 
 Мультикластер и федерация доступны в редакциях Enterprise Edition (EE) и Certified Security Edition Pro (CSE Pro 1.67+).
 
-В редакциях Community Edition (CE), Basic Edition (BE), Standard Edition (SE), Standard Edition+ (SE+) и Certified Security Edition Lite (CSE 1.67+) можно применять сервис-меш только в рамках одного кластера, например для реализации паттернов Circuit Braker, Canary Deployment и т.д.
+В редакциях Community Edition (CE), Basic Edition (BE), Standard Edition (SE), Standard Edition+ (SE+) и Certified Security Edition Lite (CSE 1.67+) можно применять сервис-меш только в рамках одного кластера, например для реализации паттернов Circuit Breaker, Canary Deployment и т.д.
 
 | Сценарий использования | CE / BE / SE / SE+ / CSE Lite (1.67+)  | EE | CSE Pro (1.67+) |
 |---------------|---------------------------------------|------------------------|-----------------|
