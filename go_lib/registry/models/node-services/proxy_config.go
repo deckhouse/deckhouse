@@ -31,11 +31,5 @@ type ProxyConfig struct {
 }
 
 func (proxyConfig ProxyConfig) Validate() error {
-	return validation.ValidateStruct(&proxyConfig,
-		validation.Field(&proxyConfig.NoProxy,
-			validation.When(proxyConfig.HTTP == "" && proxyConfig.HTTPS == "",
-				validation.Empty.Error("NoProxy should be empty when HTTP and HTTPS are empty"),
-			),
-		),
-	)
+	return nil
 }
