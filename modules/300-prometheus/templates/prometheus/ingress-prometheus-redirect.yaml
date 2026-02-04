@@ -8,7 +8,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/use-regex: "true"
     nginx.ingress.kubernetes.io/configuration-snippet: |
-      return 301 {{ printf "%s://%s/redirect-to/observability/prometheus-status" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) | quote }}
+      return 301 {{ printf "%s://%s/redirect-to/observability/prometheus-status" (ternary "https" "http" (ne (include "helm_lib_module_https_ingress_tls_enabled" .) "")) (include "helm_lib_module_public_domain" (list . "console")) | quote }};
       {{ include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
 spec:
   ingressClassName: {{ include "helm_lib_module_ingress_class" . | quote }}
