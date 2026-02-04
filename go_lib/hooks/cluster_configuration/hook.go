@@ -96,6 +96,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 		// This variable (and this package) will be removed after the cloud provider modules are externalized
 		additionalOpenAPISchemasPaths := []string{
 			"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
+			"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
 		}
 
 		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {

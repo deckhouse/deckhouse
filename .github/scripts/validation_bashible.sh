@@ -178,6 +178,7 @@ cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/candi/cloud-providers:/deckhouse/candi/cloud-providers \
   -v ${volumesRoot}/modules/030-cloud-provider-aws/candi:/deckhouse/candi/cloud-providers/aws \
   -v ${volumesRoot}/modules/030-cloud-provider-yandex/candi:/deckhouse/candi/cloud-providers/yandex \
+  -v ${volumesRoot}/modules/030-cloud-provider-gcp/candi:/deckhouse/candi/cloud-providers/gcp \
   -v ${volumesRoot}/${config}:/${config} \
   -e config=config.yaml \
   --entrypoint=bash \
