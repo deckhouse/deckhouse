@@ -69,7 +69,6 @@ require (
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofrs/uuid/v5 v5.3.2
-	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/itchyny/gojq v0.12.17
 	github.com/jonboulle/clockwork v0.4.0
