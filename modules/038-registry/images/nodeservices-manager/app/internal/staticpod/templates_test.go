@@ -73,7 +73,7 @@ func TestStaticPodManifest(t *testing.T) {
 
 func TestStaticPodManifestWithProxyEnvs(t *testing.T) {
 	model := staticPodConfigModel{
-		ProxyEnvs: &staticPodProxyEnvsModel{
+		Proxy: &staticPodProxyModel{
 			HTTP:    "http://proxy.example.com:8080",
 			HTTPS:   "http://proxy.example.com:8443",
 			NoProxy: "localhost,127.0.0.1,.internal",
@@ -81,13 +81,13 @@ func TestStaticPodManifestWithProxyEnvs(t *testing.T) {
 	}
 	testRender(t, model)
 
-	model.ProxyEnvs.HTTP = ""
+	model.Proxy.HTTP = ""
 	testRender(t, model)
 
-	model.ProxyEnvs.HTTPS = ""
+	model.Proxy.HTTPS = ""
 	testRender(t, model)
 
-	model.ProxyEnvs = nil
+	model.Proxy = nil
 	testRender(t, model)
 }
 

@@ -157,29 +157,13 @@ type staticPodConfigModel struct {
 	Version     string
 	Images      staticPodImagesModel
 	HasMirrorer bool
-	ProxyEnvs   *staticPodProxyEnvsModel
+	Proxy       *staticPodProxyModel
 }
 
-type staticPodProxyEnvsModel struct {
+type staticPodProxyModel struct {
 	HTTP    string
 	HTTPS   string
 	NoProxy string
-}
-
-func (m *staticPodProxyEnvsModel) hasAny() bool {
-	if m.HTTP != "" {
-		return true
-	}
-
-	if m.HTTPS != "" {
-		return true
-	}
-
-	if m.NoProxy != "" {
-		return true
-	}
-
-	return false
 }
 
 type staticPodImagesModel struct {
@@ -192,7 +176,7 @@ func (model staticPodConfigModel) Render() ([]byte, error) {
 	return renderTemplate("templates/static_pods/registry-nodeservices.yaml.tpl", model)
 }
 
-func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, proxyEnvs staticPodProxyEnvsModel, hash string, hasMirrorer bool) staticPodConfigModel {
+func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesModel, proxyModel staticPodProxyModel, hash string, hasMirrorer bool) staticPodConfigModel {
 	model := staticPodConfigModel{
 		Hash:        hash,
 		Version:     value.Version,
@@ -202,8 +186,18 @@ func (value NodeServicesConfigModel) toStaticPodConfig(images staticPodImagesMod
 
 	// proxyEnvs only for proxy mode
 	if value.Config.ProxyMode != nil {
-		if proxyEnvs.hasAny() {
-			model.ProxyEnvs = &proxyEnvs
+		proxy := value.Config.ProxyConfig
+
+		if proxy != nil {
+			// From input config
+			model.Proxy = &staticPodProxyModel{
+				HTTP:    proxy.HTTP,
+				HTTPS:   proxy.HTTPS,
+				NoProxy: proxy.NoProxy,
+			}
+		} else {
+			// From nodeservice manager envs
+			model.Proxy = &proxyModel
 		}
 	}
 	return model

@@ -30,7 +30,8 @@ spec:
     args:
       - serve
       - /config/config.yaml
-{{- with .ProxyEnvs }}
+{{- with .Proxy }}
+  {{- if or .HTTP .HTTPS }}
     env:
       {{- if .HTTP }}
       - name: HTTP_PROXY
@@ -50,6 +51,7 @@ spec:
       - name: no_proxy
         value: {{ .NoProxy }}
       {{- end }}
+  {{- end }}
 {{- end }}
     ports:
       - name: distribution

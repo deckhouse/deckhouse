@@ -115,7 +115,7 @@ func (manager *servicesManager) applyConfig(config NodeServicesConfigModel) (cha
 		Mirrorer:     manager.settings.Images.Mirrorer,
 	}
 
-	proxyEnvs := staticPodProxyEnvsModel{
+	proxyEnvs := staticPodProxyModel{
 		HTTP:    manager.settings.ProxyEnvs.HTTP,
 		HTTPS:   manager.settings.ProxyEnvs.HTTPS,
 		NoProxy: manager.settings.ProxyEnvs.NoProxy,
