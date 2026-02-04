@@ -41,14 +41,14 @@ func (g *KubeadmManifestGenerator) GenerateManifest(componentName string, tmpDir
 // This needs for calculating checksum for each components and referenced files from generated manifests.
 func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte, error) {
 	kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
-	patchesDir := filepath.Join(tmpDir, constants.RelativePatchesDir)
+	kubeadmDir := filepath.Join(tmpDir, constants.RelativeKubeadmDir)
 	args := []string{"init", "phase"}
 	if componentName == "etcd" {
 		// kubeadm init phase etcd local --config /tmp/control-plane-manager-123/etc/kubernetes/deckhouse/kubeadm/config.yaml
-		args = append(args, "etcd", "local", "--config", patchesDir+"/config.yaml")
+		args = append(args, "etcd", "local", "--config", kubeadmDir+"/config.yaml")
 	} else {
 		// kubeadm init phase control-plane apiserver --config /tmp/control-plane-manager-123/etc/kubernetes/deckhouse/kubeadm/config.yaml
-		args = append(args, "control-plane", strings.TrimPrefix(componentName, "kube-"), "--config", patchesDir+"/config.yaml")
+		args = append(args, "control-plane", strings.TrimPrefix(componentName, "kube-"), "--config", kubeadmDir+"/config.yaml")
 	}
 	args = append(args, "--rootfs", tmpDir)
 
