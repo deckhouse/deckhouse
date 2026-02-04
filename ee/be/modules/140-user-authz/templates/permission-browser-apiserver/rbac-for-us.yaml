@@ -68,6 +68,23 @@ rules:
 - apiGroups: ["authorization.deckhouse.io"]
   resources: ["accessiblenamespaces"]
   verbs: ["get", "list"]
+{{- $useAccessibleNamespaces := and (ne .Values.global.deckhouseEdition "CE") (.Values.userAuthz.enableMultiTenancy | default false) -}}
+{{- if $useAccessibleNamespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:accessible-namespaces-reader:system-authenticated
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authz:accessible-namespaces-reader
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: system:authenticated
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

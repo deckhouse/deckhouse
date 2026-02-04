@@ -424,3 +424,4 @@ metadata:
   {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
 rules:
 {{- include "user_authz_super_admin_rules" . }}
+

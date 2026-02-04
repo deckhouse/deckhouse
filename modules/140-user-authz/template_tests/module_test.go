@@ -441,6 +441,18 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rules).To(ContainSubstring(`"create"`))
 				Expect(rules).To(ContainSubstring(`"delete"`))
 			})
+
+			It("system:authenticated should be able to discover accessiblenamespaces", func() {
+				cr := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:accessible-namespaces-reader")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).To(ContainSubstring("accessiblenamespaces"))
+
+				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated")
+				Expect(crb.Exists()).To(BeTrue())
+				Expect(crb.Field("roleRef.name").String()).To(Equal("d8:user-authz:accessible-namespaces-reader"))
+				Expect(crb.Field("subjects.0.kind").String()).To(Equal("Group"))
+				Expect(crb.Field("subjects.0.name").String()).To(Equal("system:authenticated"))
+			})
 		})
 
 		Context("EE edition (non-CE) with MultiTenancy disabled", func() {
@@ -461,6 +473,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				rules := cr.Field("rules").String()
 				Expect(rules).To(ContainSubstring(`"namespaces"`))
 				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("system:authenticated should not get accessiblenamespaces discovery", func() {
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
 			})
 		})
 
@@ -490,6 +506,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				rules := cr.Field("rules").String()
 				Expect(rules).To(ContainSubstring(`"namespaces"`))
 				Expect(rules).NotTo(ContainSubstring("accessiblenamespaces"))
+			})
+
+			It("system:authenticated should not get accessiblenamespaces discovery", func() {
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
 			})
 		})
 	})
