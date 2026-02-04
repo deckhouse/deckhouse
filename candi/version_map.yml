@@ -135,8 +135,8 @@ k8s:
     crictlPatch: 0
     ccm:
       openstack: v1.34.1
-      aws: v1.34.1
-      vsphere: v1.34.0
+      aws: v1.35.0
+      vsphere: v1.35.0
       azure: v1.34.3
       gcp: ccm/v35.0.1
     csi:
