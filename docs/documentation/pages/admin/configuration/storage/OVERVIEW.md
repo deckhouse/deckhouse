@@ -13,7 +13,7 @@ In this section, you will learn:
 - Which tools Deckhouse provides to simplify storage configuration and operation.
 - How to choose the optimal solution for your scenarios, based on requirements for reliability, performance, and scalability.
 
-For more details on disk layout and size, see the [“Disk layout and size”](/products/kubernetes-platform/guides/fs-requirements.html) section.
+For more details on disk layout and recommended sizes, see the [“Disk layout and size”](/products/kubernetes-platform/guides/fs-requirements.html) section.
 
 ## Supported storage types
 
