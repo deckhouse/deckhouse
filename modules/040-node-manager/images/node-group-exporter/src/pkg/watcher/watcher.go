@@ -83,10 +83,11 @@ func NewWatcher(clientset kubernetes.Interface, restConfig *rest.Config, eventHa
 
 // Start begins watching for resource changes
 func (w *Watcher) Start(ctx context.Context) error {
+	var err error
 	w.logger.Debug("Starting resource watchers...")
 
 	// Add event handlers to Node informer
-	_, _ = w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = w.nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			node, err := ConvertToNode(obj)
 			if err != nil {
@@ -112,9 +113,12 @@ func (w *Watcher) Start(ctx context.Context) error {
 			w.eventHandler.OnNodeDelete(node)
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("Node informer error %v", err)
+	}
 
 	// Add event handlers to NodeGroup informer
-	_, _ = w.nodeGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err = w.nodeGroupInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			nodeGroup, err := ConvertToNodeGroup(obj)
 			if err != nil {
@@ -140,6 +144,9 @@ func (w *Watcher) Start(ctx context.Context) error {
 			w.eventHandler.OnNodeGroupDelete(nodeGroup)
 		},
 	})
+	if err != nil {
+		return fmt.Errorf("Node Group informer error %v", err)
+	}
 
 	// Start the informers
 	w.wg.Add(1)
