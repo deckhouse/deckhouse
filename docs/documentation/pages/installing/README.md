@@ -11,6 +11,10 @@ relatedLinks:
     url: ../reference/supported_versions.html
   - title: "Integration with IaaS providers"
     url: ../admin/integrations/integrations-overview.html
+  - title: "Installing DKP in a private environment"
+    url: /products/kubernetes-platform/guides/private-environment.html
+  - title: "Going to Production"
+    url: /products/kubernetes-platform/guides/production.html 
 ---
 
 {% alert %}
@@ -488,6 +492,10 @@ The configuration file provided through the `--config` parameter when running th
 ## Air-gapped environment, working via proxy and using external registries
 
 <div id="installing-deckhouse-kubernetes-platform-from-an-external-registry"></div>
+
+{% alert level="info" %}
+For more details on installing and updating DKP in an air-gapped environment, see the [“Installing DKP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DKP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
+{% endalert %}
 
 ### Installing from an external (third-party) registry
 
