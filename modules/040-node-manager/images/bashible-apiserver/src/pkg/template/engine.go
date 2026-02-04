@@ -85,6 +85,7 @@ func (e Engine) initFunMap(t *template.Template) {
 
 // renderWithTemplate takes a map of templates/values to render using
 // passed Template object.
+// keep named return to recover and wrap deferred error
 //
 //nolint:nonamedreturns
 func (e Engine) renderWithTemplate(tmpl string, t *template.Template) (out *bytes.Buffer, err error) {

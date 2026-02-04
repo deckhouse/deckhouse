@@ -95,8 +95,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Fetch the StaticMachine.
 	staticMachine := &infrav1.StaticMachine{}
-	var err error
-	if err = r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
