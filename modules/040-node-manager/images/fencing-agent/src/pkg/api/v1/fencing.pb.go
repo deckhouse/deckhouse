@@ -124,28 +124,27 @@ func (x *Node) GetAddress() string {
 	return ""
 }
 
-type NodesInNetwork struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// NodeName to Node
-	Nodes         map[string]*Node `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+type Nodes struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Nodes         []*Node                `protobuf:"bytes,1,rep,name=nodes,proto3" json:"nodes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *NodesInNetwork) Reset() {
-	*x = NodesInNetwork{}
+func (x *Nodes) Reset() {
+	*x = Nodes{}
 	mi := &file_fencing_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *NodesInNetwork) String() string {
+func (x *Nodes) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*NodesInNetwork) ProtoMessage() {}
+func (*Nodes) ProtoMessage() {}
 
-func (x *NodesInNetwork) ProtoReflect() protoreflect.Message {
+func (x *Nodes) ProtoReflect() protoreflect.Message {
 	mi := &file_fencing_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -157,59 +156,14 @@ func (x *NodesInNetwork) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use NodesInNetwork.ProtoReflect.Descriptor instead.
-func (*NodesInNetwork) Descriptor() ([]byte, []int) {
+// Deprecated: Use Nodes.ProtoReflect.Descriptor instead.
+func (*Nodes) Descriptor() ([]byte, []int) {
 	return file_fencing_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *NodesInNetwork) GetNodes() map[string]*Node {
+func (x *Nodes) GetNodes() []*Node {
 	if x != nil {
 		return x.Nodes
-	}
-	return nil
-}
-
-type NodeGroup struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// NetworkInterfaceName to Node in this network
-	Networks      map[string]*NodesInNetwork `protobuf:"bytes,1,rep,name=networks,proto3" json:"networks,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NodeGroup) Reset() {
-	*x = NodeGroup{}
-	mi := &file_fencing_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NodeGroup) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NodeGroup) ProtoMessage() {}
-
-func (x *NodeGroup) ProtoReflect() protoreflect.Message {
-	mi := &file_fencing_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NodeGroup.ProtoReflect.Descriptor instead.
-func (*NodeGroup) Descriptor() ([]byte, []int) {
-	return file_fencing_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *NodeGroup) GetNetworks() map[string]*NodesInNetwork {
-	if x != nil {
-		return x.Networks
 	}
 	return nil
 }
@@ -226,7 +180,7 @@ type Event struct {
 
 func (x *Event) Reset() {
 	*x = Event{}
-	mi := &file_fencing_proto_msgTypes[3]
+	mi := &file_fencing_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +192,7 @@ func (x *Event) String() string {
 func (*Event) ProtoMessage() {}
 
 func (x *Event) ProtoReflect() protoreflect.Message {
-	mi := &file_fencing_proto_msgTypes[3]
+	mi := &file_fencing_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +205,7 @@ func (x *Event) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Event.ProtoReflect.Descriptor instead.
 func (*Event) Descriptor() ([]byte, []int) {
-	return file_fencing_proto_rawDescGZIP(), []int{3}
+	return file_fencing_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Event) GetNode() *Node {
@@ -290,18 +244,9 @@ const file_fencing_proto_rawDesc = "" +
 	"fencing.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1bgoogle/protobuf/empty.proto\"4\n" +
 	"\x04Node\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x18\n" +
-	"\aaddress\x18\x02 \x01(\tR\aaddress\"\x99\x01\n" +
-	"\x0eNodesInNetwork\x12;\n" +
-	"\x05nodes\x18\x01 \x03(\v2%.fencing.v1.NodesInNetwork.NodesEntryR\x05nodes\x1aJ\n" +
-	"\n" +
-	"NodesEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x12&\n" +
-	"\x05value\x18\x02 \x01(\v2\x10.fencing.v1.NodeR\x05value:\x028\x01\"\xa5\x01\n" +
-	"\tNodeGroup\x12?\n" +
-	"\bnetworks\x18\x01 \x03(\v2#.fencing.v1.NodeGroup.NetworksEntryR\bnetworks\x1aW\n" +
-	"\rNetworksEntry\x12\x10\n" +
-	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.fencing.v1.NodesInNetworkR\x05value:\x028\x01\"\xb5\x01\n" +
+	"\aaddress\x18\x02 \x01(\tR\aaddress\"/\n" +
+	"\x05Nodes\x12&\n" +
+	"\x05nodes\x18\x01 \x03(\v2\x10.fencing.v1.NodeR\x05nodes\"\xb5\x01\n" +
 	"\x05Event\x12$\n" +
 	"\x04node\x18\x01 \x01(\v2\x10.fencing.v1.NodeR\x04node\x12+\n" +
 	"\x11network_interface\x18\x02 \x01(\tR\x10networkInterface\x12)\n" +
@@ -310,9 +255,9 @@ const file_fencing_proto_rawDesc = "" +
 	"\tEventType\x12\r\n" +
 	"\tUNDEFINED\x10\x00\x12\b\n" +
 	"\x04LEFT\x10\x01\x12\b\n" +
-	"\x04JOIN\x10\x022\x7f\n" +
-	"\aFencing\x127\n" +
-	"\x06GetAll\x12\x16.google.protobuf.Empty\x1a\x15.fencing.v1.NodeGroup\x12;\n" +
+	"\x04JOIN\x10\x022{\n" +
+	"\aFencing\x123\n" +
+	"\x06GetAll\x12\x16.google.protobuf.Empty\x1a\x11.fencing.v1.Nodes\x12;\n" +
 	"\fStreamEvents\x12\x16.google.protobuf.Empty\x1a\x11.fencing.v1.Event0\x01B\x1aZ\x18fencing-agent/pkg/api/v1b\x06proto3"
 
 var (
@@ -328,35 +273,29 @@ func file_fencing_proto_rawDescGZIP() []byte {
 }
 
 var file_fencing_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_fencing_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_fencing_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_fencing_proto_goTypes = []any{
 	(EventType)(0),                // 0: fencing.v1.EventType
 	(*Node)(nil),                  // 1: fencing.v1.Node
-	(*NodesInNetwork)(nil),        // 2: fencing.v1.NodesInNetwork
-	(*NodeGroup)(nil),             // 3: fencing.v1.NodeGroup
-	(*Event)(nil),                 // 4: fencing.v1.Event
-	nil,                           // 5: fencing.v1.NodesInNetwork.NodesEntry
-	nil,                           // 6: fencing.v1.NodeGroup.NetworksEntry
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),         // 8: google.protobuf.Empty
+	(*Nodes)(nil),                 // 2: fencing.v1.Nodes
+	(*Event)(nil),                 // 3: fencing.v1.Event
+	(*timestamppb.Timestamp)(nil), // 4: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 5: google.protobuf.Empty
 }
 var file_fencing_proto_depIdxs = []int32{
-	5, // 0: fencing.v1.NodesInNetwork.nodes:type_name -> fencing.v1.NodesInNetwork.NodesEntry
-	6, // 1: fencing.v1.NodeGroup.networks:type_name -> fencing.v1.NodeGroup.NetworksEntry
-	1, // 2: fencing.v1.Event.node:type_name -> fencing.v1.Node
-	0, // 3: fencing.v1.Event.type:type_name -> fencing.v1.EventType
-	7, // 4: fencing.v1.Event.time:type_name -> google.protobuf.Timestamp
-	1, // 5: fencing.v1.NodesInNetwork.NodesEntry.value:type_name -> fencing.v1.Node
-	2, // 6: fencing.v1.NodeGroup.NetworksEntry.value:type_name -> fencing.v1.NodesInNetwork
-	8, // 7: fencing.v1.Fencing.GetAll:input_type -> google.protobuf.Empty
-	8, // 8: fencing.v1.Fencing.StreamEvents:input_type -> google.protobuf.Empty
-	3, // 9: fencing.v1.Fencing.GetAll:output_type -> fencing.v1.NodeGroup
-	4, // 10: fencing.v1.Fencing.StreamEvents:output_type -> fencing.v1.Event
-	9, // [9:11] is the sub-list for method output_type
-	7, // [7:9] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	1, // 0: fencing.v1.Nodes.nodes:type_name -> fencing.v1.Node
+	1, // 1: fencing.v1.Event.node:type_name -> fencing.v1.Node
+	0, // 2: fencing.v1.Event.type:type_name -> fencing.v1.EventType
+	4, // 3: fencing.v1.Event.time:type_name -> google.protobuf.Timestamp
+	5, // 4: fencing.v1.Fencing.GetAll:input_type -> google.protobuf.Empty
+	5, // 5: fencing.v1.Fencing.StreamEvents:input_type -> google.protobuf.Empty
+	2, // 6: fencing.v1.Fencing.GetAll:output_type -> fencing.v1.Nodes
+	3, // 7: fencing.v1.Fencing.StreamEvents:output_type -> fencing.v1.Event
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_fencing_proto_init() }
@@ -370,7 +309,7 @@ func file_fencing_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_fencing_proto_rawDesc), len(file_fencing_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   6,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

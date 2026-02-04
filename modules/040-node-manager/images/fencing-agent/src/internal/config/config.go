@@ -5,6 +5,7 @@ import (
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/watchdog"
+	"fencing-agent/internal/controllers/grpc"
 	"strings"
 
 	"github.com/ilyakaznacheev/cleanenv"
@@ -21,6 +22,8 @@ type Config struct {
 	KubeClient kubeclient.Config
 
 	Memberlist memberlist.Config
+
+	GRPC grpc.Config
 }
 
 func (c *Config) MustLoad() {
@@ -41,6 +44,7 @@ func (c *Config) validate() error {
 		c.KubeClient.Validate,
 		c.Watchdog.Validate,
 		c.Memberlist.Validate,
+		c.GRPC.Validate,
 	}
 
 	for _, validator := range validators {

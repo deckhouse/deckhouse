@@ -30,8 +30,7 @@ type EventHandler interface {
 }
 
 type Memberlist struct {
-	list                 *memberlist.Memberlist
-	networkInterfaceName domain.NetworkInterface
+	list *memberlist.Memberlist
 
 	logger *log.Logger
 }
@@ -59,26 +58,23 @@ func New(
 	}
 
 	return &Memberlist{
-		list:                 list,
-		logger:               logger,
-		networkInterfaceName: domain.NetworkInterface(nodeName),
+		list:   list,
+		logger: logger,
 	}, nil
 }
 
-func (ml *Memberlist) GetNodes(ctx context.Context) (domain.NetworkInterface, domain.NodesInNetwork, error) {
+func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
 	members := ml.list.Members()
-	nodesInNetwork := domain.NodesInNetwork{
-		Members: make(map[domain.NodeName]domain.Node, len(members)),
-		Size:    len(members),
+	nodes := domain.Nodes{
+		Nodes: make([]domain.Node, 0, len(members)),
 	}
 	for _, member := range members {
-		nodesInNetwork.Members[domain.NodeName(member.Name)] = domain.Node{
-			Name: member.Name,
-			Addr: member.Addr.String(),
-		}
+		var node domain.Node
+		node.Name = member.Name
+		node.Addr = member.Addr.String()
+		nodes.Nodes = append(nodes.Nodes, node)
 	}
-
-	return ml.networkInterfaceName, nodesInNetwork, nil
+	return nodes, nil
 }
 
 func (ml *Memberlist) Start(peers ips) error {

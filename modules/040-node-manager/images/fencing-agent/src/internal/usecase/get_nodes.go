@@ -6,26 +6,18 @@ import (
 )
 
 type NodesGetter interface {
-	GetNodes(ctx context.Context) (domain.NetworkInterface, domain.NodesInNetwork, error)
+	GetNodes(ctx context.Context) (domain.Nodes, error)
 }
 
 type GetNodes struct {
-	nodesGetters []NodesGetter
+	nodesGetter NodesGetter
 }
 
-func NewGetNodes(ng []NodesGetter) *GetNodes {
-	return &GetNodes{nodesGetters: ng}
+func NewGetNodes(ng NodesGetter) *GetNodes {
+	return &GetNodes{nodesGetter: ng}
 }
 
-func GetAll(gn *GetNodes) (domain.NodeGroup, error) {
-	var ng domain.NodeGroup
-	for _, nodeGetter := range gn.nodesGetters {
-		interfaceName, nodesInNetwork, err := nodeGetter.GetNodes(context.TODO())
-		if err != nil {
-			// TODO log?
-			continue
-		}
-		ng.NodesInNetworks[interfaceName] = nodesInNetwork
-	}
-	return ng, nil
+func (gn *GetNodes) GetNodes(ctx context.Context) (domain.Nodes, error) {
+	nodes, err := gn.nodesGetter.GetNodes(ctx)
+	return nodes, err
 }

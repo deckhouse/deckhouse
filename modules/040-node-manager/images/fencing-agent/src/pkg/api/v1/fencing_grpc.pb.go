@@ -28,7 +28,7 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type FencingClient interface {
-	GetAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeGroup, error)
+	GetAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Nodes, error)
 	StreamEvents(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Event], error)
 }
 
@@ -40,9 +40,9 @@ func NewFencingClient(cc grpc.ClientConnInterface) FencingClient {
 	return &fencingClient{cc}
 }
 
-func (c *fencingClient) GetAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*NodeGroup, error) {
+func (c *fencingClient) GetAll(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*Nodes, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(NodeGroup)
+	out := new(Nodes)
 	err := c.cc.Invoke(ctx, Fencing_GetAll_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ type Fencing_StreamEventsClient = grpc.ServerStreamingClient[Event]
 // All implementations must embed UnimplementedFencingServer
 // for forward compatibility.
 type FencingServer interface {
-	GetAll(context.Context, *emptypb.Empty) (*NodeGroup, error)
+	GetAll(context.Context, *emptypb.Empty) (*Nodes, error)
 	StreamEvents(*emptypb.Empty, grpc.ServerStreamingServer[Event]) error
 	mustEmbedUnimplementedFencingServer()
 }
@@ -85,7 +85,7 @@ type FencingServer interface {
 // pointer dereference when methods are called.
 type UnimplementedFencingServer struct{}
 
-func (UnimplementedFencingServer) GetAll(context.Context, *emptypb.Empty) (*NodeGroup, error) {
+func (UnimplementedFencingServer) GetAll(context.Context, *emptypb.Empty) (*Nodes, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAll not implemented")
 }
 func (UnimplementedFencingServer) StreamEvents(*emptypb.Empty, grpc.ServerStreamingServer[Event]) error {
