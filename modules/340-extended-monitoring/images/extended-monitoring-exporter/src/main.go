@@ -48,11 +48,13 @@ func main() {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		cancel()
 		log.Fatal("Error kubernetes config: %v\n", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
+		cancel()
 		log.Fatal("Error getting kubernetes config: %v\n", err)
 	}
 
