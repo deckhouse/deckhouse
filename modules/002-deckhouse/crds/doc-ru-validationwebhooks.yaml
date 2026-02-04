@@ -232,7 +232,7 @@ spec:
                           API-версии, к которым принадлежат ресурсы. `*` означает все версии.
                       operations:
                         description: |
-                          Операции, которые интересуют admission hook: CREATE, UPDATE, DELETE, CONNECT или * для всех операций.
+                          Операции, которые интересуют admission hook: `CREATE`, `UPDATE`, `DELETE`, `CONNECT` или `*` для всех операций.
                       resources:
                         description: |
                           Список ресурсов, к которым применяется это правило.
