@@ -1235,10 +1235,6 @@ entries:
                 ru: Обзор
               url: /architecture/iam/            
             - title:
-                en: user-authn module
-                ru: Модуль user-authn
-              url: /architecture/iam/user-authn/
-            - title:
                 en: Authentication
                 ru: Аутентификация
               url: /architecture/authentication.html
@@ -1246,10 +1242,18 @@ entries:
                 en: Multitenancy
                 ru: Мультитенантность
               url: /architecture/multitenancy/
+            - title:
+                en: user-authn module
+                ru: Модуль user-authn
+              url: /architecture/iam/user-authn/
         - title:
             en: Security subsystem
             ru: Подсистема Security
           folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/security/          
             - title:
                 en: Integrity control
                 ru: Контроль целостности
