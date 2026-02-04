@@ -114,7 +114,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("Node informer error %v", err)
+		return fmt.Errorf("Watcher nodeInformer error: %v", err)
 	}
 
 	// Add event handlers to NodeGroup informer
@@ -145,7 +145,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("Node Group informer error %v", err)
+		return fmt.Errorf("Watcher nodeGroupInformer error: %v", err)
 	}
 
 	// Start the informers
