@@ -164,6 +164,8 @@ var _ = Describe("Module :: ingress-nginx :: helm template :: controllers", func
 		table.Entry("HostPortWithProxyProtocol inlet", "host-port-with-pp.yaml"),
 		table.Entry("HostWithFailover inlet with custom resources and filter IP with acceptRequestsFrom", "host-with-failover.yaml"),
 		table.Entry("LoadBalancer inlet", "lb.yaml"),
+		table.Entry("LoadBalancer inlet with annotation validation enabled (v1.10)", "lb-annotation-validation-v110.yaml"),
+		table.Entry("LoadBalancer inlet with annotation validation disabled (v1.12)", "lb-annotation-validation-v112.yaml"),
 		table.Entry("LoadBalancerWithProxyProtocol inlet", "lb-with-pp.yaml"),
 		table.Entry("LoadBalancer inlet with custom terminating time", "lb-with-terminating.yaml"),
 		table.Entry("LoadBalancer without hpa deployment", "lb-without-hpa.yaml"),
