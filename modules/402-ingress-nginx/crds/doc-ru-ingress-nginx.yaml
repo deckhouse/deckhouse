@@ -705,8 +705,6 @@ spec:
                   description: |
                     Включает HTTP/3.
 
-                    > HTTP/3 доступен только в контролере версии 1.10 и 1.12.
-                    >
                     > HTTP/3 нельзя включить, если выбран инлет `HostPortWithProxyProtocol` или `LoadBalancerWithProxyProtocol`.
                     >
                     > В случае инлета `HostWithFailover` HTTP/3 включается только для основного контроллера; резервный контроллер всегда работает без HTTP/3.
