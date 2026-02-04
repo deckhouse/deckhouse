@@ -9,8 +9,3 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/candi/cloud-providers/huaweicloud
-  to: /deckhouse/candi/cloud-providers/huaweicloud
-  stageDependencies:
-    install:
-        - '**/*'

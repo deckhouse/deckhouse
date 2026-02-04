@@ -72,14 +72,14 @@
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/openapi
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/openapi
   to: /src/ee/modules/030-cloud-provider-huaweicloud/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/openapi
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/openapi
   to: /src/ee/modules/030-cloud-provider-huaweicloud/openapi
   owner: jekyll
   group: jekyll
@@ -203,7 +203,7 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/docs
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/docs
   to: /src/ee/modules/030-cloud-provider-huaweicloud/docs
   owner: jekyll
   group: jekyll

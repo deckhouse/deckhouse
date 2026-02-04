@@ -87,6 +87,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager": "imageHash-cloudProviderHuaweicloud-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderHuaweicloud-cloudDataDiscoverer",
 		"huaweicloudCsiDriver":   "imageHash-cloudProviderHuaweicloud-huaweicloudCsiDriver",
+		"terraformManager":       "imageHash-cloudProviderHuaweicloud-terraformManager",
 	},
 	"cloudProviderOpenstack": map[string]interface{}{
 		"cinderCsiPlugin130":        "imageHash-cloudProviderOpenstack-cinderCsiPlugin130",
