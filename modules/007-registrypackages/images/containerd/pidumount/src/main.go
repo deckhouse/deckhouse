@@ -7,7 +7,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -37,7 +37,7 @@ __attribute__((constructor)) void enter_namespace(void) {
 
     char ns_path[PATH_MAX];
     snprintf(ns_path, sizeof(ns_path), "/proc/%s/ns/mnt", target_pid);
-    
+
     int fd = open(ns_path, O_RDONLY);
     if (fd == -1) {
         fprintf(stderr, "Failed to open %s: %s\n", ns_path, strerror(errno));
@@ -57,21 +57,21 @@ import "C"
 
 import (
 	"fmt"
+	"golang.org/x/sys/unix"
 	"log"
 	"os"
-	"golang.org/x/sys/unix"
 )
 
 func main() {
-    if len(os.Args) != 2 {
-        log.Fatalf("Usage: %s <mount path>", os.Args[0])
-    }
+	if len(os.Args) != 2 {
+		log.Fatalf("Usage: %s <mount path>", os.Args[0])
+	}
 
-    targetPid := os.Getenv("TARGET_PID")
-    mountPath := os.Args[1]
-    if err := unix.Unmount(mountPath, 0); err != nil {
-        log.Fatalf("Failed to unmount %s: %v", mountPath, err)
-    }
+	targetPid := os.Getenv("TARGET_PID")
+	mountPath := os.Args[1]
+	if err := unix.Unmount(mountPath, 0); err != nil {
+		log.Fatalf("Failed to unmount %s: %v", mountPath, err)
+	}
 
-    fmt.Printf("Successfully unmounted %s in namespace of PID %s\n", mountPath, targetPid)
+	fmt.Printf("Successfully unmounted %s in namespace of PID %s\n", mountPath, targetPid)
 }
