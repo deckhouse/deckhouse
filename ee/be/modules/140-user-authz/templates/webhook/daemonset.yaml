@@ -45,6 +45,14 @@ spec:
         description: |
           User Authz Webhook need to run on hostNetwork for fault tolerance. Architectural feature.
           The pod runs on the host network to ensure independence from the state of the "Service" object in k8s.
+    hostPorts:
+      # kube-apiserver calls the authorization webhook via node-local endpoint `https://127.0.0.1:40443`.
+      # This port is not used for inter-node traffic, but it must be explicitly allowed for hostNetwork pods
+      # to satisfy Admission Policy Engine / dmt validation rules.
+      - port: 40443
+        protocol: TCP
+        metadata:
+          description: Node-local authorization webhook listener.    
 {{- end }}   
 ---
 apiVersion: apps/v1
@@ -77,6 +85,10 @@ spec:
       - name: webhook
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "webhook") }}
+        ports:
+        - name: authz-webhook
+          containerPort: 40443
+          protocol: TCP
         # Use node-local kube-apiserver endpoint (hostNetwork) instead of ClusterIP "kubernetes" service.
         # Some environments may block access to ClusterIP from hostNetwork pods, which makes the webhook unstable.
         env:

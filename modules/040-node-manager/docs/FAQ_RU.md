@@ -2032,6 +2032,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 Найдите свою видеокарту и выберите подходящий профиль — его имя указывается в `spec.gpu.mig.partedConfig` вашего NodeGroup.
 Это позволит применить правильный профиль именно к вашей карте.
 
+## Как задать свой MIG-профиль для каждой карты на узле?
+
+Используйте значение `custom` в [параметре `partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) ресурса NodeGroup и опишите разбиение MIG по индексам GPU:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1 # Может принимать значение от 1 до 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 1
+            - profile: 1g.10gb
+              count: 4
+        # Добавьте остальные индексы по необходимости.
+```
+
+В результате модуль `node-manager` автоматически:
+
+- добавит в ConfigMap конфигурацию `mig-parted-config` с именем `custom-<node-group-name>-<hash>`, где `<hash>` вычисляется на основе схемы разбиения (длинные имена групп сокращаются с добавлением хеша, чтобы имя уместилось в лейбл);
+- проставит на узлах этой группы лейбл `nvidia.com/mig.config=custom-<node-group-name>-<hash>`.
+
+Для каждой группы узлов создаётся собственная конфигурация вида `custom-<ng>-<hash>`, при этом имена конфигураций не пересекаются.
+
 ## Для GPU не активируется MIG-профиль — что проверить?
 
 1. Модель GPU: MIG поддерживают H100/A100/A30, **не** поддерживает V100/T4. См. таблицы профилей в руководстве [NVIDIA MIG](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).

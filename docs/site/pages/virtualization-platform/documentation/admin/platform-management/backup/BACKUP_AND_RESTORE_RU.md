@@ -14,7 +14,7 @@ lang: ru
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Проверьте версию `etcdutl`:
@@ -125,7 +125,10 @@ lang: ru
 
 1. Переведите кластер в режим с одним master-узлом:
 
-   - В статическом кластере удалите лишние master-узлы вручную.
+   - В облачном кластере воспользуйтесь [инструкцией](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
+   - В статическом кластере выведите лишние master-узлы из роли `control-plane` по [инструкции](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#удаление-роли-master-с-узла-без-удаления-самого-узла), после чего удалите их из кластера.
+   - В статическом кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла удалите arbiter-узел и лишние master-узлы.
+   - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования) для удаления лишних master-узлов и arbiter-узла.
 
 1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-с-одним-control-plane-узлом) для кластера с одним control-plane узлом.
 
@@ -135,7 +138,9 @@ lang: ru
    d8 k delete node <ИМЯ_MASTER_УЗЛА>
    ```
 
-1. Перезапустите все узлы кластера. Убедитесь, что после перезагрузки все узлы доступны и работают корректно.
+   > **Внимание.** При недоступности команд `d8 k` или `kubectl` на узле проверьте файл конфигурации `/etc/kubernetes/kubernetes-api-proxy/nginx.conf`. В нем должен быть указан только ваш текущий API-сервер. Если в конфигурации содержатся строки с IP-адресами старых master-узлов, удалите их. Аналогичным образом исправьте конфигурацию на всех остальных узлах.
+
+1. Перезапустите master-узел. Убедитесь, что остальные узлы перешли в состояние `Ready`.
 
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
@@ -143,7 +148,7 @@ lang: ru
    d8 system queue main
    ```
 
-1. Переведите кластер обратно в мультимастерный режим.
+1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#типовые-сценарии-масштабирования).
 
 После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
 
@@ -365,7 +370,7 @@ KUBERNETES_VERSION=1.28.0                   # Версия Kubernetes.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -417,7 +422,7 @@ systemctl restart kubelet.service
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Путь до файла резервной копии etcd.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \

@@ -17,12 +17,11 @@ limitations under the License.
 package destination
 
 import (
-	"sort"
 	"strings"
-	"unicode"
 
 	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/460-log-shipper/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/modules/460-log-shipper/hooks/internal/loglabels"
 )
 
 type Kafka struct {
@@ -49,17 +48,7 @@ type KafkaSASL struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-func normalizeKey(key string) string {
-	var b strings.Builder
-	for _, c := range key {
-		if unicode.IsLetter(c) || unicode.IsNumber(c) {
-			b.WriteRune(unicode.ToLower(c))
-		}
-	}
-	return b.String()
-}
-
-func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
+func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec, sourceType string) *Kafka {
 	spec := cspec.Kafka
 
 	tls := CommonTLS{
@@ -109,37 +98,8 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 		if spec.Encoding.CEF.DeviceVersion != "" {
 			deviceVersion = spec.Encoding.CEF.DeviceVersion
 		}
-		extensions := map[string]string{
-			"message":   "message",
-			"timestamp": "timestamp",
-			"node":      "node",
-			"host":      "host",
-			"pod":       "pod",
-			"podip":     "pod_ip",
-			"namespace": "namespace",
-			"image":     "image",
-			"container": "container",
-			"podowner":  "pod_owner",
-		}
-
-		keys := make([]string, 0, len(cspec.ExtraLabels))
-		for key := range cspec.ExtraLabels {
-			keys = append(keys, key)
-		}
-
-		sort.Strings(keys)
-		specialKeys := map[string]struct{}{
-			"cef.name":     {},
-			"cef.severity": {},
-		}
-
-		for _, k := range keys {
-			normalized := normalizeKey(k)
-			if _, isSpecial := specialKeys[normalized]; isSpecial {
-				continue
-			}
-			extensions[normalized] = k
-		}
+		// Get CEF extensions based on source type (uses K8sLabels and FilesLabels)
+		extensions := loglabels.GetCEFExtensions(sourceType, cspec.ExtraLabels)
 
 		encoding.Codec = "cef"
 		encoding.CEF = CEFEncoding{
@@ -156,7 +116,7 @@ func NewKafka(name string, cspec v1alpha1.ClusterLogDestinationSpec) *Kafka {
 
 	return &Kafka{
 		CommonSettings: CommonSettings{
-			Name:   ComposeName(name),
+			Name:   ComposeNameWithSourceType(name, sourceType),
 			Type:   "kafka",
 			Inputs: set.New(),
 			Buffer: buildVectorBuffer(cspec.Buffer),

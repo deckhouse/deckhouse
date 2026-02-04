@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 )
 
 func TestCheckClusterConfig(t *testing.T) {
@@ -598,6 +599,7 @@ func createTestCheckClusterConfig(t *testing.T, p testCheckClusterConfigParams) 
 		logger:                     logger,
 		checker: NewChecker(&Params{
 			Logger:        logger,
+			StateCache:    cache.Global(),
 			CommanderMode: true,
 			IsDebug:       false,
 			KubeClient:    kubeCl,

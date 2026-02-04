@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: v1
@@ -352,4 +353,5 @@ subjects:
 - kind: ServiceAccount
   name: nvidia-dcgm-exporter
   namespace: d8-nvidia-gpu
+{{- end }}
 {{- end }}

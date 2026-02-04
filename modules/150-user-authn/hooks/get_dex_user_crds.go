@@ -26,9 +26,9 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
@@ -228,9 +228,9 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 		if ok && password.LockedUntil != nil && password.LockedUntil.After(time.Now()) {
 			lock = DexUserLock{
 				State:   true,
-				Reason:  lo.ToPtr(PasswordPolicyLockout),
-				Message: lo.ToPtr("Locked due to too many failed login attempts"),
-				Until:   lo.ToPtr(password.LockedUntil.Format(time.RFC3339)),
+				Reason:  ptr.To(PasswordPolicyLockout),
+				Message: ptr.To("Locked due to too many failed login attempts"),
+				Until:   ptr.To(password.LockedUntil.Format(time.RFC3339)),
 			}
 
 			// If this annotation exists - we consider lock was set by administrator.

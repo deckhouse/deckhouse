@@ -71,4 +71,5 @@ openapi/                                 @nabokihms @z9r5
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @nabokihms
+go_lib/cloud-data/                       @aleksey-su
 go_lib/registry/                         @RaveNoX

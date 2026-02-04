@@ -17,73 +17,76 @@ package app
 import "gopkg.in/alecthomas/kingpin.v2"
 
 var (
-	PreflightSkipAll                          = false
-	PreflightSkipSSHForward                   = false
-	PreflightSkipAvailabilityPorts            = false
-	PreflightSkipResolvingLocalhost           = false
-	PreflightSkipDeckhouseEditionCheck        = false
-	PreflightSkipRegistryThroughProxy         = false
-	PreflightSkipPublicDomainTemplateCheck    = false
-	PreflightSkipSSHCredentialsCheck          = false
-	PreflightSkipRegistryCredentials          = false
-	PreflightSkipContainerdExistCheck         = false
-	PreflightSkipPythonChecks                 = false
-	PreflightSkipSudoIsAllowedForUserCheck    = false
-	PreflightSkipSystemRequirementsCheck      = false
-	PreflightSkipOneSSHHost                   = false
-	PreflightSkipCloudAPIAccessibility        = false
-	PreflightSkipTimeDrift                    = false
-	PreflightSkipCIDRIntersection             = false
-	PreflightSkipDeckhouseUserCheck           = false
-	PreflightSkipYandexWithNatInstanceCheck   = false
-	PreflightSkipStaticInstancesIPDuplication = false
-	PreflightSkipDVPKubeconfigCheck           = false
+	PreflightSkipAll                               = false
+	PreflightSkipSSHForward                        = false
+	PreflightSkipAvailabilityPorts                 = false
+	PreflightSkipResolvingLocalhost                = false
+	PreflightSkipDeckhouseEditionCheck             = false
+	PreflightSkipRegistryThroughProxy              = false
+	PreflightSkipPublicDomainTemplateCheck         = false
+	PreflightSkipSSHCredentialsCheck               = false
+	PreflightSkipRegistryCredentials               = false
+	PreflightSkipContainerdExistCheck              = false
+	PreflightSkipPythonChecks                      = false
+	PreflightSkipSudoIsAllowedForUserCheck         = false
+	PreflightSkipSystemRequirementsCheck           = false
+	PreflightSkipOneSSHHost                        = false
+	PreflightSkipCloudAPIAccessibility             = false
+	PreflightSkipTimeDrift                         = false
+	PreflightSkipCIDRIntersection                  = false
+	PreflightSkipDeckhouseUserCheck                = false
+	PreflightSkipYandexWithNatInstanceCheck        = false
+	PreflightSkipStaticInstancesIPDuplication      = false
+	PreflightSkipDVPKubeconfigCheck                = false
+	PreflightSkipStaticInstancesWithSSHCredentials = false
 )
 
 const (
-	SSHForwardArgName                = "preflight-skip-ssh-forward-check"
-	PortsAvailabilityArgName         = "preflight-skip-availability-ports-check"
-	ResolvingLocalhostArgName        = "preflight-skip-resolving-localhost-check"
-	DeckhouseEditionCheckArgName     = "preflight-skip-deckhouse-edition-check"
-	RegistryThroughProxyCheckArgName = "preflight-skip-registry-through-proxy"
-	PublicDomainTemplateCheckArgName = "preflight-skip-public-domain-template-check"
-	SSHCredentialsCheckArgName       = "preflight-skip-ssh-credentials-check"
-	RegistryCredentialsCheckArgName  = "preflight-skip-registry-credential"
-	ContainerdExistCheckArgName      = "preflight-skip-containerd-exist"
-	PythonChecksArgName              = "preflight-skip-python-checks"
-	SudoAllowedCheckArgName          = "preflight-skip-sudo-allowed"
-	SystemRequirementsArgName        = "preflight-skip-system-requirements-check"
-	CloudAPIAccessibilityArgName     = "preflight-cloud-api-accesibility-check"
-	TimeDriftArgName                 = "preflight-time-drift-check"
-	OneSSHHostCheckArgName           = "preflight-skip-one-ssh-host"
-	CIDRIntersection                 = "preflight-skip-cidr-intersection"
-	DeckhouseUserCheckName           = "preflight-skip-deckhouse-user-check"
-	YandexWithNatInstance            = "preflight-skip-yandex-with-nat-instance-check"
-	StaticInstancesIPDuplication     = "preflight-skip-staticinstances-ip-duplication"
-	DVPKubeconfigCheck               = "preflight-skip-dvp-kubeconfig"
+	SSHForwardArgName                 = "preflight-skip-ssh-forward-check"
+	PortsAvailabilityArgName          = "preflight-skip-availability-ports-check"
+	ResolvingLocalhostArgName         = "preflight-skip-resolving-localhost-check"
+	DeckhouseEditionCheckArgName      = "preflight-skip-deckhouse-edition-check"
+	RegistryThroughProxyCheckArgName  = "preflight-skip-registry-through-proxy"
+	PublicDomainTemplateCheckArgName  = "preflight-skip-public-domain-template-check"
+	SSHCredentialsCheckArgName        = "preflight-skip-ssh-credentials-check"
+	RegistryCredentialsCheckArgName   = "preflight-skip-registry-credential"
+	ContainerdExistCheckArgName       = "preflight-skip-containerd-exist"
+	PythonChecksArgName               = "preflight-skip-python-checks"
+	SudoAllowedCheckArgName           = "preflight-skip-sudo-allowed"
+	SystemRequirementsArgName         = "preflight-skip-system-requirements-check"
+	CloudAPIAccessibilityArgName      = "preflight-cloud-api-accesibility-check"
+	TimeDriftArgName                  = "preflight-time-drift-check"
+	OneSSHHostCheckArgName            = "preflight-skip-one-ssh-host"
+	CIDRIntersection                  = "preflight-skip-cidr-intersection"
+	DeckhouseUserCheckName            = "preflight-skip-deckhouse-user-check"
+	YandexWithNatInstance             = "preflight-skip-yandex-with-nat-instance-check"
+	StaticInstancesIPDuplication      = "preflight-skip-staticinstances-ip-duplication"
+	DVPKubeconfigCheck                = "preflight-skip-dvp-kubeconfig"
+	StaticInstancesWithSSHCredentials = "preflight-skip-staticinstances-with-ssh-credentials"
 )
 
 var PreflightSkipOptionsMap = map[string]*bool{
-	SSHForwardArgName:                &PreflightSkipSSHForward,
-	PortsAvailabilityArgName:         &PreflightSkipAvailabilityPorts,
-	ResolvingLocalhostArgName:        &PreflightSkipResolvingLocalhost,
-	DeckhouseEditionCheckArgName:     &PreflightSkipDeckhouseEditionCheck,
-	RegistryThroughProxyCheckArgName: &PreflightSkipRegistryThroughProxy,
-	PublicDomainTemplateCheckArgName: &PreflightSkipPublicDomainTemplateCheck,
-	SSHCredentialsCheckArgName:       &PreflightSkipSSHCredentialsCheck,
-	RegistryCredentialsCheckArgName:  &PreflightSkipRegistryCredentials,
-	CloudAPIAccessibilityArgName:     &PreflightSkipCloudAPIAccessibility,
-	ContainerdExistCheckArgName:      &PreflightSkipContainerdExistCheck,
-	PythonChecksArgName:              &PreflightSkipPythonChecks,
-	SudoAllowedCheckArgName:          &PreflightSkipSudoIsAllowedForUserCheck,
-	SystemRequirementsArgName:        &PreflightSkipSystemRequirementsCheck,
-	OneSSHHostCheckArgName:           &PreflightSkipOneSSHHost,
-	CIDRIntersection:                 &PreflightSkipCIDRIntersection,
-	StaticInstancesIPDuplication:     &PreflightSkipStaticInstancesIPDuplication,
-	DeckhouseUserCheckName:           &PreflightSkipDeckhouseUserCheck,
-	TimeDriftArgName:                 &PreflightSkipTimeDrift,
-	YandexWithNatInstance:            &PreflightSkipYandexWithNatInstanceCheck,
-	DVPKubeconfigCheck:               &PreflightSkipDVPKubeconfigCheck,
+	SSHForwardArgName:                 &PreflightSkipSSHForward,
+	PortsAvailabilityArgName:          &PreflightSkipAvailabilityPorts,
+	ResolvingLocalhostArgName:         &PreflightSkipResolvingLocalhost,
+	DeckhouseEditionCheckArgName:      &PreflightSkipDeckhouseEditionCheck,
+	RegistryThroughProxyCheckArgName:  &PreflightSkipRegistryThroughProxy,
+	PublicDomainTemplateCheckArgName:  &PreflightSkipPublicDomainTemplateCheck,
+	SSHCredentialsCheckArgName:        &PreflightSkipSSHCredentialsCheck,
+	RegistryCredentialsCheckArgName:   &PreflightSkipRegistryCredentials,
+	CloudAPIAccessibilityArgName:      &PreflightSkipCloudAPIAccessibility,
+	ContainerdExistCheckArgName:       &PreflightSkipContainerdExistCheck,
+	PythonChecksArgName:               &PreflightSkipPythonChecks,
+	SudoAllowedCheckArgName:           &PreflightSkipSudoIsAllowedForUserCheck,
+	SystemRequirementsArgName:         &PreflightSkipSystemRequirementsCheck,
+	OneSSHHostCheckArgName:            &PreflightSkipOneSSHHost,
+	CIDRIntersection:                  &PreflightSkipCIDRIntersection,
+	StaticInstancesIPDuplication:      &PreflightSkipStaticInstancesIPDuplication,
+	DeckhouseUserCheckName:            &PreflightSkipDeckhouseUserCheck,
+	TimeDriftArgName:                  &PreflightSkipTimeDrift,
+	YandexWithNatInstance:             &PreflightSkipYandexWithNatInstanceCheck,
+	DVPKubeconfigCheck:                &PreflightSkipDVPKubeconfigCheck,
+	StaticInstancesWithSSHCredentials: &PreflightSkipStaticInstancesWithSSHCredentials,
 }
 
 func ApplyPreflightSkips(skips []string) {
@@ -158,4 +161,7 @@ func DefinePreflight(cmd *kingpin.CmdClause) {
 	cmd.Flag(DVPKubeconfigCheck, "Skip verifying DVP Kubeconfig").
 		Envar(configEnvName("PREFLIGHT_SKIP_DVP_KUBECONFIG")).
 		BoolVar(PreflightSkipOptionsMap[DVPKubeconfigCheck])
+	cmd.Flag(StaticInstancesWithSSHCredentials, "Skip verifying accessibility StaticInstances with SSHCredentials").
+		Envar(configEnvName("PREFLIGHT_SKIP_SI_WITH_SSHCREDENTIALS")).
+		BoolVar(PreflightSkipOptionsMap[StaticInstancesWithSSHCredentials])
 }

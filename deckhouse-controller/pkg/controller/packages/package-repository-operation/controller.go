@@ -291,6 +291,10 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 			return ctrl.Result{}, patchErr
 		}
 
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
+		}
+
 		logger.Warn("operation failed", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
@@ -313,6 +317,10 @@ func (r *reconciler) handleDiscoverState(ctx context.Context, operation *v1alpha
 
 		if patchErr := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); patchErr != nil {
 			return ctrl.Result{}, patchErr
+		}
+
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, v1alpha1.PackageRepositoryOperationReasonPackageListingFailed, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
 		logger.Warn("operation failed", slog.String("message", message))
@@ -381,6 +389,10 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 			return ctrl.Result{}, patchErr
 		}
 
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, false, reason, message); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
+		}
+
 		logger.Warn("operation failed", slog.String("message", message))
 		return ctrl.Result{}, nil
 	}
@@ -409,6 +421,11 @@ func (r *reconciler) handleProcessingState(ctx context.Context, operation *v1alp
 
 		if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
+		}
+
+		successMessage := fmt.Sprintf("Successfully scanned repository, found %d package(s)", operation.Status.Packages.Total)
+		if updateErr := r.updatePackageRepositoryCondition(ctx, operation.Spec.PackageRepositoryName, true, "", successMessage); updateErr != nil {
+			logger.Warn("failed to update package repository condition", log.Err(updateErr))
 		}
 
 		r.logger.Info("operation completed", slog.String("name", operation.Name))
@@ -656,6 +673,56 @@ func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alp
 
 	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
+	repo := new(v1alpha1.PackageRepository)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: repoName}, repo); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get package repository: %w", err)
+	}
+
+	original := repo.DeepCopy()
+	now := metav1.NewTime(r.dc.GetClock().Now())
+
+	status := metav1.ConditionTrue
+	if !success {
+		status = metav1.ConditionFalse
+	}
+
+	conditionExists := false
+	for idx, cond := range repo.Status.Conditions {
+		if cond.Type == v1alpha1.PackageRepositoryConditionLastOperationScanFinished {
+			conditionExists = true
+
+			if cond.Status != status {
+				repo.Status.Conditions[idx].LastTransitionTime = now
+				repo.Status.Conditions[idx].Status = status
+			}
+
+			repo.Status.Conditions[idx].Reason = reason
+			repo.Status.Conditions[idx].Message = message
+			break
+		}
+	}
+
+	if !conditionExists {
+		repo.Status.Conditions = append(repo.Status.Conditions, metav1.Condition{
+			Type:               v1alpha1.PackageRepositoryConditionLastOperationScanFinished,
+			Status:             status,
+			Reason:             reason,
+			Message:            message,
+			LastTransitionTime: now,
+		})
+	}
+
+	if err := r.client.Status().Patch(ctx, repo, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update package repository status: %w", err)
 	}
 
 	return nil

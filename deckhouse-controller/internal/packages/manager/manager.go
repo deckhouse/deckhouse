@@ -97,15 +97,15 @@ func New(conf Config, logger *log.Logger) *Manager {
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
-func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
+func (m *Manager) LoadPackage(ctx context.Context, repo registry.Remote, namespace, name string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 	span.SetAttributes(attribute.String("namespace", namespace))
-	span.SetAttributes(attribute.String("registry", registry.Name))
+	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	app, err := m.loader.Load(ctx, registry, name)
+	app, err := m.loader.Load(ctx, repo, name)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
@@ -232,7 +232,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run nelm upgrade", slog.String("name", name))
 
-	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		return newHelmUpgradeErr(err)
 	}
@@ -247,7 +247,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			return newHelmUpgradeErr(err)
 		}
@@ -287,7 +287,7 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	if !keep {
 		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err := m.nelm.Delete(ctx, app); err != nil {
+		if err := m.nelm.Delete(ctx, app.GetNamespace(), app.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
