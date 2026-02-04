@@ -38,12 +38,12 @@ secrets:
   value: {{ $.SOURCE_REPO }}
 shell:
   install:
-  - git clone --branch {{ $value.ccm.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
+  - git clone --depth 1 --branch {{ $value.ccm.gcp }} $(cat /run/secrets/SOURCE_REPO)/kubernetes/cloud-provider-gcp.git /src
   - cd /src
   {{- if $patch}}
   - git apply /patches/*.patch --verbose
   {{- end}}
-  - rm -rf vendor
+  - rm -rf .git vendor
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
 final: false
@@ -61,11 +61,10 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make git
+  - apk add --no-cache make
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
-  - rm -rf /src/.git
   setup:
   - cd /src
   - GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o gcp-cloud-controller-manager ./cmd/cloud-controller-manager
