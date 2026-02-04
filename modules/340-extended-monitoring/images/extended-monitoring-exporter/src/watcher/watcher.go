@@ -117,7 +117,7 @@ func (w *Watcher) addNamespace(ctx context.Context, ns *v1.Namespace) {
 }
 
 func (w *Watcher) updateNamespace(ctx context.Context, ns *v1.Namespace) {
-	enabled := enabledLabel(ns.Labels)
+	enabled := enabledOnNamespace(ns.Labels)
 	w.metrics.NamespacesEnabled.WithLabelValues(ns.Name).Set(boolToFloat64(enabled))
 	log.Printf("[NAMESPACE UPDATE] %s", ns.Name)
 
