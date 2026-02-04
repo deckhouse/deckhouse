@@ -65,7 +65,6 @@ func checkRequiredParams(params map[string]string) error {
 	for _, paramName := range []string{ParameterDVPStorageClass} {
 		if len(params[paramName]) == 0 {
 			return status.Errorf(codes.InvalidArgument, "missing required parameter %q", paramName)
-
 		}
 	}
 	return nil
@@ -85,7 +84,7 @@ func (c *ControllerService) CreateVolume(
 
 	diskName := req.Name
 	if len(diskName) == 0 {
-		return nil, fmt.Errorf("error required request parameter Name was not provided")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter Name was not provided")
 	}
 
 	// Check access mode
@@ -125,8 +124,17 @@ func (c *ControllerService) CreateVolume(
 		diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
 		if err != nil {
 			klog.Error(err.Error())
-			return nil, err
+			return nil, status.Errorf(codes.Internal, "failed to parse existing disk capacity for %q: %v", disk.Name, err)
 		}
+
+		if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
+			return nil, status.Errorf(
+				codes.AlreadyExists,
+				"disk %q already exists with capacity %d bytes, which is smaller than requested %d bytes",
+				disk.Name, diskCapacity, requiredSize,
+			)
+		}
+
 		result.Volume.VolumeId = disk.Name
 		result.Volume.CapacityBytes = diskCapacity
 		return result, nil
@@ -184,10 +192,10 @@ func (c *ControllerService) ControllerPublishVolume(
 	ctx context.Context, req *csi.ControllerPublishVolumeRequest,
 ) (*csi.ControllerPublishVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter VolumeId wasn't set")
 	}
 	if len(req.NodeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater NodeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter NodeId wasn't set")
 	}
 
 	diskName := req.VolumeId
@@ -199,7 +207,7 @@ func (c *ControllerService) ControllerPublishVolume(
 			klog.Infof("VM %v not found in parent DVP cluster, cannot publish disk %v", vmHostname, diskName)
 			return nil, status.Error(codes.NotFound, "VM not found in parent DVP cluster")
 		}
-		return nil, fmt.Errorf("error from parent DVP cluster while finding VM: %v: %v", vmHostname, err)
+		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while finding VM %v: %v", vmHostname, err)
 	}
 
 	exists, attached, err := c.getDiskAttachState(ctx, diskName, vmHostname)
@@ -239,9 +247,7 @@ func (c *ControllerService) ControllerPublishVolume(
 			)
 		}
 
-		msg := fmt.Errorf("error from parent DVP cluster while creating disk attachment: %v", err)
-		klog.Error(msg.Error())
-		return nil, msg
+		return nil, status.Errorf(codes.Internal, "error from parent DVP cluster while creating disk attachment: %v", err)
 	}
 
 	klog.Infof("Attached Disk %v to VM %v", diskName, req.NodeId)
@@ -258,13 +264,14 @@ func (c *ControllerService) getDiskAttachState(
 		if errors.Is(err, dvpapi.ErrNotFound) {
 			return false, false, nil
 		}
-		return false, false, fmt.Errorf("failed to get vmBDA for disk=%s vm=%s: %w", diskName, vmHostname, err)
+		return false, false, status.Errorf(codes.Internal, "failed to get vmBDA for disk=%s vm=%s: %v", diskName, vmHostname, err)
 	}
 
 	attached := vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached
 
 	if vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
-		return true, attached, fmt.Errorf(
+		return true, attached, status.Errorf(
+			codes.FailedPrecondition,
 			"vmBDA %s is Failed for disk=%s vm=%s",
 			vmbda.Name, diskName, vmHostname,
 		)
@@ -278,10 +285,10 @@ func (c *ControllerService) ControllerUnpublishVolume(
 	req *csi.ControllerUnpublishVolumeRequest,
 ) (*csi.ControllerUnpublishVolumeResponse, error) {
 	if len(req.VolumeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater VolumeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter VolumeId wasn't set")
 	}
 	if len(req.NodeId) == 0 {
-		return nil, fmt.Errorf("error required request paramater NodeId wasn't set")
+		return nil, status.Error(codes.InvalidArgument, "required request parameter NodeId wasn't set")
 	}
 
 	diskName := req.VolumeId
@@ -294,8 +301,9 @@ func (c *ControllerService) ControllerUnpublishVolume(
 				vmHostname, diskName,
 			)
 		} else {
-			return nil, fmt.Errorf(
-				"error from parent DVP cluster while finding VM: %v: %v",
+			return nil, status.Errorf(
+				codes.Internal,
+				"error from parent DVP cluster while finding VM %v: %v",
 				vmHostname, err,
 			)
 		}
