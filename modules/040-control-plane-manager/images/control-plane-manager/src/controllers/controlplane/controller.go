@@ -19,17 +19,12 @@ package controlplane
 import (
 	"context"
 	"control-plane-manager/pkg/constants"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sort"
 	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"golang.org/x/time/rate"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/ptr"
@@ -42,6 +37,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -51,12 +48,14 @@ const (
 )
 
 type Reconciler struct {
-	client client.Client
+	client            client.Client
+	manifestGenerator ManifestGenerator
 }
 
 func Register(mgr manager.Manager) error {
 	r := &Reconciler{
-		client: mgr.GetClient(),
+		client:            mgr.GetClient(),
+		manifestGenerator: &KubeadmManifestGenerator{},
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -170,7 +169,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	desired, err := buildDesiredControlPlaneConfiguration(cmpSecret, pkiSecret)
+	desired, err := buildDesiredControlPlaneConfiguration(cmpSecret, pkiSecret, r.manifestGenerator)
 	if err != nil {
 		klog.Error("Error occurred while building desired ControlPlaneConfiguration", err)
 		return reconcile.Result{}, err
@@ -201,59 +200,6 @@ func (r *Reconciler) applyControlPlaneConfiguration(ctx context.Context, desired
 		return r.client.Update(ctx, current)
 	}
 	return nil
-}
-
-func calculateSimpleComponentChecksum(manifestData []byte) string {
-	hash := sha256.New()
-	hash.Write(manifestData)
-	return hex.EncodeToString(hash.Sum(nil))
-}
-
-func calculatePKIChecksum(pkiSecret *corev1.Secret) (string, error) {
-	h := sha256.New()
-
-	keys := make([]string, 0, len(pkiSecret.Data))
-	for key := range pkiSecret.Data {
-		keys = append(keys, key)
-	}
-
-	sort.Strings(keys)
-
-	for _, key := range keys {
-		h.Write([]byte(key))
-		h.Write(pkiSecret.Data[key])
-	}
-
-	return fmt.Sprintf("%x", h.Sum(nil)), nil
-}
-
-func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *corev1.Secret) (*controlplanev1alpha1.ControlPlaneConfiguration, error) {
-	pkiChecksum, err := calculatePKIChecksum(pkiSecret)
-	if err != nil {
-		return &controlplanev1alpha1.ControlPlaneConfiguration{}, err
-	}
-	return &controlplanev1alpha1.ControlPlaneConfiguration{
-		ObjectMeta: ctrl.ObjectMeta{
-			Name: constants.ControlPlaneConfigurationName,
-		},
-		Spec: controlplanev1alpha1.ControlPlaneConfigurationSpec{
-			PKIChecksum: pkiChecksum,
-			Components: &controlplanev1alpha1.ControlPlaneComponents{
-				Etcd: &controlplanev1alpha1.ComponentChecksum{
-					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["etcd.yaml.tpl"]),
-				},
-				KubeAPIServer: &controlplanev1alpha1.ComponentChecksum{
-					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-apiserver.yaml.tpl"]),
-				},
-				KubeControllerManager: &controlplanev1alpha1.ComponentChecksum{
-					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-controller-manager.yaml.tpl"]),
-				},
-				KubeScheduler: &controlplanev1alpha1.ComponentChecksum{
-					Checksum: calculateSimpleComponentChecksum(cmpSecret.Data["kube-scheduler.yaml.tpl"]),
-				},
-			},
-		},
-	}, nil
 }
 
 func (r *Reconciler) mapSecretToControlPlaneConfigurations(ctx context.Context, object client.Object) []reconcile.Request {
