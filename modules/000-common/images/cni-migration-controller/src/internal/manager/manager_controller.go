@@ -483,13 +483,13 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 	ds := &appsv1.DaemonSet{}
 	if err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: dsNamespace}, ds); err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for %s DaemonSet creation (module '%s')...", dsName, moduleName), nil
+			return false, fmt.Sprintf("Waiting for %s DaemonSet creation (module %s)...", dsName, moduleName), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for %s pods to be scheduled (module '%s')...", dsName, moduleName), nil
+		return false, fmt.Sprintf("Waiting for %s pods to be scheduled (module %s)...", dsName, moduleName), nil
 	}
 
 	// 3. Verify that pods are actually created and scheduled
@@ -505,7 +505,7 @@ func (r *CNIMigrationReconciler) ensureTargetCNIEnabled(
 
 	if len(pods.Items) < int(ds.Status.DesiredNumberScheduled) {
 		return false, fmt.Sprintf(
-			"Waiting for %s pods creation (module '%s'): %d/%d",
+			"Waiting for %s pods creation (module %s): %d/%d",
 			dsName,
 			moduleName,
 			len(pods.Items),
@@ -588,7 +588,7 @@ func (r *CNIMigrationReconciler) ensureCurrentCNIDisabled(
 	}
 
 	// DaemonSet still exists
-	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion (module '%s')...", dsName, moduleName), nil
+	return false, fmt.Sprintf("Waiting for %s DaemonSet deletion (module %s)...", dsName, moduleName), nil
 }
 
 func (r *CNIMigrationReconciler) toggleModule(ctx context.Context, moduleName string, enabled bool) (bool, error) {
@@ -695,18 +695,18 @@ func (r *CNIMigrationReconciler) ensureTargetCNIReady(
 	err := r.Get(ctx, types.NamespacedName{Name: dsName, Namespace: "d8-" + moduleName}, ds)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module '%s')...", moduleName), nil
+			return false, fmt.Sprintf("Waiting for target CNI DaemonSet to be created (module %s)...", moduleName), nil
 		}
 		return false, "", err
 	}
 
 	if ds.Status.DesiredNumberScheduled == 0 {
-		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (module '%s')...", moduleName), nil
+		return false, fmt.Sprintf("Waiting for target CNI DaemonSet to schedule pods (module %s)...", moduleName), nil
 	}
 
 	if ds.Status.NumberReady < ds.Status.DesiredNumberScheduled {
 		return false, fmt.Sprintf(
-			"Waiting for target CNI pods ready (module '%s'): %d/%d",
+			"Waiting for target CNI pods ready (module %s): %d/%d",
 			moduleName,
 			ds.Status.NumberReady,
 			ds.Status.DesiredNumberScheduled,
