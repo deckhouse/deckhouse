@@ -106,6 +106,9 @@ func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *
 	if err := syncSecretToTmp(cmpSecret, tmpDir); err != nil {
 		return nil, fmt.Errorf("failed to sync secret to tmp: %w", err)
 	}
+	if err := syncSecretToTmp(pkiSecret, tmpDir); err != nil {
+		return nil, fmt.Errorf("failed to sync pki secret to tmp: %w", err)
+	}
 
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	checksums := make(map[string]string)
