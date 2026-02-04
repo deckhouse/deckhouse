@@ -9,3 +9,8 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/030-cloud-provider-yandex/candi
+  to: /deckhouse/candi/cloud-providers/yandex
+  stageDependencies:
+    install:
+        - '**/*'

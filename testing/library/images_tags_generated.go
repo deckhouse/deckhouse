@@ -137,6 +137,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudDataDiscoverer":    "imageHash-cloudProviderYandex-cloudDataDiscoverer",
 		"cloudMetricsExporter":   "imageHash-cloudProviderYandex-cloudMetricsExporter",
 		"cloudMigrator":          "imageHash-cloudProviderYandex-cloudMigrator",
+		"terraformManager":       "imageHash-cloudProviderYandex-terraformManager",
 		"yandexCsiPlugin":        "imageHash-cloudProviderYandex-yandexCsiPlugin",
 	},
 	"cloudProviderZvirt": map[string]interface{}{
