@@ -129,7 +129,7 @@ status:
   vlanNodeNetworkInterfaceName: right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc
 ```
 
-After both interfaces — VLAN and Bridge — appear in the system and switch to the `Up` state, the statuses of all NodeNetworkInterfaceAttachment will change to `True`.
+The NodeNetworkInterfaceAttachment status will change to `True` immediately after the corresponding NodeNetworkInterface appears and transitions to the `Up` state.
 
 To check the status of NodeNetworkInterface, use the command:
 
