@@ -57,7 +57,7 @@ To create a network based on tagged traffic, follow these steps:
    d8 k get clusternetworks.network.deckhouse.io my-cluster-network -o yaml
    ```
 
-   c of the status of a ClusterNetwork resource:
+    Example of the status of a ClusterNetwork resource:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
