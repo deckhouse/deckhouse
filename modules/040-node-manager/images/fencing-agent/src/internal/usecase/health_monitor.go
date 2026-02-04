@@ -1,9 +1,15 @@
 package usecase
 
+//go:generate minimock -i WatchDog -o ./mock/watchdog_mock.go -g
+//go:generate minimock -i NodeWatcher -o ./mock/nodewatcher_mock.go -g
+//go:generate minimock -i Decider -o ./mock/decider_mock.go -g
+//go:generate minimock -i FallbackDecider -o ./mock/fallbackdecider_mock.go -g
+//go:generate minimock -i ClusterProvider -o ./mock/clusterprovider_mock.go -g
+//go:generate minimock -i MemberlistProvider -o ./mock/memberlistprovider_mock.go -g
+
 import (
 	"context"
 	"fencing-agent/internal/helper/logger/sl"
-	"fmt"
 	"sync"
 	"time"
 
@@ -21,14 +27,21 @@ type WatchDog interface {
 	Stop() error
 }
 
-type ClusterProvider interface {
-	IsMaintenanceMode(ctx context.Context) (bool, error)
-	SetNodeLabel(ctx context.Context, key string, value string) error
-	RemoveNodeLabel(ctx context.Context, key string) error
+type NodeWatcher interface {
+	IsMaintenanceMode() bool
 }
 
-type FallbackProvider interface {
-	Alive(ctx context.Context) bool
+type Decider interface {
+	ShouldFeed(memberNum int) bool
+}
+
+type FallbackDecider interface {
+	ShouldFeed(ctx context.Context) bool
+}
+
+type ClusterProvider interface {
+	SetNodeLabel(ctx context.Context, key string, value string) error
+	RemoveNodeLabel(ctx context.Context, key string) error
 }
 
 type MemberlistProvider interface {
@@ -36,21 +49,24 @@ type MemberlistProvider interface {
 	IsAlone() bool
 }
 
-type Decider interface {
-	HasQuorum(ctx context.Context) bool
-}
-
 type HealthMonitor struct {
+	mu         *sync.Mutex
+	logger     *log.Logger
 	cluster    ClusterProvider
 	membership MemberlistProvider
 	watchdog   WatchDog
-	mu         *sync.Mutex
-	logger     *log.Logger
 	decider    Decider
-	fallbacker FallbackProvider
+	fallback   FallbackDecider
+	watcher    NodeWatcher
 }
 
-func NewHealthMonitor(cluster ClusterProvider, membership MemberlistProvider, watchdog WatchDog, decider Decider, fallbacker FallbackProvider, logger *log.Logger) *HealthMonitor {
+func NewHealthMonitor(
+	watcher NodeWatcher,
+	cluster ClusterProvider,
+	membership MemberlistProvider,
+	watchdog WatchDog, decider Decider,
+	fallbacker FallbackDecider,
+	logger *log.Logger) *HealthMonitor {
 	return &HealthMonitor{
 		cluster:    cluster,
 		membership: membership,
@@ -58,55 +74,100 @@ func NewHealthMonitor(cluster ClusterProvider, membership MemberlistProvider, wa
 		mu:         &sync.Mutex{},
 		logger:     logger,
 		decider:    decider,
-		fallbacker: fallbacker,
+		fallback:   fallbacker,
+		watcher:    watcher,
 	}
 }
 
-func (h *HealthMonitor) Run(ctx context.Context, interval time.Duration) {
-	ticker := time.NewTicker(interval) // TODO mb without interval
-	defer ticker.Stop()
+func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) {
+	timeout := time.Duration(watchdogTimeout/2-1) * time.Second
+	go func() {
+		ticker := time.NewTicker(timeout)
+		defer ticker.Stop()
 
-	// TODO think
-	if err := h.startWatchdog(ctx); err != nil {
-		panic(err)
-	}
-
-	for {
-		select {
-		case <-ticker.C:
-			h.check(ctx)
-		case <-ctx.Done():
-			return
+		// TODO think
+		if err := h.startWatchdog(ctx); err != nil {
+			panic(err)
 		}
-	}
+
+		for {
+			select {
+			case <-ticker.C:
+				h.check(ctx)
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 }
 
-func (h *HealthMonitor) Stop(ctx context.Context) error {
+func (h *HealthMonitor) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.watchdog.IsArmed() {
 		if err := h.stopWatchdog(ctx); err != nil {
-			return fmt.Errorf("unable to disarm watchdog: %w", err)
+			h.logger.Error("unable to stop watchdog", sl.Err(err))
 		}
 	}
 	h.logger.Info("health monitor stopped successfully")
-	return nil
 }
 
 func (h *HealthMonitor) check(ctx context.Context) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	if gotQuorum := h.decider.HasQuorum(ctx); !gotQuorum {
-		if alive := h.fallbacker.Alive(ctx); !alive {
-			h.logger.Error("no quorum, restart soon...")
+
+	if h.watcher.IsMaintenanceMode() {
+
+		h.logger.Info("node is in maintenance mode")
+
+		if h.watchdog.IsArmed() {
+
+			h.logger.Info("node is in maintenance mode, watchdog is armed, disarming watchdog")
+
+			err := h.stopWatchdog(ctx)
+			if err == nil {
+				h.logger.Info("watchdog disarmed successfully")
+				return
+			}
+
+			h.logger.Error("unable to disarm watchdog, continue feeding", sl.Err(err))
+
+			if feedErr := h.watchdog.Feed(); feedErr != nil {
+				h.logger.Error("unable to feed watchdog", sl.Err(feedErr))
+			}
 			return
 		}
-	}
-	if err := h.watchdog.Feed(); err != nil {
-		h.logger.Error("failed to feed watchdog, restart soon...", err)
 		return
 	}
-	h.logger.Info("got quorum, feed watchdog")
+
+	if !h.watchdog.IsArmed() {
+		h.logger.Info("watchdog is not armed, arming watchdog")
+		if err := h.startWatchdog(ctx); err != nil {
+			h.logger.Error("unable to arm watchdog", sl.Err(err))
+			return
+		}
+
+		h.logger.Info("watchdog armed successfully")
+	}
+
+	numMembers := h.membership.NumMembers()
+
+	if h.decider.ShouldFeed(numMembers) {
+		if feedErr := h.watchdog.Feed(); feedErr != nil {
+			h.logger.Error("unable to feed watchdog", sl.Err(feedErr))
+		}
+		h.logger.Info("quorum feeding")
+		return
+	}
+	if h.fallback.ShouldFeed(ctx) {
+		if feedErr := h.watchdog.Feed(); feedErr != nil {
+			h.logger.Error("unable to feed watchdog", sl.Err(feedErr))
+		}
+		h.logger.Info("fallback feeding")
+		return
+	}
 }
 
 func (h *HealthMonitor) startWatchdog(ctx context.Context) error {

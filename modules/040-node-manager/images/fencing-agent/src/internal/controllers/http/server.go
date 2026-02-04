@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"fencing-agent/internal/helper/logger/sl"
-	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -30,20 +30,25 @@ func New(logger *log.Logger, bindAddress string) *Server {
 	}
 }
 
-func (srv *Server) StartHealthzServer() {
-	srv.logger.Info("Stating healthz server", slog.String("bindAddress", srv.bindAddr))
+func (srv *Server) Start() {
+	go func() {
+		srv.logger.Info("Stating healthz server", slog.String("bindAddress", srv.bindAddr))
 
-	if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		srv.logger.Error("Healthz server failed", sl.Err(err))
-	}
+		if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			srv.logger.Error("Healthz server failed", sl.Err(err))
+		}
+	}()
 }
 
-func (srv *Server) StopHealthzServer(ctx context.Context) error {
+func (srv *Server) Stop() {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
 	srv.logger.Info("Stopping healthz server", slog.String("bindAddress", srv.bindAddr))
 	if err := srv.srv.Shutdown(ctx); err != nil {
 		srv.logger.Error("Healthz server gracefull stop failed, force...", sl.Err(err))
 		err = srv.srv.Close()
-		return fmt.Errorf("failed to force close healthz server: %w", err)
+		if err != nil {
+			srv.logger.Error("Healthz server force stop failed", sl.Err(err))
+		}
 	}
-	return nil
 }
