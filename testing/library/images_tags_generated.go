@@ -67,6 +67,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"cloudControllerManager": "imageHash-cloudProviderDynamix-cloudControllerManager",
 		"cloudDataDiscoverer":    "imageHash-cloudProviderDynamix-cloudDataDiscoverer",
 		"dynamixCsiDriver":       "imageHash-cloudProviderDynamix-dynamixCsiDriver",
+		"terraformManager":       "imageHash-cloudProviderDynamix-terraformManager",
 	},
 	"cloudProviderGcp": map[string]interface{}{
 		"cloudControllerManager130": "imageHash-cloudProviderGcp-cloudControllerManager130",
