@@ -61,7 +61,7 @@ secrets:
 shell:
   beforeInstall:
   {{- include "alpine packages proxy" . | nindent 2 }}
-  - apk add --no-cache make
+  - apk add --no-cache make git
   install:
   - cd /src
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
