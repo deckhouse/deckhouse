@@ -28,6 +28,13 @@ const (
 	PkiPath                             = "/pki"
 	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
 	KubeadmPath                         = "/kubeadm"
+	TmpPath                             = "/tmp/control-plane-manager-manifests"
+	KubeSystemNamespace                 = "kube-system"
 
-	KubeSystemNamespace = "kube-system"
+	RelativeKubernetesDir  = "etc/kubernetes"
+	RelativePkiDir         = RelativeKubernetesDir + "/pki"
+	RelativeDeckhouseDir   = RelativeKubernetesDir + "/deckhouse"
+	RelativeKubeadmDir     = RelativeDeckhouseDir + "/kubeadm"
+	RelativePatchesDir     = RelativeKubeadmDir + "/patches"
+	RelativeExtraFilesDir  = RelativeDeckhouseDir + "/extra-files"
 )
