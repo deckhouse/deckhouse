@@ -59,13 +59,17 @@ function install_dmt() {
 
 function structure_prepare {
   modules_dir=("ee/modules" "ee/be/modules" "ee/fe/modules" "ee/se/modules" "ee/se-plus/modules")
-  candi_cloud_providers_dir=("ee/candi/cloud-providers" "ee/se-plus/candi/cloud-providers")
+  cloud_providers_globs=("ee/modules/030-cloud-provider-*" "ee/se-plus/modules/030-cloud-provider-*")
   cp -R /deckhouse-src /deckhouse
+  mkdir -p /deckhouse/candi/cloud-providers
   for dir in "${modules_dir[@]}"; do
     cp -R /deckhouse/"${dir}"/* /deckhouse/modules
   done
-  for dir in "${candi_cloud_providers_dir[@]}"; do
-    cp -R /deckhouse/"${dir}"/* /deckhouse/candi/cloud-providers
+  for glob in "${cloud_providers_globs[@]}"; do
+    for dir in /deckhouse/${glob}; do
+      local cloud_provider_name=$(echo "${dir}" | grep -oP '(?<=030-cloud-provider-)[^[:space:]]+')
+      cp -R $dir /deckhouse/candi/cloud-providers/"${cloud_provider_name}"
+    done
   done
 }
 
