@@ -15,6 +15,8 @@ limitations under the License.
 
 Modifications copyright (C) 2024 Flant JSC
 
+Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
+
 The Announce struct is extended with GetIPSMap() and GetInterfaces() methods
 */
 
