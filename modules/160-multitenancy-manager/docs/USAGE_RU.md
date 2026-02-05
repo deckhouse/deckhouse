@@ -161,6 +161,8 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 Пример:
 
+{% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -174,6 +176,8 @@ metadata:
 data:
   key: value
 ```
+
+{% endraw %}
 
 В этом случае ресурс получит лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но не получит лейбл `heritage: multitenancy-manager`.
 
