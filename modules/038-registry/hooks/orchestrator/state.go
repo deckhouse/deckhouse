@@ -208,10 +208,15 @@ func (state *State) process(log go_hook.Logger, inputs Inputs) error {
 
 func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 	if state.Mode == registry_const.ModeProxy {
-		return ErrTransitionNotSupported{
+		err := ErrTransitionNotSupported{
 			From: state.Mode,
 			To:   state.TargetMode,
 		}
+
+		state.setCondition(err.Condition())
+		state.setReadyCondition(false, inputs)
+
+		return nil
 	}
 
 	// Preflight Checks
@@ -352,10 +357,15 @@ func (state *State) transitionToLocal(log go_hook.Logger, inputs Inputs) error {
 
 func (state *State) transitionToProxy(log go_hook.Logger, inputs Inputs) error {
 	if state.Mode == registry_const.ModeLocal {
-		return ErrTransitionNotSupported{
+		err := ErrTransitionNotSupported{
 			From: state.Mode,
 			To:   state.TargetMode,
 		}
+
+		state.setCondition(err.Condition())
+		state.setReadyCondition(false, inputs)
+
+		return nil
 	}
 
 	// check upstream registry
@@ -790,10 +800,15 @@ func (state *State) transitionToUnmanaged(inputs Inputs) error {
 	}
 
 	if !modeSupported {
-		return ErrTransitionNotSupported{
+		err := ErrTransitionNotSupported{
 			From: state.Mode,
 			To:   state.TargetMode,
 		}
+
+		state.setCondition(err.Condition())
+		state.setReadyCondition(false, inputs)
+
+		return nil
 	}
 
 	// Reset checker
