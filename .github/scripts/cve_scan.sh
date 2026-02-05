@@ -51,7 +51,7 @@ trivy_scan() {
   local tmp_ignore=""
   local ignore_arg=""
 
-  tmp_ignore="$(mktemp)"
+  tmp_ignore="$(mktemp /tmp/tmp_ignore.XXXXXX.yaml)"
 
   if trivy_prepare_ignore_from_cosign "${image_ref}" "${tmp_ignore}"; then
     ignore_arg="--ignorefile ${tmp_ignore}"
@@ -59,7 +59,6 @@ trivy_scan() {
 
   ${WORKDIR}/bin/trivy i \
     --vex oci \
-    --show-suppressed \
     --config-check "${TRIVY_POLICY_URL}" \
     --cache-dir "${WORKDIR}/bin/trivy_cache" \
     --skip-db-update \
@@ -300,7 +299,7 @@ for d8_tag in "${d8_tags[@]}"; do
     echo "👾 Scaning Deckhouse image \"${a_image_name}\" of module \"${a_module_name}\" for tag \"${d8_tag}\""
     echo ""
     # CVE Scan
-    trivy_scan "--scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
+    trivy_scan "--scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json --show-suppressed" "${additional_image}:${d8_tag}"
     # License scan
     trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
     # cosign download attestation ${additional_image}:${d8_tag} | jq -rc .payload | base64 -d | jq -r .predicate.Data > .trivyignore.yaml
@@ -366,7 +365,7 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       # CVE Scan
-      trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
+      trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json --show-suppressed" "${d8_image}@${IMAGE_HASH}"
       # License scan
       trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}" "${IMAGE_NAME}"
