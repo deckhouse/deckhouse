@@ -4,7 +4,7 @@
   logo: /images/logos/aws.svg
   license: MIT License
   id: amazon-ec2-utils
-  version: 2.2.0
+  version: "2.2.0"
 
 - name: containerd
   link: https://github.com/containerd/containerd
@@ -12,7 +12,7 @@
   logo: /images/logos/containerd.svg
   license: Apache License 2.0
   id: containerd
-  version: 1.7.30
+  version: "1.7.30"
 
 - name: containerd
   link: https://github.com/containerd/containerd
@@ -20,7 +20,7 @@
   logo: /images/logos/containerd.svg
   license: Apache License 2.0
   id: containerd
-  version: 2.1.6
+  version: "2.1.6"
 
 - name: runc
   link: https://github.com/opencontainers/runc
@@ -28,7 +28,7 @@
   logo: /images/logos/opencontainers.svg
   license: Apache License 2.0
   id: runc
-  version: 1.3.4
+  version: "1.3.4"
 
 - name: curl
   link: https://github.com/curl/curl
@@ -36,7 +36,7 @@
   logo: /images/logos/curl.svg
   license: curl License
   id: curl
-  version: 8.9.1
+  version: "8.9.1"
 
 - name: Deckhouse CLI
   link: https://github.com/deckhouse/deckhouse-cli
@@ -44,7 +44,7 @@
   logo: /images/logos/deckhouse.svg
   license: Apache License 2.0
   id: deckhouse-cli
-  version: v0.27.1
+  version: "v0.27.1"
 
 - name: Docker Auth
   link: https://github.com/cesanta/docker_auth
@@ -52,7 +52,7 @@
   logo: /images/logos/docker.svg
   license: Apache License 2.0
   id: docker-auth
-  version: 1.13.0
+  version: "1.13.0"
 
 - name: Docker Distribution
   link: https://github.com/distribution/distribution
@@ -60,7 +60,7 @@
   logo: /images/logos/docker.svg
   license: Apache License 2.0
   id: docker-distribution
-  version: 2.8.3
+  version: "2.8.3"
 
 - name: e2fsprogs
   link: https://github.com/tytso/e2fsprogs
@@ -68,7 +68,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: e2fsprogs
-  version: 1.47.2
+  version: "1.47.2"
 
 - name: EC2 Describe Tags
   link: https://github.com/flant/go-ec2-describe-tags
@@ -76,7 +76,7 @@
   logo: /images/logos/aws.svg
   license: Apache License 2.0
   id: ec2-describe-tags
-  version: v0.0.1-flant.3
+  version: "v0.0.1-flant.3"
 
 - name: cloud-utils
   link: https://github.com/canonical/cloud-utils
@@ -84,7 +84,7 @@
   logo: /images/logos/ubuntu.svg
   license: GPL-3.0 license
   id: cloud-utils
-  version: 0.33
+  version: "0.33"
 
 - name: util-linux (growpart)
   link: https://github.com/util-linux/util-linux
@@ -92,7 +92,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: util-linux-growpart
-  version: 2.40.1
+  version: "2.40.1"
 
 - name: iptables
   link: https://git.netfilter.org/iptables/
@@ -100,7 +100,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: iptables
-  version: 1.8.9
+  version: "1.8.9"
 
 - name: libmnl
   link: https://git.netfilter.org/libmnl/
@@ -108,7 +108,7 @@
   logo: /images/logos/linux.svg
   license: LGPL-2.1 license
   id: libmnl
-  version: 1.0.5
+  version: "1.0.5"
 
 - name: libnftnl
   link: https://git.netfilter.org/libnftnl/
@@ -116,7 +116,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: libnftnl
-  version: 1.2.6
+  version: "1.2.6"
 
 - name: CNI Plugins
   link: https://github.com/containernetworking/plugins
@@ -124,7 +124,7 @@
   logo: /images/logos/cni.svg
   license: Apache License 2.0
   id: kubernetes-cni
-  version: 1.6.2
+  version: "1.6.2"
 
 - name: Flannel CNI Plugin
   link: https://github.com/flannel-io/cni-plugin
@@ -132,7 +132,7 @@
   logo: /images/logos/flannel.svg
   license: Apache License 2.0
   id: cni-flannel
-  version: 1.6.0-flannel1
+  version: "1.6.0-flannel1"
 
 - name: util-linux (lsblk)
   link: https://github.com/util-linux/util-linux
@@ -140,7 +140,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: util-linux-lsblk
-  version: 2.40.2
+  version: "2.40.2"
 
 - name: netcat
   link: https://salsa.debian.org/debian/netcat
@@ -148,7 +148,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: netcat
-  version: 1.10-50.1
+  version: "1.10-50.1"
 
 - name: nvme-cli
   link: https://github.com/linux-nvme/nvme-cli
@@ -156,7 +156,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: nvme-cli
-  version: 2.11
+  version: "2.11"
 
 - name: socat
   link: https://repo.or.cz/socat.git
@@ -164,7 +164,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: socat
-  version: 1.7.3.4
+  version: "1.7.3.4"
 
 - name: virt-what
   link: https://people.redhat.com/rjones/virt-what/
@@ -172,7 +172,7 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: virt-what
-  version: 1.25
+  version: "1.25"
 
 - name: which
   link: https://ftp.gnu.org/gnu/which/
@@ -180,7 +180,7 @@
   logo: /images/logos/gnu.svg
   license: GPL-3.0 license
   id: which
-  version: 2.23
+  version: "2.23"
 
 - name: xfsprogs
   link: https://kernel.googlesource.com/pub/scm/fs/xfs/xfsprogs-dev/
@@ -188,4 +188,4 @@
   logo: /images/logos/linux.svg
   license: GPL-2.0 license
   id: xfsprogs
-  version: 6.7.0
+  version: "6.7.0"

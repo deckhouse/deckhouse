@@ -1,6 +1,6 @@
 {{- $cloud_utils_version := include "get_oss_version_by_id" (list "cloud-utils" $ )  -}}
 {{- $util_linux_version := include "get_oss_version_by_id" (list "util-linux-growpart" $ )  -}}
-{{- $image_version := $version | replace "." "-" }}
+{{- $image_version := $cloud_utils_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -41,7 +41,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "growpart": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all", "growpart": "{{ $cloud_utils_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true

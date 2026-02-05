@@ -2,7 +2,7 @@
 {{- $iptables_version := include "get_oss_version_by_id" (list "iptables" $ )  -}}
 {{- $libmnl_version := include "get_oss_version_by_id" (list "libmnl" $ )  -}}
 {{- $libnftnl_version := include "get_oss_version_by_id" (list "libnftnl" $ )  -}}
-{{- $image_version := $version | replace "." "-" }}
+{{- $image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -39,7 +39,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "iptables": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all", "iptables": "{{ $iptables_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
