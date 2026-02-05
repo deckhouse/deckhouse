@@ -5,8 +5,8 @@
 {{- $clusterBootstraped := .Values.global.clusterIsBootstrapped | default false }}
 {{- $staticCluster := eq (((.Values.global).clusterConfiguration).clusterType | default "" ) "Static" }}
 
-{{- $isLocalMode := eq (((.Values.deckhouse).registry).mode | default "") "Local" }}
-{{- $isProxyMode := eq (((.Values.deckhouse).registry).mode | default "") "Proxy" }}
+{{- $isLocalMode := eq ((((.Values.deckhouse).internal).registry).mode | default "") "Local" }}
+{{- $isProxyMode := eq ((((.Values.deckhouse).internal).registry).mode | default "") "Proxy" }}
 
 {{- if or (not $moduleEnabled) (not $clusterBootstraped) (not $staticCluster) $isLocalMode $isProxyMode }}
 ---
