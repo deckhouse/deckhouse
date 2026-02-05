@@ -50,13 +50,14 @@ func main() {
 
 	//
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	nodeTracker := NewNodeTracker()
 	if err := nodeTracker.Start(ctx, cfg.targetsCM, cfg.Namespace); err != nil {
 		stop()
 		log.Fatal("can't start node tracker: %v", err)
 	}
+
+	defer stop()
 
 	var wg sync.WaitGroup
 
