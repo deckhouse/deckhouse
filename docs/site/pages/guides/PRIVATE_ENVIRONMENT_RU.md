@@ -1044,54 +1044,6 @@ ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
     dexCAMode: FromIngressSecret
   ```
 
-* После `user-authn` можно сразу добавить конфигурацию пользователя, под которым будет осуществляться вход в веб-интерфейсы DKP:
-
-  ```yaml
-  apiVersion: deckhouse.io/v1
-  kind: User
-  metadata:
-    name: admin
-  spec:
-    email: admin@deckhouse.io
-    password: JDJiJDEwJHZhRjJzbFJTQm9iMU44Uk1ybXlGUnVlVGM3c2wwb0NGaVJxM3BWTEhTSC44VUp3NnFPdGJT
-  ---
-  apiVersion: deckhouse.io/v1
-  kind: ClusterAuthorizationRule
-  metadata:
-    name: admin
-  spec:
-    accessLevel: SuperAdmin
-    allowScale: true
-    portForwarding: true
-    subjects:
-      - kind: User
-        name: admin@deckhouse.io
-  ```
-
-  > В поле `password` указывается хэш-сумма пароля пользователя. Сгенерирвать её можно командой `echo -n 'mivrk22l77' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo`, где пароль `mivrk22l77`.
-
-* Добавьте конфигурацию Ingress-контроллера, чтобы веб-интерфейсы стали доступны по адресу, указанному в шаблоне `publicDomainTemplate`:
-
-  ```yaml
-  ---
-  apiVersion: deckhouse.io/v1
-  kind: IngressNginxController
-  metadata:
-    name: main
-  spec:
-    ingressClass: nginx
-    inlet: HostPort
-    hostPort:
-      httpPort: 80
-      httpsPort: 443
-    nodeSelector:
-      node-role.kubernetes.io/control-plane: ""
-      node-role.kubernetes.io/master: ""
-    tolerations:
-      - effect: NoSchedule
-        key: node-role.kubernetes.io/control-plane
-  ```
-
 * Добавьте включение и конфигурацию модуля [cert-manager](/modules/cert-manager/), в которой будет отключено использование Let's Encrypt:
 
   ```yaml
@@ -1211,42 +1163,6 @@ spec:
         global:
           kubeconfigGeneratorMasterCA: ""
 ---
-apiVersion: deckhouse.io/v1
-kind: User
-metadata:
-  name: admin
-spec:
-  email: admin@deckhouse.io
-  password: JDJiJDEwJHZhRjJzbFJTQm9iMU44Uk1ybXlGUnVlVGM3c2wwb0NGaVJxM3BWTEhTSC44VUp3NnFPdGJT
----
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  accessLevel: SuperAdmin
-  allowScale: true
-  portForwarding: true
-  subjects:
-    - kind: User
-      name: admin@deckhouse.io
----
-apiVersion: deckhouse.io/v1
-kind: IngressNginxController
-metadata:
-  name: main
-spec:
-  ingressClass: nginx
-  inlet: HostPort
-  hostPort:
-    httpPort: 80
-    httpsPort: 443
-  nodeSelector:
-    node-role.kubernetes.io/control-plane: ""
-    node-role.kubernetes.io/master: ""
-  tolerations:
-    - effect: NoSchedule
-      key: node-role.kubernetes.io/control-plane
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -1479,6 +1395,102 @@ pdpl-user -i 63 caps
   ```
 
   Запуск всех компонентов DKP после завершения установки может занять некоторое время.
+
+## Настройка Ingress-контроллера и создание пользователя
+
+### Установка ingress-контроллера
+
+Убедитесь, что под Kruise controller manager модуля [ingress-nginx](../../../modules/ingress-nginx/) запустился и находится в статусе `Running`. Для этого выполните на master-узле следующую команду:
+
+```bash
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=kruise
+NAME                                         READY   STATUS    RESTARTS    AGE
+kruise-controller-manager-7dfcbdc549-b4wk7   3/3     Running   0           15m
+```
+
+Создайте на master-узле файл `ingress-nginx-controller.yml`, содержащий конфигурацию Ingress-контроллера:
+
+```yaml
+# Секция, описывающая параметры NGINX Ingress controller.
+# https://deckhouse.ru/modules/ingress-nginx/cr.html
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  # Имя Ingress-класса для обслуживания NGINX Ingress controller.
+  ingressClass: nginx
+  # Способ поступления трафика из внешнего мира.
+  inlet: HostPort
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+  # Описывает, на каких узлах будет находиться компонент.
+  # Возможно, захотите изменить.
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - effect: NoSchedule
+    key: node-role.kubernetes.io/control-plane
+    operator: Exists
+```
+
+Примените его, выполнив на master-узле следующую команду:
+
+```bash
+sudo -i d8 k create -f $PWD/ingress-nginx-controller.yml
+```
+
+Запуск Ingress-контроллера после завершения установки DKP может занять некоторое время. Прежде чем продолжить, убедитесь, что Ingress-контроллер запустился (выполните на master-узле):
+
+```console
+$ sudo -i d8 k -n d8-ingress-nginx get po -l app=controller
+NAME                                       READY   STATUS    RESTARTS   AGE
+controller-nginx-r6hxc                     3/3     Running   0          5m
+```
+
+### Создание пользователя для доступа в веб-интерфейсы кластера
+
+Создайте на master-узле файл `user.yml`, содержащий описание учётной записи пользователя и прав доступа:
+
+```yaml
+# Настройки RBAC и авторизации.
+# https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  # Список учётных записей Kubernetes RBAC.
+  subjects:
+  - kind: User
+    name: admin@deckhouse.io
+  # Предустановленный шаблон уровня доступа.
+  accessLevel: SuperAdmin
+  # Разрешить пользователю делать kubectl port-forward.
+  portForwarding: true
+---
+# Данные статического пользователя.
+# https://deckhouse.ru/modules/user-authn/cr.html#user
+apiVersion: deckhouse.io/v1
+kind: User
+metadata:
+  name: admin
+spec:
+  # E-mail пользователя.
+  email: admin@deckhouse.io
+  # Это хеш пароля 3xqgv2auys, сгенерированного сейчас.
+  # Сгенерируйте свой или используйте этот, но только для тестирования:
+  # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
+  # Возможно, захотите изменить.
+  password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
+```
+
+Примените его, выполнив на master-узле следующую команду:
+
+```console
+sudo -i d8 k create -f $PWD/user.yml
+```
 
 ## Настройка DNS-записей
 
