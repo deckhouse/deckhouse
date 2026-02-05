@@ -7,14 +7,14 @@ permalink: en/architecture/node.html
 
 In Deckhouse, nodes are divided into the following types:
 
-- **Static**: Managed manually; [node-manager](/modules/node-manager/) does not scale or recreate them.
+- **CloudEphemeral**: The nodes are automatically ordered, created, and deleted in the configured cloud provider.
+- **CloudPermanent**: Persistent nodes created and updated by [node-manager](/modules/node-manager/). The nodes differ in that their configuration is not taken from the custom resource [nodeGroup](/modules/node-manager/cr.html#nodegroup), but from a special resource `<PROVIDER>ClusterConfiguration` (for example, [AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html) for AWS). Also, an important difference is that to apply node configuration, you need to run `dhctl converge` (by running Deckhouse installer). An example of a CloudPermanent node of a cloud cluster is a cluster master node.
 - **CloudStatic**: Created manually or by any external tools, located in the same cloud that is integrated with one of the cloud provider modules:
   - CloudStatic nodes have several features related to integration with the cloud provider. These nodes are managed by the `cloud-controller-manager` component, resulting in:
     - Zone and region metadata being automatically added to the Node object.
     - When the virtual machine is deleted in the cloud, the corresponding Node object is also removed from the cluster.
     - CSI driver can be used to attach cloud volumes.
-- **CloudPermanent**: Persistent nodes created and updated by [node-manager](/modules/node-manager/).
-- **CloudEphemeral**: Temporary nodes, created and scaled based on demand.
+- **Static**: a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](/modules/node-manager/#working-with-static-nodes).
 
 Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DKP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
 
