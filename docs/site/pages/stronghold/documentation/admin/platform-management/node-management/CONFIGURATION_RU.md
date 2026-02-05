@@ -31,7 +31,7 @@ lang: ru
 
   Примеры:
   - [настройка метрик](./containerd.html#дополнительные-настройки-containerd).
-  - [добавление приватного registry](./containerd.html#добавление-приватного-registry-с-авторизацией).
+  - [добавление приватного registry](./containerd.html#добавление-конфигурации-для-дополнительного-registry).
 
 ## Настройки NodeGroupConfiguration
 
