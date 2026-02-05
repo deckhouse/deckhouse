@@ -59,6 +59,10 @@ func baseEditConfigCMD(parent *kingpin.CmdClause, name, secret, dataKey string) 
 			return err
 		}
 
+		if err := kubernetes.CheckDeckhouseVersionCompatibility(ctx, kubeCl, kubernetes.DefaultVersionCheckOptions()); err != nil {
+			return err
+		}
+
 		return operations.SecretEdit(kubeCl, name, "kube-system", secret, dataKey, map[string]string{
 			"name": name,
 		})
