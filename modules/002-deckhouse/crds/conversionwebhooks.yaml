@@ -82,7 +82,7 @@ spec:
                         label selector matches no objects.
                       properties:
                         matchExpressions:
-                          description: `matchExpressions` is a list of label selector
+                          description: matchExpressions is a list of label selector
                             requirements. The requirements are ANDed.
                           items:
                             description: |-
@@ -90,20 +90,19 @@ spec:
                               relates the key and values.
                             properties:
                               key:
-                                description: `key` is the label key that the selector
+                                description: key is the label key that the selector
                                   applies to.
                                 type: string
                               operator:
                                 description: |-
-                                  `operator` represents a key's relationship to a set of values.
-                                  
-                                  Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
                                 type: string
                               values:
                                 description: |-
-                                  `values` is an array of string values. If the operator is `In` or `NotIn`,
-                                  the `values` array must be non-empty. If the operator is `Exists` or `DoesNotExist`,
-                                  the `values` array must be empty. This array is replaced during a strategic
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
                                   merge patch.
                                 items:
                                   type: string
@@ -119,9 +118,9 @@ spec:
                           additionalProperties:
                             type: string
                           description: |-
-                            `matchLabels` is a map of {key,value} pairs. A single {key,value} in the matchLabels
-                            map is equivalent to an element of `matchExpressions`, whose key field is `key`, the
-                            operator is `In`, and the values array contains only `value`. The requirements are `ANDed`.
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
                           type: object
                       type: object
                       x-kubernetes-map-type: atomic
@@ -139,12 +138,12 @@ spec:
                       properties:
                         labelSelector:
                           description: |-
-                            A label selector is a label query over a set of resources. The result of `matchLabels` and
-                            `matchExpressions` are `ANDed`. An empty label selector matches all objects. A null
+                            A label selector is a label query over a set of resources. The result of matchLabels and
+                            matchExpressions are ANDed. An empty label selector matches all objects. A null
                             label selector matches no objects.
                           properties:
                             matchExpressions:
-                              description: `matchExpressions` is a list of label selector
+                              description: matchExpressions is a list of label selector
                                 requirements. The requirements are ANDed.
                               items:
                                 description: |-
@@ -152,19 +151,19 @@ spec:
                                   relates the key and values.
                                 properties:
                                   key:
-                                    description: `key` is the label key that the selector
+                                    description: key is the label key that the selector
                                       applies to.
                                     type: string
                                   operator:
                                     description: |-
-                                      `operator` represents a key's relationship to a set of values.
-                                      Valid operators are `In`, `NotIn`, `Exists` and `DoesNotExist`.
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
                                     type: string
                                   values:
                                     description: |-
-                                      `values` is an array of string values. If the operator is `In` or `NotIn`,
-                                      the `values` array must be non-empty. If the operator is `Exists` or `DoesNotExist`,
-                                      the `values` array must be empty. This array is replaced during a strategic
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
                                       merge patch.
                                     items:
                                       type: string
@@ -180,9 +179,9 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                `matchLabels` is a map of {key,value} pairs. A single {key,value} in the `matchLabels`
-                                map is equivalent to an element of `matchExpressions`, whose key field is `key`, the
-                                operator is `In`, and the values array contains only `value`. The requirements are ANDed.
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
                               type: object
                           type: object
                           x-kubernetes-map-type: atomic
