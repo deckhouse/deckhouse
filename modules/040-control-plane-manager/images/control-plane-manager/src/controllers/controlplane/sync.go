@@ -48,9 +48,11 @@ func syncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	for key, content := range secret.Data {
 		switch {
 		case key == "kubeadm-config.yaml":
+			// Expand env in kubeadm config (e.g., $MY_IP)
+			expandedContent := []byte(os.ExpandEnv(string(content)))
 			if err := os.WriteFile(
 				filepath.Join(kubeadmDir, "config.yaml"),
-				content,
+				expandedContent,
 				0o600,
 			); err != nil {
 				return err

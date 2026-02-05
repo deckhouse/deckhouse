@@ -59,6 +59,10 @@ func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte
 	for _, s := range strings.Split(string(out), "\n") {
 		klog.Infof("%s", s)
 	}
+	if err != nil {
+		return nil, err
+	}
+	
 	manifestPath := filepath.Join(kubernetesDir, componentName+".yaml")
 	manifestBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
