@@ -22,8 +22,6 @@ webhooks:
     - deckhouse.io
     apiVersions:
     - v1
-    - v1alpha1
-    - v1alpha2
     operations:
     - CREATE
     - UPDATE
