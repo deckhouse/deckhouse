@@ -189,3 +189,19 @@
   license: GPL-2.0 license
   id: xfsprogs
   version: "6.7.0"
+
+- name: jq
+  link: https://github.com/jqlang/jq
+  description: Lightweight and flexible command-line JSON processor.
+  logo: /images/logos/jq.svg
+  license: MIT License
+  id: jq
+  version: "1.7.1"
+
+- name: yq
+  link: https://github.com/mikefarah/yq
+  description: Command-line YAML, JSON and XML processor.
+  logo: /images/logos/linux.svg
+  license: MIT License
+  id: yq
+  version: "4.47.1"

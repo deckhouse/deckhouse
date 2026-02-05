@@ -1,4 +1,4 @@
-{{- $version := .CandiVersionMap.jq.version }}
+{{- $version := include "get_oss_version_by_id" (list "jq" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
