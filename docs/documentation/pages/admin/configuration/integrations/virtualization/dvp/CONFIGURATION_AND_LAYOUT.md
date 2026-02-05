@@ -15,7 +15,7 @@ Example of the layout configuration:
 apiVersion: deckhouse.io/v1
 kind: DVPClusterConfiguration
 layout: Standard
-sshPublicKey: ssh-ed25519 AAAABBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 masterNodeGroup:
   replicas: 1
   instanceClass:
