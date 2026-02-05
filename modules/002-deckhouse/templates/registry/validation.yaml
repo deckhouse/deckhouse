@@ -76,7 +76,8 @@ spec:
             )
           )
         ) ||
-        !has(object.?spec.?settings.registry)
+        !has(object.?spec.?settings.registry) || 
+        size(object.spec.settings.registry) == 0
       )
     message: >-
       Switching `spec.settings.registry.mode` to Proxy or non-configurable Unmanaged mode
