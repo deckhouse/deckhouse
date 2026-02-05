@@ -60,8 +60,8 @@ type SSHHost struct {
 }
 
 type ConnectionConfig struct {
-	SSHConfig *SSHConfig `json:"sshconfig"`
-	SSHHosts  []SSHHost  `json:"sshhosts"`
+	SSHConfig *SSHConfig
+	SSHHosts  []SSHHost
 }
 
 func ParseConnectionConfig(

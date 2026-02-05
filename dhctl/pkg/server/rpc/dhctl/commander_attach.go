@@ -275,6 +275,7 @@ func (s *Service) commanderAttachServerTransitions() []fsm.Transition {
 	}
 }
 
+//nolint:musttag
 func (s *Service) attachSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[attach.PhaseData]) (*pb.CommanderAttachResponse, error) {
 	phaseDataBytes, err := json.Marshal(onPhaseData.CompletedPhaseData)
 	if err != nil {

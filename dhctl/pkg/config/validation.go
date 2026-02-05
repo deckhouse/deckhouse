@@ -54,10 +54,10 @@ var cloudProviderToProviderKind = map[string]string{
 }
 
 type ClusterConfig struct {
-	ClusterType string `yaml:"clusterType" json:"clusterType"`
+	ClusterType string `yaml:"clusterType"`
 	Cloud       struct {
 		Provider string `json:"provider"`
-	} `yaml:"cloud" json:"cloud"`
+	} `yaml:"cloud"`
 }
 
 // ValidateResources parses and validates cluster ResourcesConfiguration/InitResourcesConfiguration.
@@ -665,8 +665,8 @@ func (k ErrorKind) String() string {
 }
 
 type ValidationError struct {
-	Kind   ErrorKind `json:"kind"`
-	Errors []Error   `json:"errors"`
+	Kind   ErrorKind
+	Errors []Error
 }
 
 func (v *ValidationError) Append(kind ErrorKind, e Error) {
@@ -720,12 +720,12 @@ func (v *ValidationError) ErrorOrNil() error {
 }
 
 type Error struct {
-	Index    *int     `json:"index,omitempty"`
-	Group    string   `json:"group,omitempty"`
-	Version  string   `json:"version,omitempty"`
-	Kind     string   `json:"kind,omitempty"`
-	Name     string   `json:"name,omitempty"`
-	Messages []string `json:"messages,omitempty"`
+	Index    *int
+	Group    string
+	Version  string
+	Kind     string
+	Name     string
+	Messages []string
 }
 
 type namedIndex struct {

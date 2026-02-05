@@ -570,10 +570,11 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 	return nil
 }
 
+//nolint:musttag
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
-		HTTPProxy  string   `json:"httpProxy" yaml:"httpProxy"`
-		HTTPSProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
+		HTTPProxy  string   `yaml:"httpProxy"`
+		HTTPSProxy string   `yaml:"httpsProxy"`
 		NoProxy    []string `json:"noProxy" yaml:"noProxy"`
 	}
 

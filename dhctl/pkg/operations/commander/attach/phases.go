@@ -21,8 +21,8 @@ import (
 
 type (
 	PhaseData struct {
-		ScanResult  *ScanResult        `json:"scanResult"`
-		CheckResult *check.CheckResult `json:"checkResult"`
+		ScanResult  *ScanResult
+		CheckResult *check.CheckResult
 	}
 	OnPhaseFunc = phases.OnPhaseFunc[PhaseData]
 )
