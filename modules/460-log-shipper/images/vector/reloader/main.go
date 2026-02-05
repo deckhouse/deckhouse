@@ -232,13 +232,14 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer watcher.Close()
 
 	err = watcher.Add(sampleConfigPath)
 	if err != nil {
 		watcher.Close()
 		log.Fatal(err)
 	}
+
+	defer watcher.Close()
 
 	log.Printf("start watching Vector config changes")
 	for {
