@@ -1,4 +1,4 @@
-{{- $versions := (include "get_oss_version_by_id" (list "cluster-autoscaler" $ "multi")) | splitList "," -}}
+{{- $versions := (include "get_oss_version_by_id" (list "cluster-autoscaler" $ "all")) | splitList "," -}}
 {{- range $versions }}
   {{- $clusterAutoscalerVersion := . -}}
   {{- $versionParts := splitList "." $clusterAutoscalerVersion -}}

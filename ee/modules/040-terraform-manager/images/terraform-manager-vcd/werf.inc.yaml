@@ -1,3 +1,4 @@
+{{- $versions := (include "get_oss_version_by_id" (list "terraform-provider-vcd" $ "all")) | splitList "," -}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'
@@ -5,9 +6,9 @@ git:
 - add: /{{ .ModulePath }}modules/030-cloud-provider-vcd/candi
   to: /deckhouse/candi/cloud-providers/vcd
 import:
-{{- range $version := .TF.vcd.versions }}
-- image: cloud-provider-vcd/terraform-manager
-  add: /terraform-manager/terraform-provider-vcd-v{{ $version }}
+{{- range $version := $versions }}
+- image: terraform-provider-vcd-artifact
+  add: /terraform-provider-vcd-v{{ $version }}
   to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" $.TF "providerName" "vcd") }}/{{ $.TF.vcd.namespace }}/{{ $.TF.vcd.type }}/{{ $version }}/linux_amd64/terraform-provider-vcd
   before: setup
 {{- end }}

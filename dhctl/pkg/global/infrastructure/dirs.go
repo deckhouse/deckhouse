@@ -20,14 +20,14 @@ var (
 	dhctlPath              = "/"
 	deckhouseDir           = "/deckhouse"
 	candiDir               = deckhouseDir + "/candi"
-	infrastructureVersions = candiDir + "/terraform_versions.yml"
+	infrastructureVersions = candiDir + "/terraform_providers.yml"
 )
 
 func InitGlobalVars(pwd string) {
 	dhctlPath = pwd
 	deckhouseDir = pwd + "/deckhouse"
 	candiDir = deckhouseDir + "/candi"
-	infrastructureVersions = candiDir + "/terraform_versions.yml"
+	infrastructureVersions = candiDir + "/terraform_providers.yml"
 }
 
 func GetDhctlPath() string {

@@ -59,7 +59,7 @@ bashible-apiserver/                      @name212 @090809 @sprait
 candi/                                   @name212 @090809
 candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su
-candi/terraform_versions.yml             @aleksey-su
+candi/terraform_providers.yml             @aleksey-su
 cloud-controller-manager/                @aleksey-su
 csi/                                     @AleksZimin @duckhawk
 deckhouse-controller/                    @ldmonster

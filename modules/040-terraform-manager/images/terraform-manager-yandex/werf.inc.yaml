@@ -1,3 +1,4 @@
+{{- $providerVersion := include "get_oss_version_by_id" (list "terraform-provider-yandex" $ )  -}}
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "yandex") }}'
 git:
@@ -6,7 +7,7 @@ git:
 import:
 - image: cloud-provider-yandex/terraform-manager
   add: /terraform-manager/terraform-provider-yandex
-  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ .TF.yandex.version }}/linux_amd64/terraform-provider-yandex
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "yandex") }}/{{ .TF.yandex.namespace }}/{{ .TF.yandex.type }}/{{ $providerVersion }}/linux_amd64/terraform-provider-yandex
   before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}

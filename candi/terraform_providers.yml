@@ -1,0 +1,132 @@
+# All versions was moved to modules/040-terraform-manager/oss.yaml
+
+# Attention! For migrate to opentofu we need some manual actions.
+# Unfortunately useOpentofu variable available only in werf and discovered inside dhctl
+# But we need enable automigrator and terraform state metrics hook. We can add global hook
+# for autodiscovery terraform versions file, but we think that this attention will be enough.
+# So, for switch to opentofu existing provider with terraform we need to do two additional actions:
+# 1. in the cloud provider module you should add hook go_lib/hooks/to_tofu_migrate_metric, see example
+#    modules/030-cloud-provider-yandex/hooks/to_tofu_migrate_metric.go
+# 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
+#    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
+# after migration, please remove this comment
+
+aws:
+  namespace: hashicorp
+  cloudName: AWS
+  type: aws
+  # artifact name with provider binary
+  artifact: terraform-provider-aws
+  # provider binary name with artifact and destination image
+  artifactBinary: terraform-provider-aws
+  # provider binary name with destination image
+  destinationBinary: terraform-provider-aws
+  vmResourceType: aws_instance
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+azure:
+  namespace: hashicorp
+  cloudName: Azure
+  type: azurerm
+  artifact: terraform-provider-azure
+  artifactBinary: terraform-provider-azurerm
+  destinationBinary: terraform-provider-azurerm
+  vmResourceType: azurerm_linux_virtual_machine
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+gcp:
+  namespace: hashicorp
+  cloudName: GCP
+  type: google
+  artifact: terraform-provider-gcp
+  artifactBinary: terraform-provider-gcp
+  destinationBinary: terraform-provider-google
+  vmResourceType: google_compute_instance
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+openstack:
+  namespace: terraform-provider-openstack
+  cloudName: OpenStack
+  type: openstack
+  artifact: terraform-provider-openstack
+  artifactBinary: terraform-provider-openstack
+  destinationBinary: terraform-provider-openstack
+  vmResourceType: openstack_blockstorage_volume_v3
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+ovirt:
+  namespace: terraform-provider-ovirt
+  cloudName: Zvirt
+  type: ovirt
+  artifact: terraform-provider-ovirt
+  artifactBinary: terraform-provider-ovirt
+  destinationBinary: terraform-provider-ovirt
+  vmResourceType: ovirt_vm
+  useOpentofu: true
+
+vsphere:
+  namespace: hashicorp
+  cloudName: vSphere
+  type: vsphere
+  artifact: terraform-provider-vsphere
+  artifactBinary: terraform-provider-vsphere
+  destinationBinary: terraform-provider-vsphere
+  vmResourceType: vsphere_virtual_machine
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+vcd:
+  namespace: vmware
+  cloudName: VCD
+  type: vcd
+  artifact: terraform-provider-vcd-artifact
+  artifactBinary: terraform-provider-vcd
+  destinationBinary: terraform-provider-vcd
+  vmResourceType: vcd_vapp_vm
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+yandex:
+  namespace: yandex-cloud
+  cloudName: Yandex
+  type: yandex
+  artifact: terraform-provider-yandex
+  artifactBinary: terraform-provider-yandex
+  destinationBinary: terraform-provider-yandex
+  vmResourceType: yandex_compute_instance
+  useOpentofu: true
+
+decort:
+  namespace: terraform-provider-decort
+  cloudName: Dynamix
+  type: decort
+  artifact: terraform-provider-decort
+  artifactBinary: terraform-provider-decort
+  destinationBinary: terraform-provider-decort
+  vmResourceType: decort_kvmvm
+  useOpentofu: true
+
+huaweicloud:
+  namespace: terraform-provider-huaweicloud
+  cloudName: Huaweicloud
+  type: huaweicloud
+  artifact: terraform-provider-huaweicloud
+  artifactBinary: terraform-provider-huaweicloud
+  destinationBinary: terraform-provider-huaweicloud
+  vmResourceType: huaweicloud_compute_instance
+  # Attention! For migrate to opentofu we need some manual actions. See above ^^^
+  useOpentofu: false
+
+kubernetes:
+  namespace: hashicorp
+  cloudName: DVP
+  type: kubernetes
+  artifact: terraform-provider-kubernetes
+  artifactBinary: terraform-provider-kubernetes
+  destinationBinary: terraform-provider-kubernetes
+  vmResourceType: kubernetes_manifest
+  useOpentofu: true
