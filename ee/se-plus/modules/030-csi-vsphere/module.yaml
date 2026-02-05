@@ -5,5 +5,5 @@ subsystems:
 namespace: d8-csi-vsphere
 stage: General Availability
 descriptions:
-  en: Provides Container Storage Interface (CSI) support for VMware vSphere environments, providing dynamic provisioning and management of persistent storage volumes in Kubernetes clusters running on vSphere infrastructure.
-  ru: Предоставляет поддержку Container Storage Interface (CSI) для сред VMware vSphere, обеспечивает динамическое предоставление и управление постоянными томами хранения в кластерах Kubernetes, работающих на инфраструктуре vSphere.
+  en: Provides CSI for for VMware vSphere environments.
+  ru: Предоставляет CSI для сред VMware vSphere.
