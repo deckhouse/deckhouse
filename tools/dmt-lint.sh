@@ -17,6 +17,7 @@
 set -euo pipefail
 
 DMT_VERSION=0.1.67
+YQ_VERSION=4.25.3
 
 function install_dmt() {
   platform_name=$(uname -m)
@@ -58,34 +59,40 @@ function install_dmt() {
 }
 
 function install_yq() {
-  # Copy yq from the mounted source directory
-  # Resolve symlink to get the actual binary file
-  if [ -L /deckhouse-src/bin/yq ]; then
-    # Get the symlink target (might be relative or absolute)
-    local yq_link=$(readlink /deckhouse-src/bin/yq)
-    # If it's an absolute path, try it directly; otherwise resolve relative to bin/
-    if [[ "$yq_link" = /* ]]; then
-      # Extract just the filename from absolute path
-      local yq_file=$(basename "$yq_link")
-      local yq_target="/deckhouse-src/bin/$yq_file"
-    else
-      # Relative path, resolve it relative to bin directory
-      local yq_target="/deckhouse-src/bin/$yq_link"
-    fi
-    
-    if [ -f "$yq_target" ]; then
-      cp "$yq_target" /usr/local/bin/yq
-      chmod +x /usr/local/bin/yq
-    else
-      echo "Warning: yq target file not found: $yq_target"
-    fi
-  elif [ -f /deckhouse-src/bin/yq ]; then
-    # yq is a regular file, just copy it
-    cp /deckhouse-src/bin/yq /usr/local/bin/yq
-    chmod +x /usr/local/bin/yq
-  else
-    echo "Warning: yq not found in /deckhouse-src/bin/"
-  fi
+  platform_name=$(uname -m)
+  os_name=$(uname)
+
+  case "$os_name" in
+    Linux)
+      local platform="linux"
+      ;;
+    Darwin)
+      local platform="darwin"
+      ;;
+    *)
+      echo "Unsupported OS: $os_name"
+      return 1
+      ;;
+  esac
+
+  case "$platform_name" in
+    x86_64)
+      local arch="amd64"
+      ;;
+    arm64)
+      local arch="arm64"
+      ;;
+    aarch64)
+      local arch="arm64"
+      ;;
+    *)
+      echo "Unsupported architecture: $platform_name"
+      return 1
+      ;;
+  esac
+
+  curl -sSfL https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_${platform}_${arch} -o /usr/local/bin/yq
+  chmod +x /usr/local/bin/yq
 }
 
 function copy_with_yaml_merge {
