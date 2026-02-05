@@ -2,10 +2,11 @@
 ---
 
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 
-.navigation__container { 
-  position: sticky;
+.navigation__container {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -14,6 +15,10 @@
   height: 69px;
   background-color: #fff;
   transition: top .15s ease-in-out;
+
+  &.fixed-navigation {
+    position: sticky;
+  }
 
   &.hidden {
     top: 0 !important;
@@ -418,6 +423,15 @@
   position: relative;
   width: 297px;
   min-width: 297px;
+
+  @include breakpoints.max-w(xl) {
+    width: 250px;
+    min-width: 250px;
+  }
+
+  @include breakpoints.max-w(l) {
+    display: none;
+  }
 }
 
 .layout-sidebar__sidebar::after,
