@@ -3,7 +3,7 @@ package memberlist
 import (
 	"encoding/json"
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/helper/logger/sl"
+	"fencing-agent/internal/lib/logger/sl"
 	"log/slog"
 	"time"
 

@@ -3,8 +3,8 @@ package kubeclient
 import (
 	"context"
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/helper/logger/sl"
-	"fencing-agent/internal/helper/validators"
+	"fencing-agent/internal/lib/logger/sl"
+	"fencing-agent/internal/lib/validators"
 	"fmt"
 	"log/slog"
 	"sync/atomic"
@@ -148,7 +148,7 @@ func (p *Client) SetNodeLabel(ctx context.Context, key, value string) error {
 		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
 	}
 
-	p.logger.Info("Node label set",
+	p.logger.Info("node label set",
 		slog.String("node", p.nodeName),
 		slog.String("label", key),
 		slog.String("value", value))
@@ -184,19 +184,6 @@ func (p *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
 	return "", fmt.Errorf("node %s has no InternalIP address", p.nodeName)
 }
 
-// Reimplementation of clientcmd.buildConfig to avoid default warn message
-func buildConfig(kubeconfigPath string) (*rest.Config, error) {
-	if kubeconfigPath == "" {
-		kubeconfig, err := rest.InClusterConfig()
-		if err == nil {
-			return kubeconfig, nil
-		}
-	}
-	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
-		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
-		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}}).ClientConfig()
-}
-
 func (p *Client) startInformer(ctx context.Context) error {
 
 	p.informerFactory = informers.NewSharedInformerFactory(p.client, 30*time.Second)
@@ -207,7 +194,7 @@ func (p *Client) startInformer(ctx context.Context) error {
 		AddFunc: func(obj interface{}) {
 			node, ok := obj.(*v1.Node)
 			if !ok {
-				p.logger.Warn("Failed to cast object to Node in AddFunc")
+				p.logger.Warn("failed to cast object to Node in AddFunc")
 				return
 			}
 			if node.Name == p.nodeName {
@@ -248,7 +235,7 @@ func (p *Client) startInformer(ctx context.Context) error {
 	if !cache.WaitForCacheSync(ctx.Done(), nodeInformer.HasSynced) {
 		return fmt.Errorf("failed to sync node informer cache")
 	}
-	p.logger.Info("Node informer cache synced successfully")
+	p.logger.Info("node informer cache synced successfully")
 	return nil
 }
 
@@ -268,7 +255,7 @@ func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
 
 	if oldValue != hasAnnotation {
 		if hasAnnotation {
-			p.logger.Info("Maintenance mode detected",
+			p.logger.Info("maintenance mode detected",
 				slog.String("node", p.nodeName),
 				slog.String("annotation", foundAnnotation))
 		} else {
@@ -281,6 +268,19 @@ func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
 func (p *Client) stopInformer() {
 	if p.informerStopCh != nil {
 		close(p.informerStopCh)
-		p.logger.Info("Node informer stopped")
+		p.logger.Info("node informer stopped")
 	}
+}
+
+// Reimplementation of clientcmd.buildConfig to avoid default warn message
+func buildConfig(kubeconfigPath string) (*rest.Config, error) {
+	if kubeconfigPath == "" {
+		kubeconfig, err := rest.InClusterConfig()
+		if err == nil {
+			return kubeconfig, nil
+		}
+	}
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfigPath},
+		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}}).ClientConfig()
 }

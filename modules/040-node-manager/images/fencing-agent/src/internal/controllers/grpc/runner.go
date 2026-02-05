@@ -3,7 +3,8 @@ package grpc
 import (
 	"context"
 	"errors"
-	"fencing-agent/internal/helper/validators"
+	"fencing-agent/internal/lib/logger/sl"
+	"fencing-agent/internal/lib/validators"
 	pb "fencing-agent/pkg/api/v1"
 	"fmt"
 	"net"
@@ -89,6 +90,10 @@ func (r *Runner) Run() error {
 
 func (r *Runner) Stop() {
 	r.grpcServer.GracefulStop()
+	cleanErr := r.cleanSocket()
+	if cleanErr != nil {
+		r.logger.Error("failed to clean socket file", sl.Err(cleanErr))
+	}
 }
 
 func (r *Runner) cleanSocket() error {

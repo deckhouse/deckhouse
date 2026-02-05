@@ -27,16 +27,14 @@ import (
 	"fmt"
 	"os"
 
-	//"fencing-agent/internal/adapters/memberlist"
-	//"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/helper/logger/sl"
+	"fencing-agent/internal/lib/logger/sl"
 	"fencing-agent/internal/usecase"
 	"os/signal"
 	"syscall"
 
 	"fencing-agent/internal/config"
-	"fencing-agent/internal/helper/logger"
+	"fencing-agent/internal/lib/logger"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/sync/errgroup"
@@ -103,7 +101,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	}
 
 	// always have to start memberlist before all components
-	err = mblist.Start(ips)
+	err = mblist.Start(ctx, ips)
 	if err != nil {
 		return fmt.Errorf("failed to start memberlist: %w", err)
 	}
@@ -114,7 +112,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	// -------- clear mblist functionality over -------
 	if cfg.FencingMode == Watchdog {
 		log.Info("Watchdog enabled, starting health monitor")
-		softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
+		softdog := watchdog.New(cfg.Watchdog.Device)
 
 		fencingAgent := usecase.NewHealthMonitor(
 			kubeClient,
@@ -126,7 +124,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 			log,
 		)
 
-		err = fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
+		err = fencingAgent.Start(ctx, cfg.Watchdog.Timeout)
 		if err != nil {
 			return fmt.Errorf("failed to start health monitor: %w", err)
 		}
