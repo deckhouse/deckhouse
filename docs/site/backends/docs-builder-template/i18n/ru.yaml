@@ -85,6 +85,9 @@ module_settings_details_content: |
       enabled: true
       settings: # Параметры модуля из раздела "Параметры" ниже.
     ```
+module_release_channel_details_title: Как сменить канал обновления модуля...
+module_release_channel_details_content: |
+  Для смены канала обновления модуля воспользуйтесь [инструкцией из FAQ](/products/kubernetes-platform/documentation/v1/faq.html#как-сменить-канал-обновления-для-модуля-из-источника).
 module_versions: Версии модуля
 module_version: Версия модуля
 module_crd_warning_1: Deckhouse Kubernetes Platform устанавливает CRD, но не удаляет их при отключении модуля. Если вам больше не нужны созданные CRD, удалите их.

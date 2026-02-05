@@ -143,9 +143,9 @@ Skipping minor releases may result in:
 - Cluster malfunction due to missed migrations
 {% endalert %}
 
-## Module update mechanism
+## Module from source update mechanism
 
-Modules have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
+Modules from source have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
 
 The cluster contains [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource) resources tracked by DKP,
 which determine the list of available modules.

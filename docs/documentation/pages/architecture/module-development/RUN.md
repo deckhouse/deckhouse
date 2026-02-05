@@ -5,13 +5,15 @@ permalink: en/architecture/module-development/run/
 
 This section describes the process of running a module in a Deckhouse Kubernetes Platform (DKP) cluster, as well as connecting Deckhouse Module Tools for setting up validation and metrics collection.
 
+## Run the module in the DKP cluster
+
 Follow these steps to run the module in a cluster:
 
 - [Define ModuleSource](#module-source) (the [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource).
 - _(optional)_ Define the [module update policy](#module-update-policy) (the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource).
 - [Enable the module in the cluster](#enabling-the-module) (the [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) resource).
   
-## Module source
+### Module source
 
 Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
@@ -304,7 +306,7 @@ Follow these steps to deploy a module from a different module source:
    d8 k get mr
    ```
 
-## Module update policy
+### Module update policy
 
 The module update policy refers to the rules that DKP uses to update modules in the cluster. It is set by the [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy) resource with the following settings:
 - module update mode (automatic, manual, updates are disabled);
@@ -334,7 +336,7 @@ spec:
 
 The update policy is specified in the `updatePolicy` field in ModuleConfig.
 
-## Enabling the module
+### Enabling the module
 
 Before enabling the module, make sure that it can be enabled. Run the following command to list all the available DKP modules:
 

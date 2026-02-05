@@ -13,6 +13,9 @@ iam:
 security:
   en: Security
   ru: Безопасность
+modules:
+  en: Modules
+  ru: Модули
 network:
   en: Network
   ru: Сеть
