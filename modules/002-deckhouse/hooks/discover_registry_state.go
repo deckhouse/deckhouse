@@ -64,7 +64,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 					return nil, fmt.Errorf("failed to convert secret %q: %w", obj.GetName(), err)
 				}
 
-				state := registryState{}
+				var state registryState
 				state.fromSecret(secret)
 				return state, nil
 			},
