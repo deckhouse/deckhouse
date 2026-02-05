@@ -399,5 +399,5 @@ func (m *Manager) Render(ctx context.Context, name string) (string, error) {
 		return "", fmt.Errorf("package %s not loaded", name)
 	}
 
-	return m.nelm.Render(ctx, app)
+	return m.nelm.Render(ctx, app.GetNamespace(), app)
 }
