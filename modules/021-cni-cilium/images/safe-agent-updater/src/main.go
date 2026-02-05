@@ -91,10 +91,7 @@ func main() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			err = waitUntilDisruptionApproved(kubeClient, nodeName)
-			if err != nil {
-				log.Fatal(err)
-			}
+			waitUntilDisruptionApproved(kubeClient, nodeName)
 		} else {
 			log.Infof("[SafeAgentUpdater] The current agent image is not the same as in the upcoming update, but sts pods are not present on node, so the 1.17-migration-disruptive-update is no needed")
 			if err := setAnnotationToNode(kubeClient, nodeName, migrationSucceededAnnotation, ""); err != nil {
@@ -301,7 +298,7 @@ func setAnnotationToNode(kubeClient kubernetes.Interface, nodeName string, annot
 	return nil
 }
 
-func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName string) error {
+func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName string) {
 	for {
 		node, err := kubeClient.CoreV1().Nodes().Get(
 			context.TODO(),
@@ -311,7 +308,7 @@ func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName strin
 		if err != nil {
 			log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
 		} else if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
-			return nil
+			return
 		}
 		log.Infof("[SafeAgentUpdater] Waiting until disruption update on node %s was approved", nodeName)
 		time.Sleep(10 * time.Second)
