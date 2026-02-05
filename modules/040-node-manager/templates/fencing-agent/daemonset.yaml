@@ -85,6 +85,15 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+          ports:
+            - name: memberlist-tcp
+              containerPort: 8500
+              hostPort: 8500
+              protocol: TCP
+            - name: memberlist-udp
+              containerPort: 8500
+              hostPort: 8500
+              protocol: UDP
           image: {{ include "helm_lib_module_image" (list $ctx "fencingAgent") }}
           livenessProbe:
             httpGet:
@@ -102,11 +111,16 @@ spec:
           volumeMounts:
             - name: watchdog
               mountPath: /dev/watchdog
+            - name: socket
+              mountPath: /tmp
       terminationGracePeriodSeconds: 10
       volumes:
         - name: watchdog
           hostPath:
             path: /dev/watchdog
             type: CharDevice
+        - name: socket
+          hostPath:
+            path: /tmp
   {{- end }}
 {{- end }}
