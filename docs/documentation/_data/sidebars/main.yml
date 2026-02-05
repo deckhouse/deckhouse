@@ -1155,6 +1155,10 @@ entries:
                 ru: Георезервирование
               url: /architecture/disaster-resilience/geo-reserving.html                     
         - title:
+            en: Updating
+            ru: Обновление
+          url: /architecture/updating.html
+        - title:
             en: Deckhouse subsystem
             ru: Подсистема Deckhouse
           folders:
@@ -1328,10 +1332,6 @@ entries:
             ru: TODO Установка
           url: /architecture/installation.html
           draft: true
-        - title:
-            en: Updating
-            ru: Обновление
-          url: /architecture/updating.html       
 
     - title:
         en: Reference
