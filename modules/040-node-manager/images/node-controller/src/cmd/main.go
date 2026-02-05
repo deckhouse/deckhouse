@@ -35,6 +35,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/controller"
 	"github.com/deckhouse/node-controller/internal/webhook"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -56,9 +57,13 @@ func main() {
 	var metricsAddr string
 	var probeAddr string
 
+	// Controller flags
+	var enableNodeGroupStatusController bool
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+	flag.BoolVar(&enableNodeGroupStatusController, "enable-nodegroup-status-controller", true, "Enable NodeGroupStatus controller")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -86,8 +91,18 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Controllers
+	if enableNodeGroupStatusController {
+		if err = controller.SetupNodeGroupStatusController(mgr); err != nil {
+			setupLog.Error(err, "unable to setup NodeGroupStatus controller")
+			os.Exit(1)
+		}
+		setupLog.Info("NodeGroupStatus controller enabled")
+	}
+
+	// Setup all webhooks
 	if err = webhook.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
+		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
 
