@@ -121,7 +121,6 @@ func LockDeckhouseQueueBeforeCreatingModuleConfigs(
 		deckhouseDeploymentPresent = true
 		return nil
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -188,16 +187,17 @@ func CreateDeckhouseManifests(
 				return manifests.DeckhouseNamespace("d8-system")
 			},
 			CreateFunc: func(manifest any) error {
-				_, err := kubeCl.
-					CoreV1().
-					Namespaces().
-					Create(ctx, manifest.(*apiv1.Namespace), metav1.CreateOptions{})
-
-				if err != nil && apierrors.IsAlreadyExists(err) {
-					log.InfoLn("Already exists. Skip!")
-					return nil
+				namespace := manifest.(*apiv1.Namespace)
+				_, err := kubeCl.CoreV1().Namespaces().Get(ctx, namespace.GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
+						return err
+					}
+					return err
 				}
-				return err
+				log.InfoLn("Already exists. Skip!")
+				return nil
 			},
 			UpdateFunc: func(manifest any) error {
 				_, err := kubeCl.
@@ -304,7 +304,6 @@ func CreateDeckhouseManifests(
 				return registry.GetPKI(ctx, kubeCl)
 			},
 		)
-
 	if err != nil {
 		return nil, fmt.Errorf("create deckhouse registry secret data: %w", err)
 	}
@@ -338,7 +337,6 @@ func CreateDeckhouseManifests(
 	isExist, registryBashibleConfigSecretData, err := cfg.Registry.
 		Manifest().
 		RegistryBashibleConfigSecretData()
-
 	if err != nil {
 		return nil, fmt.Errorf("create registry bashible config secret data: %w", err)
 	}
@@ -623,7 +621,6 @@ func WaitForReadinessNotOnNode(ctx context.Context, kubeCl *client.KubernetesCli
 					WaitPodBecomeReady().
 					WithExcludeNode(excludeNode).
 					Print(ctx)
-
 				if err != nil {
 					if errors.Is(err, ErrTimedOut) {
 						return err

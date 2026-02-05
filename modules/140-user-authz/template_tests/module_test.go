@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -133,6 +134,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
+			// Make SecurityPolicyException available for template rendering.
+			// In CI template-tests, `.Capabilities.APIVersions` is typically empty, so we emulate discovery.
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
 			f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
@@ -294,10 +298,43 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(ds.Exists()).To(BeTrue())
 			Expect(ds.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
 
+			// Webhook listens on a node-local port, kube-apiserver calls it via https://127.0.0.1:40443.
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(40443)))
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.protocol").String()).To(Equal("TCP"))
+
 			Expect(ds.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
+		})
+
+		It("Should allow node-local webhook port in SecurityPolicyException", func() {
+			rendered := map[string]string{}
+			f.HelmRender(WithFilteredRenderOutput(rendered, []string{"webhook/daemonset.yaml"}))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			manifest := ""
+			for k, v := range rendered {
+				if strings.Contains(k, "webhook/daemonset.yaml") {
+					manifest = v
+					break
+				}
+			}
+			if manifest == "" {
+				if len(rendered) == 1 {
+					for _, v := range rendered {
+						manifest = v
+						break
+					}
+				}
+			}
+			Expect(manifest).ToNot(BeEmpty())
+			Expect(manifest).To(ContainSubstring("kind: SecurityPolicyException"))
+			Expect(manifest).To(ContainSubstring("name: user-authz-webhook"))
+			Expect(manifest).To(ContainSubstring("allowedValue: true"))
+			Expect(manifest).To(ContainSubstring("hostPorts:"))
+			Expect(manifest).To(ContainSubstring("port: 40443"))
+			Expect(manifest).To(ContainSubstring("protocol: TCP"))
 		})
 
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {

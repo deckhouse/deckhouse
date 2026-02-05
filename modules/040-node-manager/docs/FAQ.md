@@ -1971,6 +1971,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
 Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
 
+## How to set a custom per-GPU MIG layout on a node?
+
+Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1    # Can be in the range from 1 to 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 2
+            - profile: 1g.10gb
+              count: 1
+        # Add more indexes as needed.
+```
+
+As a result, the `node-manager` module automatically:
+
+- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
+- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
+
+A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
+
 ## MIG profile does not activate — what to check?
 
 1. **GPU model:** MIG is supported on H100/A100/A30; it is **not** supported on V100/T4. See the profile tables in the [NVIDIA MIG guide](https://docs.nvidia.com/datacenter/tesla/mig-user-guide/contents.html).

@@ -1,10 +1,10 @@
 ---
-title: "Кэширование DNS-запросов на узлах кластера"
+title: "Кеширование DNS-запросов на узлах кластера"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/other/dns-caching.html
 lang: ru
 ---
 
-В Deckhouse Virtualization Platform можно развернуть локальный кэширующий DNS-сервер на каждом узле кластера. Он экспортирует метрики в Prometheus для визуализации в [дашборде Grafana](/modules/node-local-dns/#grafana-dashboard).
+В Deckhouse Virtualization Platform можно развернуть локальный кеширующий DNS-сервер на каждом узле кластера. Он экспортирует метрики в Prometheus для визуализации в [дашборде Grafana](/modules/node-local-dns/#grafana-dashboard).
 
 Функциональность реализуется модулем [`node-local-dns`](/modules/node-local-dns/). Модуль состоит из оригинального CoreDNS, разворачиваемого в DaemonSet на всех узлах кластера, с добавлением алгоритма настройки сети и правил iptables.
 
