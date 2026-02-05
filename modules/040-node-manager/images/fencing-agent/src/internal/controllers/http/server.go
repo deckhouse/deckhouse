@@ -3,7 +3,7 @@ package http
 import (
 	"context"
 	"errors"
-	"fencing-agent/internal/helper/logger/sl"
+	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"log/slog"
 	"net/http"

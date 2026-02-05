@@ -9,9 +9,8 @@ package usecase
 
 import (
 	"context"
-	"fencing-agent/internal/helper/logger/sl"
-	"fmt"
-	"log/slog"
+	"fencing-agent/internal/lib/backoff"
+	"fencing-agent/internal/lib/logger/sl"
 	"sync"
 	"time"
 
@@ -171,28 +170,11 @@ func (h *HealthMonitor) check(ctx context.Context) {
 }
 
 func (h *HealthMonitor) startWatchdogBackoff(ctx context.Context) error {
-	const triesLimit = 5
-	currenTry := 1
+	wrapped := backoff.Wrap(ctx, h.logger, 5, "watchdog", h.watchdog.Start)
 
-	err := h.watchdog.Start()
-
-	base, mx := time.Second, time.Minute
-
-	for backoff := base; err != nil; backoff <<= 1 {
-		if currenTry > triesLimit {
-			return fmt.Errorf("failed to start watchdog, tries limit reached: %w", err)
-		}
-
-		if backoff > mx {
-			backoff = mx
-		}
-		h.logger.Warn("failed to start watchdog", sl.Err(err), slog.String("backoff", backoff.String()), slog.Int("tries", currenTry))
-
-		time.Sleep(backoff)
-
-		err = h.watchdog.Start()
-
-		currenTry++
+	err := wrapped()
+	if err != nil {
+		return err
 	}
 
 	// Set node label to indicate fencing is enabled

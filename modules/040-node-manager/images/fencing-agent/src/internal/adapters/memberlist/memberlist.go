@@ -4,8 +4,8 @@ import (
 	"context"
 	"errors"
 	"fencing-agent/internal/domain"
-	"fencing-agent/internal/helper/logger/sl"
-	"log/slog"
+	"fencing-agent/internal/lib/backoff"
+	"fencing-agent/internal/lib/logger/sl"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -90,27 +90,19 @@ func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
 	return nodes, nil
 }
 
-func (ml *Memberlist) Start(peers ips) error {
-	const triesLimit = 5
-	currenTry := 1
-	numberJoin, memberErr := ml.list.Join(peers)
-	base, mx := time.Second, time.Minute
-	for backoff := base; memberErr != nil; backoff <<= 1 {
-		if currenTry > triesLimit {
-			ml.logger.Error("failed to start memberlist, tries limit reached", sl.Err(memberErr))
-			return memberErr
-		}
-		if backoff > mx {
-			backoff = mx
-		}
-		ml.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()), slog.Int("tries", currenTry))
+func (ml *Memberlist) Start(ctx context.Context, peers ips) error {
+	wrapped := backoff.Wrap(ctx, ml.logger, 5, "memberlist",
+		func() error {
+			_, err := ml.list.Join(peers)
+			return err
+		})
 
-		time.Sleep(backoff)
-
-		numberJoin, memberErr = ml.list.Join(peers)
-		currenTry++
+	err := wrapped()
+	if err != nil {
+		return err
 	}
-	ml.logger.Info("memberlist started successfully", slog.Int("number_joined", numberJoin))
+
+	ml.logger.Info("memberlist started successfully")
 	return nil
 }
 
