@@ -1,2 +1,22 @@
 type: object
+required:
+  - provider
 properties:
+  provider:
+    type: object
+    required:
+      - kubeconfigDataBase64
+      - namespace
+    properties:
+      kubeconfigDataBase64:
+        type: string
+        description: |
+          Base64-encoded kubeconfig used by DVP to access the target Kubernetes cluster.
+        x-examples:
+          - LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+      namespace:
+        type: string
+        description: |
+          Kubernetes namespace where cloud provider resources will be created.
+        x-examples:
+          - team-d8-cloud-providers
