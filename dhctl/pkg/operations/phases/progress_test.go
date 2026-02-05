@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -381,6 +382,32 @@ func TestProgressTracker_WriteProgress(t *testing.T) {
 	}
 }
 
+func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
+	t.Parallel()
+
+	var result []phases.Progress
+	progressTracker := phases.NewProgressTracker(phases.OperationBootstrap, func(progress phases.Progress) error {
+		result = append(result, progress)
+		return nil
+	})
+	progressTracker.SetClusterType("Static")
+
+	require.NoError(t, progressTracker.Progress("", "", opts))
+	require.Len(t, result, 1)
+
+	phaseNames := make([]string, 0, len(result[0].Phases))
+	for _, p := range result[0].Phases {
+		phaseNames = append(phaseNames, string(p.Phase))
+	}
+
+	assert.NotContains(t, phaseNames, string(phases.BaseInfraPhase),
+		"BaseInfraPhase must not appear in progress for Bootstrap Static",
+	)
+	assert.Equal(t, string(phases.RegistryPackagesProxyPhase), string(result[0].CurrentPhase),
+		"first phase for Bootstrap Static should be RegistryPackagesProxy",
+	)
+}
+
 func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
 	t.Helper()
 
@@ -407,6 +434,8 @@ func readJSONLinesFromFile(t *testing.T, filename string) []phases.Progress {
 }
 
 var cmpOpts = cmp.Options{
+	cmpopts.IgnoreFields(phases.PhaseWithSubPhases{}, "includeIf"),
+
 	cmp.Comparer(func(x, y *phases.ProgressAction) bool {
 		if x == nil && (y != nil && *y == "") {
 			return true
