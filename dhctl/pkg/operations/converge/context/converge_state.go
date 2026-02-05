@@ -35,8 +35,9 @@ const (
 )
 
 type State struct {
-	Phase               phases.OperationPhase   `json:"phase"`
-	NodeUserCredentials *v1.NodeUserCredentials `json:"nodeUserCredentials"`
+	Phase                  phases.OperationPhase   `json:"phase"`
+	NodeUserCredentials    *v1.NodeUserCredentials `json:"nodeUserCredentials"`
+	PreserveExistingHAMode bool                    `json:"preserveExistingHAMode"`
 }
 
 type stateStore interface {
