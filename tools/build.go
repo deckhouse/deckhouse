@@ -476,7 +476,7 @@ func (e *executor) executeEdition(editionName string) {
 			Dir:     "modules",
 			Prefix:  prefix,
 			IncludePaths: []string{
-				"*/bashible",
+				"bashible",
 			},
 			StageDependencies: stageDependenciesFile,
 		}
