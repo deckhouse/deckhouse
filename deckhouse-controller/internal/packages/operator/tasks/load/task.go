@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package load provides the Load task which loads a package into the runtime.
-// This task is executed after Download and Install tasks have prepared the package
-// on the filesystem. It parses hooks, values schema, and Helm chart, then applies
-// initial settings. On success, sets ConditionSettingsValid and ConditionWaitConverge.
 package load
 
 import (

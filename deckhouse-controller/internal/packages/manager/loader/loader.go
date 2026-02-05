@@ -55,47 +55,45 @@ var (
 //  5. Creates and returns an Application instance
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
-func LoadAppConf(ctx context.Context, packageDir string, logger *log.Logger) (*apps.Config, error) {
+func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.Config, error) {
 	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadAppConf")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("path", packageDir))
+	span.SetAttributes(attribute.String("path", appDir))
 
-	logger = logger.With(slog.String("path", packageDir))
+	logger = logger.With(slog.String("path", appDir))
 
-	logger.Debug("load application from directory", slog.String("path", packageDir))
+	logger.Debug("load application from directory")
 
-	if _, err := os.Stat(packageDir); os.IsNotExist(err) {
+	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
-	span.SetAttributes(attribute.String("path", packageDir))
-
 	// Load package definition (package.yaml)
-	def, err := loadDefinition(packageDir)
+	def, err := loadDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("load package from '%s': %w", packageDir, err)
+		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
 	}
 
 	// Load values from values.yaml and openapi schemas
-	static, config, values, err := loadValues(def.Name, packageDir)
+	static, config, values, err := loadValues(def.Name, appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
-	packageName := filepath.Base(packageDir)
+	appName := filepath.Base(appDir)
 
-	splits := strings.SplitN(packageName, ".", 2)
+	splits := strings.SplitN(appName, ".", 2)
 	if len(splits) != 2 {
 		span.SetStatus(codes.Error, "invalid name")
-		return nil, fmt.Errorf("invalid package name '%s'", packageName)
+		return nil, fmt.Errorf("invalid package name '%s'", appName)
 	}
 
 	// Discover and load hooks (shell and batch)
-	hooksLoader := newHookLoader(splits[0], splits[1], packageDir, shapp.DebugKeepTmpFiles, logger)
+	hooksLoader := newHookLoader(splits[0], splits[1], appDir, shapp.DebugKeepTmpFiles, logger)
 	hooks, err := hooksLoader.load(ctx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -108,14 +106,14 @@ func LoadAppConf(ctx context.Context, packageDir string, logger *log.Logger) (*a
 		return nil, fmt.Errorf("convert app definition: %w", err)
 	}
 
-	digests, err := loadDigests(packageDir)
+	digests, err := loadDigests(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
 	return &apps.Config{
-		Path:       packageDir,
+		Path:       appDir,
 		Definition: appDef,
 
 		Digests: digests,

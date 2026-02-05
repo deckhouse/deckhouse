@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package uninstall provides the Uninstall task which unmounts and removes
-// a package from the filesystem. This task is executed during package removal
-// after the Disable task has stopped the package. For apps, downloaded images
-// are kept (keep=true) to allow reinstallation; for modules, they are removed.
 package uninstall
 
 import (

@@ -12,10 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package install provides the Install task which mounts a downloaded package
-// to the deployed directory. This task follows the Download task and makes the
-// package available on the filesystem for the Load task to parse.
-// On success, sets ConditionReadyOnFilesystem.
 package install
 
 import (
