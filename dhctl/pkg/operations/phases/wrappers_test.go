@@ -387,6 +387,8 @@ func TestPipelineWrapper(t *testing.T) {
 			return nil
 		})
 
+		require.NoError(t, err)
+
 		notChanged = true
 		err = pipeline.Run(func(switcher switcherType) error {
 			logger.LogInfoLn("Should not printed")
