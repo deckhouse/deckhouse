@@ -866,14 +866,17 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 			}
 
 			webhooks, found, err := unstructured.NestedSlice(obj.Object, "webhooks")
-			if err != nil || !found {
+			if err != nil {
+				return false, "", fmt.Errorf("failed to parse webhooks for %s %s: %w", kind, name, err)
+			}
+			if !found {
 				continue
 			}
 
-			for _, w := range webhooks {
+			for i, w := range webhooks {
 				webhook, ok := w.(map[string]any)
 				if !ok {
-					continue
+					return false, "", fmt.Errorf("webhook #%d in %s %s has invalid format", i, kind, name)
 				}
 
 				clientConfig, found, _ := unstructured.NestedMap(webhook, "clientConfig")
@@ -891,15 +894,14 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 				svcName, _, _ := unstructured.NestedString(svcRef, "name")
 
 				if ns == "" || svcName == "" {
-					continue
+					return false, "", fmt.Errorf("webhook #%d in %s %s has invalid service reference", i, kind, name)
 				}
 
 				// Get Service to find selector
 				svc := &corev1.Service{}
 				if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ns}, svc); err != nil {
 					if errors.IsNotFound(err) {
-						ctrl.Log.Info("Webhook service not found, skipping check", "webhook", name, "service", svcName)
-						continue
+						return false, fmt.Sprintf("Waiting for service %s/%s for webhook %s...", ns, svcName, name), nil
 					}
 					return false, "", err
 				}
@@ -952,6 +954,9 @@ func (r *CNIMigrationReconciler) checkWebhookPodsReady(ctx context.Context) (boo
 }
 
 func isPodReady(pod *corev1.Pod) bool {
+	if pod.DeletionTimestamp != nil {
+		return false
+	}
 	if pod.Status.Phase != corev1.PodRunning {
 		return false
 	}
