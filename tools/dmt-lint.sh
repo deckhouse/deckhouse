@@ -61,13 +61,23 @@ function install_yq() {
   # Copy yq from the mounted source directory
   # Resolve symlink to get the actual binary file
   if [ -L /deckhouse-src/bin/yq ]; then
-    # Follow the symlink and copy the actual file
-    local yq_target=$(readlink -f /deckhouse-src/bin/yq)
+    # Get the symlink target (might be relative or absolute)
+    local yq_link=$(readlink /deckhouse-src/bin/yq)
+    # If it's an absolute path, try it directly; otherwise resolve relative to bin/
+    if [[ "$yq_link" = /* ]]; then
+      # Extract just the filename from absolute path
+      local yq_file=$(basename "$yq_link")
+      local yq_target="/deckhouse-src/bin/$yq_file"
+    else
+      # Relative path, resolve it relative to bin directory
+      local yq_target="/deckhouse-src/bin/$yq_link"
+    fi
+    
     if [ -f "$yq_target" ]; then
       cp "$yq_target" /usr/local/bin/yq
       chmod +x /usr/local/bin/yq
     else
-      echo "Warning: yq symlink target not found: $yq_target"
+      echo "Warning: yq target file not found: $yq_target"
     fi
   elif [ -f /deckhouse-src/bin/yq ]; then
     # yq is a regular file, just copy it
