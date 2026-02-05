@@ -134,6 +134,9 @@ function structure_prepare {
     done
     shopt -u nullglob
   done
+  
+  # Disable dotglob to restore default behavior
+  shopt -u dotglob
 }
 
 apt update > /dev/null
