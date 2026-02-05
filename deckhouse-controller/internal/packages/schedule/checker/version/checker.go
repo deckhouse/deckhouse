@@ -65,7 +65,8 @@ func (c *Checker) Check() checker.Result {
 	if err != nil {
 		return checker.Result{
 			Enabled: false,
-			Reason:  fmt.Sprintf("get version: %s", err.Error()),
+			Reason:  checker.ReasonVersionLookupFailed,
+			Message: fmt.Sprintf("get version: %s", err.Error()),
 		}
 	}
 

@@ -20,10 +20,12 @@ import (
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"k8s.io/utils/ptr"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func Test_Check(t *testing.T) {
@@ -40,9 +42,10 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
-		assert.Equal(t, "test error", result.Message)
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
+		assert.Equal(t, "dependency 'test': test error", result.Message)
+		assert.Equal(t, checker.ReasonDependencyLookupFailed, result.Reason)
 		assert.False(t, result.Enabled)
 	})
 	t.Run("module not exist. Optional", func(t *testing.T) {
@@ -58,8 +61,8 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
 		assert.Equal(t, "", result.Message)
 		assert.True(t, result.Enabled)
 	})
@@ -76,8 +79,8 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
 		assert.Equal(t, "", result.Message)
 		assert.True(t, result.Enabled)
 	})
@@ -94,9 +97,10 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
 		assert.Equal(t, "dependency 'test' not enabled", result.Message)
+		assert.Equal(t, checker.ReasonDependencyNotEnabled, result.Reason)
 		assert.False(t, result.Enabled)
 	})
 	t.Run("module not exist. !Optional", func(t *testing.T) {
@@ -112,9 +116,10 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
 		assert.Equal(t, "dependency 'test' not found", result.Message)
+		assert.Equal(t, checker.ReasonDependencyNotFound, result.Reason)
 		assert.False(t, result.Enabled)
 	})
 	t.Run("not valid version", func(t *testing.T) {
@@ -131,9 +136,10 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
-		assert.Equal(t, "1.2.0 is less than 1.21", result.Message)
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
+		assert.Equal(t, "dependency 'test': 1.2.0 is less than 1.21", result.Message)
+		assert.Equal(t, checker.ReasonDependencyVersionMismatch, result.Reason)
 		assert.False(t, result.Enabled)
 	})
 	t.Run("pass", func(t *testing.T) {
@@ -150,8 +156,8 @@ func Test_Check(t *testing.T) {
 			},
 		}
 
-		checker := NewChecker(f, dep, log.NewLogger())
-		result := checker.Check()
+		ch := NewChecker(f, dep, log.NewLogger())
+		result := ch.Check()
 		assert.Equal(t, "", result.Message)
 		assert.True(t, result.Enabled)
 	})
