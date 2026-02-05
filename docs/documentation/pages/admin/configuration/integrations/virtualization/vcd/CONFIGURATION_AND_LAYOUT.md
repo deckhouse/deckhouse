@@ -24,7 +24,7 @@ provider:
   username: '<USERNAME>'
   password: '<PASSWORD>'
   insecure: true
-sshPublicKey: ssh-ed25519 AAAABBBBB
+sshPublicKey: <SSH_PUBLIC_KEY>
 organization: deckhouse
 virtualDataCenter: MSK-1
 virtualApplicationName: deckhouse
