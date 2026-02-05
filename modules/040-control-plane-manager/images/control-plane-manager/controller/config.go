@@ -135,7 +135,7 @@ func (c *Config) newClient() error {
 }
 
 func (c *Config) checkKubernetesVersion() error {
-	log.Infof("check desired kubernetes version %s against allowed kubernetes version list: %s", c.KubernetesVersion, c.AllowedKubernetesVersions)
+	log.Info(fmt.Sprintf("check desired kubernetes version %s against allowed kubernetes version list: %s", c.KubernetesVersion, c.AllowedKubernetesVersions))
 
 	for _, v := range strings.Split(c.AllowedKubernetesVersions, ",") {
 		if c.KubernetesVersion == v {

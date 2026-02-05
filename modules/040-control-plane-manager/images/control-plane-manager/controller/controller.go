@@ -103,7 +103,7 @@ func main() {
 
 func httpServerClose() {
 	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
+		log.Fatal("HTTP close error: " + err.Error())
 	}
 }
 

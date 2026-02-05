@@ -81,7 +81,7 @@ func GetEtcdPerformanceParams() EtcdPerformanceParams {
 	}
 
 	if config.EtcdArbiter {
-		log.Infof("using increased etcd timeouts for EtcdArbiter mode: heartbeat=%dms, election=%dms", etcdArbiterParams.HeartbeatInterval, etcdArbiterParams.ElectionTimeout)
+		log.Info(fmt.Sprintf("using increased etcd timeouts for EtcdArbiter mode: heartbeat=%dms, election=%dms", etcdArbiterParams.HeartbeatInterval, etcdArbiterParams.ElectionTimeout))
 		return etcdArbiterParams
 	}
 
@@ -107,7 +107,7 @@ spec:
 	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", "etcd800performance.yaml")
 	content := fmt.Sprintf(patchTemplate, params.HeartbeatInterval, params.ElectionTimeout)
 
-	log.Infof("generating etcd performance patch: file=%s, heartbeat_interval_ms=%d, election_timeout_ms=%d", patchFile, params.HeartbeatInterval, params.ElectionTimeout)
+	log.Info(fmt.Sprintf("generating etcd performance patch: file=%s, heartbeat_interval_ms=%d, election_timeout_ms=%d", patchFile, params.HeartbeatInterval, params.ElectionTimeout))
 
 	return os.WriteFile(patchFile, []byte(content), 0o600)
 }
@@ -157,7 +157,7 @@ func (c *Etcd) findAllMembers() ([]EtcdMember, error) {
 
 		resp, err := c.client.MemberList(ctx)
 		if err != nil {
-			log.Infof("[d8][etcd] memberList failed on attempt %d: %v", attempts, err)
+			log.Info(fmt.Sprintf("[d8][etcd] memberList failed on attempt %d: %v", attempts, err))
 			lastErr = err
 			return false, nil
 		}
@@ -170,8 +170,8 @@ func (c *Etcd) findAllMembers() ([]EtcdMember, error) {
 		}
 		return true, nil
 	})
-	if err == wait.ErrWaitTimeout {
-		log.Errorf("[d8][etcd] failed to list members after %d attempts: %v", attempts, lastErr)
+	if wait.Interrupted(err) {
+		log.Error(fmt.Sprintf("[d8][etcd] failed to list members after %d attempts: %v", attempts, lastErr))
 		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", lastErr)
 	}
 	return members, nil
@@ -253,7 +253,7 @@ func (c *Etcd) newEtcdCli() (*clientv3.Client, error) {
 		endpoints = defaultETCDendpoints
 	}
 
-	log.Infof("[d8][etcd] found etcd endpoints: %v", endpoints)
+	log.Info(fmt.Sprintf("[d8][etcd] found etcd endpoints: %v", endpoints))
 
 	tlsConfig, err := c.buildTLSConfig(caCertPath, certPath, keyPath)
 	if err != nil {
@@ -297,7 +297,7 @@ func (c *Etcd) buildTLSConfig(caFile, certFile, keyFile string) (*tls.Config, er
 }
 
 func (c *Etcd) MemberPromote(learnerID uint64) error {
-	log.Infof("[d8][etcd] promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
+	log.Info(fmt.Sprintf("[d8][etcd] promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16)))
 	var lastError error
 	attempts := 0
 	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
@@ -307,16 +307,16 @@ func (c *Etcd) MemberPromote(learnerID uint64) error {
 
 		_, err := c.client.MemberPromote(ctx, learnerID)
 		if err == nil {
-			log.Infof("[d8][etcd] learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts)
+			log.Info(fmt.Sprintf("[d8][etcd] learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts))
 			return true, nil
 		}
-		log.Infof("[d8][etcd] promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err)
+		log.Info(fmt.Sprintf("[d8][etcd] promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err))
 		lastError = err
 		return false, nil
 	})
 
-	if err == wait.ErrWaitTimeout {
-		log.Errorf("[d8][etcd] failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError)
+	if wait.Interrupted(err) {
+		log.Error(fmt.Sprintf("[d8][etcd] failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError))
 		return lastError
 	}
 	return err
@@ -335,8 +335,8 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Durat
 				return false, nil
 			}
 			if len(etcdEndpoints) == 0 || overallEtcdPodCount != len(etcdEndpoints) {
-				log.Debugf("[d8][etcd] found a total of %d etcd pods and the following endpoints: %v; retrying",
-					overallEtcdPodCount, etcdEndpoints)
+				log.Debug(fmt.Sprintf("[d8][etcd] found a total of %d etcd pods and the following endpoints: %v; retrying",
+					overallEtcdPodCount, etcdEndpoints))
 				return false, nil
 			}
 			return true, nil
@@ -356,7 +356,7 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Durat
 // and "no endpoints found and pods were listed", so they can skip retrying.
 // from kubeadm
 func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int, error) {
-	log.Debugf("[d8][etcd] retrieving etcd endpoints from %q annotation in etcd Pods", EtcdAdvertiseClientUrlsAnnotationKey)
+	log.Debug(fmt.Sprintf("[d8][etcd] retrieving etcd endpoints from %q annotation in etcd Pods", EtcdAdvertiseClientUrlsAnnotationKey))
 	podList, err := config.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(
 		context.TODO(),
 		metav1.ListOptions{
@@ -377,11 +377,11 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int
 			}
 		}
 		if !podIsReady {
-			log.Debugf("[d8][etcd] etcd pod %q is not ready", pod.ObjectMeta.Name)
+			log.Debug(fmt.Sprintf("[d8][etcd] etcd pod %q is not ready", pod.ObjectMeta.Name))
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[EtcdAdvertiseClientUrlsAnnotationKey]
 		if !ok {
-			log.Debugf("[d8][etcd] etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL using the Pod annotation", pod.ObjectMeta.Name, EtcdAdvertiseClientUrlsAnnotationKey)
+			log.Debug(fmt.Sprintf("[d8][etcd] etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL using the Pod annotation", pod.ObjectMeta.Name, EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
 		}
 		etcdEndpoints = append(etcdEndpoints, etcdEndpoint)

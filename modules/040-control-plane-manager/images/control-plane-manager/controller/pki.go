@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -106,11 +107,11 @@ func renewCertificates() error {
 func renewCertificate(componentName, f string) error {
 	path := filepath.Join(kubernetesPkiPath, f+".crt")
 	keyPath := filepath.Join(kubernetesPkiPath, f+".key")
-	log.Infof("generate or renew %s certificate %s", componentName, path)
+	log.Info(fmt.Sprintf("generate or renew %s certificate %s", componentName, path))
 
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
-		log.Infof("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum)
+		log.Info(fmt.Sprintf("configuration has changed since last certificate generation (last applied checksum %s, configuration checksum %s), verifying certificate", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum))
 		if err := prepareCerts(componentName, true); err != nil {
 			return err
 		}
@@ -126,22 +127,22 @@ func renewCertificate(componentName, f string) error {
 		}
 
 		if !certificateSubjectAndSansIsEqual(currentCert, tmpCert) {
-			log.Infof("certificate %s subject or sans has been changed", path)
+			log.Info(fmt.Sprintf("certificate %s subject or sans has been changed", path))
 			remove = true
 		}
 
 		if !certificateEncAndLengthIsEqual(currentCert, tmpCert) {
-			log.Infof("certificate %s encryption or length has been changed", path)
+			log.Info(fmt.Sprintf("certificate %s encryption or length has been changed", path))
 			remove = true
 		}
 
 		if certificateExpiresSoon(currentCert, 30*24*time.Hour) {
-			log.Infof("certificate %s is expiring in less than 30 days", path)
+			log.Info(fmt.Sprintf("certificate %s is expiring in less than 30 days", path))
 			remove = true
 		}
 
 		if _, err := os.Stat(keyPath); err != nil {
-			log.Infof("certificate %s exists, but no appropriate key %s is found", path, keyPath)
+			log.Info(fmt.Sprintf("certificate %s exists, but no appropriate key %s is found", path, keyPath))
 			remove = true
 		}
 
@@ -156,7 +157,7 @@ func renewCertificate(componentName, f string) error {
 	}
 
 	if _, err := os.Stat(path); err == nil {
-		log.Infof("%s certificate is up to date", path)
+		log.Info(fmt.Sprintf("%s certificate is up to date", path))
 		return nil
 	}
 	// regenerate certificate
@@ -185,7 +186,7 @@ func certificateSubjectAndSansIsEqual(a, b *x509.Certificate) bool {
 }
 
 func fillTmpDirWithPKIData() error {
-	log.Infof("phase: fill tmp dir %s with pki data", config.TmpPath)
+	log.Info(fmt.Sprintf("phase: fill tmp dir %s with pki data", config.TmpPath))
 
 	if err := os.RemoveAll(config.TmpPath); err != nil {
 		return err
@@ -268,7 +269,7 @@ func prepareCerts(componentName string, isTemp bool) error {
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info(s)
 	}
 	return err
 }

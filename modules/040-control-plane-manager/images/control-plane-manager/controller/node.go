@@ -26,7 +26,7 @@ import (
 )
 
 func annotateNode() error {
-	log.Infof("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation)
+	log.Info(fmt.Sprintf("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation))
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func annotateNode() error {
 
 	if _, ok := node.Annotations[approvedAnnotation]; ok {
 		// node already approved, no need to annotate
-		log.Infof("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation)
+		log.Info(fmt.Sprintf("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation))
 		return nil
 	}
 
@@ -45,9 +45,9 @@ func annotateNode() error {
 }
 
 func waitNodeApproval() error {
-	log.Infof("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation)
+	log.Info(fmt.Sprintf("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation))
 
-	log.Infof("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName)
+	log.Info(fmt.Sprintf("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName))
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
