@@ -112,7 +112,7 @@ func init() {
 		}
 
 		if requirementValue == "true" && hasUnsupportedContainerdV1 {
-			return false, errors.New("has unsupported containerd v1, see clusteralerts for details")
+			return false, errors.New("has nodes with unsupported containerd version (v1.x), see clusteralerts for details")
 		}
 
 		return true, nil
