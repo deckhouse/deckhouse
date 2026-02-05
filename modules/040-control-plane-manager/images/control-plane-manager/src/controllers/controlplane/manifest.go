@@ -31,6 +31,7 @@ import (
 type ManifestGenerator interface {
 	GenerateManifest(componentName string, tmpDir string) ([]byte, error)
 	GenerateCertificates(componentName string, tmpDir string) error
+	GenerateKubeconfigs(tmpDir string) error
 }
 
 type KubeadmManifestGenerator struct{}
@@ -43,6 +44,11 @@ func (g *KubeadmManifestGenerator) GenerateManifest(componentName string, tmpDir
 // GenerateCertificates generates certificates for components using kubeadm init phase certs.
 func (g *KubeadmManifestGenerator) GenerateCertificates(componentName string, tmpDir string) error {
 	return generateTmpCertificatesWithKubeadm(componentName, tmpDir)
+}
+
+// GenerateKubeconfigs generates kubeconfig files for control-plane components using kubeadm init phase kubeconfig.
+func (g *KubeadmManifestGenerator) GenerateKubeconfigs(tmpDir string) error {
+	return generateTmpKubeconfigsWithKubeadm(tmpDir)
 }
 
 // generateTmpManifestWithKubeadm generates manifest for component using kubeadm init phase to "tmp directory + etc/kubernetes/manifests".
@@ -96,6 +102,24 @@ func generateTmpCertificatesWithKubeadm(componentName string, tmpDir string) err
 			if err := runKubeadmCommand(args, fmt.Sprintf("generate certificate %s", certName)); err != nil {
 				return err
 			}
+		}
+	}
+
+	return nil
+}
+
+// generateTmpKubeconfigsWithKubeadm generates kubeconfig files for control-plane components.
+// This is needed to generate controller-manager.conf and scheduler.conf files in tmpDir
+// before calculating checksums, as these files are referenced in component manifests.
+func generateTmpKubeconfigsWithKubeadm(tmpDir string) error {
+	configPath := filepath.Join("/", constants.RelativeKubeadmDir, "config.yaml")
+
+	// Generate kubeconfigs for controller-manager and scheduler, other not needed because they are not referenced in control-plane manifests.
+	// For real node-operation-controller should generate super-admin.conf/kubelet.conf/admin.conf too.
+	for _, componentName := range []string{"controller-manager", "scheduler"} {
+		args := []string{"init", "phase", "kubeconfig", componentName, "--config", configPath, "--rootfs", tmpDir}
+		if err := runKubeadmCommand(args, fmt.Sprintf("generate kubeconfig for %s", componentName)); err != nil {
+			return err
 		}
 	}
 

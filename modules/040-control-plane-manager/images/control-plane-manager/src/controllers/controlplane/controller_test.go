@@ -116,6 +116,24 @@ spec:
 `, componentName, componentName, componentName)), nil
 }
 
+func (m *mockManifestGenerator) GenerateKubeconfigs(tmpDir string) error {
+	kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
+	if err := os.MkdirAll(kubernetesDir, 0o700); err != nil {
+		return err
+	}
+	
+	// Generate mock kubeconfig files for controller-manager and scheduler
+	for _, component := range []string{"controller-manager", "scheduler"} {
+		kubeconfigPath := filepath.Join(kubernetesDir, component+".conf")
+		mockKubeconfig := []byte(fmt.Sprintf("# Mock kubeconfig for %s\napiVersion: v1\nkind: Config\n", component))
+		if err := os.WriteFile(kubeconfigPath, mockKubeconfig, 0o600); err != nil {
+			return err
+		}
+	}
+	
+	return nil
+}
+
 func (m *mockManifestGenerator) GenerateCertificates(componentName string, tmpDir string) error {
 	pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
 	etcdPkiDir := filepath.Join(pkiDir, "etcd")
@@ -577,6 +595,41 @@ func (suite *ControllerTestSuite) TestCertificateGeneration() {
 		require.NoError(suite.T(), err, "kube-scheduler should not fail even without certs")
 
 		suite.T().Log("All certificate generation tests passed")
+	})
+}
+
+func (suite *ControllerTestSuite) TestGenerateKubeconfigs() {
+	suite.Run("TestGenerateKubeconfigs", func() {
+		generator := &mockManifestGenerator{}
+		
+		tmpDir, err := os.MkdirTemp("", "kubeconfig-test-")
+		require.NoError(suite.T(), err)
+		defer os.RemoveAll(tmpDir)
+
+		err = generator.GenerateKubeconfigs(tmpDir)
+		require.NoError(suite.T(), err)
+		
+		kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
+		
+		// Verify controller-manager.conf was created
+		controllerManagerConf := filepath.Join(kubernetesDir, "controller-manager.conf")
+		_, err = os.Stat(controllerManagerConf)
+		require.NoError(suite.T(), err, "controller-manager.conf should exist")
+		
+		content, err := os.ReadFile(controllerManagerConf)
+		require.NoError(suite.T(), err)
+		require.Contains(suite.T(), string(content), "controller-manager", "controller-manager.conf should contain reference")
+		
+		// Verify scheduler.conf was created
+		schedulerConf := filepath.Join(kubernetesDir, "scheduler.conf")
+		_, err = os.Stat(schedulerConf)
+		require.NoError(suite.T(), err, "scheduler.conf should exist")
+		
+		content, err = os.ReadFile(schedulerConf)
+		require.NoError(suite.T(), err)
+		require.Contains(suite.T(), string(content), "scheduler", "scheduler.conf should contain reference")
+		
+		suite.T().Log("Kubeconfig generation test passed")
 	})
 }
 
