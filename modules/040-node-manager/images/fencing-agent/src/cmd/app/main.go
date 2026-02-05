@@ -42,6 +42,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const (
+	Dryrun   = "Dryrun"
+	Watchdog = "Watchdog"
+)
+
 func main() {
 	var cfg config.Config
 	cfg.MustLoad()
@@ -107,24 +112,28 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	mblist.BroadcastNodesNumber(totalNodes)
 
 	// -------- clear mblist functionality over -------
+	if cfg.FencingMode == Watchdog {
+		log.Info("Watchdog enabled, starting health monitor")
+		softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
 
-	softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
+		fencingAgent := usecase.NewHealthMonitor(
+			kubeClient,
+			kubeClient,
+			mblist,
+			softdog,
+			quorumDecider,
+			kubeClient,
+			log,
+		)
 
-	fencingAgent := usecase.NewHealthMonitor(
-		kubeClient,
-		kubeClient,
-		mblist,
-		softdog,
-		quorumDecider,
-		kubeClient,
-		log,
-	)
-
-	err = fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
-	if err != nil {
-		return fmt.Errorf("failed to start health monitor: %w", err)
+		err = fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
+		if err != nil {
+			return fmt.Errorf("failed to start health monitor: %w", err)
+		}
+		defer fencingAgent.Stop()
+	} else {
+		log.Info("Dryrun mode enabled, no fencing will be performed")
 	}
-	// defer fencingAgent.Stop()
 
 	// ------- clear fencingAgent functionality over -------
 

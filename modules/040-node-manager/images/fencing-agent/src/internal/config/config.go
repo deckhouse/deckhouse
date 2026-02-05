@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	FencingMode            string `env:"FENCING_MODE" env-required:"true"`
 	HealthProbeBindAddress string `env:"HEALTH_PROBE_BIND_ADDRESS"  env-default:":8081"`
 	NodeName               string `env:"NODE_NAME" env-required:"true"`
 	NodeGroup              string `env:"NODE_GROUP" env-required:"true"`
@@ -59,6 +60,10 @@ func (c *Config) validate() error {
 func (c *Config) validateCommon() error {
 	if strings.TrimSpace(c.NodeName) == "" {
 		return errors.New("NODE_NAME is empty")
+	}
+
+	if strings.TrimSpace(c.FencingMode) == "" {
+		return errors.New("FENCING_MODE is empty")
 	}
 
 	if strings.TrimSpace(c.NodeGroup) == "" {
