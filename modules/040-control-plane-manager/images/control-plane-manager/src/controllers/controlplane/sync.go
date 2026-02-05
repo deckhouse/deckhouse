@@ -19,9 +19,11 @@ package controlplane
 import (
 	"control-plane-manager/pkg/constants"
 	"fmt"
+	"k8s.io/klog/v2"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
@@ -31,11 +33,12 @@ import (
 // syncSecretToTmp syncs secret data to tmp directory in control-plane-manager pod in specify folders for manifests, patches, extra files and pki.
 func syncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
+	etcdPkiDir := filepath.Join(pkiDir, "etcd")
 	kubeadmDir := filepath.Join(tmpDir, constants.RelativeKubeadmDir)
 	patchesDir := filepath.Join(tmpDir, constants.RelativePatchesDir)
 	extraFilesDir := filepath.Join(tmpDir, constants.RelativeExtraFilesDir)
 
-	if err := os.MkdirAll(pkiDir, 0o700); err != nil {
+	if err := os.MkdirAll(etcdPkiDir, 0o700); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(patchesDir, 0o700); err != nil {
@@ -79,8 +82,16 @@ func syncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 			}
 
 		case secret.Name == constants.PkiSecretName:
+			var filePath string
+			if strings.HasPrefix(key, "etcd-") {
+				name := strings.TrimPrefix(key, "etcd-")
+				filePath = filepath.Join(etcdPkiDir, name)
+			} else {
+				filePath = filepath.Join(pkiDir, key)
+			}
+
 			if err := os.WriteFile(
-				filepath.Join(pkiDir, key),
+				filePath,
 				content,
 				0o600,
 			); err != nil {
@@ -114,7 +125,7 @@ func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *
 
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	checksums := make(map[string]string)
-
+	start := time.Now()
 	for _, component := range components {
 		manifest, err := generator.GenerateManifest(component, tmpDir)
 		if err != nil {
@@ -128,6 +139,7 @@ func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *
 
 		checksums[component] = checksum
 	}
+	klog.Infof("Calculated component checksums in %v\n", time.Since(start))
 	return &controlplanev1alpha1.ControlPlaneConfiguration{
 		ObjectMeta: ctrl.ObjectMeta{
 			Name: constants.ControlPlaneConfigurationName,
