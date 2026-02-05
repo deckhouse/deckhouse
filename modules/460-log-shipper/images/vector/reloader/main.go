@@ -213,7 +213,7 @@ func main() {
 			Handler:           mux,
 		}
 
-		server.ListenAndServe()
+		_ = server.ListenAndServe()
 	}()
 
 	cleanLocks()
@@ -236,6 +236,7 @@ func main() {
 
 	err = watcher.Add(sampleConfigPath)
 	if err != nil {
+		watcher.Close()
 		log.Fatal(err)
 	}
 
@@ -250,8 +251,7 @@ func main() {
 				if err := watcher.Add(event.Name); err != nil {
 					log.Fatal(err)
 				}
-				switch event.Name {
-				case sampleConfigPath:
+				if event.Name == sampleConfigPath {
 					reloadOnce()
 				}
 			}
