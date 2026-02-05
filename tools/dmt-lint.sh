@@ -57,6 +57,56 @@ function install_dmt() {
 
 }
 
+function install_yq() {
+  # Copy yq from the mounted source directory
+  # Resolve symlink to get the actual binary file
+  if [ -L /deckhouse-src/bin/yq ]; then
+    # Follow the symlink and copy the actual file
+    local yq_target=$(readlink -f /deckhouse-src/bin/yq)
+    if [ -f "$yq_target" ]; then
+      cp "$yq_target" /usr/local/bin/yq
+      chmod +x /usr/local/bin/yq
+    else
+      echo "Warning: yq symlink target not found: $yq_target"
+    fi
+  elif [ -f /deckhouse-src/bin/yq ]; then
+    # yq is a regular file, just copy it
+    cp /deckhouse-src/bin/yq /usr/local/bin/yq
+    chmod +x /usr/local/bin/yq
+  else
+    echo "Warning: yq not found in /deckhouse-src/bin/"
+  fi
+}
+
+function copy_with_yaml_merge {
+  local src="$1"
+  local dst="$2"
+  
+  # If source is a directory, recursively copy its contents
+  if [ -d "$src" ]; then
+    mkdir -p "$dst"
+    for item in "$src"/*; do
+      [ -e "$item" ] || continue
+      local basename=$(basename "$item")
+      copy_with_yaml_merge "$item" "$dst/$basename"
+    done
+    return
+  fi
+  
+  # If destination exists and both files are oss.yaml, merge them
+  if [ -f "$dst" ] && [ "$(basename "$src")" = "oss.yaml" ]; then
+    echo "Merging oss.yaml: $src -> $dst"
+    local temp_file=$(mktemp)
+    # Concatenate YAML arrays - both files are array types
+    yq eval-all '. as $item | $item | flatten' "$dst" "$src" > "$temp_file"
+    mv "$temp_file" "$dst"
+  else
+    # Otherwise just copy
+    mkdir -p "$(dirname "$dst")"
+    cp -f "$src" "$dst"
+  fi
+}
+
 function structure_prepare {
   modules_dir=("ee/modules" "ee/be/modules" "ee/fe/modules" "ee/se/modules" "ee/se-plus/modules")
   cloud_providers_glob="030-cloud-provider-*"
@@ -78,6 +128,7 @@ function structure_prepare {
 
 apt update > /dev/null
 apt install curl -y > /dev/null
+install_yq
 structure_prepare
 install_dmt
 dmt lint -l INFO /deckhouse/modules
