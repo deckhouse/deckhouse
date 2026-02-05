@@ -81,9 +81,12 @@ func New(cfg Config,
 	return client, nil
 }
 
-func (p *Client) Start(ctx context.Context) {
+func (p *Client) Start(ctx context.Context) error {
 	p.logger.Info("starting kubeclient node informer")
-	p.startInformer(ctx)
+	if err := p.startInformer(ctx); err != nil {
+		return fmt.Errorf("failed to start node informer: %w", err)
+	}
+	return nil
 }
 
 func (p *Client) Stop() {
@@ -194,7 +197,7 @@ func buildConfig(kubeconfigPath string) (*rest.Config, error) {
 		&clientcmd.ConfigOverrides{ClusterInfo: clientcmdapi.Cluster{Server: ""}}).ClientConfig()
 }
 
-func (p *Client) startInformer(ctx context.Context) {
+func (p *Client) startInformer(ctx context.Context) error {
 
 	p.informerFactory = informers.NewSharedInformerFactory(p.client, 30*time.Second)
 
@@ -229,14 +232,13 @@ func (p *Client) startInformer(ctx context.Context) {
 				return
 			}
 			if node.Name == p.nodeName {
-				p.logger.Warn("Current node deleted from cluster")
+				p.logger.Warn("current node deleted from cluster")
 			}
 		},
 	})
 
 	if err != nil {
-		p.logger.Error("Failed to add event handler to node informer", sl.Err(err))
-		return
+		return fmt.Errorf("failed to add event handler to node informer: %w", err)
 	}
 
 	p.informerStopCh = make(chan struct{})
@@ -244,10 +246,10 @@ func (p *Client) startInformer(ctx context.Context) {
 	p.informerFactory.Start(p.informerStopCh)
 
 	if !cache.WaitForCacheSync(ctx.Done(), nodeInformer.HasSynced) {
-		p.logger.Error("Failed to sync node informer cache")
-		return
+		return fmt.Errorf("failed to sync node informer cache")
 	}
 	p.logger.Info("Node informer cache synced successfully")
+	return nil
 }
 
 func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
