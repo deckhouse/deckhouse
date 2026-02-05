@@ -71,3 +71,9 @@ This patch fixes:
 ### 011-provide-custom-CA-to-gitlab-connector.patch
 
 This patch allows Gitlab connector to use custom CA for HTTPS connections.
+
+### 012-forced-password-change.patch
+
+This patch adds a forced password change flag (`requireResetHashOnNextSuccLogin`) for local users.
+The flag can be set externally (e.g. by a controller). After a successful login, the user is redirected to the password change page.
+The flag is reset on successful password change.
