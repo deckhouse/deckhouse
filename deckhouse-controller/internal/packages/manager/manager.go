@@ -189,7 +189,7 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run on startup hooks", slog.String("name", name))
 
-	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newStartupHookErr(err)
 	}
@@ -230,7 +230,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run before helm hooks", slog.String("name", name))
 
-	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newBeforeHelmHookErr(err)
 	}
@@ -246,7 +246,7 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
-	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newAfterHelmHookErr(err)
 	}
@@ -300,7 +300,7 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 		m.logger.Debug("run after delete helm hooks", slog.String("name", name))
 
 		// Run after delete helm hooks
-		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
+		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m.kubeObjectPatcher); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run after delete helm hooks: %w", err)
 		}

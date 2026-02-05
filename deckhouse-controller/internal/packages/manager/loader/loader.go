@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	shapp "github.com/flant/shell-operator/pkg/app"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -32,6 +31,9 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
+	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -48,11 +50,11 @@ var (
 
 // LoadAppConf loads an application package from the filesystem based on the instance specification.
 // It performs the following steps:
-//  1. Validates package and version directories exist
-//  2. Loads package definition (package.yaml) - currently not used
+//  1. Validates package directory exists
+//  2. Loads package definition (package.yaml)
 //  3. Loads values (static values.yaml and OpenAPI schemas)
-//  4. Discovers and loads hooks (shell and batch)
-//  5. Creates and returns an Application instance
+//  4. Discovers and loads hooks
+//  5. Creates and returns an Application config
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
 func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.Config, error) {
@@ -71,7 +73,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 	}
 
 	// Load package definition (package.yaml)
-	def, err := loadDefinition(appDir)
+	def, err := loadPackageDefinition(ctx, appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
@@ -93,8 +95,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 	}
 
 	// Discover and load hooks (shell and batch)
-	hooksLoader := newHookLoader(splits[0], splits[1], appDir, shapp.DebugKeepTmpFiles, logger)
-	hooks, err := hooksLoader.load(ctx)
+	hooks, err := loadAppHooks(ctx, splits[0], splits[1], appDir, logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load hooks: %w", err)
@@ -122,25 +123,157 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 		ConfigSchema: config,
 		ValuesSchema: values,
 
-		Hooks: hooks,
+		Hooks: hooks.hooks,
 
-		SettingsCheck: hooksLoader.settingsCheck,
+		SettingsCheck: hooks.settingsCheck,
 	}, nil
 }
 
-// loadDefinition reads and parses the package.yaml file from the package directory.
+// LoadModuleConf loads a module package from the filesystem based on the instance specification.
+// It performs the following steps:
+//  1. Validates package directory exists
+//  2. Loads package definition (module.yaml)
+//  3. Loads values (static values.yaml and OpenAPI schemas)
+//  4. Discovers and loads hooks
+//  5. Creates and returns a Module config
+//
+// Returns ErrPackageNotFound if package directory doesn't exist.
+func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", moduleDir))
+
+	logger = logger.With(slog.String("path", moduleDir))
+
+	logger.Debug("load module from directory", slog.String("path", moduleDir))
+
+	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
+		return nil, ErrPackageNotFound
+	}
+
+	// Load package definition (package.yaml/module.yaml)
+	def, err := loadPackageDefinition(ctx, moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
+	}
+
+	// Load values from values.yaml and openapi schemas
+	static, config, values, err := loadValues(def.Name, moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load values: %w", err)
+	}
+
+	packageName := filepath.Base(moduleDir)
+
+	// Discover and load hooks (shell and batch)
+	hooks, err := loadModuleHooks(ctx, packageName, moduleDir, logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+
+	moduleDef, err := def.ToModule()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("convert module definition: %w", err)
+	}
+
+	digests, err := loadDigests(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
+	return &modules.Config{
+		Path:       moduleDir,
+		Definition: moduleDef,
+
+		Digests: digests,
+
+		StaticValues: static,
+		ConfigSchema: config,
+		ValuesSchema: values,
+
+		Hooks: hooks.hooks,
+
+		SettingsCheck: hooks.settingsCheck,
+	}, nil
+}
+
+// loadPackageDefinition reads and parses the package.yaml file from the package directory.
 // It validates YAML structure but doesn't validate content.
 //
 // Returns the parsed Definition or an error if reading or parsing fails.
-func loadDefinition(packageDir string) (*dto.Definition, error) {
+func loadPackageDefinition(ctx context.Context, packageDir string) (*dto.Definition, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
+
+	content, err := os.ReadFile(definitionPath)
+	if err == nil {
+		def := new(dto.Definition)
+		if err = yaml.Unmarshal(content, def); err != nil {
+			return nil, fmt.Errorf("unmarshal file '%s': %w", definitionPath, err)
+		}
+
+		return def, nil
+	}
+
+	if !os.IsNotExist(err) {
+		return nil, fmt.Errorf("read file '%s': %w", definitionPath, err)
+	}
+
+	def, err := loadModuleDefinition(packageDir)
+	if err != nil {
+		return nil, fmt.Errorf("load module definition: %w", err)
+	}
+
+	// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
+	version, err := getModuleVersion(ctx, packageDir)
+	if err != nil {
+		return nil, fmt.Errorf("load module version: %w", err)
+	}
+
+	return &dto.Definition{
+		Name:    def.Name,
+		Type:    "Module",
+		Version: version,
+		Stage:   def.Stage,
+		Descriptions: dto.Descriptions{
+			Ru: def.Descriptions.Ru,
+			En: def.Descriptions.En,
+		},
+		Requirements: dto.Requirements{
+			Kubernetes: def.Requirements.Kubernetes,
+			Deckhouse:  def.Requirements.Deckhouse,
+		},
+		DisableOptions: dto.DisableOptions{
+			Confirmation: def.DisableOptions.Confirmation,
+			Message:      def.DisableOptions.Message,
+		},
+		Module: dto.DefinitionModule{
+			Weight:   int(def.Weight),
+			Critical: def.Critical,
+		},
+	}, nil
+}
+
+// loadModuleDefinition reads and parses the module.yaml file from the package directory.
+// It validates YAML structure but doesn't validate content.
+//
+// Returns the parsed Definition or an error if reading or parsing fails.
+// TODO(ipaqsa): get rid of it when all modules migrated to package.yaml
+func loadModuleDefinition(packageDir string) (*moduletypes.Definition, error) {
+	definitionPath := filepath.Join(packageDir, moduletypes.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
 	if err != nil {
 		return nil, fmt.Errorf("read definition file '%s': %w", definitionPath, err)
 	}
 
-	def := new(dto.Definition)
+	def := new(moduletypes.Definition)
 	if err = yaml.Unmarshal(content, def); err != nil {
 		return nil, fmt.Errorf("unmarshal file '%s': %w", definitionPath, err)
 	}
@@ -168,4 +301,21 @@ func loadDigests(packageDir string) (map[string]string, error) {
 	}
 
 	return digests, nil
+}
+
+// getModuleVersion returns the version of the package at moduleDir.
+// With dm-verity, the version is extracted from the device status.
+// Without dm-verity, the version is derived from the symlink target directory name.
+func getModuleVersion(ctx context.Context, moduleDir string) (string, error) {
+	if verity.IsSupported() {
+		return verity.GetVersionByDevice(ctx, filepath.Base(moduleDir))
+	}
+
+	// resolve symlink to get the versioned directory name
+	target, err := os.Readlink(moduleDir)
+	if err != nil {
+		return "", fmt.Errorf("readlink '%s': %w", moduleDir, err)
+	}
+
+	return filepath.Base(target), nil
 }

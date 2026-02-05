@@ -1,4 +1,4 @@
-// Copyright 2025 Flant JSC
+// Copyright 2026 Flant JSC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package apps provides the Application type representing a running package instance.
-// It manages hooks, values, and execution lifecycle for a single application.
-package apps
+package modules
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	"github.com/flant/addon-operator/pkg"
 	"github.com/flant/addon-operator/pkg/hook/types"
@@ -42,32 +39,30 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
-// Application represents a running instance of a package.
+// Module represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
 //
-// Thread Safety: The Application itself is not thread-safe, but its hooks and values
+// Thread Safety: The Module itself is not thread-safe, but its hooks and values
 // storage components use internal synchronization.
-type Application struct {
-	name      string // Package name(namespace.name)
-	instance  string // Application instance name
-	namespace string // Application instance namespace
-	path      string // path to the package dir on fs
+type Module struct {
+	name string // Package name
+	path string // path to the package dir on fs
 
-	definition Definition        // Application definition
+	definition Definition        // Module definition
 	digests    map[string]string // Package digests
-	repository registry.Remote   // Application repository
+	repository registry.Remote   // Module repository
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
-// Config holds configuration for creating a new Application instance.
+// Config holds configuration for creating a new Module instance.
 type Config struct {
 	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
 
-	Definition Definition // Application definition
+	Definition Definition // Module definition
 
 	Digests    map[string]string // Package images digests(images_digests.json)
 	Repository registry.Remote   // Package repository options
@@ -80,46 +75,38 @@ type Config struct {
 	SettingsCheck *kind.SettingsCheck
 }
 
-// NewAppByConfig creates a new Application instance with the specified configuration.
+// NewModuleByConfig creates a new Module instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewAppByConfig(name string, cfg *Config) (*Application, error) {
-	a := new(Application)
+func NewModuleByConfig(name string, cfg *Config) (*Module, error) {
+	m := new(Module)
 
-	splits := strings.Split(name, ".")
-	if len(splits) != 2 {
-		return nil, fmt.Errorf("invalid application name: %s", name)
-	}
+	m.name = name
 
-	a.namespace = splits[0]
-	a.instance = splits[1]
+	m.path = cfg.Path
+	m.definition = cfg.Definition
+	m.digests = cfg.Digests
+	m.repository = cfg.Repository
+	m.settingsCheck = cfg.SettingsCheck
 
-	a.name = name
-
-	a.path = cfg.Path
-	a.definition = cfg.Definition
-	a.digests = cfg.Digests
-	a.repository = cfg.Repository
-	a.settingsCheck = cfg.SettingsCheck
-
-	a.hooks = hooks.NewStorage()
-	if err := a.addHooks(cfg.Hooks...); err != nil {
+	m.hooks = hooks.NewStorage()
+	if err := m.addHooks(cfg.Hooks...); err != nil {
 		return nil, fmt.Errorf("add hooks: %v", err)
 	}
 
 	var err error
-	a.values, err = values.NewStorage(a.definition.Name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
+	m.values, err = values.NewStorage(m.name, cfg.StaticValues, cfg.ConfigSchema, cfg.ValuesSchema)
 	if err != nil {
 		return nil, fmt.Errorf("new values storage: %v", err)
 	}
 
-	return a, nil
+	return m, nil
 }
 
-// addHooks initializes and adds hooks to the application's hook storage.
+// addHooks initializes and adds hooks to the module's hook storage.
 // For each hook, it initializes the configuration and sets up logging/metrics labels.
-func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
+func (m *Module) addHooks(found ...*addonhooks.ModuleHook) error {
 	for _, hook := range found {
 		if err := hook.InitializeHookConfig(); err != nil {
 			return fmt.Errorf("initialize hook configuration: %w", err)
@@ -138,7 +125,7 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 			}
 		}
 
-		a.hooks.Add(hook)
+		m.hooks.Add(hook)
 	}
 
 	return nil
@@ -147,90 +134,74 @@ func (a *Application) addHooks(found ...*addonhooks.ModuleHook) error {
 // RuntimeValues holds runtime values that are not part of schema.
 // These values are passed to helm templates under .Runtime prefix.
 type RuntimeValues struct {
-	Instance addonutils.Values
-	Package  addonutils.Values
+	Package addonutils.Values
 }
 
 // GetRuntimeValues returns values that are not part of schema.
 // Instance contains name and namespace of the running instance.
 // Package contains package metadata (name, version, digests, registry).
-func (a *Application) GetRuntimeValues() RuntimeValues {
+func (m *Module) GetRuntimeValues() RuntimeValues {
 	return RuntimeValues{
-		Instance: addonutils.Values{
-			"Name":      a.instance,
-			"Namespace": a.namespace,
-		},
 		Package: addonutils.Values{
-			"Name":     a.definition.Name,
-			"Digests":  a.digests,
-			"Registry": a.repository,
-			"Version":  a.definition.Version,
+			"Name":     m.definition.Name,
+			"Digests":  m.digests,
+			"Registry": m.repository,
+			"Version":  m.definition.Version,
 		},
 	}
 }
 
 // GetExtraNelmValues returns runtime values in string format
-func (a *Application) GetExtraNelmValues() string {
-	runtimeValues := a.GetRuntimeValues()
-	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
+func (m *Module) GetExtraNelmValues() string {
+	runtimeValues := m.GetRuntimeValues()
 	packageJSON, _ := json.Marshal(runtimeValues.Package)
 
-	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
+	return fmt.Sprintf("Package=%s", packageJSON)
 }
 
-// GetName returns the full application identifier in format "namespace.name".
-func (a *Application) GetName() string {
-	return a.name
-}
-
-// BuildName returns the full application identifier in format "namespace.name".
-func BuildName(namespace, name string) string {
-	return fmt.Sprintf("%s.%s", namespace, name)
-}
-
-// GetNamespace returns the application namespace.
-func (a *Application) GetNamespace() string {
-	return a.namespace
+// GetName returns the full module identifier.
+func (m *Module) GetName() string {
+	return m.name
 }
 
 // GetVersion return the package version
-func (a *Application) GetVersion() string {
-	return a.definition.Version
+func (m *Module) GetVersion() string {
+	return m.definition.Version
 }
 
 // GetPath returns path to the package dir
-func (a *Application) GetPath() string {
-	return a.path
+func (m *Module) GetPath() string {
+	return m.path
 }
 
 // GetValuesChecksum returns a checksum of the current values.
 // Used to detect if values changed after hook execution.
-func (a *Application) GetValuesChecksum() string {
-	return a.values.GetValuesChecksum()
+func (m *Module) GetValuesChecksum() string {
+	return m.values.GetValuesChecksum()
 }
 
 // GetSettingsChecksum returns a checksum of the current config values.
 // Used to detect if settings changed.
-func (a *Application) GetSettingsChecksum() string {
-	return a.values.GetConfigChecksum()
+func (m *Module) GetSettingsChecksum() string {
+	return m.values.GetConfigChecksum()
 }
 
 // ValidateSettings validates settings against openAPI and call setting check if exists
-func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
-	if err := a.values.ValidateConfigValues(settings); err != nil {
+func (m *Module) ValidateSettings(ctx context.Context, settings addonutils.Values) (settingscheck.Result, error) {
+	if err := m.values.ValidateConfigValues(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
 	// apply defaults from config values spec
-	settings = a.values.ApplyDefaultsConfigValues(settings)
+	settings = m.values.ApplyDefaultsConfigValues(settings)
 
 	// no need to call the settings check if nothing changed
-	if a.values.GetConfigChecksum() == settings.Checksum() {
+	if m.values.GetConfigChecksum() == settings.Checksum() {
 		return settingscheck.Result{Valid: true}, nil
 	}
 
-	if a.settingsCheck != nil {
-		return a.settingsCheck.Check(ctx, settings)
+	if m.settingsCheck != nil {
+		return m.settingsCheck.Check(ctx, settings)
 	}
 
 	return settingscheck.Result{
@@ -239,28 +210,28 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 }
 
 // GetValues returns values for rendering
-func (a *Application) GetValues() addonutils.Values {
-	return a.values.GetValues()
+func (m *Module) GetValues() addonutils.Values {
+	return m.values.GetValues()
 }
 
-// ApplySettings apply setting values to application
-func (a *Application) ApplySettings(settings addonutils.Values) error {
-	return a.values.ApplyConfigValues(settings)
+// ApplySettings apply settings values
+func (m *Module) ApplySettings(settings addonutils.Values) error {
+	return m.values.ApplyConfigValues(settings)
 }
 
 // GetChecks return scheduler checks, their determine if an app should be enabled/disabled
-func (a *Application) GetChecks() schedule.Checks {
-	return a.definition.Requirements.Checks()
+func (m *Module) GetChecks() schedule.Checks {
+	return m.definition.Requirements.Checks()
 }
 
-// GetHooks returns all hooks for this application in arbitrary order.
-func (a *Application) GetHooks() []*addonhooks.ModuleHook {
-	return a.hooks.GetHooks()
+// GetHooks returns all hooks for this module in arbitrary order.
+func (m *Module) GetHooks() []*addonhooks.ModuleHook {
+	return m.hooks.GetHooks()
 }
 
 // UnlockKubernetesMonitors called after sync task is completed to unlock getting events
-func (a *Application) UnlockKubernetesMonitors(hook string, monitors ...string) {
-	h := a.hooks.GetHookByName(hook)
+func (m *Module) UnlockKubernetesMonitors(hook string, monitors ...string) {
+	h := m.hooks.GetHookByName(hook)
 	if h == nil {
 		return
 	}
@@ -271,30 +242,30 @@ func (a *Application) UnlockKubernetesMonitors(hook string, monitors ...string) 
 }
 
 // GetHooksByBinding returns all hooks for the specified binding type, sorted by order.
-func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook {
-	return a.hooks.GetHooksByBinding(binding)
+func (m *Module) GetHooksByBinding(binding shtypes.BindingType) []*addonhooks.ModuleHook {
+	return m.hooks.GetHooksByBinding(binding)
 }
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
 // It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
-func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType, patcher *objectpatch.ObjectPatcher) error {
-	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHooksByBinding")
+func (m *Module) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType, patcher *objectpatch.ObjectPatcher) error {
+	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
-	for _, hook := range a.hooks.GetHooksByBinding(binding) {
+	for _, hook := range m.hooks.GetHooksByBinding(binding) {
 		bc := bctx.BindingContext{
 			Binding: string(binding),
 		}
-		// Update kubernetes snapshots just before execute a hook
+		// Update kubernetes snapshots just before execute m hook
 		if binding == types.BeforeHelm || binding == types.AfterHelm || binding == types.AfterDeleteHelm {
 			bc.Snapshots = hook.GetHookController().KubernetesSnapshots()
 			bc.Metadata.IncludeAllSnapshots = true
 		}
 		bc.Metadata.BindingType = binding
 
-		if err := a.runHook(ctx, hook, []bctx.BindingContext{bc}, patcher); err != nil {
+		if err := m.runHook(ctx, hook, []bctx.BindingContext{bc}, patcher); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
@@ -305,21 +276,21 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 
 // RunHookByName executes a specific hook by name with the provided binding context.
 // Returns nil if hook is not found (silent no-op).
-func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
-	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHookByName")
+func (m *Module) RunHookByName(ctx context.Context, name string, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
+	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "RunHookByName")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", name))
 
-	hook := a.hooks.GetHookByName(name)
+	hook := m.hooks.GetHookByName(name)
 	if hook == nil {
 		return nil
 	}
 
-	// Update kubernetes snapshots just before execute a hook
+	// Update kubernetes snapshots just before execute m hook
 	bctx = hook.GetHookController().UpdateSnapshots(bctx)
 
-	return a.runHook(ctx, hook, bctx, patcher)
+	return m.runHook(ctx, hook, bctx, patcher)
 }
 
 // runHook executes a single hook with the specified binding context.
@@ -331,19 +302,19 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bct
 //  3. Apply Kubernetes object patches (even if hook fails)
 //  4. Apply values patches to storage
 //
-// Returns error if hook execution or patch application fails.
-func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
-	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
+// Returns error if hook execution or patch fails.
+func (m *Module) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
+	ctx, span := otel.Tracer(m.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("hook", h.GetName()))
-	span.SetAttributes(attribute.String("name", a.GetName()))
+	span.SetAttributes(attribute.String("name", m.GetName()))
 
-	hookConfigValues := a.values.GetConfigValues()
-	hookValues := a.values.GetValues()
+	hookConfigValues := m.values.GetConfigValues()
+	hookValues := m.values.GetValues()
 	hookVersion := h.GetConfigVersion()
 
-	hookResult, err := h.Execute(ctx, hookVersion, bctx, a.GetName(), hookConfigValues, hookValues, make(map[string]string))
+	hookResult, err := h.Execute(ctx, hookVersion, bctx, m.GetName(), hookConfigValues, hookValues, make(map[string]string))
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
@@ -363,7 +334,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	}
 
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
-		if err = a.values.ApplyValuesPatch(*valuesPatch); err != nil {
+		if err = m.values.ApplyValuesPatch(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
 		}
 	}
