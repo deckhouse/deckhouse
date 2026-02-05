@@ -12,3 +12,12 @@ output "node_internal_ip_address" {
 output "kubernetes_data_device_path" {
   value = "/dev/sdb"
 }
+
+data "vsphere_virtual_machine" "master-data" {
+  name   = join("-", [local.prefix, "master", var.nodeIndex])
+  folder = var.providerClusterConfiguration.vmFolderPath
+}
+
+output "master-data" {
+  value = data.vsphere_virtual_machine.master-data
+}
