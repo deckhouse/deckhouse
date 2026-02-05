@@ -240,6 +240,7 @@ func (e *DummyOutputExecutor) Output(ctx context.Context, statePath string, outF
 	return nil, nil
 }
 
+//nolint:prealloc
 func GetActions(ctx context.Context, cmd *exec.Cmd) ([]string, error) {
 	type state struct {
 		ResourceChanges []struct {
@@ -251,7 +252,7 @@ func GetActions(ctx context.Context, cmd *exec.Cmd) ([]string, error) {
 
 	buf := bytes.NewBuffer(make([]byte, 0, 5000))
 	cmd.Stdout = buf
-	actions := make([]string, 0, 5)
+	actions := make([]string, 0)
 
 	if err := cmd.Run(); err != nil {
 		return actions, fmt.Errorf("failed to start terraform: %w", err)
