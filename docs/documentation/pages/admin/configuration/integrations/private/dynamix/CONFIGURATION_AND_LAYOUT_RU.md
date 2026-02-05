@@ -22,7 +22,7 @@ Deckhouse Kubernetes Platform поддерживает две схемы раз�
 apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard
-sshPublicKey: "ssh-ed25519 AAAA"
+sshPublicKey: "<SSH_PUBLIC_KEY>"
 location: dynamix
 account: acc_user
 provider:
