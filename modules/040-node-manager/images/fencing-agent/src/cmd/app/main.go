@@ -20,110 +20,140 @@ import (
 	"context"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
+	"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/controllers/event"
 	"fencing-agent/internal/controllers/grpc"
 	"fencing-agent/internal/controllers/http"
+	"fmt"
+	"os"
 
 	//"fencing-agent/internal/adapters/memberlist"
 	//"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/helper/logger/sl"
-	"fencing-agent/internal/local"
 	"fencing-agent/internal/usecase"
 	"os/signal"
 	"syscall"
 
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/helper/logger"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
-	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	defer cancel()
-
 	var cfg config.Config
 	cfg.MustLoad()
 
+	// logging
 	log := logger.NewLogger(cfg.LogLevel)
 
+	err := AppRun(cfg, log)
+	if err != nil {
+		log.Error("failed to run application", sl.Err(err))
+		os.Exit(1)
+	}
+}
+
+func AppRun(cfg config.Config, log *log.Logger) error {
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	defer cancel()
+
+	// create kubernetes client
 	kubeClient, err := kubeclient.New(cfg.KubeClient, log, cfg.NodeName, cfg.NodeGroup)
 	if err != nil {
-		log.Error("failed to create KubernetesClient", sl.Err(err))
-		panic(err)
+		return fmt.Errorf("failed to create KubernetesAPI client: %w", err)
 	}
+
+	err = kubeClient.Start(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to start KubernetesAPI client: %w", err)
+	}
+	defer kubeClient.Stop()
 
 	ip, err := kubeClient.GetCurrentNodeIP(ctx)
 	if err != nil {
-		log.Error("failed to get current node IP", sl.Err(err))
-		panic(err)
+		return fmt.Errorf("failed to get current node IP: %w", err)
 	}
 	log.Info("current node IP", ip)
 
 	ips, err := kubeClient.GetNodesIP(ctx)
 	if err != nil {
-		log.Error("failed to get nodes IPs", sl.Err(err))
-		panic(err)
+		return fmt.Errorf("failed to get nodes IPs: %w", err)
 	}
+
 	totalNodes := len(ips)
 	log.Info("total nodes", "totalNodes", totalNodes)
 
-	decider := domain.NewQuorumDecider(totalNodes)
+	quorumDecider := domain.NewQuorumDecider(totalNodes)
 
 	eventBus := usecase.NewEventsBus()
+
 	eventHandler := event.NewEventHandler(log, eventBus)
-	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, decider)
-	//mblist, err := local.NewMemberlist(log)
+
+	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, quorumDecider)
 	if err != nil {
-		log.Error("failed to create memberlist", sl.Err(err))
-		panic(err)
+		return fmt.Errorf("failed to create memberlist: %w", err)
 	}
 
+	// always have to start memberlist before all components
 	err = mblist.Start(ips)
 	if err != nil {
-		log.Error("failed to start memberlist", sl.Err(err))
-		panic(err)
+		return fmt.Errorf("failed to start memberlist: %w", err)
 	}
+	defer mblist.Stop()
 
 	mblist.BroadcastNodesNumber(totalNodes)
 
-	//softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
-	var s []byte
-	softdog := local.NewWatchdog(&s)
+	// -------- clear mblist functionality over -------
+
+	softdog := watchdog.New(cfg.Watchdog.WatchdogDevice)
 
 	fencingAgent := usecase.NewHealthMonitor(
 		kubeClient,
 		kubeClient,
 		mblist,
 		softdog,
-		decider,
+		quorumDecider,
 		kubeClient,
 		log,
 	)
 
+	err = fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
+	if err != nil {
+		return fmt.Errorf("failed to start health monitor: %w", err)
+	}
+	// defer fencingAgent.Stop()
+
+	// ------- clear fencingAgent functionality over -------
+
 	// get_nodes usecase
 	nodesGetter := usecase.NewGetNodes(mblist)
 
-	// eventbus usecase
 	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
 
 	grpcSrvRunner, err := grpc.NewRunner(cfg.GRPC, log, grpcSrv)
 	if err != nil {
-		panic(err)
+		return fmt.Errorf("failed to create grpc server runner: %w", err)
 	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(grpcSrvRunner.Run)
+
+	// ------- clear grpcSrvRunner functionality over -------
 
 	healthzSrv := http.New(log, cfg.HealthProbeBindAddress)
 
-	kubeClient.Start(ctx)
-	fencingAgent.Start(ctx, cfg.Watchdog.WathcdogTimeout)
-	healthzSrv.Start()
-	grpcSrvRunner.Start()
+	g.Go(healthzSrv.Run)
 
-	<-ctx.Done()
+	g.Go(func() error {
+		<-ctx.Done()
+		healthzSrv.Stop()
+		grpcSrvRunner.Stop()
+		return nil
+	})
 
-	healthzSrv.Stop()
-	fencingAgent.Stop()
-	kubeClient.Stop()
-	mblist.Stop()
-	// Start grpc server
-
+	return g.Wait()
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/helper/logger/sl"
+	"log/slog"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -90,12 +91,26 @@ func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
 }
 
 func (ml *Memberlist) Start(peers ips) error {
-	numJoined, err := ml.list.Join(peers)
-	if err != nil {
-		return err
-	}
-	ml.logger.Info("joined cluster", "numJoined", numJoined)
+	const triesLimit = 5
+	currenTry := 1
+	numberJoin, memberErr := ml.list.Join(peers)
+	base, mx := time.Second, time.Minute
+	for backoff := base; memberErr != nil; backoff <<= 1 {
+		if currenTry > triesLimit {
+			ml.logger.Error("failed to start memberlist, tries limit reached", sl.Err(memberErr))
+			return memberErr
+		}
+		if backoff > mx {
+			backoff = mx
+		}
+		ml.logger.Warn("failed to start memberlist", sl.Err(memberErr), slog.String("backoff", backoff.String()), slog.Int("tries", currenTry))
 
+		time.Sleep(backoff)
+
+		numberJoin, memberErr = ml.list.Join(peers)
+		currenTry++
+	}
+	ml.logger.Info("memberlist started successfully", slog.Int("number_joined", numberJoin))
 	return nil
 }
 
@@ -104,19 +119,18 @@ func (ml *Memberlist) BroadcastNodesNumber(nodesNumber int) {
 	ml.delegate.BroadcastNodesNumber(nodesNumber)
 }
 
-func (ml *Memberlist) Stop() error {
-	// TODO graceful leave
+func (ml *Memberlist) Stop() {
 	tmpTimeout := 3 * time.Second
 	if err := ml.list.Leave(tmpTimeout); err != nil {
 		ml.logger.Error("failed to leave cluster, shutdown", sl.Err(err))
 		if err = ml.list.Shutdown(); err != nil {
 			ml.logger.Error("failed to shutdown", sl.Err(err))
-			return err
+			return
 		}
 		ml.logger.Info("shutdown successfully")
+		return
 	}
 	ml.logger.Info("left cluster correctly")
-	return nil
 }
 
 func (ml *Memberlist) NumMembers() int {

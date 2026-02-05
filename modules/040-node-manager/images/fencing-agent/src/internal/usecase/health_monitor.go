@@ -10,6 +10,8 @@ package usecase
 import (
 	"context"
 	"fencing-agent/internal/helper/logger/sl"
+	"fmt"
+	"log/slog"
 	"sync"
 	"time"
 
@@ -78,16 +80,14 @@ func NewHealthMonitor(
 	}
 }
 
-func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) {
+func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) error {
 	timeout := time.Duration(watchdogTimeout/2-1) * time.Second
+	if err := h.startWatchdogBackoff(ctx); err != nil {
+		return err
+	}
 	go func() {
 		ticker := time.NewTicker(timeout)
 		defer ticker.Stop()
-
-		// TODO think
-		if err := h.startWatchdog(ctx); err != nil {
-			panic(err)
-		}
 
 		for {
 			select {
@@ -98,6 +98,7 @@ func (h *HealthMonitor) Start(ctx context.Context, watchdogTimeout int) {
 			}
 		}
 	}()
+	return nil
 }
 
 func (h *HealthMonitor) Stop() {
@@ -143,7 +144,7 @@ func (h *HealthMonitor) check(ctx context.Context) {
 
 	if !h.watchdog.IsArmed() {
 		h.logger.Info("watchdog is not armed, arming watchdog")
-		if err := h.startWatchdog(ctx); err != nil {
+		if err := h.startWatchdogBackoff(ctx); err != nil {
 			h.logger.Error("unable to arm watchdog", sl.Err(err))
 			return
 		}
@@ -169,18 +170,40 @@ func (h *HealthMonitor) check(ctx context.Context) {
 	}
 }
 
-func (h *HealthMonitor) startWatchdog(ctx context.Context) error {
-	if err := h.watchdog.Start(); err != nil {
-		return err
+func (h *HealthMonitor) startWatchdogBackoff(ctx context.Context) error {
+	const triesLimit = 5
+	currenTry := 1
+
+	err := h.watchdog.Start()
+
+	base, mx := time.Second, time.Minute
+
+	for backoff := base; err != nil; backoff <<= 1 {
+		if currenTry > triesLimit {
+			return fmt.Errorf("failed to start watchdog, tries limit reached: %w", err)
+		}
+
+		if backoff > mx {
+			backoff = mx
+		}
+		h.logger.Warn("failed to start watchdog", sl.Err(err), slog.String("backoff", backoff.String()), slog.Int("tries", currenTry))
+
+		time.Sleep(backoff)
+
+		err = h.watchdog.Start()
+
+		currenTry++
 	}
 
 	// Set node label to indicate fencing is enabled
-	if err := h.cluster.SetNodeLabel(ctx, fencingNodeLabel, ""); err != nil {
-		h.logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(err))
+	if labelErr := h.cluster.SetNodeLabel(ctx, fencingNodeLabel, ""); labelErr != nil {
+		h.logger.Error("unable to set node label, disarming watchdog for safety", sl.Err(labelErr))
+
 		if stopErr := h.watchdog.Stop(); stopErr != nil {
 			h.logger.Error("failed to stop watchdog after label error", sl.Err(stopErr))
 		}
-		return err
+
+		return labelErr
 	}
 
 	return nil

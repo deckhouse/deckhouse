@@ -3,7 +3,6 @@ package grpc
 import (
 	"context"
 	"errors"
-	"fencing-agent/internal/helper/logger/sl"
 	"fencing-agent/internal/helper/validators"
 	pb "fencing-agent/pkg/api/v1"
 	"fmt"
@@ -81,33 +80,15 @@ func NewRunner(cfg Config, logger *log.Logger, handler *Server) (*Runner, error)
 	}, nil
 }
 
-func (r *Runner) Start() {
-	go func() {
-		if err := r.grpcServer.Serve(r.listener); err != nil {
-			r.logger.Error("gRPC server failed", sl.Err(err))
-		}
-	}()
+func (r *Runner) Run() error {
+	if err := r.grpcServer.Serve(r.listener); err != nil {
+		return fmt.Errorf("gRPC server failed: %w", err)
+	}
+	return nil
 }
 
-func (r *Runner) Stop(ctx context.Context) error {
-	done := make(chan struct{})
-
-	go func() {
-		r.grpcServer.GracefulStop()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-		r.logger.Info("gRPC server shutdown complete")
-		return r.cleanSocket()
-
-	case <-ctx.Done():
-		r.logger.Warn("gRPC server shutdown exceeded, forced stop")
-		r.grpcServer.Stop()
-		_ = r.cleanSocket()
-		return fmt.Errorf("gRPC graceful shutdown timeout exceeded, forced stop")
-	}
+func (r *Runner) Stop() {
+	r.grpcServer.GracefulStop()
 }
 
 func (r *Runner) cleanSocket() error {

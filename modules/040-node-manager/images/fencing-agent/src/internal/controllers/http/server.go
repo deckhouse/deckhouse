@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fencing-agent/internal/helper/logger/sl"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -30,14 +31,13 @@ func New(logger *log.Logger, bindAddress string) *Server {
 	}
 }
 
-func (srv *Server) Start() {
-	go func() {
-		srv.logger.Info("Stating healthz server", slog.String("bindAddress", srv.bindAddr))
+func (srv *Server) Run() error {
+	srv.logger.Info("stating healthz server", slog.String("bindAddress", srv.bindAddr))
 
-		if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			srv.logger.Error("Healthz server failed", sl.Err(err))
-		}
-	}()
+	if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return fmt.Errorf("healthz server failed: %w", err)
+	}
+
 }
 
 func (srv *Server) Stop() {
