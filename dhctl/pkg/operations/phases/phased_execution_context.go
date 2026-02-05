@@ -45,6 +45,7 @@ type (
 		CompleteSubPhase(completedSubPhase OperationSubPhase)
 		CompletePhaseAndPipeline(stateCache dstate.Cache, completedPhaseData OperationPhaseDataT) error
 		GetLastState() DhctlState
+		SetClusterType(clusterType string)
 	}
 
 	DefaultPhasedExecutionContext PhasedExecutionContext[DefaultContextType]
@@ -126,6 +127,12 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 	}
 
 	return false, nil
+}
+
+// SetClusterType sets the cluster type and syncs the progress phase list immediately.
+// Call as soon as meta config is parsed, before any phase is reported.
+func (pec *phasedExecutionContext[OperationPhaseDataT]) SetClusterType(clusterType string) {
+	pec.progressTracker.SetClusterType(clusterType)
 }
 
 // InitPipeline initializes phasedExecutionContext before usage.

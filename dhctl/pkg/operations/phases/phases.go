@@ -34,6 +34,8 @@ type PhaseWithSubPhases struct {
 	Phase     OperationPhase      `json:"phase"`
 	Action    *ProgressAction     `json:"action,omitempty,omitzero"`
 	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
+
+	includeIf func(opts phasesOpts) bool
 }
 
 const (
@@ -107,7 +109,7 @@ const (
 
 func BootstrapPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: BaseInfraPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: RegistryPackagesProxyPhase},
 		{Phase: ExecuteBashibleBundlePhase},
 		{
@@ -127,7 +129,7 @@ func BootstrapPhases() []PhaseWithSubPhases {
 
 func ConvergePhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
-		{Phase: BaseInfraPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: InstallDeckhousePhase},
 		{Phase: AllNodesPhase},
 		{Phase: ScaleToMultiMasterPhase},
@@ -146,7 +148,7 @@ func DestroyPhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
 		{Phase: DeleteResourcesPhase},
 		{Phase: AllNodesPhase},
-		{Phase: BaseInfraPhase},
+		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 	}
 }
 
@@ -177,8 +179,12 @@ func CommanderDetachPhases() []PhaseWithSubPhases {
 	}
 }
 
-func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
-	phase, ok := map[Operation][]PhaseWithSubPhases{
+type phasesOpts struct {
+	clusterType string
+}
+
+func operationPhases(operation Operation, opts phasesOpts) ([]PhaseWithSubPhases, bool) {
+	p, ok := map[Operation][]PhaseWithSubPhases{
 		OperationBootstrap:       BootstrapPhases(),
 		OperationConverge:        ConvergePhases(),
 		OperationCheck:           CheckPhases(),
@@ -187,5 +193,16 @@ func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
 		OperationCommanderDetach: CommanderDetachPhases(),
 	}[operation]
 
-	return phase, ok
+	phases := make([]PhaseWithSubPhases, 0, len(p))
+	for _, phase := range p {
+		if phase.includeIf == nil || phase.includeIf(opts) {
+			phases = append(phases, phase)
+		}
+	}
+
+	return phases, ok
+}
+
+func ifNotStatic(opts phasesOpts) bool {
+	return opts.clusterType != "Static"
 }
