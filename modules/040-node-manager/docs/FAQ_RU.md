@@ -346,11 +346,11 @@ May 25 04:39:16 kube-master-0 systemd[1]: bashible.service: Succeeded.
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Выполните полученную команду (в примере выше — `nc 192.168.199.178 8000`), чтобы просмотреть логи `cloud-init` и определить, на каком этапе остановилась настройка узла.
+1. Выполните полученную команду (в примере выше — `curl -N http://192.168.199.158:8000`), чтобы просмотреть логи `cloud-init` и определить, на каком этапе остановилась настройка узла.
 
 Логи первоначальной настройки узла находятся в `/var/log/cloud-init-output.log`.
 
@@ -2031,6 +2031,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 В разделе mig-configs вы увидите конкретные модели ускорителей (по PCI-ID) и список совместимых MIG-профилей для каждой из них.
 Найдите свою видеокарту и выберите подходящий профиль — его имя указывается в `spec.gpu.mig.partedConfig` вашего NodeGroup.
 Это позволит применить правильный профиль именно к вашей карте.
+
+## Как задать свой MIG-профиль для каждой карты на узле?
+
+Используйте значение `custom` в [параметре `partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) ресурса NodeGroup и опишите разбиение MIG по индексам GPU:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1 # Может принимать значение от 1 до 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 1
+            - profile: 1g.10gb
+              count: 4
+        # Добавьте остальные индексы по необходимости.
+```
+
+В результате модуль `node-manager` автоматически:
+
+- добавит в ConfigMap конфигурацию `mig-parted-config` с именем `custom-<node-group-name>-<hash>`, где `<hash>` вычисляется на основе схемы разбиения (длинные имена групп сокращаются с добавлением хеша, чтобы имя уместилось в лейбл);
+- проставит на узлах этой группы лейбл `nvidia.com/mig.config=custom-<node-group-name>-<hash>`.
+
+Для каждой группы узлов создаётся собственная конфигурация вида `custom-<ng>-<hash>`, при этом имена конфигураций не пересекаются.
 
 ## Для GPU не активируется MIG-профиль — что проверить?
 

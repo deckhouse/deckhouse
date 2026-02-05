@@ -1,4 +1,4 @@
-# Copyright 2025 Flant JSC
+# Copyright 2026 Flant JSC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,3 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+resource "kubernetes_manifest" "isolated_cluster_prefix_network_policy" {
+  for_each = local.targets
+
+  field_manager {
+    force_conflicts = true
+  }
+
+  manifest = {
+    apiVersion = "networking.k8s.io/v1"
+    kind       = "NetworkPolicy"
+
+    metadata = {
+      name      = each.value.name
+      namespace = each.value.namespace
+    }
+
+    spec = {
+      podSelector = {
+        matchLabels = {
+          "dvp.deckhouse.io/cluster-uuid" = local.cluster_uuid
+        }
+      }
+
+      policyTypes = ["Ingress", "Egress"]
+      ingress     = local.template_ingress
+      egress      = local.template_egress
+    }
+  }
+}
+
+# Validate that required DVP resources exist before proceeding with cluster bootstrap.
+# This module will fail fast with clear error messages if VirtualMachineClass or boot images
+# are not found in the parent DVP cluster, preventing VM creation from getting stuck in Pending state.
+module "validation" {
+  source = "../../../terraform-modules/validation"
+
+  namespace                  = local.namespace
+  virtual_machine_class_name = local.virtual_machine_class_name
+  image_kind                 = local.root_disk_image.kind
+  image_name                 = local.root_disk_image.name
+}

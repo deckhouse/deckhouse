@@ -18,6 +18,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/discovery"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -450,7 +451,87 @@ func wrapRegex(ln string) string {
 		ln = "^" + ln
 	}
 	if !strings.HasSuffix(ln, "$") {
-		ln = ln + "$"
+		ln += "$"
 	}
 	return ln
+}
+
+// IsNamespaceAllowed checks if the multi-tenancy rules allow access to a specific namespace
+// for the given user. This is a helper method for the namespace resolver.
+// Returns true if access is allowed, false if denied.
+func (e *Engine) IsNamespaceAllowed(userInfo user.Info, namespace string) bool {
+	if userInfo == nil {
+		return true // No user info means no restrictions
+	}
+
+	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
+	if len(dirEntriesAffected) == 0 {
+		// No ClusterAuthorizationRules apply to this user, no MT restrictions
+		return true
+	}
+
+	combinedDir := e.combineDirEntries(dirEntriesAffected)
+
+	// If there are no effective filters, allow access
+	if !hasAnyFilters(&combinedDir) {
+		return true
+	}
+
+	// Check namespace against combined rules
+	allowed := true
+
+	// Check limitNamespaces patterns
+	if !combinedDir.NamespaceFiltersAbsent {
+		allowed = false
+		for _, pattern := range combinedDir.LimitNamespaces {
+			if pattern.MatchString(namespace) {
+				allowed = true
+				break
+			}
+		}
+	}
+
+	// Check system namespaces restriction
+	if allowed && !combinedDir.AllowAccessToSystemNamespaces {
+		for _, pattern := range systemNamespacesRegex {
+			if pattern.MatchString(namespace) {
+				allowed = false
+				break
+			}
+		}
+	}
+
+	// Check namespace selectors if denied by patterns
+	if !allowed && len(combinedDir.NamespaceSelectors) > 0 {
+		match, err := e.namespaceLabelsMatchSelector(namespace, combinedDir.NamespaceSelectors)
+		if err == nil && match {
+			allowed = true
+		}
+	}
+
+	return allowed
+}
+
+// GetAllowedNamespaces returns a list of all namespaces the user is allowed to access
+// according to multi-tenancy rules. If mtEngine has no restrictions for the user,
+// returns nil (meaning all namespaces are allowed from MT perspective).
+// This is used by the namespace resolver for optimization.
+func (e *Engine) GetAllowedNamespaces(userInfo user.Info) ([]string, bool) {
+	if userInfo == nil {
+		return nil, false
+	}
+
+	dirEntriesAffected := e.affectedDirs(userInfo.GetName(), userInfo.GetGroups())
+	if len(dirEntriesAffected) == 0 {
+		// No restrictions, return nil to indicate "all allowed"
+		return nil, false
+	}
+
+	combinedDir := e.combineDirEntries(dirEntriesAffected)
+	if !hasAnyFilters(&combinedDir) {
+		return nil, false
+	}
+
+	// User has restrictions - we need to filter
+	return nil, true
 }

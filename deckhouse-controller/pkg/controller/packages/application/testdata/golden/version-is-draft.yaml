@@ -41,8 +41,5 @@ metadata:
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.0
   resourceVersion: "1"
-spec:
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
+spec: {}
 status: {}

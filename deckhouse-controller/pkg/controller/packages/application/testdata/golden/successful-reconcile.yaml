@@ -76,9 +76,6 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
-  packageRepositoryName: deckhouse
-  packageVersion: v1.0.1
   usedBy:
   - name: test-app
     namespace: foobar

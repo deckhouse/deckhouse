@@ -27,7 +27,7 @@ var (
 	resourceFileRe = regexp.MustCompile(`openapi/config-values.y[a]?ml$|crds/.+.y[a]?ml$|openapi/cluster_configuration.y[a]?ml$|openapi/instance_class.y[a]?ml$|openapi/node_group.y[a]?ml$`)
 	docFileRe      = regexp.MustCompile(`\.md$`)
 
-	excludeFileRe = regexp.MustCompile("crds/(gatekeeper|native|ratify)/.+.y[a]?ml$")
+	excludeFileRe = regexp.MustCompile("crds/(gatekeeper|native|ratify|cert-manager)/.+.y[a]?ml$")
 )
 
 func RunDocChangesValidation(info *DiffInfo) (exitCode int) {

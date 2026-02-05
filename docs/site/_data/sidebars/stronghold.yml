@@ -44,6 +44,10 @@ entries:
                 en: HSM Support
                 ru: Поддержка HSM
               url: /stronghold/documentation/admin/standalone/hsm.html
+            - title:
+                en: Recover from lost quorum
+                ru: Восстановление после потери кворума
+              url: /stronghold/documentation/admin/standalone/raft-lost-quorum-recovery.html
         - title:
             en: Launch in DKP
             ru: Запуск в DKP
@@ -321,6 +325,10 @@ entries:
                     en: KV/v2
                     ru: KV/v2
                   url: /stronghold/documentation/user/secrets-engines/kv/kv-v2.html
+                - title:
+                    en: KV1/KV2 replication
+                    ru: Репликация KV1/KV2
+                  url: /stronghold/documentation/user/secrets-engines/kv/kv-replication.html
             - title:
                 en: PKI Secrets engine
                 ru: Механизм секретов PKI

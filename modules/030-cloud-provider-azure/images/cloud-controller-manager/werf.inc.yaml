@@ -5,7 +5,7 @@
   {{- if $value.ccm.azure }}
     {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
     {{- $patch := false }}
-    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/patches/*" $patches) }}
       {{- if contains $version $path }}
         {{- $patch = true }}
       {{- end }}
@@ -13,6 +13,7 @@
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
+fromCacheVersion: "patch-refresh-1"
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
   add: /src/bin/azure-cloud-controller-manager

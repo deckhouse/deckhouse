@@ -348,11 +348,11 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
+1. Run the command you got (`curl -N http://192.168.199.158:8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 
@@ -1970,6 +1970,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
 Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
+
+## How to set a custom per-GPU MIG layout on a node?
+
+Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1    # Can be in the range from 1 to 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 2
+            - profile: 1g.10gb
+              count: 1
+        # Add more indexes as needed.
+```
+
+As a result, the `node-manager` module automatically:
+
+- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
+- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
+
+A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
 
 ## MIG profile does not activate — what to check?
 
