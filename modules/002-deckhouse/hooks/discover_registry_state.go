@@ -36,7 +36,7 @@ type registryState struct {
 	Mode string `json:"mode,omitempty" yaml:"mode,omitempty"`
 }
 
-func (state *registryState) FromSecret(secret corev1.Secret) {
+func (state *registryState) fromSecret(secret corev1.Secret) {
 	*state = registryState{
 		Mode: string(secret.Data["mode"]),
 	}
@@ -65,7 +65,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 				}
 
 				state := registryState{}
-				state.FromSecret(secret)
+				state.fromSecret(secret)
 				return state, nil
 			},
 		},

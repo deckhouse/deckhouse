@@ -66,14 +66,17 @@ spec:
 {{- if $isLocalMode }}
   - expression: |
       !(
-        has(object.?spec.?settings.?registry.mode) &&
         (
-          object.spec.settings.registry.mode == "Proxy" ||
+          has(object.?spec.?settings.?registry.mode) &&
           (
-            object.spec.settings.registry.mode == "Unmanaged" &&
-            !has(object.?spec.?settings.?registry.unmanaged)
+            object.spec.settings.registry.mode == "Proxy" ||
+            (
+              object.spec.settings.registry.mode == "Unmanaged" &&
+              !has(object.?spec.?settings.?registry.unmanaged)
+            )
           )
-        )
+        ) ||
+        !has(object.?spec.?settings.registry)
       )
     message: >-
       Switching `spec.settings.registry.mode` to Proxy or non-configurable Unmanaged mode
