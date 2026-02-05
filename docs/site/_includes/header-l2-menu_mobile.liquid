@@ -1,0 +1,229 @@
+<div class="header__sidebar">
+  <div class="container">
+      <ul id="bottom-header-nav" class="nav header__sidebar--nav">
+        <li class="header__navigation-item current-menu-parent menu-item-has-children
+          {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+          {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}"
+        >
+        {%- unless site.mode == "module" %}
+          {%- if page.lang == "ru" %}
+          <a href="#">Продукты</a>
+          <div class="sub-menu-container">
+          <ul class="sub-menu sub-menu_products">
+            <li>
+              <a href="/products/kubernetes-platform/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                </svg>
+                <span>Kubernetes Platform</span>
+                <p>Создание идентичных Kubernetes-кластеров и&nbsp;управление ими</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/virtualization-platform/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                </svg>
+                <span>Virtualization Platform</span>
+                <p>Управление виртуальными машинами</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/observability-platform/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                </svg>
+                <span>Observability Platform</span>
+                <p>Мониторинг и&nbsp;журналирование инфраструктуры и&nbsp;приложений</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/stronghold/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                </svg>
+                <span>Stronghold</span>
+                <p>Безопасное управление жизненным циклом секретов</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/delivery-kit/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                </svg>
+                <span>Delivery Kit</span>
+                <p>Сборка и&nbsp;доставка контейнеризованного&nbsp;ПО</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/commander/">
+                <svg class="products__icon">
+                  <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                </svg>
+                <span>Commander</span>
+                <p>Центр управления парком кластеров</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/code/">
+                <svg width="20" height="20" viewBox="0 0 280 280" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M208.947 41.7573L250.705 0H0V250.757L41.8106 208.757L41.927 41.9269L208.947 41.7573Z" fill="#00003C"/>
+                  <path d="M280 29.5309L238.447 71.2573L238.073 238.073L71.4473 238.088L29.5386 280H280V29.5309Z" fill="#00003C"/>
+                  <path d="M145.855 179.993H105.855V99.9932H145.855C167.884 99.9932 185.855 117.964 185.855 139.993C185.855 162.022 167.884 179.993 145.855 179.993Z" fill="#0064FF"/>
+                </svg>
+                <span>Code</span>
+                <p>Непрерывная разработка и&nbsp;управление жизненным циклом ПО</p>
+              </a>
+            </li>
+            <li>
+              <a href="/products/prompp/">
+                <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
+                  <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
+                  <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                </svg>
+                <span>Prom++</span>
+                <p>Open Source-система мониторинга</p>
+              </a>
+            </li>
+          </ul>
+        </div>
+          {%- else %}
+            <a href="#">Products</a>
+            <div class="sub-menu-container">
+              <ul class="sub-menu sub-menu_products">
+                <li>
+                  <a href="/products/kubernetes-platform/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#kubernetes-platform-icon"></use>
+                    </svg>
+                    <span>Kubernetes Platform</span>
+                    <p>Creating identical Kubernetes clusters and&nbsp;managing them</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/virtualization-platform/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#virtualization-platform-icon"></use>
+                    </svg>
+                    <span>Virtualization Platform</span>
+                    <p>Managing virtual machines</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/observability-platform/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#observability-platform-icon"></use>
+                    </svg>
+                    <span>Observability Platform</span>
+                    <p>Infrastructure and&nbsp;application monitoring and&nbsp;logging</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/stronghold/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#stronghold-icon"></use>
+                    </svg>
+                    <span>Stronghold</span>
+                    <p>Securely managing lifecycle of&nbsp;secrets</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/delivery-kit/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#delivery-icon"></use>
+                    </svg>
+                    <span>Delivery Kit</span>
+                    <p>Building and&nbsp;delivering containerized software</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/commander/">
+                    <svg class="products__icon">
+                      <use xlink:href="/images/sprite.svg#commander-icon"></use>
+                    </svg>
+                    <span>Commander</span>
+                    <p>Cluster control center</p>
+                  </a>
+                </li>
+                <li>
+                  <a href="/products/prompp/">
+                    <svg width="17" height="20" viewBox="0 0 17 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path id="Rectangle 75" d="M0.749023 13.9888H16.2508L15.7448 15.8522H1.25505L0.749023 13.9888Z" fill="#00003C"/>
+                      <path id="Vector" d="M12.2239 17.8746V16.9834L4.79004 16.9834V17.8746L8.50699 20L12.2239 17.8746Z" fill="#00003C"/>
+                      <path id="Subtract" fill-rule="evenodd" clip-rule="evenodd" d="M15.1528 3.81515V12.8575H8.50695H1.86108V3.81515L8.50695 0L15.1528 3.81515ZM6.59876 9.84508H8.84374C10.0801 9.84508 11.0887 8.83209 11.0887 7.59038C11.0887 6.34866 10.0801 5.33568 8.84374 5.33568H6.59876V9.84508Z" fill="#0064FF"/>
+                    </svg>
+                    <span>Prom++</span>
+                    <p>Open Source monitoring system</p>
+                  </a>
+                </li>
+              </ul>
+            </div>
+          {%- endif %}
+        </li>
+        {%- endunless %}
+        {% for entry in topnav %}
+          {% for item in entry.items %}
+            {%- if site.mode == 'module' and item.ee_only and site.d8Revision != 'EE' %}{% continue %}{% endif %}
+            {%- if item.title == site.data.i18n.common.products[page.lang] %}{% continue %}{% endif %}
+            {%- assign item_url_parts = item.url | split: '/' -%}
+            {%- assign is_getting_started_item = page_url_without_lang | startswith: '/gs/' -%}
+            <li class="header__navigation-item
+              {%- if page.mode == 'ssi' and site.mode != 'module' and item_url_parts[1] == 'documentation' %} header__navigation-item_active{% endif %}
+              {%- if page.mode != 'ssi' and is_getting_started_item and item.url == '/gs/' %} header__navigation-item_active{% endif %}
+              {%- if item.url.size>1 and page.url == item.url %} header__navigation-item_active{% endif %}
+              {%- if page_url_without_lang == item.url %} header__navigation-item_active{% endif %}
+              {%- if item.items %} current-menu-parent menu-item-has-children{% endif %}
+              {%- if item.url.size<2 and page.url.size<2 %} header__navigation-item_active{% endif %}"
+              {%- if item.items %} data-proofer-ignore{% endif %}
+            >
+              <a
+                {%- if item.external_url %} href="{{ item.external_url }}" {%- if !item.target %} target="_blank"{% endif %}
+                {%- elsif item.url %} href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ item.url }}"
+                {%- else %} href="#"
+                {%- endif %}
+                {%- if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{- item.title -}}
+              </a>
+
+              {% if item.items %}
+                <div class="sub-menu-container">
+                  <ul class="sub-menu">
+                    {% for subitem in item.items %}
+                      {%- assign item_url_parts = subitem.url | split: '/' -%}
+                      <li data-proofer-ignore>
+                        <a
+                          {%- if subitem.external_url %}
+                            href="{{ subitem.external_url }}" {%- if !subitem.target %} target="_blank"{% endif %}
+                          {%- elsif subitem.url %}
+                            href="{% if site.mode == 'module' %}/{{ page.lang }}/platform{% endif %}{{ subitem.url }}"
+                          {%- else %}
+                            href="#"
+                          {% endif %}
+                          {%- if subitem.target.size > 0 %} target="{{ subitem.target }}"{% endif %}
+                          >
+                            {{ subitem.title }}
+                          </a>
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+            </li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+      <div class="sidebar__footer">
+        <label class="switch">
+            <input id="language-switch" type="checkbox">
+            <span class="slider round">
+              <span>En</span>
+              <span>Ru</span>
+        </label>
+        <div class="socials">
+          <a href="https://github.com/deckhouse/deckhouse" target="_blank">
+            <svg xmlns="http://www.w3.org/2000/svg" width="68" height="66" viewBox="0 0 68 66" fill="none"><path d="M34 0C15.215 0 0 15.141 0 33.8346C0 48.8065 9.73257 61.4521 23.2475 65.9352C24.9475 66.2313 25.585 65.2162 25.585 64.3282C25.585 63.5246 25.5424 60.8602 25.5424 58.0265C16.9999 59.5914 14.7899 55.9541 14.11 54.051C13.7274 53.0782 12.0699 50.0754 10.625 49.2718C9.435 48.6374 7.735 47.0727 10.5824 47.0303C13.2599 46.988 15.1725 49.4833 15.81 50.4983C18.87 55.6157 23.7575 54.1778 25.7125 53.2897C26.0099 51.0904 26.9025 49.61 27.88 48.7643C20.315 47.9184 12.41 45.0002 12.41 32.0584C12.41 28.3789 13.7276 25.3338 15.8949 22.9654C15.555 22.1195 14.365 18.6515 16.235 13.9992C16.235 13.9992 19.0824 13.1111 25.585 17.4673C28.305 16.706 31.1949 16.3253 34.085 16.3253C36.975 16.3253 39.865 16.706 42.585 17.4673C49.0875 13.0688 51.935 13.9992 51.935 13.9992C53.805 18.6515 52.615 22.1195 52.275 22.9654C54.4425 25.3338 55.7599 28.3366 55.7599 32.0584C55.7599 45.0424 47.8124 47.9184 40.2474 48.7643C41.4799 49.8216 42.5424 51.8518 42.5424 55.0238C42.5424 59.5491 42.4999 63.1864 42.4999 64.3284C42.4999 65.2164 43.1375 66.2737 44.8374 65.9354C58.2674 61.4521 68 48.7642 68 33.8346C68 15.141 52.785 0 34 0Z" fill="white"></path></svg>
+          </a>
+        </div>
+      </div>
+  </div>
+</div>
