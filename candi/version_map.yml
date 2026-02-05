@@ -146,3 +146,5 @@ k8s:
       registrar: v2.13.0
       snapshotter: v8.1.1
       livenessprobe: v2.15.0
+d8:
+  d8CliVersion: v0.27.1
