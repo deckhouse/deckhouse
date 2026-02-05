@@ -187,6 +187,8 @@ data:
 
 Пример:
 
+{% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -200,6 +202,8 @@ type: Opaque
 data:
   token: <base64-encoded-value>
 ```
+
+{% endraw %}
 
 Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
 
