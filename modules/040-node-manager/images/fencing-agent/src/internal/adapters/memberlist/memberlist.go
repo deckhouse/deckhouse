@@ -14,7 +14,7 @@ import (
 
 type ips []string
 type Config struct {
-	MemberListPort uint `env:"MEMBERLIST_PORT" env-required:"true"`
+	MemberListPort uint `env:"MEMBERLIST_PORT" env-default:"8500"`
 }
 
 func (c *Config) Validate() error {

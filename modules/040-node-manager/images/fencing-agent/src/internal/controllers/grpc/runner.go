@@ -20,7 +20,7 @@ import (
 )
 
 type Config struct {
-	SocketPath  string `env:"GRPC_SOCKET_PATH" env-default:"/var/run/fencing-agent.sock"`
+	SocketPath  string `env:"GRPC_SOCKET_PATH" env-default:"/tmp/fencing-agent.sock"`
 	UnaryRPS    int    `env:"REQUEST_RPS" env-default:"10"`
 	UnaryBurst  int    `env:"REQUEST_BURST" env-default:"100"`
 	StreamRPS   int    `env:"STREAM_RPS" env-default:"5"`
