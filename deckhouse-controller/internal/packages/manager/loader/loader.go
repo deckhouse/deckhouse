@@ -32,12 +32,11 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
-	appLoaderTracer = "application-loader"
+	loaderTracer = "package-loader"
 
 	digestsFile = "images_digests.json"
 )
@@ -47,25 +46,7 @@ var (
 	ErrPackageNotFound = errors.New("package not found")
 )
 
-// ApplicationLoader loads application packages from the filesystem.
-// It validates package structure, loads definitions, values, and hooks.
-type ApplicationLoader struct {
-	appsDir string
-
-	logger *log.Logger
-}
-
-// NewApplicationLoader creates a new ApplicationLoader for the specified directory.
-// The appsDir should contain package directories organized as: <package>/<version>/
-func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader {
-	return &ApplicationLoader{
-		appsDir: appsDir,
-
-		logger: logger.Named(appLoaderTracer),
-	}
-}
-
-// Load loads an application package from the filesystem based on the instance specification.
+// LoadAppConf loads an application package from the filesystem based on the instance specification.
 // It performs the following steps:
 //  1. Validates package and version directories exist
 //  2. Loads package definition (package.yaml) - currently not used
@@ -74,47 +55,45 @@ func NewApplicationLoader(appsDir string, logger *log.Logger) *ApplicationLoader
 //  5. Creates and returns an Application instance
 //
 // Returns ErrPackageNotFound if package directory doesn't exist.
-func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Remote, name string) (*apps.Application, error) {
-	ctx, span := otel.Tracer(appLoaderTracer).Start(ctx, "Load")
+func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.Config, error) {
+	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadAppConf")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("path", appDir))
 
-	logger := l.logger.With(slog.String("name", name))
+	logger = logger.With(slog.String("path", appDir))
 
-	logger.Debug("load application from directory", slog.String("path", l.appsDir))
+	logger.Debug("load application from directory")
 
-	// Verify package directory exists: <apps>/<package>
-	path := filepath.Join(l.appsDir, name)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
+	if _, err := os.Stat(appDir); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
-	span.SetAttributes(attribute.String("path", path))
-
 	// Load package definition (package.yaml)
-	def, err := loadDefinition(path)
+	def, err := loadDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("load package from '%s': %w", path, err)
+		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
 	}
 
 	// Load values from values.yaml and openapi schemas
-	static, config, values, err := loadValues(def.Name, path)
+	static, config, values, err := loadValues(def.Name, appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load values: %w", err)
 	}
 
-	splits := strings.SplitN(name, ".", 2)
+	appName := filepath.Base(appDir)
+
+	splits := strings.SplitN(appName, ".", 2)
 	if len(splits) != 2 {
 		span.SetStatus(codes.Error, "invalid name")
-		return nil, fmt.Errorf("invalid package name '%s'", name)
+		return nil, fmt.Errorf("invalid package name '%s'", appName)
 	}
 
 	// Discover and load hooks (shell and batch)
-	hooksLoader := newHookLoader(splits[0], splits[1], path, shapp.DebugKeepTmpFiles, l.logger)
+	hooksLoader := newHookLoader(splits[0], splits[1], appDir, shapp.DebugKeepTmpFiles, logger)
 	hooks, err := hooksLoader.load(ctx)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
@@ -127,18 +106,17 @@ func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Remote, name
 		return nil, fmt.Errorf("convert app definition: %w", err)
 	}
 
-	digests, err := loadDigests(path)
+	digests, err := loadDigests(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load digests: %w", err)
 	}
 
-	// Build application configuration
-	conf := apps.ApplicationConfig{
+	return &apps.Config{
+		Path:       appDir,
 		Definition: appDef,
 
-		Digests:    digests,
-		Repository: repo,
+		Digests: digests,
 
 		StaticValues: static,
 		ConfigSchema: config,
@@ -147,15 +125,7 @@ func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Remote, name
 		Hooks: hooks,
 
 		SettingsCheck: hooksLoader.settingsCheck,
-	}
-
-	app, err := apps.NewApplication(name, path, conf)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("create new application: %w", err)
-	}
-
-	return app, nil
+	}, nil
 }
 
 // loadDefinition reads and parses the package.yaml file from the package directory.
@@ -163,16 +133,16 @@ func (l *ApplicationLoader) Load(ctx context.Context, repo registry.Remote, name
 //
 // Returns the parsed Definition or an error if reading or parsing fails.
 func loadDefinition(packageDir string) (*dto.Definition, error) {
-	path := filepath.Join(packageDir, dto.DefinitionFile)
+	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
-	content, err := os.ReadFile(path)
+	content, err := os.ReadFile(definitionPath)
 	if err != nil {
-		return nil, fmt.Errorf("read file '%s': %w", path, err)
+		return nil, fmt.Errorf("read definition file '%s': %w", definitionPath, err)
 	}
 
 	def := new(dto.Definition)
 	if err = yaml.Unmarshal(content, def); err != nil {
-		return nil, fmt.Errorf("unmarshal file '%s': %w", path, err)
+		return nil, fmt.Errorf("unmarshal file '%s': %w", definitionPath, err)
 	}
 
 	return def, nil

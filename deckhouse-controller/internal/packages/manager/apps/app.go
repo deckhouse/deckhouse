@@ -67,8 +67,9 @@ type Application struct {
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
-// ApplicationConfig holds configuration for creating a new Application instance.
-type ApplicationConfig struct {
+// Config holds configuration for creating a new Application instance.
+type Config struct {
+	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
 
 	Definition Definition // Application definition
@@ -84,11 +85,11 @@ type ApplicationConfig struct {
 	SettingsCheck *kind.SettingsCheck
 }
 
-// NewApplication creates a new Application instance with the specified configuration.
+// NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
+func NewAppByConfig(name string, cfg *Config) (*Application, error) {
 	a := new(Application)
 
 	splits := strings.Split(name, ".")
@@ -100,8 +101,8 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.instance = splits[1]
 
 	a.name = name
-	a.path = path
 
+	a.path = cfg.Path
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
 	a.repository = cfg.Repository
