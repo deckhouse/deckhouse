@@ -2,3 +2,4 @@ dirs:
 # for static pod (node-service)
 - /config
 - /pki
+- /test
