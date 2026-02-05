@@ -478,7 +478,7 @@ func (e *executor) executeEdition(editionName string) {
 			IncludePaths: []string{
 				"*/bashible",
 			},
-			StageDependencies: stageDependenciesBeforeSetup,
+			StageDependencies: stageDependenciesFile,
 		}
 
 		writeSettingCandi := writeSettings{

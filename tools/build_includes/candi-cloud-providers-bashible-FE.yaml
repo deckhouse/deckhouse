@@ -4,75 +4,75 @@
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-azure/candi
   to: /deckhouse/candi/cloud-providers/azure
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-dvp/candi
   to: /deckhouse/candi/cloud-providers/dvp
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-gcp/candi
   to: /deckhouse/candi/cloud-providers/gcp
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /modules/030-cloud-provider-yandex/candi
   to: /deckhouse/candi/cloud-providers/yandex
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi
   to: /deckhouse/candi/cloud-providers/vsphere
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi
   to: /deckhouse/candi/cloud-providers/zvirt
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-dynamix/candi
   to: /deckhouse/candi/cloud-providers/dynamix
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-huaweicloud/candi
   to: /deckhouse/candi/cloud-providers/huaweicloud
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-openstack/candi
   to: /deckhouse/candi/cloud-providers/openstack
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-vcd/candi
   to: /deckhouse/candi/cloud-providers/vcd
   includePaths:
     - '*/bashible'
   stageDependencies:
-    beforeSetup:
-        - '*'
+    install:
+        - '**/*'
