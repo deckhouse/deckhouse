@@ -276,7 +276,7 @@ func (suite *ControllerTestSuite) TestSyncSecretToTmp() {
 		require.Contains(suite.T(), string(content), "apiVersion: audit.k8s.io/v1",
 			"Audit policy should be valid")
 
-		pkiFiles := []string{"ca.crt", "ca.key", "apiserver.crt", "apiserver.key"}
+		pkiFiles := []string{"ca.crt", "ca.key", "apiserver.crt", "apiserver.key", "etcd/ca.crt", "etcd/ca.key"}
 		for _, file := range pkiFiles {
 			pkiFilePath := filepath.Join(pkiDir, file)
 			require.FileExists(suite.T(), pkiFilePath, fmt.Sprintf("PKI file %s should exist", file))
@@ -305,7 +305,7 @@ func (suite *ControllerTestSuite) TestReferencedFilesAffectChecksum() {
 		cpc := &controlplanev1alpha1.ControlPlaneConfiguration{}
 		err = suite.client.Get(suite.ctx, client.ObjectKey{Name: constants.ControlPlaneConfigurationName}, cpc)
 		require.NoError(suite.T(), err)
-		
+
 		oldApiServerChecksum := cpc.Spec.Components.KubeAPIServer.Checksum
 		oldEtcdChecksum := cpc.Spec.Components.Etcd.Checksum
 
@@ -354,19 +354,19 @@ func (suite *ControllerTestSuite) TestChecksumCalculation() {
 
 		checksum1, err := calculatePKIChecksum(pkiSecret)
 		require.NoError(suite.T(), err)
-		
+
 		checksum2, err := calculatePKIChecksum(pkiSecret)
 		require.NoError(suite.T(), err)
 
-		require.Equal(suite.T(), checksum1, checksum2, 
+		require.Equal(suite.T(), checksum1, checksum2,
 			"Checksums should be stable for same data")
 
 		pkiSecret.Data["ca.crt"] = []byte("MODIFIED_DATA")
-		
+
 		checksum3, err := calculatePKIChecksum(pkiSecret)
 		require.NoError(suite.T(), err)
 
-		require.NotEqual(suite.T(), checksum1, checksum3, 
+		require.NotEqual(suite.T(), checksum1, checksum3,
 			"Checksum should change when data changes")
 
 		suite.T().Logf("Original checksum: %s", checksum1)
