@@ -32,8 +32,8 @@ import (
 func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarget, countPings int, p *PrometheusExporterMetrics) {
 	// Prepare flat list of hosts and a map to distinguish internal/external
 	startPingTime := time.Now()
-	var allHosts []string
 	summuryCountHosts := len(cluster) + len(external)
+	allHosts := make([]string, 0, summuryCountHosts)
 	hostTypes := make(map[string]string, summuryCountHosts) // host -> "internal" / "external"
 	nameMap := make(map[string]string, summuryCountHosts)   // host -> name
 	log.Info(fmt.Sprintf("count internal nodes: %d", len(cluster)))
