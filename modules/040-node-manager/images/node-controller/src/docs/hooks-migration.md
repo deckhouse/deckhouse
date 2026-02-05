@@ -1,15 +1,15 @@
-# Миграция Conversion и Validation Hooks из Python/Bash в Go
+# Migration of Conversion and Validation Hooks from Python/Bash to Go
 
-## Обзор
+## Overview
 
-Этот документ описывает как хуки из `modules/040-node-manager/hooks/` были переписаны на Go:
+This document describes how hooks from `modules/040-node-manager/hooks/` were rewritten in Go:
 
 1. **node_group.py** — Conversion Webhook (Python)
 2. **node_group** — Validation Webhook (Bash)
 
-## Часть 1: Conversion Hooks (node_group.py)
+## Part 1: Conversion Hooks (node_group.py)
 
-## Сравнение: Python Hook vs Go Conversion
+## Comparison: Python Hook vs Go Conversion
 
 ### Python Hook (shell-operator)
 
@@ -23,16 +23,16 @@ kubernetesCustomResourceConversion:
       toVersion: deckhouse.io/v1alpha2
 ```
 
-**Как работает:**
-1. Shell-operator регистрирует Conversion Webhook в API Server
-2. API Server вызывает webhook через HTTP при конверсии
-3. Python код обрабатывает объект и возвращает результат
+**How it works:**
+1. Shell-operator registers a Conversion Webhook with the API Server
+2. API Server calls the webhook over HTTP during conversion
+3. Python code processes the object and returns the result
 
-**Проблемы:**
-- HTTP вызов на каждую конверсию
-- Отдельный процесс для обработки
-- Парсинг JSON/YAML
-- Нет типизации
+**Problems:**
+- HTTP call on every conversion
+- Separate process for handling
+- JSON/YAML parsing
+- No type safety
 
 ### Go Conversion (controller-runtime)
 
@@ -40,32 +40,32 @@ kubernetesCustomResourceConversion:
 // api/deckhouse.io/v1alpha1/nodegroup_conversion.go
 func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
     dst := dstRaw.(*v1.NodeGroup)
-    // ... конверсия
+    // ... conversion
     return nil
 }
 ```
 
-**Как работает:**
-1. Webhook сервер встроен в контроллер
-2. API Server вызывает webhook через HTTP
-3. Go код обрабатывает типизированный объект
+**How it works:**
+1. Webhook server is embedded in the controller
+2. API Server calls the webhook over HTTP
+3. Go code processes a typed object
 
-**Преимущества:**
-- Типизация на этапе компиляции
-- Один процесс (контроллер)
-- Нет парсинга JSON (используется схема)
-- Тестируемость
+**Advantages:**
+- Compile-time type safety
+- Single process (controller)
+- No JSON parsing (schema is used)
+- Testability
 
-## Маппинг функций
+## Function Mapping
 
-| Python функция | Go функция | Файл |
+| Python function | Go function | File |
 |----------------|------------|------|
 | `alpha1_to_alpha2()` | `ConvertTo()` + `Convert_v1alpha1_*` | `v1alpha1/nodegroup_conversion.go`, `v1alpha1/conversion.go` |
 | `alpha2_to_alpha1()` | `ConvertFrom()` + `Convert_v1_*` | `v1alpha1/nodegroup_conversion.go`, `v1alpha1/conversion.go` |
 | `alpha2_to_v1()` | `ConvertTo()` | `v1alpha2/nodegroup_conversion.go` |
 | `v1_to_alpha2()` | `ConvertFrom()` | `v1alpha2/nodegroup_conversion.go` |
 
-## Детальное сравнение логики
+## Detailed Logic Comparison
 
 ### 1. alpha1_to_alpha2: docker → cri.docker
 
@@ -100,19 +100,19 @@ func Convert_v1alpha1_NodeGroupSpec_To_v1_NodeGroupSpec(in *NodeGroupSpec, out *
             Manage:                 in.Docker.Manage,
         }
     }
-    // kubernetesVersion и static просто не конвертируются (теряются)
+    // kubernetesVersion and static are simply not converted (lost)
     return nil
 }
 ```
 
-### 2. alpha2_to_v1: nodeType маппинг + cluster config
+### 2. alpha2_to_v1: nodeType mapping + cluster config
 
 **Python:**
 ```python
 def alpha2_to_v1(self, o):
     obj.apiVersion = "deckhouse.io/v1"
     
-    # Читаем cluster config из Secret
+    # Read cluster config from Secret
     provider_config = get_from_secret("d8-provider-cluster-configuration")
     
     ng_name = obj.metadata.name
@@ -121,7 +121,7 @@ def alpha2_to_v1(self, o):
     if ng_type == "Cloud":
         ng_type = "CloudEphemeral"
     elif ng_type == "Hybrid":
-        # Определяем CloudPermanent vs CloudStatic
+        # Determine CloudPermanent vs CloudStatic
         found_in_permanent = False
         if ng_name == "master":
             found_in_permanent = True
@@ -156,20 +156,20 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 }
 ```
 
-### 3. Проблема: Hybrid → CloudPermanent требует cluster config
+### 3. Problem: Hybrid → CloudPermanent requires cluster config
 
-**В Python хуке:**
+**In the Python hook:**
 ```python
-# Хук имеет доступ к Secret через snapshot
+# Hook has access to Secret via snapshot
 includeSnapshotsFrom: ["cluster_config"]
 
-# В коде:
+# In code:
 provider_config = base64.decode(self._snapshots["cluster_config"][0]["filterResult"])
 ```
 
-**В Go есть два варианта:**
+**In Go there are two options:**
 
-**Вариант A: Validating Webhook с доступом к cluster config**
+**Option A: Conversion Webhook with cluster config access**
 ```go
 // api/deckhouse.io/v1alpha2/nodegroup_webhook.go
 
@@ -179,7 +179,7 @@ type NodeGroupWebhook struct {
 
 func (w *NodeGroupWebhook) ConvertTo(src *NodeGroup, dst *v1.NodeGroup) error {
     if src.Spec.NodeType == NodeTypeHybrid {
-        // Читаем Secret
+        // Read Secret
         secret := &corev1.Secret{}
         w.Client.Get(ctx, types.NamespacedName{
             Namespace: "kube-system",
@@ -198,9 +198,9 @@ func (w *NodeGroupWebhook) ConvertTo(src *NodeGroup, dst *v1.NodeGroup) error {
 }
 ```
 
-**Вариант B: Использовать annotation для передачи информации**
+**Option B: Use an annotation to pass information**
 ```yaml
-# При создании NodeGroup, внешний компонент добавляет annotation
+# When creating a NodeGroup, an external component adds an annotation
 metadata:
   annotations:
     node.deckhouse.io/permanent-node-group: "true"
@@ -219,7 +219,7 @@ func (src *NodeGroup) ConvertTo(dstRaw conversion.Hub) error {
 }
 ```
 
-### 4. v1_to_alpha2: Обратный маппинг
+### 4. v1_to_alpha2: Reverse mapping
 
 **Python:**
 ```python
@@ -253,7 +253,7 @@ func (dst *NodeGroup) ConvertFrom(srcRaw conversion.Hub) error {
 }
 ```
 
-## Цепочка конверсий
+## Conversion Chain
 
 ### Python (shell-operator)
 
@@ -264,7 +264,7 @@ v1alpha1 → v1alpha2 → v1 (hub)
                └── alpha2_to_v1()
 ```
 
-Shell-operator реализует **прямые конверсии** между соседними версиями.
+Shell-operator implements **direct conversions** between adjacent versions.
 
 ### Go (controller-runtime)
 
@@ -276,31 +276,31 @@ v1alpha2 ─────────────────► v1 (hub)
               ConvertTo()
 ```
 
-Controller-runtime реализует **hub-and-spoke**: каждая версия конвертируется напрямую в hub.
+Controller-runtime implements **hub-and-spoke**: each version converts directly to the hub.
 
-## Потерянные поля при конверсии
+## Fields Lost During Conversion
 
-### v1alpha1 → v1 (потеряно)
+### v1alpha1 → v1 (lost)
 
-| Поле | Причина |
-|------|---------|
-| `spec.kubernetesVersion` | Deprecated, управляется кластером |
-| `spec.static.internalNetworkCIDRs` | Нет эквивалента в v1 |
+| Field | Reason |
+|-------|--------|
+| `spec.kubernetesVersion` | Deprecated, managed by cluster |
+| `spec.static.internalNetworkCIDRs` | No equivalent in v1 |
 
-### v1 → v1alpha1 (потеряно)
+### v1 → v1alpha1 (lost)
 
-| Поле | Причина |
-|------|---------|
-| `spec.gpu` | Новое в v1 |
-| `spec.fencing` | Новое в v1 |
-| `spec.update` | Новое в v1 |
-| `spec.staticInstances` | Новое в v1 |
-| `spec.cri.containerdV2` | Новое в v1 (downgrade to containerd) |
-| `spec.cri.notManaged` | Новое в v1 |
-| `spec.kubelet.resourceReservation` | Новое в v1 |
-| `spec.kubelet.topologyManager` | Новое в v1 |
+| Field | Reason |
+|-------|--------|
+| `spec.gpu` | New in v1 |
+| `spec.fencing` | New in v1 |
+| `spec.update` | New in v1 |
+| `spec.staticInstances` | New in v1 |
+| `spec.cri.containerdV2` | New in v1 (downgrade to containerd) |
+| `spec.cri.notManaged` | New in v1 |
+| `spec.kubelet.resourceReservation` | New in v1 |
+| `spec.kubelet.topologyManager` | New in v1 |
 
-## Тестирование
+## Testing
 
 ```go
 // api/deckhouse.io/v1alpha1/conversion_test.go
@@ -325,19 +325,19 @@ func TestConvertTo(t *testing.T) {
 }
 ```
 
-## Итог
+## Summary
 
-| Аспект | Python Hook | Go Conversion |
+| Aspect | Python Hook | Go Conversion |
 |--------|-------------|---------------|
-| Типизация | Нет | Да |
-| Тестируемость | Сложно | Просто |
-| Производительность | HTTP + JSON | Прямой вызов |
-| Доступ к cluster config | Через snapshots | Через webhook с client |
-| Сложность | Низкая | Средняя |
+| Type safety | No | Yes |
+| Testability | Hard | Easy |
+| Performance | HTTP + JSON | Direct call |
+| Cluster config access | Via snapshots | Via webhook with client |
+| Complexity | Low | Medium |
 
-## Часть 2: Validation Webhook (node_group bash hook)
+## Part 2: Validation Webhook (node_group bash hook)
 
-### Исходный хук (Bash)
+### Original Hook (Bash)
 
 ```bash
 # modules/040-node-manager/hooks/node_group
@@ -352,24 +352,24 @@ kubernetesValidating:
     resources:   ["nodegroups"]
 ```
 
-### Что читает хук
+### What the Hook Reads
 
-| Snapshot | Ресурс | Что извлекает |
-|----------|--------|---------------|
-| `endpoints` | Endpoints/kubernetes | Количество API server endpoints |
+| Snapshot | Resource | What it extracts |
+|----------|----------|------------------|
+| `endpoints` | Endpoints/kubernetes | API server endpoint count |
 | `cluster_config` | Secret/d8-cluster-configuration | defaultCRI, clusterPrefixLen, clusterType, podSubnetNodeCIDRPrefix |
-| `provider_cluster_config` | Secret/d8-provider-cluster-configuration | Доступные зоны |
+| `provider_cluster_config` | Secret/d8-provider-cluster-configuration | Available zones |
 | `deckhouse_config` | ModuleConfig/global | customTolerationKeys |
-| `nodes_with_containerd_custom_conf` | Nodes с label `containerd-config=custom` | Ноды с кастомным containerd |
-| `nodes_without_containerd_support` | Nodes с label `containerd-v2-unsupported` | Ноды без поддержки containerd v2 |
+| `nodes_with_containerd_custom_conf` | Nodes with label `containerd-config=custom` | Nodes with custom containerd |
+| `nodes_without_containerd_support` | Nodes with label `containerd-v2-unsupported` | Nodes without containerd v2 support |
 
-### Все проверки
+### All Validations
 
-| # | Проверка | Когда | Go реализация |
-|---|----------|-------|---------------|
+| # | Validation | When | Go implementation |
+|---|-----------|------|-------------------|
 | 1 | `clusterPrefix + ngName <= 42` | CREATE, Cloud | `NodeGroupValidator.Handle()` |
 | 2 | `maxPerZone >= minPerZone` | CREATE/UPDATE | `NodeGroupValidator.Handle()` |
-| 3 | `maxPods` vs subnet size | CREATE/UPDATE | Warning в `NodeGroupValidator` |
+| 3 | `maxPods` vs subnet size | CREATE/UPDATE | Warning in `NodeGroupValidator` |
 | 4 | Zone exists in provider | CREATE/UPDATE | `loadProviderClusterConfig()` |
 | 5 | `cri.type != Docker` | CREATE/UPDATE | `NodeGroupValidator.Handle()` |
 | 6 | CRI change on master < 3 endpoints | UPDATE | Warning, `getKubernetesEndpointsCount()` |
@@ -382,7 +382,7 @@ kubernetesValidating:
 | 13 | ContainerdV2 blocked by unsupported nodes | UPDATE | `getNodesWithoutContainerdV2Support()` |
 | 14 | memorySwap requires cgroup v2 | UPDATE | `getNodesWithoutContainerdV2Support()` |
 
-### Go реализация
+### Go Implementation
 
 ```go
 // internal/webhook/validator.go
@@ -393,31 +393,31 @@ type NodeGroupValidator struct {
 }
 
 func (v *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) admission.Response {
-    // Загружаем cluster config
+    // Load cluster config
     clusterConfig, _ := v.loadClusterConfig(ctx)
     providerConfig, _ := v.loadProviderClusterConfig(ctx)
     
-    // Проверка 1: prefix + name <= 42
+    // Validation 1: prefix + name <= 42
     if req.Operation == "CREATE" && clusterConfig.ClusterType == "Cloud" {
         if 63-clusterConfig.ClusterPrefixLen-1-len(ng.Name)-21 < 0 {
             return admission.Denied("...")
         }
     }
     
-    // Проверка 2: maxPerZone >= minPerZone
+    // Validation 2: maxPerZone >= minPerZone
     if ng.Spec.CloudInstances != nil {
         if ng.Spec.CloudInstances.MaxPerZone < ng.Spec.CloudInstances.MinPerZone {
             return admission.Denied("...")
         }
     }
     
-    // ... остальные проверки
+    // ... remaining validations
     
     return admission.Allowed("")
 }
 ```
 
-### Регистрация webhook
+### Webhook Registration
 
 ```go
 // cmd/main.go
@@ -429,17 +429,17 @@ mgr.GetWebhookServer().Register("/validate-nodegroup-policy", &webhook.Admission
 })
 ```
 
-### Сравнение: Bash vs Go
+### Comparison: Bash vs Go
 
-| Аспект | Bash Hook | Go Validator |
+| Aspect | Bash Hook | Go Validator |
 |--------|-----------|--------------|
-| Типизация | Нет (JSON/jq) | Да (Go structs) |
-| Доступ к кластеру | Через snapshots | Через client.Client |
-| Ошибки | Runtime | Compile-time |
-| Тестируемость | Сложно | Unit tests |
-| Производительность | Новый процесс | В памяти |
+| Type safety | No (JSON/jq) | Yes (Go structs) |
+| Cluster access | Via snapshots | Via client.Client |
+| Errors | Runtime | Compile-time |
+| Testability | Hard | Unit tests |
+| Performance | New process | In-memory |
 
-## Файлы проекта
+## Project Files
 
 ```
 node-controller/
@@ -464,7 +464,7 @@ node-controller/
     └── main.go                       # Registers both webhooks
 ```
 
-## Webhook конфигурация
+## Webhook Configuration
 
 ```yaml
 # config/webhook/webhook-configuration.yaml
