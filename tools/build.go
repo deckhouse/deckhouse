@@ -41,7 +41,6 @@ const (
 	modulesWithDependencies     = "modules-with-dependencies-%s.yaml"
 	candiFileName               = "candi-%s.yaml"
 	candiCloudProviders         = "candi-cloud-providers-%s.yaml"
-	candiCloudProvidersBashible = "candi-cloud-providers-bashible-%s.yaml"
 	modulesExcluded             = "modules-excluded-%s.yaml"
 	cloudProviderGlob           = "030-cloud-provider-*"
 )
@@ -95,19 +94,12 @@ var stageDependenciesFile = map[string][]string{
 	},
 }
 
-var stageDependenciesBeforeSetup = map[string][]string{
-	"beforeSetup": {
-		"*",
-	},
-}
-
 type writeSettings struct {
 	Edition           string
 	Prefix            string
 	Dir               string
 	SaveTo            string
 	ExcludePaths      []string
-	IncludePaths      []string
 	StageDependencies map[string][]string
 	ExcludedModules   map[string]struct{}
 }
@@ -297,7 +289,6 @@ func writeCandiCloudProvidersSections(settings writeSettings) {
 			Add:               strings.TrimPrefix(candiPath, workDir),
 			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
 			ExcludePaths:      settings.ExcludePaths,
-			IncludePaths:      settings.IncludePaths,
 			StageDependencies: settings.StageDependencies,
 		})
 	}
@@ -470,14 +461,6 @@ func (e *executor) executeEdition(editionName string) {
 			StageDependencies: stageDependenciesFile,
 		}
 
-		writeSettingCandiCloudProvidersBashible := writeSettings{
-			Edition: editionName,
-			SaveTo:  candiCloudProvidersBashible,
-			Dir:     "modules",
-			Prefix:  prefix,
-			StageDependencies: stageDependenciesBeforeSetup,
-		}
-
 		writeSettingCandi := writeSettings{
 			Edition:           editionName,
 			SaveTo:            candiFileName,
@@ -526,7 +509,6 @@ func (e *executor) executeEdition(editionName string) {
 		writeSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
 		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
-		writeCandiCloudProvidersSections(writeSettingCandiCloudProvidersBashible)
 
 		if ed.Name == editionName {
 			// only for one edition
