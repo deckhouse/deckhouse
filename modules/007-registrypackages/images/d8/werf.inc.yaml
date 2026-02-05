@@ -1,3 +1,4 @@
+{{- $version := include "get_oss_version_by_id" (list "deckhouse-cli" $ )  -}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
@@ -13,7 +14,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch {{ .CandiVersionMap.d8.d8CliVersion }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
+  - git clone --depth 1 --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/deckhouse-cli.git /src/deckhouse-cli
 #  - rm -rf /src/deckhouse-cli/.git # https://github.com/deckhouse/deckhouse-cli/blob/main/Taskfile.yml#L9
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
@@ -29,7 +30,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "d8": "{{ .CandiVersionMap.d8.d8CliVersion }}" }
+    labels: { "distro": "all", "version": "all", "d8": "{{ $version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
@@ -78,7 +79,7 @@ shell:
 
   - cd /src/deckhouse-cli
   - task build:dist:linux:amd64
-  - mv ./dist/{{ .CandiVersionMap.d8.d8CliVersion }}/linux-amd64/bin/d8 /d8
+  - mv ./dist/{{ $version }}/linux-amd64/bin/d8 /d8
   - mv /src/scripts/* /
   - chmod +x /d8 /install /uninstall
   - rm ~/.gitconfig # Prevent PRIVATE_REPO_TOKEN from leaking into the image layer
