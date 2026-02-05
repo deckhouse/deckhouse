@@ -18,6 +18,7 @@ package apps
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -59,21 +60,22 @@ type Application struct {
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
-	registry   registry.Registry // Application registry
+	repository registry.Remote   // Application repository
 
 	hooks         *hooks.Storage      // Hook storage with indices
 	values        *values.Storage     // Values storage with layering
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
-// ApplicationConfig holds configuration for creating a new Application instance.
-type ApplicationConfig struct {
+// Config holds configuration for creating a new Application instance.
+type Config struct {
+	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
 
 	Definition Definition // Application definition
 
-	Digests  map[string]string // Package images digests
-	Registry registry.Registry
+	Digests    map[string]string // Package images digests(images_digests.json)
+	Repository registry.Remote   // Package repository options
 
 	ConfigSchema []byte // OpenAPI config schema (YAML)
 	ValuesSchema []byte // OpenAPI values schema (YAML)
@@ -83,11 +85,11 @@ type ApplicationConfig struct {
 	SettingsCheck *kind.SettingsCheck
 }
 
-// NewApplication creates a new Application instance with the specified configuration.
+// NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
+func NewAppByConfig(name string, cfg *Config) (*Application, error) {
 	a := new(Application)
 
 	splits := strings.Split(name, ".")
@@ -99,11 +101,11 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.instance = splits[1]
 
 	a.name = name
-	a.path = path
 
+	a.path = cfg.Path
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
-	a.registry = cfg.Registry
+	a.repository = cfg.Repository
 	a.settingsCheck = cfg.SettingsCheck
 
 	a.hooks = hooks.NewStorage()
@@ -166,10 +168,19 @@ func (a *Application) GetRuntimeValues() RuntimeValues {
 		Package: addonutils.Values{
 			"Name":     a.definition.Name,
 			"Digests":  a.digests,
-			"Registry": a.registry,
+			"Registry": a.repository,
 			"Version":  a.definition.Version,
 		},
 	}
+}
+
+// GetExtraNelmValues returns runtime values in string format
+func (a *Application) GetExtraNelmValues() string {
+	runtimeValues := a.GetRuntimeValues()
+	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
+	packageJSON, _ := json.Marshal(runtimeValues.Package)
+
+	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".

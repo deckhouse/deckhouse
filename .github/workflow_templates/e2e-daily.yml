@@ -80,7 +80,7 @@ jobs:
     name: Send alert about workflow problem
     runs-on: "regular"
     needs: {!{ $dependsJobsForAlert | data.ToJSON }!}
-    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' }}
+    if: ${{ failure() && github.repository == 'deckhouse/deckhouse' && github.run_attempt == 1 }}
     steps:
 {!{- $labels := dict "trigger" "DailyE2EWorkflowFailed" -}!}
 {!{- $annotations := dict "summary" "Daily e2e tests workflow failed" -}!}

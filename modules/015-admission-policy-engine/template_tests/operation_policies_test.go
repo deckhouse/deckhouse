@@ -31,49 +31,107 @@ const (
 )
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation policies", func() {
-	f := SetupHelmConfig(`{global: {discovery: {kubernetesVersion: "1.30"}},admissionPolicyEngine: {podSecurityStandards: {}, internal: {"bootstrapped": true, "ratify": {"webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
-{
-	"metadata":{"name":"genpolicy"},
-	"spec":{
-		"policies":{
-			"allowedRepos":["foo"],
-			"requiredResources":{"limits":["memory"],"requests":["cpu","memory"]},
-			"disallowedImageTags":["latest"],
-			"requiredLabels": {
-				"labels": [
-					{ "key": "foo" },
-					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.agilebank.demo$" }
-				],
-				"watchKinds": ["/Pod", "networking.k8s.io/Ingress"]
-			},
-            "requiredAnnotations": {
-				"annotations": [
-					{ "key": "foo" },
-					{ "key": "bar", "allowedRegex": "^[a-zA-Z]+.myapp.demo$" }
-				],
-				"watchKinds": ["/Namespace"]
-			},
-			"requiredProbes":["livenessProbe","readinessProbe"],
-			"maxRevisionHistoryLimit":3,
-			"imagePullPolicy":"Always",
-			"priorityClassNames":["foo","bar"],
-			"ingressClassNames": ["ing1", "ing2"],
-			"storageClassNames": ["st1", "st2"],
-			"checkHostNetworkDNSPolicy":true,
-			"checkContainerDuplicates":true,
-			"replicaLimits":{
-					"minReplicas":1,
-					"maxReplicas":10
-			},
-			"disallowedTolerations": [
-				{"key": "node-role.kubernetes.io/master", "operator": "Exists"},
-				{"key": "node-role.kubernetes.io/control-plane", "operator": "Exists"}
-			]
-		},
-		"match":{"namespaceSelector":{"matchNames":["default"]}}}}],
-		"trackedConstraintResources": [{"apiGroups":[""],"resources":["pods","nodes","namespaces"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
-		"trackedMutateResources": [{"apiGroups":[""],"resources":["pods"]},{"apiGroups":["extensions","networking.k8s.io"],"resources":["ingresses"]}],
-		"webhook": {ca: YjY0ZW5jX3N0cmluZwo=, crt: YjY0ZW5jX3N0cmluZwo=, key: YjY0ZW5jX3N0cmluZwo=}}}}`)
+	f := SetupHelmConfig(`
+global:
+  discovery:
+    kubernetesVersion: "1.30"
+admissionPolicyEngine:
+  podSecurityStandards: {}
+  internal:
+    bootstrapped: true
+    ratify:
+      webhook:
+        key: YjY0ZW5jX3N0cmluZwo=
+        crt: YjY0ZW5jX3N0cmluZwo=
+        ca: YjY0ZW5jX3N0cmluZwo=
+    podSecurityStandards:
+      enforcementActions:
+        - deny
+    operationPolicies:
+      - metadata:
+          name: genpolicy
+        spec:
+          policies:
+            allowedRepos:
+              - foo
+            requiredResources:
+              limits:
+                - memory
+              requests:
+                - cpu
+                - memory
+            disallowedImageTags:
+              - latest
+            requiredLabels:
+              labels:
+                - key: foo
+                - key: bar
+                  allowedRegex: "^[a-zA-Z]+.agilebank.demo$"
+              watchKinds:
+                - /Pod
+                - networking.k8s.io/Ingress
+            requiredAnnotations:
+              annotations:
+                - key: foo
+                - key: bar
+                  allowedRegex: "^[a-zA-Z]+.myapp.demo$"
+              watchKinds:
+                - /Namespace
+            requiredProbes:
+              - livenessProbe
+              - readinessProbe
+            maxRevisionHistoryLimit: 3
+            imagePullPolicy: Always
+            priorityClassNames:
+              - foo
+              - bar
+            ingressClassNames:
+              - ing1
+              - ing2
+            storageClassNames:
+              - st1
+              - st2
+            checkHostNetworkDNSPolicy: true
+            checkContainerDuplicates: true
+            replicaLimits:
+              minReplicas: 1
+              maxReplicas: 10
+            disallowedTolerations:
+              - key: node-role.kubernetes.io/master
+                operator: Exists
+              - key: node-role.kubernetes.io/control-plane
+                operator: Exists
+          match:
+            namespaceSelector:
+              matchNames:
+                - default
+    trackedConstraintResources:
+      - apiGroups:
+          - ""
+        resources:
+          - pods
+          - nodes
+          - namespaces
+      - apiGroups:
+          - extensions
+          - networking.k8s.io
+        resources:
+          - ingresses
+    trackedMutateResources:
+      - apiGroups:
+          - ""
+        resources:
+          - pods
+      - apiGroups:
+          - extensions
+          - networking.k8s.io
+        resources:
+          - ingresses
+    webhook:
+      ca: YjY0ZW5jX3N0cmluZwo=
+      crt: YjY0ZW5jX3N0cmluZwo=
+      key: YjY0ZW5jX3N0cmluZwo=
+`)
 
 	Context("Cluster with operation policies", func() {
 		BeforeEach(func() {

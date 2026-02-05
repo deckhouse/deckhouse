@@ -520,6 +520,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/040-control-plane-manager/images/update-observer/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/bashible-apiserver/src"
   labels:
   - "type/dependencies"
@@ -548,6 +557,15 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-node-manager/images/fencing-agent/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
+  directory: "/modules/040-node-manager/images/node-group-exporter/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

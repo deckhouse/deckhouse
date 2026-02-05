@@ -104,12 +104,12 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 		err := s.cache.Check()
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("Ok."))
+			_, _ = w.Write([]byte("Ok."))
 			return
 		}
 
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		_, _ = w.Write([]byte(err.Error()))
 	})
 
 	tlsCfg, err := buildTLSConfig()

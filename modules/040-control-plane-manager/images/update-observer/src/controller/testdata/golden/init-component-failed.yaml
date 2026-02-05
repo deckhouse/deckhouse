@@ -1,0 +1,35 @@
+---
+data:
+  spec: |
+    desiredVersion: v1.35
+    updateMode: Automatic
+  status: |
+    currentVersion: v1.35
+    phase: ControlPlaneUpdating
+    progress: 88%
+    controlPlane:
+    - name: master-1
+      phase: UpToDate
+      components:
+        kube-apiserver: v1.35
+        kube-controller-manager: v1.35
+        kube-scheduler: v1.35
+    - name: master-2
+      phase: Failed
+      components:
+        kube-apiserver: v1.35
+        kube-controller-manager: v1.35
+        kube-scheduler: v1.35
+    nodes:
+      desiredCount: 3
+      upToDateCount: 3
+metadata:
+  annotations:
+    cause: init
+    lastReconciliationTime: "2000-01-01T03:00:30+03:00"
+  labels:
+    heritage: deckhouse
+    k8s-version: v1.35
+    max-k8s-version: v1.35
+  name: d8-cluster-kubernetes
+  namespace: kube-system

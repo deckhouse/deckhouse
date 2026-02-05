@@ -190,4 +190,3 @@ func (s *AccessibleNamespaceStorage) ConvertToTable(ctx context.Context, object 
 
 	return &table, nil
 }
-

@@ -143,24 +143,22 @@ func testCreateAbortStaticProviderTest(t *testing.T, params testAbortStaticTestP
 
 	loggerProvider := log.SimpleLoggerProvider(logger)
 
-	pipeline := phases.NewDummyDefaultPipelineProviderOpts(
-		phases.WithPipelineName("static abort"),
-		phases.WithPipelineLoggerProvider(loggerProvider),
-	)()
-
 	sshProvider := testCreateAbortSSHProvider(params, logger)
 
 	stateCache := cache.NewTestCache()
 
+	pec := phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil)
+	require.NoError(t, pec.InitPipeline(stateCache))
+
 	abortParams := &GetAbortDestroyerParams{
 		MetaConfig:             metaConfig,
 		StateCache:             stateCache,
-		PhasedExecutionContext: phases.NewDefaultPhasedExecutionContext(phases.OperationBootstrap, nil, nil),
+		PhasedExecutionContext: pec,
 		LoggerProvider:         loggerProvider,
 		TmpDir:                 tmpDir,
 		SSHClientProvider:      sshProvider.provider,
 
-		overridePhaseProvider: phases.NewPhaseActionProviderFromPipeline(pipeline),
+		overridePhaseProvider: phases.NewDefaultPhaseActionProviderWithStateCache(pec, stateCache),
 		staticLoopsParams: static.LoopsParams{
 			DestroyMaster: retry.NewEmptyParams(),
 		},

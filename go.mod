@@ -69,6 +69,7 @@ require (
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofrs/uuid/v5 v5.3.2
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/itchyny/gojq v0.12.17
 	github.com/jonboulle/clockwork v0.4.0
@@ -279,7 +280,7 @@ require (
 	github.com/rubenv/sql-migrate v1.7.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/samber/lo v1.51.0
+	github.com/samber/lo v1.51.0 // indirect
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/shopspring/decimal v1.4.0 // indirect

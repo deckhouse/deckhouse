@@ -45,9 +45,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to send request: %v", err)
 	}
-	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		log.Fatalf("Failed to read response: %v", err)
 	}

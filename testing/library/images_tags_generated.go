@@ -256,6 +256,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler134":                    "imageHash-controlPlaneManager-kubeScheduler134",
 		"kubeScheduler134VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler134VexArtifact",
 		"kubernetesApiProxy":                  "imageHash-controlPlaneManager-kubernetesApiProxy",
+		"updateObserver":                      "imageHash-controlPlaneManager-updateObserver",
 	},
 	"dashboard": map[string]interface{}{
 		"api":            "imageHash-dashboard-api",
@@ -411,6 +412,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"fencingAgent":                    "imageHash-nodeManager-fencingAgent",
 		"machineControllerManager":        "imageHash-nodeManager-machineControllerManager",
 		"nodeFeatureDiscovery":            "imageHash-nodeManager-nodeFeatureDiscovery",
+		"nodeGroupExporter":               "imageHash-nodeManager-nodeGroupExporter",
 		"nvidiaDcgm":                      "imageHash-nodeManager-nvidiaDcgm",
 		"nvidiaDcgmExporter":              "imageHash-nodeManager-nvidiaDcgmExporter",
 		"nvidiaDevicePlugin":              "imageHash-nodeManager-nvidiaDevicePlugin",
