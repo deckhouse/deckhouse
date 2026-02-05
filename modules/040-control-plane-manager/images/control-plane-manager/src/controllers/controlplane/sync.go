@@ -123,6 +123,10 @@ func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *
 		return nil, fmt.Errorf("failed to sync pki secret to tmp: %w", err)
 	}
 
+	if err := generator.GenerateKubeconfigs(tmpDir); err != nil {
+		return nil, fmt.Errorf("failed to generate kubeconfigs: %w", err)
+	}
+
 	components := []string{"etcd", "kube-apiserver", "kube-controller-manager", "kube-scheduler"}
 	checksums := make(map[string]string)
 	start := time.Now()
