@@ -74,7 +74,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: LOG_LEVEL
-              value: info
+              value: debug
             - name: FENCING_MODE
               value: {{ (($ng.fencing).mode) | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
@@ -85,6 +85,9 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: NODE_GROUP
+              value: {{ $ng.name }}
+
           ports:
             - name: memberlist-tcp
               containerPort: 8500
