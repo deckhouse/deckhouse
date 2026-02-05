@@ -1,3 +1,4 @@
+{{- $providerVersion := include "get_oss_version_by_id" (list "terraform-provider-vsphere" $ )  -}}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vsphere") }}'
@@ -7,7 +8,7 @@ git:
 import:
 - image: cloud-provider-vsphere/terraform-manager
   add: /terraform-manager/terraform-provider-vsphere
-  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "vsphere") }}/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ .TF.vsphere.version }}/linux_amd64/terraform-provider-vsphere
+  to: /plugins/{{ include "infrastructure_manager_plugin_dir" (dict "TF" .TF "providerName" "vsphere") }}/{{ .TF.vsphere.namespace }}/{{ .TF.vsphere.type }}/{{ $providerVersion }}/linux_amd64/terraform-provider-vsphere
   before: setup
 
 {{ include "image_spec_for_infrastructure_manager" . }}
