@@ -58,6 +58,12 @@ import:
   add: /src/bashible-apiserver
   to: /bashible-apiserver
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-cloud-providers-bashible
+  add: /deckhouse/candi/cloud-providers
+  to: /deckhouse/candi/cloud-providers
+  includePaths:
+  - '*/bashible'
+  before: setup
 git:
 {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 - add: /{{ .ModulePath }}candi/bashible
@@ -76,8 +82,13 @@ git:
   {{- end }}
   excludePaths:
   - "**/cluster-bootstrap"
-{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-bashible-%s.yaml" .Env) }}
 {{- include "image mount points" . }}
 imageSpec:
   config:
     entrypoint: ["/bashible-apiserver", "--tls-cipher-suites", "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_RSA_WITH_AES_128_CBC_SHA,TLS_RSA_WITH_AES_256_CBC_SHA,TLS_RSA_WITH_AES_128_GCM_SHA256,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA"]
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-cloud-providers-bashible
+fromImage: base/scratch
+final: false
+git:
+{{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
