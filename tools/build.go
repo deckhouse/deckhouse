@@ -475,9 +475,6 @@ func (e *executor) executeEdition(editionName string) {
 			SaveTo:  candiCloudProvidersBashible,
 			Dir:     "modules",
 			Prefix:  prefix,
-			IncludePaths: []string{
-				"bashible",
-			},
 			StageDependencies: stageDependenciesBeforeSetup,
 		}
 
