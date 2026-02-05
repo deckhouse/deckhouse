@@ -95,27 +95,19 @@ spec:
         apiVersions: ["v1"]
         operations: ["CREATE", "UPDATE"]
         resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]
+        scope: "*"
       - apiGroups: ["batch"]
         apiVersions: ["v1"]
         operations: ["CREATE", "UPDATE"]
-        resources: ["jobs", "cronjobs"]
+        resources: ["jobs"]
+        scope: "*"
   validations:
-    # deployments/rs/sts/ds + jobs
-    - expression: >-
-        request.resource.resource == 'cronjobs'
-        || !(has(object.spec.template.metadata.labels) &&
-             object.spec.template.metadata.labels['gatekeeper.sh/operation'] == 'webhook')
+    - expression: |-
+        !(has(object.spec.template.metadata.labels) &&
+          object.spec.template.metadata.labels['gatekeeper.sh/operation'] == 'webhook')
         || request.userInfo.username.startsWith("system:serviceaccount:d8-")
         || request.userInfo.username.startsWith("system:serviceaccount:kube-")
-      message: "Setting gatekeeper.sh/operation=webhook in pod template is forbidden"
-    # cronjobs
-    - expression: >-
-        request.resource.resource != 'cronjobs'
-        || !(has(object.spec.jobTemplate.spec.template.metadata.labels) &&
-             object.spec.jobTemplate.spec.template.metadata.labels['gatekeeper.sh/operation'] == 'webhook')
-        || request.userInfo.username.startsWith("system:serviceaccount:d8-")
-        || request.userInfo.username.startsWith("system:serviceaccount:kube-")
-      message: "Setting gatekeeper.sh/operation=webhook in CronJob pod template is forbidden"
+      message: Setting gatekeeper.sh/operation=webhook in pod template is forbidden
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
@@ -124,4 +116,35 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
 spec:
   policyName: deny-gatekeeper-webhook-operation-label-controllers
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: deny-gatekeeper-webhook-operation-label-controllers-cronjobs
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["batch"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["cronjobs"]
+        scope: "*"
+  validations:
+    - expression: |-
+        !(has(object.spec.jobTemplate.spec.template.metadata.labels) &&
+          object.spec.jobTemplate.spec.template.metadata.labels['gatekeeper.sh/operation'] == 'webhook')
+        || request.userInfo.username.startsWith("system:serviceaccount:d8-")
+        || request.userInfo.username.startsWith("system:serviceaccount:kube-")
+      message: Setting gatekeeper.sh/operation=webhook in CronJob pod template is forbidden
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-gatekeeper-webhook-operation-label-controllers-cronjobs-binding"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: deny-gatekeeper-webhook-operation-label-controllers-cronjobs
   validationActions: [Deny]
