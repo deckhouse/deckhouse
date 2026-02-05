@@ -18,6 +18,7 @@ package controlplane
 
 import (
 	"control-plane-manager/pkg/constants"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,6 +30,7 @@ import (
 
 type ManifestGenerator interface {
 	GenerateManifest(componentName string, tmpDir string) ([]byte, error)
+	GenerateCertificates(componentName string, tmpDir string) error
 }
 
 type KubeadmManifestGenerator struct{}
@@ -36,6 +38,11 @@ type KubeadmManifestGenerator struct{}
 // GenerateManifest KubeadmManifestGenerator generate manifests for components using kubeadm init phase.
 func (g *KubeadmManifestGenerator) GenerateManifest(componentName string, tmpDir string) ([]byte, error) {
 	return generateTmpManifestWithKubeadm(componentName, tmpDir)
+}
+
+// GenerateCertificates generates certificates for components using kubeadm init phase certs.
+func (g *KubeadmManifestGenerator) GenerateCertificates(componentName string, tmpDir string) error {
+	return generateTmpCertificatesWithKubeadm(componentName, tmpDir)
 }
 
 // generateTmpManifestWithKubeadm generates manifest for component using kubeadm init phase to "tmp directory + etc/kubernetes/manifests".
@@ -53,16 +60,7 @@ func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte
 	}
 	args = append(args, "--rootfs", tmpDir)
 
-	klog.Infof("run kubeadm for %v", componentName)
-
-	start := time.Now()
-	c := exec.Command(constants.KubeadmPath, args...)
-	out, err := c.CombinedOutput()
-	for _, s := range strings.Split(string(out), "\n") {
-		klog.Infof("%s", s)
-	}
-	klog.Infof("kubeadm command took %v", time.Since(start))
-	if err != nil {
+	if err := runKubeadmCommand(args, fmt.Sprintf("generate manifest for %s", componentName)); err != nil {
 		return nil, err
 	}
 
@@ -73,4 +71,55 @@ func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte
 	}
 
 	return manifestBytes, nil
+}
+
+// generateTmpCertificatesWithKubeadm generates certificates for components using kubeadm init phase certs.
+// This is needed to generate peer, server, and healthcheck-client certificates for etcd,
+// and other certificates for control-plane components in tmpDir before calculating checksums.
+func generateTmpCertificatesWithKubeadm(componentName string, tmpDir string) error {
+	configPath := filepath.Join("/", constants.RelativeKubeadmDir, "config.yaml")
+	var args []string
+
+	switch componentName {
+	case "etcd":
+		// kubeadm init phase certs etcd-server --config /etc/kubernetes/deckhouse/kubeadm/config.yaml --rootfs /tmp/control-plane-123
+		for _, certName := range []string{"etcd-server", "etcd-peer", "etcd-healthcheck-client"} {
+			args = []string{"init", "phase", "certs", certName, "--config", configPath, "--rootfs", tmpDir}
+			if err := runKubeadmCommand(args, fmt.Sprintf("generate certificate %s", certName)); err != nil {
+				return err
+			}
+		}
+	case "kube-apiserver":
+		// Generate apiserver certificates
+		for _, certName := range []string{"apiserver", "apiserver-kubelet-client", "apiserver-etcd-client", "front-proxy-client"} {
+			args = []string{"init", "phase", "certs", certName, "--config", configPath, "--rootfs", tmpDir}
+			if err := runKubeadmCommand(args, fmt.Sprintf("generate certificate %s", certName)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func runKubeadmCommand(args []string, description string) error {
+	klog.Infof("run kubeadm: %s", description)
+	start := time.Now()
+	c := exec.Command(constants.KubeadmPath, args...)
+	out, err := c.CombinedOutput()
+
+	// Always log
+	for _, s := range strings.Split(string(out), "\n") {
+		if s != "" {
+			klog.Infof("%s", s)
+		}
+	}
+
+	klog.Infof("kubeadm command took %v", time.Since(start))
+
+	if err != nil {
+		return fmt.Errorf("%s: %w", description, err)
+	}
+
+	return nil
 }

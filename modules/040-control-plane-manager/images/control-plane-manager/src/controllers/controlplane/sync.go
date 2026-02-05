@@ -127,6 +127,11 @@ func buildDesiredControlPlaneConfiguration(cmpSecret *corev1.Secret, pkiSecret *
 	checksums := make(map[string]string)
 	start := time.Now()
 	for _, component := range components {
+
+		if err := generator.GenerateCertificates(component, tmpDir); err != nil {
+			return nil, fmt.Errorf("failed to generate certificates for %s: %w", component, err)
+		}
+
 		manifest, err := generator.GenerateManifest(component, tmpDir)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate manifest for %s: %w", component, err)
