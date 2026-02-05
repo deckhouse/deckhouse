@@ -5,7 +5,10 @@
 {{- $clusterBootstraped := .Values.global.clusterIsBootstrapped | default false }}
 {{- $staticCluster := eq (((.Values.global).clusterConfiguration).clusterType | default "" ) "Static" }}
 
-{{- if or (not $moduleEnabled) (not $clusterBootstraped) (not $staticCluster) }}
+{{- $isLocalMode := eq (((.Values.deckhouse).registry).mode | default "") "Local" }}
+{{- $isProxyMode := eq (((.Values.deckhouse).registry).mode | default "") "Proxy" }}
+
+{{- if or (not $moduleEnabled) (not $clusterBootstraped) (not $staticCluster) $isLocalMode $isProxyMode }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
 kind: ValidatingAdmissionPolicy
@@ -60,6 +63,34 @@ spec:
       Proxy and Local are unsupported for non-static clusters.
       Please use other available modes."
   {{- end }}
+{{- if $isLocalMode }}
+  - expression: |
+      !(
+        has(object.?spec.?settings.?registry.mode) &&
+        (
+          object.spec.settings.registry.mode == "Proxy" ||
+          (
+            object.spec.settings.registry.mode == "Unmanaged" &&
+            !has(object.?spec.?settings.?registry.unmanaged)
+          )
+        )
+      )
+    message: >-
+      Switching `spec.settings.registry.mode` to Proxy or non-configurable Unmanaged mode
+      is not supported when registry is running in "Local" mode.
+      Please use a transition mode to switch to the desired mode, for example: Direct or configurable Unmanaged.
+{{- end }}
+{{- if $isProxyMode }}
+  - expression: |
+      !(
+        has(object.?spec.?settings.?registry.mode) &&
+        object.spec.settings.registry.mode == "Local"
+      )
+    message: >-
+      Switching `spec.settings.registry.mode` to Local mode
+      is not supported when registry is running in "Proxy" mode.
+      Please use a transition mode to switch to the desired mode, for example: Direct or configurable Unmanaged.
+{{- end }}
 ---
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
 kind: ValidatingAdmissionPolicyBinding
