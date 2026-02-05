@@ -20,3 +20,11 @@ properties:
           Kubernetes namespace where cloud provider resources will be created.
         x-examples:
           - team-d8-cloud-providers
+  zones:
+    type: array
+    description: |
+      List of availability zones used by the cloud provider.
+    items:
+      type: string
+    x-examples:
+      - [zone-a, zone-b]
