@@ -15,7 +15,7 @@
   {{- if $trivyIgnoreFile }}
 ---
 image: {{ $imageName }}-trivy-ignore-artifact
-cacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
+fromCacheVersion: {{ div .Commit.Date.Unix (mul 60 60) }}v1
 fromImage: base/vex
 final: true
 secrets:
