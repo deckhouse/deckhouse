@@ -166,7 +166,8 @@ spec:
                 matchConditions:
                   description: Дополнительный список условий соответствия для тонкой фильтрации запросов. Доступно только начиная с версии Kubernetes 1.27.
                   items:
-                    description:  `matchCondition` представляет собой условие, которое должно быть выполнено для отправки запроса в вебхук.
+                    description: |-
+                      `matchCondition` представляет собой условие, которое должно быть выполнено для отправки запроса в вебхук.
                     properties:
                       expression:
                         description: |-
