@@ -37,7 +37,7 @@ func (srv *Server) Run() error {
 	if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("healthz server failed: %w", err)
 	}
-
+	return nil
 }
 
 func (srv *Server) Stop() {
