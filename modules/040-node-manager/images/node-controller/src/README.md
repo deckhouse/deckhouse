@@ -256,6 +256,7 @@ node-controller/
 │   └── main.go                     # Entry point, manager setup
 ├── internal/
 │   ├── controller/
+│   │   ├── register_controller.go          # Auto-registration via init()
 │   │   └── nodegroup_status_controller.go  # Status reconciler
 │   └── webhook/
 │       ├── nodegroup_webhook.go             # Validation webhook (17 checks)
@@ -270,6 +271,29 @@ node-controller/
 ├── Makefile
 └── PROJECT
 ```
+
+## Command-Line Flags
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--metrics-bind-address` | `:8080` | Address for metrics endpoint |
+| `--health-probe-bind-address` | `:8081` | Address for health probes |
+| `--logging-format` | `text` | Logging format (`text` or `json`) |
+| `--disable-controllers` | `` | Comma-separated list of controllers to disable |
+
+### Disabling Controllers
+
+Controllers auto-register via `init()`. To disable specific controllers at runtime:
+
+```bash
+# Disable one controller
+./node-controller --disable-controllers=NodeGroupStatus
+
+# Disable multiple controllers
+./node-controller --disable-controllers=NodeGroupStatus,ChaosMonkey
+```
+
+Controller names match the first argument to `Register()` in each controller file.
 
 ## Building
 

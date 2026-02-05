@@ -39,6 +39,9 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
+// Auto-register controller (like sdk.RegisterFunc in hooks)
+var _ = Register("NodeGroupStatus", SetupNodeGroupStatusController)
+
 const (
 	// NodeGroupLabel is the label on Node that indicates which NodeGroup it belongs to
 	NodeGroupLabel = "node.deckhouse.io/group"
