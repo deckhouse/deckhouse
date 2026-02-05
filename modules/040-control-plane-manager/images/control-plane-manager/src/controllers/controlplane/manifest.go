@@ -40,7 +40,7 @@ func (g *KubeadmManifestGenerator) GenerateManifest(componentName string, tmpDir
 // generateTmpManifestWithKubeadm generates manifest for component using kubeadm init phase to "tmp directory + etc/kubernetes/manifests".
 // This needs for calculating checksum for each components and referenced files from generated manifests.
 func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte, error) {
-	kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
+	manifestDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir, "manifests")
 	configPath := filepath.Join("/", constants.RelativeKubeadmDir, "config.yaml")
 	args := []string{"init", "phase"}
 	if componentName == "etcd" {
@@ -54,16 +54,18 @@ func generateTmpManifestWithKubeadm(componentName string, tmpDir string) ([]byte
 
 	klog.Infof("run kubeadm for %v", componentName)
 
+	start := time.Now()
 	c := exec.Command(constants.KubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
 		klog.Infof("%s", s)
 	}
+	klog.Infof("kubeadm command took %v", time.Since(start))
 	if err != nil {
 		return nil, err
 	}
-	
-	manifestPath := filepath.Join(kubernetesDir, componentName+".yaml")
+
+	manifestPath := filepath.Join(manifestDir, componentName+".yaml")
 	manifestBytes, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
