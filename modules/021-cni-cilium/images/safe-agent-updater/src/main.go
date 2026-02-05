@@ -310,7 +310,6 @@ func waitUntilDisruptionApproved(kubeClient kubernetes.Interface, nodeName strin
 		)
 		if err != nil {
 			log.Errorf("[SafeAgentUpdater] Failed to get node %s. Error: %v", nodeName, err)
-			return err
 		} else if val, ok := node.Annotations["update.node.deckhouse.io/disruption-approved"]; ok && val == "" {
 			return nil
 		}
