@@ -27,10 +27,10 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/samber/lo"
 	"golang.org/x/crypto/bcrypt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
@@ -113,28 +113,28 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ApiVersion:          "deckhouse.io/v1",
 			Kind:                "UserOperation",
 			FilterFunc:          applyUserOperationFilter,
-			ExecuteHookOnEvents: lo.ToPtr(true),
+			ExecuteHookOnEvents: ptr.To(true),
 		},
 		{
 			Name:                "passwords",
 			ApiVersion:          "dex.coreos.com/v1",
 			Kind:                "Password",
 			FilterFunc:          applyPasswordFilter,
-			ExecuteHookOnEvents: lo.ToPtr(false),
+			ExecuteHookOnEvents: ptr.To(false),
 		},
 		{
 			Name:                "offlinesessions",
 			ApiVersion:          "dex.coreos.com/v1",
 			Kind:                "OfflineSessions",
 			FilterFunc:          applyOfflineSessionFilter,
-			ExecuteHookOnEvents: lo.ToPtr(false),
+			ExecuteHookOnEvents: ptr.To(false),
 		},
 		{
 			Name:                "refreshtokens",
 			ApiVersion:          "dex.coreos.com/v1",
 			Kind:                "RefreshToken",
 			FilterFunc:          applyRefreshTokenFilter,
-			ExecuteHookOnEvents: lo.ToPtr(false),
+			ExecuteHookOnEvents: ptr.To(false),
 		},
 	},
 }, getUserOperations)
@@ -246,7 +246,7 @@ func getUserOperations(_ context.Context, input *go_hook.HookInput) error {
 			operation.Status.Phase = UserOperationStatusPhaseSucceeded
 			operation.Status.Message = ""
 		}
-		operation.Status.CompletedAt = lo.ToPtr(metav1.Now())
+		operation.Status.CompletedAt = ptr.To(metav1.Now())
 
 		input.PatchCollector.PatchWithMerge(
 			map[string]any{"status": operation.Status},
@@ -304,7 +304,7 @@ func executeLock(input *go_hook.HookInput, operation UserOperation) error {
 			input.Logger.Error("Failed to convert Password object", "error", err)
 			return nil, err
 		}
-		pass.LockedUntil = lo.ToPtr(time.Now().Add(operation.Spec.Lock.For.Duration))
+		pass.LockedUntil = ptr.To(time.Now().Add(operation.Spec.Lock.For.Duration))
 		u, err := sdk.ToUnstructured(&pass)
 		if err != nil {
 			return nil, err

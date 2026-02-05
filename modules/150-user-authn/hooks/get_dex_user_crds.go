@@ -26,7 +26,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
-	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
@@ -236,8 +235,8 @@ func getDexUsers(_ context.Context, input *go_hook.HookInput) error {
 
 			// If this annotation exists - we consider lock was set by administrator.
 			if _, ok := password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
-				lock.Reason = lo.ToPtr(LockedByAdministrator)
-				lock.Message = lo.ToPtr("Locked by administrator")
+				lock.Reason = ptr.To(LockedByAdministrator)
+				lock.Message = ptr.To("Locked by administrator")
 			}
 		} else if _, ok = password.Annotations[PasswordAnnotationLockedByAdministrator]; ok {
 			// In this case we have expired or unexisted lock and saved from previous lock annotation.
