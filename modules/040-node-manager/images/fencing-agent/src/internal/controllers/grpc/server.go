@@ -7,6 +7,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type NodesGetter interface {
@@ -50,34 +51,36 @@ func (s *Server) GetAll(ctx context.Context, _ *emptypb.Empty) (*pb.Nodes, error
 }
 
 func (s *Server) StreamEvents(_ *emptypb.Empty, stream pb.Fencing_StreamEventsServer) error {
-	//// TODO scan method
 	s.logger.Info("grpc call: StreamEvents")
-	//ctx := stream.Context()
-	//
-	//events, err := s.publisher.Subscribe(ctx)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//for {
-	//	select {
-	//	case event, ok := <-events:
-	//		if !ok {
-	//			// Event channel closed
-	//			return nil
-	//		}
-	//
-	//		pbEvent := mapEvent(event)
-	//
-	//		if err = stream.Send(pbEvent); err != nil {
-	//			return err
-	//		}
-	//
-	//	case <-ctx.Done():
-	//		return ctx.Err()
-	//	}
-	//}
-	return nil
+	ctx := stream.Context()
+
+	events := s.publisher.Subscribe(ctx)
+
+	for {
+		select {
+		case event, ok := <-events:
+			if !ok {
+				// Event channel closed
+				return nil
+			}
+
+			pbEvent := &pb.Event{
+				Node: &pb.Node{
+					Name:    event.Node.Name,
+					Address: event.Node.Addr,
+				},
+				Type: domainEventTypeToPB(event.EventType),
+				Time: timestamppb.Now(),
+			}
+
+			if err := stream.Send(pbEvent); err != nil {
+				return err
+			}
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func domainEventTypeToPB(et domain.EventType) pb.EventType {
