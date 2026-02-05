@@ -27,7 +27,7 @@ import (
 	addonhooks "github.com/flant/addon-operator/pkg/module_manager/models/hooks"
 	"github.com/flant/addon-operator/pkg/module_manager/models/hooks/kind"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	bindingcontext "github.com/flant/shell-operator/pkg/hook/binding_context"
+	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	"go.opentelemetry.io/otel"
@@ -41,11 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
-
-// DependencyContainer provides access to shared services needed by applications.
-type DependencyContainer interface {
-	KubeObjectPatcher() *objectpatch.ObjectPatcher
-}
 
 // Application represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
@@ -67,8 +62,9 @@ type Application struct {
 	settingsCheck *kind.SettingsCheck // Hook to validate settings
 }
 
-// ApplicationConfig holds configuration for creating a new Application instance.
-type ApplicationConfig struct {
+// Config holds configuration for creating a new Application instance.
+type Config struct {
+	Path         string            // Path to package dir
 	StaticValues addonutils.Values // Static values from values.yaml files
 
 	Definition Definition // Application definition
@@ -84,11 +80,11 @@ type ApplicationConfig struct {
 	SettingsCheck *kind.SettingsCheck
 }
 
-// NewApplication creates a new Application instance with the specified configuration.
+// NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
 //
 // Returns error if hook initialization or values storage creation fails.
-func NewApplication(name, path string, cfg ApplicationConfig) (*Application, error) {
+func NewAppByConfig(name string, cfg *Config) (*Application, error) {
 	a := new(Application)
 
 	splits := strings.Split(name, ".")
@@ -100,8 +96,8 @@ func NewApplication(name, path string, cfg ApplicationConfig) (*Application, err
 	a.instance = splits[1]
 
 	a.name = name
-	a.path = path
 
+	a.path = cfg.Path
 	a.definition = cfg.Definition
 	a.digests = cfg.Digests
 	a.repository = cfg.Repository
@@ -281,14 +277,14 @@ func (a *Application) GetHooksByBinding(binding shtypes.BindingType) []*addonhoo
 
 // RunHooksByBinding executes all hooks for a specific binding type in order.
 // It creates a binding context with snapshots for BeforeHelm/AfterHelm/AfterDeleteHelm hooks.
-func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType, dc DependencyContainer) error {
+func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.BindingType, patcher *objectpatch.ObjectPatcher) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHooksByBinding")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("binding", string(binding)))
 
 	for _, hook := range a.hooks.GetHooksByBinding(binding) {
-		bc := bindingcontext.BindingContext{
+		bc := bctx.BindingContext{
 			Binding: string(binding),
 		}
 		// Update kubernetes snapshots just before execute a hook
@@ -298,7 +294,7 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 		}
 		bc.Metadata.BindingType = binding
 
-		if err := a.runHook(ctx, hook, []bindingcontext.BindingContext{bc}, dc); err != nil {
+		if err := a.runHook(ctx, hook, []bctx.BindingContext{bc}, patcher); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run hook '%s': %w", hook.GetName(), err)
 		}
@@ -309,7 +305,7 @@ func (a *Application) RunHooksByBinding(ctx context.Context, binding shtypes.Bin
 
 // RunHookByName executes a specific hook by name with the provided binding context.
 // Returns nil if hook is not found (silent no-op).
-func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
+func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "RunHookByName")
 	defer span.End()
 
@@ -323,7 +319,7 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 	// Update kubernetes snapshots just before execute a hook
 	bctx = hook.GetHookController().UpdateSnapshots(bctx)
 
-	return a.runHook(ctx, hook, bctx, dc)
+	return a.runHook(ctx, hook, bctx, patcher)
 }
 
 // runHook executes a single hook with the specified binding context.
@@ -336,7 +332,7 @@ func (a *Application) RunHookByName(ctx context.Context, name string, bctx []bin
 //  4. Apply values patches to storage
 //
 // Returns error if hook execution or patch application fails.
-func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bindingcontext.BindingContext, dc DependencyContainer) error {
+func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bctx []bctx.BindingContext, patcher *objectpatch.ObjectPatcher) error {
 	ctx, span := otel.Tracer(a.GetName()).Start(ctx, "runHook")
 	defer span.End()
 
@@ -351,7 +347,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
-			patchErr := dc.KubeObjectPatcher().ExecuteOperations(hookResult.ObjectPatcherOperations)
+			patchErr := patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
 				return fmt.Errorf("exec hook: %w, and exec operations: %w", err, patchErr)
 			}
@@ -361,7 +357,7 @@ func (a *Application) runHook(ctx context.Context, h *addonhooks.ModuleHook, bct
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
-		if err = dc.KubeObjectPatcher().ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
+		if err = patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)
 		}
 	}

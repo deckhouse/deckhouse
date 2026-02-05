@@ -1,0 +1,8 @@
+type: object
+properties:
+  replicas:
+    type: integer
+    description: Number of replicas
+  image:
+    type: string
+    description: Container image
