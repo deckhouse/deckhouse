@@ -1238,18 +1238,62 @@ entries:
             en: IAM subsystem
             ru: Подсистема IAM
           folders:
-          - title:
-              en: Cluster architecture with Istio enabled
-              ru: Архитектура кластера с включенным Istio
-            url: /architecture/network/cluster-with-istio.html
-          - title:
-              en: Application service architecture with Istio enabled
-              ru: Архитектура прикладного сервиса с включенным Istio
-            url: /architecture/network/service-with-istio.html
-          - title:
-              en: Caching DNS server in a cluster
-              ru: Кеширующий DNS-сервер в кластере
-            url: /architecture/network/dns-caching.html
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/iam/            
+            - title:
+                en: Authentication
+                ru: Аутентификация
+              url: /architecture/authentication.html
+            - title:
+                en: Multitenancy
+                ru: Мультитенантность
+              url: /architecture/multitenancy/
+            - title:
+                en: user-authn module
+                ru: Модуль user-authn
+              url: /architecture/iam/user-authn/
+        - title:
+            en: Security subsystem
+            ru: Подсистема Security
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/security/          
+            - title:
+                en: Integrity control
+                ru: Контроль целостности
+              url: /architecture/security/integrity-control.html
+            - title:
+                en: Security events audit
+                ru: Аудит событий безопасности
+              url: /architecture/security/runtime-audit.html
+        - title:
+            en: Network subsystem
+            ru: Подсистема Network
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/network/
+            - title:
+                en: ingress-nginx module
+                ru: Модуль ingress-nginx
+              url: /architecture/network/ingress-nginx/
+            - title:
+                en: Cluster architecture with Istio enabled
+                ru: Архитектура кластера с включенным Istio
+              url: /architecture/network/cluster-with-istio.html
+            - title:
+                en: Application service architecture with Istio enabled
+                ru: Архитектура прикладного сервиса с включенным Istio
+              url: /architecture/network/service-with-istio.html
+            - title:
+                en: Caching DNS server in a cluster
+                ru: Кеширующий DNS-сервер в кластере
+              url: /architecture/network/dns-caching.html              
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
