@@ -107,8 +107,8 @@ function copy_with_yaml_merge {
   if [ -f "$dst" ] && [ "$(basename "$src")" = "oss.yaml" ]; then
     echo "Merging oss.yaml: $src -> $dst"
     local temp_file=$(mktemp)
-    # Concatenate YAML arrays - both files are array types
-    yq eval-all '. as $item | $item | flatten' "$dst" "$src" > "$temp_file"
+    # Concatenate YAML arrays using ireduce
+    yq eval-all '. as $item ireduce ([]; . + $item)' "$dst" "$src" > "$temp_file"
     mv "$temp_file" "$dst"
   else
     # Otherwise just copy
