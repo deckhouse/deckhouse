@@ -133,6 +133,8 @@
     labels:
       tier: cluster
       severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
@@ -152,6 +154,8 @@
     labels:
       tier: cluster
       severity_level: "8"
+      d8_module: node-manager
+      d8_component: node-manager
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
