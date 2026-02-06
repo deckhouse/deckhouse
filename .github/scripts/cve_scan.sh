@@ -300,7 +300,7 @@ for d8_tag in "${d8_tags[@]}"; do
     echo ""
     # CVE Scan
     # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
-    trivy_scan "--scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json --show-suppressed" "${additional_image}:${d8_tag}"
+    trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
     # License scan
     trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
     # cosign download attestation ${additional_image}:${d8_tag} | jq -rc .payload | base64 -d | jq -r .predicate.Data > .trivyignore.yaml
@@ -367,7 +367,7 @@ for d8_tag in "${d8_tags[@]}"; do
       echo ""
       # CVE Scan
       # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
-      trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json --show-suppressed" "${d8_image}@${IMAGE_HASH}"
+      trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
       # License scan
       trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}" "${IMAGE_NAME}"
