@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
-Modifications copyright (C) 2026 Flant JSC
+Modifications copyright (C) 2024 Flant JSC
 
 The Announce struct is extended with GetIPSMap() and GetInterfaces() methods
 */
