@@ -14,8 +14,7 @@ output "kubernetes_data_device_path" {
 }
 
 data "vsphere_virtual_machine" "master-data" {
-  name   = join("-", [local.prefix, "master", var.nodeIndex])
-  folder = var.providerClusterConfiguration.vmFolderPath
+  name = join("-", [local.prefix, "master", var.nodeIndex])
 }
 
 output "master-data" {
