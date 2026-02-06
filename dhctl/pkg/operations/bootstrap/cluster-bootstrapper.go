@@ -770,16 +770,30 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers := make([]resources.Checker, 0)
+		checkersFirst := make([]resources.Checker, 0)
+		checkersSecond := make([]resources.Checker, 0)
+		firstQueueResources, secondQueueResources := resourcesToCreate.GetCloudNGs()
+		var err error
 		if !skipChecks {
-			var err error
-			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+			checkersFirst, err = resources.GetCheckers(kubeCl, firstQueueResources, nil)
+			if err != nil {
+				return err
+			}
+
+			checkersSecond, err = resources.GetCheckers(kubeCl, secondQueueResources, nil)
 			if err != nil {
 				return err
 			}
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
+		if len(firstQueueResources) > 0 {
+			log.Process("Create resources", "Waiting for NodeGroups", func() error {
+				err = resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
+				return err
+			})
+		}
+
+		return resources.CreateResourcesLoop(ctx, kubeCl, secondQueueResources, checkersSecond, tasks)
 	})
 }
 

@@ -142,3 +142,16 @@ func TestResourcesWithEmptyDocs(t *testing.T) {
 		require.Len(t, resources, 2)
 	})
 }
+
+func TestGetCloudNGs(t *testing.T) {
+	t.Run("returns two slices, one with ngs", func(t *testing.T) {
+		resources, err := ParseResources("testdata/resources/with_ngs.yaml", make(map[string]interface{}))
+
+		require.NoError(t, err)
+		require.Len(t, resources, 14)
+
+		cloudNGres, otherres := resources.GetCloudNGs()
+		require.Len(t, cloudNGres, 4)
+		require.Len(t, otherres, 10)
+	})
+}

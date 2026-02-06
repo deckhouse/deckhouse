@@ -16,7 +16,6 @@ package resources
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -64,7 +63,7 @@ func (n *kubeNgGetter) NodeGroups(ctx context.Context) ([]*v1.NodeGroup, error) 
 	var errs error
 	for _, n := range ngs {
 		nn := n
-		ng, err := unstructuredToNodeGroup(&nn)
+		ng, err := entity.UnstructuredToNodeGroup(&nn)
 		if err != nil {
 			errs = multierr.Append(errs, err)
 			continue
@@ -281,7 +280,7 @@ func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params construct
 		return nil, nil
 	}
 
-	ng, err := unstructuredToNodeGroup(&r.Object)
+	ng, err := entity.UnstructuredToNodeGroup(&r.Object)
 	if err != nil {
 		return nil, err
 	}
@@ -308,23 +307,7 @@ func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params construct
 	return newClusterIsBootstrapCheck(ngGetter, params), nil
 }
 
-func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
-	content, err := o.MarshalJSON()
-	if err != nil {
-		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
-	}
-
-	var ng v1.NodeGroup
-
-	err = json.Unmarshal(content, &ng)
-	if err != nil {
-		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
-	}
-
-	return &ng, nil
-}
-
-func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) Checker {
+func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) (Checker, error) {
 	if params.metaConfig == nil {
 		return nil
 	}

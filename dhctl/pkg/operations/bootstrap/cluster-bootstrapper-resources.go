@@ -82,11 +82,25 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 			return err
 		}
 
-		checkers, err := resources.GetCheckers(kubeCl, resourcesToCreate, nil)
+		firstQueueResources, secondQueueResources := resourcesToCreate.GetCloudNGs()
+
+		checkersFirst, err := resources.GetCheckers(kubeCl, firstQueueResources, nil)
 		if err != nil {
 			return err
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, nil)
+		checkersSecond, err := resources.GetCheckers(kubeCl, secondQueueResources, nil)
+		if err != nil {
+			return err
+		}
+
+		if len(firstQueueResources) > 0 {
+			log.Process("Create resources", "Waiting for NodeGroups", func() error {
+				err = resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
+				return err
+			})
+		}
+
+		return resources.CreateResourcesLoop(ctx, kubeCl, secondQueueResources, checkersSecond, nil)
 	})
 }
