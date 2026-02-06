@@ -41,6 +41,7 @@ var defaultBackoff = wait.Backoff{
 	Steps:    50,
 }
 
+//nolint:unparam
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
