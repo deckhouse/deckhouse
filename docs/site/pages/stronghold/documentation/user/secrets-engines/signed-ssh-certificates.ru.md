@@ -165,7 +165,7 @@ ssh-keygen -Lf ~/.ssh/signed-cert.pub
 -Выполните на локальной машине команду `ssh`, используя подписанный ключ. Вы должны передать как подписанный открытый ключ, так и соответствующий закрытый ключ в качестве аутентификации для установки SSH-соединения.
 
 ```text
-ssh -i signed-cert.pub -i ~/.ssh/id_ed25519 username@10.0.23.5
+ssh -i signed-cert.pub -i ~/.ssh/<SSH_PRIVATE_KEY_FILE> username@10.0.23.5
 ```
 
 ## Подпись ключа хоста (host)
@@ -431,8 +431,8 @@ ssh-keygen -C "...Comments" -N "" -t rsa -b 4096 -f host-ca
 ```shell-extension
 # Using CLI:
 stronghold secrets enable -path=hosts-ca ssh
-KEY_PRI=$(cat ~/.ssh/id_ed25519 | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_ed25519.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub | sed -z 's/\n/\\n/g')
 # Create / update keypair in stronghold
 stronghold write ssh-client-signer/config/ca \
   generate_signing_key=false \
@@ -440,11 +440,13 @@ stronghold write ssh-client-signer/config/ca \
   public_key="${KEY_PUB}"
 ```
 
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+
 ```shell-extension
 # Using API:
 curl -X POST -H "X-Vault-Token: ..." -d '{"type":"ssh"}' http://127.0.0.1:8200/v1/sys/mounts/hosts-ca
-KEY_PRI=$(cat ~/.ssh/id_ed25519 | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/id_ed25519.pub | sed -z 's/\n/\\n/g')
+KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub | sed -z 's/\n/\\n/g')
 tee payload.json <<EOF
 {
   "generate_signing_key" : false,
