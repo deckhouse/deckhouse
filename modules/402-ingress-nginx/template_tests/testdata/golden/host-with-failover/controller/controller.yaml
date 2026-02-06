@@ -89,6 +89,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --status-update-interval=5
         - --shutdown-grace-period=0
         - --default-ssl-certificate=default/custom-secret
         - --controller-class=ingress-nginx.deckhouse.io/solid
@@ -405,6 +406,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --status-update-interval=5
         - --shutdown-grace-period=0
         - --default-ssl-certificate=default/custom-secret
         - --controller-class=ingress-nginx.deckhouse.io/solid

@@ -74,6 +74,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --status-update-interval=5
         - --shutdown-grace-period=60
         - --controller-class=ingress-nginx.deckhouse.io/test
         - --maxmind-mirror=https://geoproxy:4250/download

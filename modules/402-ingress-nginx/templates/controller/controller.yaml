@@ -287,6 +287,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
+        - --status-update-interval=5 # update interval Ingress resources in seconds (Default 60).
         {{- if eq $controllerVersion "1.12" }}
         - --enable-metrics=true
         {{- end }}
