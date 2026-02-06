@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/lib/backoff"
+	"fencing-agent/internal/lib/logger"
 	"fencing-agent/internal/lib/logger/sl"
 	"time"
 
@@ -38,7 +39,7 @@ type Memberlist struct {
 
 func New(
 	cfg Config,
-	logger *log.Logger,
+	log *log.Logger,
 	nodeIP string,
 	nodeName string,
 	numNodes int,
@@ -54,13 +55,15 @@ func New(
 	config.BindPort = int(cfg.MemberListPort)
 	config.AdvertisePort = int(cfg.MemberListPort)
 
-	delegate := NewDelegate(logger, func() int {
+	delegate := NewDelegate(log, func() int {
 		return numNodes
 	}, receiver)
 
 	config.Delegate = delegate
 
 	config.Events = eventHandler
+
+	config.LogOutput = logger.NewLogWriter(log)
 
 	list, err := memberlist.Create(config)
 	if err != nil {
@@ -70,13 +73,14 @@ func New(
 	ml := &Memberlist{
 		list:     list,
 		delegate: delegate,
-		logger:   logger,
+		logger:   log,
 	}
 
 	return ml, nil
 }
 
 func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
+	// TODO context
 	members := ml.list.Members()
 	nodes := domain.Nodes{
 		Nodes: make([]domain.Node, 0, len(members)),
