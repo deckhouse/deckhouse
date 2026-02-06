@@ -10,7 +10,6 @@
 # 2. Enable state migrator here https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/modules/040-terraform-manager/templates/terraform-auto-converger/deployment.yaml#L61
 #    to enable migrator please add provider name from this list https://github.com/deckhouse/deckhouse/blob/b6fdb7ce4f084d0d56f839ceef683710c24c3b8e/candi/openapi/cluster_configuration.yaml#L63
 # after migration, please remove this comment
-
 aws:
   namespace: hashicorp
   cloudName: AWS
@@ -24,7 +23,7 @@ aws:
   vmResourceType: aws_instance
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 5.83.1
 azure:
   namespace: hashicorp
   cloudName: Azure
@@ -35,7 +34,7 @@ azure:
   vmResourceType: azurerm_linux_virtual_machine
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 3.117.1
 gcp:
   namespace: hashicorp
   cloudName: GCP
@@ -46,7 +45,7 @@ gcp:
   vmResourceType: google_compute_instance
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 3.48.0
 openstack:
   namespace: terraform-provider-openstack
   cloudName: OpenStack
@@ -57,7 +56,7 @@ openstack:
   vmResourceType: openstack_blockstorage_volume_v3
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 1.54.1
 ovirt:
   namespace: terraform-provider-ovirt
   cloudName: Zvirt
@@ -67,7 +66,7 @@ ovirt:
   destinationBinary: terraform-provider-ovirt
   vmResourceType: ovirt_vm
   useOpentofu: true
-
+  version: 2.1.5
 vsphere:
   namespace: hashicorp
   cloudName: vSphere
@@ -78,7 +77,7 @@ vsphere:
   vmResourceType: vsphere_virtual_machine
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 2.0.2
 vcd:
   namespace: vmware
   cloudName: VCD
@@ -89,7 +88,9 @@ vcd:
   vmResourceType: vcd_vapp_vm
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  versions:
+    - 3.10.0
+    - 3.14.1
 yandex:
   namespace: yandex-cloud
   cloudName: Yandex
@@ -99,7 +100,7 @@ yandex:
   destinationBinary: terraform-provider-yandex
   vmResourceType: yandex_compute_instance
   useOpentofu: true
-
+  version: 0.174.0
 decort:
   namespace: terraform-provider-decort
   cloudName: Dynamix
@@ -109,7 +110,7 @@ decort:
   destinationBinary: terraform-provider-decort
   vmResourceType: decort_kvmvm
   useOpentofu: true
-
+  version: 4.7.3
 huaweicloud:
   namespace: terraform-provider-huaweicloud
   cloudName: Huaweicloud
@@ -120,7 +121,7 @@ huaweicloud:
   vmResourceType: huaweicloud_compute_instance
   # Attention! For migrate to opentofu we need some manual actions. See above ^^^
   useOpentofu: false
-
+  version: 1.69.0
 kubernetes:
   namespace: hashicorp
   cloudName: DVP
@@ -130,3 +131,4 @@ kubernetes:
   destinationBinary: terraform-provider-kubernetes
   vmResourceType: kubernetes_manifest
   useOpentofu: true
+  version: 2.35.1

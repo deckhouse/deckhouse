@@ -61,7 +61,7 @@ build:
 {{- include "base_k8s_versions" . }}
 ---
 # Terraform Versions
-{{- $_ := set . "TF" (.Files.Get "candi/terraform_providers.yml" | fromYaml) }}
+{{- $_ := set . "TF" (.Files.Get "candi/terraform_versions.yml" | fromYaml) }}
 
 # Source repo  settings
 {{- $_ := set . "SOURCE_REPO" (env "SOURCE_REPO" | default "https://github.com") }}
