@@ -6,7 +6,7 @@ memory: 50Mi
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{ if eq $mode "Watchdog" }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Dryrun") }}
       {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
