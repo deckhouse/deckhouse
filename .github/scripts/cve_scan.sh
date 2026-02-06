@@ -83,8 +83,6 @@ trivy_prepare_ignore_from_cosign() {
   local image_ref="$1"
   local ignore_file="$2"
 
-  cosign download attestation "${image_ref}" #TODO debug
-
   cosign download attestation "${image_ref}" 2>/dev/null \
   | jq -r '
       select(.payloadType=="application/vnd.in-toto+json")
@@ -94,8 +92,6 @@ trivy_prepare_ignore_from_cosign() {
       | select(.predicateType=="https://cosign.sigstore.dev/attestation/v1")
       | .predicate.Data
     ' > "${ignore_file}"
-  echo "image-ref: ${image_ref}" #TODO debug
-  cat ${ignore_file} #TODO debug
 
   [[ -s "${ignore_file}" ]] || return 1
   return 0
