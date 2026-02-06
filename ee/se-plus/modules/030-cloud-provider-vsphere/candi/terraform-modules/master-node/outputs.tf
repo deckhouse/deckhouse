@@ -13,13 +13,6 @@ output "kubernetes_data_device_path" {
   value = "/dev/sdb"
 }
 
-data "vsphere_virtual_machine" "master-data" {
-  name = join("-", [local.prefix, "master", var.nodeIndex])
-}
-
-output "master-data" {
-  value = data.vsphere_virtual_machine.master-data
-}
 output "master-data2" {
   value = vsphere_virtual_machine.master
 }
