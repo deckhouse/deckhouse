@@ -5,5 +5,3 @@ git:
 {{- include "image mount points" . }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
----
-{{- include "trivy mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

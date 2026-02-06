@@ -299,7 +299,6 @@ for d8_tag in "${d8_tags[@]}"; do
     trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
     # License scan
     trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
-    # cosign download attestation ${additional_image}:${d8_tag} | jq -rc .payload | base64 -d | jq -r .predicate.Data > .trivyignore.yaml
     send_report "CVE" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${a_module_name}" "${a_image_name}"
     send_report "License" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${a_module_name}" "${a_image_name}"
   done

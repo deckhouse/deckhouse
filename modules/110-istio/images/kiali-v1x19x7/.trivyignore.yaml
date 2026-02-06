@@ -1,4 +1,0 @@
-licenses:
-- id: GPL-2.0
-  paths:
-  - "usr/share/groff/1.22.3/tmac/hyphen.cs"
