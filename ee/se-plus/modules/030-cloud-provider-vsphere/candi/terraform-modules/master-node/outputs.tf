@@ -1,6 +1,6 @@
 # Copyright 2021 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
-local {
+locals {
   kubernetes_data_device_uuid = replace(vsphere_virtual_machine.master, "-", "")
 }
 
