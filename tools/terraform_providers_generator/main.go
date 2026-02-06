@@ -33,13 +33,13 @@ type ossItem struct {
 	Versions []string `yaml:"versions"`
 }
 
-const (
-	repoRoot      = "/Users/nikolajzykov/Documents/projects/deckhouse"
-	providersPath = repoRoot + "/candi/terraform_versions.yml"
-)
-
 func main() {
-	ossFiles, err := findOssFiles(repoRoot)
+	cwd, _ := os.Getwd()
+	rootPath := filepath.Dir(cwd)
+
+	tfVersions := filepath.Join(rootPath, "candi", "terraform_versions.yml")
+
+	ossFiles, err := findOssFiles(rootPath)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +49,7 @@ func main() {
 		panic(err)
 	}
 
-	content, err := os.ReadFile(providersPath)
+	content, err := os.ReadFile(tfVersions)
 	if err != nil {
 		panic(fmt.Errorf("cannot read terraform providers file: %w", err))
 	}
@@ -72,7 +72,7 @@ func main() {
 		panic(err)
 	}
 
-	if err := os.WriteFile(providersPath, buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(tfVersions, buf.Bytes(), 0o644); err != nil {
 		panic(fmt.Errorf("cannot write terraform providers file: %w", err))
 	}
 }
