@@ -74,7 +74,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: LOG_LEVEL
-              value: debug
+              value: info
             - name: FENCING_MODE
               value: {{ (($ng.fencing).mode) | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
@@ -111,12 +111,15 @@ spec:
         {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "fencing_agent_resources" $ctx | nindent 14 }}
         {{- end }}
+          {{- if eq $mode "Watchdog" }}
           volumeMounts:
             - name: watchdog
               mountPath: /dev/watchdog
             - name: socket
               mountPath: /tmp
+          {{- end }}
       terminationGracePeriodSeconds: 10
+      {{- if eq $mode "Watchdog" }}
       volumes:
         - name: watchdog
           hostPath:
@@ -125,5 +128,6 @@ spec:
         - name: socket
           hostPath:
             path: /tmp
+      {{- end }}
   {{- end }}
 {{- end }}
