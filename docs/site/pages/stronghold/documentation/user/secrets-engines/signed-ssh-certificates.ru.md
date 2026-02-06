@@ -108,7 +108,7 @@ EOH
 Следующие шаги выполняются клиентом (пользователем), который хочет аутентифицироваться на машинах, управляемых Stronghold.
 Эти команды обычно выполняются с локальной рабочей станции клиента.
 
-- Найдите или сгенерируйте открытый ключ SSH. Обычно он расположен по пути `~/.ssh/id_ed25519.pub`.
+- Найдите или сгенерируйте открытый ключ SSH. Обычно он расположен по пути `~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub`.
 
 Если у вас нет пары ключей SSH, сгенерируйте их:
 
@@ -120,7 +120,7 @@ ssh-keygen -t ed25519 -C "user@example.com"
 
 ```text
 $ stronghold write ssh-client-signer/sign/my-role \
-  public_key=@$HOME/.ssh/id_ed25519.pub
+  public_key=@$HOME/.ssh/<SSH_PRIVATE_KEY_FILE>.pub
 
 
  Key             Value
@@ -150,7 +150,7 @@ $ stronghold write ssh-client-signer/sign/my-role -<<"EOH"
 
 ```text
 $ stronghold write -field=signed_key ssh-client-signer/sign/my-role \
-  public_key=@$HOME/.ssh/id_ed25519.pub > signed-cert.pub
+  public_key=@$HOME/.ssh/<SSH_PRIVATE_KEY_FILE>.pub > signed-cert.pub
 ```
 
 Если вы сохраняете сертификат непосредственно рядом с парой ключей SSH, добавьте в имя файла суффикс `-cert.pub` (`~/.ssh/id_ed25519-cert.pub`).

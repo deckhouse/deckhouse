@@ -559,7 +559,7 @@ Example of running a DKP installation with cloud cluster deployment:
 
 ```shell
 dhctl bootstrap \
-  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
+  --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml
 ```
 
@@ -568,6 +568,7 @@ Where:
 - `/config.yml`: Installation configuration file.
 - `<SSH_USER>`: Username for SSH connection to the server.
 - `--ssh-agent-private-keys`: Private SSH key file for SSH connection.
+- `<SSH_PRIVATE_KEY_FILE>`: name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
 ### Pre-installation checks
 
@@ -653,10 +654,12 @@ Example of using a preflight skip flag:
 
   ```shell
       dhctl bootstrap \
-      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
+      --ssh-user=<SSH_USER> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
       --config=/config.yml \
       --preflight-skip-all-checks
   ```
+
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
 {% endofftopic %}
 
