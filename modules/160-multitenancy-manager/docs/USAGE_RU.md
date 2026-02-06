@@ -161,6 +161,8 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 
 Пример:
 
+{% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -175,6 +177,8 @@ data:
   key: value
 ```
 
+{% endraw %}
+
 В этом случае ресурс получит лейблы `projects.deckhouse.io/project` и `projects.deckhouse.io/project-template`, но не получит лейбл `heritage: multitenancy-manager`.
 
 ### Исключение ресурсов из управления multitenancy-manager
@@ -182,6 +186,8 @@ data:
 Если необходимо исключить ресурс из управления `multitenancy-manager` (например, если он должен управляться вручную или другим контроллером), добавьте к ресурсу лейбл `projects.deckhouse.io/unmanaged`.
 
 Пример:
+
+{% raw %}
 
 ```yaml
 ---
@@ -196,6 +202,8 @@ type: Opaque
 data:
   token: <base64-encoded-value>
 ```
+
+{% endraw %}
 
 Ресурсы с лейблом `projects.deckhouse.io/unmanaged`:
 
