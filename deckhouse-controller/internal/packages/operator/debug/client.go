@@ -31,7 +31,6 @@ import (
 // Client communicates with a debug Server over a Unix domain socket using HTTP.
 // All requests are routed through the socket; the HTTP host is ignored by the transport.
 type Client struct {
-	socketPath string
 	httpClient *http.Client
 }
 
@@ -55,7 +54,6 @@ func NewClient(socketPath string) (*Client, error) {
 	}
 
 	return &Client{
-		socketPath: socketPath,
 		httpClient: client,
 	}, nil
 }
