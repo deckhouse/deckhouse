@@ -1,29 +1,25 @@
 document.addEventListener('DOMContentLoaded', function () {
     const channelListTitle = document.querySelectorAll('.channel__list--title');
-    console.log(channelListTitle)
+    const channelListDescr = document.querySelectorAll('.channel__list--descr');
+
+    function activeTab(index) {
+        channelListTitle.forEach(title => title.classList.remove('active'));
+        channelListDescr.forEach(descr => descr.classList.remove('active'));
+
+        channelListTitle[index].classList.add('active');
+        channelListDescr[index].classList.add('active');
+    }
 
     channelListTitle.forEach(title => {
-        title.addEventListener('click', function() {
-            if(title.classList.contains('show')) {
-                return;
-            }
-            const description = this.nextElementSibling;
+        title.addEventListener('click', () => {
+            const index = parseInt(title.dataset.index);
+            console.log(index)
 
-            channelListTitle.forEach(otherTitle => {
-                if(otherTitle !== title) {
-                    const otherDescription = otherTitle.nextElementSibling;
-                    otherDescription.classList.remove('active');
-                    otherTitle.classList.remove('show');
-                }
-            });
-
-            if(description.classList.contains('active')) {
-                description.classList.remove('active');
-                title.classList.remove('show');
-            } else {
-                description.classList.add('active');
-                title.classList.add('show');
+            if(!title.classList.contains('active')) {
+                activeTab(index);
             }
-        })
-    })
-})
+        });
+    });
+
+    activeTab(0);
+});

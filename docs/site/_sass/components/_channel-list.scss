@@ -2,15 +2,15 @@
 
 .channel__list {
     display: flex;
+    flex-direction: column;
     gap: 72px;
     list-style: none;
     padding: 0;
     margin: 0;
 
-    &--item {
-        height: 220px;
-        margin-bottom: 30px;
-        margin-left: 0 !important;
+    &--container_title {
+        display: flex;
+
 
         &::before {
             content: none !important;
@@ -19,6 +19,8 @@
 
     &--title {
         position: relative;
+        padding: 0;
+        margin: 0;
         margin-bottom: 22px;
         width: calc(100% + 32px);
         color: #5E6697;
@@ -26,8 +28,13 @@
         font-weight: 400;
         cursor: pointer;
 
-        &.show {
+        &::before {
+            content: none !important;
+        }
+
+        &.active {
             color: #00122C;
+
             
             &::before {
                 content: "";
@@ -35,22 +42,6 @@
                 width: 100%;
                 bottom: -10px;
                 border: 1px solid #00122C;
-            }
-
-            &::after {
-                content: "";
-                display: inline-block;
-                border: 8px solid transparent;
-                border-left-color: #00122C;
-                position: absolute;
-                top: 31px;
-                right: -10px;
-            }
-
-            &.last-title {
-                &::after {
-                    content: none !important;
-                }
             }
         }
     }
