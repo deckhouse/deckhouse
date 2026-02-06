@@ -14,19 +14,19 @@ func Wrap(ctx context.Context, log *log.Logger, triesLimit int, moduleName strin
 	return func() error {
 		err := f()
 
-		currenTry := 1
+		currentTry := 1
 
 		base, mx := time.Second, time.Minute
 
 		for backoff := base; err != nil; backoff <<= 1 {
-			if currenTry > triesLimit {
+			if currentTry > triesLimit {
 				return fmt.Errorf("failed to start %s, tries limit reached: %w", moduleName, err)
 			}
 
 			if backoff > mx {
 				backoff = mx
 			}
-			log.Warn("failed to start module", slog.String("module_name", moduleName), sl.Err(err), slog.String("backoff", backoff.String()), slog.Int("tries", currenTry))
+			log.Warn("failed to start module", slog.String("module_name", moduleName), sl.Err(err), slog.String("backoff", backoff.String()), slog.Int("tries", currentTry))
 
 			select {
 			case <-ctx.Done():
@@ -36,7 +36,7 @@ func Wrap(ctx context.Context, log *log.Logger, triesLimit int, moduleName strin
 
 			err = f()
 
-			currenTry++
+			currentTry++
 		}
 		return err
 	}

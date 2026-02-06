@@ -164,7 +164,7 @@ func (p *Client) RemoveNodeLabel(ctx context.Context, key string) error {
 		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
 	}
 
-	p.logger.Info("Node label removed",
+	p.logger.Info("node label removed",
 		slog.String("node", p.nodeName),
 		slog.String("label", key))
 	return nil
@@ -259,7 +259,7 @@ func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
 				slog.String("node", p.nodeName),
 				slog.String("annotation", foundAnnotation))
 		} else {
-			p.logger.Info("Maintenance mode cleared",
+			p.logger.Info("maintenance mode cleared",
 				slog.String("node", p.nodeName))
 		}
 	}
