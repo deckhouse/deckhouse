@@ -307,7 +307,7 @@ func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params construct
 	return newClusterIsBootstrapCheck(ngGetter, params), nil
 }
 
-func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) (Checker, error) {
+func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) Checker {
 	if params.metaConfig == nil {
 		return nil
 	}
