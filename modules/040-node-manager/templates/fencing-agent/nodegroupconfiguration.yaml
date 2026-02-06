@@ -1,7 +1,7 @@
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $mode := dig "fencing" "mode" "" $ng }}
-  {{- if eq $mode "Watchdog" }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Dryrun") }}
     {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -45,23 +45,33 @@ spec:
     #!/bin/bash
 
     WD="/dev/watchdog"
+    MODE="{{ $mode }}"
 
     start_wd() {
       if [ -e "${WD}" ]; then
         ls -lha /dev/watchdog* 2>/dev/null
         rm -rf "${WD}"
       fi
-      modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+
+      if [ "${MODE}" = "Dryrun" ]; then
+        echo "[DRYRUN] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
+      else
+        modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+      fi
     }
 
     stop_wd() {
-      while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
-        fuser "${WD}" -k -TERM
-        sleep 1
-      done
-
-      rmmod softdog
+      if [ "${MODE}" = "Dryrun" ]; then
+        echo "[DRYRUN] Would run: rmmod softdog"
+      else
+        while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
+          fuser "${WD}" -k -TERM
+          sleep 1
+        done
+        rmmod softdog
+      fi
     }
+
 
     case "$1" in
         start)
