@@ -173,8 +173,12 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	})
 
 	address := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.ErrorF("Cannot listen on %s: %v\n", address, err)
+		return nil, fmt.Errorf("Cannot start HTTP server for tunnel preflight check on %s: %w", address, err)
+	}
 	server := &http.Server{
-		Addr:         address,
 		Handler:      mux,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
@@ -182,7 +186,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 
 	go func() {
 		log.DebugF("Starting HTTP server for tunnel preflight check on %s\n", address)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.InfoF("Error starting HTTP server for tunnel preflight check on %s: %v\n", address, err)
 		}
 	}()
@@ -201,7 +205,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 
 	client := &http.Client{}
 
-	err := retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 5, 1*time.Millisecond).RunContext(ctx, func() error {
+	err = retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 5, 100*time.Millisecond).RunContext(ctx, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel() // Ensure the context is canceled to release resources
 
