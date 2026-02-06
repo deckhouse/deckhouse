@@ -275,7 +275,7 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 func tryToGetClusterIsBootstrappedChecker(r *template.Resource, params constructorParams) (Checker, error) {
 	logger := params.loggerProvider()
 
-	if !(r.GVK.Kind == "NodeGroup" && r.GVK.Group == "deckhouse.io" && r.GVK.Version == "v1") {
+	if r.GVK.Kind != "NodeGroup" || r.GVK.Group != "deckhouse.io" || r.GVK.Version != "v1" {
 		logger.LogDebugF("tryToGetClusterIsBootstrappedChecker: skip GVK (%s %s %s)",
 			r.GVK.Version, r.GVK.Group, r.GVK.Kind)
 		return nil, nil
@@ -324,17 +324,17 @@ func unstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error
 	return &ng, nil
 }
 
-func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) (Checker, error) {
+func tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params constructorParams) Checker {
 	if params.metaConfig == nil {
-		return nil, nil
+		return nil
 	}
 
 	for _, terraNg := range params.metaConfig.GetTerraNodeGroups() {
 		if terraNg.Replicas > 0 {
 			checker := newClusterIsBootstrapCheck(&kubeNgGetter{kubeProvider: params.kubeProvider}, params)
-			return checker, nil
+			return checker
 		}
 	}
 
-	return nil, nil
+	return nil
 }

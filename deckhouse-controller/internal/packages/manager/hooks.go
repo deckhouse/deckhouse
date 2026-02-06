@@ -68,7 +68,7 @@ func (m *Manager) RunPackageHook(ctx context.Context, name, hook string, bctx []
 	// modified application values (via patches), which may require a Helm upgrade
 	// to reconcile the cluster state with the new values.
 	oldChecksum := app.GetValuesChecksum()
-	if err := app.RunHookByName(ctx, hook, bctx, m); err != nil {
+	if err := app.RunHookByName(ctx, hook, bctx, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newEventHookErr(err)
 	}

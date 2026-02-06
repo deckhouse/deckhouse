@@ -161,12 +161,12 @@ func (c *BashibleContext) subscribe(ctx context.Context, factory informers.Share
 
 	// Launch the informer
 	informer := factory.Core().V1().Secrets().Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
 	go informer.Run(ctx.Done())
 
 	// Subscribe to updates
-	informer.AddEventHandler(cache.FilteringResourceEventHandler{
+	_, _ = informer.AddEventHandler(cache.FilteringResourceEventHandler{
 		FilterFunc: secretMapFilter(secretName),
 		Handler:    &secretEventHandler{ch, c},
 	})
@@ -406,7 +406,6 @@ func (c *BashibleContext) update(src string) {
 
 	c.secretHandler.OnChecksumUpdate(ngmap)
 	c.updateHandler.OnUpdate()
-
 }
 
 // Get retrieves a copy of context for the given secretKey.
@@ -596,9 +595,9 @@ func (c *BashibleContext) subscribeOnNodeUserCRD(ctx context.Context, ngConfigFa
 	})
 
 	informer := ginformer.Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			c.nodeUsersQueue <- queueAction{
 				action:    "add",
@@ -643,9 +642,9 @@ func (c *BashibleContext) subscribeOnModuleSource(ctx context.Context, moduleSou
 	})
 
 	informer := ginformer.Informer()
-	informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
+	_ = informer.SetWatchErrorHandler(cache.DefaultWatchErrorHandler)
 
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			c.moduleSourcesQueue <- queueAction{
 				action:    "add",
@@ -713,7 +712,6 @@ func (c *BashibleContext) RemoveModuleSourceCA(ms *ModuleSource) {
 	defer c.rw.Unlock()
 	registryHost := ms.getRegistry()
 	delete(c.contextBuilder.moduleSourcesCA, registryHost)
-
 }
 
 func (c *BashibleContext) RemoveNodeUserConfiguration(nu *NodeUser) {

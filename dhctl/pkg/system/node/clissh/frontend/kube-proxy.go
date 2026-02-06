@@ -54,7 +54,7 @@ func NewKubeProxy(sess *session.Session) *KubeProxy {
 	}
 }
 
-func (k *KubeProxy) Start(useLocalPort int) (port string, err error) {
+func (k *KubeProxy) Start(useLocalPort int) (string, error) {
 	startID := rand.Int()
 
 	log.DebugF("Kube-proxy start id=[%d]; port:%d\n", startID, useLocalPort)
@@ -236,7 +236,7 @@ func (k *KubeProxy) upTunnel(
 	useLocalPort int,
 	tunnelErrorCh chan error,
 	startID int,
-) (tun *Tunnel, localPort int, err error) {
+) (*Tunnel, int, error) {
 	log.DebugF(
 		"[%d] Starting up tunnel with proxy port %s and local port %d\n",
 		startID,
@@ -245,7 +245,7 @@ func (k *KubeProxy) upTunnel(
 	)
 
 	rewriteLocalPort := false
-	localPort = useLocalPort
+	localPort := useLocalPort
 
 	if useLocalPort < 1 {
 		log.DebugF(
@@ -261,6 +261,7 @@ func (k *KubeProxy) upTunnel(
 	maxRetries := 5
 	retries := 0
 	var lastError error
+	var tun *Tunnel
 	for {
 		log.DebugF("[%d] Start %d iteration for up tunnel\n", startID, retries)
 
@@ -317,11 +318,11 @@ func (k *KubeProxy) upTunnel(
 func (k *KubeProxy) runKubeProxy(
 	waitCh chan error,
 	startID int,
-) (proxy *Command, port string, err error) {
+) (*Command, string, error) {
 	log.DebugF("[%d] Begin starting proxy\n", startID)
-	proxy = k.proxyCMD(startID)
+	proxy := k.proxyCMD(startID)
 
-	port = ""
+	port := ""
 	portReady := make(chan struct{}, 1)
 	portRe := regexp.MustCompile(`Starting to serve on .*?:(\d+)`)
 
@@ -346,7 +347,7 @@ func (k *KubeProxy) runKubeProxy(
 	})
 
 	log.DebugF("[%d] Start proxy command\n", startID)
-	err = proxy.Start()
+	err := proxy.Start()
 	if err != nil {
 		log.DebugF("[%d] Start proxy command error: %v\n", startID, err)
 		return nil, "", fmt.Errorf("start kubectl proxy: %w", err)

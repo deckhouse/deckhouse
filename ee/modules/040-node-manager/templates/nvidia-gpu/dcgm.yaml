@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- if include "nvidia_gpu_enabled" . }}
 ---
 apiVersion: policy/v1
@@ -98,4 +99,5 @@ spec:
           hostPath:
             path: "/run/nvidia"
             type: Directory
+{{- end }}
 {{- end }}

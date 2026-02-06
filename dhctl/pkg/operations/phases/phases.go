@@ -24,6 +24,23 @@ type (
 	OperationSubPhase string
 )
 
+type ProgressAction string
+
+func (a ProgressAction) IsZero() bool {
+	return a == ""
+}
+
+type PhaseWithSubPhases struct {
+	Phase     OperationPhase      `json:"phase"`
+	Action    *ProgressAction     `json:"action,omitempty,omitzero"`
+	SubPhases []OperationSubPhase `json:"subPhases,omitempty"`
+}
+
+const (
+	ProgressActionDefault ProgressAction = ""
+	ProgressActionSkip    ProgressAction = "skip"
+)
+
 const (
 	OperationBootstrap       Operation = "Bootstrap"
 	OperationConverge        Operation = "Converge"
@@ -57,6 +74,9 @@ const (
 	WaitStaticDestroyerNodeUserPhase   OperationPhase = "WaitStaticDestroyerNodeUser"
 	SetDeckhouseResourcesDeletedPhase  OperationPhase = "SetDeckhouseResourcesDelete"
 	CommanderUUIDWasChecked            OperationPhase = "CommanderUUIDWasChecked"
+	// check only
+	CheckInfra         OperationPhase = "CheckInfra"
+	CheckConfiguration OperationPhase = "CheckConfiguration"
 	// all
 	FinalizationPhase OperationPhase = "Finalization"
 )
@@ -68,8 +88,14 @@ const (
 	CommanderAttachCheckPhase   OperationPhase = "Check"
 )
 
+// commander detach phases
+const (
+	CommanderDetachCheckPhase  OperationPhase = "Check"
+	CommanderDetachDetachPhase OperationPhase = "Detach"
+)
+
 var (
-	StopOperationCondition = errors.New("StopOperationCondition")
+	ErrStopOperationCondition = errors.New("StopOperationCondition")
 )
 
 // bootstrap sub phases
@@ -78,3 +104,88 @@ const (
 	InstallDeckhouseSubPhaseInstall OperationSubPhase = "InstallDeckhouse"
 	InstallDeckhouseSubPhaseWait    OperationSubPhase = "WaitForFirstMasterReady"
 )
+
+func BootstrapPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: BaseInfraPhase},
+		{Phase: RegistryPackagesProxyPhase},
+		{Phase: ExecuteBashibleBundlePhase},
+		{
+			Phase: InstallDeckhousePhase,
+			SubPhases: []OperationSubPhase{
+				InstallDeckhouseSubPhaseConnect,
+				InstallDeckhouseSubPhaseInstall,
+				InstallDeckhouseSubPhaseWait,
+			},
+		},
+		{Phase: InstallAdditionalMastersAndStaticNodes},
+		{Phase: CreateResourcesPhase},
+		{Phase: ExecPostBootstrapPhase},
+		{Phase: FinalizationPhase},
+	}
+}
+
+func ConvergePhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: BaseInfraPhase},
+		{Phase: InstallDeckhousePhase},
+		{Phase: AllNodesPhase},
+		{Phase: ScaleToMultiMasterPhase},
+		{Phase: DeckhouseConfigurationPhase},
+	}
+}
+
+func CheckPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: CheckInfra},
+		{Phase: CheckConfiguration},
+	}
+}
+
+func DestroyPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: DeleteResourcesPhase},
+		{Phase: AllNodesPhase},
+		{Phase: BaseInfraPhase},
+	}
+}
+
+func CommanderAttachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{Phase: CommanderAttachScanPhase},
+		{Phase: CommanderAttachCapturePhase},
+		{
+			Phase: CommanderAttachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+	}
+}
+
+func CommanderDetachPhases() []PhaseWithSubPhases {
+	return []PhaseWithSubPhases{
+		{
+			Phase: CommanderDetachCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
+		{Phase: CommanderDetachDetachPhase},
+	}
+}
+
+func operationPhases(operation Operation) ([]PhaseWithSubPhases, bool) {
+	phase, ok := map[Operation][]PhaseWithSubPhases{
+		OperationBootstrap:       BootstrapPhases(),
+		OperationConverge:        ConvergePhases(),
+		OperationCheck:           CheckPhases(),
+		OperationDestroy:         DestroyPhases(),
+		OperationCommanderAttach: CommanderAttachPhases(),
+		OperationCommanderDetach: CommanderDetachPhases(),
+	}[operation]
+
+	return phase, ok
+}

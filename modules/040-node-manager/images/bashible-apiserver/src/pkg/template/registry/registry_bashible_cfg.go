@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 const (

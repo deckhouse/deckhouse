@@ -22,7 +22,7 @@ import (
 	"strings"
 	"sync"
 
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud"
@@ -121,12 +121,12 @@ func simpleFromMap(s any, terraformVersion string, openTofuVersion string) (*set
 	}
 
 	if set.UseOpenTofu() {
-		set.InfrastructureVersionVal = pointer.String(openTofuVersion)
+		set.InfrastructureVersionVal = ptr.To(openTofuVersion)
 	} else {
-		set.InfrastructureVersionVal = pointer.String(terraformVersion)
+		set.InfrastructureVersionVal = ptr.To(terraformVersion)
 	}
 
-	set.CloudNameVal = pointer.String(strings.ToLower(*set.CloudNameVal))
+	set.CloudNameVal = ptr.To(strings.ToLower(*set.CloudNameVal))
 
 	return &set, nil
 }

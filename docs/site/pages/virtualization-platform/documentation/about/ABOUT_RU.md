@@ -28,7 +28,7 @@ DVP работает на основе [Deckhouse Kubernetes Platform](/products
 Платформа включает в себя следующие компоненты:
 
 - Ядро платформы (CORE) — основано на проекте KubeVirt и использует QEMU/KVM + libvirtd для запуска виртуальных машин.
-- Deckhouse Virtualization Container Registry (DVCR) — репозиторий для хранения и кэширования образов виртуальных машин.
+- Deckhouse Virtualization Container Registry (DVCR) — репозиторий для хранения и кеширования образов виртуальных машин.
 - Virtualization API (API) — контроллер, реализующий API пользователя для создания и управления ресурсами виртуальных машин.
 
 ![Архитектура](/../../images/virtualization-platform/arch.ru.png)

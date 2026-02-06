@@ -10,9 +10,9 @@ require (
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/flant/addon-operator v1.18.5
+	github.com/flant/addon-operator v1.18.6
 	github.com/flant/kube-client v1.5.1
-	github.com/flant/shell-operator v1.13.1
+	github.com/flant/shell-operator v1.13.2
 	github.com/go-openapi/spec v0.22.0
 	github.com/gojuno/minimock/v3 v3.4.7
 	github.com/google/go-cmp v0.7.0
@@ -46,7 +46,7 @@ require (
 	k8s.io/apimachinery v0.32.10
 	k8s.io/apiserver v0.32.10
 	k8s.io/client-go v0.32.10
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/yaml v1.4.0
 )
 
@@ -72,6 +72,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/itchyny/gojq v0.12.17
 	github.com/jonboulle/clockwork v0.4.0
+	github.com/samber/lo v1.51.0
 	github.com/shirou/gopsutil/v3 v3.24.5
 	github.com/slok/kubewebhook/v2 v2.5.0
 	github.com/sylabs/oci-tools v0.16.0

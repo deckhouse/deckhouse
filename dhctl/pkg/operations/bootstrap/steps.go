@@ -229,8 +229,8 @@ func killBashible(ctx context.Context, nodeInterface node.Interface, pids []stri
 	return nil
 }
 
-func unlockBashible(ctx context.Context, NodeInterface node.Interface) error {
-	cmd := NodeInterface.Command("rm", "-f", "/var/lock/bashible")
+func unlockBashible(ctx context.Context, nodeInterface node.Interface) error {
+	cmd := nodeInterface.Command("rm", "-f", "/var/lock/bashible")
 	cmd.Sudo(ctx)
 	cmd.WithTimeout(10 * time.Second)
 	if err := cmd.Run(ctx); err != nil {
@@ -296,7 +296,7 @@ type registryClientConfigGetter struct {
 	registry.ClientConfig
 }
 
-func newRegistryClientConfigGetter(config registry_config.Data) (*registryClientConfigGetter, error) {
+func newRegistryClientConfigGetter(config registry_config.Data) *registryClientConfigGetter {
 	return &registryClientConfigGetter{
 		ClientConfig: registry.ClientConfig{
 			Repository: config.ImagesRepo,
@@ -304,7 +304,7 @@ func newRegistryClientConfigGetter(config registry_config.Data) (*registryClient
 			CA:         config.CA,
 			Auth:       config.AuthBase64(),
 		},
-	}, nil
+	}
 }
 
 func (r *registryClientConfigGetter) Get(_ string) (*registry.ClientConfig, error) {
@@ -324,10 +324,7 @@ func StartRegistryPackagesProxy(ctx context.Context, registryRemote registry_con
 		return fmt.Errorf("Failed to listen registry proxy socket: %v", err)
 	}
 
-	clientConfigGetter, err := newRegistryClientConfigGetter(registryRemote)
-	if err != nil {
-		return fmt.Errorf("Failed to create registry client for registry proxy: %v", err)
-	}
+	clientConfigGetter := newRegistryClientConfigGetter(registryRemote)
 	srv := &http.Server{}
 	http.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { _, _ = w.Write([]byte("ok")) })
 	proxyConfig := &proxy.Config{SignCheck: (rppSignCheck == "true")}
@@ -624,7 +621,7 @@ func CheckDHCTLDependencies(ctx context.Context, nodeInterface node.Interface) e
 				}
 
 				log.DebugF("Generated dependency check bash script:\n%s\n", bashScript)
-				//Encode the script to avoid "\n" characters and safely pass it via SSH
+				// Encode the script to avoid "\n" characters and safely pass it via SSH
 				encoded := base64.StdEncoding.EncodeToString([]byte(bashScript))
 				remoteCmd := fmt.Sprintf("echo %q | base64 -d | bash", encoded)
 				cmd := nodeInterface.Command("bash", "-c", remoteCmd)

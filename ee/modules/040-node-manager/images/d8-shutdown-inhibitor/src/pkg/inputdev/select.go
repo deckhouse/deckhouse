@@ -12,6 +12,8 @@ import (
 )
 
 // FD_SET sets the bit for the file descriptor fd in the bitmask FdSet.
+//
+//nolint:revive
 func FD_SET(fd int, fdSet *syscall.FdSet) {
 	fdIdx := fd / 64
 	fdBitMask := int64(1 << (fd % 64))
@@ -20,6 +22,8 @@ func FD_SET(fd int, fdSet *syscall.FdSet) {
 }
 
 // FD_ISSET examines if bit is set for the file descriptor fd in the bitmask FdSet.
+//
+//nolint:revive
 func FD_ISSET(fd int, fdSet *syscall.FdSet) bool {
 	fdIdx := fd / 64
 	fdBitMask := int64(1 << (fd % 64))
@@ -27,6 +31,8 @@ func FD_ISSET(fd int, fdSet *syscall.FdSet) bool {
 }
 
 // FD_ZERO cleans the bitmask FdSet to initialize bitmask after modification from the Select call.
+//
+//nolint:revive
 func FD_ZERO(fdSet *syscall.FdSet) {
 	for i := range fdSet.Bits {
 		fdSet.Bits[i] = 0

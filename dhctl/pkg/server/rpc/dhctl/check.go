@@ -46,8 +46,9 @@ import (
 )
 
 type checkParams struct {
-	request    *pb.CheckStart
-	logOptions logger.Options
+	request      *pb.CheckStart
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
 }
 
 func (s *Service) Check(server pb.DHCTL_CheckServer) error {
@@ -62,6 +63,12 @@ func (s *Service) Check(server pb.DHCTL_CheckServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CheckRequest)
 	sendCh := make(chan *pb.CheckResponse)
+	pt := progressTracker[*pb.CheckResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CheckResponse {
+			return &pb.CheckResponse{Message: &pb.CheckResponse_Progress{Progress: convertProgress(progress)}}
+		},
+	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
@@ -107,8 +114,9 @@ connectionProcessor:
 				}
 				go func() {
 					result := s.checkSafe(ctx, checkParams{
-						request:    message.Start,
-						logOptions: logOptions,
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
 					})
 					sendCh <- &pb.CheckResponse{Message: &pb.CheckResponse_Result{Result: result}}
 				}()
@@ -125,6 +133,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.CheckResult) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -132,7 +143,6 @@ func (s *Service) checkSafe(ctx context.Context, p checkParams) (result *pb.Chec
 			result = &pb.CheckResult{State: string(lastState), Err: err.Error()}
 		}
 	}()
-
 	return s.check(ctx, p)
 }
 
@@ -230,12 +240,14 @@ func (s *Service) check(ctx context.Context, p checkParams) *pb.CheckResult {
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
 		TmpDir:                s.params.TmpDir,
+		OnPhaseFunc:           func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc:        p.sendProgress,
 	}
 
 	kubeClient, sshClient, cleanup, err := helper.InitializeClusterConnections(ctx, helper.ClusterConnectionsOptions{
 		CommanderMode: p.request.Options.CommanderMode,
-		ApiServerUrl:  p.request.Options.ApiServerUrl,
-		ApiServerOptions: helper.ApiServerOptions{
+		APIServerURL:  p.request.Options.ApiServerUrl,
+		APIServerOptions: helper.APIServerOptions{
 			Token:                    p.request.Options.ApiServerToken,
 			InsecureSkipTLSVerify:    p.request.Options.ApiServerInsecureSkipTlsVerify,
 			CertificateAuthorityData: util.StringToBytes(p.request.Options.ApiServerCertificateAuthorityData),

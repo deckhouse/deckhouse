@@ -18,41 +18,20 @@ package dependency
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/checker"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// Getter retrieves dependency information by name.
-// Implementations should return nil if the dependency doesn't exist.
-//
-// Example implementation:
-//
-//	func (s *Scheduler) GetDependency(name string) Node {
-//	    s.mu.Lock()
-//	    defer s.mu.Unlock()
-//	    return s.nodes[name]
-//	}
-type Getter interface {
-	// IsEnabled checks if the module enabled, returning nil means module does not exist
-	IsEnabled(name string) *bool
+type ModuleDependencyGetter func(moduleName string) (*ModuleInfo, error)
 
-	// GetDependency returns the dependency node by name, or nil if not found.
-	// GetDependency(name string) Node
+type ModuleInfo struct {
+	IsModuleEnabled *bool
+	Version         *semver.Version
 }
-
-// Node represents a package dependency that can be validated.
-// It provides version information and enable/disable state.
-// type Node interface {
-// GetVersion returns the semantic version of this dependency.
-// May return nil if version is not yet determined.
-// GetVersion() *semver.Version
-
-// IsEnabled returns whether this dependency is currently enabled.
-// A package cannot be enabled if any of its required dependencies are disabled.
-// IsEnabled() bool
-// }
 
 // Dependency defines a version constraint requirement for a package dependency.
 type Dependency struct {
@@ -74,8 +53,9 @@ type Dependency struct {
 //
 // Optional dependencies are skipped if missing but still validated if present.
 type Checker struct {
-	getter       Getter                // Retrieves dependency information
-	dependencies map[string]Dependency // Map of dependency name -> requirements
+	getter              ModuleDependencyGetter // Retrieves dependency information
+	modulesDependencies map[string]Dependency  // Map of dependency name -> requirements
+	logger              *log.Logger
 }
 
 // NewChecker creates a new dependency checker.
@@ -97,10 +77,11 @@ type Checker struct {
 //	    },
 //	}
 //	checker := NewChecker(getter, dependencies)
-func NewChecker(getter Getter, dependencies map[string]Dependency) *Checker {
+func NewChecker(getter ModuleDependencyGetter, modulesDependencies map[string]Dependency, logger *log.Logger) *Checker {
 	return &Checker{
-		getter:       getter,
-		dependencies: dependencies,
+		getter:              getter,
+		modulesDependencies: modulesDependencies,
+		logger:              logger.Named("dependency-checker").With(slog.Int("dependencies count", len(modulesDependencies))),
 	}
 }
 
@@ -126,45 +107,83 @@ func NewChecker(getter Getter, dependencies map[string]Dependency) *Checker {
 // If an optional dependency exists, it must still be enabled and satisfy version constraints.
 func (c *Checker) Check() checker.Result {
 	// Iterate through all declared dependencies
-	for name, dep := range c.dependencies {
-		// Retrieve the dependency node
-		enabled := c.getter.IsEnabled(name)
-		if enabled == nil {
-			// Dependency doesn't exist
-			if dep.Optional {
-				// Optional dependency - skip validation
-				continue
+	for name, dep := range c.modulesDependencies {
+		c.logger.Debug("check dependency",
+			slog.String("name", name),
+			slog.Bool("optional", dep.Optional))
+
+		moduleInfo, err := c.getter(name)
+		if err != nil {
+			return checker.Result{
+				Enabled: false,
+				Reason:  err.Error(),
+				Message: err.Error(),
 			}
+		}
+
+		// Dependency not enabled
+		if moduleInfo.IsModuleEnabled == nil || !*moduleInfo.IsModuleEnabled {
+			if dep.Optional {
+				continue // Optional dependency - skip validation
+			}
+
+			suffix := "not enabled"
+			if moduleInfo.IsModuleEnabled == nil {
+				suffix = "not found"
+			}
+			msg := fmt.Sprintf("dependency '%s' %s", name, suffix)
 
 			// Required dependency is missing - fail
 			return checker.Result{
 				Enabled: false,
-				Reason:  fmt.Sprintf("dependency '%s' not found", name),
+				Message: msg,
+				Reason:  msg,
 			}
 		}
 
-		// Dependency exists but check if it's enabled
-		// Even optional dependencies must be enabled if they exist
-		if !*enabled {
-			return checker.Result{
-				Enabled: false,
-				Message: fmt.Sprintf("dependency '%s' not enabled", name),
-			}
-		}
+		version := removePrereleaseAndMetadata(moduleInfo.Version, c.logger)
+
+		c.logger.Debug("semver validate",
+			slog.String("constraint", dep.Constraint.String()),
+			slog.String("version", version.String()))
 
 		// Validate version constraint
 		// semver.Constraints.Validate returns (bool, []error)
 		// We only care about the errors - if any exist, constraint is not satisfied
-		// if _, errs := dep.Constraint.Validate(node.GetVersion()); len(errs) != 0 {
-		// 	return checker.Result{
-		// 		Enabled: false,
-		// 		Reason:  errs[0].Error(), // Return first validation error
-		// 	}
-		// }
+		if _, errs := dep.Constraint.Validate(version); len(errs) != 0 {
+			return checker.Result{
+				Enabled: false,
+				Reason:  fmt.Sprintf("dependency %s error: %s", name, errs[0].Error()), // Return first validation error
+				Message: errs[0].Error(),
+			}
+		}
 	}
 
 	// All dependencies satisfied
 	return checker.Result{
 		Enabled: true,
 	}
+}
+
+// removePrereleaseAndMetadata returns a version without prerelease and metadata parts
+func removePrereleaseAndMetadata(version *semver.Version, logger *log.Logger) *semver.Version {
+	if len(version.Prerelease()) > 0 {
+		woPrerelease, err := version.SetPrerelease("")
+		if err != nil {
+			logger.Warn("could not remove prerelease")
+			return version
+		}
+		version = &woPrerelease
+	}
+
+	if len(version.Metadata()) > 0 {
+		woMetadata, err := version.SetMetadata("")
+		if err != nil {
+			logger.Warn("could not remove metadata")
+			return version
+		}
+		version = &woMetadata
+	}
+
+	return version
 }

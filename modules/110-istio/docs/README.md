@@ -213,6 +213,10 @@ It is also possible to add the sidecar to an individual pod in namespace without
 - Each request is DNAT'ed to Envoy that processes it and creates another one. The same thing happens on the receiving side.
 - Each Envoy stores information about all the services in the cluster, thereby consuming memory. The bigger the cluster, the more memory Envoy consumes. You can use the [Sidecar](istio-cr.html#sidecar) CustomResource to solve this problem.
 
+{% alert level="warning" %}
+The EnvoyFilter interface can be controlled by Lua plugins, but it is an internal control mechanism for implementing the Istio functionality. It must not be used in a user configuration, as doing so would compromise the integrity of the system.
+{% endalert %}
+
 It is also important to get the Ingress controller and the application's Ingress resources ready:
 
 - Enable [`enableIstioSidecar`](../ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) of the `IngressNginxController` resource.
