@@ -124,6 +124,36 @@ apiVersions:
                   Storage domain id which contains the shared resources that must be available to all datacenter hosts.
                 pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
+              customNetworkConfig:
+                type: boolean
+                description: |
+                  Use custom static network configuration for nodes.
+              networkInterfaceName:
+                type: string
+                description: |
+                  Network interface name (for custom network configuration)
+                example: enp1s0
+              networkInterfaceAddress:
+                type: array
+                items:
+                  type: string
+                uniqueItems: true
+                description: | 
+                  A set of IP-addresses for each node (in CIDR notation, for custom network configuration)
+                example:  ["192.168.1.10/24", "192.168.1.11/24"]
+              networkInterfaceGateway:
+                type: string
+                description: |
+                  Network interface gateway (for custom network configuration)
+                example: 192.168.1.1
+              networkInterfaceDNS:
+                type: array
+                items:
+                  type: string
+                uniqueItems: true
+                description: |
+                  A set of DNS (for custom network configuration)
+                example:  ["8.8.8.8", "8.8.4.4"]
       nodeGroups:
         type: array
         description: |
