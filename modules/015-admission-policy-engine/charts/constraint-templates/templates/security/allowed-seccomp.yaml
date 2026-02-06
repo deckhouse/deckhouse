@@ -117,6 +117,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seccompProfile")
+                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
                 exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
                 allowed := exception_allowed_profiles
               }
@@ -125,6 +128,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seccompProfile")
+                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
                 exception_allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues[_]
                 startswith(exception_allowed_profiles, "localhost")
                 allowed := naming_translation.localhost[_]
@@ -132,12 +138,73 @@ spec:
 
               get_message(profile, file, name, location, allowed_profiles) := message if {
                 not profile == "Localhost"
-                message := sprintf("Seccomp profile '%v' is not allowed for container '%v'. Found at: %v. Allowed profiles: %v", [profile, name, location, allowed_profiles])
+                actual_value := sprintf("Actual profile: '%v' (found at: %v)", [profile, location])
+                allowed_by_policy := sprintf("Allowed profiles: %v", [allowed_profiles])
+                exception_allowed := exception_allowed_seccomp_value
+                message := build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed)
               }
 
               get_message(profile, file, name, location, allowed_profiles) := message if {
                 profile == "Localhost"
-                message := sprintf("Seccomp profile '%v' with file '%v' is not allowed for container '%v'. Found at: %v. Allowed profiles: %v", [profile, file, name, location, allowed_profiles])
+                actual_value := sprintf("Actual profile: '%v' with file '%v' (found at: %v)", [profile, file, location])
+                allowed_by_policy := sprintf("Allowed profiles: %v", [allowed_profiles])
+                exception_allowed := exception_allowed_seccomp_value
+                message := build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed)
+              }
+
+              exception_allowed_seccomp_value := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seccompProfile")
+                has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
+                allowed_profiles := exception.spec.securityContext.seccompProfile.allowedValues
+                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
+              }
+
+              exception_allowed_seccomp_value := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              exception_allowed_seccomp_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              exception_allowed_seccomp_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              exception_allowed_seccomp_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "seccompProfile")
+              }
+
+              exception_allowed_seccomp_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seccompProfile")
+                not has_field(exception.spec.securityContext.seccompProfile, "allowedValues")
+              }
+
+              build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("Seccomp profile is not allowed for container '%v'.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_seccomp_message(name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("Seccomp profile is not allowed for container '%v'.\n%v\n%v", [name, actual_value, allowed_by_policy])
               }
 
               input_wildcard_allowed_profiles if {
@@ -296,4 +363,13 @@ spec:
 
               input_containers[container.name] := container if {
                 container := input.review.object.spec.ephemeralContainers[_]
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
