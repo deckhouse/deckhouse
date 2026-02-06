@@ -1,23 +1,18 @@
 {{ $ctx := . }}
-{{- $nodeGroupsList := list }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
-  {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{ if eq $mode "Watchdog" }}
-    {{- $nodeGroupsList = append $nodeGroupsList $ng.name }}
-  {{- end }}
-{{- end }}
-
-{{ if not (eq (len $nodeGroupsList) 0) }}
+  {{- $mode := dig "fencing" "mode" "" $ng }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Dryrun") }}
+    {{- $timeout := dig "fencing" "watchdog" "timeout" 60 $ng }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: NodeGroupConfiguration
 metadata:
-  name: enable-watchdog-for-nodegroup.sh
+  name: enable-watchdog-for-nodegroup-{{ $ng.name }}.sh
   labels:
     app: fencing-agent
 spec:
   weight: 99
-  nodeGroups: {{ $nodeGroupsList | toJson }}
+  nodeGroups: ["{{ $ng.name }}"]
   bundles: ["*"]
   content: |
     bb-sync-file /etc/udev/rules.d/60-watchdog.rules - <<"EOF"
@@ -50,23 +45,33 @@ spec:
     #!/bin/bash
 
     WD="/dev/watchdog"
+    MODE="{{ $mode }}"
 
     start_wd() {
       if [ -e "${WD}" ]; then
         ls -lha /dev/watchdog* 2>/dev/null
         rm -rf "${WD}"
       fi
-      modprobe softdog soft_margin=60 soft_panic=1
+
+      if [ "${MODE}" = "Dryrun" ]; then
+        echo "[DRYRUN] Would run: modprobe softdog soft_margin={{ $timeout }} soft_panic=1"
+      else
+        modprobe softdog soft_margin={{ $timeout }} soft_panic=1
+      fi
     }
 
     stop_wd() {
-      while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
-        fuser "${WD}" -k -TERM
-        sleep 1
-      done
-
-      rmmod softdog
+      if [ "${MODE}" = "Dryrun" ]; then
+        echo "[DRYRUN] Would run: rmmod softdog"
+      else
+        while [[ $(lsof "${WD}" 2>/dev/null | tail -n +2 | wc -l) -ge 1 ]]; do
+          fuser "${WD}" -k -TERM
+          sleep 1
+        done
+        rmmod softdog
+      fi
     }
+
 
     case "$1" in
         start)
@@ -83,4 +88,5 @@ spec:
     EOF
 
     chmod +x /opt/deckhouse/bin/nodegroup-watchdog.sh
-{{ end }}
+  {{- end }}
+{{- end }}

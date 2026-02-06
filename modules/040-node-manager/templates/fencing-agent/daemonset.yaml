@@ -6,7 +6,7 @@ memory: 50Mi
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{ $mode := dig "fencing" "mode" "" $ng }}
-  {{ if eq $mode "Watchdog" }}
+  {{- if or (eq $mode "Watchdog") (eq $mode "Dryrun") }}
       {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -75,8 +75,12 @@ spec:
           env:
             - name: LOG_LEVEL
               value: info
+            - name: FENCING_MODE
+              value: {{ (($ng.fencing).mode) | default "Watchdog" }}
             - name: WATCHDOG_DEVICE
               value: /dev/watchdog
+            - name: WATCHDOG_TIMEOUT
+              value: {{ ((($ng.fencing).watchdog).timeout) | default 60 | toString | quote }}
             - name: NODE_NAME
               valueFrom:
                 fieldRef:
@@ -95,14 +99,18 @@ spec:
         {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "fencing_agent_resources" $ctx | nindent 14 }}
         {{- end }}
+          {{- if eq $mode "Watchdog" }}
           volumeMounts:
             - name: watchdog
               mountPath: /dev/watchdog
+          {{- end }}
       terminationGracePeriodSeconds: 10
+      {{- if eq $mode "Watchdog" }}
       volumes:
         - name: watchdog
           hostPath:
             path: /dev/watchdog
             type: CharDevice
+      {{- end }}
   {{- end }}
 {{- end }}
