@@ -1,17 +1,23 @@
 ---
-title: Как сменить канал обновления для модуля из источника?
+title: Как сменить канал обновлений для модуля?
 lang: ru
 ---
 
-Смена канала обновления возможна для модулей из источника (т.к. их релизный цикл не привязан к релизному циклу DKP). По умолчанию канал обновления для модулей наследуется от глобального (указывается в параметре [`settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel)). Подробнее про каналы обновлений — в разделе [«Каналы обновлений»](reference/release-channels.html).
+Модуль может быть встроенным в DKP или подключенным из источника модулей (определяется с помощью [ModuleSource](reference/api/cr.html#modulesource)). Встроенные модули имеют общий с DKP релизный цикл и обновляются вместе с DKP. **Канал обновлений встроенного модуля всегда соответствует каналу обновлений DKP.** Модуль, подключаемый из источника модулей, имеет собственный релизный цикл, который не зависит от релизного цикла DKP. **Канал обновлений модуля, подключенного из источника модулей, может быть изменен.** 
 
-Для модулей из источника канал обновления задается через ресурс ModuleUpdatePolicy, определяющий политику обновления, который затем привязывается к модулю через поле `spec.updatePolicy` в ModuleConfig.
+Далее рассматривается процесс смены канала обновлений для модуля, подключенного из источника модулей.
 
-Чтобы сменить канал обновления для используемого в кластере модуля из источника, выполните следующие шаги:
+По умолчанию канал обновлений для модулей наследуется от канала обновлений DKP (указывается в параметре [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) ModuleConfig `deckhouse`). Подробнее про каналы обновлений — в разделе [«Каналы обновлений»](architecture/module-development/versioning/#каналы-обновлений).
 
-1. Создайте или измените [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) с нужным каналом (канал укажите в поле `spec.releaseChannel`).
+Для модулей из источника канал обновлений задается с помощью [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy), который затем _привязывается_ к модулю через параметр `updatePolicy` в ModuleConfig.
 
-   Пример манифеста ModuleUpdatePolicy:
+Чтобы сменить канал обновлений у модуля из источника модулей, выполните следующие шаги:
+
+1. Определите политику обновления модуля.
+
+   Создайте [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy), в котором укажите канал обновлений в параметре `releaseChannel`.
+
+   Пример ModuleUpdatePolicy:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
@@ -19,16 +25,17 @@ lang: ru
    metadata:
      name: my-module-policy
    spec:
-     releaseChannel: Alpha  # Канал обновления, который должен быть установлен для модуля.
-     update:
-       mode: AutoPatch
-       windows: []  # Опционально: окна обновления.
+     releaseChannel: Alpha
+     # При необходимости, укажите режим обновления и окна обновления.
+     # update:
+     #   mode: AutoPatch
+     #   windows: []
    ```
 
-1. Убедитесь, что политика создана, используя команду:
+   Убедитесь, что политика создана:
 
    ```shell
-   d8 k get mup
+   d8 k get mup my-module-policy
    ```
 
    Пример ответа:
@@ -38,7 +45,17 @@ lang: ru
    my-module-policy   Alpha             AutoPatch
    ```
 
-1. Укажите имя созданной политики в [ModuleConfig](reference/api/cr.html#moduleconfig) модуля, для которого меняется канал:
+1. Свяжите политику обновления с модулем.
+
+   Укажите имя созданной политики обновления в параметре [updatePolicy](reference/api/cr.html#moduleconfig-v1alpha1-spec-updatepolicy) ModuleConfig соответствующего модуля.
+
+   Для редактирования ModuleConfig используйте команду (укажите имя модуля):
+
+   ```shell
+   d8 k edit mc my-module
+   ```
+
+   Пример ModuleConfig:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -47,36 +64,32 @@ lang: ru
      name: my-module
    spec:
      enabled: true
-     updatePolicy: my-module-policy  # Имя ModuleUpdatePolicy
+     # Имя ModuleUpdatePolicy
+     updatePolicy: my-module-policy
    ```
 
-При изменении канала обновления модуль автоматически начнет получать версии из нового канала. Если в новом канале уже есть более новая версия, она будет установлена согласно настроенному режиму обновления.
+При изменении канала обновлений модуля, его установленная версия изменится согласно настроенному режиму обновления.
 
-Чтобы убедиться в том, что для модуля используется желаемый канал обновления, используйте команду:
+Чтобы посмотреть текущий канал обновлений модуля и другую информацию о состоянии модуля в кластере, используйте соответствующий объект [Module](reference/api/cr.html#module).
+
+Пример команды для получения информации о модуле:
 
 ```shell
 d8 k get module my-module -o yaml
 ```
 
-Используемая политика обновления указывается в поле `properties.updatePolicy`. Текущий канал обновления модуля указывается в параметре `properties.releaseChannel`. Пример:
+Используемая политика обновления будет указана в поле `properties.updatePolicy`, текущий канал обновлений — в поле `properties.releaseChannel`. Пример вывода:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
 kind: Module
 metadata:
   name: my-module
-  resourceVersion: "4095616"
-  uid: d69fff12-54c4-4949-b82e-7d92f7ecf17a
+  # ...
 properties:
-  ...
-  namespace: my-namespace
-  releaseChannel: Alpha # Канал обновления модуля.
-  requirements:
-    deckhouse: '>= 1.71'
-  source: deckhouse
-  stage: General Availability
-  updatePolicy: my-module-policy # Политика обновления модуля.
-  version: v1.16.10
-  weight: 900
-  ...
+  # ...
+  releaseChannel: Alpha # Канал обновлений модуля.
+  updatePolicy: my-module-policy # Политика обновлений модуля.
+  version: v1.16.10  # Версия модуля.
+  # ...
 ```
