@@ -1,2 +1,15 @@
 type: object
 properties:
+  loadBalancerClass:
+    type: object
+    description: |
+      Settings for filtering LoadBalancerClass resources.
+    properties:
+      exclude:
+        type: array
+        description: |
+          A list of regular expressions to exclude LoadBalancerClass resources by name.
+        items:
+          type: string
+        x-examples:
+          - ["private-.*", "test-.*"]

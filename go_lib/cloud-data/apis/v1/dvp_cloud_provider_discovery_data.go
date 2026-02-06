@@ -15,11 +15,12 @@
 package v1
 
 type DVPCloudProviderDiscoveryData struct {
-	APIVersion       string            `json:"apiVersion,omitempty"`
-	Kind             string            `json:"kind,omitempty"`
-	Layout           string            `json:"layout,omitempty"`
-	Zones            []string          `json:"zones,omitempty"`
-	StorageClassList []DVPStorageClass `json:"storageClasses,omitempty"`
+	APIVersion            string                 `json:"apiVersion,omitempty"`
+	Kind                  string                 `json:"kind,omitempty"`
+	Layout                string                 `json:"layout,omitempty"`
+	Zones                 []string               `json:"zones,omitempty"`
+	StorageClassList      []DVPStorageClass      `json:"storageClasses,omitempty"`
+	LoadBalancerClassList []DVPLoadBalancerClass `json:"loadBalancerClasses,omitempty"`
 }
 
 type DVPStorageClass struct {
@@ -29,4 +30,12 @@ type DVPStorageClass struct {
 	AllowVolumeExpansion bool   `json:"allowVolumeExpansion,omitempty"`
 	IsEnabled            bool   `json:"isEnabled,omitempty"`
 	IsDefault            bool   `json:"isDefault,omitempty"`
+}
+
+type DVPLoadBalancerClass struct {
+	Name        string   `json:"name,omitempty"`
+	AddressPool []string `json:"addressPool,omitempty"`
+	Interfaces  []string `json:"interfaces,omitempty"`
+	IsEnabled   bool     `json:"isEnabled,omitempty"`
+	IsDefault   bool     `json:"isDefault,omitempty"`
 }
