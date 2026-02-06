@@ -18,9 +18,11 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,10 +32,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -110,25 +115,39 @@ const (
 // IMPORTANT: This controller only updates specific status fields and preserves
 // fields managed by other controllers (e.g., deckhouse.processed, deckhouse.synced).
 type NodeGroupStatusReconciler struct {
-	Client client.Client
-	Scheme *runtime.Scheme
+	Client   client.Client
+	Scheme   *runtime.Scheme
+	Recorder record.EventRecorder
+
+	// lastEventMessages caches the last event message per NodeGroup
+	// to avoid creating duplicate events with the same message.
+	lastEventMessages sync.Map
 }
 
 // SetupNodeGroupStatusController registers the NodeGroupStatus controller with the manager.
 func SetupNodeGroupStatusController(mgr ctrl.Manager) error {
 	return (&NodeGroupStatusReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:   mgr.GetClient(),
+		Scheme:   mgr.GetScheme(),
+		Recorder: mgr.GetEventRecorderFor("node-controller"),
 	}).SetupWithManager(mgr)
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *NodeGroupStatusReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Only process Node events for nodes that belong to a NodeGroup.
+	// This matches the original hook's LabelSelector: node.deckhouse.io/group Exists
+	nodeHasGroupLabel := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		_, exists := obj.GetLabels()[NodeGroupLabel]
+		return exists
+	})
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1.NodeGroup{}).
 		Watches(
 			&corev1.Node{},
 			handler.EnqueueRequestsFromMapFunc(r.nodeToNodeGroup),
+			builder.WithPredicates(nodeHasGroupLabel),
 		).
 		Watches(
 			r.newUnstructured(MCMMachineGVK),
@@ -302,6 +321,14 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		errorMsg = errorMsg[:1024]
 	}
 
+	// Create event for machine failures (matching original hook behavior)
+	// Events contain the detailed error, status shows generic message
+	if errorMsg != "" {
+		r.createEventIfChanged(ng, errorMsg)
+		// Rewrite status message for NG - details go to Events
+		errorMsg = "Machine creation failed. Check events for details."
+	}
+
 	// Calculate conditions
 	conditions := r.calculateConditions(ng, nodes, readyCount, desired, instancesCount, isFrozen, errorMsg, updatingNodes, waitingForApprovalNodes)
 
@@ -392,20 +419,21 @@ func (r *NodeGroupStatusReconciler) getZonesCount(ctx context.Context, ng *v1.No
 		return 1 // Default to 1 zone
 	}
 
-	// Parse zones from secret
+	// Parse zones from secret as JSON array (matching original hook)
 	zonesData := secret.Data["zones"]
 	if len(zonesData) == 0 {
 		return 1
 	}
 
-	// Count commas + 1 (simple heuristic for JSON array)
-	count := int32(1)
-	for _, b := range zonesData {
-		if b == ',' {
-			count++
-		}
+	var zones []string
+	if err := json.Unmarshal(zonesData, &zones); err != nil {
+		return 1
 	}
-	return count
+
+	if len(zones) == 0 {
+		return 1
+	}
+	return int32(len(zones))
 }
 
 // MachineFailure represents a machine failure.
@@ -538,8 +566,50 @@ func (r *NodeGroupStatusReconciler) getMachinesCount(ctx context.Context, ngName
 	return count
 }
 
+// createEventIfChanged creates a Kubernetes Event for machine failures,
+// but only if the message differs from the last event for this NodeGroup.
+// This matches the original hook's ngStatusCache deduplication behavior.
+func (r *NodeGroupStatusReconciler) createEventIfChanged(ng *v1.NodeGroup, msg string) {
+	prev, _ := r.lastEventMessages.Load(ng.Name)
+	if prev == msg {
+		return // Skip duplicate event
+	}
+
+	eventType := corev1.EventTypeWarning
+	reason := "MachineFailed"
+	if msg == "Started Machine creation process" {
+		eventType = corev1.EventTypeNormal
+		reason = "MachineCreating"
+	}
+
+	r.Recorder.Event(ng, eventType, reason, msg)
+	r.lastEventMessages.Store(ng.Name, msg)
+}
+
+// findExistingCondition returns the existing condition by type from a slice.
+// Used to preserve LastTransitionTime when condition status hasn't changed.
+func findExistingCondition(conditions []metav1.Condition, condType string) *metav1.Condition {
+	for i := range conditions {
+		if conditions[i].Type == condType {
+			return &conditions[i]
+		}
+	}
+	return nil
+}
+
+// setConditionTime preserves LastTransitionTime if the condition status hasn't changed,
+// following Kubernetes conventions for condition management.
+func setConditionTime(cond *metav1.Condition, existing []metav1.Condition, now metav1.Time) {
+	if prev := findExistingCondition(existing, cond.Type); prev != nil && prev.Status == cond.Status {
+		cond.LastTransitionTime = prev.LastTransitionTime
+	} else {
+		cond.LastTransitionTime = now
+	}
+}
+
 // calculateConditions calculates all conditions for the NodeGroup.
-// This matches the conditions generated by the original Python hook.
+// It preserves LastTransitionTime from existing conditions when status hasn't changed,
+// following Kubernetes conventions.
 func (r *NodeGroupStatusReconciler) calculateConditions(
 	ng *v1.NodeGroup,
 	nodes []corev1.Node,
@@ -549,14 +619,14 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 	updatingNodes, waitingForApprovalNodes []string,
 ) []metav1.Condition {
 	now := metav1.Now()
+	existing := ng.Status.Conditions
 	conditions := make([]metav1.Condition, 0, 4)
 
 	nodesCount := int32(len(nodes))
 
 	// 1. Ready condition
 	readyCondition := metav1.Condition{
-		Type:               ConditionTypeReady,
-		LastTransitionTime: now,
+		Type: ConditionTypeReady,
 	}
 
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
@@ -590,12 +660,12 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 			readyCondition.Message = fmt.Sprintf("%d of %d nodes are ready", readyCount, nodesCount)
 		}
 	}
+	setConditionTime(&readyCondition, existing, now)
 	conditions = append(conditions, readyCondition)
 
 	// 2. Updating condition
 	updatingCondition := metav1.Condition{
-		Type:               ConditionTypeUpdating,
-		LastTransitionTime: now,
+		Type: ConditionTypeUpdating,
 	}
 
 	if len(updatingNodes) > 0 {
@@ -607,12 +677,12 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 		updatingCondition.Reason = "NoUpdatesInProgress"
 		updatingCondition.Message = ""
 	}
+	setConditionTime(&updatingCondition, existing, now)
 	conditions = append(conditions, updatingCondition)
 
 	// 3. WaitingForDisruptiveApproval condition
 	waitingCondition := metav1.Condition{
-		Type:               ConditionTypeWaitingForDisruptiveApproval,
-		LastTransitionTime: now,
+		Type: ConditionTypeWaitingForDisruptiveApproval,
 	}
 
 	if len(waitingForApprovalNodes) > 0 {
@@ -624,12 +694,12 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 		waitingCondition.Reason = "NoDisruptiveUpdates"
 		waitingCondition.Message = ""
 	}
+	setConditionTime(&waitingCondition, existing, now)
 	conditions = append(conditions, waitingCondition)
 
 	// 4. Error condition
 	errorCondition := metav1.Condition{
-		Type:               ConditionTypeError,
-		LastTransitionTime: now,
+		Type: ConditionTypeError,
 	}
 
 	if errorMsg != "" {
@@ -641,13 +711,13 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 		errorCondition.Reason = "NoErrors"
 		errorCondition.Message = ""
 	}
+	setConditionTime(&errorCondition, existing, now)
 	conditions = append(conditions, errorCondition)
 
 	// 5. Scaling condition (only for CloudEphemeral)
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
 		scalingCondition := metav1.Condition{
-			Type:               ConditionTypeScaling,
-			LastTransitionTime: now,
+			Type: ConditionTypeScaling,
 		}
 
 		if instances < desired {
@@ -663,18 +733,19 @@ func (r *NodeGroupStatusReconciler) calculateConditions(
 			scalingCondition.Reason = "NotScaling"
 			scalingCondition.Message = "Desired number of instances reached"
 		}
+		setConditionTime(&scalingCondition, existing, now)
 		conditions = append(conditions, scalingCondition)
 	}
 
 	// 6. Frozen condition (only for CloudEphemeral)
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral && isFrozen {
 		frozenCondition := metav1.Condition{
-			Type:               ConditionTypeFrozen,
-			Status:             metav1.ConditionTrue,
-			LastTransitionTime: now,
-			Reason:             "MachineDeploymentFrozen",
-			Message:            "MachineDeployment is frozen due to errors",
+			Type:    ConditionTypeFrozen,
+			Status:  metav1.ConditionTrue,
+			Reason:  "MachineDeploymentFrozen",
+			Message: "MachineDeployment is frozen due to errors",
 		}
+		setConditionTime(&frozenCondition, existing, now)
 		conditions = append(conditions, frozenCondition)
 	}
 
