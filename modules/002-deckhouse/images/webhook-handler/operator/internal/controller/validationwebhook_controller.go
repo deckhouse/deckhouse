@@ -37,10 +37,10 @@ import (
 )
 
 const (
-	validationHooksBaseDir   = "hooks"
-	validationWebhooksSubDir = "webhooks"
-	validatingSubDir         = "validating"
-	validationWebhookFileExt = ".py"
+	validationHooksBaseDir          = "hooks"
+	validationWebhooksSubDir        = "webhooks"
+	validatingSubDir                = "validating"
+	validationWebhookFileExt        = ".py"
 	validationWebhookDirectoryPerms = 0755
 	validationWebhookFilePerms      = 0755
 )
@@ -141,7 +141,6 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 
 	webhookDir := r.webhookDir(vwh.Name)
 	if err := os.MkdirAll(webhookDir, validationWebhookDirectoryPerms); err != nil {
-		res.Requeue = true
 		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
@@ -165,7 +164,6 @@ func (r *ValidationWebhookReconciler) handleProcessValidatingWebhook(ctx context
 		controllerutil.AddFinalizer(vwh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vwh); err != nil {
-			res.Requeue = true
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
 				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
@@ -181,7 +179,6 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 
 	webhookFile := r.webhookFilePath(vh.Name)
 	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
-		res.Requeue = true
 		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
@@ -193,7 +190,6 @@ func (r *ValidationWebhookReconciler) handleDeleteValidatingWebhook(ctx context.
 		controllerutil.RemoveFinalizer(vh, deckhouseiov1alpha1.ValidationWebhookFinalizer)
 
 		if err := r.client.Update(ctx, vh); err != nil {
-			res.Requeue = true
 			return res, fmt.Errorf("remove finalizer for %s: %w", vh.Name, err)
 		}
 	}

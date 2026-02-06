@@ -138,7 +138,6 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 
 	webhookDir := r.webhookDir(cwh.Name)
 	if err := os.MkdirAll(webhookDir, directoryPermissions); err != nil {
-		res.Requeue = true
 		r.logger.Error("failed to create directory", slog.String("path", webhookDir), log.Err(err))
 		return res, fmt.Errorf("create dir %s: %w", webhookDir, err)
 	}
@@ -162,7 +161,6 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 		controllerutil.AddFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
 		if err := r.client.Update(ctx, cwh); err != nil {
-			res.Requeue = true
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
 				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
@@ -178,7 +176,6 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 
 	webhookFile := r.webhookFilePath(cwh.Name)
 	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
-		res.Requeue = true
 		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
 	}
 
@@ -190,7 +187,6 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
 		if err := r.client.Update(ctx, cwh); err != nil {
-			res.Requeue = true
 			return res, fmt.Errorf("remove finalizer for %s: %w", cwh.Name, err)
 		}
 	}
