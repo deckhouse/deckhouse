@@ -20,3 +20,7 @@ data "vsphere_virtual_machine" "master-data" {
 output "master-data" {
   value = data.vsphere_virtual_machine.master-data
 }
+output "master-data2" {
+  value = vsphere_virtual_machine.master
+}
+
