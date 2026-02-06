@@ -2378,17 +2378,20 @@ spec:
                         - "Watchdog"
                         - "Dryrun"
                       description: |
-                        Fencing supports modes: `Watchdog`, 'Dryrun'. In 'Watchdog` mode, the watchdog kernel module (watchdog timer) is used.
+                        Fencing mode:
+                        - `Watchdog` — uses the watchdog kernel module to automatically reboot nodes that lose cluster connectivity.
+                        - `Dryrun` — runs the fencing-agent without activating the watchdog (for testing and monitoring only).
 
-                        The Watchdog implementation includes the following components:
+                        `NodeGroupConfiguration` script loads the `softdog` kernel module with parameters `soft_margin=<timeout>` and `soft_panic=1`.
 
-                        - Fencing-agent — a DaemonSet that is deployed on a specific group of nodes (NodeGroups).
+                        Fencing-agent — a DaemonSet deployed on each node in the NodeGroup:
+                           - Opens `/dev/watchdog` device and sets the label `node-manager.deckhouse.io/fencing-enabled` on the node.
+                           - Participates in a gossip cluster (memberlist) with other fencing-agents in the same NodeGroup.
+                           - Periodically checks quorum (majority of nodes reachable), if quorum=false, fallback to check Kubernetes API availability.
+                           - If quorum is maintained OR Kubernetes API is available, the agent feeds the watchdog (resets the timer).
+                           - If neither condition is met, the watchdog timer expires, triggering a kernel panic and node reboot.
+                           - Monitors maintenance annotations (`node-manager.deckhouse.io/fencing-disable`, `update.node.deckhouse.io/approved`, `update.node.deckhouse.io/disruption-approved`) to temporarily disable the watchdog during planned maintenance.
 
-                          Once started, the agent activates Watchdog and sets a special label `node-manager.deckhouse.io/fencing-enabled` on the node where it is functioning. The agent regularly checks if the Kubernetes API is available. If the API is available, the agent sends a signal to Watchdog, which resets the watchdog timer. The agent also monitors special service labels on the node and, depending on their presence, enables or disables the Watchdog.
-
-                          A softdog kernel module with parameters `soft_margin=60` and `soft_panic=1` is used as Watchdog. This means that the timeout period of the watchdog timer is 60 seconds. After this time expires, kernel-panic occurs and the node remains in this state until the user reboots it.
-
-                        - Fencing-controller — a controller that monitors all nodes with the `node-manager.deckhouse.io/fencing-enabled` label. If any node becomes unavailable for more than 60 seconds, the controller removes all pods from that node and then removes the node itself.
                     watchdog:
                       type: object
                       properties:
