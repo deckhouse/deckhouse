@@ -13,7 +13,6 @@ import (
 	"github.com/hashicorp/memberlist"
 )
 
-type ips []string
 type Config struct {
 	MemberListPort uint `env:"MEMBERLIST_PORT" env-default:"8500"`
 }
@@ -80,24 +79,36 @@ func New(
 }
 
 func (ml *Memberlist) GetNodes(ctx context.Context) (domain.Nodes, error) {
-	// TODO context
-	members := ml.list.Members()
-	nodes := domain.Nodes{
-		Nodes: make([]domain.Node, 0, len(members)),
+	res := make(chan domain.Nodes, 1)
+
+	go func() {
+		members := ml.list.Members()
+		nodes := domain.Nodes{
+			Nodes: make([]domain.Node, 0, len(members)),
+		}
+
+		for _, member := range members {
+			var node domain.Node
+			node.Name = member.Name
+			node.Addr = member.Addr.String()
+			nodes.Nodes = append(nodes.Nodes, node)
+		}
+
+		res <- nodes
+	}()
+
+	select {
+	case <-ctx.Done():
+		return domain.Nodes{}, ctx.Err()
+	case r := <-res:
+		return r, nil
 	}
-	for _, member := range members {
-		var node domain.Node
-		node.Name = member.Name
-		node.Addr = member.Addr.String()
-		nodes.Nodes = append(nodes.Nodes, node)
-	}
-	return nodes, nil
 }
 
-func (ml *Memberlist) Start(ctx context.Context, peers ips) error {
+func (ml *Memberlist) Start(ctx context.Context, peersIPs []string) error {
 	wrapped := backoff.Wrap(ctx, ml.logger, 5, "memberlist",
 		func() error {
-			_, err := ml.list.Join(peers)
+			_, err := ml.list.Join(peersIPs)
 			return err
 		})
 

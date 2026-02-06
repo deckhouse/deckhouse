@@ -36,7 +36,7 @@ func (lw *LogWriter) Write(p []byte) (n int, err error) {
 	}
 
 	switch level {
-	case "ERROR":
+	case "ERR", "ERROR":
 		lw.logger.Error(text)
 	case "WARN":
 		lw.logger.Warn(text)

@@ -81,30 +81,30 @@ func New(cfg Config,
 	return client, nil
 }
 
-func (p *Client) Start(ctx context.Context) error {
-	p.logger.Info("starting kubeclient node informer")
-	if err := p.startInformer(ctx); err != nil {
+func (c *Client) Start(ctx context.Context) error {
+	c.logger.Info("starting kubeclient node informer")
+	if err := c.startInformer(ctx); err != nil {
 		return fmt.Errorf("failed to start node informer: %w", err)
 	}
 	return nil
 }
 
-func (p *Client) Stop() {
-	p.logger.Info("stopping kubeclient")
-	p.stopInformer()
-	p.logger.Info("kubeclient stopped")
+func (c *Client) Stop() {
+	c.logger.Info("stopping kubeclient")
+	c.stopInformer()
+	c.logger.Info("kubeclient stopped")
 }
 
-func (p *Client) GetNodesIP(ctx context.Context) ([]string, error) {
-	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", p.nodeGroup)
+func (c *Client) GetNodesIP(ctx context.Context) ([]string, error) {
+	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", c.nodeGroup)
 
-	p.logger.Debug("get nodes", slog.String("labelSelector", labelSelector))
+	c.logger.Debug("get nodes", slog.String("labelSelector", labelSelector))
 
-	nodes, err := p.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{
+	nodes, err := c.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{
 		LabelSelector: labelSelector,
 	})
 	if err != nil {
-		p.logger.Warn("failed to get nodes from kubeapi", sl.Err(err))
+		c.logger.Warn("failed to get nodes from kubeapi", sl.Err(err))
 		return nil, err
 	}
 
@@ -122,58 +122,58 @@ func (p *Client) GetNodesIP(ctx context.Context) ([]string, error) {
 	return ips, nil
 }
 
-func (p *Client) ShouldFeed(ctx context.Context) bool {
-	_, err := p.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{})
+func (c *Client) ShouldFeed(ctx context.Context) bool {
+	_, err := c.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{})
 	if err != nil {
-		p.logger.Debug("kubernetes API is not available", sl.Err(err))
+		c.logger.Debug("kubernetes API is not available", sl.Err(err))
 		return false
 	}
 	return true
 }
 
-func (p *Client) IsMaintenanceMode() bool {
-	return p.inMaintenanceMode.Load()
+func (c *Client) IsMaintenanceMode() bool {
+	return c.inMaintenanceMode.Load()
 }
 
-func (p *Client) SetNodeLabel(ctx context.Context, key, value string) error {
+func (c *Client) SetNodeLabel(ctx context.Context, key, value string) error {
 	patch := []byte(fmt.Sprintf(
 		`{"metadata":{"labels":{%q:%q}}}`,
 		key, value,
 	))
 
-	_, err := p.client.CoreV1().Nodes().
-		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
+	_, err := c.client.CoreV1().Nodes().
+		Patch(ctx, c.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
 
 	if err != nil {
-		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
+		return fmt.Errorf("failed to patch node %s labels: %w", c.nodeName, err)
 	}
 
-	p.logger.Info("node label set",
-		slog.String("node", p.nodeName),
+	c.logger.Info("node label set",
+		slog.String("node", c.nodeName),
 		slog.String("label", key),
 		slog.String("value", value))
 	return nil
 }
 
-func (p *Client) RemoveNodeLabel(ctx context.Context, key string) error {
+func (c *Client) RemoveNodeLabel(ctx context.Context, key string) error {
 	patch := []byte(fmt.Sprintf(`{"metadata":{"labels":{%q:null}}}`, key))
 
-	_, err := p.client.CoreV1().Nodes().
-		Patch(ctx, p.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
+	_, err := c.client.CoreV1().Nodes().
+		Patch(ctx, c.nodeName, types.MergePatchType, patch, v1meta.PatchOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to patch node %s labels: %w", p.nodeName, err)
+		return fmt.Errorf("failed to patch node %s labels: %w", c.nodeName, err)
 	}
 
-	p.logger.Info("node label removed",
-		slog.String("node", p.nodeName),
+	c.logger.Info("node label removed",
+		slog.String("node", c.nodeName),
 		slog.String("label", key))
 	return nil
 }
 
-func (p *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
-	node, err := p.client.CoreV1().Nodes().Get(ctx, p.nodeName, v1meta.GetOptions{})
+func (c *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
+	node, err := c.client.CoreV1().Nodes().Get(ctx, c.nodeName, v1meta.GetOptions{})
 	if err != nil {
-		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", p.nodeName, err)
+		return "", fmt.Errorf("failed to get node=%s InternalIp for memberlist: %w", c.nodeName, err)
 	}
 
 	for _, addr := range node.Status.Addresses {
@@ -181,45 +181,45 @@ func (p *Client) GetCurrentNodeIP(ctx context.Context) (string, error) {
 			return addr.Address, nil
 		}
 	}
-	return "", fmt.Errorf("node %s has no InternalIP address", p.nodeName)
+	return "", fmt.Errorf("node %s has no InternalIP address", c.nodeName)
 }
 
-func (p *Client) startInformer(ctx context.Context) error {
+func (c *Client) startInformer(ctx context.Context) error {
 
-	p.informerFactory = informers.NewSharedInformerFactory(p.client, 30*time.Second)
+	c.informerFactory = informers.NewSharedInformerFactory(c.client, 30*time.Second)
 
-	nodeInformer := p.informerFactory.Core().V1().Nodes().Informer()
+	nodeInformer := c.informerFactory.Core().V1().Nodes().Informer()
 
 	_, err := nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			node, ok := obj.(*v1.Node)
 			if !ok {
-				p.logger.Warn("failed to cast object to Node in AddFunc")
+				c.logger.Warn("failed to cast object to Node in AddFunc")
 				return
 			}
-			if node.Name == p.nodeName {
-				p.checkMaintenanceAnnotations(node)
+			if node.Name == c.nodeName {
+				c.checkMaintenanceAnnotations(node)
 			}
 		},
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			node, ok := newObj.(*v1.Node)
 			if !ok {
-				p.logger.Warn("failed to cast object to Node in UpdateFunc")
+				c.logger.Warn("failed to cast object to Node in UpdateFunc")
 				return
 			}
-			if node.Name == p.nodeName {
-				p.checkMaintenanceAnnotations(node)
+			if node.Name == c.nodeName {
+				c.checkMaintenanceAnnotations(node)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
 			// If our node is deleted, we're likely shutting down anyway
 			node, ok := obj.(*v1.Node)
 			if !ok {
-				p.logger.Warn("failed to cast object to Node in DeleteFunc")
+				c.logger.Warn("failed to cast object to Node in DeleteFunc")
 				return
 			}
-			if node.Name == p.nodeName {
-				p.logger.Warn("current node deleted from cluster")
+			if node.Name == c.nodeName {
+				c.logger.Warn("current node deleted from cluster")
 			}
 		},
 	})
@@ -228,18 +228,18 @@ func (p *Client) startInformer(ctx context.Context) error {
 		return fmt.Errorf("failed to add event handler to node informer: %w", err)
 	}
 
-	p.informerStopCh = make(chan struct{})
+	c.informerStopCh = make(chan struct{})
 
-	p.informerFactory.Start(p.informerStopCh)
+	c.informerFactory.Start(c.informerStopCh)
 
 	if !cache.WaitForCacheSync(ctx.Done(), nodeInformer.HasSynced) {
 		return fmt.Errorf("failed to sync node informer cache")
 	}
-	p.logger.Info("node informer cache synced successfully")
+	c.logger.Info("node informer cache synced successfully")
 	return nil
 }
 
-func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
+func (c *Client) checkMaintenanceAnnotations(node *v1.Node) {
 	hasAnnotation := false
 	var foundAnnotation string
 
@@ -251,24 +251,24 @@ func (p *Client) checkMaintenanceAnnotations(node *v1.Node) {
 		}
 	}
 
-	oldValue := p.inMaintenanceMode.Swap(hasAnnotation)
+	oldValue := c.inMaintenanceMode.Swap(hasAnnotation)
 
 	if oldValue != hasAnnotation {
 		if hasAnnotation {
-			p.logger.Info("maintenance mode detected",
-				slog.String("node", p.nodeName),
+			c.logger.Info("maintenance mode detected",
+				slog.String("node", c.nodeName),
 				slog.String("annotation", foundAnnotation))
 		} else {
-			p.logger.Info("maintenance mode cleared",
-				slog.String("node", p.nodeName))
+			c.logger.Info("maintenance mode cleared",
+				slog.String("node", c.nodeName))
 		}
 	}
 }
 
-func (p *Client) stopInformer() {
-	if p.informerStopCh != nil {
-		close(p.informerStopCh)
-		p.logger.Info("node informer stopped")
+func (c *Client) stopInformer() {
+	if c.informerStopCh != nil {
+		close(c.informerStopCh)
+		c.logger.Info("node informer stopped")
 	}
 }
 

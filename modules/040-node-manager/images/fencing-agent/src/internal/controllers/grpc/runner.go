@@ -77,7 +77,6 @@ func NewRunner(cfg Config, logger *log.Logger, handler *Server) (*Runner, error)
 		grpcServer: grpcServer,
 		listener:   listener,
 		logger:     logger,
-		cleanOnce:  sync.Once{},
 	}, nil
 }
 
