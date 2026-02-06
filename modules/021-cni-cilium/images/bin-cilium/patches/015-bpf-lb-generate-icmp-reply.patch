@@ -16,19 +16,28 @@ index 15dacfa4df..495cc2c4ba 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..d24e940c60 100644
+index 0142716855..110338919e 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -2679,6 +2679,62 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -27,6 +27,7 @@
+ #include "proxy_hairpin.h"
+ #include "fib.h"
+ #include "srv6.h"
++#include "ratelimit.h"
+ 
+ #define nodeport_nat_egress_ipv4_hook(ctx, ip4, info, tuple, l4_off, ext_err) CTX_ACT_OK
+ #define nodeport_rev_dnat_ingress_ipv4_hook(ctx, ip4, tuple, tunnel_endpoint, src_sec_identity, \
+@@ -2679,6 +2680,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+// ICMP reply handling code for LoadBalancer services
-+// This code will be compiled when the feature is enabled
++/* ICMP reply handling code for LoadBalancer services
++ * This code will be compiled when the feature is enabled */
 +static __always_inline 
 +int make_icmp_responce_lb4(struct __ctx_buff *ctx,
-+					struct iphdr *ip4) {
++					struct iphdr *ip4)
++{
 +		void *data, *data_end;
 +	struct ethhdr *ethhdr;
 +	struct icmphdr *icmphdr;
@@ -75,27 +84,14 @@ index 0142716855..d24e940c60 100644
 +	ccsum += (0x08) << 8;
 +	icmphdr->checksum = bpf_htons(ccsum);
 +
-+	printk("MEG:2222 HOST GOT A NEW ICMP HANDLER DONE(datalen=, csum=%x)!\n", ccsum);
-+	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
++	return redirect_self(ctx, ctx_get_ifindex(ctx), 0);
 +}
-+#endif //ENABLE_LOADBALANCER_ICMP_REPLY
++#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
++
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2697,10 +2753,12 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
- 	struct lb4_service *svc;
- 	struct lb4_key key = {};
- 	int ret, l4_off;
-+	//struct endpoint_info __maybe_unused *enp;
- 
- 	cilium_capture_in(ctx);
- 
- 	ret = lb4_extract_tuple(ctx, ip4, l3_off, &l4_off, &tuple);
-+
- 	if (IS_ERR(ret)) {
- 		if (ret == DROP_UNSUPP_SERVICE_PROTO) {
- 			is_svc_proto = false;
-@@ -2714,8 +2772,26 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2714,8 +2772,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	}
  
  	lb4_fill_key(&key, &tuple);
@@ -105,24 +101,55 @@ index 0142716855..d24e940c60 100644
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
 +	if(ip4->protocol == IPPROTO_ICMP) {
-+		printk("MEG:5555333 ENTER ENABLE_LOADBALANCER_ICMP_REPLY!!!!");
++		struct ratelimit_key rkey = {
++			.usage = RATELIMIT_USAGE_ICMPV4,
++		};
++		/* Rate limit to 30 ICMP packets per second, burstable to 60 packets/s */
++		struct ratelimit_settings settings = {
++			.bucket_size = 60,
++			.tokens_per_topup = 30,
++			.topup_interval_ns = NSEC_PER_SEC,
++		};
++
++		rkey.key.icmpv4.netdev_idx = ctx_get_ifindex(ctx);
++		if (!ratelimit_check_and_take(&rkey, &settings))
++			return DROP_RATE_LIMITED;
++
 +		if (!svc) {
 +			key.dport = 0;
 +			key.proto = 6;
 +			svc = lb4_lookup_service(&key, true);
-+			//enp = lookup_ip4_endpoint(ip4);
-+			printk("MEG:5555 SEARCHING SVC FOR NEW ICMP (svb:%d) (enp:%d)", svc ? 1 : 0, 0);	
 +		} 
 +		if (svc && lb4_svc_is_loadbalancer(svc)) {
-+			printk("MEG:5555 GOT SVC FOR NEW ICMP PACKET ENTER src:%x dst:%x! (enp_is_lb:%d)", 
-+					ip4->saddr, ip4->daddr, 0);
-+					return make_icmp_responce_lb4(ctx, ip4);
++			return make_icmp_responce_lb4(ctx, ip4);
 +		}
 +	}
 +#endif //ENABLE_LOADBALANCER_ICMP_REPLY
  	if (svc) {
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
+diff --git a/bpf/lib/ratelimit.h b/bpf/lib/ratelimit.h
+index e170b73dfd..dd8197d782 100644
+--- a/bpf/lib/ratelimit.h
++++ b/bpf/lib/ratelimit.h
+@@ -8,6 +8,7 @@
+ 
+ #define RATELIMIT_USAGE_ICMPV6 1
+ #define RATELIMIT_USAGE_EVENTS_MAP 2
++#define RATELIMIT_USAGE_ICMPV4 3
+ 
+ struct ratelimit_key {
+ 	__u32 usage;
+@@ -15,6 +16,9 @@ struct ratelimit_key {
+ 		struct {
+ 			__u32 netdev_idx;
+ 		} icmpv6;
++		struct {
++			__u32 netdev_idx;
++		} icmpv4;
+ 	} key;
+ };
+ 
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 index 96e484911f..99da9bda87 100644
 --- a/daemon/cmd/daemon_main.go
@@ -159,68 +186,6 @@ index a3243d93e3..d97fb282e7 100644
  		if option.Config.NodePortAcceleration != option.NodePortAccelerationDisabled {
  			cDefinesMap["ENABLE_NODEPORT_ACCELERATION"] = "1"
  		}
-diff --git a/pkg/datapath/loader/base.go b/pkg/datapath/loader/base.go
-index 557ee8f8e7..cf2abd8dfb 100644
---- a/pkg/datapath/loader/base.go
-+++ b/pkg/datapath/loader/base.go
-@@ -271,6 +271,10 @@ func reinitializeOverlay(ctx context.Context, tunnelConfig tunnel.Config) error
- 	}
- 	if option.Config.EnableNodePort {
- 		opts = append(opts, "-DDISABLE_LOOPBACK_LB")
-+		// Add LoadBalancer ICMP reply feature define if enabled
-+		if option.Config.EnableLoadBalancerICMPReply {
-+			opts = append(opts, getLoadBalancerICMPReplyDefines()...)
-+		}
- 	}
- 	if option.Config.IsDualStack() {
- 		opts = append(opts, fmt.Sprintf("-DSECLABEL_IPV4=%d", identity.ReservedIdentityWorldIPv4))
-@@ -469,6 +473,11 @@ func (l *loader) Reinitialize(ctx context.Context, cfg *datapath.LocalNodeConfig
- 
- 	if option.Config.EnableSocketLB {
- 		// compile bpf_sock.c and attach/detach progs for socketLB
-+		sockOpts := []string{"-DCALLS_MAP=cilium_calls_lb"}
-+		// Add LoadBalancer ICMP reply feature define if enabled
-+		if option.Config.EnableLoadBalancerICMPReply {
-+			sockOpts = append(sockOpts, getLoadBalancerICMPReplyDefines()...)
-+		}
- 		if err := compileWithOptions(ctx, "bpf_sock.c", "bpf_sock.o", []string{"-DCALLS_MAP=cilium_calls_lb"}); err != nil {
- 			log.WithError(err).Fatal("failed to compile bpf_sock.c")
- 		}
-diff --git a/pkg/datapath/loader/compile.go b/pkg/datapath/loader/compile.go
-index bc9b271f91..82500fdbe7 100644
---- a/pkg/datapath/loader/compile.go
-+++ b/pkg/datapath/loader/compile.go
-@@ -308,6 +308,15 @@ func compileDatapath(ctx context.Context, dirs *directoryInfo, isHost bool, logg
- 	return nil
- }
- 
-+// getLoadBalancerICMPReplyDefines returns compile-time defines for LoadBalancer
-+// ICMP reply feature. This feature enables creating port 0 service entries
-+// for LoadBalancer services to support ICMP reply generation.
-+func getLoadBalancerICMPReplyDefines() []string {
-+	// Enable ICMP reply feature for LoadBalancer services
-+	// This allows eBPF code to conditionally compile ICMP reply handling
-+	return []string{"-DENABLE_LOADBALANCER_ICMP_REPLY=1"}
-+}
-+
- // compileWithOptions compiles a BPF program generating an object file,
- // using a set of provided compiler options.
- func compileWithOptions(ctx context.Context, src string, out string, opts []string) error {
-diff --git a/pkg/datapath/loader/xdp.go b/pkg/datapath/loader/xdp.go
-index 946fd14ce2..880bde6a11 100644
---- a/pkg/datapath/loader/xdp.go
-+++ b/pkg/datapath/loader/xdp.go
-@@ -113,6 +113,10 @@ func xdpCompileArgs(xdpDev string, extraCArgs []string) ([]string, error) {
- 			fmt.Sprintf("-DTHIS_MTU=%d", link.Attrs().MTU),
- 			"-DDISABLE_LOOPBACK_LB",
- 		}...)
-+		// Add LoadBalancer ICMP reply feature define if enabled
-+		if option.Config.EnableLoadBalancerICMPReply {
-+			args = append(args, getLoadBalancerICMPReplyDefines()...)
-+		}
- 	}
- 	if option.Config.IsDualStack() {
- 		args = append(args, fmt.Sprintf("-DSECLABEL_IPV4=%d", identity.ReservedIdentityWorldIPv4))
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
 index 1a25f14957..b57f3d2523 100644
 --- a/pkg/defaults/defaults.go
@@ -267,7 +232,7 @@ index e4390c0622..e77a0677eb 100644
  	c.EnableHostLegacyRouting = vp.GetBool(EnableHostLegacyRouting)
  	c.NodePortBindProtection = vp.GetBool(NodePortBindProtection)
 diff --git a/pkg/service/service.go b/pkg/service/service.go
-index 52b2d9aa2b..8619eca938 100644
+index 52b2d9aa2b..c7ecad7854 100644
 --- a/pkg/service/service.go
 +++ b/pkg/service/service.go
 @@ -21,6 +21,7 @@ import (
@@ -306,16 +271,15 @@ index 52b2d9aa2b..8619eca938 100644
  		monitorAgent:             monitorAgent,
  		healthServer:             localHealthServer,
  		healthCheckChan:          make(chan any),
-@@ -716,7 +724,7 @@ func (s *Service) reUpsertServicesByName(name, namespace string) error {
+@@ -716,7 +724,6 @@ func (s *Service) reUpsertServicesByName(name, namespace string) error {
  
  func (s *Service) upsertService(params *lb.SVC) (bool, lb.ID, error) {
  	empty := L7LBResourceName{}
 -
-+	//fmt.Printf("MEG: upsertService-----2\n")
  	// Set L7 LB for this service if registered.
  	l7lbInfo, exists := s.l7lbSvcs[params.Name]
  	if exists && l7lbInfo.ownerRef != empty && l7lbInfo.isProtoAndPortMatch(&params.Frontend.L4Addr) {
-@@ -1590,6 +1598,107 @@ func (s *Service) addBackendsToAffinityMatchMap(svcID lb.ID, backendIDs []lb.Bac
+@@ -1590,6 +1597,107 @@ func (s *Service) addBackendsToAffinityMatchMap(svcID lb.ID, backendIDs []lb.Bac
  	}
  }
  
@@ -423,7 +387,7 @@ index 52b2d9aa2b..8619eca938 100644
  func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal bool,
  	prevBackendCount int, newBackends []*lb.Backend, obsoleteBackends []*lb.Backend,
  	prevSessionAffinity bool, prevLoadBalancerSourceRanges []*cidr.CIDR,
-@@ -1722,6 +1831,60 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
+@@ -1722,6 +1830,53 @@ func (s *Service) upsertServiceIntoLBMaps(svc *svcInfo, isExtLocal, isIntLocal b
  	if err := s.lbmap.UpsertService(p); err != nil {
  		return err
  	}
@@ -461,8 +425,6 @@ index 52b2d9aa2b..8619eca938 100644
 +
 +			if shouldCreate {
 +				// First service using this port 0 entry - create it
-+				fmt.Printf("MEG: upsertServiceIntoLBMaps DO INSERT port 0 (first ref)--t:%s- addr=%s,port=%d, name=%s, svcID=%d\n",
-+					p2.Type, p2.IP.String(), p2.Port, p2.Name, p.ID)
 +				if err := s.lbmap.UpsertService(p2); err != nil {
 +					// If creation fails, remove the reference we just added
 +					s.removePortZeroRef(p.IP, p.Protocol, p.Scope, lb.ID(p.ID))
@@ -471,20 +433,15 @@ index 52b2d9aa2b..8619eca938 100644
 +						logfields.ServiceIP: p2.IP.String(),
 +						logfields.Port:      p2.Port,
 +						logfields.ServiceID: p.ID,
-+					}).WithError(err).Warn("MEG: Failed to add port 0 service entry, main service created successfully")
++					}).WithError(err).Warn("Failed to add port 0 service entry, main service created successfully")
 +				}
-+			} else {
-+				// Another service already created this port 0 entry - just track the reference
-+				fmt.Printf("MEG: upsertServiceIntoLBMaps port 0 already exists (ref count increased)--t:%s- addr=%s,port=%d, name=%s, svcID=%d\n",
-+					p2.Type, p2.IP.String(), p2.Port, p2.Name, p.ID)
 +			}
 +		}
-+		//fmt.Printf("MEG: upsertServiceIntoLBMaps ----t:%s- addr=%x,port=%d, name=%s2\n", p.Type, p.IP, p.Port, p.Name)
 +	}
  
  	// If L7 LB is configured for this service then BPF level session affinity is not used.
  	if option.Config.EnableSessionAffinity && !svc.isL7LBService() {
-@@ -1976,6 +2139,56 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
+@@ -1976,6 +2131,47 @@ func (s *Service) deleteServiceLocked(svc *svcInfo) error {
  		return err
  	}
  
@@ -503,7 +460,7 @@ index 52b2d9aa2b..8619eca938 100644
 +			// Use reference counting to determine if we should delete port 0 entry
 +			protocol, err := u8proto.ParseProtocol(svc.frontend.L3n4Addr.L4Addr.Protocol)
 +			if err != nil {
-+				scopedLog.WithError(err).Warn("MEG: Unable to parse protocol for port 0 service check")
++				scopedLog.WithError(err).Warn("Unable to parse protocol for port 0 service check")
 +			} else {
 +				shouldDelete := s.removePortZeroRef(
 +					portZeroFrontend.L3n4Addr.AddrCluster.AsNetIP(),
@@ -517,22 +474,13 @@ index 52b2d9aa2b..8619eca938 100644
 +					scopedLog.WithFields(logrus.Fields{
 +						logfields.ServiceID: svc.frontend.ID,
 +						logfields.ServiceIP: portZeroFrontend.L3n4Addr.AddrCluster.AsNetIP(),
-+					}).Debug("MEG: Last reference to port 0 entry, deleting")
++					}).Debug("Last reference to port 0 entry, deleting")
 +
 +					// Delete port 0 service entries manually to avoid double-deleting revNAT
 +					// (revNAT is already deleted when main service was deleted)
 +					if err := s.deletePortZeroServiceEntries(portZeroFrontend, svc.svcNatPolicy); err != nil {
-+						scopedLog.WithError(err).Warning("MEG: Unable to delete port 0 service entry for LoadBalancer service")
-+					} else {
-+						fmt.Printf("MEG: Deleted port 0 service entry (last ref removed): %s (%s), svcID=%d\n",
-+							portZeroFrontend.L3n4Addr.String(), svc.svcName.Name, svc.frontend.ID)
++						scopedLog.WithError(err).Warning("Unable to delete port 0 service entry for LoadBalancer service")
 +					}
-+				} else {
-+					// Other services still using this port 0 entry - just remove our reference
-+					scopedLog.WithFields(logrus.Fields{
-+						logfields.ServiceID: svc.frontend.ID,
-+						logfields.ServiceIP: portZeroFrontend.L3n4Addr.AddrCluster.AsNetIP(),
-+					}).Debug("MEG: Port 0 entry still in use by other services, keeping entry")
 +				}
 +			}
 +		}
