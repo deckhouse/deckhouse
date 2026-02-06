@@ -10,13 +10,14 @@ import (
 
 type Config struct {
 	Device  string `env:"WATCHDOG_DEVICE" env-default:"/dev/watchdog"`
-	Timeout int    `env:"WATCHDOG_TIMEOUT" env-required:"true"`
+	Timeout int    `env:"WATCHDOG_TIMEOUT"` // required if FENCING_MODE=watchdog
 }
 
 func (c *Config) Validate() error {
 	if strings.TrimSpace(c.Device) == "" {
 		return errors.New("WATCHDOG_DEVICE env var is empty")
 	}
+
 	return nil
 }
 
