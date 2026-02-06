@@ -23,8 +23,6 @@ import (
 )
 
 // Run watches the given path and calls onChange when the file is updated
-// (e.g. k8s configmap uses symlinks: old file is removed and a new link is created).
-// It blocks until a fatal error occurs.
 func Run(path string, onChange func()) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
