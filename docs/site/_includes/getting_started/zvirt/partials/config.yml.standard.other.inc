@@ -94,7 +94,7 @@ spec:
     # [<en>] Enabling access to the API server through Ingress.
     # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
     publishAPI:
-      enable: true
+      enabled: true
       https:
         mode: Global
         global:

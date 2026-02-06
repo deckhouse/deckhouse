@@ -1,0 +1,178 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: useroperations.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: user-authn
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: useroperations
+    singular: useroperation
+    kind: UserOperation
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: false
+      deprecated: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - user
+                - type
+              properties:
+                user:
+                  type: string
+                  description: "Name (username) of the target User resource."
+                  x-doc-examples: ['jane.doe']
+                type:
+                  type: string
+                  description: |
+                    Type of the user operation. Possible values:
+                    
+                    * `ResetPassword`: Password reset.
+                    * `Reset2FA`: Two-factor authentication reset.
+                    * `Lock`: User lock.
+                    * `Unlock`: User unlock.
+                initiatorType:
+                  type: string
+                  description: |
+                    Indicates who initiated the operation. Possible values:
+ 
+                    * `admin`: By an administrator.
+                    * `system`: Automatically by the system.
+                    * `self`: By the user.
+                resetPassword:
+                  type: object
+                  description: "Parameters for password reset."
+                  properties:
+                    newPasswordHash:
+                      type: string
+                      description: "Bcrypt hash of the new password."
+                lock:
+                  type: object
+                  description: "Parameters for locking the user."
+                  properties:
+                    for:
+                      type: string
+                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    Current phase of the operation. Possible values:
+ 
+                    * `Succeeded`: Operation completed successfully.
+                    * `Failed`: Operation failed.
+                  enum:
+                    - "Succeeded"
+                    - "Failed"
+                message:
+                  type: string
+                  description: "Optional message about the result or failure of the operation."
+                completedAt:
+                  type: string
+                  description: "Time when the operation was completed."
+      subresources: &subresources
+        status: {}
+      additionalPrinterColumns: &additionalPrinterColumns
+        - name: User
+          type: string
+          jsonPath: .spec.user
+        - name: Type
+          type: string
+          jsonPath: .spec.type
+        - name: Phase
+          type: string
+          jsonPath: .status.phase
+        - name: CompletedAt
+          type: string
+          jsonPath: .status.completedAt
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - user
+                - type
+              properties:
+                user:
+                  type: string
+                  description: "Name (username) of the target User resource."
+                  x-doc-examples: ['jane.doe']
+                type:
+                  type: string
+                  description: |
+                    Type of the user operation. Possible values:
+                    
+                    * `ResetPassword`: Password reset.
+                    * `Reset2FA`: Two-factor authentication reset.
+                    * `Lock`: User lock.
+                    * `Unlock`: User unlock.
+                initiatorType:
+                  type: string
+                  description: |
+                    Indicates who initiated the operation. Possible values:
+ 
+                    * `admin`: By an administrator.
+                    * `system`: Automatically by the system.
+                    * `self`: By the user.
+                resetPassword:
+                  type: object
+                  description: "Parameters for password reset."
+                  properties:
+                    newPasswordHash:
+                      type: string
+                      description: "Bcrypt hash of the new password."
+                lock:
+                  type: object
+                  description: "Parameters for locking the user."
+                  properties:
+                    for:
+                      type: string
+                      description: "Lock duration. Should be specified in the following format: `30s`, `10m`, `1h`, `2h30m`."
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    Current phase of the operation. Possible values:
+ 
+                    * `Succeeded`: Operation was completed successfully.
+                    * `Failed`: Operation failed.
+                  enum:
+                    - "Succeeded"
+                    - "Failed"
+                message:
+                  type: string
+                  description: "Optional message about the result or failure of the operation."
+                completedAt:
+                  type: string
+                  description: "Time when the operation was completed."
+      subresources: *subresources
+      additionalPrinterColumns: *additionalPrinterColumns
+
+
