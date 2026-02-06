@@ -78,7 +78,7 @@ func FileExistsInDirAndParentsDirs(dir, fileName string) (string, error) {
 		return "", fmt.Errorf("file or dir can't be empty")
 	}
 
-	if !filepath.IsAbs(filepath.Join(dir)) {
+	if !filepath.IsAbs(dir) {
 		return "", fmt.Errorf("'%s' is not an absolute path", dir)
 	}
 
@@ -137,6 +137,8 @@ func GetSystemDirectories() []string {
 }
 
 // IsSystemDirOrUserHome dir must be absolute and cleaned
+//
+//nolint:gocritic
 func IsSystemDirOrUserHome(dir string) (bool, []string, error) {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {

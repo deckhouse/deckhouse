@@ -135,6 +135,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {

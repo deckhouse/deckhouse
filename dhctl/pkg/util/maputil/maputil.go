@@ -41,12 +41,12 @@ func Join[K comparable, V any](dst map[K]V, sources ...map[K]V) {
 	}
 }
 
-func Clone[K comparable, V any](in map[K]V) (out map[K]V) {
-	out = make(map[K]V)
+func Clone[K comparable, V any](in map[K]V) map[K]V {
+	out := make(map[K]V)
 	for k, v := range in {
 		out[k] = v
 	}
-	return
+	return out
 }
 
 func Keys[K comparable, V any](m map[K]V) []K {

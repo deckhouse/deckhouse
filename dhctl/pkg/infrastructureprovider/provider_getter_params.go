@@ -150,6 +150,6 @@ func (p *CloudProviderGetterParams) isDebug() bool {
 	return p.IsDebug
 }
 
-func (p *CloudProviderGetterParams) getAdditionalParams() (cloud.ProviderAdditionalParams, error) {
-	return p.AdditionalParams, nil
+func (p *CloudProviderGetterParams) getAdditionalParams() cloud.ProviderAdditionalParams {
+	return p.AdditionalParams
 }

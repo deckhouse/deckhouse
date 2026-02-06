@@ -68,7 +68,7 @@ func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 
 	remotePortStr := strconv.Itoa(defaultTunnelRemotePort)
 
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthUrl(defaultTunnelRemotePort))
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort))
 	if err != nil {
 		return fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
@@ -78,7 +78,7 @@ func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 		return fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
-	shutdownServer, err := startHttpServer(ctx, defaultTunnelLocalPort)
+	shutdownServer, err := startHTTPServer(ctx, defaultTunnelLocalPort)
 	if err != nil {
 		return err
 	}
@@ -171,7 +171,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic(_ context.Context) error {
 
 type shutdownServerFunc func()
 
-func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) {
+func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) {
 	mux := http.NewServeMux()
 
 	// Register handlers for specific paths
@@ -204,7 +204,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 		log.DebugLn("Server for checking ssh tunnel stopped")
 	}
 
-	url := healthUrl(defaultTunnelLocalPort)
+	url := healthURL(defaultTunnelLocalPort)
 
 	client := &http.Client{}
 
@@ -243,7 +243,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	return shutdownServer, nil
 }
 
-func healthUrl(port int) string {
+func healthURL(port int) string {
 	return fmt.Sprintf("http://%s:%d%s", localhost, port, httpPath)
 }
 

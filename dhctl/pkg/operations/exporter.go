@@ -216,6 +216,9 @@ func (c *ConvergeExporter) registerMetrics() {
 	c.CounterMetrics["errors"] = errorsVec
 }
 
+// false positive linter issue: cancel() called exactly before os.Exit(1), so there's no context leak
+//
+//nolint:gocritic
 func (c *ConvergeExporter) Start(ctx context.Context) {
 	log.InfoLn("Start exporter")
 	log.InfoLn("Address: ", app.ListenAddress)
