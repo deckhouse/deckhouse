@@ -32,7 +32,7 @@ func New(logger *log.Logger, bindAddress string) *Server {
 }
 
 func (srv *Server) Run() error {
-	srv.logger.Info("stating healthz server", slog.String("bindAddress", srv.bindAddr))
+	srv.logger.Info("starting healthz server", slog.String("bindAddress", srv.bindAddr))
 
 	if err := srv.srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("healthz server failed: %w", err)
