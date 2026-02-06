@@ -21,30 +21,26 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
 )
 
 type ossItem struct {
-	ID       string   `yaml:"id"`
-	Version  string   `yaml:"version"`
-	Versions []string `yaml:"versions"`
+	ID      string `yaml:"id"`
+	Version string `yaml:"version"`
 }
 
 func main() {
-	cwd, _ := os.Getwd()
+	cwd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Errorf("cannot get pwd: %w", err))
+	}
 	rootPath := filepath.Dir(cwd)
 
 	tfVersions := filepath.Join(rootPath, "candi", "terraform_versions.yml")
 
-	ossFiles, err := findOssFiles(rootPath)
-	if err != nil {
-		panic(err)
-	}
-
-	versionsByID, err := loadOssVersions(ossFiles)
+	versionsByID, err := loadOssVersions(rootPath)
 	if err != nil {
 		panic(err)
 	}
@@ -61,6 +57,7 @@ func main() {
 
 	rootNode := doc.Content[0]
 	applyVersions(rootNode, versionsByID)
+	applyCoreVersions(rootNode, versionsByID)
 
 	var buf bytes.Buffer
 	encoder := yaml.NewEncoder(&buf)
@@ -79,7 +76,7 @@ func main() {
 
 func findOssFiles(root string) ([]string, error) {
 	var files []string
-	needle := filepath.Join("modules", "040-terraform-manager", "oss.yaml")
+	pattern := "modules/040-terraform-manager/oss.yaml"
 
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -88,7 +85,7 @@ func findOssFiles(root string) ([]string, error) {
 		if d.IsDir() {
 			return nil
 		}
-		if !strings.HasSuffix(path, needle) {
+		if !strings.HasSuffix(path, pattern) {
 			return nil
 		}
 		files = append(files, path)
@@ -97,15 +94,18 @@ func findOssFiles(root string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	sort.Strings(files)
 	return files, nil
 }
 
-func loadOssVersions(paths []string) (map[string][]string, error) {
+func loadOssVersions(root string) (map[string][]string, error) {
+	ossFiles, err := findOssFiles(root)
+	if err != nil {
+		return nil, err
+	}
+
 	versionsByID := make(map[string][]string)
 
-	for _, path := range paths {
+	for _, path := range ossFiles {
 		content, err := os.ReadFile(path)
 		if err != nil {
 			return nil, fmt.Errorf("cannot read oss file %s: %w", path, err)
@@ -117,12 +117,10 @@ func loadOssVersions(paths []string) (map[string][]string, error) {
 		}
 
 		for _, item := range items {
-			versions := item.Versions
-			if len(versions) == 0 {
-				versions = []string{item.Version}
+			if item.Version == "" {
+				continue
 			}
-
-			versionsByID[item.ID] = append(versionsByID[item.ID], versions...)
+			versionsByID[item.ID] = append(versionsByID[item.ID], item.Version)
 		}
 	}
 
@@ -131,12 +129,12 @@ func loadOssVersions(paths []string) (map[string][]string, error) {
 
 func applyVersions(root *yaml.Node, versionsByID map[string][]string) {
 	for i := 0; i < len(root.Content); i += 2 {
-		valueNode := root.Content[i+1]
-		if valueNode.Kind != yaml.MappingNode {
+		providerNode := root.Content[i+1]
+		if providerNode.Kind != yaml.MappingNode {
 			continue
 		}
 
-		typeNode := mappingValue(valueNode, "type")
+		typeNode := mappingValue(providerNode, "type")
 		if typeNode == nil {
 			continue
 		}
@@ -146,36 +144,38 @@ func applyVersions(root *yaml.Node, versionsByID map[string][]string) {
 		versions := versionsByID[ossID]
 
 		if len(versions) == 1 {
-			setMapping(valueNode, "version", scalarNode(versions[0]))
-			deleteMappingKey(valueNode, "versions")
+			setMapping(providerNode, "version", valueNode(versions[0]))
+			deleteMappingKey(providerNode, "versions")
 			continue
 		}
 
-		setMapping(valueNode, "versions", sequenceNode(versions))
-		deleteMappingKey(valueNode, "version")
+		setMapping(providerNode, "versions", listNode(versions))
+		deleteMappingKey(providerNode, "version")
 	}
 }
 
-func mappingIndex(node *yaml.Node, key string) int {
+func applyCoreVersions(root *yaml.Node, versionsByID map[string][]string) {
+	setMapping(root, "terraform", valueNode(firstVersion(versionsByID, "terraform")))
+	setMapping(root, "opentofu", valueNode(firstVersion(versionsByID, "opentofu")))
+}
+
+func firstVersion(versionsByID map[string][]string, id string) string {
+	versions := versionsByID[id]
+	return versions[0]
+}
+
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
 	if node == nil || node.Kind != yaml.MappingNode {
-		return -1
+		return nil
 	}
 
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
-			return i
+			return node.Content[i+1]
 		}
 	}
 
-	return -1
-}
-
-func mappingValue(node *yaml.Node, key string) *yaml.Node {
-	index := mappingIndex(node, key)
-	if index == -1 {
-		return nil
-	}
-	return node.Content[index+1]
+	return nil
 }
 
 func setMapping(node *yaml.Node, key string, value *yaml.Node) {
@@ -183,14 +183,15 @@ func setMapping(node *yaml.Node, key string, value *yaml.Node) {
 		return
 	}
 
-	index := mappingIndex(node, key)
-	if index != -1 {
-		overwriteNode(node.Content[index+1], value)
-		return
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			overwriteNode(node.Content[i+1], value)
+			return
+		}
 	}
 
 	node.Content = append(node.Content,
-		scalarNode(key),
+		valueNode(key),
 		value,
 	)
 }
@@ -200,12 +201,12 @@ func deleteMappingKey(node *yaml.Node, key string) {
 		return
 	}
 
-	index := mappingIndex(node, key)
-	if index == -1 {
-		return
+	for i := 0; i < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			node.Content = append(node.Content[:i], node.Content[i+2:]...)
+			return
+		}
 	}
-
-	node.Content = append(node.Content[:index], node.Content[index+2:]...)
 }
 
 func overwriteNode(dst, src *yaml.Node) {
@@ -216,14 +217,14 @@ func overwriteNode(dst, src *yaml.Node) {
 	dst.Style = src.Style
 }
 
-func scalarNode(value string) *yaml.Node {
+func valueNode(value string) *yaml.Node {
 	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
 }
 
-func sequenceNode(values []string) *yaml.Node {
+func listNode(values []string) *yaml.Node {
 	seq := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
 	for _, value := range values {
-		seq.Content = append(seq.Content, scalarNode(value))
+		seq.Content = append(seq.Content, valueNode(value))
 	}
 	return seq
 }
