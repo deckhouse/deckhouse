@@ -6,14 +6,12 @@ lang: ru
 layout: sidebar-guides
 ---
 
-{% alert level="warning" %}
-В руководстве рассматривается DKP Enterprise Edition, но механизмы аналогичны [для других редакций](../documentation/v1/reference/revision-comparison.html).
-{% endalert %}
-
 {% alert level="info" %}
-Руководство тестировалось на [d8 v0.17.1](../documentation/v1/cli/d8/).
+В руководстве рассматривается DKP Enterprise Edition, но механизмы аналогичны и для [других редакций](../documentation/v1/reference/revision-comparison.html).
 
-В руководстве используется сторонняя утилита [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) для анализа container registry. Перед началом работ установите её в соответствии [с официальной инструкцией](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md#installation).
+Для выполнения приведенных в руководстве команд потребуется аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`. Для аутентификации используйте `license-token` в качестве имени и ваш лицензионный ключ в качестве пароля.
+
+В руководстве используется сторонняя утилита [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) для анализа хранилища образов. Перед началом работ установите её в соответствии [с официальной инструкцией](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md#installation).
 {% endalert %}
 
 ## Механика обновления платформы с помощью релизных каналов
@@ -30,11 +28,11 @@ d8 k get mc deckhouse -o jsonpath='{.spec.settings.releaseChannel}'
 Stable
 ```
 
-Технически обновление DKP выглядит следующим образом: в registry находится образ с неизменным именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DKP (при выпуске новой версии этот образ заменяется на новый).
+Технически обновление DKP выглядит следующим образом: в registry находится образ с именем `release-channel` и тегом по названию канала обновлений, который указывает на образ уже конкретной версии DKP (при выпуске новой версии этот образ заменяется на новый).
 
 Рассмотрим содержимое образа DKP Enterprise Edition с каналом обновления `alpha`.
 
-Для этого используйте команду:
+Выполните следующую команду (требуется предварительная аутентификация в хранилище образов контейнеров `registry.deckhouse.ru`?используя ):
 
 ```bash
 crane export registry.deckhouse.ru/deckhouse/ee/release-channel:alpha | tar -tf -

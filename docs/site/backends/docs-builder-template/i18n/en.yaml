@@ -88,7 +88,7 @@ module_settings_details_content: |
     ```
 module_release_channel_details_title: How to change the module release channel...
 module_release_channel_details_content: |
-  To change the module release channel, follow the [instruction in the FAQ](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module-from-source).
+  To change the module release channel, follow the [instruction](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module-from-source).
 module_versions: Module versions
 module_version: Module version
 module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.

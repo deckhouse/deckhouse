@@ -1,7 +1,5 @@
 ---
 title: How do I change the release channel for a module from source?
-subsystems:
-  - modules
 lang: en
 ---
 
