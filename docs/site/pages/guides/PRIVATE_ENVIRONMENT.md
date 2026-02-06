@@ -942,7 +942,9 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="How to obtain the public part of the key..." %}
-You can get the public part of the key by running `cat ~/.ssh/id_ed25519.pub`.
+You can get the public part of the key by running `cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub`.
+
+Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 {% endofftopic %}
 
 As a result of these commands:
@@ -1207,10 +1209,12 @@ After the image is pulled and the container starts successfully, you will see a 
 Start the DKP installation with the following command (specify the master node’s internal IP address):
 
 ```bash
-dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 \
+dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
   --config=/config.yml \
   --ask-become-pass
 ```
+
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
 The installation process may take up to 30 minutes depending on the network speed.
 
