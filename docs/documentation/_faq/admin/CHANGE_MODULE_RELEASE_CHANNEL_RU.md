@@ -3,15 +3,15 @@ title: Как сменить канал обновления для модуля
 lang: ru
 ---
 
-Смена канала обновления возможна для модулей из источника (т.к. их релизный цикл не привязан к релизному циклу DKP). Подробнее про каналы обновлений — в разделе [«Каналы обновлений»](reference/release-channels.html).
+Смена канала обновления возможна для модулей из источника (т.к. их релизный цикл не привязан к релизному циклу DKP). По умолчанию канал обновления для модулей наследуется от глобального (указывается в параметре [`settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel)). Подробнее про каналы обновлений — в разделе [«Каналы обновлений»](reference/release-channels.html).
 
 Для модулей из источника канал обновления задается через ресурс ModuleUpdatePolicy, определяющий политику обновления, который затем привязывается к модулю через поле `spec.updatePolicy` в ModuleConfig.
 
 Чтобы сменить канал обновления для используемого в кластере модуля из источника, выполните следующие шаги:
 
-1. Создайте или измените ресурс [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) с нужным каналом (канал укажите в поле `spec.releaseChannel`).
+1. Создайте или измените [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) с нужным каналом (канал укажите в поле `spec.releaseChannel`).
 
-   Пример манифеста ресурса:
+   Пример манифеста ModuleUpdatePolicy:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2

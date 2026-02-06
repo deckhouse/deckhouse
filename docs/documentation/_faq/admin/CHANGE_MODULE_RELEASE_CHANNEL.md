@@ -3,15 +3,15 @@ title: How do I change the release channel for a module from source?
 lang: en
 ---
 
-Changing the release channel is possible for modules from the source (since their release cycle is not depends on the DKP release cycle). For more information about update channels, see the [Update Channels](reference/release-channels.html) section.
+Changing the release channel is possible for modules from the source (since their release cycle is not depends on the DKP release cycle). By default, the release channel for modules is inherited from the global one (specified in the [`settings.releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter). For more information about update channels, see the [Update Channels](reference/release-channels.html) section.
 
 For modules from the source, the release channel is specified via the ModuleUpdatePolicy resource, which defines the update policy, which is then linked to the module via the `spec.updatePolicy` field in ModuleConfig.
 
 To change the release channel for the module used in the cluster from the source, follow these steps:
 
-1. Create or modify the [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) resource with the desired channel (specify the channel in the `spec.releaseChannel` field).
+1. Create or modify the [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy) with the desired channel (specify the channel in the `spec.releaseChannel` field).
 
-   Example of a resource manifest:
+   Example of a manifest for ModuleUpdatePolicy:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha2
