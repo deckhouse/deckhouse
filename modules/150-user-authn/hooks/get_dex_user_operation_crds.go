@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+/*
 package hooks
 
 import (
@@ -472,3 +473,4 @@ func executeReset2FA(input *go_hook.HookInput, operation UserOperation) error {
 
 	return nil
 }
+*/
