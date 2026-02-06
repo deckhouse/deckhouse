@@ -539,7 +539,7 @@ To configure access, follow these steps:
 
    ```shell
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
-     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/id_ed25519 --config=/config.yml
+     --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
 
    Where:
