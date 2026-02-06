@@ -56,7 +56,7 @@ type Conversions struct {
 	From string `json:"from"`
 	// A version of a custom resource that hook can produce.
 	To string `json:"to"`
-	// An array of names of kubernetes bindings in a hook.
+	// An array of names of Kubernetes bindings in a hook.
 	// When specified, a list of monitored objects from
 	// these bindings will be added to the binding context in the snapshots field.
 	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
