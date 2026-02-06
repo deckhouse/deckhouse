@@ -7,13 +7,13 @@ tests:
   template: ../../templates/security/allowed-flex-volumes.yaml
   constraint: constraint_security_policy.yaml
   cases:
-  - name: 1-example-allowed
+  - name: 001-example-allowed
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/001-allowed.yaml
     assertions:
     - violations: no
-  - name: 2-example-disallowed
+  - name: 002-example-disallowed
     inventory:
     - ../common/test_samples/ns.yaml
     object: test_samples/security_policy/002-disallowed.yaml

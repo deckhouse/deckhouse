@@ -1,0 +1,21 @@
+kind: Suite
+apiVersion: test.gatekeeper.sh/v1alpha1
+metadata:
+  name: d8-deny-exec-heritage
+tests:
+- name: security-policy
+  template: ../../templates/security/deny-exec-heritage.yaml
+  constraint: constraint.yaml
+  cases:
+  - name: CONNECT to pods/exec on heritage pod from sudouser (allowed)
+    object: connect-heritage-pod-sudouser-allowed.yaml
+    assertions:
+    - violations: no
+  - name: CONNECT to pods/exec on heritage pod from d8-system SA (allowed)
+    object: connect-heritage-pod-d8-sa-allowed.yaml
+    assertions:
+    - violations: no
+  - name: CONNECT to pods/exec on heritage pod from kube-system SA (allowed)
+    object: connect-heritage-pod-kube-sa-allowed.yaml
+    assertions:
+    - violations: no
