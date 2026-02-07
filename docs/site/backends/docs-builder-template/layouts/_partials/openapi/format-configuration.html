@@ -22,6 +22,7 @@
 
 {{- partial "openapi/module-enable" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
 {{- partial "openapi/module-settings" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
+{{- partial "openapi/module-release-channel" (dict "ModuleName" $moduleName "configVersion" $configVersion) }}
 
 {{/* Show module requirements */}}
 {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}
