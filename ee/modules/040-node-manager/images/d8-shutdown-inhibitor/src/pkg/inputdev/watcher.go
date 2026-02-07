@@ -100,7 +100,7 @@ func (w *Watcher) processDeviceCycle(evCh chan *inputEvent, fds []int) error {
 
 	defer closeFDs(fds)
 
-	return w.handleDeviceEvents(evCh, fds, &fdSet, fdMax, w.stopCh)
+	return w.handleDeviceEvents(evCh, fds, &fdSet, fdMax)
 }
 
 func closeFDs(fds []int) {
@@ -109,6 +109,7 @@ func closeFDs(fds []int) {
 	}
 }
 
+//nolint:unparam
 func (w *Watcher) prepareDeviceFDs(fds []int) ([]int, syscall.FdSet, int, bool) {
 	fds = fds[:0]
 
@@ -135,7 +136,7 @@ func (w *Watcher) prepareDeviceFDs(fds []int) ([]int, syscall.FdSet, int, bool) 
 	return fds, fdSet, fdMax, true
 }
 
-func (w *Watcher) handleDeviceEvents(evCh chan *inputEvent, fds []int, fdSet *syscall.FdSet, fdMax int, stopCh <-chan struct{}) error {
+func (w *Watcher) handleDeviceEvents(evCh chan *inputEvent, fds []int, fdSet *syscall.FdSet, fdMax int) error {
 	// Read events until stopped via channel.
 	for {
 		// Return if watcher was stopped.

@@ -191,7 +191,7 @@ func fromUnstructured(unstructuredObj *unstructured.Unstructured, obj interface{
 }
 
 func generateNgPairs(ngs []string) []string {
-	result := make([]string, 0)
+	result := make([]string, 0, len(ngs))
 
 	for _, ng := range ngs {
 		result = append(result, fmt.Sprintf("*:%s", ng))
