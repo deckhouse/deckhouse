@@ -143,7 +143,7 @@ Next, you need to enable the module. To do this, you need to create a ModuleConf
 
 The parameter `enabled` in ModuleConfig is responsible for enabling the module. If the module is available from multiple sources (resource ModuleSource), the required source can be specified in the `source` parameter.
 
-The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse update parameters.
+The update policy (the name of the ModuleUpdatePolicy) can be specified in the `updatePolicy` parameter. It is not necessary to specify the update policy; in this case, it will be inherited from the Deckhouse Kubernetes Platform update parameters ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) and [update](/modules/deckhouse/configuration.html#parameters-update) of the ModuleConfig `deckhouse`).
 
 Example of ModuleConfig for enabling the module `module-one` from the source `example`:
 

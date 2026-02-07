@@ -37,7 +37,7 @@ and a tag corresponding to the release channel.
 This tag points to an image of a specific DKP version (when a new version is released,
 the tag is updated to point to the new image).
 
-Let's examine the contents of a DKP Enterprise Edition image with the `alpha` release channel.
+Let's examine the contents of a DKP Enterprise Edition image with the Alpha release channel.
 
 To do that, run the following command:
 
