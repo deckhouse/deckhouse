@@ -91,17 +91,17 @@ func PrepareBundle(templateController *Controller, nodeIP, devicePath string, me
 	return templateController.RenderBashBooster(bashboosterDir, bashibleDir, bashibleData)
 }
 
+//nolint:prealloc
 func PrepareBashibleBundle(templateController *Controller, templateData map[string]interface{}, provider, devicePath string) error {
-	saveInfo := []saveFromTo{
-		{
-			from: candiBashibleDir,
-			to:   bashibleDir,
-			data: templateData,
-			ignorePaths: map[string]struct{}{
-				filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
-			},
+	saveInfo := make([]saveFromTo, 0)
+	saveInfo = append(saveInfo, saveFromTo{
+		from: candiBashibleDir,
+		to:   bashibleDir,
+		data: templateData,
+		ignorePaths: map[string]struct{}{
+			filepath.Join(candiBashibleDir, "bootstrap.sh.tpl"): {},
 		},
-	}
+	})
 
 	for _, steps := range []string{"all", "cluster-bootstrap"} {
 		saveInfo = append(saveInfo, saveFromTo{
@@ -179,16 +179,6 @@ func PrepareKubeadmConfig(templateController *Controller, templateData map[strin
 		}
 	}
 	return nil
-}
-
-func withoutNodeGroup(data map[string]interface{}) map[string]interface{} {
-	filteredData := make(map[string]interface{}, len(data))
-	for key, value := range data {
-		if key != "nodeGroup" {
-			filteredData[key] = value
-		}
-	}
-	return filteredData
 }
 
 func InitGlobalVars(pwd string) {

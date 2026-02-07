@@ -108,7 +108,7 @@ func (o *Operator) Update(repo registry.Remote, inst Instance) {
 		o.queueService.Enqueue(ctx, name, taskdisable.NewTask(name, o.status, o.manager, true, o.logger))
 		o.queueService.Enqueue(ctx, name, taskdownload.NewAppTask(name, packageName, packageVersion, repo, o.status, o.installer, o.logger))
 		o.queueService.Enqueue(ctx, name, taskinstall.NewAppTask(name, packageName, packageVersion, repo, o.status, o.installer, o.logger))
-		o.queueService.Enqueue(ctx, name, taskload.NewTask(repo, inst.Namespace, name, inst.Settings, o.status, o.manager, o.logger))
+		o.queueService.Enqueue(ctx, name, taskload.NewAppTask(name, repo, inst.Settings, o.status, o.manager, o.logger))
 
 		return
 	}

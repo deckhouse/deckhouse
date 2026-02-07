@@ -71,6 +71,15 @@ spec:
                 required:
                 - repo
                 type: object
+              scanInterval:
+                description: |
+                  Interval for registry scan.
+
+                  Defines the frequency of checking the container registry for new packages.
+                pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
+                type: string
+                x-doc-default: 6h
+                x-doc-examples: ['5m', '1h', '6h30m']
             required:
             - registry
             type: object
