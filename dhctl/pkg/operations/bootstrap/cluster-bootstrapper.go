@@ -112,7 +112,6 @@ type Params struct {
 type ClusterBootstrapper struct {
 	*Params
 	PhasedExecutionContext phases.DefaultPhasedExecutionContext
-	initializeNewAgent     bool
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	lastState phases.DhctlState
 	logger    log.Logger
@@ -143,7 +142,7 @@ func NewClusterBootstrapper(params *Params) *ClusterBootstrapper {
 // TODO(remove-global-app):  applyParams will not be needed anymore then.
 //
 // applyParams overrides app.* options that are explicitly passed using Params struct
-func (b *ClusterBootstrapper) applyParams() (func(), error) {
+func (b *ClusterBootstrapper) applyParams() func() {
 	var restoreFuncs []func()
 	restoreFunc := func() {
 		for _, f := range restoreFuncs {
@@ -180,7 +179,7 @@ func (b *ClusterBootstrapper) applyParams() (func(), error) {
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfig, b.KubernetesInitParams.KubeConfig))
 		restoreFuncs = append(restoreFuncs, setWithRestore(&app.KubeConfigContext, b.KubernetesInitParams.KubeConfigContext))
 	}
-	return restoreFunc, nil
+	return restoreFunc
 }
 
 func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *config.MetaConfig) (func(), error) {
@@ -203,11 +202,8 @@ func (b *ClusterBootstrapper) getCleanupFunc(ctx context.Context, metaConfig *co
 }
 
 func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	masterAddressesForSSH := make(map[string]string)
 
@@ -227,7 +223,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	preparatorParams := infrastructureprovider.NewPreparatorProviderParams(b.logger)
 	preparatorParams.WithPhaseBootstrap()
 	preparatorParams.WithPreflightChecks(infrastructureprovider.PreflightChecks{
-		DVPValidateKubeApi: !app.PreflightSkipDVPKubeconfigCheck,
+		DVPValidateKubeAPI: !app.PreflightSkipDVPKubeconfigCheck,
 	})
 	metaConfig, err := config.LoadConfigFromFile(
 		ctx,
@@ -317,7 +313,9 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 	}
 	// TODO(dhctl-for-commander): pass stateCache externally using params as in Destroyer, this variable will be unneeded then
 	b.lastState = nil
-	defer b.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	printBanner()
 
@@ -707,7 +705,7 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 	terraNodeGroups := metaConfig.GetTerraNodeGroups()
 	bootstrapAdditionalTerraNodeGroups := BootstrapTerraNodes
 	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
-		// vcd doesn't support parrallel creating nodes in same vapp
+		// vcd doesn't support parallel creating nodes in same vapp
 		// https://github.com/vmware/terraform-provider-vcd/issues/530
 		bootstrapAdditionalTerraNodeGroups = operations.BootstrapSequentialTerraNodes
 	}
@@ -730,9 +728,9 @@ func bootstrapAdditionalNodesForCloudCluster(ctx context.Context, kubeCl *client
 		return nil
 	})
 }
-func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (before template.Resources, after template.Resources) {
-	before = make(template.Resources, 0, len(resourcesToCreate))
-	after = make(template.Resources, 0, len(resourcesToCreate))
+func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resources) (template.Resources, template.Resources) {
+	before := make(template.Resources, 0, len(resourcesToCreate))
+	after := make(template.Resources, 0, len(resourcesToCreate))
 
 	for _, resource := range resourcesToCreate {
 		annotations := resource.Object.GetAnnotations()
@@ -779,7 +777,6 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 			if err != nil {
 				return err
 			}
-
 		}
 
 		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)

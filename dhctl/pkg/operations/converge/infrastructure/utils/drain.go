@@ -138,7 +138,7 @@ type writer struct {
 	logFunc func(elems ...interface{})
 }
 
-func (w writer) Write(p []byte) (n int, err error) {
+func (w writer) Write(p []byte) (int, error) {
 	w.logFunc(string(p))
 
 	return len(p), nil

@@ -9,6 +9,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,7 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8type "k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/strings/slices"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 

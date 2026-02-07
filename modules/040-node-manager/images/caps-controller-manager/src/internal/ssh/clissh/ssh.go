@@ -118,11 +118,12 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 		stdout = genssh.NewLogger(instanceScope.Logger.WithName("stdout"))
 	}
 
-	cmd.Stdout = stdout
-	cmd.Stderr = stderr
 	if stderr == nil {
 		stderr = genssh.NewLogger(instanceScope.Logger.WithName("stderr"))
 	}
+
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
 
 	instanceScope.Logger.Info(
 		"Exec ssh command",

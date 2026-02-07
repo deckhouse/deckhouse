@@ -83,11 +83,7 @@ func CloudProviderGetter(params CloudProviderGetterParams) infrastructure.CloudP
 				return nil, err
 			}
 
-			additionalParams, err := params.getAdditionalParams()
-			if err != nil {
-				return nil, err
-			}
-
+			additionalParams := params.getAdditionalParams()
 			diParams, err := params.gtFSDIParams()
 			if err != nil {
 				return nil, err
