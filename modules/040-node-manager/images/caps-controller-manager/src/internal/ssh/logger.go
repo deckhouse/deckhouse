@@ -38,8 +38,8 @@ func NewLogger(logger logr.Logger) *Logger {
 }
 
 // Write implements io.Writer.
-func (l *Logger) Write(p []byte) (n int, err error) {
-	n = len(p)
+func (l *Logger) Write(p []byte) (int, error) {
+	n := len(p)
 
 	for {
 		advance, output, err := bufio.ScanLines(p, false)

@@ -178,7 +178,7 @@ func (t *ReverseTunnel) tryToRestart(ctx context.Context, id int, killer node.Re
 	t.stop(id, false)
 	log.DebugF("[%d] Kill tunnel\n", id)
 	// (k EmptyReverseTunnelKiller) KillTunnel won't return error anyways, so we couldn't check return values
-	killer.KillTunnel(ctx)
+	_, _ = killer.KillTunnel(ctx)
 	return t.upNewTunnel(id)
 }
 
@@ -226,7 +226,6 @@ func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker node.Rev
 			log.DebugF("[%d] Signal was sent. Chan len: %d\n", id, len(restartCh))
 		}
 		for {
-
 			if !checkReverseTunnel(id) {
 				go restart(id)
 			}

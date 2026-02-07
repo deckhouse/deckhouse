@@ -166,8 +166,8 @@ func (s *SCP) SCP(ctx context.Context) *SCP {
 		dstPath,
 	}...)
 
-	scpArgs := append(sshPathArgs, args...)
-	s.scpCmd = exec.CommandContext(ctx, "scp", scpArgs...)
+	args = append(args, sshPathArgs...)
+	s.scpCmd = exec.CommandContext(ctx, "scp", args...)
 	s.scpCmd.Env = env
 	// scpCmd.Stdout = os.Stdout
 	// scpCmd.Stderr = os.Stderr

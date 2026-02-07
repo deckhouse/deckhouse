@@ -1,7 +1,0 @@
-dirs:
-- /chroot/var/lib/nginx
-- /chroot/var/log/nginx
-- /chroot/etc/nginx/ssl/
-- /chroot/etc/nginx/webhook-ssl
-- /chroot/etc/ingress-controller
-- /var/log/valgrind

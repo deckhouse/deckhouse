@@ -42,16 +42,15 @@ const (
 	deckhouseClusterStateSuffix = "-dhctl.*.tfstate"
 	deckhousePlanSuffix         = "-dhctl.*.tfplan"
 	varFileName                 = "cluster-config.auto.*.tfvars.json"
-
-	infrastructurePipelineAbortedMessage = `
-Infrastructure pipeline aborted.
-If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
-`
 )
 
 var (
-	ErrRunnerStopped              = errors.New("Infrastructure runner was stopped.")
-	ErrInfrastructureApplyAborted = errors.New("Infrastructure apply aborted.")
+	ErrRunnerStopped                 = errors.New("Infrastructure runner was stopped.")
+	ErrInfrastructureApplyAborted    = errors.New("Infrastructure apply aborted.")
+	ErrInfrastructurePipelineAborted = errors.New(`
+Infrastructure pipeline aborted.
+If you want to drop the cache and continue, please run dhctl with "--yes-i-want-to-drop-cache" flag.
+`)
 )
 
 type (
@@ -304,7 +303,7 @@ func (r *Runner) Init(ctx context.Context) error {
 				}
 
 				if !isConfirm {
-					return fmt.Errorf(infrastructurePipelineAbortedMessage)
+					return ErrInfrastructurePipelineAborted
 				}
 			}
 
@@ -376,7 +375,7 @@ func (r *Runner) runBeforeActionAndWaitReady(ctx context.Context) error {
 	return nil
 }
 
-func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
+func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 	// first verify destructive change
 	if r.changesInPlan == plan.HasDestructiveChanges && r.changeSettings.AutoDismissDestructive {
 		// skip plan
@@ -401,9 +400,7 @@ func (r *Runner) isSkipChanges(ctx context.Context) (skip bool, err error) {
 		}
 	}
 
-	err = r.runBeforeActionAndWaitReady(ctx)
-
-	return false, err
+	return false, r.runBeforeActionAndWaitReady(ctx)
 }
 
 func (r *Runner) Apply(ctx context.Context) error {
