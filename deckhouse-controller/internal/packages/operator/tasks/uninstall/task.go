@@ -39,17 +39,8 @@ type installer interface {
 	Uninstall(ctx context.Context, downloaded, deployed, name string, keep bool) error
 }
 
-func NewModuleTask(name string, installer installer, logger *log.Logger) queue.Task {
-	return &task{
-		downloaded: filepath.Join(modulesDownloadedDir, name),
-		deployed:   filepath.Join(modulesDeployedDir, name),
-		name:       name,
-		keep:       false,
-		installer:  installer,
-		logger:     logger.Named(taskTracer),
-	}
-}
-
+// NewAppTask creates an Uninstall task for an Application package.
+// Sets keep=true to preserve downloaded images for potential reinstallation.
 func NewAppTask(instance string, installer installer, logger *log.Logger) queue.Task {
 	return &task{
 		// TODO(ipaqsa): design app deletion
@@ -59,6 +50,19 @@ func NewAppTask(instance string, installer installer, logger *log.Logger) queue.
 		keep:      true,
 		installer: installer,
 		logger:    logger.Named(taskTracer),
+	}
+}
+
+// NewModuleTask creates an Uninstall task for a Module package.
+// Sets keep=false to remove both deployed and downloaded directories.
+func NewModuleTask(name string, installer installer, logger *log.Logger) queue.Task {
+	return &task{
+		downloaded: filepath.Join(modulesDownloadedDir, name),
+		deployed:   filepath.Join(modulesDeployedDir, name),
+		name:       name,
+		keep:       false,
+		installer:  installer,
+		logger:     logger.Named(taskTracer),
 	}
 }
 

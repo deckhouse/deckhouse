@@ -226,7 +226,6 @@ func (c *SSHCommand) wait() error {
 		if err != nil {
 			return err
 		}
-
 	}
 	return nil
 }
@@ -559,24 +558,19 @@ func (c *SSHCommand) CaptureStderr(buf *bytes.Buffer) *SSHCommand {
 	return c
 }
 
-func (c *SSHCommand) SetupStreamHandlers() (err error) {
-	// stderr goes to console (commented because ssh writes only "Connection closed" messages to stderr)
-	// c.Cmd.Stderr = os.Stderr
-	// connect console's stdin
-	// c.Cmd.Stdin = os.Stdin
-
+func (c *SSHCommand) SetupStreamHandlers() error {
 	// setup stdout stream handlers
+	var err error
 	if c.session != nil && c.out == nil && c.stdoutHandler == nil && len(c.Matchers) == 0 {
 		c.session.Stdout = os.Stdout
 		c.session.Stdout = &c.OutBytes
 		c.session.Stderr = &c.ErrBytes
-		return
+		return err
 	}
 
 	var stdoutHandlerWritePipe *os.File
 	var stdoutHandlerReadPipe *os.File
 	if c.out != nil || c.stdoutHandler != nil || len(c.Matchers) > 0 {
-
 		if c.out == nil {
 			c.out = new(bytes.Buffer)
 		}
@@ -602,7 +596,6 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 	var stderrHandlerWritePipe *os.File
 	var stderrHandlerReadPipe *os.File
 	if c.err != nil || c.stderrHandler != nil || len(c.Matchers) > 0 {
-
 		if c.err == nil {
 			c.err = new(bytes.Buffer)
 		}
@@ -641,7 +634,7 @@ func (c *SSHCommand) SetupStreamHandlers() (err error) {
 		c.readFromStreams(c.stdoutPipeFile, stdoutHandlerWritePipe, false)
 	}()
 
-	// sudo hack, becouse of password prompt is sent to STDERR, not STDOUT
+	// sudo hack, because of password prompt is sent to STDERR, not STDOUT
 	go func() {
 		c.readFromStreams(c.stderrPipeFile, stdoutHandlerWritePipe, true)
 	}()
@@ -764,7 +757,7 @@ func (c *SSHCommand) readFromStreams(stdoutReadPipe io.Reader, stdoutHandlerWrit
 		}
 
 		if c.combined != nil {
-			c.combined.Write(buf[:n])
+			_, _ = c.combined.Write(buf[:n])
 		}
 		if c.stdoutHandler != nil {
 			_, _ = stdoutHandlerWritePipe.Write(buf[m:n])
@@ -818,9 +811,9 @@ func (c *SSHCommand) Stop() {
 	}
 	c.logDebugF("Stopped")
 	c.logDebugF("Sending SIGINT...")
-	c.session.Signal(ssh.SIGINT)
+	_ = c.session.Signal(ssh.SIGINT)
 	c.logDebugF("Signal SIGINT sent")
-	c.session.Signal(ssh.SIGKILL)
+	_ = c.session.Signal(ssh.SIGKILL)
 }
 
 func (c *SSHCommand) setWaitError(err error) {

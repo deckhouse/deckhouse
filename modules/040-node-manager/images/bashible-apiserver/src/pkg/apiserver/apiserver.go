@@ -112,15 +112,16 @@ func (cfg *Config) Complete() CompletedConfig {
 // New returns a new instance of BashibleServer from the given config.
 func (c completedConfig) New() (*BashibleServer, error) {
 	ctx, cancel := context.WithCancel(context.Background())
+	hookfunc := func() error {
+		cancel()
+		return nil
+	}
 	genericServer, err := c.GenericConfig.New("bashible-apiserver", genericapiserver.NewEmptyDelegate())
 	if err != nil {
 		return nil, err
 	}
 
-	err = genericServer.AddPreShutdownHook("cancel-builder-context", func() error {
-		cancel()
-		return nil
-	})
+	err = genericServer.AddPreShutdownHook("cancel-builder-context", hookfunc)
 	if err != nil {
 		return nil, err
 	}

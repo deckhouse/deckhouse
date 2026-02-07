@@ -138,7 +138,7 @@ connectionProcessor:
 				case pb.Continue_CONTINUE_NEXT_PHASE:
 					phaseSwitcher.next <- nil
 				case pb.Continue_CONTINUE_STOP_OPERATION:
-					phaseSwitcher.next <- phases.StopOperationCondition
+					phaseSwitcher.next <- phases.ErrStopOperationCondition
 				case pb.Continue_CONTINUE_ERROR:
 					phaseSwitcher.next <- errors.New(message.Continue.Err)
 				}
@@ -155,6 +155,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) destroySafe(ctx context.Context, p destroyParams) (result *pb.DestroyResult) {
 	defer func() {
 		if r := recover(); r != nil {

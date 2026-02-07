@@ -25,11 +25,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) ExecPostBootstrap(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	wrapper, ok := b.NodeInterface.(*ssh.NodeInterfaceWrapper)
 	if !ok {

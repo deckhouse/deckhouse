@@ -135,6 +135,12 @@ func (i *Installer) Install(ctx context.Context, downloaded, deployed, name, ver
 		}
 	}
 
+	// Create parent directory if it does not exist (for new clusters).
+	if err := os.MkdirAll(filepath.Dir(deployed), 0755); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return newCreatePackageDirErr(err)
+	}
+
 	// <downloaded>/<version>
 	versionPath := filepath.Join(downloaded, version)
 	if _, err := os.Stat(versionPath); err != nil {

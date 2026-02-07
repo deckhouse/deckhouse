@@ -40,11 +40,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	if !app.SanityCheck {
 		log.WarnLn(bootstrapAbortCheckMessage)
@@ -127,7 +124,9 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
-	defer b.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {

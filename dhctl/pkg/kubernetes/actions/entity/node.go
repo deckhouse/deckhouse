@@ -129,10 +129,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
 					}
 				}
-			} else {
-				if nodeGroupName == global.MasterNodeGroupName {
-					logger.LogDebugLn("Got empty apiserver endpoints from arguments")
-				}
+			} else if nodeGroupName == global.MasterNodeGroupName {
+				logger.LogDebugLn("Got empty apiserver endpoints from arguments")
 			}
 
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
