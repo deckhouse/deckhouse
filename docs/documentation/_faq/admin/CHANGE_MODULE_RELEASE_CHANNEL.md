@@ -3,15 +3,15 @@ title: How do I change the release channel for a module?
 lang: en
 ---
 
-A module can be built-in to DKP or connected from a module source (defined using [ModuleSource](reference/api/cr.html#modulesource)). Built-in modules have a common release cycle with DKP and are updated together with DKP. **The release channel of a built-in module always matches the DKP release channel.** A module connected from a module source has its own release cycle, which is independent of the DKP release cycle. **The release channel of a module connected from a module source can be changed.**
+A module can be built-in to DKP or connected from a module source (defined using [ModuleSource](reference/api/cr.html#modulesource)). Built-in modules have a common release cycle with DKP and are updated together with DKP. **The release channel of a built-in module always matches the DKP release channel.** A module connected from a source has its own release cycle, which is independent of the DKP release cycle. **The release channel of a module connected from a source can be changed.**
 
-Below is the process of changing the release channel for a module connected from a module source.
+Below is the process of changing the release channel for a module connected from a source.
 
 By default, the release channel for modules is inherited from the DKP release channel (specified in the [`releaseChannel`](/modules/deckhouse/configuration.html#parameters-releasechannel) parameter of the `deckhouse` ModuleConfig). For more information about release channels, see the [Release Channels](architecture/module-development/versioning/#release-channels) section.
 
 For modules from a source, the release channel is specified using [ModuleUpdatePolicy](reference/api/cr.html#moduleupdatepolicy), which is then _linked_ to the module via the `updatePolicy` parameter in ModuleConfig.
 
-To change the release channel for a module from a module source, follow these steps:
+To change the release channel for a module from a source, follow these steps:
 
 1. Define the module update policy.
 
