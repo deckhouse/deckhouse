@@ -94,7 +94,6 @@ func numerateManifestLines(manifest []byte) string {
 func ParseConfig(ctx context.Context, paths []string, preparatorProvider MetaConfigPreparatorProvider, opts ...ValidateOption) (*MetaConfig, error) {
 	content := ""
 	for _, path := range paths {
-
 		if strings.Contains(path, "*") {
 			continue // skip wildcard paths, we revealed them in the previous step
 		}

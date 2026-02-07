@@ -162,6 +162,8 @@ If you need to allow resource modification (for example, for compatibility with 
 
 Example:
 
+{% raw %}
+
 ```yaml
 ---
 apiVersion: v1
@@ -176,6 +178,8 @@ data:
   key: value
 ```
 
+{% endraw %}
+
 In this case, the resource will receive the labels `projects.deckhouse.io/project` and `projects.deckhouse.io/project-template`, but will not receive the label `heritage: multitenancy-manager`.
 
 ### Excluding resources from management by multitenancy-manager
@@ -183,6 +187,8 @@ In this case, the resource will receive the labels `projects.deckhouse.io/projec
 If you need to exclude a resource from management by `multitenancy-manager` (for example, if the resource should be managed manually or by another controller), add the label `projects.deckhouse.io/unmanaged` to the resource.
 
 Example:
+
+{% raw %}
 
 ```yaml
 ---
@@ -197,6 +203,8 @@ type: Opaque
 data:
   token: <base64-encoded-value>
 ```
+
+{% endraw %}
 
 Resources with the label `projects.deckhouse.io/unmanaged`:
 

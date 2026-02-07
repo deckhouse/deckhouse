@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,6 +27,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
+	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -33,8 +35,15 @@ const (
 	taskTracer = "package-load"
 )
 
+var (
+	modulesDownloadedDir = d8env.GetDownloadedModulesDir()
+	modulesDeployedDir   = filepath.Join(modulesDownloadedDir, "modules")
+	appsDownloadedDir    = filepath.Join(d8env.GetDownloadedModulesDir(), "apps")
+	appsDeployedDir      = filepath.Join(appsDownloadedDir, "deployed")
+)
+
 type manager interface {
-	LoadPackage(ctx context.Context, registry registry.Remote, namespace, name string) (string, error)
+	LoadPackage(ctx context.Context, repo registry.Remote, packageDir string) (string, error)
 	ApplySettings(ctx context.Context, name string, settings addonutils.Values) error
 }
 
@@ -45,10 +54,10 @@ type statusService interface {
 }
 
 type task struct {
-	packageName string
-	namespace   string
-	repository  registry.Remote
-	settings    addonutils.Values
+	name       string
+	deployed   string
+	repository registry.Remote
+	settings   addonutils.Values
 
 	manager manager
 	status  statusService
@@ -56,15 +65,31 @@ type task struct {
 	logger *log.Logger
 }
 
-func NewTask(repo registry.Remote, namespace, name string, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
+// NewAppTask creates a Load task for an Application package.
+// The deployed path points to apps/deployed/{name} where the package is mounted.
+func NewAppTask(name string, repo registry.Remote, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
 	return &task{
-		packageName: name,
-		namespace:   namespace,
-		repository:  repo,
-		settings:    settings,
-		manager:     manager,
-		status:      status,
-		logger:      logger.Named(taskTracer),
+		name:       name,
+		deployed:   filepath.Join(appsDeployedDir, name),
+		repository: repo,
+		settings:   settings,
+		manager:    manager,
+		status:     status,
+		logger:     logger.Named(taskTracer),
+	}
+}
+
+// NewModuleTask creates a Load task for a Module package.
+// The deployed path points to modules/{name} where the module is mounted.
+func NewModuleTask(name string, repo registry.Remote, settings addonutils.Values, status statusService, manager manager, logger *log.Logger) queue.Task {
+	return &task{
+		name:       name,
+		deployed:   filepath.Join(modulesDeployedDir, name),
+		repository: repo,
+		settings:   settings,
+		manager:    manager,
+		status:     status,
+		logger:     logger.Named(taskTracer),
 	}
 }
 
@@ -74,23 +99,25 @@ func (t *task) String() string {
 
 func (t *task) Execute(ctx context.Context) error {
 	// Load package into package manager (parse hooks, values, chart)
-	t.logger.Debug("load package", slog.String("name", t.packageName))
-	version, err := t.manager.LoadPackage(ctx, t.repository, t.namespace, t.packageName)
+	t.logger.Debug("load package", slog.String("name", t.name))
+	version, err := t.manager.LoadPackage(ctx, t.repository, t.deployed)
 	if err != nil {
-		t.status.HandleError(t.packageName, err)
+		t.status.HandleError(t.name, err)
 		return fmt.Errorf("load package: %w", err)
 	}
 
-	t.logger.Debug("apply initial settings", slog.String("name", t.packageName))
-	if err = t.manager.ApplySettings(ctx, t.packageName, t.settings); err != nil {
-		t.status.HandleError(t.packageName, err)
+	t.logger.Debug("apply initial settings", slog.String("name", t.name))
+	if err = t.manager.ApplySettings(ctx, t.name, t.settings); err != nil {
+		t.status.HandleError(t.name, err)
 		return fmt.Errorf("apply initial settings: %w", err)
 	}
 
-	t.status.SetConditionTrue(t.packageName, status.ConditionSettingsValid)
-	t.status.SetVersion(t.packageName, version)
+	t.status.SetConditionTrue(t.name, status.ConditionSettingsValid)
+	t.status.SetVersion(t.name, version)
 
-	t.status.HandleError(t.packageName, &status.Error{
+	// Signal that package is loaded and waiting for the scheduler to enable it.
+	// The WaitConverge condition indicates the package is ready but not yet running.
+	t.status.HandleError(t.name, &status.Error{
 		Err: errors.New("wait for converge done"),
 		Conditions: []status.Condition{
 			{

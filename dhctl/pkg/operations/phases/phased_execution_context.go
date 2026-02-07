@@ -56,7 +56,6 @@ type phasedExecutionContext[OperationPhaseDataT any] struct {
 	lastState                 DhctlState
 	completedPhase            OperationPhase
 	completedPhaseData        OperationPhaseDataT
-	failedPhase               OperationPhase
 	currentPhase              OperationPhase
 	stopOperationCondition    bool
 	pipelineCompletionCounter int
@@ -119,7 +118,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 
 		pec.stopOperationCondition = true
 
-		if errors.Is(onPhaseErr, StopOperationCondition) {
+		if errors.Is(onPhaseErr, ErrStopOperationCondition) {
 			return true, nil
 		} else {
 			return false, onPhaseErr
@@ -139,7 +138,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) InitPipeline(stateCache 
 	return nil
 }
 
-// Finalize supposed to always be called when errors or no errors have occured (use defer pec.Finalize() for example).
+// Finalize supposed to always be called when errors or no errors have occurred (use defer pec.Finalize() for example).
 // Call Finalize in the same scope where InitPipeline has been called.
 //
 // It is not possible to use phasedExecutionContext after Finalize called.

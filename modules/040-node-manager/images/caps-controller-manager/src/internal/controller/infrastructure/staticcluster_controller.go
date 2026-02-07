@@ -99,26 +99,26 @@ func (r *StaticClusterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	result, reconcileErr := r.reconcile(ctx, clusterScope)
+	reconcileErr := r.reconcile(ctx, clusterScope)
 	if reconcileErr != nil {
 		clusterScope.Logger.Error(reconcileErr, "failed to reconcile StaticCluster")
 	}
 
-	return result, reconcileErr
+	return ctrl.Result{}, reconcileErr
 }
 
 func (r *StaticClusterReconciler) reconcile(
 	ctx context.Context,
 	clusterScope *scope.ClusterScope,
-) (ctrl.Result, error) {
+) error {
 	controlPlaneEndpointURL, err := url.Parse(r.Config.Host)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server host")
+		return errors.Wrap(err, "failed to parse api server host")
 	}
 
 	port, err := strconv.Atoi(controlPlaneEndpointURL.Port())
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to parse api server port")
+		return errors.Wrap(err, "failed to parse api server port")
 	}
 
 	clusterScope.StaticCluster.Spec.ControlPlaneEndpoint = clusterv1.APIEndpoint{
@@ -130,10 +130,10 @@ func (r *StaticClusterReconciler) reconcile(
 
 	err = clusterScope.Patch(ctx)
 	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticCluster")
+		return errors.Wrap(err, "failed to patch StaticCluster")
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

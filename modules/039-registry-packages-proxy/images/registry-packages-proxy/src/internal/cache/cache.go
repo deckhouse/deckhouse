@@ -126,10 +126,11 @@ func (c *Cache) Set(digest string, layerDigest string, reader io.Reader) error {
 	}
 
 	file, err := os.Create(path)
-	defer file.Close()
 	if err != nil {
 		return err
 	}
+	defer file.Close()
+
 	size, err := io.Copy(file, reader)
 	if err != nil {
 		return err
@@ -310,11 +311,11 @@ func (c *Cache) checkHashIsOK(layerDigest string) bool {
 	path := c.layerDigestToPath(layerDigest)
 	c.logger.Info("checking hash sum of file in the cache", slog.String("layer_digest", layerDigest), slog.String("path", path))
 	file, err := os.Open(path)
-	defer file.Close()
 	if err != nil {
 		c.logger.Warn("failed to open file", slog.String("path", path), log.Err(err))
 		return false
 	}
+	defer file.Close()
 
 	h := sha256.New()
 	if _, err := io.Copy(h, file); err != nil {
