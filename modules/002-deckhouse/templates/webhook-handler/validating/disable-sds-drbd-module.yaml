@@ -1,0 +1,29 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: disable-sds-drbd-module
+  {{- include "helm_lib_module_labels" (list . (dict "app" "webhook-handler")) | nindent 2 }}
+validationObject:
+  name: disable-sds-drbd-module.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["moduleconfigs"]
+    scope:       "Cluster"
+handler:
+  python: |
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+        mc_name = ctx.review.request.object.metadata.name
+        if mc_name == "sds-drbd":
+            if ctx.review.request.object.spec.get("enabled"):
+                return (
+                    'moduleconfigs.deckhouse.io "sds-drbd" is deprecated, '
+                    'please use sds-replicated-volume module instead '
+                    '(https://deckhouse.io/modules/sds-replicated-volume/stable/faq.html'
+                    '#migrating-from-sds-drbd-module-to-sds-replicated-volume).',
+                    False
+                )
+        return None, True
