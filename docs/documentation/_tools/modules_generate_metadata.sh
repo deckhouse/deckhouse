@@ -44,6 +44,7 @@ done | jq -s '
             module_id: $module.key,
             link: .link,
             description: .description,
+            version: .version,
             logo: .logo,
             license: .license
         }
@@ -58,6 +59,7 @@ done | jq -s '
             description: .[0].description,
             logo: .[0].logo,
             license: .[0].license,
+            version: .[0].version,
             modules: [.[].module_id] | unique | sort
         }
     }) |

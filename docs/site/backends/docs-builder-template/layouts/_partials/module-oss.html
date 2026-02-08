@@ -1,0 +1,43 @@
+{{- $ctx := .ctx | default . }}
+{{- $moduleName := .moduleName | default "" }}
+{{- $moduleChannel := .moduleChannel | default "" }}
+{{- if and $moduleName $moduleChannel }}
+  {{- $moduleData := index (index $ctx.Site.Data.modules $moduleName) $moduleChannel }}
+  {{- $ossItems := slice }}
+  {{- if $moduleData }}
+    {{- $ossItems = index $moduleData "oss" }}
+  {{- end }}
+  {{- if not $ossItems }}
+    {{- $moduleData = index $ctx.Site.Data.modules $moduleName }}
+    {{- if $moduleData }}
+      {{- $ossItems = index $moduleData "oss" }}
+    {{- end }}
+  {{- end }}
+  {{- if and $ossItems (gt (len $ossItems) 0) }}
+    {{- $modulePlaceholder := printf "<code>%s</code>" $moduleName }}
+    {{- replace (T "ossPageBlock1") "<MODULE>" $modulePlaceholder | safeHTML }}
+
+    <ul>
+    {{- range $ossItems }}
+      <li>
+      {{- $itemLine := "" -}}
+      {{- if .link }}
+        {{- $itemLine = printf "<a href='%s'>%s</a>" .link .name }}
+      {{- else }}
+        {{- $itemLine = .name }}
+      {{- end }}
+      {{- if .version }}
+        {{- $itemLine = printf "%s %s" $itemLine .version }}
+      {{- end }}
+      <p>{{- $itemLine | safeHTML -}}</p>
+      {{- if .license -}}
+        <p>{{- printf "License: %s" .license }}</p>
+      {{- end }}
+      {{- if .description }}
+        <p>{{- printf "%s" .description }}</p>
+      {{- end }}
+    {{- end }}
+    </li>
+  {{- end }}
+  </ul>
+{{- end }}
