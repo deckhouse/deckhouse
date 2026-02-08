@@ -1,7 +1,7 @@
 {"documents":[
 {%- assign searchedpages = site.pages | where: "sidebar", "embedded-modules" | where: "lang", page.lang %}
 {%- for page in searchedpages %}
-{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' or page.name == 'OSS.md' %}{% continue %}{% endif %}
+{%- if page.name == 'CR.md' or page.name == 'CR_RU.md' or page.name == 'CONFIGURATION.md' or page.name == 'CONFIGURATION_RU.md' or page.name == 'CLUSTER_CONFIGURATION.md' or page.name == 'CLUSTER_CONFIGURATION_RU.md' %}{% continue %}{% endif %}
 {"title": "{{ page.title | escape }}",
 "url": "/{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
 {%- if page['module-kebab-name'] %}

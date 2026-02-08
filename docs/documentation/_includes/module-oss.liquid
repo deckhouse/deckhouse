@@ -8,10 +8,10 @@
 
 {% for item in ossItems %}
 - {% if item.link.size >0 %}[{{ item.name }}]({{ item.link }}){% else %}{{ item.name }}{% endif %}
-  {%- if item.version %} {{ item.version }}{%- endif %}
+  {%- if item.version %} {{ item.version }}{%- endif %}
   {%- if item.license %}
 
-  License: {{ item.license }}
+  License: {{ item.license }}
   {%- endif %}
   {%- if item.description %}
 

@@ -202,7 +202,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       end
     end
 
-    next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') or page.name.end_with?('OSS.md') )
+    next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )
     next if page['force_searchable'] == true
     page.data['searchable'] = false
   end

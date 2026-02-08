@@ -421,8 +421,9 @@ common:
       Список стороннего программного обеспечения используемого в конкретном модуле можно найти на странице описания в документации модуля.
   ossPageBlock1:
     en: |
-      <h2>Third-party components</h2>
-      <p>List of third-party software used in the <MODULE> module.</p>
+      ## Third-party components
+
+      List of third-party software used in the <MODULE> module:
     ru: |
       ## Внешние компоненты
 
