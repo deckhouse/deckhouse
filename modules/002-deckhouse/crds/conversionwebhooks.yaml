@@ -66,6 +66,14 @@ spec:
                       required:
                       - matchExpressions
                       type: object
+                    includeSnapshotsFrom:
+                      description: |-
+                        An array of names of kubernetes bindings in a hook.
+                        When specified, a list of monitored objects from that bindings
+                        will be added to the binding context in a snapshots field. Self-include is also possible.
+                      items:
+                        type: string
+                      type: array
                     jqFilter:
                       description: |-
                         An optional parameter that specifies event filtering using jq syntax.
