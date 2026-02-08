@@ -46,7 +46,7 @@ context:
           - kube-system
       jqFilter: |-
         {
-          "clusterDomain": ( .data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*clusterDomain:[ ]+(.*)\n").captures[0].string),
+          "clusterDomain": ( .data."cluster-configuration.yaml" // "" | @base64d | match("[ ]*clusterDomain:[ ]+(.+)").captures[0].string),
         }
   - name: kube-dns-module
     kubernetes:
