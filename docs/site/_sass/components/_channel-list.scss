@@ -3,13 +3,13 @@
 .channel__list {
     display: flex;
     flex-direction: column;
-    gap: 72px;
-    list-style: none;
+    gap: 8px;
     padding: 0;
     margin: 0;
 
     &--container_title {
         display: flex;
+        gap: 40px;
 
 
         &::before {
@@ -18,14 +18,12 @@
     }
 
     &--title {
-        position: relative;
-        padding: 0;
-        margin: 0;
+        padding: 0 !important;
+        margin: 0 !important;
         margin-bottom: 22px;
-        width: calc(100% + 32px);
         color: #5E6697;
-        font-size: 20px;
-        font-weight: 400;
+        font-size: 18px;
+        font-weight: 600;
         cursor: pointer;
 
         &::before {
@@ -35,12 +33,12 @@
         &.active {
             color: #00122C;
 
-            
-            &::before {
+            &::after {
                 content: "";
                 position: absolute;
-                width: 100%;
+                width: calc(100% + 8px);
                 bottom: -10px;
+                left: 0;
                 border: 1px solid #00122C;
             }
         }
@@ -49,8 +47,9 @@
     &--descr {
         position: absolute;
         display: none;
-        width: 300px;
+        width: 572px;
         padding: 0;
+        margin: 0 !important;
         opacity: 0;
         height: 0;
         overflow: hidden;

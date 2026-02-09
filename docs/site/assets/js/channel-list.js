@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const channelListTitle = document.querySelectorAll('.channel__list--title');
     const channelListDescr = document.querySelectorAll('.channel__list--descr');
 
+    if (!channelListTitle.length || !channelListDescr.length) return;
+
     function activeTab(index) {
         channelListTitle.forEach(title => title.classList.remove('active'));
         channelListDescr.forEach(descr => descr.classList.remove('active'));
@@ -12,11 +14,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     channelListTitle.forEach(title => {
         title.addEventListener('click', () => {
-            const index = parseInt(title.dataset.index);
-            console.log(index)
+            const titleIndex = parseInt(title.dataset.index, 10) - 1;
 
-            if(!title.classList.contains('active')) {
-                activeTab(index);
+            if (!title.classList.contains('active')) {
+                activeTab(titleIndex);
             }
         });
     });
