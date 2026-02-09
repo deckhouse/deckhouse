@@ -17,6 +17,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -32,7 +33,33 @@ func Test(t *testing.T) {
 }
 
 func init() {
-	candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
+	// Determine paths dynamically to support both Docker and local environments
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Sprintf("failed to get working directory: %v", err))
+	}
+
+	// modulePath is parent of template_tests directory
+	modulePath := filepath.Dir(wd)
+	candiPath := filepath.Join(modulePath, "candi")
+
+	// Find the root deckhouse directory
+	rootPath := modulePath
+	for filepath.Base(filepath.Dir(rootPath)) != "modules" && filepath.Dir(rootPath) != "/" {
+		rootPath = filepath.Dir(rootPath)
+	}
+	// Go up two more levels: modules -> ee/modules or just modules, then deckhouse root
+	rootPath = filepath.Dir(filepath.Dir(rootPath))
+
+	eeCandiPath := filepath.Join(rootPath, "ee", "candi", "cloud-providers", "openstack")
+
+	// Check if this is EE module, if not use regular candi path
+	if _, err := os.Stat(eeCandiPath); os.IsNotExist(err) {
+		// Not an EE environment, this shouldn't happen for openstack but handle it
+		return
+	}
+
+	// Remove existing symlink or directory
 	if info, err := os.Lstat(candiPath); err == nil {
 		if info.Mode()&os.ModeSymlink != 0 {
 			_ = os.Remove(candiPath)
@@ -40,7 +67,9 @@ func init() {
 			_ = os.RemoveAll(candiPath)
 		}
 	}
-	err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", candiPath)
+
+	// Create symlink
+	err = os.Symlink(eeCandiPath, candiPath)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create symlink: %v", err))
 	}
