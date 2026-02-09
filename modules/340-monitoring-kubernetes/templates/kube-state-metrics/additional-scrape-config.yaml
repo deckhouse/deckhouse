@@ -25,6 +25,14 @@ spec:
     targetLabel: name
     regex: kube_verticalpodautoscaler_labels
     replacement: ''
+  - sourceLabels: [controller_type]
+    regex: '^InternalVirtualizationVirtualMachineInstance$'
+    targetLabel: controller_type
+    replacement: VirtualMachine
+  - sourceLabels: [controller]
+    regex: '^InternalVirtualizationVirtualMachineInstance(.*)$'
+    targetLabel: controller
+    replacement: VirtualMachine${1}
   - action: labeldrop
     regex: customresource_version|customresource_kind|customresource_group
   relabelings:
