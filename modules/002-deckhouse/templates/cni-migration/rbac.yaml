@@ -6,7 +6,6 @@ metadata:
   name: cni-migration-manager
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-manager")) | nindent 2 }}
-
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -14,7 +13,6 @@ metadata:
   name: cni-migration-agent
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-agent")) | nindent 2 }}
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -46,7 +44,6 @@ rules:
   - apiGroups: ["admissionregistration.k8s.io"]
     resources: ["validatingwebhookconfigurations", "mutatingwebhookconfigurations"]
     verbs: ["get", "list", "watch"]
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -61,7 +58,6 @@ subjects:
   - kind: ServiceAccount
     name: cni-migration-manager
     namespace: d8-system
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -84,7 +80,6 @@ rules:
   - apiGroups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
