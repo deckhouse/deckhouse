@@ -2,13 +2,14 @@ package config
 
 import (
 	"errors"
+	"strings"
+
+	"github.com/ilyakaznacheev/cleanenv"
+
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/controllers/grpc"
-	"strings"
-
-	"github.com/ilyakaznacheev/cleanenv"
 )
 
 type Config struct {

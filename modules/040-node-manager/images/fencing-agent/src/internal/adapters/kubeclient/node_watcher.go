@@ -36,7 +36,6 @@ func (c *Client) IsMaintenanceMode() bool {
 }
 
 func (c *Client) startInformer(ctx context.Context) error {
-
 	c.informerFactory = informers.NewSharedInformerFactory(c.client, 30*time.Second)
 
 	nodeInformer := c.informerFactory.Core().V1().Nodes().Informer()
@@ -52,7 +51,7 @@ func (c *Client) startInformer(ctx context.Context) error {
 				c.checkMaintenanceAnnotations(node)
 			}
 		},
-		UpdateFunc: func(oldObj, newObj interface{}) {
+		UpdateFunc: func(_, newObj interface{}) {
 			node, ok := newObj.(*v1.Node)
 			if !ok {
 				c.logger.Warn("failed to cast object to Node in UpdateFunc")

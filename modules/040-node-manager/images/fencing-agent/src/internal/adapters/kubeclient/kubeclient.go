@@ -1,17 +1,18 @@
 package kubeclient
 
 import (
-	"fencing-agent/internal/lib/validators"
 	"sync/atomic"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-
-	"k8s.io/client-go/kubernetes"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/lib/validators"
 )
 
 type Config struct {
@@ -41,8 +42,8 @@ type Client struct {
 func New(cfg Config,
 	logger *log.Logger,
 	nodeName string,
-	nodeGroup string) (*Client, error) {
-
+	nodeGroup string,
+) (*Client, error) {
 	restConfig, err := buildConfig(cfg.ConfigPath)
 	if err != nil {
 		return nil, err

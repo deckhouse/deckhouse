@@ -2,9 +2,10 @@ package usecase
 
 import (
 	"context"
-	"fencing-agent/internal/domain"
 	"sync"
 	"sync/atomic"
+
+	"fencing-agent/internal/domain"
 )
 
 type EventsBus struct {

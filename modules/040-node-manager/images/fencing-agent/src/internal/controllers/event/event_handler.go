@@ -1,28 +1,29 @@
 package event
 
 import (
-	"fencing-agent/internal/domain"
+	"log/slog"
 	"time"
 
-	"log/slog"
+	"github.com/hashicorp/memberlist"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/hashicorp/memberlist"
+
+	"fencing-agent/internal/domain"
 )
 
 type Producer interface {
 	Publish(event domain.Event)
 }
-type EventHandler struct {
+type Handler struct {
 	logger   *log.Logger
 	eventBus Producer
 }
 
-func NewEventHandler(logger *log.Logger, eventBus Producer) *EventHandler {
-	return &EventHandler{logger: logger, eventBus: eventBus}
+func NewHandler(logger *log.Logger, eventBus Producer) *Handler {
+	return &Handler{logger: logger, eventBus: eventBus}
 }
 
-func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
+func (h *Handler) NotifyJoin(node *memberlist.Node) {
 	h.logger.Debug("Node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false joining?
 	event := domain.Event{
@@ -36,7 +37,7 @@ func (h *EventHandler) NotifyJoin(node *memberlist.Node) {
 	h.eventBus.Publish(event)
 }
 
-func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
+func (h *Handler) NotifyLeave(node *memberlist.Node) {
 	h.logger.Debug("Node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
 	event := domain.Event{
@@ -50,6 +51,6 @@ func (h *EventHandler) NotifyLeave(node *memberlist.Node) {
 	h.eventBus.Publish(event)
 }
 
-func (h *EventHandler) NotifyUpdate(node *memberlist.Node) {
+func (h *Handler) NotifyUpdate(node *memberlist.Node) {
 	h.logger.Debug("Node updated", slog.String("node", node.Name))
 }

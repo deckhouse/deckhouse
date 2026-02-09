@@ -18,26 +18,26 @@ package main
 
 import (
 	"context"
-	"fencing-agent/internal/adapters/kubeclient"
-	"fencing-agent/internal/adapters/memberlist"
-	"fencing-agent/internal/adapters/watchdog"
-	"fencing-agent/internal/controllers/event"
-	"fencing-agent/internal/controllers/grpc"
-	"fencing-agent/internal/controllers/http"
 	"fmt"
 	"os"
-
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/logger/sl"
-	"fencing-agent/internal/usecase"
 	"os/signal"
 	"syscall"
 
-	"fencing-agent/internal/config"
-	"fencing-agent/internal/lib/logger"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
-	"golang.org/x/sync/errgroup"
+
+	"fencing-agent/internal/adapters/kubeclient"
+	"fencing-agent/internal/adapters/memberlist"
+	"fencing-agent/internal/adapters/watchdog"
+	"fencing-agent/internal/config"
+	"fencing-agent/internal/controllers/event"
+	"fencing-agent/internal/controllers/grpc"
+	"fencing-agent/internal/controllers/http"
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/lib/logger"
+	"fencing-agent/internal/lib/logger/sl"
+	"fencing-agent/internal/usecase"
 )
 
 const (
@@ -79,7 +79,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	if err != nil {
 		return fmt.Errorf("failed to get current node IP: %w", err)
 	}
-	log.Info("current node IP", ip)
+	log.Info("current node IP", "ip", ip)
 
 	ips, err := kubeClient.GetNodesIP(ctx)
 	if err != nil {
@@ -87,13 +87,13 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	}
 
 	totalNodes := len(ips)
-	log.Info("total nodes", "totalNodes", totalNodes)
+	log.Info("total nodes", "total_nodes", totalNodes)
 
 	quorumDecider := domain.NewQuorumDecider(totalNodes)
 
 	eventBus := usecase.NewEventsBus()
 
-	eventHandler := event.NewEventHandler(log, eventBus)
+	eventHandler := event.NewHandler(log, eventBus)
 
 	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, quorumDecider)
 	if err != nil {

@@ -3,21 +3,23 @@ package grpc
 import (
 	"context"
 	"errors"
-	"fencing-agent/internal/lib/logger/sl"
-	"fencing-agent/internal/lib/validators"
-	pb "fencing-agent/pkg/api/v1"
 	"fmt"
 	"net"
 	"os"
 	"strings"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/lib/logger/sl"
+	"fencing-agent/internal/lib/validators"
+	pb "fencing-agent/pkg/api/v1"
 )
 
 type Config struct {

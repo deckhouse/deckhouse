@@ -2,19 +2,20 @@ package kubeclient
 
 import (
 	"context"
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"log/slog"
 
 	v1 "k8s.io/api/core/v1"
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 func (c *Client) GetNodesIP(ctx context.Context) ([]string, error) {
 	labelSelector := fmt.Sprintf("node.deckhouse.io/group=%s", c.nodeGroup)
 
-	c.logger.Debug("get nodes", slog.String("labelSelector", labelSelector))
+	c.logger.Debug("get nodes", slog.String("label_selector", labelSelector))
 
 	nodes, err := c.client.CoreV1().Nodes().List(ctx, v1meta.ListOptions{
 		LabelSelector: labelSelector,
