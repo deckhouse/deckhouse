@@ -156,6 +156,6 @@ Follow the steps below to delete a cluster that has been manually installed (e.g
    where:
    - `<USER>` — the user of the remote machine that ran the installation. If `<USER>` needs to perform actions via `sudo`, add the `--ask-become-pass` flag;
    - `<MASTER_IP>` — the IP address of the cluster's master node;
-   - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+   - `<SSH_PRIVATE_KEY_FILE>`: Name of private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
 
 The installer will then connect to the master node and delete all Deckhouse and Kubernetes cluster components on it.
