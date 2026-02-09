@@ -7,6 +7,7 @@ This directory contains **two groups** of CRDs:
 - **Dex Kubernetes storage CRDs** (`*.dex.coreos.com`)
   - These files are **copied from upstream Dex** (repo `dexidp/dex`, directory `scripts/manifests/crds`).
   - **Do not edit them manually.**
+  - Stored under `crds/external/` to avoid rendering as Deckhouse module CRDs.
 
 ### Why Dex CRDs are here
 
