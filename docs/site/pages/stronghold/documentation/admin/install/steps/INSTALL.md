@@ -363,7 +363,7 @@ where:
 - `/resources.yaml` — resource manifests file;
 - `<SSH_USER>` — user on the server for SSH connection;
 - `--ssh-agent-private-keys` — file containing the private SSH key for the connection;
-- `<SSH_PRIVATE_KEY_FILE>` — имя приватного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+- `<SSH_PRIVATE_KEY_FILE>` — the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
 
 Next, connect to the master node via SSH (the master node's IP address is provided by the installer at the end of the installation):
 
