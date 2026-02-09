@@ -1,26 +1,20 @@
-# put image with vex mitigations to registry.
-# Mitigations can be found in the known_vulnerabilities.vex file in the image directory
+# put image with trivy mitigations to registry.
+# Mitigations can be found in the .trivyignore.yaml file in the image directory
 # input parameters:
 # list of $ and image name.
 # list ($ "common/kubernetes")
-{{- define "vex mitigation" }}
+{{- define "trivy mitigation" }}
   {{- $context := index . 0 }}
   {{- $imageName := index . 1 }}
-  {{- $knownVulnPath := "" }}
-  {{- if eq $imageName "dev" }}
-    {{- $knownVulnPath = "/deckhouse-controller/known_vulnerabilities.vex" }}
-  {{- else if eq $imageName "dev/install" }}
-    {{- $knownVulnPath = "/dhctl/known_vulnerabilities.vex" }}
-  {{- else }}
-    {{- $knownVulnPath = (printf "/%smodules/%s-%s/images/%s/known_vulnerabilities.vex" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $trivyIgnorePath := "" }}
+  {{- $trivyIgnorePath = (printf "/%smodules/%s-%s/images/%s/.trivyignore.yaml" $context.ModulePath $context.ModulePriority $context.ModuleName $context.ImageName) }}
+  {{- $trivyIgnoreFile := false }}
+  {{- if eq (len ($context.Files.Glob $trivyIgnorePath)) 1 }}
+    {{- $trivyIgnoreFile = true }}
   {{- end }}
-  {{- $vexFile := false }}
-  {{- if eq (len ($context.Files.Glob $knownVulnPath)) 1 }}
-    {{- $vexFile = true }}
-  {{- end }}
-  {{- if $vexFile }}
+  {{- if $trivyIgnoreFile }}
 ---
-image: {{ $imageName }}-vex-artifact
+image: {{ $imageName }}-trivy-ignore-artifact
 fromCacheVersion: {{ div $context.Commit.Date.Unix (mul 60 60) }}v1
 fromImage: base/vex
 final: true
@@ -42,8 +36,8 @@ secrets:
 - id: ACTIONS_ID_TOKEN_REQUEST_URL
   env: ACTIONS_ID_TOKEN_REQUEST_URL
 git:
-- add: {{ $knownVulnPath }}
-  to: /known_vulnerabilities.vex
+- add: {{ $trivyIgnorePath }}
+  to: /.trivyignore.yaml
   stageDependencies:
     install:
     - "**/*"
@@ -72,8 +66,8 @@ shell:
       --replace \
       --registry-username="${REGISTRY_USER}" \
       --registry-password="${REGISTRY_PASSWORD}" \
-      --predicate /known_vulnerabilities.vex \
-      --type openvex \
+      --predicate /.trivyignore.yaml \
+      --type custom \
       --key hashivault://${COSIGN_VAULT_KEY} \
       --tlog-upload=false \
       -y \
