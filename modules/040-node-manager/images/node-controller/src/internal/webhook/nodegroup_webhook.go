@@ -104,7 +104,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	clusterConfig := w.loadClusterConfig(ctx)
-	providerConfig := w.loadProviderClusterConfig(ctx)
+	//providerConfig := w.loadProviderClusterConfig(ctx)
 	var warnings []string
 
 	if req.Operation == "CREATE" && clusterConfig.ClusterType == "Cloud" {
@@ -144,14 +144,17 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	if ng.Spec.CloudInstances != nil && len(providerConfig.Zones) > 0 && len(ng.Spec.CloudInstances.Zones) > 0 {
-		allowedZones := make(map[string]bool)
-		for _, z := range providerConfig.Zones {
-			allowedZones[z] = true
-		}
-		for _, zone := range ng.Spec.CloudInstances.Zones {
-			if !allowedZones[zone] {
-				return admission.Denied(fmt.Sprintf("unknown zone %q", zone))
+	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 && clusterConfig.ClusterType == "Cloud" {
+		providerConfig := w.loadProviderClusterConfig(ctx)
+		if len(providerConfig.Zones) > 0 {
+			allowedZones := make(map[string]bool)
+			for _, z := range providerConfig.Zones {
+				allowedZones[z] = true
+			}
+			for _, zone := range ng.Spec.CloudInstances.Zones {
+				if !allowedZones[zone] {
+					return admission.Denied(fmt.Sprintf("unknown zone %q", zone))
+				}
 			}
 		}
 	}
