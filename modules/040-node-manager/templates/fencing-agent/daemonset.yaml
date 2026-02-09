@@ -111,24 +111,19 @@ spec:
         {{- if not ( $ctx.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
               {{- include "fencing_agent_resources" $ctx | nindent 14 }}
         {{- end }}
-          {{- if eq $mode "Watchdog" }}
           volumeMounts:
             - name: watchdog
               mountPath: /dev/watchdog
-          {{- end }}
             - name: socket
               mountPath: /tmp
       terminationGracePeriodSeconds: 10
-      {{- if eq $mode "Watchdog" }}
       volumes:
         - name: watchdog
           hostPath:
             path: /dev/watchdog
             type: CharDevice
-      {{- end }}
         - name: socket
           hostPath:
             path: /tmp
-
   {{- end }}
 {{- end }}
