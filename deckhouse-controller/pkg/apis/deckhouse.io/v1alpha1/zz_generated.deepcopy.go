@@ -2124,7 +2124,7 @@ func (in *PackageRepositorySpec) DeepCopyInto(out *PackageRepositorySpec) {
 	*out = *in
 	if in.ScanInterval != nil {
 		in, out := &in.ScanInterval, &out.ScanInterval
-		*out = new(metav1.Duration)
+		*out = new(v1.Duration)
 		**out = **in
 	}
 	out.Registry = in.Registry

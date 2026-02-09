@@ -105,10 +105,15 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
+		reason := string(cond.Reason)
+		if reason == "" {
+			reason = string(cond.Type)
+		}
+
 		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
 			Type:               cond.Type,
 			Status:             cond.Status,
-			Reason:             cond.Reason,
+			Reason:             reason,
 			Message:            cond.Message,
 			ObservedGeneration: app.Generation,
 		})
