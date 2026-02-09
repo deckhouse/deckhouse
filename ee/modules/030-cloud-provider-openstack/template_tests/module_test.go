@@ -31,6 +31,21 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
+func init() {
+	candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
+	if info, err := os.Lstat(candiPath); err == nil {
+		if info.Mode()&os.ModeSymlink != 0 {
+			_ = os.Remove(candiPath)
+		} else {
+			_ = os.RemoveAll(candiPath)
+		}
+	}
+	err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", candiPath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to create symlink: %v", err))
+	}
+}
+
 const globalValues = `
   clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler"]
@@ -317,32 +332,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-
-	BeforeSuite(func() {
-		candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
-		if info, err := os.Lstat(candiPath); err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				_ = os.Remove(candiPath)
-			} else {
-				_ = os.RemoveAll(candiPath)
-			}
-		}
-		err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", candiPath)
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
-		if info, err := os.Lstat(candiPath); err == nil {
-			if info.Mode()&os.ModeSymlink != 0 {
-				_ = os.Remove(candiPath)
-			} else {
-				_ = os.RemoveAll(candiPath)
-			}
-		}
-		err := os.Symlink("/deckhouse/candi/cloud-providers/openstack", candiPath)
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("Openstack with k8s 1.32", func() {
 		openstackCheck(f, "1.32")
