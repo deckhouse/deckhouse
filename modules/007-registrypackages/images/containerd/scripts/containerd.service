@@ -6,6 +6,7 @@ After=network.target local-fs.target
 [Service]
 Environment="PATH=/opt/deckhouse/bin:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 ExecStartPre=-/sbin/modprobe overlay
+ExecStartPost=/bin/bash -c 'sleep 3; /opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/pause.tar && /opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:pause io.cri-containerd.pinned=pinned || true; /opt/deckhouse/bin/ctr -n k8s.io images import /opt/deckhouse/images/kubernetes-api-proxy.tar && /opt/deckhouse/bin/ctr -n k8s.io images label deckhouse.local/images:kubernetes-api-proxy io.cri-containerd.pinned=pinned || true'
 ExecStart=/opt/deckhouse/bin/containerd
 
 Type=notify

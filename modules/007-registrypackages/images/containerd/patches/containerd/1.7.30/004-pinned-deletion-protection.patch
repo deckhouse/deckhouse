@@ -1,0 +1,41 @@
+diff --git pkg/cri/server/image_remove.go pkg/cri/server/image_remove.go
+index e10062a31..81718c92f 100644
+--- pkg/cri/server/image_remove.go
++++ pkg/cri/server/image_remove.go
+@@ -44,6 +44,11 @@ func (c *criService) RemoveImage(ctx context.Context, r *runtime.RemoveImageRequ
+ 		}
+ 		return nil, fmt.Errorf("can not resolve %q locally: %w", r.GetImage().GetImage(), err)
+ 	}
++
++	if image.Pinned {
++		return nil, fmt.Errorf("image %q is pinned, cannot be removed", image.ID)
++	}
++
+ 	span.SetAttributes(tracing.Attribute("image.id", image.ID))
+ 	// Remove all image references.
+ 	for i, ref := range image.References {
+diff --git services/images/local.go services/images/local.go
+index d7ecbf9d6..dbd76662c 100644
+--- services/images/local.go
++++ services/images/local.go
+@@ -32,6 +32,7 @@ import (
+ 	"github.com/containerd/containerd/gc"
+ 	"github.com/containerd/containerd/images"
+ 	"github.com/containerd/containerd/metadata"
++	"github.com/containerd/containerd/pkg/cri/labels"
+ 	"github.com/containerd/containerd/pkg/deprecation"
+ 	"github.com/containerd/containerd/pkg/epoch"
+ 	"github.com/containerd/containerd/plugin"
+@@ -183,6 +184,12 @@ func (l *local) Update(ctx context.Context, req *imagesapi.UpdateImageRequest, _
+ func (l *local) Delete(ctx context.Context, req *imagesapi.DeleteImageRequest, _ ...grpc.CallOption) (*ptypes.Empty, error) {
+ 	log.G(ctx).WithField("name", req.Name).Debugf("delete image")
+ 
++	if image, err := l.store.Get(ctx, req.Name); err == nil && image.Labels[labels.PinnedImageLabelKey] == labels.PinnedImageLabelValue {
++		return nil, status.Errorf(codes.FailedPrecondition, "image %q is pinned, cannot be removed", req.Name)
++	} else if err != nil {
++		return nil, errdefs.ToGRPC(err)
++	}
++
+ 	if err := l.store.Delete(ctx, req.Name); err != nil {
+ 		return nil, errdefs.ToGRPC(err)
+ 	}
