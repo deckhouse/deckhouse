@@ -1536,10 +1536,74 @@ spec:
                       properties:
                         partedConfig:
                           type: string
-                          pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
                           description: |
                             MIG configuration name.
+                            
+                            Standard `all-*` profiles are supported (the same partitioning applied to all GPUs), as well as the `custom` value, which allows defining partitioning individually for each GPU.
                           x-doc-default: all-1g.5gb
+                        customConfigs:
+                          type: array
+                          description: |
+                            Custom MIG partitioning by GPU index.
+
+                            Used only when `partedConfig: custom` is set.
+
+                            Represents an array of devices (a map keyed by `index`), where each entry refers to a GPU by its index and describes the slices to be created.
+                          minItems: 1
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          x-kubernetes-list-type: map
+                          x-kubernetes-list-map-keys:
+                            - index
+                          items:
+                            type: object
+                            required:
+                              - index
+                              - slices
+                            properties:
+                              index:
+                                type: integer
+                                minimum: 0
+                                description: GPU index on the node.
+                              slices:
+                                type: array
+                                description: List of MIG slices to create.
+                                items:
+                                  type: object
+                                  required:
+                                    - profile
+                                    - count
+                                  properties:
+                                    profile:
+                                      type: string
+                                      pattern: "^[0-9]+g\\.[0-9]+gb(\\.me)?$"
+                                      description: MIG profile name.
+                                      x-doc-examples:
+                                        - 3g.40gb
+                                        - 1g.10gb
+                                        - 1g.10gb.me
+                                    count:
+                                      type: integer
+                                      minimum: 1
+                                      maximum: 7
+                                      description: Number of slices in the selected profile.
+                                      x-doc-default: 1
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
                     timeSlicing:
                       description: |
                         `TimeSlicing` sharing strategy parameters.
@@ -1666,7 +1730,7 @@ spec:
                     Parameter for provisioning static machines to the cluster.
                   type: object
                   x-kubernetes-validations:
-                    - message: "spec.staticInstances.labelSelector is immutable and cannot be changed once set"
+                    - message: "spec.staticInstances.labelSelector can be added but cannot be modified once set. To change it, create a new NodeGroup."
                       rule: "!has(oldSelf.labelSelector) || self.labelSelector == oldSelf.labelSelector"
                   properties:
                     labelSelector:
@@ -2256,7 +2320,7 @@ spec:
                           type: string
                           description: |
                             Defines how swap memory is handled on the node:
-                            
+
                             * `NoSwap`: Swap is disabled. This is the traditional Kubernetes behavior.
                             * `LimitedSwap`: Kubelet can use swap memory up to the limit specified in `limitedSwap.size`.
 
@@ -2271,11 +2335,11 @@ spec:
                           default: 60
                           description: |
                             Defines the kernel's tendency to use the swap.
-                            
+
                             * `0`: Minimal swap usage (only to avoid OOM).
                             * `60`: Default balanced behavior.
                             * `100`: Aggressive swap usage.
-                            
+
                             This value is set via `vm.swappiness` sysctl parameter.
                           x-doc-default: 60
                         limitedSwap:

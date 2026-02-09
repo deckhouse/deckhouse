@@ -116,12 +116,12 @@ func (s *KubeClientSwitcher) tmpDirForConverger() string {
 	return filepath.Join(s.params.TmpDir, "converger")
 }
 
-func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) (err error) {
+func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) error {
 	s.logger.LogDebugLn("Starting replacing kube client")
 
 	tmpDir := s.tmpDirForConverger()
 
-	err = os.MkdirAll(tmpDir, 0o755)
+	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
 	}
@@ -178,7 +178,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 			return fmt.Errorf("failed to create executor for node %s: %w", nodeName, err)
 		}
 
-		executor, err := provider.OutputExecutor(s.ctx.Ctx(), s.logger)
+		executor, _ := provider.OutputExecutor(s.ctx.Ctx(), s.logger)
 
 		// do not cleanup provider after getting output executor!
 

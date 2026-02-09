@@ -194,14 +194,16 @@ lint-fix: golangci-lint ## Fix lint violations.
 # Generic function to iterate over all directories with go.mod
 # Usage: $(call iterateAllGoModules,message,command)
 define iterateAllGoModules
-	find . -name "go.mod" -type f -exec dirname {} \; | while read dir; do \
+	@FAILED=0; \
+	for dir in $$(find . -name "go.mod" -type f -exec dirname {} \; ); do \
 		echo ""; \
 		echo "============================================================"; \
-		echo "$(1) $$dir"; \
+		echo "$(1) in $$dir"; \
 		echo "============================================================"; \
 		echo ""; \
-		(cd $$dir && $(2)); \
-	done
+		(cd $$dir && $(2)) || FAILED=1; \
+	done; \
+	exit $$FAILED
 endef
 
 .PHONY: lint-all
@@ -373,6 +375,7 @@ update-lib-helm: yq ## Update lib-helm.
 update-base-images-versions:
 	##~ Options: version=vMAJOR.MINOR.PATCH
 	cd candi && curl --fail -sSLO https://fox.flant.com/api/v4/projects/deckhouse%2Fbase-images/packages/generic/base_images/$(version)/base_images.yml
+	$(MAKE) render-workflow
 
 ##@ Build
 .PHONY: build
@@ -468,7 +471,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
     endif
   endif
 
-build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
+build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
 GO=$(shell which go)
@@ -506,9 +509,8 @@ YQ = $(LOCALBIN)/yq
 
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
-GO_TOOLCHAIN_AUTOINSTALL_VERSION ?= go1.24.9
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.26.3
+DECKHOUSE_CLI_VERSION ?= v0.27.1
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2
@@ -530,7 +532,7 @@ generate-werf: yq ## Generate changes in werf files.
 generate-docs: yq deckhouse-cli ## Generate documentation for deckhouse-cli.
 	@$(DECKHOUSE_CLI) --version
 	@$(YQ) eval '.d8.d8CliVersion = "$(DECKHOUSE_CLI_VERSION)"' -i ./candi/version_map.yml
-	@DECKHOUSE_PLUGINS_ENABLED=false $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
+	@DECKHOUSE_PLUGINS_ENABLED=false HELM_PLUGINS="" $(DECKHOUSE_CLI)  help-json --username-replace=$(WHOAMI) > ./docs/documentation/_data/reference/d8-cli.json && echo "d8 help-json content is updated"
 
 ## Generate codebase for deckhouse-controllers kubernetes entities
 .PHONY: generate-kubernetes
@@ -650,7 +652,7 @@ set -e; \
 package=$(2)@$(3) ;\
 echo "Downloading $${package}" ;\
 rm -f $(1) || true ;\
-GOBIN=$(LOCALBIN) GOTOOLCHAIN=$(GO_TOOLCHAIN_AUTOINSTALL_VERSION) go install $${package} ;\
+GOBIN=$(LOCALBIN) go install $${package} ;\
 mv $(1) $(1)-$(3) ;\
 } ;\
 ln -sf $(1)-$(3) $(1)

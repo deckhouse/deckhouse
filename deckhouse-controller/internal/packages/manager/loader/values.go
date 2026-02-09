@@ -23,6 +23,15 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 )
 
+const (
+	// openAPIDir is the subdirectory containing OpenAPI schema files.
+	openAPIDir = "openapi"
+	// configValuesFile is the OpenAPI schema for user-configurable values.
+	configValuesFile = "config-values.yaml"
+	// valuesFile is the OpenAPI schema for all values including internal ones.
+	valuesFile = "values.yaml"
+)
+
 // loadValues loads all values-related files for a package.
 // It loads:
 //  1. Static values from values.yaml
@@ -70,24 +79,24 @@ func loadValues(name, path string) (addonutils.Values, []byte, []byte, error) {
 //	/modules/XXX-module-name/openapi/config-values.yaml
 //	/modules/XXX-module-name/openapi/values.yaml
 func loadPackageSchemas(packageDir string) ([]byte, []byte, error) {
-	schemasDir := filepath.Join(packageDir, "openapi")
+	schemasDir := filepath.Join(packageDir, openAPIDir)
 
-	configValues := make([]byte, 0)
-	configPath := filepath.Join(schemasDir, "config-values.yaml")
-	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
-		configValues, err = os.ReadFile(configPath)
-		if err != nil {
+	configPath := filepath.Join(schemasDir, configValuesFile)
+	configValues, err := os.ReadFile(configPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
 			return nil, nil, fmt.Errorf("read file '%s': %w", configPath, err)
 		}
+		configValues = nil
 	}
 
-	values := make([]byte, 0)
-	valuesPath := filepath.Join(schemasDir, "values.yaml")
-	if _, err := os.Stat(valuesPath); !os.IsNotExist(err) {
-		values, err = os.ReadFile(valuesPath)
-		if err != nil {
+	valuesPath := filepath.Join(schemasDir, valuesFile)
+	values, err := os.ReadFile(valuesPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
 			return nil, nil, fmt.Errorf("read file '%s': %w", valuesPath, err)
 		}
+		values = nil
 	}
 
 	return configValues, values, nil

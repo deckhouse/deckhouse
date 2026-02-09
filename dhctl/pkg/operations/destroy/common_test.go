@@ -317,7 +317,7 @@ func testCreateResourcesGeneral(t *testing.T, kubeCl *client.KubernetesClient) [
 		resourceYAML string
 	}{
 		{
-			gvr: v1alpha1.LocalStorageClassGRV,
+			gvr: v1alpha1.LocalStorageClassGVR,
 			resourceYAML: `
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: LocalStorageClass
@@ -335,7 +335,7 @@ spec:
 `,
 		},
 		{
-			gvr: v1alpha1.ReplicateStorageClassGRV,
+			gvr: v1alpha1.ReplicatedStorageClassGVR,
 			resourceYAML: `
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: ReplicatedStorageClass
@@ -349,7 +349,7 @@ spec:
 `,
 		},
 		{
-			gvr: v1alpha1.NFSStorageClassGRV,
+			gvr: v1alpha1.NFSStorageClassGVR,
 			resourceYAML: `
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: NFSStorageClass
@@ -369,7 +369,7 @@ spec:
 `,
 		},
 		{
-			gvr: v1alpha1.CephStorageClassGRV,
+			gvr: v1alpha1.CephStorageClassGVR,
 			resourceYAML: `
 apiVersion: storage.deckhouse.io/v1alpha1
 kind: CephStorageClass
@@ -381,6 +381,78 @@ spec:
   type: CephFS
   cephFS:
     fsName: cephfs
+`,
+		},
+		{
+			gvr: v1alpha1.SCSIStorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: SCSIStorageClass
+metadata:
+  name: scsi-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+`,
+		},
+		{
+			gvr: v1alpha1.S3StorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: S3StorageClass
+metadata:
+  name: s3-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+`,
+		},
+		{
+			gvr: v1alpha1.YadroTatlinUnifiedStorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: YadroTatlinUnifiedStorageClass
+metadata:
+  name: yadro-tatlin-unified-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+`,
+		},
+		{
+			gvr: v1alpha1.NetappStorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: NetappStorageClass
+metadata:
+  name: netapp-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
+`,
+		},
+		{
+			gvr: v1alpha1.HuaweiStorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: HuaweiStorageClass
+metadata:
+  name: huawei-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: WaitForFirstConsumer
+`,
+		},
+		{
+			gvr: v1alpha1.HPEStorageClassGVR,
+			resourceYAML: `
+apiVersion: storage.deckhouse.io/v1alpha1
+kind: HPEStorageClass
+metadata:
+  name: hpe-storage-class
+spec:
+  reclaimPolicy: Delete
+  volumeBindingMode: Immediate
 `,
 		},
 	}

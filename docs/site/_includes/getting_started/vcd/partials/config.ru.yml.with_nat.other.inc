@@ -136,8 +136,8 @@ bastion:
   instanceClass:
     rootDiskSizeGb: 30
     sizingPolicy: *!CHANGE_SIZING_POLICY_BASTION*
-    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     storageProfile: *!CHANGE_STORAGE_PROFILE*
+    template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddress: 192.168.199.10
 edgeGateway:
   name: *!CHANGE_EDGE_GW_NAME*
@@ -148,8 +148,8 @@ createDefaultFirewallRules: false
 masterNodeGroup:
   replicas: 1
   instanceClass:
-    storageProfile: *!CHANGE_STORAGE_PROFILE*
     sizingPolicy: *!CHANGE_SIZING_POLICY*
+    storageProfile: *!CHANGE_STORAGE_PROFILE*
     template: *!CHANGE_TEMPLATE_NAME_WITH_CATALOG*
     mainNetworkIPAddresses:
       - 192.168.199.2
@@ -248,7 +248,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -д '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

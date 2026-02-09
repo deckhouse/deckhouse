@@ -29,7 +29,7 @@ properties:
                 Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/storage/common/storage-account-overview#types-of-storage-accounts).
             cachingMode:
               description: |
-                Желаемый режим кэширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
+                Желаемый режим кеширования. Если размер диска превышает 4 TiB, необходимо использовать `cachineMode: None`.
 
                 Дополнительную информацию можно найти в [документации Azure](https://docs.microsoft.com/ru-ru/azure/virtual-machines/premium-storage-performance#disk-caching).
             diskIOPSReadWrite:

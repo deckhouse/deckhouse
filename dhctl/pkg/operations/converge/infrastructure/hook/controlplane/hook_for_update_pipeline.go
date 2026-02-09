@@ -122,6 +122,19 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 		return false, fmt.Errorf("not all nodes are ready: %v", err)
 	}
 
+	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
+	if err != nil {
+		return false, fmt.Errorf("Get master node pipeline outputs got error: %w", err)
+	}
+
+	masterIP := outputs.MasterIPForSSH
+	if masterIP == "" {
+		log.InfoF("Got empty master IP for ssh for node %s.\n", h.nodeToConverge)
+		return false, nil
+	}
+
+	h.oldMasterIPForSSH = masterIP
+
 	err = removeControlPlaneRoleFromNode(ctx, h.kubeGetter.KubeClient(), h.nodeToConverge, h.commanderMode)
 	if err != nil {
 		return false, fmt.Errorf("failed to remove control plane role from node '%s': %v", h.nodeToConverge, err)
@@ -131,13 +144,6 @@ func (h *HookForUpdatePipeline) BeforeAction(ctx context.Context, runner infrast
 	if err != nil {
 		return false, fmt.Errorf("failed to delete object node '%s' from cluster: %v\n", h.nodeToConverge, err)
 	}
-
-	outputs, err := infrastructure.GetMasterNodeResult(ctx, runner)
-	if err != nil {
-		log.ErrorF("Get master node pipeline outputs: %v", err)
-	}
-
-	h.oldMasterIPForSSH = outputs.MasterIPForSSH
 
 	return false, nil
 }
@@ -165,7 +171,6 @@ func (h *HookForUpdatePipeline) AfterAction(ctx context.Context, runner infrastr
 
 		cl.Session().RemoveAvailableHosts(session.Host{Host: h.oldMasterIPForSSH, Name: h.nodeToConverge})
 		cl.Session().AddAvailableHosts(session.Host{Host: outputs.MasterIPForSSH, Name: h.nodeToConverge})
-
 	}
 
 	// Before waiting for the master node to be listed as a member of the etcd cluster,

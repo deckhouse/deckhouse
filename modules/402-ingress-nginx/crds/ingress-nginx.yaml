@@ -70,7 +70,7 @@ spec:
                     One of the supported Ingress NGINX Controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.9", "1.10", "1.12"]
+                  enum: ["1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -678,7 +678,7 @@ spec:
                     Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.9", "1.10", "1.12"]
+                  enum: ["1.10", "1.12"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -1135,8 +1135,6 @@ spec:
                   description: |
                     Enables HTTP/3 support.
 
-                    > HTTP3 is only available in Ingress controller version 1.10 and 1.12
-                    >
                     > HTTP/3 cannot be enabled when the inlet is set to `HostPortWithProxyProtocol` or `LoadBalancerWithProxyProtocol`.
                     >
                     > For the `HostWithFailover` inlet, HTTP/3 is applied only to the primary controller; the failover controller always runs without HTTP/3.
@@ -1390,8 +1388,6 @@ spec:
                       enum: ['HostWithFailover']
                     hostWithFailover: {}
               x-kubernetes-validations:
-                - message: .spec.controllerVersion should be explicitly set to 1.10 or 1.12 for .spec.enableHTTP3 to make effect
-                  rule: 'self.enableHTTP3 == true ? self.controllerVersion in [''1.10'', ''1.12'']: true'
                 - message: .spec.enableHTTP3 cannot be enabled when inlet is HostPortWithProxyProtocol or LoadBalancerWithProxyProtocol
                   rule: "!((has(self.enableHTTP3) && self.enableHTTP3 == true) && self.inlet in ['HostPortWithProxyProtocol', 'LoadBalancerWithProxyProtocol'])"
                 - message: '"enableIstioSidecar" cannot be enabled when "inlet" is "HostWithFailover".'

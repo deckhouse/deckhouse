@@ -23,7 +23,7 @@ final: false
 git:
   - url: {{ $.SOURCE_REPO }}/dexidp/dex.git
     to: /src
-    tag: v2.44.0
+    tag: v{{ include "get_oss_version_by_id" (list "dex" $ ) }}
     stageDependencies:
       install:
         - '**/*.go'

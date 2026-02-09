@@ -28,12 +28,17 @@ import (
 
 type AuthorizationV1alpha1Interface interface {
 	RESTClient() rest.Interface
+	AccessibleNamespacesGetter
 	BulkSubjectAccessReviewsGetter
 }
 
 // AuthorizationV1alpha1Client is used to interact with features provided by the authorization.deckhouse.io group.
 type AuthorizationV1alpha1Client struct {
 	restClient rest.Interface
+}
+
+func (c *AuthorizationV1alpha1Client) AccessibleNamespaces() AccessibleNamespaceInterface {
+	return newAccessibleNamespaces(c)
 }
 
 func (c *AuthorizationV1alpha1Client) BulkSubjectAccessReviews() BulkSubjectAccessReviewInterface {

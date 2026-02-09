@@ -249,7 +249,7 @@ func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.Met
 
 	bootstrapNewNodeGroups := operations.ParallelCreateNodeGroup
 	if operations.IsSequentialNodesBootstrap() || metaConfig.ProviderName == "vcd" {
-		// vcd doesn't support parrallel creating nodes in same vapp
+		// vcd doesn't support parallel creating nodes in same vapp
 		// https://github.com/vmware/terraform-provider-vcd/issues/530
 		bootstrapNewNodeGroups = operations.BootstrapSequentialTerraNodes
 	}

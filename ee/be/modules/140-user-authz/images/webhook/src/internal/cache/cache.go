@@ -130,7 +130,7 @@ func (c *NamespacedDiscoveryCache) Check() error {
 			return false, fmt.Errorf("check Kubernetes API create request: %w", err)
 		}
 
-		if _, err := c.execRequest(req, "check API", nil); err != nil {
+		if err := c.execRequest(req, "check API", nil); err != nil {
 			return true, err
 		}
 		return false, nil
@@ -171,8 +171,7 @@ func (c *NamespacedDiscoveryCache) initClient() {
 
 func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Request) error {
 	var groupedResp Response
-	_, err := c.execRequest(req, "renew namespaced cache", &groupedResp)
-	if err != nil {
+	if err := c.execRequest(req, "renew namespaced cache", &groupedResp); err != nil {
 		return err
 	}
 
@@ -220,8 +219,7 @@ func (c *NamespacedDiscoveryCache) getAvailableAPIGroupVerionsInDescendingOrder(
 		}
 
 		var apiGroupVersions APIGroupResponse
-		_, err = c.execRequest(req, "request available apigroup versions", &apiGroupVersions)
-		if err != nil {
+		if err = c.execRequest(req, "request available apigroup versions", &apiGroupVersions); err != nil {
 			return true, fmt.Errorf("request available apigroup verions: %w", err)
 		}
 
@@ -256,8 +254,7 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource strin
 			}
 
 			var apiResourceList APIResourceList
-			_, err = c.execRequest(req, "request list of resources", &apiResourceList)
-			if err != nil {
+			if err = c.execRequest(req, "request list of resources", &apiResourceList); err != nil {
 				return true, fmt.Errorf("request list of resources: %w", err)
 			}
 
@@ -330,8 +327,7 @@ func (c *NamespacedDiscoveryCache) requestCoreResources() (CoreResourcesDict, er
 		}
 
 		var apiResourceList APIResourceList
-		_, err = c.execRequest(req, "request list of core resources", &apiResourceList)
-		if err != nil {
+		if err = c.execRequest(req, "request list of core resources", &apiResourceList); err != nil {
 			return true, fmt.Errorf("request list of core resources: %w", err)
 		}
 
@@ -433,34 +429,34 @@ func (c *NamespacedDiscoveryCache) isEntryExpired(e *cacheEntry) bool {
 	return c.now().After(e.AddTime.Add(e.TTL))
 }
 
-func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string, result interface{}) (string, error) {
+func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string, result interface{}) error {
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return "", fmt.Errorf("%s: requesting error: %w", logTag, err)
+		return fmt.Errorf("%s: requesting error: %w", logTag, err)
 	}
 
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", fmt.Errorf("%s: decoding response error: %w", logTag, err)
+		return fmt.Errorf("%s: decoding response error: %w", logTag, err)
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return "", ErrNotFound
+		return ErrNotFound
 	}
 
 	if resp.StatusCode/100 > 2 {
-		return "", fmt.Errorf("%s: kube response error: %d %s", logTag, resp.StatusCode, respBody)
+		return fmt.Errorf("%s: kube response error: %d %s", logTag, resp.StatusCode, respBody)
 	}
 
 	if result != nil {
 		if err := json.Unmarshal(respBody, result); err != nil {
-			return "", fmt.Errorf("%s: failed to unmarshal response: %w", logTag, err)
+			return fmt.Errorf("%s: failed to unmarshal response: %w", logTag, err)
 		}
 	}
 
-	return string(respBody), nil
+	return nil
 }
 
 // Resource is a single entry of the /apis/.../... endpoint response.

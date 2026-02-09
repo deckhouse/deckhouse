@@ -1,0 +1,115 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  name: test-app
+  namespace: foobar
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.1
+    uid: old-apv-uid
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackage
+    name: test
+    uid: ap-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: Processed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  labels:
+    heritage: deckhouse
+  name: test
+  uid: ap-uid
+status:
+  availableRepositories:
+    - deckhouse
+  usedBy:
+    - name: test-app
+      namespace: foobar
+      version: v1.0.1
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  labels:
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  uid: old-apv-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsEnriched
+  packageMetadata:
+    category: Misc
+    description:
+      en: example — test
+      ru: example — test
+    requirements:
+      deckhouse: '>=1.0.0'
+      kubernetes: '>=1.26'
+    stage: Preview
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.2
+  labels:
+    packages.deckhouse.io/package: test
+    packages.deckhouse.io/repository: deckhouse
+  uid: new-apv-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsEnriched
+  packageMetadata:
+    category: Misc
+    description:
+      en: example — test
+      ru: example — test
+    requirements:
+      deckhouse: '>=1.0.0'
+      kubernetes: '>=1.26'
+    stage: Preview
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCFG: test-docker-cfg
+    ca: test-ca

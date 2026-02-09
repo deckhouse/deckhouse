@@ -142,7 +142,8 @@ func (e *Exporter) fetchConstraints(clientGVR controllerClient.Client) ([]gateke
 		return nil, err
 	}
 
-	allMetrics := make([]prometheus.Metric, 0)
+	// Preallocate: at least 1 metric per constraint (constraint info) plus some violations.
+	allMetrics := make([]prometheus.Metric, 0, len(constraints))
 	violationMetrics := gatekeeper.ExportViolations(constraints)
 	allMetrics = append(allMetrics, violationMetrics...)
 

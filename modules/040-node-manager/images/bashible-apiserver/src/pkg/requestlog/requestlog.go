@@ -17,8 +17,6 @@ limitations under the License.
 package requestlog
 
 import (
-	"bashible-apiserver/pkg/apis/bashible"
-	"bashible-apiserver/pkg/util"
 	"context"
 	"net"
 	"net/http"
@@ -28,15 +26,18 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/klog/v2"
+
+	"bashible-apiserver/pkg/apis/bashible"
+	"bashible-apiserver/pkg/util"
 )
 
 type contextKey string
 
 const (
 	requestIDKey       contextKey = "bashible-request-id"
-	checksumAnnotation            = "bashible.deckhouse.io/configuration-checksum"
-	bashibles_uri                 = "/apis/bashible.deckhouse.io"
-	bashibleAPIGroup              = "bashible.deckhouse.io"
+	checksumAnnotation string     = "bashible.deckhouse.io/configuration-checksum"
+	bashiblesURI       string     = "/apis/bashible.deckhouse.io"
+	bashibleAPIGroup   string     = "bashible.deckhouse.io"
 )
 
 func WithRequestLogging(next http.Handler) http.Handler {
