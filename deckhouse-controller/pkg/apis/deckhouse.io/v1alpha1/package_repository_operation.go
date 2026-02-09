@@ -173,8 +173,8 @@ type PackageRepositoryOperationStatusFailedPackage struct {
 }
 
 type PackageRepositoryOperationStatusFailedPackageError struct {
-	// Name of the error.
-	Name string `json:"name"`
+	// Version of the package that failed.
+	Version string `json:"version"`
 
 	// Error message.
 	Error string `json:"error"`
