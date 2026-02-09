@@ -319,14 +319,28 @@ var _ = Describe("Module :: cloud-provider-openstack :: helm template ::", func(
 	f := SetupHelmConfig(``)
 
 	BeforeSuite(func() {
-		_ = os.Remove("/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
-		err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
+		if info, err := os.Lstat(candiPath); err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				_ = os.Remove(candiPath)
+			} else {
+				_ = os.RemoveAll(candiPath)
+			}
+		}
+		err := os.Symlink("/deckhouse/ee/candi/cloud-providers/openstack", candiPath)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		_ = os.Remove("/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
-		err := os.Symlink("/deckhouse/candi/cloud-providers/openstack", "/deckhouse/ee/modules/030-cloud-provider-openstack/candi")
+		candiPath := "/deckhouse/ee/modules/030-cloud-provider-openstack/candi"
+		if info, err := os.Lstat(candiPath); err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				_ = os.Remove(candiPath)
+			} else {
+				_ = os.RemoveAll(candiPath)
+			}
+		}
+		err := os.Symlink("/deckhouse/candi/cloud-providers/openstack", candiPath)
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
