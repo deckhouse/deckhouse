@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', function () {
-    const channelListTitle = document.querySelectorAll('.channel__list--title');
-    const channelListDescr = document.querySelectorAll('.channel__list--descr');
+    const channelListTitle = document.querySelectorAll('.channel__item--title');
+    const channelListDescr = document.querySelectorAll('.channel__item--descr');
 
     if (!channelListTitle.length || !channelListDescr.length) return;
 

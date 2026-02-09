@@ -1,71 +1,85 @@
 @use "components/common/_variables.scss";
+@use "components/common/_mixins";
+@use 'components/common/_breakpoints.scss';
 
 .channel__list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 32px;
     padding: 0;
     margin: 0;
-    margin-top: 26px;
+    margin-top: 30px;
 
-    &--container_title {
-        display: flex;
-        gap: 40px;
-        margin: 0;
-
-        &::before {
-            content: none !important;
-        }
+    @include breakpoints.max-w(xxl) {
+        gap: 24px;
     }
 
-    &--title {
-        padding: 0 8px !important;
-        margin: 0 !important;
-        margin-bottom: 22px;
-        color: #5E6697;
-        font-size: 18px;
-        font-weight: 600;
-        cursor: pointer;
+    .channel__container {
+        margin: 0;
 
-        &::before {
-            content: none !important;
-        }
+        &--title {
+            display: flex;
+            gap: 40px;
 
-        &.active {
-            color: #00122C;
-
-            &::after {
-                content: "";
-                position: absolute;
-                width: 100%;
-                bottom: -3px;
-                left: 0;
-                border: 1px solid #00122C;
+            @include breakpoints.max-w(xxl) {
+                gap: 16px;
             }
         }
     }
 
-    &--descr {
-        position: absolute;
-        display: none;
-        width: 572px;
-        padding: 0;
+    .channel__item {
         margin: 0 !important;
-        opacity: 0;
-        height: 0;
-        overflow: hidden;
-        transition: opacity 0.3s ease-in-out;
-        color: #00122C;
-        font-size: 14px;
-        font-weight: 400;
-        line-height: 24px;
-        letter-spacing: 0.3px;
 
-        &.active {
-            display: block;
-            opacity: 1;
-            height: auto;
-            padding: 10px 0;
+        &::before {
+            content: none !important;
+        }
+
+        &--title {
+            padding: 0 8px !important;
+            margin-bottom: 22px;
+            color: #5E6697;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+
+            &.active {
+                color: #00122C;
+
+                &::after {
+                    content: "";
+                    position: absolute;
+                    width: 100%;
+                    bottom: -3px;
+                    left: 0;
+                    border: 1px solid #00122C;
+                }
+            }
+        }
+
+        &--descr {
+            display: none;
+            width: 572px;
+            padding: 0 !important;
+            opacity: 0;
+            height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease-in-out;
+            color: #00122C;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 24px;
+            letter-spacing: 0.3px;
+
+            @include breakpoints.max-w(xxl) {
+                width: 478px;
+                letter-spacing: -0.3px;
+            }
+
+            &.active {
+                display: block;
+                opacity: 1;
+                height: auto;
+            }
         }
     }
 }
