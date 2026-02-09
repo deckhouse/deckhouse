@@ -57,6 +57,8 @@ spec:
           runAsUser: 0
           runAsGroup: 0
         volumeMounts:
+        - name: tmp
+          mountPath: /tmp
         - name: host-proc
           mountPath: /host/proc
           readOnly: true
@@ -78,6 +80,8 @@ spec:
         - name: host-var-lib-cni
           mountPath: /var/lib/cni
       volumes:
+      - name: tmp
+        emptyDir: {}
       - name: host-proc
         hostPath:
           path: /proc
