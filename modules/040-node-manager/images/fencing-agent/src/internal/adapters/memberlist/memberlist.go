@@ -16,12 +16,27 @@ import (
 )
 
 type Config struct {
-	MemberListPort uint `env:"MEMBERLIST_PORT" env-default:"8500"`
+	MemberListPort      uint          `env:"MEMBERLIST_PORT" env-default:"8500"`
+	ProbeInterval       time.Duration `env:"PROBE_INTERVAL" env-default:"500ms"`
+	ProbeTimeout        time.Duration `env:"PROBE_TIMEOUT" env-default:"200ms"`
+	SuspicionMult       uint          `env:"SUSPICION_MULT" env-default:"2"`
+	IndirectChecks      uint          `env:"INDIRECT_CHECKS" env-default:"3"`
+	GossipInterval      time.Duration `env:"GOSSIP_INTERVAL" env-default:"200ms"`
+	RetransmitMult      uint          `env:"RETRANSMIT_MULT" env-default:"4"`
+	GossipToTheDeadTime time.Duration `env:"GOSSIP_TO_THE_DEAD_TIME" env-default:"2s"`
 }
 
 func (c *Config) Validate() error {
 	if c.MemberListPort == 0 {
 		return errors.New("MEMBERLIST_PORT env var is empty")
+	}
+
+	if c.SuspicionMult == 0 {
+		return errors.New("SUSPICION_MULT env var must be greater than zero")
+	}
+
+	if c.ProbeTimeout >= c.ProbeInterval {
+		return errors.New("PROBE_TIMEOUT env var must be less than probe interval")
 	}
 	return nil
 }
@@ -64,6 +79,15 @@ func New(
 	config.Events = eventHandler
 
 	config.LogOutput = logger.NewLogWriter(log)
+
+	// gossip config
+	config.ProbeInterval = cfg.ProbeInterval
+	config.ProbeTimeout = cfg.ProbeTimeout
+	config.SuspicionMult = int(cfg.SuspicionMult)
+	config.IndirectChecks = int(cfg.IndirectChecks)
+	config.GossipInterval = cfg.GossipInterval
+	config.RetransmitMult = int(cfg.RetransmitMult)
+	config.GossipToTheDeadTime = cfg.GossipToTheDeadTime
 
 	list, err := memberlist.Create(config)
 	if err != nil {
