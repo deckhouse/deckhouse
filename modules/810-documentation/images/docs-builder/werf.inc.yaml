@@ -1,2 +1,3 @@
 {{- $context := . }}
 {{ tpl (.Files.Get (printf "%sdocs/site/werf-docs-builder.inc.yaml" .ModulePath)) $context }}
+{{- include "vex mitigation" (list . (printf "%s/%s" .ModuleName .ImageName)) }}

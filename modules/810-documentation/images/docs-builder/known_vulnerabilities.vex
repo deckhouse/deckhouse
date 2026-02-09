@@ -1,0 +1,84 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-documentation-docsbuilder-2026",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61726"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.24.3"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в Go standard library (CVE-2025-61726). Затронутый функционал не вызывается в путях выполнения сервиса docs-builder. Сервис предназначен для сборки документации из доверенных исходников и не обрабатывает недоверенный ввод в контексте уязвимого кода.",
+      "timestamp": "2026-02-09T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61728"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.24.3"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в Go standard library (CVE-2025-61728). Затронутый функционал не вызывается в путях выполнения сервиса docs-builder. Сервис предназначен для сборки документации из доверенных исходников и не обрабатывает недоверенный ввод в контексте уязвимого кода.",
+      "timestamp": "2026-02-09T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-61730"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Go crypto/tls — обработка сообщений TLS 1.3 handshake на границах уровней шифрования. Эксплуатация требует возможности внедрения сообщений в handshake из сети. Сервис docs-builder работает во внутренней инфраструктуре; сценарии атаки с инъекцией в handshake и последующим раскрытием информации не применимы в рамках эксплуатационной модели.",
+      "timestamp": "2026-02-09T12:00:00.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-68121"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        },
+        {
+          "@id": "pkg:golang/stdlib@v1.25.6"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость в Go standard library (CVE-2025-68121). Затронутый функционал не вызывается в путях выполнения сервиса docs-builder. Сервис предназначен для сборки документации из доверенных исходников и не обрабатывает недоверенный ввод в контексте уязвимого кода.",
+      "timestamp": "2026-02-09T12:00:00.000000000Z"
+    }
+  ],
+  "timestamp": "2026-02-09T12:00:00Z",
+  "last_updated": "2026-02-09T12:00:00Z"
+}
