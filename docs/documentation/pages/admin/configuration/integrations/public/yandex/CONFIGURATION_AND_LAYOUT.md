@@ -531,7 +531,7 @@ To configure access, follow these steps:
      --public-address 178.154.226.159
    ```
    
-   > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+   > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
    Ensure the IP address specified in `--public-address` is accessible from your network and is correct.
 
