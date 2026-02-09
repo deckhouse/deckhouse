@@ -2,9 +2,10 @@ package kubeclient
 
 import (
 	"context"
-	"fencing-agent/internal/lib/logger/sl"
 
 	v1meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 func (c *Client) ShouldFeed(ctx context.Context) bool {

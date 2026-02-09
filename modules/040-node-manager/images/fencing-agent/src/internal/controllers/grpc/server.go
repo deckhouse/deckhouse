@@ -2,12 +2,14 @@ package grpc
 
 import (
 	"context"
-	"fencing-agent/internal/domain"
-	pb "fencing-agent/pkg/api/v1"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/domain"
+	pb "fencing-agent/pkg/api/v1"
 )
 
 type NodesGetter interface {

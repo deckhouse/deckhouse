@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+
 	"fencing-agent/internal/domain"
 )
 

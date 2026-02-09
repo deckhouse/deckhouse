@@ -9,12 +9,13 @@ package usecase
 
 import (
 	"context"
-	"fencing-agent/internal/lib/backoff"
-	"fencing-agent/internal/lib/logger/sl"
 	"sync"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/lib/backoff"
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 const (
@@ -118,11 +119,9 @@ func (h *HealthMonitor) check(ctx context.Context) {
 	defer h.mu.Unlock()
 
 	if h.watcher.IsMaintenanceMode() {
-
 		h.logger.Info("node is in maintenance mode")
 
 		if h.watchdog.IsArmed() {
-
 			h.logger.Info("node is in maintenance mode, watchdog is armed, disarming watchdog")
 
 			err := h.stopWatchdog(ctx)

@@ -21,7 +21,7 @@ func NewLogWriter(logger *log.Logger) *LogWriter {
 	return &LogWriter{logger: logger}
 }
 
-func (lw *LogWriter) Write(p []byte) (n int, err error) {
+func (lw *LogWriter) Write(p []byte) (int, error) {
 	msg := strings.TrimSpace(string(bytes.TrimRight(p, "\n")))
 	if msg == "" {
 		return len(p), nil

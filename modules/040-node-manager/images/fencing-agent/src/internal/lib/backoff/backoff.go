@@ -2,12 +2,13 @@ package backoff
 
 import (
 	"context"
-	"fencing-agent/internal/lib/logger/sl"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 func Wrap(ctx context.Context, log *log.Logger, triesLimit int, moduleName string, f func() error) func() error {
@@ -40,5 +41,4 @@ func Wrap(ctx context.Context, log *log.Logger, triesLimit int, moduleName strin
 		}
 		return err
 	}
-
 }

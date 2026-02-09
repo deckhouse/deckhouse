@@ -3,14 +3,16 @@ package memberlist
 import (
 	"context"
 	"errors"
+	"time"
+
+	"github.com/hashicorp/memberlist"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/lib/backoff"
 	"fencing-agent/internal/lib/logger"
 	"fencing-agent/internal/lib/logger/sl"
-	"time"
-
-	"github.com/deckhouse/deckhouse/pkg/log"
-	"github.com/hashicorp/memberlist"
 )
 
 type Config struct {
@@ -45,7 +47,6 @@ func New(
 	eventHandler EventHandler,
 	receiver NodesNumberReceiver,
 ) (*Memberlist, error) {
-
 	config := memberlist.DefaultLANConfig()
 
 	config.Name = nodeName

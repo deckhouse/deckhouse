@@ -2,13 +2,15 @@ package memberlist
 
 import (
 	"encoding/json"
-	"fencing-agent/internal/domain"
-	"fencing-agent/internal/lib/logger/sl"
 	"log/slog"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/hashicorp/memberlist"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"fencing-agent/internal/domain"
+	"fencing-agent/internal/lib/logger/sl"
 )
 
 // NodesNumberReceiver is called when a NodesNumber message is received
@@ -22,7 +24,7 @@ type simpleBroadcast struct {
 	notify chan struct{}
 }
 
-func (b *simpleBroadcast) Invalidates(other memberlist.Broadcast) bool {
+func (b *simpleBroadcast) Invalidates(_ memberlist.Broadcast) bool {
 	return false
 }
 
@@ -86,7 +88,7 @@ func (d *Delegate) BroadcastNodesNumber(totalNodes int) {
 }
 
 // NodeMeta returns metadata about this node (not used)
-func (d *Delegate) NodeMeta(limit int) []byte {
+func (d *Delegate) NodeMeta(_ int) []byte {
 	return nil
 }
 
@@ -117,10 +119,10 @@ func (d *Delegate) GetBroadcasts(overhead, limit int) [][]byte {
 }
 
 // LocalState is used for TCP push/pull state exchange (not used)
-func (d *Delegate) LocalState(join bool) []byte {
+func (d *Delegate) LocalState(_ bool) []byte {
 	return nil
 }
 
 // MergeRemoteState handles state received from remote nodes (not used)
-func (d *Delegate) MergeRemoteState(buf []byte, join bool) {
+func (d *Delegate) MergeRemoteState(_ []byte, _ bool) {
 }
