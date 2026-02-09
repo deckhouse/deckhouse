@@ -95,9 +95,8 @@ func (b *ClusterBootstrapper) CreateResources(ctx context.Context) error {
 		}
 
 		if len(firstQueueResources) > 0 {
-			log.Process("Create resources", "Waiting for NodeGroups", func() error {
-				err = resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
-				return err
+			_ = log.Process("Create resources", "Waiting for NodeGroups", func() error {
+				return resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
 			})
 		}
 

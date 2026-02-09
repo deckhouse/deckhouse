@@ -537,7 +537,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
 		},
 		State: bootstrapState,
 	}
@@ -589,7 +589,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult, false)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -747,7 +747,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
@@ -787,9 +787,8 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 		}
 
 		if len(firstQueueResources) > 0 {
-			log.Process("Create resources", "Waiting for NodeGroups", func() error {
-				err = resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
-				return err
+			_ = log.Process("Create resources", "Waiting for NodeGroups", func() error {
+				return resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
 			})
 		}
 

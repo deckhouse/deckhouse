@@ -201,7 +201,7 @@ func (n *clusterIsBootstrapCheck) outputNodeGroups(ctx context.Context) string {
 			fmt.Sprint(stat.Instances),
 			fmt.Sprint(stat.Desired),
 			stat.Error)
-		out = out + o
+		out += o
 	}
 
 	return strings.TrimSuffix(out, "\n")
@@ -260,7 +260,7 @@ func (n *clusterIsBootstrapCheck) IsReady(ctx context.Context) (bool, error) {
 	}
 
 	if len(n.outputNodeGroups(ctx)) > 0 {
-		logger.LogProcess("Create Resources", "NodeGroups status", func() error {
+		_ = logger.LogProcess("Create Resources", "NodeGroups status", func() error {
 			logger.LogInfoLn(n.outputNodeGroups(ctx))
 			return nil
 		})

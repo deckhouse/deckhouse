@@ -213,16 +213,6 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 		return err
 	}
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(c.resources))
-	for _, resource := range c.resources {
-		key := resource.GVK.String()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
-		}
-	}
-
 	for _, task := range c.mcTasks {
 		err := c.runSingleMCTask(ctx, task)
 		if err != nil {
@@ -330,7 +320,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 		}
 	}
 
-	log.Process("Create Resources", "Resources to create", func() error {
+	_ = log.Process("Create Resources", "Resources to create", func() error {
 		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
 		return nil
 	})
