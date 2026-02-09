@@ -313,7 +313,7 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	gvks := make(map[string]struct{})
 	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
 	for _, resource := range resourceCreator.resources {
-		key := resource.GVK.String()
+		key := resource.DetailedGVKString()
 		if _, ok := gvks[key]; !ok {
 			gvks[key] = struct{}{}
 			resourcesToCreate = append(resourcesToCreate, key)

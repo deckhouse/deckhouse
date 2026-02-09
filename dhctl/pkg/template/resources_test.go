@@ -155,3 +155,29 @@ func TestGetCloudNGs(t *testing.T) {
 		require.Len(t, otherres, 10)
 	})
 }
+
+func TestResourcesDetailedGVKString(t *testing.T) {
+	t.Run("returns group if not empty", func(t *testing.T) {
+		cases := []struct {
+			title    string
+			resource Resource
+			expected string
+		}{
+			{
+				title:    "with group",
+				resource: Resource{GVK: schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}, Object: unstructured.Unstructured{}},
+				expected: "Group=deckhouse.io, ApiVersion=v1, Kind=NodeGroup",
+			},
+			{
+				title:    "without group",
+				resource: Resource{GVK: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}, Object: unstructured.Unstructured{}},
+				expected: "ApiVersion=v1, Kind=Namespace",
+			},
+		}
+		for _, c := range cases {
+			t.Run(c.title, func(t *testing.T) {
+				require.Equal(t, c.expected, c.resource.DetailedGVKString())
+			})
+		}
+	})
+}

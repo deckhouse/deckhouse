@@ -85,6 +85,14 @@ func (r *Resource) String() string {
 	return fmt.Sprintf("%s - %s/%s", r.GVK.String(), r.Object.GetNamespace(), r.Object.GetName())
 }
 
+func (r *Resource) DetailedGVKString() string {
+	group := ""
+	if r.GVK.Group != "" {
+		group = "Group=" + r.GVK.Group + ", "
+	}
+	return group + "ApiVersion=" + r.GVK.Version + ", Kind=" + r.GVK.Kind
+}
+
 type Resources []*Resource
 
 func (r Resources) Len() int {
