@@ -12,3 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Validate that required DVP resources exist before proceeding with cluster bootstrap.
+# This module will fail fast with clear error messages if VirtualMachineClass or boot images
+# are not found in the parent DVP cluster, preventing VM creation from getting stuck in Pending state.
+module "validation" {
+  source = "../../../terraform-modules/validation"
+
+  namespace                  = local.namespace
+  virtual_machine_class_name = local.virtual_machine_class_name
+  image_kind                 = local.root_disk_image.kind
+  image_name                 = local.root_disk_image.name
+}
