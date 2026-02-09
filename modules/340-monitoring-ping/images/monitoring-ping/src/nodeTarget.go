@@ -136,7 +136,7 @@ func createInformer(cfgMapName, namespace string, handler func(interface{}), cli
 	)
 
 	informer := cache.NewSharedInformer(lw, &v1.ConfigMap{}, 0)
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    handler,
 		UpdateFunc: func(_, obj interface{}) { handler(obj) },
 		DeleteFunc: func(obj interface{}) {
