@@ -16,11 +16,6 @@ limitations under the License.
 
 package hooks
 
-import (
-	"github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
-)
+import "github.com/deckhouse/deckhouse/go_lib/hooks/ensure_crds"
 
-// Ensure Dex Kubernetes storage CRDs shipped under crds/external/.
-// The default module CRD loader is non-recursive (crds/*.yaml), so we explicitly apply external CRDs.
 var _ = ensure_crds.RegisterEnsureCRDsHook("/deckhouse/modules/150-user-authn/crds/external/*.yaml")
-
