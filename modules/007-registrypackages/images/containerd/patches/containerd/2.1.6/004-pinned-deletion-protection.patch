@@ -1,7 +1,7 @@
-diff --git internal/cri/server/images/image_remove.go internal/cri/server/images/image_remove.go
+diff --git a/internal/cri/server/images/image_remove.go b/internal/cri/server/images/image_remove.go
 index 1e1d7d900..067d4b507 100644
---- internal/cri/server/images/image_remove.go
-+++ internal/cri/server/images/image_remove.go
+--- a/internal/cri/server/images/image_remove.go
++++ b/internal/cri/server/images/image_remove.go
 @@ -53,6 +53,11 @@ func (c *CRIImageService) RemoveImage(ctx context.Context, imageSpec *runtime.Im
  		}
  		return fmt.Errorf("can not resolve %q locally: %w", imageSpec.GetImage(), err)
@@ -14,10 +14,10 @@ index 1e1d7d900..067d4b507 100644
  	span.SetAttributes(tracing.Attribute("image.id", image.ID))
  	// Remove all image references.
  	for i, ref := range image.References {
-diff --git plugins/services/images/local.go plugins/services/images/local.go
+diff --git a/plugins/services/images/local.go b/plugins/services/images/local.go
 index 9e98df3e7..abaa1ec11 100644
---- plugins/services/images/local.go
-+++ plugins/services/images/local.go
+--- a/plugins/services/images/local.go
++++ b/plugins/services/images/local.go
 @@ -31,6 +31,7 @@ import (
  
  	"github.com/containerd/containerd/v2/core/images"
