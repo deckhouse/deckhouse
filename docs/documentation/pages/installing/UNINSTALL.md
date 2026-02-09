@@ -43,7 +43,7 @@ Perform the following steps to delete a cluster deployed with a cloud provider
 
    ```shell
    dhctl destroy --ssh-user=<USER> \
-     --ssh-agent-private-keys=/tmp/.ssh/ \
+     --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> \
      --yes-i-am-sane-and-i-understand-what-i-am-doing \
      --ssh-host=<MASTER_IP>
    ```
