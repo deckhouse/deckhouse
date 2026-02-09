@@ -239,7 +239,7 @@ func (exp *Exporter) watchIngressGateways(ctx context.Context) {
 	}
 }
 
-func extractLoadBalancerInfo(services *v1.ServiceList) ([]IngressGateway, error) {
+func extractLoadBalancerInfo(services *v1.ServiceList) []IngressGateway {
 	var gateways = make([]IngressGateway, 0, len(services.Items))
 
 	for _, svc := range services.Items {
@@ -268,7 +268,7 @@ func extractLoadBalancerInfo(services *v1.ServiceList) ([]IngressGateway, error)
 		}
 	}
 
-	return gateways, nil
+	return gateways
 }
 
 func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeList) ([]IngressGateway, error) {
@@ -382,10 +382,7 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 
 	switch inlet {
 	case "LoadBalancer":
-		ingressGatewaysLoadBalancer, err := extractLoadBalancerInfo(serviceList)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract load balancer info: %w", err)
-		}
+		ingressGatewaysLoadBalancer := extractLoadBalancerInfo(serviceList)
 		fmt.Printf("ingressGatewaysLoadBalancer=%+v\n", ingressGatewaysLoadBalancer)
 		ingressGateways = append(ingressGateways, ingressGatewaysLoadBalancer...)
 
@@ -430,7 +427,7 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 }
 
 // GetPublicServices main function for federation to get public services
-func (exp *Exporter) GetPublicServices() ([]PublicServices, error) {
+func (exp *Exporter) GetPublicServices() []PublicServices {
 	services := exp.publicServiceInformer.GetStore().List()
 	clusterDomain := exp.clusterDomain
 	result := make([]PublicServices, 0, len(services))
@@ -449,7 +446,7 @@ func (exp *Exporter) GetPublicServices() ([]PublicServices, error) {
 		result = append(result, serviceInfo)
 	}
 
-	return result, nil
+	return result
 }
 
 // SpiffeBundleJSON create JSON Spiffe Bundle
@@ -570,7 +567,7 @@ func (exp *Exporter) ExtractRootCaCert() (string, error) {
 		return "", fmt.Errorf("ConfigMap does not contain root-cert.pem")
 	}
 
-	pubKey := string(rootCAPem)
+	pubKey := rootCAPem
 
 	return pubKey, nil
 }
@@ -677,10 +674,7 @@ func (exp *Exporter) RenderFederationPrivateMetadataJSON() string {
 	pm.IngressGateways = &ingressGateways
 
 	if exp.federationEnabled == "true" {
-		services, err := exp.GetPublicServices()
-		if err != nil {
-			fmt.Printf("failed to get public services: %v", err)
-		}
+		services := exp.GetPublicServices()
 		pm.PublicServices = &services
 	}
 

@@ -20,7 +20,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"golang.org/x/sys/unix"
 	"log"
 	"net"
 	"os"
@@ -30,6 +29,7 @@ import (
 
 	"github.com/coreos/go-iptables/iptables"
 	"github.com/vishvananda/netlink"
+	"golang.org/x/sys/unix"
 )
 
 type iptablesRule struct {
@@ -212,7 +212,7 @@ func mknodDevNetTun() error {
 		}
 	}
 
-	command := fmt.Sprintf("/bin/mknod")
+	command := "/bin/mknod"
 	args := []string{
 		"/dev/net/tun",
 		"c",
