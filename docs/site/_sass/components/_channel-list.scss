@@ -10,7 +10,7 @@
     &--container_title {
         display: flex;
         gap: 40px;
-
+        margin: 0;
 
         &::before {
             content: none !important;
@@ -18,7 +18,7 @@
     }
 
     &--title {
-        padding: 0 !important;
+        padding: 0 8px !important;
         margin: 0 !important;
         margin-bottom: 22px;
         color: #5E6697;
@@ -36,8 +36,8 @@
             &::after {
                 content: "";
                 position: absolute;
-                width: calc(100% + 8px);
-                bottom: -10px;
+                width: 100%;
+                bottom: -8px;
                 left: 0;
                 border: 1px solid #00122C;
             }
