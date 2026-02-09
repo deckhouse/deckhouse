@@ -659,7 +659,7 @@ Example of using a preflight skip flag:
       --preflight-skip-all-checks
   ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa`, and for a key with ED25519 encryption, it will be with `id_ed25519`.
 
 {% endofftopic %}
 
