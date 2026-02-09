@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "urn:deckhouse:vex:3a4f910385960098934503700078170889218760057250688085605068848460",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 2,
+  "version": 3,
   "statements": [
     {
       "vulnerability": {
@@ -48,7 +48,22 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "TLS information disclosure - Эксплуатация уязвимости раскрытия информации в TLS-стеке библиотеки Go stdlib версии 1.25.5 требует специфических условий и высокой сложности атаки, которые отсутствуют в рамках текущей конфигурации развертывания. Вектор атаки признан непрактичным, так как уязвимый код эффективно изолирован от контроля со стороны злоумышленника.",
       "timestamp": "2026-02-03T10:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-68121",
+        "description": "Improper Certificate Validation (CWE-295) in crypto/tls"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.5"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "component_not_present",
+      "impact_statement": "Improper Certificate Validation - Приложение docs-builder используется для генерации статического контента и не выполняет исходящих TLS-соединений к недоверенным внешним ресурсам в процессе сборки. Проверка сертификатов делегирована системным механизмам среды CI/CD, что исключает влияние данной уязвимости на безопасность артефакта.",
+      "timestamp": "2026-02-09T16:00:00Z"
     }
   ],
-  "timestamp": "2026-02-03T10:00:00Z"
+  "timestamp": "2026-02-09T16:00:00Z"
 }
