@@ -117,7 +117,7 @@ git:
   - excluded_modules.json
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-fromImage: builder/golang-bookworm
+fromImage: builder/golang-alpine
 final: false
 mount:
 {{ include "mount points for golang builds" . }}
