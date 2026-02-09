@@ -121,10 +121,30 @@ func (c *ControllerService) CreateVolume(
 
 	if len(disks.Items) == 1 {
 		disk := disks.Items[0]
-		diskCapacity, err := utils.ConvertStringQuantityToInt64(disk.Status.Capacity)
+
+		capacityStr := disk.Status.Capacity
+		if capacityStr == "" {
+			if requiredSize <= 0 {
+				return nil, status.Errorf(
+					codes.Internal,
+					"disk %q exists but capacity is not reported yet (phase=%s) and requested size is %d",
+					disk.Name, disk.Status.Phase, requiredSize,
+				)
+			}
+
+			result.Volume.VolumeId = disk.Name
+			result.Volume.CapacityBytes = requiredSize
+			return result, nil
+		}
+
+		diskCapacity, err := utils.ConvertStringQuantityToInt64(capacityStr)
 		if err != nil {
 			klog.Error(err.Error())
-			return nil, status.Errorf(codes.Internal, "failed to parse existing disk capacity for %q: %v", disk.Name, err)
+			return nil, status.Errorf(
+				codes.Internal,
+				"failed to parse existing disk capacity for %q (capacity=%q): %v",
+				disk.Name, capacityStr, err,
+			)
 		}
 
 		if requiredSize > 0 && diskCapacity > 0 && requiredSize > diskCapacity {
@@ -139,7 +159,6 @@ func (c *ControllerService) CreateVolume(
 		result.Volume.CapacityBytes = diskCapacity
 		return result, nil
 	}
-
 	disk, err := c.dvpCloudAPI.DiskService.CreateDisk(
 		ctx,
 		c.clusterUUID,
