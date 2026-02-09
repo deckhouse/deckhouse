@@ -245,11 +245,7 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 	return nil
 }
 
-func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, error) {
-	return isNamespaced(c.kubeCl, gvk, name)
-}
-
-func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
+func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured) {
 	doc := resource.Object
 
 	gvr := &schema.GroupVersionResource{
@@ -268,16 +264,13 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 	docCopy.SetNamespace(namespace)
 
-	return gvr, docCopy, nil
+	return gvr, docCopy
 }
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
-		gvr, docCopy, err := resourceToGVR(resource, apires)
-		if err != nil {
-			return err
-		}
+		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
@@ -301,7 +294,7 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		err = manifestTask.CreateOrUpdate()
+		err := manifestTask.CreateOrUpdate()
 		if err != nil {
 			if strings.Contains(err.Error(), "the server could not find the requested resource") {
 				c.kubeCl.InvalidateDiscoveryCache()

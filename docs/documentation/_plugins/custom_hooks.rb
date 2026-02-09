@@ -32,6 +32,13 @@ def insert_module_edition_block(page)
     page.content.prepend(additional_content) if page.content
 end
 
+def insert_module_oss_block(page)
+    # Inserts the module-oss.liquid block into the bottom of the module pages content.
+    additional_content = "\n\n{% include module-oss.liquid %}\n"
+
+    page.content << additional_content if page.content
+end
+
 # Inserts a block with the list of module web interfaces into the module pages content.
 def insert_module_webiface_block(page)
     additional_content = "\n{% include module-webiface-notice.liquid %}\n\n"
@@ -167,7 +174,7 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       page.data['module-kebab-name'] = moduleKebabCase
       page.data['module-snake-name'] = moduleSnakeCase
       page.data['sidebar'] = 'embedded-modules'
-      if  page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
+      if page.name && page.name.match?(/CONFIGURATION(\.ru|_RU)?\.md$/) then
         page.data['legacy-enabled-commands'] = %Q(#{moduleSnakeCase}Enabled)
       else
         page.data['module-index-page'] = true
@@ -178,17 +185,21 @@ Jekyll::Hooks.register :site, :pre_render do |site|
       insert_module_webiface_block(page)
     end
 
-    if page.data['module-kebab-name'] and !page.name.match?(/CR(\.ru|_RU)?\.md$/)
+    if page.data['module-kebab-name'] and page.name
       insert_module_stage_block(page)
 
       if page.name.match?(/^README(\.ru|_RU)?\.md$/i) ||
          page.name.match?(/^CONFIGURATION(\.ru|_RU)?\.md$/i)
         insert_module_edition_block(page)
       end
-    end
 
-    if page.data['module-kebab-name'] and page.name.match?(/CR(\.ru|_RU)?\.md$/)
-      insert_crd_warning_block(page)
+      if page.name.match?(/^README(\.ru|_RU)?\.md$/i)
+        insert_module_oss_block(page)
+      end
+
+      if page.name.match?(/CR(\.ru|_RU)?\.md$/)
+        insert_crd_warning_block(page)
+      end
     end
 
     next if page.name && ! ( page.name.end_with?('CR.md') or page.name.end_with?('CR_RU.md') or page.name.end_with?('CONFIGURATION.md') or page.name.end_with?('CONFIGURATION_RU.md') )

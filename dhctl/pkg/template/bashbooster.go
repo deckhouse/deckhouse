@@ -49,7 +49,7 @@ func RenderBashBooster(templatesDir string, data map[string]interface{}) (string
 				return "", fmt.Errorf("render template file '%s': %v", file.Name(), err)
 			}
 			// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
-			bashBoosterScriptContent = strings.TrimSuffix(string(rendered.Content.String()), "\n")
+			bashBoosterScriptContent = strings.TrimSuffix(rendered.Content.String(), "\n")
 		} else {
 			// BashBooster step can have no endline symbol at the end of the file. Tolerate this.
 			bashBoosterScriptContent = strings.TrimSuffix(string(fileContent), "\n")

@@ -71,7 +71,9 @@ func (op *Detacher) Detach(ctx context.Context) error {
 	if err := op.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
 		return err
 	}
-	defer op.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = op.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	_, _ = op.PhasedExecutionContext.StartPhase(phases.CommanderDetachCheckPhase, false, stateCache)
 

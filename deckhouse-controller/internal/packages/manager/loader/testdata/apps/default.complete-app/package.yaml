@@ -1,0 +1,8 @@
+name: complete-app
+type: Application
+version: v1.0.0
+descriptions:
+  en: Complete test application
+requirements:
+  kubernetes: ">=1.28"
+  deckhouse: ">=1.60"

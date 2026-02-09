@@ -40,6 +40,7 @@ git:
   add: /frameworks/shell
   to: /deckhouse/shell-operator/frameworks/shell
   {{ .Files.Get (printf "tools/build_includes/modules-%s.yaml" .Env) }}
+  {{ .Files.Get (printf "tools/build_includes/candi-cloud-providers-%s.yaml" .Env) }}
   {{ .Files.Get (printf "tools/build_includes/candi-%s.yaml" .Env) }}
 import:
 - image: deckhouse-controller-artifact

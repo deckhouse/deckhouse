@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	ErrCloudApiUnreachable = errors.New("could not reach Cloud API from master node")
+	ErrCloudAPIUnreachable = errors.New("could not reach Cloud API from master node")
 )
 
 func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
@@ -52,12 +52,12 @@ func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
 		return nil
 	}
 
-	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
+	proxyURL, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		return fmt.Errorf("get proxy config: %w", err)
 	}
 
-	cloudAPIConfig, err := getCloudApiConfigFromMetaConfig(pc.metaConfig)
+	cloudAPIConfig, err := getCloudAPIConfigFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		log.ErrorF("Cannot parse Cloud API Configuration: %v", err)
 		return err
@@ -67,11 +67,11 @@ func (pc *Checker) CheckCloudAPIAccessibility(ctx context.Context) error {
 		return nil
 	}
 
-	if proxyUrl == nil || shouldSkipProxyCheck(cloudAPIConfig.URL.Hostname(), noProxyAddresses) {
-		proxyUrl = nil
+	if proxyURL == nil || shouldSkipProxyCheck(cloudAPIConfig.URL.Hostname(), noProxyAddresses) {
+		proxyURL = nil
 		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), cloudAPIConfig.URL)
 	} else {
-		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
+		tun, err = setupSSHTunnelToProxyAddr(wrapper.Client(), proxyURL)
 	}
 	if err != nil {
 		return fmt.Errorf(`cannot setup tunnel to control-plane host: %w.
@@ -81,22 +81,21 @@ Please check connectivity to control-plane host and that the sshd config paramet
 	defer cancel()
 	defer tun.Stop()
 
-	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudAPIConfig, proxyUrl)
+	resp, err := executeHTTPRequest(ctx, http.MethodGet, cloudAPIConfig, proxyURL)
 
 	if err != nil {
 		log.ErrorF("Error while accessing Cloud API: %v", err)
-		return ErrCloudApiUnreachable
+		return ErrCloudAPIUnreachable
 	}
 	log.DebugF("GET %s: %s\n", cloudAPIConfig.URL.String(), resp.Status)
 	if resp.StatusCode >= 500 {
-		return ErrCloudApiUnreachable
+		return ErrCloudAPIUnreachable
 	}
 
 	return nil
 }
 
-func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client, error) {
-
+func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudAPIConfig) (*http.Client, error) {
 	tlsConfig := &tls.Config{
 		ServerName: cloudAPIConfig.URL.Hostname(),
 	}
@@ -133,8 +132,7 @@ func buildSSHTunnelHTTPClient(cloudAPIConfig *cca.CloudApiConfig) (*http.Client,
 	return client, nil
 }
 
-func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudApiConfig, proxyUrl *url.URL) (*http.Response, error) {
-
+func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.CloudAPIConfig, proxyURL *url.URL) (*http.Response, error) {
 	cloudAPIUrlString := cloudAPIConfig.URL.String()
 
 	var client *http.Client
@@ -144,10 +142,10 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 		return nil, fmt.Errorf("request creation failed: %w", err)
 	}
 
-	if proxyUrl == nil {
+	if proxyURL == nil {
 		client, err = buildSSHTunnelHTTPClient(cloudAPIConfig)
 	} else {
-		client = buildHTTPClientWithLocalhostProxy(proxyUrl)
+		client = buildHTTPClientWithLocalhostProxy(proxyURL)
 	}
 
 	if err != nil {
@@ -161,7 +159,7 @@ func executeHTTPRequest(ctx context.Context, method string, cloudAPIConfig *cca.
 	return resp, nil
 }
 
-var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudApiConfig, error){
+var cloudAPIConfigsProviders = map[string]func(providerClusterConfig []byte) (*cca.CloudAPIConfig, error){
 	"openstack": cca.HandleOpenStackProvider,
 	"vsphere":   cca.HandleVSphereProvider,
 }
@@ -177,7 +175,7 @@ func needCheckCloudAPI(metaConfig *config.MetaConfig) bool {
 	return ok
 }
 
-func getCloudApiConfigFromMetaConfig(metaConfig *config.MetaConfig) (*cca.CloudApiConfig, error) {
+func getCloudAPIConfigFromMetaConfig(metaConfig *config.MetaConfig) (*cca.CloudAPIConfig, error) {
 	providerClusterConfig, exists := metaConfig.ProviderClusterConfig["provider"]
 	if !exists || len(providerClusterConfig) == 0 {
 		return nil, fmt.Errorf("Provider configuration not found in ProviderClusterConfig")

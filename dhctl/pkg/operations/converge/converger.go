@@ -187,7 +187,9 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		return err
 	}
 	c.lastState = nil
-	defer c.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
@@ -361,7 +363,9 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 	c.lastState = nil
-	defer c.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
@@ -493,8 +497,7 @@ func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Durati
 		}
 	}
 
-	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), convergectx.Params{
+	convergeCtx := convergectx.NewContext(context.Background(), convergectx.Params{
 		KubeClient:     kubeCl,
 		Cache:          cache.Global(),
 		ChangeParams:   c.Params.ChangesSettings,

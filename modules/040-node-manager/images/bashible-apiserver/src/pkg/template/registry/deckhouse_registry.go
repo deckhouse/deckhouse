@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
 const (
@@ -38,7 +39,7 @@ type deckhouseRegistrySecret struct {
 	DockerConfig []byte `json:".dockerconfigjson" yaml:".dockerconfigjson"`
 }
 
-func (d *deckhouseRegistrySecret) decode(secret *corev1.Secret) error {
+func (d *deckhouseRegistrySecret) decode(secret *corev1.Secret) {
 	if v, ok := secret.Data["address"]; ok {
 		d.Address = string(v)
 	}
@@ -57,7 +58,6 @@ func (d *deckhouseRegistrySecret) decode(secret *corev1.Secret) error {
 	if v, ok := secret.Data[".dockerconfigjson"]; ok {
 		d.DockerConfig = v
 	}
-	return nil
 }
 
 func (d deckhouseRegistrySecret) validate() error {

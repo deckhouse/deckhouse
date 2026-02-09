@@ -1,7 +1,7 @@
 ---
 title: What to do if problems adding a node to the cluster via Cluster API Provider Static are present?
 subsystems:
-  - сluster_infrastructure
+  - cluster_infrastructure
 lang: en
 ---
 
