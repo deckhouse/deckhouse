@@ -115,7 +115,7 @@ Adds a flag to disable TLS verification when downloading from the MaxMind mirror
 
 This patch adds the --status-service-label flag, allowing the controller to define a label selector that is used to match related k8s services. Then, the ip addresses/hostnames from the services' statuses are used to fill in Ingress objects statuses with correct values.
 
-### 018-use-proxy-real-ip-cidr-v2.patch
+### 018-use-proxy-real-ip-cidr.patch
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
 

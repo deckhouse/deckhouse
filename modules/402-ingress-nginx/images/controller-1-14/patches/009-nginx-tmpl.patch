@@ -1,12 +1,12 @@
 diff --git a/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua b/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
-index 8f3d57be6..5823f40a9 100644
+index 8f3d57be6..5ea886093 100644
 --- a/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
 +++ b/rootfs/etc/nginx/lua/nginx/ngx_conf_log.lua
 @@ -1,2 +1,2 @@
 -local monitor = require("monitor")
 -monitor.call()
 \ No newline at end of file
-+local pbmetrics = require("pbmetrics")
++local monitor = require("pbmetrics")
 +pbmetrics.call()
 diff --git a/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua b/rootfs/etc/nginx/lua/nginx/ngx_conf_log_block.lua
 index 72f6a6430..d667871c6 100644
@@ -71,14 +71,14 @@ index cba866136..da6c2569b 100644
 \ No newline at end of file
 +pbmetrics.init_worker()
 diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
-index dd4fd1cc9..e407c1598 100644
+index dd4fd1cc9..597d4af63 100644
 --- a/rootfs/etc/nginx/template/nginx.tmpl
 +++ b/rootfs/etc/nginx/template/nginx.tmpl
 @@ -12,6 +12,9 @@
  # setup custom paths that do not require root access
  pid {{ .PID }};
  
-+# enables the use of just-in-time compilation for the regular expressions known by the time of configuration parsing
++# enables the use of “just-in-time compilation” for the regular expressions known by the time of configuration parsing
 +pcre_jit on;
 +
  {{ if $cfg.UseGeoIP2 }}
@@ -100,24 +100,6 @@ index dd4fd1cc9..e407c1598 100644
  
      {{ if or $cfg.DisableAccessLog $cfg.DisableHTTPAccessLog }}
      access_log off;
-@@ -610,7 +622,7 @@ http {
-         }
-         {{ end }}
- 
--        set_by_lua_file $redirect_to /etc/nginx/lua/nginx/ngx_srv_redirect.lua {{ $redirect.To }}; 
-+        set_by_lua_file $redirect_to /etc/nginx/lua/nginx/ngx_srv_redirect.lua {{ $redirect.To }};
- 
-         return {{ $all.Cfg.HTTPRedirectCode }} $redirect_to;
-     }
-@@ -733,7 +745,7 @@ stream {
-     lua_package_path "/etc/nginx/lua/?.lua;/etc/nginx/lua/vendor/?.lua;;";
- 
-     lua_shared_dict tcp_udp_configuration_data 5M;
--    
-+
-     {{ buildResolvers $cfg.Resolver $cfg.DisableIpv6DNS }}
- 
-     init_by_lua_file /etc/nginx/lua/ngx_conf_init_stream.lua;
 @@ -864,13 +876,14 @@ stream {
              proxy_set_header       Host               $best_http_host;
  
@@ -156,7 +138,7 @@ index dd4fd1cc9..e407c1598 100644
              {{ if $externalAuth.AuthCacheKey }}
              proxy_buffering                         "on";
              {{ else }}
-@@ -1157,12 +1177,16 @@ stream {
+@@ -1157,6 +1177,9 @@ stream {
          {{ end }}
  
          location {{ $path }} {
@@ -166,14 +148,16 @@ index dd4fd1cc9..e407c1598 100644
              {{ $ing := (getIngressInformation $location.Ingress $server.Hostname $location.IngressPath) }}
              set $namespace      {{ $ing.Namespace | quote}};
              set $ingress_name   {{ $ing.Rule | quote }};
-             set $service_name   {{ $ing.Service | quote }};
+@@ -1164,6 +1187,8 @@ stream {
              set $service_port   {{ $ing.ServicePort | quote }};
              set $location_path  {{ $ing.Path | escapeLiteralDollar | quote }};
-+            set $content_kind "";
  
++            set $content_kind "";
++
              {{ buildOpentelemetryForLocation $all.Cfg.EnableOpentelemetry $all.Cfg.OpentelemetryTrustIncomingSpan $location }}
  
-@@ -1463,14 +1487,15 @@ stream {
+             {{ if $location.Mirror.Source }}
+@@ -1463,14 +1488,15 @@ stream {
  
          {{ if eq $server.Hostname "_" }}
          # health checks in cloud providers require the use of port {{ $all.ListenPorts.HTTP }}
