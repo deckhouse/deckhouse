@@ -6,6 +6,7 @@
     gap: 8px;
     padding: 0;
     margin: 0;
+    margin-top: 26px;
 
     &--container_title {
         display: flex;
@@ -37,7 +38,7 @@
                 content: "";
                 position: absolute;
                 width: 100%;
-                bottom: -5px;
+                bottom: -3px;
                 left: 0;
                 border: 1px solid #00122C;
             }
