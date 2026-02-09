@@ -17,7 +17,6 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -256,20 +255,6 @@ const moduleNamespace = "d8-cloud-provider-vsphere"
 
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
