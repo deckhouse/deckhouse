@@ -462,19 +462,24 @@ func TestValidation_ValidZones(t *testing.T) {
 	}
 }
 
-func TestValidation_ZonesValidation_SkippedForStaticCluster(t *testing.T) {
+func TestValidation_ZonesValidation_NoProviderConfig(t *testing.T) {
 	s := newScheme()
 
-	// Static cluster - zones validation should be skipped (no providerConfig loaded)
-	clusterSec := clusterConfigSecret("Static", "", "", 0)
+	// No provider config secret - zones validation is skipped (no zones to check against)
+	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
-	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1, MaxPerZone: 3,
+		Zones:          []string{"any-zone"}, // No provider config to validate against
+		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
+	}
 
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
 	if !resp.Allowed {
-		t.Fatalf("expected allowed: Static cluster should not check zones, got: %s", resp.Result.Message)
+		t.Fatalf("expected allowed: no provider config to validate zones against, got: %s", resp.Result.Message)
 	}
 }
 
@@ -793,18 +798,23 @@ func TestValidation_ClusterConfigNotFound_UsesDefaults(t *testing.T) {
 	}
 }
 
-func TestValidation_ProviderConfigNotFound_StaticCluster(t *testing.T) {
+func TestValidation_ProviderConfigNotFound_AnyCluster(t *testing.T) {
 	s := newScheme()
-	// Static cluster - no provider config is OK
-	clusterSec := clusterConfigSecret("Static", "", "", 0)
+	// No provider config - zones validation is skipped when no provider config exists
+	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
-	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1, MaxPerZone: 3,
+		Zones:          []string{"any-zone"},
+		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
+	}
 
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
 	if !resp.Allowed {
-		t.Fatalf("expected allowed for Static cluster without provider config, got: %s", resp.Result.Message)
+		t.Fatalf("expected allowed without provider config, got: %s", resp.Result.Message)
 	}
 }
 

@@ -56,7 +56,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-var webhookLog = logf.Log.WithName("nodegroup-validation-webhook")
+var webhookLog = logf.Log.WithName("nodegroup-webhook")
 
 // NodeGroupValidator handles validation for NodeGroup resources.
 // It has access to cluster state via Client.
@@ -150,9 +150,9 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	// Zones validation - only for Cloud clusters with cloudInstances.zones specified
-	// Skip loading providerConfig for Static clusters (secret doesn't exist)
-	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 && clusterConfig.ClusterType == "Cloud" {
+	// Zones validation - check zones against provider discovery data if available
+	// providerConfig can exist in both Cloud and Static clusters
+	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 {
 		providerConfig, err := w.loadProviderClusterConfig(ctx)
 		if err != nil {
 			webhookLog.Error(err, "failed to load provider cluster config")
