@@ -644,12 +644,12 @@ node updates or requires manual confirmation.
 
 When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
 
-The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
+The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at least one of the following conditions is true:
 
-- Kernel version is at least 5.8;
-- systemd version is at least 244;
-- cgroup v2 is enabled;
-- The EROFS filesystem is available.
+- Kernel version lower than 5.8;
+- systemd version lower than 244;
+- cgroup v2 is disabled;
+- EROFS file system is unavailable.
 
 The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
 
