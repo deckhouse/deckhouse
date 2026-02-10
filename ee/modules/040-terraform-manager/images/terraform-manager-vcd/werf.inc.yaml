@@ -1,3 +1,4 @@
+{{/* oss-yaml.tmpl currently works poorly in cases when a component has multiple versions, such components are left for the future */}}
 {{- $versions := (list "3.10.0" "3.14.1") }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
