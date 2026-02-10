@@ -119,6 +119,10 @@ This patch adds the --status-service-label flag, allowing the controller to defi
 
 This patch updates lua ingress script to take into account the `proxy-real-ip-cidr` value when deciding if it's ok to accept x-forwarded headers values or not.
 
+### 019-removed-deprecated-patches.patch (Already applied in nginx 1.29.5)
+
+This patch is no longer needed because the related changes are already included in nginx `1.29.5`.
+
 ### cve-03022026.patch (Already exist)
 
 Fixes the following CVEs:
