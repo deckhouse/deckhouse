@@ -19,7 +19,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"time"
@@ -28,17 +28,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/db"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/downtime"
-	"d8.io/upmeter/pkg/probe"
-	"d8.io/upmeter/pkg/probe/calculated"
-	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/registry"
-	"d8.io/upmeter/pkg/server/api"
-	"d8.io/upmeter/pkg/server/remotewrite"
+	"upmeter/pkg/db"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/downtime"
+	"upmeter/pkg/probe"
+	"upmeter/pkg/probe/calculated"
+	"upmeter/pkg/probe/checker"
+	"upmeter/pkg/registry"
+	"upmeter/pkg/server/api"
+	"upmeter/pkg/server/remotewrite"
 )
 
 // server initializes all dependencies:
@@ -128,7 +128,7 @@ func (s *Server) Start(ctx context.Context) error {
 	// Start http server. It blocks, that's why it is the last here.
 	s.logger.Debugf("starting HTTP server")
 	listenAddr := s.config.ListenHost + ":" + s.config.ListenPort
-	s.server = initHttpServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
+	s.server = initHTTPServer(dbctx, s.downtimeMonitor, s.remoteWriteController, probeLister, listenAddr)
 
 	err = s.server.ListenAndServe()
 	if err == http.ErrServerClosed {
@@ -202,7 +202,7 @@ func cleanOld5mEpisodes(ctx context.Context, dbCtx *dbcontext.DbContext, retDays
 	}
 }
 
-func initHttpServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
+func initHTTPServer(dbCtx *dbcontext.DbContext, downtimeMonitor *downtime.Monitor, controller *remotewrite.Controller, probeLister registry.ProbeLister, addr string) *http.Server {
 	mux := http.NewServeMux()
 
 	// API handlers
@@ -265,6 +265,6 @@ func newProbeLister(disabled []string, dynamic *DynamicProbesConfig) *registry.R
 
 func newDummyLogger() *log.Logger {
 	logger := log.New()
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 	return logger
 }

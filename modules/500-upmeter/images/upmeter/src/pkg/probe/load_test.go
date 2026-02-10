@@ -17,15 +17,15 @@ limitations under the License.
 package probe
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/checker"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe/checker"
 )
 
 func Test_NewProbeFilter(t *testing.T) {
@@ -162,7 +162,7 @@ func newDummyLogger() *log.Entry {
 	logger := log.New()
 
 	// logger.Level = log.DebugLevel
-	logger.SetOutput(ioutil.Discard)
+	logger.SetOutput(io.Discard)
 
 	return log.NewEntry(logger)
 }

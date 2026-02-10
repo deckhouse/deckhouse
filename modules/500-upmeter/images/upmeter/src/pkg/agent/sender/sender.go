@@ -23,9 +23,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe/run"
-	"d8.io/upmeter/pkg/server/api"
+	"upmeter/pkg/check"
+	"upmeter/pkg/probe/run"
+	"upmeter/pkg/server/api"
 )
 
 type Sender struct {

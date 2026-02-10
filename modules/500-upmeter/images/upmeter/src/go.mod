@@ -1,4 +1,4 @@
-module d8.io/upmeter
+module upmeter
 
 go 1.24.0
 

@@ -23,9 +23,9 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/server/ranges"
 )
 
 //nolint:unparam

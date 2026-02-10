@@ -21,7 +21,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/server/ranges"
 )
 
 func Test_parseStepRange(t *testing.T) {

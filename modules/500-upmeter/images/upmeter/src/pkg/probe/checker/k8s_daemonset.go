@@ -27,10 +27,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
-	"d8.io/upmeter/pkg/set"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
+	"upmeter/pkg/set"
 )
 
 // DaemonSetPodsReady is a checker constructor and configurator
@@ -92,7 +92,7 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 	ds, err := c.dsRepo.Get()
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			return check.ErrFail(err.Error())
+			return check.ErrFail("%s", err.Error())
 		}
 		return check.ErrUnknown("getting DaemonSet: %v", err)
 	}
@@ -106,7 +106,7 @@ func (c *dsPodsReadinessChecker) Check() check.Error {
 	// Filter node names of interest
 	nodeNames := findDaemonSetNodeNames(nodes, ds)
 	if err = c.verifyPods(pods, nodeNames); err != nil {
-		return check.ErrFail(err.Error())
+		return check.ErrFail("%s", err.Error())
 	}
 	return nil
 }

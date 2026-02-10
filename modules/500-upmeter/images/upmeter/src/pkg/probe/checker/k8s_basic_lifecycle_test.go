@@ -24,7 +24,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 // successDoer mocks a doer with that returns nil error
@@ -39,7 +39,7 @@ func (d *failDoer) Do(_ context.Context) error { return d.err }
 
 // doerErr creates doer that results in arbitrary error
 func doerErr(msg string) *failDoer {
-	return &failDoer{err: fmt.Errorf(msg)}
+	return &failDoer{err: fmt.Errorf("%s", msg)}
 }
 
 var err404 = apierrors.NewNotFound(schema.GroupResource{}, "")

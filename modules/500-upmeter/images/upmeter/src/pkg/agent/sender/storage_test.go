@@ -22,8 +22,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/migrations"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db/migrations"
 )
 
 func Test_saving_and_reading(t *testing.T) {

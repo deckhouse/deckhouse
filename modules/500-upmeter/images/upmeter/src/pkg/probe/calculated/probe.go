@@ -19,9 +19,9 @@ package calculated
 import (
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/probe"
-	"d8.io/upmeter/pkg/set"
+	"upmeter/pkg/check"
+	"upmeter/pkg/probe"
+	"upmeter/pkg/set"
 )
 
 func NewLoader(filter probe.Filter, logger *log.Logger) *Loader {

@@ -31,7 +31,7 @@ func Test_withTimer(t *testing.T) {
 				time.Sleep(timeout / 2)
 			},
 			func() {
-				t.Errorf(msg)
+				t.Errorf("%s", msg)
 			},
 		)
 	}
@@ -48,7 +48,7 @@ func Test_withTimer(t *testing.T) {
 				case <-timeoutCallbackCalled:
 					return
 				default:
-					t.Errorf(msg)
+					t.Errorf("%s", msg)
 				}
 			},
 			func() {

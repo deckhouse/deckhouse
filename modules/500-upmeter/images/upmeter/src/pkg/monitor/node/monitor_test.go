@@ -87,7 +87,7 @@ func TestNodesMonitor(t *testing.T) {
 		return len(nodes) == 2, nil
 	})
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf("%s", err.Error())
 	}
 
 	// #3 Delete node
@@ -107,6 +107,6 @@ func TestNodesMonitor(t *testing.T) {
 		return len(nodes) == 1, nil
 	})
 	if err != nil {
-		t.Fatalf(err.Error())
+		t.Fatalf("%s", err.Error())
 	}
 }

@@ -23,17 +23,17 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/agent/scheduler"
-	"d8.io/upmeter/pkg/agent/sender"
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
-	"d8.io/upmeter/pkg/probe"
-	"d8.io/upmeter/pkg/probe/calculated"
-	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/registry"
+	"upmeter/pkg/agent/scheduler"
+	"upmeter/pkg/agent/sender"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
+	"upmeter/pkg/probe"
+	"upmeter/pkg/probe/calculated"
+	"upmeter/pkg/probe/checker"
+	"upmeter/pkg/registry"
 )
 
 type Agent struct {

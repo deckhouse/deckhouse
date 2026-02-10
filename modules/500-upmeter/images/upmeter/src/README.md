@@ -9,7 +9,7 @@ features within the cluster. The server collects and serves probe statuses to 'w
 
 ## Package name
 
-The package is named `d8.io/upmeter` to distinguish its name from Go standard library packages.
+The package is named `upmeter`, consistent with other modules in the project.
 
 ## Development
 

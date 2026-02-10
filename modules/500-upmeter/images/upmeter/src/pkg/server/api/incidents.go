@@ -19,9 +19,9 @@ package api
 import (
 	"fmt"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/monitor/downtime"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	"upmeter/pkg/monitor/downtime"
+	"upmeter/pkg/server/ranges"
 )
 
 func fetchIncidents(monitor *downtime.Monitor, muteDowntimeTypes []string, group string, rng ranges.StepRange) ([]check.DowntimeIncident, error) {

@@ -28,9 +28,9 @@ import (
 	"os"
 	"time"
 
-	"d8.io/upmeter/pkg/kubernetes"
-
 	log "github.com/sirupsen/logrus"
+
+	"upmeter/pkg/kubernetes"
 )
 
 type Client struct {
@@ -64,7 +64,7 @@ type ClientConfig struct {
 func NewClient(config *ClientConfig, access kubernetes.Access) *Client {
 	return &Client{
 		url:       getEndpoint(config),
-		client:    NewHttpClient(config, access),
+		client:    NewHTTPClient(config, access),
 		UserAgent: config.UserAgent,
 	}
 }
@@ -85,18 +85,18 @@ func (c *Client) Send(reqBody []byte) error {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("reding server response body: %v", err)
+		return fmt.Errorf("reading server response body: %v", err)
 	}
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("unexpected upmeter response: status=%d, body=%q", resp.StatusCode, string(body))
 	}
 
 	return nil
 }
 
-func NewHttpClient(config *ClientConfig, access kubernetes.Access) *http.Client {
-	client, err := createSecureHttpClient(config.TLS, config.CAPath, config.Timeout, access)
+func NewHTTPClient(config *ClientConfig, access kubernetes.Access) *http.Client {
+	client, err := createSecureHTTPClient(config.TLS, config.CAPath, config.Timeout, access)
 	if err != nil {
 		log.Errorf("falling back to default HTTP client: %v", err)
 		return &http.Client{
@@ -107,7 +107,7 @@ func NewHttpClient(config *ClientConfig, access kubernetes.Access) *http.Client 
 	return client
 }
 
-func createSecureHttpClient(useTLS bool, caPath string, timeout time.Duration, access kubernetes.Access) (*http.Client, error) {
+func createSecureHTTPClient(useTLS bool, caPath string, timeout time.Duration, access kubernetes.Access) (*http.Client, error) {
 	if !useTLS {
 		return nil, fmt.Errorf("TLS is off by client")
 	}

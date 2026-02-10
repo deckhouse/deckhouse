@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"d8.io/upmeter/pkg/server/entity"
+	"upmeter/pkg/server/entity"
 )
 
 func Test_calculateStatus(t *testing.T) {

@@ -24,13 +24,13 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/monitor/downtime"
-	"d8.io/upmeter/pkg/registry"
-	"d8.io/upmeter/pkg/server/entity"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/monitor/downtime"
+	"upmeter/pkg/registry"
+	"upmeter/pkg/server/entity"
+	"upmeter/pkg/server/ranges"
 )
 
 type PublicStatusResponse struct {
@@ -129,7 +129,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			Status: StatusNoData.String(),
 		})
 		w.WriteHeader(http.StatusOK)
-		w.Write(out)
+		_, _ = w.Write(out)
 		return
 	}
 
@@ -139,7 +139,7 @@ func (h *PublicStatusHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		Rows:   statuses,
 		Status: totalStatus.String(),
 	})
-	w.Write(out)
+	_, _ = w.Write(out)
 }
 
 // getGroupStatusList returns the most recent complete episode. If peek is true, then 30s episodes

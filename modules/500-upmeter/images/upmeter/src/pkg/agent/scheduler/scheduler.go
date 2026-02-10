@@ -22,9 +22,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/registry"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/registry"
 )
 
 type Scheduler struct {
@@ -150,8 +150,6 @@ func (e *Scheduler) run() {
 		if !runner.ShouldRun(now) {
 			continue
 		}
-
-		runner := runner // avoid closure capturing
 		go func() {
 			e.recv <- runner.Run(now)
 		}()

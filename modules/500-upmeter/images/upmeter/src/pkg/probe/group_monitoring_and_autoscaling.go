@@ -19,9 +19,9 @@ package probe
 import (
 	"time"
 
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
-	"d8.io/upmeter/pkg/probe/checker"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
+	"upmeter/pkg/probe/checker"
 )
 
 func initMonitoringAndAutoscaling(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer) []runnerConfig {

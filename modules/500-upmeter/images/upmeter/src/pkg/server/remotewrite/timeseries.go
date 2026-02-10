@@ -23,7 +23,7 @@ import (
 
 	"github.com/prometheus/prometheus/prompb"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 func convEpisodes2Timeseries(timeslot time.Time, episodes []*check.Episode, commonLabels []*prompb.Label) []*prompb.TimeSeries {

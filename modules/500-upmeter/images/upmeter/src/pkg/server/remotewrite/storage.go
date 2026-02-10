@@ -19,9 +19,9 @@ package remotewrite
 import (
 	"time"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/db/dao"
 )
 
 type SyncIdentifier string // not to mess up with other string arguments

@@ -21,7 +21,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 // KubeObjectBasicLifecycle checks the creation and deletion of an object in

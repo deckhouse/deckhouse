@@ -26,10 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	ngv1 "d8.io/upmeter/internal/nodegroups/v1"
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
+	ngv1 "upmeter/internal/nodegroups/v1"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
 )
 
 // NodegroupHasDesiredAmountOfNodes is a checker constructor and configurator

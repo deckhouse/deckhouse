@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db"
-	dbcontext "d8.io/upmeter/pkg/db/context"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db"
+	dbcontext "upmeter/pkg/db/context"
 )
 
 const originsSep = ":"

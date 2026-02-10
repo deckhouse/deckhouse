@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -170,7 +170,7 @@ func neighborHandler(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil || string(body) != "ok" {
 				log.Error(err)
 				errorCount++
@@ -204,7 +204,7 @@ func neighborViaServiceHandler(w http.ResponseWriter, r *http.Request) {
 			}
 			defer resp.Body.Close()
 
-			body, err := ioutil.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
 			if err != nil || string(body) != "ok" {
 				log.Error(err)
 				errorCount++
@@ -232,7 +232,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		apiserverEndpoint = fmt.Sprintf("https://%s:%s/api/v1/namespaces/%s/pods/%s", kubernetesServiceHost, kubernetesServicePort, namespace, podName)
 	}
 
-	serviceaccountToken, err := ioutil.ReadFile(serviceAccountTokenPath)
+	serviceaccountToken, err := os.ReadFile(serviceAccountTokenPath)
 	if err != nil {
 		w.WriteHeader(500)
 		log.Error(err)
@@ -256,7 +256,7 @@ func apiHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(500)
@@ -269,13 +269,13 @@ func diskHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
 	originalContent := fmt.Sprint(time.Now().UnixNano())
 	tmpFilePath := fmt.Sprintf("/disk/sm-%s", originalContent)
-	err := ioutil.WriteFile(tmpFilePath, []byte(originalContent), 0o644)
+	err := os.WriteFile(tmpFilePath, []byte(originalContent), 0o644)
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(500)
 		return
 	}
-	content, err := ioutil.ReadFile(tmpFilePath)
+	content, err := os.ReadFile(tmpFilePath)
 	if err != nil {
 		w.WriteHeader(500)
 		log.Error(err)
@@ -298,7 +298,7 @@ func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 	log.Info(r.RemoteAddr, r.RequestURI)
 	prometheusEndpoint := "https://prometheus.d8-monitoring:9090/api/v1/metadata?metric=prometheus_build_info"
 
-	serviceaccountToken, err := ioutil.ReadFile(serviceAccountTokenPath)
+	serviceaccountToken, err := os.ReadFile(serviceAccountTokenPath)
 	if err != nil {
 		w.WriteHeader(500)
 		log.Error(err)
@@ -317,7 +317,7 @@ func prometheusHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer resp.Body.Close()
-	_, err = ioutil.ReadAll(resp.Body)
+	_, err = io.ReadAll(resp.Body)
 	if err != nil {
 		log.Error(err)
 		w.WriteHeader(500)

@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	dbcontext "d8.io/upmeter/pkg/db/context"
+	dbcontext "upmeter/pkg/db/context"
 )
 
 func Test_server_migrations(t *testing.T) {

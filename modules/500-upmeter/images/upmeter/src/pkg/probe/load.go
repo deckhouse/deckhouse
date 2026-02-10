@@ -22,11 +22,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
-	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/set"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
+	"upmeter/pkg/probe/checker"
+	"upmeter/pkg/set"
 )
 
 func NewLoader(

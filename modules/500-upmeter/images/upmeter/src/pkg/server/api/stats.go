@@ -23,8 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/db/dao"
 )
 
 type StatsHandler struct {
@@ -38,19 +38,19 @@ func (h *StatsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	stats, err := getStats(h.DbCtx)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)
+		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
 		return
 	}
 
 	out, err := json.Marshal(stats)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, "%d Error: %s\n", http.StatusBadRequest, err)
+		fmt.Fprintf(w, "%d Error: %s\n", http.StatusInternalServerError, err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(out)
+	_, _ = w.Write(out)
 }
 
 func getStats(dbctx *dbcontext.DbContext) ([]string, error) {

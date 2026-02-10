@@ -21,10 +21,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/node"
-	"d8.io/upmeter/pkg/probe/checker"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/node"
+	"upmeter/pkg/probe/checker"
 )
 
 func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer, nodeGroupNames, knownZones []string, zonePrefix string) []runnerConfig {

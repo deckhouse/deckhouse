@@ -19,9 +19,9 @@ package probe
 import (
 	"time"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/checker"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe/checker"
 )
 
 func initNginx(access kubernetes.Access, preflight checker.Doer, names []string) []runnerConfig {

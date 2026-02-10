@@ -23,12 +23,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/monitor/downtime"
-	"d8.io/upmeter/pkg/server/entity"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/monitor/downtime"
+	"upmeter/pkg/server/entity"
+	"upmeter/pkg/server/ranges"
 )
 
 type StatusResponse struct {
@@ -59,7 +59,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	filter, err := parseFilter(r)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprintf(w, "%d %s\n", http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -86,7 +86,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp, err := getStatusSummary(dao.NewEpisodeDao5m(daoCtx), h.DowntimeMonitor, filter, true /*with total*/)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		fmt.Fprintf(w, err.Error(), http.StatusInternalServerError)
+		fmt.Fprintf(w, "%d %s\n", http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -100,7 +100,7 @@ func (h *StatusRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	w.Write(respJSON)
+	_, _ = w.Write(respJSON)
 }
 
 type statusFilter struct {

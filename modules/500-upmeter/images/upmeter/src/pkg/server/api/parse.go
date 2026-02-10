@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/server/ranges"
 )
 
 // parseStepRange decodes 3 arguments

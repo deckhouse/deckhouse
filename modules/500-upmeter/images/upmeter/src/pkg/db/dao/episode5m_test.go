@@ -25,8 +25,8 @@ import (
 	. "github.com/onsi/gomega"
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/migrations"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db/migrations"
 )
 
 func Test_Fill_RandomDB_For_Today(t *testing.T) {

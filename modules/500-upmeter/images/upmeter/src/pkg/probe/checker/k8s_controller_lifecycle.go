@@ -23,7 +23,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 // KubeControllerObjectLifecycle checks controller object lifecycle where a
@@ -49,10 +49,10 @@ func (c *KubeControllerObjectLifecycle) Check() check.Error {
 	}
 
 	if err := c.cleanGarbage(ctx, c.parentGetter, c.parentDeleter); err != nil {
-		return check.ErrUnknown(err.Error())
+		return check.ErrUnknown("%s", err.Error())
 	}
 	if err := c.cleanGarbage(ctx, c.childGetter, c.childDeleter); err != nil {
-		return check.ErrUnknown(err.Error())
+		return check.ErrUnknown("%s", err.Error())
 	}
 
 	// 1. create parent

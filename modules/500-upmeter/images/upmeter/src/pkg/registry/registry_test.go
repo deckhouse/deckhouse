@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 // Test how the lister deduplicates and sorts groups and probes

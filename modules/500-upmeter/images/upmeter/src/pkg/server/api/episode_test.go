@@ -27,8 +27,8 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db"
 )
 
 func Test_AddEpisodesHandler(t *testing.T) {

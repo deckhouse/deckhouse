@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/server/ranges"
 )
 
 const (

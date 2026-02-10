@@ -21,9 +21,9 @@ import (
 	"strings"
 	"time"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/server/ranges"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/server/ranges"
 )
 
 type EpisodeDao30s struct {
@@ -194,7 +194,9 @@ func (d *EpisodeDao30s) Stats() ([]string, error) {
 	stats := []string{}
 	for rows.Next() {
 		var startUnix, count int64
-		rows.Scan(&startUnix, &count)
+		if err := rows.Scan(&startUnix, &count); err != nil {
+			return nil, fmt.Errorf("scan row: %w", err)
+		}
 		stats = append(stats, fmt.Sprintf("%d %d", startUnix, count))
 	}
 
@@ -227,7 +229,9 @@ func (d *EpisodeDao30s) GetEarliestTimeSlot() (time.Time, error) {
 
 	for rows.Next() {
 		var startUnix int64
-		rows.Scan(&startUnix)
+		if err := rows.Scan(&startUnix); err != nil {
+			return slot, fmt.Errorf("scan row: %w", err)
+		}
 		slot = time.Unix(startUnix, 0)
 		break
 	}

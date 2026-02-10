@@ -22,7 +22,7 @@ import (
 	"sync"
 	"testing"
 
-	dbcontext "d8.io/upmeter/pkg/db/context"
+	dbcontext "upmeter/pkg/db/context"
 )
 
 // Reproduce messages "insert error: database is locked" without MaxOpenConns and busy_timeout in Connect.

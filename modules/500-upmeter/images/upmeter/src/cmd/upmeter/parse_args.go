@@ -22,9 +22,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"d8.io/upmeter/pkg/agent"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/server"
+	"upmeter/pkg/agent"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/server"
 )
 
 func parseServerArgs(cmd *kingpin.CmdClause, config *server.Config) {

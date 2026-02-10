@@ -23,8 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/registry"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/registry"
 )
 
 type ProbeListHandler struct {
@@ -52,5 +52,5 @@ func (h *ProbeListHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Write(out)
+	_, _ = w.Write(out)
 }

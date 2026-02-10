@@ -28,9 +28,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"go.opentelemetry.io/contrib/exporters/metric/cortex"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/db/dao"
-	"d8.io/upmeter/pkg/monitor/remotewrite"
+	"upmeter/pkg/check"
+	"upmeter/pkg/db/dao"
+	"upmeter/pkg/monitor/remotewrite"
 )
 
 // syncer links puller and exporter via channel in exporter

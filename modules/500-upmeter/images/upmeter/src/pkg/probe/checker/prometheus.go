@@ -24,8 +24,8 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"d8.io/upmeter/pkg/check"
-	"d8.io/upmeter/pkg/kubernetes"
+	"upmeter/pkg/check"
+	"upmeter/pkg/kubernetes"
 )
 
 // PrometheusApiAvailable is a checker constructor and configurator
@@ -155,10 +155,10 @@ func (v *metricPresenceVerifier) Verify(body []byte) check.Error {
 	return nil
 }
 
-func addMetricQuery(baseUrl, metricName string) string {
-	endpoint, err := url.Parse(baseUrl)
+func addMetricQuery(baseURL, metricName string) string {
+	endpoint, err := url.Parse(baseURL)
 	if err != nil {
-		panic(fmt.Errorf("cannot parse baseUrl: %v", err))
+		panic(fmt.Errorf("cannot parse baseURL: %v", err))
 	}
 
 	query := make(url.Values)

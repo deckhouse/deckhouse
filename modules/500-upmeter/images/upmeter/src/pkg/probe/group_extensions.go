@@ -19,8 +19,8 @@ package probe
 import (
 	"time"
 
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/checker"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe/checker"
 )
 
 func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerConfig {

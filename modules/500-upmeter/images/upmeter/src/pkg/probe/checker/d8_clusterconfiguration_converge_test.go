@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 )

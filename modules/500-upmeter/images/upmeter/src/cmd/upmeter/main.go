@@ -25,10 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"d8.io/upmeter/pkg/agent"
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/probe/run"
-	"d8.io/upmeter/pkg/server"
+	"upmeter/pkg/agent"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/probe/run"
+	"upmeter/pkg/server"
 )
 
 func main() {
@@ -117,7 +117,7 @@ func main() {
 
 			err := a.Stop()
 			if err != nil {
-				logger.Fatalf("error stopp agent gracefully: %v", err)
+				logger.Fatalf("error stop agent gracefully: %v", err)
 			}
 
 			os.Exit(0)

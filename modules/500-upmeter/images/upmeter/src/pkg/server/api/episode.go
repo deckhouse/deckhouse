@@ -24,10 +24,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/check"
-	dbcontext "d8.io/upmeter/pkg/db/context"
-	"d8.io/upmeter/pkg/server/entity"
-	"d8.io/upmeter/pkg/server/remotewrite"
+	"upmeter/pkg/check"
+	dbcontext "upmeter/pkg/db/context"
+	"upmeter/pkg/server/entity"
+	"upmeter/pkg/server/remotewrite"
 )
 
 type EpisodesPayload struct {
@@ -43,7 +43,7 @@ type AddEpisodesHandler struct {
 func (h *AddEpisodesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
-		fmt.Fprintf(w, "%d POST is required\n", http.StatusBadRequest)
+		fmt.Fprintf(w, "%d POST is required\n", http.StatusMethodNotAllowed)
 		return
 	}
 	// check content-type

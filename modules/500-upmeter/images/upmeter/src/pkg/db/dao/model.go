@@ -20,7 +20,7 @@ import (
 	"database/sql"
 	"time"
 
-	"d8.io/upmeter/pkg/check"
+	"upmeter/pkg/check"
 )
 
 type Entity struct {

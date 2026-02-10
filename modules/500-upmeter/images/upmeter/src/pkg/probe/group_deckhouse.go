@@ -21,10 +21,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"d8.io/upmeter/pkg/kubernetes"
-	"d8.io/upmeter/pkg/monitor/hookprobe"
-	"d8.io/upmeter/pkg/probe/checker"
-	"d8.io/upmeter/pkg/probe/run"
+	"upmeter/pkg/kubernetes"
+	"upmeter/pkg/monitor/hookprobe"
+	"upmeter/pkg/probe/checker"
+	"upmeter/pkg/probe/run"
 )
 
 func initDeckhouse(access kubernetes.Access, preflight checker.Doer, config ConvergeConfig, logger *logrus.Logger) []runnerConfig {
