@@ -95,33 +95,15 @@ function install_yq() {
   chmod +x /usr/local/bin/yq
 }
 
-function copy_with_yaml_merge {
+function merge_oss_yaml {
   local src="$1"
   local dst="$2"
-  
-  # If source is a directory, recursively copy its contents
-  if [ -d "$src" ]; then
-    mkdir -p "$dst"
-    for item in "$src"/*; do
-      [ -e "$item" ] || continue
-      local basename=$(basename "$item")
-      copy_with_yaml_merge "$item" "$dst/$basename"
-    done
-    return
-  fi
-  
-  # If destination exists and both files are oss.yaml, merge them
-  if [ -f "$dst" ] && [ "$(basename "$src")" = "oss.yaml" ]; then
-    echo "Merging oss.yaml: $src -> $dst"
-    local temp_file=$(mktemp)
-    # Concatenate YAML arrays using ireduce
-    yq eval-all '. as $item ireduce ([]; . + $item)' "$dst" "$src" > "$temp_file"
-    mv "$temp_file" "$dst"
-  else
-    # Otherwise just copy
-    mkdir -p "$(dirname "$dst")"
-    cp -f "$src" "$dst"
-  fi
+  echo "Merging oss.yaml: $src -> $dst"
+  local temp_file
+  temp_file=$(mktemp)
+  # Concatenate YAML arrays using ireduce
+  yq eval-all '. as $item ireduce ([]; . + $item)' "$dst" "$src" > "$temp_file"
+  mv "$temp_file" "$dst"
 }
 
 function structure_prepare {
@@ -140,6 +122,22 @@ function structure_prepare {
       cp -R $cloud_provider_dir /deckhouse/candi/cloud-providers/"${cloud_provider_name}"
     done
     shopt -u nullglob
+  done
+
+  local module="040-terraform-manager"
+  local dst="/deckhouse/modules/${module}/oss.yaml"
+  local base="/deckhouse-src/modules/${module}/oss.yaml"
+
+  if [ -f "$base" ]; then
+    mkdir -p "$(dirname "$dst")"
+    cp -f "$base" "$dst"
+  fi
+
+  for dir in "${modules_dir[@]}"; do
+    local src="/deckhouse/${dir}/${module}/oss.yaml"
+    if [ -f "$src" ]; then
+      merge_oss_yaml "$src" "$dst"
+    fi
   done
   
   # Disable dotglob to restore default behavior
