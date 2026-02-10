@@ -27,18 +27,22 @@ spec:
     replacement: ''
   - sourceLabels: [controller_type]
     regex: '^InternalVirtualizationVirtualMachineInstance$'
+    action: replace
     targetLabel: controller_type
     replacement: VirtualMachine
   - sourceLabels: [controller]
     regex: '^InternalVirtualizationVirtualMachineInstance(.*)$'
+    action: replace
     targetLabel: controller
     replacement: VirtualMachine${1}
   - sourceLabels: [controller]
     regex: "^Pod/(virt-launcher-|d8v-vm-)(.*)$"
+    action: replace
     targetLabel: controller_type
     replacement: "HotplugPod"
   - sourceLabels: [controller]
     regex: "^Pod/(virt-launcher-|d8v-vm-)(.*)$"
+    action: replace
     targetLabel: controller
     replacement: "HotplugPod/${1}${2}"
   - action: labeldrop
