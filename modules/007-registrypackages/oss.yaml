@@ -5,22 +5,12 @@
   license: MIT License
   id: amazon-ec2-utils
   version: "2.2.0"
-
+  
 - name: containerd
   link: https://github.com/containerd/containerd
   description: An open and reliable container runtime.
   logo: /images/logos/containerd.svg
   license: Apache License 2.0
-  id: containerd
-  version: "1.7.30"
-
-- name: containerd
-  link: https://github.com/containerd/containerd
-  description: An open and reliable container runtime.
-  logo: /images/logos/containerd.svg
-  license: Apache License 2.0
-  id: containerd
-  version: "2.1.6"
 
 - name: runc
   link: https://github.com/opencontainers/runc
@@ -44,7 +34,6 @@
   logo: /images/logos/deckhouse.svg
   license: Apache License 2.0
   id: deckhouse-cli
-  version: "v0.27.1"
 
 - name: Docker Auth
   link: https://github.com/cesanta/docker_auth

@@ -27,13 +27,3 @@
   description: Terraform provider for VMware Cloud Director.
   logo: /images/logos/terraform.png
   license: Mozilla Public License 2.0
-  id: terraform-provider-vcd
-  version: 3.10.0
-
-- name: Terraform Provider VCD
-  link: https://github.com/vmware/terraform-provider-vcd
-  description: Terraform provider for VMware Cloud Director.
-  logo: /images/logos/terraform.png
-  license: Mozilla Public License 2.0
-  id: terraform-provider-vcd
-  version: 3.14.1

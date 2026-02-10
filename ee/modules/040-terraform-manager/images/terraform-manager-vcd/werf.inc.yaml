@@ -1,4 +1,4 @@
-{{- $versions := (include "get_oss_version_by_id" (list "terraform-provider-vcd" $ "all")) | splitList "," -}}
+{{- $versions := (list "3.10.0" "3.14.1") }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 fromImage: '{{- include "infrastructure_manager_base_image" (dict "TF" .TF "providerName" "vcd") }}'

@@ -235,9 +235,9 @@
         {{- if not $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
-
         {{- if eq $tf.type "vcd" }}
-          {{- $versions := (include "get_oss_version_by_id" (list $ossId $ossCtx "all")) | splitList "," }}
+          {{/* {{- $versions := (include "get_oss_version_by_id" (list $ossId $ossCtx "all")) | splitList "," }} */}}
+          {{ $versions := (list "3.10.0" "3.14.1") }}
           {{- range $version := $versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}
@@ -283,9 +283,9 @@
         {{- if $tf.useOpentofu  }}
           {{- continue }}
         {{- end }}
-
         {{- if eq $tf.type "vcd" }}
-          {{- $versions := (include "get_oss_version_by_id" (list $ossId $ossCtx "all")) | splitList "," }}
+          {{/* {{- $versions := (include "get_oss_version_by_id" (list $ossId $ossCtx "all")) | splitList "," }} */}}
+          {{ $versions := (list "3.10.0" "3.14.1") }}
           {{- range $version := $versions }}
 - image: {{ $tf.artifact }} # from modules/040-terraform-manager/images/terraform-manager-{PROVIDER}/werf.inc.yaml
   add: /{{ $tf.artifactBinary }}-v{{ $version }}

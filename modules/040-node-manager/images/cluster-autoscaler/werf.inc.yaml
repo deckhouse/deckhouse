@@ -1,16 +1,20 @@
-{{- $versions := (include "get_oss_version_by_id" (list "cluster-autoscaler" $ "all")) | splitList "," -}}
-{{- range $versions }}
-  {{- $clusterAutoscalerVersion := . -}}
-  {{- $versionParts := splitList "." $clusterAutoscalerVersion -}}
-  {{- $version := printf "%s.%s" (index $versionParts 0) (index $versionParts 1) -}}
-  {{- $image_version := $version | replace "." "-" -}}
-  {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
-  {{- $patch := false }}
-  {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
-    {{- if contains $version $path }}
-      {{- $patch = true }}
+{{- $maxVersion := "1.34" -}}
+
+{{- range $key, $value := .CandiVersionMap.k8s }}
+  {{- $version := toString $key }}
+  {{- $origVersion := toString $key }}
+  {{- if semverCompare (printf ">%s" $maxVersion) $version -}}
+    {{- $version = $maxVersion -}}
+  {{- end -}}
+  {{- $image_version := $origVersion | replace "." "-" }}
+  {{- if $value.clusterAutoscalerPatch }}
+    {{- $patches := (printf "/%smodules/%s-%s/images/%s" $.ModulePath $.ModulePriority $.ModuleName $.ImageName) }}
+    {{- $patch := false }}
+    {{- range $path, $_ := $.Files.Glob (printf "%s/*" $patches) }}
+      {{- if contains $version $path }}
+        {{- $patch = true }}
+      {{- end }}
     {{- end }}
-  {{- end }}
 
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}-src-artifact
@@ -31,7 +35,8 @@ shell:
   install:
   - mkdir -p /tmp/autoscaler
   - cd /tmp/autoscaler
-  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }} $(cat /run/secrets/SOURCE_REPO)/gardener/autoscaler.git .
+    {{- $clusterAutoscalerVersion := $version }}
+  - git clone --depth 1 --branch v{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }} $(cat /run/secrets/SOURCE_REPO)/gardener/autoscaler.git .
     {{- if $patch }}
   - git apply /patches/*.patch --verbose
     {{- end }}
@@ -58,7 +63,7 @@ shell:
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - GOPROXY=$(cat /run/secrets/GOPROXY) go mod download
   - go build -ldflags='-s -w -extldflags "-static"' -o cluster-autoscaler
-  - echo "{{ $clusterAutoscalerVersion }}-flant" > VERSION
+  - echo "{{ $clusterAutoscalerVersion }}.{{ $value.clusterAutoscalerPatch }}-flant" > VERSION
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
 fromImage: common/distroless
@@ -74,6 +79,7 @@ imageSpec:
   config:
     env: { "container": "docker" }
     entrypoint: ["/cluster-autoscaler"]
+  {{- end }}
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
 {{- end }}
