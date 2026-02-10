@@ -1224,7 +1224,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 6,
+        "w": 12,
         "x": 0,
         "y": 16
       },
@@ -1253,7 +1253,6 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ controller }}",
-          "range": true,
           "refId": "A"
         }
       ],
