@@ -70,7 +70,7 @@ spec:
                     One of the supported Ingress NGINX Controller versions.
 
                     **By default**: the version in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.10", "1.12"]
+                  enum: ["1.10", "1.12", "1.14"]
                 enableIstioSidecar:
                   type: boolean
                   description: |
@@ -678,7 +678,7 @@ spec:
                     Ingress NGINX Controller version.
 
                     **By default**, the version set in the [module settings](configuration.html#parameters-defaultcontrollerversion) is used.
-                  enum: ["1.10", "1.12"]
+                  enum: ["1.10", "1.12", "1.14"]
                 enableIstioSidecar:
                   type: boolean
                   description: |

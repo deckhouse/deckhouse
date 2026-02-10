@@ -1,0 +1,13 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 012f465bf..670405cf1 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -1110,7 +1110,7 @@ func (n *NGINXController) createUpstreams(data []*ingress.Ingress, du *ingress.B
+ 					_, port := upstreamServiceNameAndPort(path.Backend.Service)
+ 					endp, err := n.serviceEndpoints(svcKey, port.String())
+ 					if err != nil {
+-						klog.Warningf("Error obtaining Endpoints for Service %q: %v", svcKey, err)
++						// klog.Warningf("Error obtaining Endpoints for Service %q: %v", svcKey, err)
+ 						n.metricCollector.IncOrphanIngress(ing.Namespace, ing.Name, orphanMetricLabelNoService)
+ 						continue
+ 					}
