@@ -77,6 +77,7 @@ spec:
         - --publish-service=d8-ingress-nginx/wait-lb-non-default-load-balancer
         - --shutdown-grace-period=333
         - --controller-class=ingress-nginx.deckhouse.io/%!s(<nil>)
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-%!s(<nil>)
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=

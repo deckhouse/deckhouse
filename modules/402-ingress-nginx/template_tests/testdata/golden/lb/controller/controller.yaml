@@ -78,6 +78,7 @@ spec:
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
         - --watch-ingress-without-class=true
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-nginx
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=nginx

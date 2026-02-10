@@ -302,12 +302,7 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- if $crd.spec.annotationValidationEnabled }}
-        - --enable-annotation-validation=true
-        {{- else if eq $controllerVersion "1.12" }}
-        # In controller v1.12 annotation validation is enabled by default.
-        - --enable-annotation-validation=false
-        {{- end }}
+        - --enable-annotation-validation={{ $crd.spec.annotationValidationEnabled | default false }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}
