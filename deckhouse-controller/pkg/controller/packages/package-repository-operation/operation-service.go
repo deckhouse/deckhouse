@@ -134,7 +134,8 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 func (s *OperationService) foundTagsToProcess(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) ([]*semver.Version, error) {
 	// Handle fullScan vs incremental scan
 	if operation.Spec.Update != nil && operation.Spec.Update.FullScan {
-		rawTags, err := s.svc.Package(packageName).ListTags(ctx)
+		// TODO: check for applications this changes
+		rawTags, err := s.svc.Package(packageName).Versions().ListTags(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to list package tags: %w", err)
 		}
