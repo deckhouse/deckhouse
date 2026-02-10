@@ -318,6 +318,7 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 
 	var failedVersions = make([]failedVersion, 0)
 	for _, versionTag := range foundTags {
+		// TODO: make ensureModulePackageVersion if it's module
 		err := s.ensureApplicationPackageVersion(ctx, packageName, "v"+versionTag.String())
 		if err != nil {
 			s.logger.Warn("failed to create package version",
