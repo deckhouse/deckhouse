@@ -15,10 +15,12 @@
 package debug
 
 import (
+	"context"
 	"fmt"
 
-	sh_debug "github.com/flant/shell-operator/pkg/debug"
 	"gopkg.in/alecthomas/kingpin.v2"
+
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator/debug"
 )
 
 var packagesDebugSocket = "/tmp/deckhouse-debug.socket"
@@ -28,17 +30,19 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 
 	packagesDumpCmd := packagesCmd.Command("dump", "Dump all packages state from memory.").
 		Action(func(_ *kingpin.ParseContext) error {
-			client, err := sh_debug.NewClient(packagesDebugSocket)
+			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
 				return err
 			}
 			defer client.Close()
 
-			out, err := client.Get("http://unix/packages/dump")
+			ctx := context.Background()
+			out, err := client.Get(ctx, "packages/dump")
 			if err != nil {
 				return err
 			}
 			fmt.Println(string(out))
+
 			return nil
 		})
 	definePackagesDebugSocketFlag(packagesDumpCmd)
@@ -46,17 +50,19 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 	packagesQueueCmd := packagesCmd.Command("queue", "Queue operations.")
 	packagesQueueListCmd := packagesQueueCmd.Command("list", "List all package queues with tasks.").
 		Action(func(_ *kingpin.ParseContext) error {
-			client, err := sh_debug.NewClient(packagesDebugSocket)
+			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
 				return err
 			}
 			defer client.Close()
 
-			out, err := client.Get("http://unix/packages/queues/dump")
+			ctx := context.Background()
+			out, err := client.Get(ctx, "packages/queues/dump")
 			if err != nil {
 				return err
 			}
 			fmt.Println(string(out))
+
 			return nil
 		})
 	definePackagesDebugSocketFlag(packagesQueueListCmd)
@@ -64,17 +70,19 @@ func DefinePackagesCommands(kpApp *kingpin.Application) {
 	var packageName string
 	packagesRenderCmd := packagesCmd.Command("render", "Render package Helm templates.").
 		Action(func(_ *kingpin.ParseContext) error {
-			client, err := sh_debug.NewClient(packagesDebugSocket)
+			client, err := debug.NewClient(packagesDebugSocket)
 			if err != nil {
 				return err
 			}
 			defer client.Close()
 
-			out, err := client.Get(fmt.Sprintf("http://unix/packages/render/%s", packageName))
+			ctx := context.Background()
+			out, err := client.Get(ctx, "packages/render", packageName)
 			if err != nil {
 				return err
 			}
 			fmt.Println(string(out))
+
 			return nil
 		})
 	packagesRenderCmd.Arg("package_name", "Name of the package to render.").Required().StringVar(&packageName)

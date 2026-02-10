@@ -507,8 +507,8 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	failedList := make([]v1alpha1.PackageRepositoryOperationStatusFailedPackageError, 0, len(processResult.Failed))
 	for _, failedVersion := range processResult.Failed {
 		failedList = append(failedList, v1alpha1.PackageRepositoryOperationStatusFailedPackageError{
-			Name:  failedVersion.Name,
-			Error: failedVersion.Error,
+			Version: failedVersion.Name,
+			Error:   failedVersion.Error,
 		})
 	}
 

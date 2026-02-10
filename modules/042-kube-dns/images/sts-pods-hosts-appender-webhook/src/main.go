@@ -53,14 +53,14 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "Ok.")
 }
 
-func initFlags() config {
+func initFlags() (config, error) {
 	cfg := config{}
 
 	fl := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	fl.StringVar(&cfg.certFile, "tls-cert-file", "", "TLS certificate file")
 	fl.StringVar(&cfg.keyFile, "tls-key-file", "", "TLS key file")
-	fl.Parse(os.Args[1:])
-	return cfg
+	err := fl.Parse(os.Args[1:])
+	return cfg, err
 }
 
 func addInitContainerToPod(_ context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhmutating.MutatorResult, error) {
@@ -163,7 +163,10 @@ func main() {
 	logrusLogEntry.Logger.SetLevel(logrus.DebugLevel)
 	logger := kwhlogrus.NewLogrus(logrusLogEntry)
 
-	cfg := initFlags()
+	cfg, err := initFlags()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while init flags: %s", err)
+	}
 
 	mt := kwhmutating.MutatorFunc(addInitContainerToPod)
 

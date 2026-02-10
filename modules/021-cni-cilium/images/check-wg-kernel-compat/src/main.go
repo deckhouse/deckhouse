@@ -92,7 +92,6 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("the kernel meets the requirements, there is nothing to do")
-	return
 }
 
 func isCiliumBinaryExists(cniCiliumPath string) (bool, error) {

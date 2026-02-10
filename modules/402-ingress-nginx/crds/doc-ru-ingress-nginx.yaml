@@ -40,6 +40,7 @@ spec:
                     Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
+                    Поддерживаемые версии: `1.10`, `1.12`.
                 enableIstioSidecar:
                   description: |
                     Добавить к подам контроллера аннотации для автоматического инжекта сайдкаров Istio.
@@ -421,6 +422,7 @@ spec:
                     Версия Ingress NGINX Controller.
 
                     **По умолчанию** используется версия из [настроек модуля](configuration.html#parameters-defaultcontrollerversion).
+                    Поддерживаемые версии: `1.10`, `1.12`.
                 enableIstioSidecar:
                   description: |
                     Добавляет к подам контроллера аннотации для автоматического инжекта сайдкаров Istio.
@@ -703,8 +705,6 @@ spec:
                   description: |
                     Включает HTTP/3.
 
-                    > HTTP/3 доступен только в контролере версии 1.10 и 1.12.
-                    >
                     > HTTP/3 нельзя включить, если выбран инлет `HostPortWithProxyProtocol` или `LoadBalancerWithProxyProtocol`.
                     >
                     > В случае инлета `HostWithFailover` HTTP/3 включается только для основного контроллера; резервный контроллер всегда работает без HTTP/3.

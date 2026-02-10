@@ -6,6 +6,9 @@ linters-settings:
     exclude-rules:
       enum:
         - "properties.storageClass.properties.provision.items.properties.type"
+        - "properties.internal.properties.providerDiscoveryData.properties.apiVersion"
+        - "properties.internal.properties.providerClusterConfiguration.properties.apiVersion"
+        - "properties.internal.properties.providerClusterConfiguration.properties.serviceEndpoints.items"
   container:
     exclude-rules:
       read-only-root-filesystem:

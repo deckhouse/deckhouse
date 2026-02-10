@@ -7,7 +7,6 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -115,19 +114,6 @@ const tolerationsAnyNodeWithUninitialized = `
 
 var _ = Describe("Module :: cloud-provider-zvirt :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/zvirt", "/deckhouse/ee/se-plus/modules/030-cloud-provider-zvirt/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("zVirt Suite A", func() {
 		BeforeEach(func() {
