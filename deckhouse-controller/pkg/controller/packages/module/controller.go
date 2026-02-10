@@ -87,7 +87,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) handleCreateOrUpdate(_ context.Context, logger *log.Logger, _ *v1alpha2.Module) error {
+func (r *reconciler) handleCreateOrUpdate(_ context.Context, logger *log.Logger, _ *v1alpha2.Module) error { //nolint:unparam
 	logger.Debug("handle create or update module")
 
 	return nil

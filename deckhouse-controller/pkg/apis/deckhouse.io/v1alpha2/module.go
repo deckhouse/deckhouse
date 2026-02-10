@@ -29,11 +29,11 @@ const (
 	ModuleKind     = "Module"
 
 	// ModuleConditionTypeProcessed changes only by module controller
-	ModuleConditionTypeProcessed                    = "Processed"
-	ModuleConditionReasonVersionNotFound            = "VersionNotFound"
-	ModuleConditionReasonModulePackageNotFound       = "ModulePackageNotFound"
-	ModuleConditionReasonVersionIsDraft             = "VersionIsDraft"
-	ModuleConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
+	ModuleConditionTypeProcessed                = "Processed"
+	ModuleConditionReasonVersionNotFound        = "VersionNotFound"
+	ModuleConditionReasonModulePackageNotFound  = "ModulePackageNotFound"
+	ModuleConditionReasonVersionIsDraft         = "VersionIsDraft"
+	ModuleConditionReasonVersionSpecIsCorrupted = "VersionSpecIsCorrupted"
 
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
