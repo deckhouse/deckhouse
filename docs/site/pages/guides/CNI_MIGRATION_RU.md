@@ -23,6 +23,16 @@ layout: sidebar-guides
 
 {% endalert %}
 
+Поддерживаемые режимы переключения CNI:
+
+|                  | simple-bridge | flannel (hostgw) | flannel (vxlan) | cilium (native) | cilium (vxlan) |
+| ---------------- | :-----------: | :--------------: | :-------------: | :-------------: | :------------: |
+| simple-bridge    |      🟫       |        🟩        |       🟩        |       🟩        |       🟩       |
+| flannel (hostgw) |      🟩       |        🟫        |       🟨        |       🟩        |       🟩       |
+| flannel (vxlan)  |      🟩       |        🟨        |       🟫        |       🟩        |       🟩       |
+| cilium (native)  |      🟩       |        🟩        |       🟩        |       🟫        |       🟨       |
+| cilium (vxlan)   |      🟩       |        🟩        |       🟩        |       🟨        |       🟫       |
+
 Переключение CNI в кластере DKP можно выполнить несколькими способами.
 
 ## Способ 1: Использование группы команд d8 cni-migration утилиты d8 (автоматизированное переключение)

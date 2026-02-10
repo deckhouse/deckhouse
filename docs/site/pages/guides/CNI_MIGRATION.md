@@ -23,6 +23,16 @@ This document describes the procedure for changing the network plugin (CNI) in a
 
 {% endalert %}
 
+Supported CNI switching modes:
+
+|                  | simple-bridge | flannel (hostgw) | flannel (vxlan) | cilium (native) | cilium (vxlan) |
+| ---------------- | :-----------: | :--------------: | :-------------: | :-------------: | :------------: |
+| simple-bridge    |      🟫       |        🟩        |       🟩        |       🟩        |       🟩       |
+| flannel (hostgw) |      🟩       |        🟫        |       🟨        |       🟩        |       🟩       |
+| flannel (vxlan)  |      🟩       |        🟨        |       🟫        |       🟩        |       🟩       |
+| cilium (native)  |      🟩       |        🟩        |       🟩        |       🟫        |       🟨       |
+| cilium (vxlan)   |      🟩       |        🟩        |       🟩        |       🟨        |       🟫       |
+
 There are several methods to switch CNI in a DKP cluster.
 
 ## Method 1: Using the d8 cni-migration command group of the d8 utility (automated switching)
