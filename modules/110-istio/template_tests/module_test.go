@@ -238,7 +238,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(len(mwh.Field("webhooks").Array())).To(Equal(2))
 
-			iopV25 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x25x2")
+			// 1.25 uses sailoperator.io Istio CR, not IstioOperator
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
 			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 
 			deploymentOperatorV25 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25x2")
@@ -251,7 +252,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			serviceGlobal := f.KubernetesResource("Service", "d8-istio", "istiod")
 
-			Expect(iopV25.Exists()).To(BeTrue())
+			Expect(istioV25.Exists()).To(BeTrue())
 			Expect(iopV21.Exists()).To(BeTrue())
 			Expect(deploymentOperatorV25.Exists()).To(BeTrue())
 			Expect(deploymentOperatorV21.Exists()).To(BeTrue())
@@ -263,19 +264,18 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(serviceGlobal.Exists()).To(BeTrue())
 
-			Expect(iopV25.Field("spec.revision").String()).To(Equal(`v1x25x2`))
-			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
+			// sailoperator.io Istio CR: revision and meshConfig under spec.values
+			Expect(istioV25.Field("spec.values.revision").String()).To(Equal(`v1x25x2`))
+			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
+			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
 
-			Expect(iopV25.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
+			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
 			Expect(iopV21.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 
 			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x25x2`))
 			Expect(deploymentOperatorV21.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x21x6`))
 
-			Expect(iopV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
 			Expect(iopV21.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x21x6`))
-
-			Expect(iopV25.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x25x2`))
 			Expect(iopV21.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x21x6`))
 
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x21x6`))
