@@ -473,6 +473,16 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
+	// TODO: check type and legacy mode
+	// 1) found tags
+	// 2) fetch [0] tag image config
+	// 3) check label is application or module
+	// 4) if not found labels - is legacy (and log info about legacy module)
+	// if it's legacy module you must make var legacyModule = true
+
+	// TODO: if application - EnsureApplicationPackage
+	// if module - EnsureModulePackage
+
 	// Create or update ApplicationPackage or ClusterApplicationPackage
 	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
 	if err != nil {
