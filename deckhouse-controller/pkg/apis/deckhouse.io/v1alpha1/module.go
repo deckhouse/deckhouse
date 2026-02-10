@@ -117,6 +117,7 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:storageversion
 
 // Module is a deckhouse module representation.
 type Module struct {
