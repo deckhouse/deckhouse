@@ -88,10 +88,10 @@ func renewAdminKubeconfig() error {
 
 func renewKubeconfig(componentName string) error {
 	path := filepath.Join(kubernetesConfigPath, componentName+".conf")
-	log.Info(fmt.Sprintf("generate or renew %s kubeconfig", path))
+	log.Info("generate or renew kubeconfig", slog.String("path", path))
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		tmpPath := filepath.Join(config.TmpPath, path)
-		log.Info(fmt.Sprintf("configuration has changed since last kubeconfig generation (last applied checksum %s, configuration checksum %s), verifying kubeconfig", config.LastAppliedConfigurationChecksum, config.ConfigurationChecksum))
+		log.Info("configuration has changed since last kubeconfig generation, verifying kubeconfig", slog.String("last_applied_checksum", config.LastAppliedConfigurationChecksum), slog.String("configuration_checksum", config.ConfigurationChecksum))
 		if err := prepareKubeconfig(componentName, true); err != nil {
 			return err
 		}
@@ -113,7 +113,7 @@ func renewKubeconfig(componentName string) error {
 	}
 
 	// regenerate kubeconfig
-	log.Info(fmt.Sprintf("generate new kubeconfig %s", path))
+	log.Info("generate new kubeconfig", slog.String("path", path))
 	return prepareKubeconfig(componentName, false)
 }
 
@@ -211,7 +211,7 @@ func updateRootKubeconfig() error {
 	}
 
 	originalPath := filepath.Join(kubernetesConfigPath, "admin.conf")
-	log.Info(fmt.Sprintf("update root user kubeconfig (%s)", path))
+	log.Info("update root user kubeconfig", slog.String("path", path))
 	if _, err := os.Stat(path); err == nil {
 		p, err := filepath.EvalSymlinks(path)
 		if p == originalPath && err == nil {
@@ -231,7 +231,7 @@ func updateRootKubeconfig() error {
 
 func checkKubeletConfig() error {
 	kubeletPath := filepath.Join(kubernetesConfigPath, "kubelet.conf")
-	log.Info(fmt.Sprintf("phase: check kubelet config %s", kubeletPath))
+	log.Info("phase: check kubelet config", slog.String("path", kubeletPath))
 
 	res, err := loadKubeconfig(kubeletPath)
 	if err != nil {

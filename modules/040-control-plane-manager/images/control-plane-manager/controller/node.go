@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -26,7 +27,7 @@ import (
 )
 
 func annotateNode() error {
-	log.Info(fmt.Sprintf("phase: annotate node %s with annotation %s", config.NodeName, waitingApprovalAnnotation))
+	log.Info("phase: annotate node", slog.String("node", config.NodeName), slog.String("annotation", waitingApprovalAnnotation))
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
@@ -34,7 +35,7 @@ func annotateNode() error {
 
 	if _, ok := node.Annotations[approvedAnnotation]; ok {
 		// node already approved, no need to annotate
-		log.Info(fmt.Sprintf("node %s already approved by annotation %s, no need to annotate", config.NodeName, approvedAnnotation))
+		log.Info("node already approved by annotation, no need to annotate", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
 		return nil
 	}
 
@@ -45,9 +46,9 @@ func annotateNode() error {
 }
 
 func waitNodeApproval() error {
-	log.Info(fmt.Sprintf("phase: waiting node node %s approval with annotation %s", config.NodeName, approvedAnnotation))
+	log.Info("phase: waiting node approval with annotation", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
 
-	log.Info(fmt.Sprintf("waiting for %s annotation on our node %s", approvedAnnotation, config.NodeName))
+	log.Info("waiting for annotation on our node", slog.String("node", config.NodeName), slog.String("annotation", approvedAnnotation))
 	node, err := config.K8sClient.CoreV1().Nodes().Get(context.TODO(), config.NodeName, metav1.GetOptions{})
 	if err != nil {
 		return err
