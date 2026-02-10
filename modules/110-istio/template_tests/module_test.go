@@ -264,8 +264,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(mwh.Exists()).To(BeTrue())
 			Expect(serviceGlobal.Exists()).To(BeTrue())
 
-			// sailoperator.io Istio CR: revision and meshConfig under spec.values
-			Expect(istioV25.Field("spec.values.revision").String()).To(Equal(`v1x25x2`))
+			// sailoperator.io Istio CR: name is the revision; meshConfig and proxy image under spec.values
+			Expect(istioV25.Field("metadata.name").String()).To(Equal(`v1x25x2`))
 			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
 
