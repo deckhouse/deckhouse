@@ -1,24 +1,8 @@
-/*
-Copyright 2025 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package main
 
 import (
 	"bytes"
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,197 +18,144 @@ type ossItem struct {
 func main() {
 	cwd, err := os.Getwd()
 	if err != nil {
-		panic(fmt.Errorf("cannot get pwd: %w", err))
+		log.Fatalf("failed to get cwd: %v", err)
 	}
 	rootPath := filepath.Dir(cwd)
 
-	tfVersions := filepath.Join(rootPath, "candi", "terraform_versions.yml")
-
-	versionsByID, err := loadOssVersions(rootPath)
+	versions, err := loadOSSVersions(rootPath)
 	if err != nil {
-		panic(err)
+		log.Fatalf("failed to load oss versions: %v", err)
 	}
 
-	content, err := os.ReadFile(tfVersions)
+	targetFile := filepath.Join(rootPath, "candi", "terraform_versions.yml")
+	data, err := os.ReadFile(targetFile)
 	if err != nil {
-		panic(fmt.Errorf("cannot read terraform providers file: %w", err))
+		log.Fatalf("failed to read target file: %v", err)
 	}
 
 	var doc yaml.Node
-	if err := yaml.Unmarshal(content, &doc); err != nil {
-		panic(fmt.Errorf("cannot parse terraform providers yaml: %w", err))
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		log.Fatalf("failed to parse yaml: %v", err)
 	}
 
-	rootNode := doc.Content[0]
-	applyVersions(rootNode, versionsByID)
-	applyCoreVersions(rootNode, versionsByID)
+	updateNodes(doc.Content[0], versions)
 
 	var buf bytes.Buffer
-	encoder := yaml.NewEncoder(&buf)
-	encoder.SetIndent(2)
-	if err := encoder.Encode(&doc); err != nil {
-		panic(fmt.Errorf("cannot encode terraform providers yaml: %w", err))
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		log.Fatalf("failed to encode yaml: %v", err)
 	}
-	if err := encoder.Close(); err != nil {
-		panic(err)
-	}
+	enc.Close()
 
-	if err := os.WriteFile(tfVersions, buf.Bytes(), 0o644); err != nil {
-		panic(fmt.Errorf("cannot write terraform providers file: %w", err))
+	if err := os.WriteFile(targetFile, buf.Bytes(), 0o644); err != nil {
+		log.Fatalf("failed to write file: %v", err)
 	}
 }
 
-func findOssFiles(root string) ([]string, error) {
-	var files []string
-	pattern := "modules/040-terraform-manager/oss.yaml"
-
+func loadOSSVersions(root string) (map[string][]string, error) {
+	out := make(map[string][]string)
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, "modules/040-terraform-manager/oss.yaml") {
+			return err
+		}
+
+		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
-			return nil
-		}
-		if !strings.HasSuffix(path, pattern) {
-			return nil
-		}
-		files = append(files, path)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return files, nil
-}
-
-func loadOssVersions(root string) (map[string][]string, error) {
-	ossFiles, err := findOssFiles(root)
-	if err != nil {
-		return nil, err
-	}
-
-	versionsByID := make(map[string][]string)
-
-	for _, path := range ossFiles {
-		content, err := os.ReadFile(path)
-		if err != nil {
-			return nil, fmt.Errorf("cannot read oss file %s: %w", path, err)
-		}
 
 		var items []ossItem
-		if err := yaml.Unmarshal(content, &items); err != nil {
-			return nil, fmt.Errorf("cannot parse oss file %s: %w", path, err)
+		if err := yaml.Unmarshal(data, &items); err != nil {
+			return err
 		}
 
 		for _, item := range items {
-			if item.Version == "" {
-				continue
+			if item.Version != "" {
+				out[item.ID] = append(out[item.ID], item.Version)
 			}
-			versionsByID[item.ID] = append(versionsByID[item.ID], item.Version)
 		}
-	}
-
-	return versionsByID, nil
+		return nil
+	})
+	return out, err
 }
 
-func applyVersions(root *yaml.Node, versionsByID map[string][]string) {
+func updateNodes(root *yaml.Node, versions map[string][]string) {
 	for i := 0; i < len(root.Content); i += 2 {
-		providerNode := root.Content[i+1]
-		if providerNode.Kind != yaml.MappingNode {
+		keyNode := root.Content[i]
+		valNode := root.Content[i+1]
+
+		if keyNode.Value == "terraform" || keyNode.Value == "opentofu" {
+			if v, ok := versions[keyNode.Value]; ok && len(v) > 0 {
+				valNode.Value = v[0]
+				valNode.Style = yaml.DoubleQuotedStyle
+				valNode.Tag = "!!str"
+			}
 			continue
 		}
 
-		typeNode := mappingValue(providerNode, "type")
+		if valNode.Kind != yaml.MappingNode {
+			continue
+		}
+
+		typeNode := findKey(valNode, "type")
 		if typeNode == nil {
 			continue
 		}
 
-		providerType := typeNode.Value
-		ossID := "terraform-provider-" + providerType
-		versions := versionsByID[ossID]
-
-		if len(versions) == 1 {
-			setMapping(providerNode, "version", valueNode(versions[0]))
-			deleteMappingKey(providerNode, "versions")
+		ossID := "terraform-provider-" + typeNode.Value
+		vers, ok := versions[ossID]
+		if !ok || len(vers) == 0 {
 			continue
 		}
 
-		setMapping(providerNode, "versions", listNode(versions))
-		deleteMappingKey(providerNode, "version")
+		if len(vers) == 1 {
+			setKey(valNode, "version", strNode(vers[0]))
+			removeKey(valNode, "versions")
+		} else {
+			seq := &yaml.Node{Kind: yaml.SequenceNode}
+			for _, v := range vers {
+				seq.Content = append(seq.Content, strNode(v))
+			}
+			setKey(valNode, "versions", seq)
+			removeKey(valNode, "version")
+		}
 	}
 }
 
-func applyCoreVersions(root *yaml.Node, versionsByID map[string][]string) {
-	setMapping(root, "terraform", valueNode(firstVersion(versionsByID, "terraform")))
-	setMapping(root, "opentofu", valueNode(firstVersion(versionsByID, "opentofu")))
-}
-
-func firstVersion(versionsByID map[string][]string, id string) string {
-	versions := versionsByID[id]
-	return versions[0]
-}
-
-func mappingValue(node *yaml.Node, key string) *yaml.Node {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return nil
+func strNode(val string) *yaml.Node {
+	return &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Tag:   "!!str",
+		Value: val,
+		Style: yaml.DoubleQuotedStyle,
 	}
+}
 
+func findKey(node *yaml.Node, key string) *yaml.Node {
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
 			return node.Content[i+1]
 		}
 	}
-
 	return nil
 }
 
-func setMapping(node *yaml.Node, key string, value *yaml.Node) {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return
-	}
-
+func setKey(node *yaml.Node, key string, val *yaml.Node) {
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
-			overwriteNode(node.Content[i+1], value)
+			node.Content[i+1] = val
 			return
 		}
 	}
-
-	node.Content = append(node.Content,
-		valueNode(key),
-		value,
-	)
+	node.Content = append(node.Content, &yaml.Node{Kind: yaml.ScalarNode, Value: key}, val)
 }
 
-func deleteMappingKey(node *yaml.Node, key string) {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return
-	}
-
+func removeKey(node *yaml.Node, key string) {
 	for i := 0; i < len(node.Content); i += 2 {
 		if node.Content[i].Value == key {
 			node.Content = append(node.Content[:i], node.Content[i+2:]...)
 			return
 		}
 	}
-}
-
-func overwriteNode(dst, src *yaml.Node) {
-	dst.Kind = src.Kind
-	dst.Tag = src.Tag
-	dst.Value = src.Value
-	dst.Content = src.Content
-	dst.Style = src.Style
-}
-
-func valueNode(value string) *yaml.Node {
-	return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: value}
-}
-
-func listNode(values []string) *yaml.Node {
-	seq := &yaml.Node{Kind: yaml.SequenceNode, Tag: "!!seq"}
-	for _, value := range values {
-		seq.Content = append(seq.Content, valueNode(value))
-	}
-	return seq
 }
