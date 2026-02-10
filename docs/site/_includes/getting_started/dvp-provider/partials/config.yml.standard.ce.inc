@@ -24,6 +24,7 @@ podSubnetCIDR: 10.112.0.0/16
 serviceSubnetCIDR: 10.223.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for bootstrapping the Deckhouse cluster.
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration

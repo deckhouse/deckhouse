@@ -144,7 +144,7 @@ masterNodeGroup:
     # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    ami: ami-0caef02b518350c8b
+    ami: ami-0aad10862ade98f27
 # [<en>] Address space of the AWS cloud.
 # [<ru>] Адресное пространство облака внутри AWS.
 vpcNetworkCIDR: "10.241.0.0/16"
