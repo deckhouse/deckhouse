@@ -490,7 +490,7 @@ jobs:
             publish_image 'dev' "${DEV_REGISTRY_PATH}:${IMAGE_TAG}"
             publish_image 'dev/install' "${DEV_REGISTRY_PATH}/install:${IMAGE_TAG}"
             publish_image 'dev/install-standalone' "${DEV_REGISTRY_PATH}/install-standalone:${IMAGE_TAG}"
-            publish_image 'e2e-opentofu-eks' "${DEV_REGISTRY_PATH}/e2e-opentofu-eks:${IMAGE_TAG}"
+            publish_image 'e2e-terraform' "${DEV_REGISTRY_PATH}/e2e-terraform:${IMAGE_TAG}"
           else
             echo "Branch unset, skipping branch publish."
           fi
