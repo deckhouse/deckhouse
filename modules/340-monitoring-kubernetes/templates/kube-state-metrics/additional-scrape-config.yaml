@@ -31,22 +31,10 @@ spec:
     targetLabel: created_by_kind
     replacement: VirtualMachine
   - sourceLabels:
-    - created_by_kind
-    - created_by_name
-    regex: Pod;(virt-launcher-|d8v-vm-)(.*)
-    targetLabel: created_by_kind
-    replacement: HotplugPod
-  - sourceLabels:
     - owner_kind
     regex: InternalVirtualizationVirtualMachineInstance
     targetLabel: owner_kind
     replacement: VirtualMachine
-  - sourceLabels:
-    - owner_kind
-    - owner_name
-    regex: Pod;(virt-launcher-|d8v-vm-)(.*)
-    targetLabel: owner_kind
-    replacement: HotplugPod
   - action: labeldrop
     regex: customresource_version|customresource_kind|customresource_group
   relabelings:
