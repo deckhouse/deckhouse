@@ -786,6 +786,18 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    loadBalancerIP:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                      description: |
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
+
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
+                      x-doc-examples: ['203.0.113.10']
                     behindL7Proxy:
                       type: boolean
                       description: |
@@ -855,6 +867,18 @@ spec:
                       items:
                         type: string
                         pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$'
+                    loadBalancerIP:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                      description: |
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
+
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
+                      x-doc-examples: ['203.0.113.10']
                 loadBalancerWithSSLPassthrough:
                   type: object
                   x-doc-required: false
@@ -890,6 +914,18 @@ spec:
                       type: string
                       description: |
                         Class of the load balancer for incoming network requests (passed to the `spec.loadBalancerClass` parameter of the provisioned service with the `LoadBalancer` type).
+                    loadBalancerIP:
+                      type: string
+                      pattern: '^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$'
+                      description: |
+                        A static IP address for the Ingress controller Service of type `LoadBalancer` (the value is propagated to the `spec.loadBalancerIP` field of the created Service).
+
+                        This field can be set only when creating the IngressNginxController resource. Any subsequent changes to `loadBalancerIP` will be rejected.
+
+                        > **Warning.** Your cloud provider may not support this field and may ignore it.
+
+                        > **Warning.** Support for a static IP and the ability to reuse the same IP when recreating the Service/load balancer depends on the specific cloud provider implementation. Before using it in production, verify the behavior in your environment and, if necessary, confirm the limitations with your provider.
+                      x-doc-examples: ['203.0.113.10']
                 hostPort:
                   type: object
                   description: |
@@ -1394,6 +1430,27 @@ spec:
                   rule: "!((has(self.enableIstioSidecar) && self.enableIstioSidecar == true) && self.inlet == 'HostWithFailover')"
                 - message: .spec.nginxProfilingEnabled experimental option available only in version 1.10
                   rule: "!has(self.nginxProfilingEnabled) || !self.nginxProfilingEnabled || (self.controllerVersion in ['1.10'])"
+                - message: '"spec.loadBalancer.loadBalancerIP" can only be set at creation'
+                  rule: >-
+                    !has(oldSelf.inlet) ||
+                    ((has(oldSelf.loadBalancer) && has(oldSelf.loadBalancer.loadBalancerIP)) ==
+                     (has(self.loadBalancer) && has(self.loadBalancer.loadBalancerIP)) &&
+                     (!(has(self.loadBalancer) && has(self.loadBalancer.loadBalancerIP)) ||
+                      self.loadBalancer.loadBalancerIP == oldSelf.loadBalancer.loadBalancerIP))
+                - message: '"spec.loadBalancerWithProxyProtocol.loadBalancerIP" can only be set at creation'
+                  rule: >-
+                    !has(oldSelf.inlet) ||
+                    ((has(oldSelf.loadBalancerWithProxyProtocol) && has(oldSelf.loadBalancerWithProxyProtocol.loadBalancerIP)) ==
+                     (has(self.loadBalancerWithProxyProtocol) && has(self.loadBalancerWithProxyProtocol.loadBalancerIP)) &&
+                     (!(has(self.loadBalancerWithProxyProtocol) && has(self.loadBalancerWithProxyProtocol.loadBalancerIP)) ||
+                      self.loadBalancerWithProxyProtocol.loadBalancerIP == oldSelf.loadBalancerWithProxyProtocol.loadBalancerIP))
+                - message: '"spec.loadBalancerWithSSLPassthrough.loadBalancerIP" can only be set at creation'
+                  rule: >-
+                    !has(oldSelf.inlet) ||
+                    ((has(oldSelf.loadBalancerWithSSLPassthrough) && has(oldSelf.loadBalancerWithSSLPassthrough.loadBalancerIP)) ==
+                     (has(self.loadBalancerWithSSLPassthrough) && has(self.loadBalancerWithSSLPassthrough.loadBalancerIP)) &&
+                     (!(has(self.loadBalancerWithSSLPassthrough) && has(self.loadBalancerWithSSLPassthrough.loadBalancerIP)) ||
+                      self.loadBalancerWithSSLPassthrough.loadBalancerIP == oldSelf.loadBalancerWithSSLPassthrough.loadBalancerIP))
       additionalPrinterColumns:
         - jsonPath: .spec.ingressClass
           name: Ingress Class
