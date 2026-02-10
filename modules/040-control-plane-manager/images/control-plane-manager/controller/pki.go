@@ -106,7 +106,7 @@ func renewCertificates() error {
 func renewCertificate(componentName, f string) error {
 	path := filepath.Join(kubernetesPkiPath, f+".crt")
 	keyPath := filepath.Join(kubernetesPkiPath, f+".key")
-	log.Info("generate or renew certificate", slog.String("component", componentName), slog.String("path", path))
+	log.Info("generate or renew certificate", slog.String("component", componentName), slog.String("cert_path", path))
 
 	if _, err := os.Stat(path); err == nil && config.ConfigurationChecksum != config.LastAppliedConfigurationChecksum {
 		var remove bool
