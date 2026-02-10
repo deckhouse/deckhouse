@@ -20,7 +20,7 @@ spec:
       type: string
     - jsonPath: .status.syncTime
       name: Sync
-      type: string
+      type: date
     - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
       name: MSG
       type: string
