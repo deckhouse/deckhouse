@@ -92,6 +92,7 @@ spec:
         - --shutdown-grace-period=0
         - --default-ssl-certificate=default/custom-secret
         - --controller-class=ingress-nginx.deckhouse.io/solid
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid
@@ -408,6 +409,7 @@ spec:
         - --shutdown-grace-period=0
         - --default-ssl-certificate=default/custom-secret
         - --controller-class=ingress-nginx.deckhouse.io/solid
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-solid
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=solid

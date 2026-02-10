@@ -76,6 +76,7 @@ spec:
         - --update-status=true
         - --shutdown-grace-period=60
         - --controller-class=ingress-nginx.deckhouse.io/test
+        - --enable-annotation-validation=false
         - --maxmind-mirror=https://geoproxy:4250/download
         - --maxmind-skip-tls-verification=true
         - --maxmind-retries-count=5

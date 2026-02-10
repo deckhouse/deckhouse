@@ -302,9 +302,7 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- if $crd.spec.annotationValidationEnabled }}
-        - --enable-annotation-validation=true
-        {{- end }}
+        - --enable-annotation-validation={{ $crd.spec.annotationValidationEnabled | default false }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}

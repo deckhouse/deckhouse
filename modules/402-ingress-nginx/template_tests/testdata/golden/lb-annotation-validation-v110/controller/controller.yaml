@@ -38,7 +38,7 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: bf2256aff20c9a5728a01e7e631ede90d1aa26a5a930837199651eb2afee2f09
+    ingress-nginx-controller.deckhouse.io/checksum: 13473c50521f33b22a908bf1560f390016ab55e75150a03220775d947c550c26
     ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
@@ -78,7 +78,7 @@ spec:
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
         - --watch-ingress-without-class=true
-        - --enable-annotation-validation=false
+        - --enable-annotation-validation=true
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-nginx
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=nginx
