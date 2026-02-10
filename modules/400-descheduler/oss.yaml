@@ -3,4 +3,6 @@
   description: A tool to auto-fix scheduling issues Kubernetes does not cover itself.
   logo: /images/logos/kubernetes.svg
   license: Apache License 2.0
+  id: descheduler
+  version: 0.34.0
 
