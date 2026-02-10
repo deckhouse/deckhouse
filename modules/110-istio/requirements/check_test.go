@@ -28,22 +28,22 @@ import (
 func TestIstioOperatorVersionRequirement(t *testing.T) {
 	requirements.RemoveValue(minVersionValuesKey)
 	t.Run("requirement met", func(t *testing.T) {
-		requirements.SaveValue(minVersionValuesKey, "1.19.7")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
+		requirements.SaveValue(minVersionValuesKey, "1.21.6")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
 
 	t.Run("requirement failed", func(t *testing.T) {
 		requirements.SaveValue(minVersionValuesKey, "1.13")
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
 		assert.False(t, ok)
 		require.Error(t, err)
 	})
 
 	t.Run("Istio is not installed on the cluster", func(t *testing.T) {
 		requirements.RemoveValue(minVersionValuesKey)
-		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.19")
+		ok, err := requirements.CheckRequirement(requirementIstioMinimalVersionKey, "1.21")
 		assert.True(t, ok)
 		require.NoError(t, err)
 	})
@@ -54,7 +54,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 	t.Run("requirement for k8s version pass", func(t *testing.T) {
 		requirements.SaveValue(isK8sVersionAutomaticKey, true)
 		requirements.SaveValue(minVersionValuesKey, "1.13")
-		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
+		var mapVersions = map[string][]string{"1.13": {"1.21", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
 		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.20.0")
 		assert.True(t, ok)
@@ -64,7 +64,7 @@ func TestIstioOperatorVersionRequirement(t *testing.T) {
 	t.Run("requirement for k8s version failed", func(t *testing.T) {
 		requirements.SaveValue(isK8sVersionAutomaticKey, true)
 		requirements.SaveValue(minVersionValuesKey, "1.13")
-		var mapVersions = map[string][]string{"1.13": {"1.19", "1.20", "1.21"}}
+		var mapVersions = map[string][]string{"1.13": {"1.21", "1.20", "1.21"}}
 		requirements.SaveValue(istioToK8sCompatibilityMapKey, mapVersions)
 		ok, err := requirements.CheckRequirement(requirementDefaultK8sKey, "1.22.0")
 		assert.False(t, ok)
