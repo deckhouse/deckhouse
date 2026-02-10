@@ -23,7 +23,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 // KubeControllerObjectLifecycle checks controller object lifecycle where a
@@ -125,21 +125,22 @@ type pollingDoer struct {
 	interval time.Duration
 }
 
-func (p *pollingDoer) Do(ctx context.Context) (err error) {
+func (p *pollingDoer) Do(ctx context.Context) error {
 	deadline := time.NewTimer(p.timeout)
 	ticker := time.NewTicker(p.interval)
 	defer deadline.Stop()
 	defer ticker.Stop()
 
+	var lastErr error
 	for {
 		select {
 		case <-ticker.C:
-			err = p.doer.Do(ctx)
-			if p.catch(err) {
-				return err
+			lastErr = p.doer.Do(ctx)
+			if p.catch(lastErr) {
+				return lastErr
 			}
 		case <-deadline.C:
-			return err
+			return lastErr
 		}
 	}
 }

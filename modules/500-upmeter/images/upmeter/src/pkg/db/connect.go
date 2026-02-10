@@ -19,7 +19,7 @@ package db
 import (
 	_ "github.com/mattn/go-sqlite3"
 
-	dbcontext "upmeter/pkg/db/context"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 )
 
 func Connect(path string, opts map[string]string) (*dbcontext.DbContext, error) {

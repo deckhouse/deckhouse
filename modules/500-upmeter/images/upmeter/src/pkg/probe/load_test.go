@@ -23,9 +23,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func Test_NewProbeFilter(t *testing.T) {

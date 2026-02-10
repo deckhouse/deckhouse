@@ -21,7 +21,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 type convergeStatusChecker struct {

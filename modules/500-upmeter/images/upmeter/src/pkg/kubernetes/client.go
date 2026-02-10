@@ -25,7 +25,7 @@ func InitKubeClient(config *Config) (kube.Client, error) {
 
 	client.WithContextName(config.Context)
 	client.WithConfigPath(config.Config)
-	client.WithRateLimiterSettings(config.ClientQps, config.ClientBurst)
+	client.WithRateLimiterSettings(config.ClientQPS, config.ClientBurst)
 	// TODO(nabokihms): add kubernetes client metrics
 
 	// FIXME: Kubernetes client is configured successfully with 'out-of-cluster' config

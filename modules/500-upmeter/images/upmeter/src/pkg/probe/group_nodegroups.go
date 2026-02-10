@@ -21,10 +21,10 @@ import (
 
 	v1 "k8s.io/api/core/v1"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/monitor/node"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight checker.Doer, nodeGroupNames, knownZones []string, zonePrefix string) []runnerConfig {
@@ -34,7 +34,7 @@ func initNodeGroups(access kubernetes.Access, nodeLister node.Lister, preflight 
 	)
 	controlPlanePinger := checker.DoOrUnknown(controlPlaneTimeout, preflight)
 
-	configs := []runnerConfig{}
+	configs := make([]runnerConfig, 0, len(nodeGroupNames))
 
 	for _, ngName := range nodeGroupNames {
 		configs = append(configs,

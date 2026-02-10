@@ -19,7 +19,7 @@ package checker
 import (
 	"testing"
 
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 func createTestProbeImage(name string, secrets []string) *kubernetes.ProbeImage {

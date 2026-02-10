@@ -22,11 +22,11 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/monitor/node"
-	"upmeter/pkg/probe/checker"
-	"upmeter/pkg/set"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
+	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/set"
 )
 
 func NewLoader(
@@ -111,7 +111,6 @@ func (l *Loader) Groups() []string {
 			continue
 		}
 		groups.Add(rc.group)
-
 	}
 
 	l.groups = groups.Slice()
@@ -135,7 +134,6 @@ func (l *Loader) Probes() []check.ProbeRef {
 		}
 		seen.Add(ref.Id())
 		l.probes = append(l.probes, ref)
-
 	}
 	sort.Sort(check.ByProbeRef(l.probes))
 	return l.probes
@@ -181,5 +179,5 @@ type Filter struct {
 }
 
 func (f Filter) Enabled(ref check.ProbeRef) bool {
-	return !(f.refs.Has(ref.Id()) || f.refs.Has(ref.Group) || f.refs.Has(ref.Group+"/"))
+	return !f.refs.Has(ref.Id()) && !f.refs.Has(ref.Group) && !f.refs.Has(ref.Group+"/")
 }

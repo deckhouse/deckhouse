@@ -26,8 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // StatefulSetPodLifecycle is a checker constructor and configurator

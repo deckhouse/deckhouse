@@ -22,18 +22,18 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
-// MetricsAdapterApiAvailable is a checker constructor and configurator
-type MetricsAdapterApiAvailable struct {
+// MetricsAdapterAPIAvailable is a checker constructor and configurator
+type MetricsAdapterAPIAvailable struct {
 	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
 
-func (c MetricsAdapterApiAvailable) Checker() check.Checker {
+func (c MetricsAdapterAPIAvailable) Checker() check.Checker {
 	verifier := metricsAdapterAPIVerifier{
 		endpoint:     c.Endpoint,
 		kubeAccessor: c.Access,

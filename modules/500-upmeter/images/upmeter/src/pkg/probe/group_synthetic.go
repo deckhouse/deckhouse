@@ -21,8 +21,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func initSynthetic(access kubernetes.Access, logger *logrus.Logger) []runnerConfig {

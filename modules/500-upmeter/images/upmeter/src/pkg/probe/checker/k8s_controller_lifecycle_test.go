@@ -24,7 +24,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 func TestKubeControllerObjectLifecycle_Check(t *testing.T) {

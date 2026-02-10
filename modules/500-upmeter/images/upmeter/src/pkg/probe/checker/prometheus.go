@@ -24,18 +24,18 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
-// PrometheusApiAvailable is a checker constructor and configurator
-type PrometheusApiAvailable struct {
+// PrometheusAPIAvailable is a checker constructor and configurator
+type PrometheusAPIAvailable struct {
 	Access   kubernetes.Access
 	Timeout  time.Duration
 	Endpoint string
 }
 
-func (c PrometheusApiAvailable) Checker() check.Checker {
+func (c PrometheusAPIAvailable) Checker() check.Checker {
 	verifier := prometheusAPIVerifier{
 		endpoint: c.Endpoint,
 		access:   c.Access,

@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/db"
-	dbcontext "upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 )
 
 const originsSep = ":"
@@ -35,7 +35,7 @@ type set map[string]struct{}
 
 // {b, a, c} => "a:b:c"
 func (s set) String() string {
-	var list []string
+	list := make([]string, 0, len(s))
 	for el := range s {
 		list = append(list, el)
 	}

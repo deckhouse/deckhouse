@@ -19,9 +19,9 @@ package remotewrite
 import (
 	"time"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
 )
 
 type SyncIdentifier string // not to mess up with other string arguments
@@ -39,7 +39,7 @@ func newStorage(ctx *dbcontext.DbContext, originsCount int) *storage {
 }
 
 func (s *storage) Add(syncID SyncIdentifier, origin string, episodes []*check.Episode) error {
-	var entities []dao.ExportEntity
+	entities := make([]dao.ExportEntity, 0, len(episodes))
 	for _, ep := range episodes {
 		entity := dao.ExportEntity{
 			Episode: *ep,

@@ -29,8 +29,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // SmokeMiniAvailable is a checker constructor and configurator

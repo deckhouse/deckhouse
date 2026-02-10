@@ -23,8 +23,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/registry"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type ProbeListHandler struct {

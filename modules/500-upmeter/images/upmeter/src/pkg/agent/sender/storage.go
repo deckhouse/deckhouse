@@ -19,10 +19,10 @@ package sender
 import (
 	"time"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/db"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
 )
 
 type ListTxStorage interface {

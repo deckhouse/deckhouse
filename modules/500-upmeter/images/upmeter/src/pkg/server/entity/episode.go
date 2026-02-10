@@ -22,10 +22,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/db"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
 )
 
 var ErrNotChanged = fmt.Errorf("not changed")

@@ -27,10 +27,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/monitor/node"
-	"upmeter/pkg/set"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/node"
+	"d8.io/upmeter/pkg/set"
 )
 
 // DaemonSetPodsReady is a checker constructor and configurator

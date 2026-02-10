@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 
-	k8saccess "upmeter/pkg/kubernetes"
+	k8saccess "d8.io/upmeter/pkg/kubernetes"
 )
 
 func Test_smokeMiniAvailable(t *testing.T) {

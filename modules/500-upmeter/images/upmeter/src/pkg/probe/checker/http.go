@@ -23,7 +23,7 @@ import (
 	"net/http"
 	"time"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 // httpChecker implements the checker for HTTP endpoints

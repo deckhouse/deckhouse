@@ -28,17 +28,17 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/db"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/monitor/downtime"
-	"upmeter/pkg/probe"
-	"upmeter/pkg/probe/calculated"
-	"upmeter/pkg/probe/checker"
-	"upmeter/pkg/registry"
-	"upmeter/pkg/server/api"
-	"upmeter/pkg/server/remotewrite"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/monitor/downtime"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/registry"
+	"d8.io/upmeter/pkg/server/api"
+	"d8.io/upmeter/pkg/server/remotewrite"
 )
 
 // server initializes all dependencies:

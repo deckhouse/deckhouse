@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"upmeter/pkg/check"
+	"d8.io/upmeter/pkg/check"
 )
 
 // Config is basically a checker constructor with verbose arguments

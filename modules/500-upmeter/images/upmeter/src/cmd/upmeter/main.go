@@ -25,10 +25,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 
-	"upmeter/pkg/agent"
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/run"
-	"upmeter/pkg/server"
+	"d8.io/upmeter/pkg/agent"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/run"
+	"d8.io/upmeter/pkg/server"
 )
 
 func main() {

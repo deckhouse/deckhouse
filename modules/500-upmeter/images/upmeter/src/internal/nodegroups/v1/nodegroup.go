@@ -21,8 +21,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	nm "upmeter/internal/schema"
-	"upmeter/internal/update"
+	nm "d8.io/upmeter/internal/schema"
+	"d8.io/upmeter/internal/update"
 )
 
 // +genclient

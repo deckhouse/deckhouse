@@ -30,7 +30,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 type Client struct {
@@ -165,14 +165,6 @@ func newTransport(timeout time.Duration) *http.Transport {
 		TLSHandshakeTimeout:   10 * time.Second, // 10s is the default value
 		ResponseHeaderTimeout: timeout,
 	}
-}
-
-func getServiceAccountToken() (string, error) {
-	bs, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return "", fmt.Errorf("cannot read service account file: %v", err)
-	}
-	return string(bs), nil
 }
 
 func NewKubeBearerTransport(next http.RoundTripper, access kubernetes.Access) *KubeBearerTransport {

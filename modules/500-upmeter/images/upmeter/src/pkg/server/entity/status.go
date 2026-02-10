@@ -21,9 +21,9 @@ import (
 	"sort"
 	"time"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/db/dao"
-	"upmeter/pkg/server/ranges"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 type EpisodeSummary struct {
@@ -186,7 +186,11 @@ func combineEpisodesByTimeslot(episodes []check.Episode, slotSize time.Duration)
 		idx[probeID][start] = append(idx[probeID][start], i)
 	}
 
-	newEpisodes := make([]check.Episode, 0)
+	total := 0
+	for _, timeslots := range idx {
+		total += len(timeslots)
+	}
+	newEpisodes := make([]check.Episode, 0, total)
 	for _, timeslots := range idx {
 		for _, indices := range timeslots {
 			ep := episodes[indices[0]]

@@ -144,13 +144,13 @@ func (a ByTimeSlot) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // DowntimeIncident defines a long lasting downtime. It is stored in cluster as a CR.
 type DowntimeIncident struct {
-	Start        int64 // start of downtime ()
-	End          int64 // end of downtime ()
-	Duration     int64 // duration in seconds
-	Type         string
-	Description  string
-	Affected     []string // a list of affected groups
-	DowntimeName string   // a checkName of a Downtime custom resource
+	Start        int64    `json:"start"`
+	End          int64    `json:"end"`
+	Duration     int64    `json:"duration"`
+	Type         string   `json:"type"`
+	Description  string   `json:"description"`
+	Affected     []string `json:"affected"`
+	DowntimeName string   `json:"downtimeName"`
 }
 
 type Stats struct {

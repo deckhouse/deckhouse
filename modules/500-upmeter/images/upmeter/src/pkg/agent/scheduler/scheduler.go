@@ -22,9 +22,9 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/db/dao"
-	"upmeter/pkg/registry"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/registry"
 )
 
 type Scheduler struct {
@@ -195,7 +195,7 @@ func (e *Scheduler) convert(start time.Time) ([]check.Episode, error) {
 	// Collect episodes for calculated probes.
 	for _, calc := range e.registry.Calculators() {
 		sss := make([]*check.StatusSeries, 0)
-		for _, id := range calc.MergeIds() {
+		for _, id := range calc.MergeIDs() {
 			if ss, ok := e.seriesMap[id]; ok {
 				sss = append(sss, ss)
 			}

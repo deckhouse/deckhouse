@@ -19,8 +19,8 @@ package probe
 import (
 	"time"
 
-	"upmeter/pkg/kubernetes"
-	"upmeter/pkg/probe/checker"
+	"d8.io/upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/probe/checker"
 )
 
 func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerConfig {
@@ -121,7 +121,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			probe:  "prometheus-longterm",
 			check:  "api",
 			period: 10 * time.Second,
-			config: checker.PrometheusApiAvailable{
+			config: checker.PrometheusAPIAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://prometheus-longterm.d8-monitoring:9090/api/v1/query?query=vector(1)",
@@ -155,7 +155,7 @@ func initExtensions(access kubernetes.Access, preflight checker.Doer) []runnerCo
 			probe:  "dex",
 			check:  "keys",
 			period: 10 * time.Second,
-			config: checker.DexApiAvailable{
+			config: checker.DexAPIAvailable{
 				Access:   access,
 				Timeout:  5 * time.Second,
 				Endpoint: "https://dex.d8-user-authn/keys",

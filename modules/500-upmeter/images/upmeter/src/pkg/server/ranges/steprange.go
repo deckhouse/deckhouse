@@ -49,8 +49,8 @@ func New(start, end time.Time, step time.Duration, includeCurrent bool) StepRang
 	}
 
 	return NewStepRange(
-		int64(startAligned.Unix()),
-		int64(endAligned.Unix()),
+		startAligned.Unix(),
+		endAligned.Unix(),
 		int64(step.Seconds()),
 	)
 }

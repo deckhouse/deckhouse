@@ -22,8 +22,8 @@ import (
 	"sync"
 	"time"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/kubernetes"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/kubernetes"
 )
 
 // ControlPlaneAvailable is a checker constructor and configurator

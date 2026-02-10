@@ -19,10 +19,10 @@ package registry
 import (
 	"sort"
 
-	"upmeter/pkg/check"
-	"upmeter/pkg/probe"
-	"upmeter/pkg/probe/calculated"
-	"upmeter/pkg/set"
+	"d8.io/upmeter/pkg/check"
+	"d8.io/upmeter/pkg/probe"
+	"d8.io/upmeter/pkg/probe/calculated"
+	"d8.io/upmeter/pkg/set"
 )
 
 type Registry struct {

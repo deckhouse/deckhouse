@@ -26,8 +26,8 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/sqlite3"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 
-	"upmeter/pkg/db"
-	dbcontext "upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 )
 
 func GetMigratedDatabase(ctx context.Context, dbPath, migrationsPath string) (*dbcontext.DbContext, error) {

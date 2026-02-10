@@ -23,12 +23,12 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
-	"upmeter/pkg/monitor/downtime"
-	"upmeter/pkg/server/entity"
-	"upmeter/pkg/server/ranges"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/monitor/downtime"
+	"d8.io/upmeter/pkg/server/entity"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 type StatusResponse struct {

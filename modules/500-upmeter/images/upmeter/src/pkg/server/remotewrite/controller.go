@@ -24,9 +24,9 @@ import (
 	kube "github.com/flant/kube-client/client"
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/monitor/remotewrite"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/monitor/remotewrite"
 )
 
 type Exporter interface {

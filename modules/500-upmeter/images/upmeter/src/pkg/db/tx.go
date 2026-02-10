@@ -19,7 +19,7 @@ package db
 import (
 	"fmt"
 
-	dbcontext "upmeter/pkg/db/context"
+	dbcontext "d8.io/upmeter/pkg/db/context"
 )
 
 // SQLite: "No Isolation Between Operations On The Same Database Connection"

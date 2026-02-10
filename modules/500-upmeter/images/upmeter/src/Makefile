@@ -36,7 +36,7 @@ fmt:
 	@# - gofumpt is not included in the .golangci.yaml because it conflicts with imports https://github.com/golangci/golangci-lint/issues/1490#issuecomment-778782810
 	@# - goimports is not turned on since it is used mostly by gofumpt internally
 	$(GOFUMPT_BIN) -l -w -extra .
-	goimports -w -local upmeter .
+	goimports -w -local d8.io/upmeter .
 	$(GOLANGCILINT_BIN) run ./... -c .golangci.yaml --fix
 
 test:

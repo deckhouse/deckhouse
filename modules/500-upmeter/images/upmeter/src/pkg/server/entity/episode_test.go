@@ -23,10 +23,10 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/dao"
-	"upmeter/pkg/server/ranges"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/dao"
+	"d8.io/upmeter/pkg/server/ranges"
 )
 
 func Test_Save30sEpisode_Saves(t *testing.T) {

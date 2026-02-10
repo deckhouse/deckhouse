@@ -23,9 +23,9 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	. "github.com/onsi/gomega"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/db/migrations"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/db/migrations"
 )
 
 // getFileDatabase bootstraps the server database in memory; it is used to generate random data for further usage

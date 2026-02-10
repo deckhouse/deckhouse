@@ -24,10 +24,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"upmeter/pkg/check"
-	dbcontext "upmeter/pkg/db/context"
-	"upmeter/pkg/server/entity"
-	"upmeter/pkg/server/remotewrite"
+	"d8.io/upmeter/pkg/check"
+	dbcontext "d8.io/upmeter/pkg/db/context"
+	"d8.io/upmeter/pkg/server/entity"
+	"d8.io/upmeter/pkg/server/remotewrite"
 )
 
 type EpisodesPayload struct {
