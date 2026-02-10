@@ -31,7 +31,7 @@ istio:
   internal:
     istioToK8sCompatibilityMap:
       "1.16": ["1.22", "1.23", "1.24", "1.25"]
-	  "1.21": ["1.30", "1.31", "1.32", "1.33", "1.34"]
+      "1.21": ["1.30", "1.31", "1.32", "1.33", "1.34"]
 `
 	f := HookExecutionConfigInit(initValues, "")
 
