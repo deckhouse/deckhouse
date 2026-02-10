@@ -65,6 +65,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleConfigs().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("moduledocumentations"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModuleDocumentations().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("modulepackages"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModulePackages().Informer()}, nil
+	case v1alpha1.SchemeGroupVersion.WithResource("modulepackageversions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModulePackageVersions().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulepulloverrides"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().ModulePullOverrides().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("modulereleases"):
@@ -83,6 +87,8 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha1().PackageRepositoryOperations().Informer()}, nil
 
 		// Group=deckhouse.io, Version=v1alpha2
+	case v1alpha2.SchemeGroupVersion.WithResource("modules"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().Modules().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("modulepulloverrides"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Deckhouse().V1alpha2().ModulePullOverrides().Informer()}, nil
 	case v1alpha2.SchemeGroupVersion.WithResource("moduleupdatepolicies"):
