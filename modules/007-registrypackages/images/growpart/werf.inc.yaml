@@ -1,5 +1,5 @@
 {{- $cloud_utils_version := include "get_oss_version_by_id" (list "cloud-utils" $ )  -}}
-{{- $util_linux_version := include "get_oss_version_by_id" (list "util-linux-growpart" $ )  -}}
+{{- $growpart_version := include "get_oss_version_by_id" (list "util-linux-growpart" $ )  -}}
 {{- $image_version := $cloud_utils_version | replace "." "-" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact-{{ $image_version }}
@@ -16,7 +16,7 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b v{{ $util_linux_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
+  - git clone -b v{{ $growpart_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/util-linux/util-linux.git  /src/util-linux
   - rm -rf /src/util-linux/.git
   - git clone -b {{ $cloud_utils_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/canonical/cloud-utils.git /src/cloud-utils
   - rm -rf /src/cloud-utils/.git
