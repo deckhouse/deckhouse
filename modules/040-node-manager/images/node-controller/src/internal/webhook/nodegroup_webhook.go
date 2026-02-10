@@ -43,6 +43,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -55,7 +56,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-var webhookLog = logf.Log.WithName("nodegroup-webhook")
+var webhookLog = logf.Log.WithName("nodegroup-validation-webhook")
 
 // NodeGroupValidator handles validation for NodeGroup resources.
 // It has access to cluster state via Client.
@@ -103,8 +104,13 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
-	clusterConfig := w.loadClusterConfig(ctx)
-	//providerConfig := w.loadProviderClusterConfig(ctx)
+	// Load cluster config - required for validation
+	clusterConfig, err := w.loadClusterConfig(ctx)
+	if err != nil {
+		webhookLog.Error(err, "failed to load cluster config")
+		return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to load cluster config: %w", err))
+	}
+
 	var warnings []string
 
 	if req.Operation == "CREATE" && clusterConfig.ClusterType == "Cloud" {
@@ -144,8 +150,14 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		}
 	}
 
+	// Zones validation - only for Cloud clusters with cloudInstances.zones specified
+	// Skip loading providerConfig for Static clusters (secret doesn't exist)
 	if ng.Spec.CloudInstances != nil && len(ng.Spec.CloudInstances.Zones) > 0 && clusterConfig.ClusterType == "Cloud" {
-		providerConfig := w.loadProviderClusterConfig(ctx)
+		providerConfig, err := w.loadProviderClusterConfig(ctx)
+		if err != nil {
+			webhookLog.Error(err, "failed to load provider cluster config")
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to load provider cluster config: %w", err))
+		}
 		if len(providerConfig.Zones) > 0 {
 			allowedZones := make(map[string]bool)
 			for _, z := range providerConfig.Zones {
@@ -179,7 +191,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		oldCRIType := getCRIType(oldNG, clusterConfig.DefaultCRI)
 		newCRIType := getCRIType(ng, clusterConfig.DefaultCRI)
 		if oldCRIType != newCRIType {
-			endpointsCount := w.getKubernetesEndpointsCount(ctx)
+			endpointsCount, err := w.getKubernetesEndpointsCount(ctx)
+			if err != nil {
+				webhookLog.Error(err, "failed to get kubernetes endpoints count")
+				return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to get kubernetes endpoints: %w", err))
+			}
 			if endpointsCount < 3 {
 				warnings = append(warnings,
 					"it is disruptive to change cri.type in master node group for cluster with apiserver endpoints < 3")
@@ -188,7 +204,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	}
 
 	if ng.Spec.NodeTemplate != nil && len(ng.Spec.NodeTemplate.Taints) > 0 {
-		customKeys := w.loadCustomTolerationKeys(ctx)
+		customKeys, err := w.loadCustomTolerationKeys(ctx)
+		if err != nil {
+			webhookLog.Error(err, "failed to load custom toleration keys")
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to load custom toleration keys: %w", err))
+		}
 		standardTaints := map[string]bool{
 			"dedicated":                             true,
 			"dedicated.deckhouse.io":                true,
@@ -267,7 +287,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		oldCRIType := getCRIType(oldNG, "")
 		newCRIType := getCRIType(ng, "")
 		if oldCRIType != newCRIType {
-			customNodes := w.getNodesWithCustomContainerd(ctx, ng.Name)
+			customNodes, err := w.getNodesWithCustomContainerd(ctx, ng.Name)
+			if err != nil {
+				webhookLog.Error(err, "failed to get nodes with custom containerd")
+				return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to get nodes with custom containerd: %w", err))
+			}
 			if len(customNodes) > 0 {
 				return admission.Denied(fmt.Sprintf(
 					"CRI cannot be changed because some nodes are using custom configuration: %s",
@@ -278,7 +302,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if req.Operation == "UPDATE" {
 		if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerdV2 {
-			unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
+			unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
+			if err != nil {
+				webhookLog.Error(err, "failed to get nodes without containerd v2 support")
+				return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to get nodes without containerd v2 support: %w", err))
+			}
 			if len(unsupportedNodes) > 0 {
 				return admission.Denied(fmt.Sprintf(
 					"It is forbidden for NodeGroup %q to use CRI ContainerdV2 because it contains nodes that do not support ContainerdV2. "+
@@ -291,7 +319,11 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
 			if ng.Spec.Kubelet.MemorySwap.Behavior == "LimitedSwap" {
-				unsupportedNodes := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
+				unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
+				if err != nil {
+					webhookLog.Error(err, "failed to get nodes without cgroup v2 support")
+					return admission.Errored(http.StatusInternalServerError, fmt.Errorf("failed to get nodes without cgroup v2 support: %w", err))
+				}
 				if len(unsupportedNodes) > 0 {
 					return admission.Denied(fmt.Sprintf(
 						"memorySwap requires cgroup v2, but NodeGroup %q contains nodes where cgroup v2 is not supported",
@@ -421,7 +453,9 @@ type ProviderClusterConfig struct {
 	Zones []string
 }
 
-func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) *ClusterConfig {
+// loadClusterConfig reads cluster configuration from d8-cluster-configuration Secret.
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterConfig, error) {
 	config := &ClusterConfig{PodSubnetNodeCIDRPrefix: 24}
 
 	secret := &corev1.Secret{}
@@ -430,13 +464,18 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) *ClusterConf
 		Name:      "d8-cluster-configuration",
 	}, secret)
 	if err != nil {
-		webhookLog.V(1).Info("failed to load cluster config", "error", err)
-		return config
+		if errors.IsNotFound(err) {
+			// Secret not found - return defaults
+			webhookLog.V(1).Info("d8-cluster-configuration secret not found, using defaults")
+			return config, nil
+		}
+		// Timeout, permission denied, API unavailable - this is an error
+		return nil, fmt.Errorf("failed to get secret kube-system/d8-cluster-configuration: %w", err)
 	}
 
 	configYAML, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		return config
+		return config, nil
 	}
 
 	if match := regexp.MustCompile(`defaultCRI:\s+(\S+)`).FindSubmatch(configYAML); match != nil {
@@ -455,10 +494,13 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) *ClusterConf
 		fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix)
 	}
 
-	return config
+	return config, nil
 }
 
-func (w *NodeGroupValidator) loadProviderClusterConfig(ctx context.Context) *ProviderClusterConfig {
+// loadProviderClusterConfig reads provider cluster configuration from d8-provider-cluster-configuration Secret.
+// Returns empty config if secret is not found (expected for Static clusters).
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) loadProviderClusterConfig(ctx context.Context) (*ProviderClusterConfig, error) {
 	config := &ProviderClusterConfig{}
 
 	secret := &corev1.Secret{}
@@ -467,29 +509,35 @@ func (w *NodeGroupValidator) loadProviderClusterConfig(ctx context.Context) *Pro
 		Name:      "d8-provider-cluster-configuration",
 	}, secret)
 	if err != nil {
-		webhookLog.V(1).Info("failed to load provider cluster config", "error", err)
-		return config
+		if errors.IsNotFound(err) {
+			// Static cluster - secret doesn't exist, this is OK
+			webhookLog.V(1).Info("d8-provider-cluster-configuration secret not found (expected for Static clusters)")
+			return config, nil
+		}
+		// Timeout, permission denied, API unavailable - this is an error
+		return nil, fmt.Errorf("failed to get secret kube-system/d8-provider-cluster-configuration: %w", err)
 	}
 
 	discoveryData, ok := secret.Data["cloud-provider-discovery-data.json"]
 	if !ok {
-		return config
+		return config, nil
 	}
 
 	var data struct {
 		Zones []string `json:"zones"`
 	}
 	if err := json.Unmarshal(discoveryData, &data); err != nil {
-		webhookLog.V(1).Info("failed to parse discovery data", "error", err)
-		return config
+		return nil, fmt.Errorf("failed to parse cloud-provider-discovery-data.json: %w", err)
 	}
 
 	config.Zones = data.Zones
-	return config
+	return config, nil
 }
 
-// loadCustomTolerationKeys reads customTolerationKeys from ModuleConfig "global"
-func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) []string {
+// loadCustomTolerationKeys reads customTolerationKeys from ModuleConfig "global".
+// Returns empty slice if ModuleConfig is not found.
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) ([]string, error) {
 	// ModuleConfig is deckhouse.io/v1alpha1
 	mc := &unstructured.Unstructured{}
 	mc.SetGroupVersionKind(schema.GroupVersionKind{
@@ -500,84 +548,97 @@ func (w *NodeGroupValidator) loadCustomTolerationKeys(ctx context.Context) []str
 
 	err := w.Client.Get(ctx, types.NamespacedName{Name: "global"}, mc)
 	if err != nil {
-		webhookLog.V(1).Info("failed to load ModuleConfig global", "error", err)
-		return nil
+		if errors.IsNotFound(err) {
+			// ModuleConfig not found - return empty slice
+			webhookLog.V(1).Info("ModuleConfig 'global' not found")
+			return nil, nil
+		}
+		// Timeout, permission denied, API unavailable - this is an error
+		return nil, fmt.Errorf("failed to get ModuleConfig 'global': %w", err)
 	}
 
 	// Path: .spec.settings.modules.placement.customTolerationKeys
 	settings, found, _ := unstructured.NestedMap(mc.Object, "spec", "settings")
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	modules, found, _ := unstructured.NestedMap(settings, "modules")
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	placement, found, _ := unstructured.NestedMap(modules, "placement")
 	if !found {
-		return nil
+		return nil, nil
 	}
 
 	keys, found, _ := unstructured.NestedStringSlice(placement, "customTolerationKeys")
 	if !found {
-		return nil
+		return nil, nil
 	}
 
-	return keys
+	return keys, nil
 }
 
-func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) int {
+// getKubernetesEndpointsCount returns the number of kubernetes API server endpoints.
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) getKubernetesEndpointsCount(ctx context.Context) (int, error) {
 	endpoints := &corev1.Endpoints{}
 	err := w.Client.Get(ctx, types.NamespacedName{
 		Namespace: "default",
 		Name:      "kubernetes",
 	}, endpoints)
 	if err != nil {
-		webhookLog.V(1).Info("failed to get kubernetes endpoints", "error", err)
-		return 0
+		if errors.IsNotFound(err) {
+			// Endpoints not found - return 0
+			return 0, nil
+		}
+		// Timeout, permission denied, API unavailable - this is an error
+		return 0, fmt.Errorf("failed to get endpoints default/kubernetes: %w", err)
 	}
 
 	count := 0
 	for _, subset := range endpoints.Subsets {
 		count += len(subset.Addresses)
 	}
-	return count
+	return count, nil
 }
 
-func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, nodeGroupName string) []string {
+// getNodesWithCustomContainerd returns nodes with custom containerd configuration.
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, nodeGroupName string) ([]string, error) {
 	nodeList := &corev1.NodeList{}
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-config": "custom",
 		"node.deckhouse.io/group":             nodeGroupName,
 	})
 	if err != nil {
-		webhookLog.V(1).Info("failed to list nodes with custom containerd", "error", err)
-		return nil
+		return nil, fmt.Errorf("failed to list nodes with custom containerd: %w", err)
 	}
 
 	var names []string
 	for _, node := range nodeList.Items {
 		names = append(names, node.Name)
 	}
-	return names
+	return names, nil
 }
 
-func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) []string {
+// getNodesWithoutContainerdV2Support returns nodes that don't support containerd v2.
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) ([]string, error) {
 	nodeList := &corev1.NodeList{}
 	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
 		"node.deckhouse.io/group":                     nodeGroupName,
 	})
 	if err != nil {
-		webhookLog.V(1).Info("failed to list nodes without containerd v2 support", "error", err)
-		return nil
+		return nil, fmt.Errorf("failed to list nodes without containerd v2 support: %w", err)
 	}
 
 	var names []string
 	for _, node := range nodeList.Items {
 		names = append(names, node.Name)
 	}
-	return names
+	return names, nil
 }

@@ -19,6 +19,7 @@ package webhook
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -28,13 +29,12 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
-
-// --- helpers ---
 
 func newScheme() *runtime.Scheme {
 	s := runtime.NewScheme()
@@ -89,7 +89,7 @@ func clusterConfigSecret(clusterType, prefix, defaultCRI string, podSubnetPrefix
 		yaml += "defaultCRI: " + defaultCRI + "\n"
 	}
 	if podSubnetPrefix > 0 {
-		yaml += "podSubnetNodeCIDRPrefix: " + string(rune('0'+podSubnetPrefix/10)) + string(rune('0'+podSubnetPrefix%10)) + "\n"
+		yaml += fmt.Sprintf("podSubnetNodeCIDRPrefix: %d\n", podSubnetPrefix)
 	}
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-configuration", Namespace: "kube-system"},
@@ -123,7 +123,18 @@ func moduleConfigGlobal(customTolerationKeys []string) *unstructured.Unstructure
 	return obj
 }
 
-// --- Tests ---
+func kubernetesEndpoints(addressCount int) *corev1.Endpoints {
+	addresses := make([]corev1.EndpointAddress, addressCount)
+	for i := 0; i < addressCount; i++ {
+		addresses[i] = corev1.EndpointAddress{IP: fmt.Sprintf("10.0.0.%d", i+1)}
+	}
+	return &corev1.Endpoints{
+		ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: "default"},
+		Subsets: []corev1.EndpointSubset{
+			{Addresses: addresses},
+		},
+	}
+}
 
 func TestValidation_NodeTypeImmutability(t *testing.T) {
 	s := newScheme()
@@ -334,7 +345,27 @@ func TestValidation_TaintsStandardKeysAllowed(t *testing.T) {
 	}
 }
 
-func TestValidation_CloudNameLength(t *testing.T) {
+func TestValidation_TaintsInCustomTolerationKeys(t *testing.T) {
+	s := newScheme()
+
+	mc := moduleConfigGlobal([]string{"custom-key", "another-key"})
+	c := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(mc).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng.Spec.NodeTemplate = &v1.NodeTemplate{
+		Taints: []corev1.Taint{
+			{Key: "custom-key", Value: "val", Effect: corev1.TaintEffectNoSchedule},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: taint key is in customTolerationKeys, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_CloudNameLengthTooLong(t *testing.T) {
 	s := newScheme()
 
 	// prefix "my-long-cluster-prefix" = 22 chars → max ng name = 63-22-1-21 = 19
@@ -373,11 +404,28 @@ func TestValidation_CloudNameLengthOK(t *testing.T) {
 	}
 }
 
+func TestValidation_StaticCluster_NameLengthNotChecked(t *testing.T) {
+	s := newScheme()
+
+	// Static cluster - name length check should be skipped
+	sec := clusterConfigSecret("Static", "long-prefix-that-would-fail", "", 0)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("this-name-is-very-long-but-should-be-allowed-in-static", v1.NodeTypeStatic)
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: Static cluster should not check name length, got: %s", resp.Result.Message)
+	}
+}
+
 func TestValidation_UnknownZone(t *testing.T) {
 	s := newScheme()
 
+	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
 	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b"})
-	c := fake.NewClientBuilder().WithScheme(s).WithObjects(provSec).Build()
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
 	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
 
 	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
@@ -390,6 +438,64 @@ func TestValidation_UnknownZone(t *testing.T) {
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
 	if resp.Allowed {
 		t.Fatal("expected denied: unknown zone us-east-1a")
+	}
+}
+
+func TestValidation_ValidZones(t *testing.T) {
+	s := newScheme()
+
+	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
+	provSec := providerConfigSecret([]string{"eu-west-1a", "eu-west-1b", "eu-west-1c"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1, MaxPerZone: 3,
+		Zones:          []string{"eu-west-1a", "eu-west-1b"},
+		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: all zones are valid, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_ZonesValidation_SkippedForStaticCluster(t *testing.T) {
+	s := newScheme()
+
+	// Static cluster - zones validation should be skipped (no providerConfig loaded)
+	clusterSec := clusterConfigSecret("Static", "", "", 0)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: Static cluster should not check zones, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_ZonesValidation_SkippedWhenNoZonesSpecified(t *testing.T) {
+	s := newScheme()
+
+	clusterSec := clusterConfigSecret("Cloud", "test", "", 0)
+	provSec := providerConfigSecret([]string{"eu-west-1a"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec, provSec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("ephemeral", v1.NodeTypeCloudEphemeral)
+	ng.Spec.CloudInstances = &v1.CloudInstancesSpec{
+		MinPerZone: 1, MaxPerZone: 3,
+		// No zones specified - should use provider defaults
+		ClassReference: v1.ClassReference{Kind: "AWSInstanceClass", Name: "worker"},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: no zones specified, got: %s", resp.Result.Message)
 	}
 }
 
@@ -423,6 +529,27 @@ func TestValidation_TopologyManagerStaticWithoutCPU(t *testing.T) {
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
 	if resp.Allowed {
 		t.Fatal("expected denied: topologyManager + Static mode requires cpu")
+	}
+}
+
+func TestValidation_TopologyManagerWithValidConfig(t *testing.T) {
+	s := newScheme()
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cpu := intstr.FromString("500m")
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng.Spec.Kubelet = &v1.KubeletSpec{
+		TopologyManager: &v1.TopologyManagerSpec{Policy: "single-numa-node"},
+		ResourceReservation: &v1.ResourceReservationSpec{
+			Mode:   "Static",
+			Static: &v1.StaticResourceReservation{CPU: &cpu},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed: valid topologyManager config, got: %s", resp.Result.Message)
 	}
 }
 
@@ -468,6 +595,27 @@ func TestValidation_LabelSelectorCanBeAdded(t *testing.T) {
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
 	if !resp.Allowed {
 		t.Fatalf("expected allowed: adding labelSelector to existing NG, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_LabelSelectorCannotBeRemoved(t *testing.T) {
+	s := newScheme()
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+	oldNG.Spec.StaticInstances = &v1.StaticInstancesSpec{
+		LabelSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{"role": "worker"},
+		},
+	}
+
+	newNG := baseNodeGroup("worker", v1.NodeTypeStatic)
+	// No StaticInstances - labelSelector removed
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if resp.Allowed {
+		t.Fatal("expected denied: labelSelector cannot be removed once set")
 	}
 }
 
@@ -554,6 +702,70 @@ func TestValidation_MaxPodsWarning(t *testing.T) {
 	}
 }
 
+func TestValidation_MaxPodsNoWarningWhenOK(t *testing.T) {
+	s := newScheme()
+
+	sec := clusterConfigSecret("", "", "", 24)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	maxPods := int32(100)
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng.Spec.Kubelet = &v1.KubeletSpec{MaxPods: &maxPods}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed, got: %s", resp.Result.Message)
+	}
+	if len(resp.Warnings) > 0 {
+		t.Fatalf("expected no warning for reasonable maxPods, got: %v", resp.Warnings)
+	}
+}
+
+func TestValidation_MasterCRIChangeWarning_LessThan3Endpoints(t *testing.T) {
+	s := newScheme()
+
+	endpoints := kubernetesEndpoints(2)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(endpoints).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
+	oldNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd}
+
+	newNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
+	newNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerdV2}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if !resp.Allowed {
+		t.Fatalf("CRI change should be allowed with warning, got: %s", resp.Result.Message)
+	}
+	if len(resp.Warnings) == 0 {
+		t.Fatal("expected a warning about disruptive CRI change with < 3 endpoints")
+	}
+}
+
+func TestValidation_MasterCRIChangeNoWarning_3OrMoreEndpoints(t *testing.T) {
+	s := newScheme()
+
+	endpoints := kubernetesEndpoints(3)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(endpoints).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	oldNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
+	oldNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerd}
+
+	newNG := baseNodeGroup("master", v1.NodeTypeCloudPermanent)
+	newNG.Spec.CRI = &v1.CRISpec{Type: v1.CRITypeContainerdV2}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "UPDATE", newNG, oldNG))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed, got: %s", resp.Result.Message)
+	}
+	if len(resp.Warnings) > 0 {
+		t.Fatalf("expected no warning with >= 3 endpoints, got: %v", resp.Warnings)
+	}
+}
+
 func TestValidation_SimpleCreateAllowed(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
@@ -564,5 +776,138 @@ func TestValidation_SimpleCreateAllowed(t *testing.T) {
 	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
 	if !resp.Allowed {
 		t.Fatalf("expected simple create to be allowed, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_ClusterConfigNotFound_UsesDefaults(t *testing.T) {
+	s := newScheme()
+	// No d8-cluster-configuration secret
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed with default config, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_ProviderConfigNotFound_StaticCluster(t *testing.T) {
+	s := newScheme()
+	// Static cluster - no provider config is OK
+	clusterSec := clusterConfigSecret("Static", "", "", 0)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(clusterSec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if !resp.Allowed {
+		t.Fatalf("expected allowed for Static cluster without provider config, got: %s", resp.Result.Message)
+	}
+}
+
+func TestValidation_ModuleConfigNotFound_TaintsValidation(t *testing.T) {
+	s := newScheme()
+	// No ModuleConfig - custom taints should be denied
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	ng := baseNodeGroup("worker", v1.NodeTypeStatic)
+	ng.Spec.NodeTemplate = &v1.NodeTemplate{
+		Taints: []corev1.Taint{
+			{Key: "custom-key", Value: "val", Effect: corev1.TaintEffectNoSchedule},
+		},
+	}
+
+	resp := w.Handle(context.Background(), makeAdmissionRequest(t, "CREATE", ng, nil))
+	if resp.Allowed {
+		t.Fatal("expected denied: custom taint without ModuleConfig should be denied")
+	}
+}
+
+func TestLoadClusterConfig_Success(t *testing.T) {
+	s := newScheme()
+	sec := clusterConfigSecret("Cloud", "my-prefix", "Containerd", 22)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cfg, err := w.loadClusterConfig(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.ClusterType != "Cloud" {
+		t.Fatalf("expected ClusterType Cloud, got %s", cfg.ClusterType)
+	}
+	if cfg.ClusterPrefixLen != 9 { // len("my-prefix")
+		t.Fatalf("expected ClusterPrefixLen 9, got %d", cfg.ClusterPrefixLen)
+	}
+	if cfg.DefaultCRI != "Containerd" {
+		t.Fatalf("expected DefaultCRI Containerd, got %s", cfg.DefaultCRI)
+	}
+	if cfg.PodSubnetNodeCIDRPrefix != 22 {
+		t.Fatalf("expected PodSubnetNodeCIDRPrefix 22, got %d", cfg.PodSubnetNodeCIDRPrefix)
+	}
+}
+
+func TestLoadClusterConfig_SecretNotFound(t *testing.T) {
+	s := newScheme()
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cfg, err := w.loadClusterConfig(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error for missing secret, got: %v", err)
+	}
+	if cfg.PodSubnetNodeCIDRPrefix != 24 {
+		t.Fatalf("expected default PodSubnetNodeCIDRPrefix 24, got %d", cfg.PodSubnetNodeCIDRPrefix)
+	}
+}
+
+func TestLoadProviderClusterConfig_Success(t *testing.T) {
+	s := newScheme()
+	sec := providerConfigSecret([]string{"zone-a", "zone-b"})
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cfg, err := w.loadProviderClusterConfig(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(cfg.Zones) != 2 {
+		t.Fatalf("expected 2 zones, got %d", len(cfg.Zones))
+	}
+	if cfg.Zones[0] != "zone-a" || cfg.Zones[1] != "zone-b" {
+		t.Fatalf("unexpected zones: %v", cfg.Zones)
+	}
+}
+
+func TestLoadProviderClusterConfig_SecretNotFound(t *testing.T) {
+	s := newScheme()
+	c := fake.NewClientBuilder().WithScheme(s).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cfg, err := w.loadProviderClusterConfig(context.Background())
+	if err != nil {
+		t.Fatalf("expected no error for missing secret (Static cluster), got: %v", err)
+	}
+	if len(cfg.Zones) != 0 {
+		t.Fatalf("expected empty zones for missing secret, got %d", len(cfg.Zones))
+	}
+}
+
+func TestLoadProviderClusterConfig_InvalidJSON(t *testing.T) {
+	s := newScheme()
+	sec := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8-provider-cluster-configuration", Namespace: "kube-system"},
+		Data:       map[string][]byte{"cloud-provider-discovery-data.json": []byte("not valid json")},
+	}
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	_, err := w.loadProviderClusterConfig(context.Background())
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
 	}
 }

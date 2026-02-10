@@ -25,6 +25,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apix "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +38,7 @@ import (
 	"github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
-var conversionLog = logf.Log.WithName("nodegroup-conversion")
+var conversionLog = logf.Log.WithName("nodegroup-conversion-webhook")
 
 // ProviderClusterConfiguration holds parsed provider config from Secret.
 // This is used to determine CloudPermanent vs CloudStatic for Hybrid nodeType.
@@ -97,7 +98,13 @@ func (h *NodeGroupConversionHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	)
 
 	// Load provider config for Hybrid -> CloudPermanent/CloudStatic decision
-	providerConfig := h.loadProviderConfig(ctx)
+	providerConfig, err := h.loadProviderConfig(ctx)
+	if err != nil {
+		conversionLog.Error(err, "failed to load provider config")
+		h.writeError(w, string(review.Request.UID), fmt.Sprintf("failed to load provider config: %v", err))
+		return
+	}
+
 	response := h.handleConversion(review.Request, providerConfig)
 	review.Response = response
 	review.Request = nil // Clear request in response
@@ -107,8 +114,10 @@ func (h *NodeGroupConversionHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// loadProviderConfig reads the provider cluster configuration from Secret
-func (h *NodeGroupConversionHandler) loadProviderConfig(ctx context.Context) *ProviderClusterConfiguration {
+// loadProviderConfig reads the provider cluster configuration from Secret.
+// Returns empty config if secret is not found (expected for Static clusters).
+// Returns error for transient failures (timeout, permission denied, etc.)
+func (h *NodeGroupConversionHandler) loadProviderConfig(ctx context.Context) (*ProviderClusterConfiguration, error) {
 	config := &ProviderClusterConfiguration{}
 
 	secret := &corev1.Secret{}
@@ -117,21 +126,28 @@ func (h *NodeGroupConversionHandler) loadProviderConfig(ctx context.Context) *Pr
 		Name:      "d8-provider-cluster-configuration",
 	}, secret)
 	if err != nil {
-		conversionLog.V(1).Info("failed to load provider config secret", "error", err)
-		return config
+		if errors.IsNotFound(err) {
+			// Static cluster — secret doesn't exist, this is OK
+			conversionLog.V(1).Info("provider config secret not found (expected for Static clusters)")
+			return config, nil
+		}
+		// Timeout, permission denied, API unavailable — this is an error
+		return nil, fmt.Errorf("failed to get secret kube-system/d8-provider-cluster-configuration: %w", err)
 	}
 
 	configData, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]
 	if !ok {
+		// Secret exists but doesn't have expected key — treat as empty config
 		conversionLog.V(1).Info("cloud-provider-cluster-configuration.yaml not found in secret")
-		return config
+		return config, nil
 	}
+
 	if err := yaml.Unmarshal(configData, config); err != nil {
-		conversionLog.V(1).Info("failed to parse provider config", "error", err)
-		return config
+		return nil, fmt.Errorf("failed to parse cloud-provider-cluster-configuration.yaml: %w", err)
 	}
+
 	conversionLog.V(1).Info("loaded provider config", "nodeGroupsCount", len(config.NodeGroups))
-	return config
+	return config, nil
 }
 
 // handleConversion processes the conversion request
