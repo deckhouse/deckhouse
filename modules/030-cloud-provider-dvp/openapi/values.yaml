@@ -73,8 +73,6 @@ properties:
                     image:
                       kind: ClusterVirtualImage
                       name: ubuntu-2204
-        required:
-          [apiVersion, kind, sshPublicKey, masterNodeGroup, layout, provider]
         properties:
           apiVersion:
             type: string
@@ -440,12 +438,15 @@ properties:
               - kubeconfigDataBase64
               - namespace
         oneOf:
-          - required: [layout]
-            properties:
-              layout:
-                enum:
-                  - Standard
-                type: string
+          - required: [provider]
+            not:
+              anyOf:
+                - required: [apiVersion]
+                - required: [kind]
+                - required: [layout]
+                - required: [sshPublicKey]
+                - required: [masterNodeGroup]
+          - required: [apiVersion, kind, sshPublicKey, masterNodeGroup, layout, provider]
       providerDiscoveryData:
         type: object
         additionalProperties: false

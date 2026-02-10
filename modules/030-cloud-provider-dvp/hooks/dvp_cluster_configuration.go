@@ -1,19 +1,3 @@
-/*
-Copyright 2025 Flant JSC
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
 package hooks
 
 import (
@@ -111,8 +95,18 @@ func overrideValues(p *v1.DvpProviderClusterConfiguration, m *v1.DvpModuleConfig
 	if p.Provider.Namespace == nil || len(*p.Provider.Namespace) == 0 {
 		return errors.New("provider.namespace cannot be empty")
 	}
-	if p.Zones == nil || len(*p.Zones) == 0 {
-		return errors.New("zones cannot be empty")
+
+	cloudManaged := p.APIVersion != nil || p.Kind != nil
+	if cloudManaged {
+		if p.APIVersion == nil || len(*p.APIVersion) == 0 {
+			return errors.New("apiVersion cannot be empty")
+		}
+		if p.Kind == nil || len(*p.Kind) == 0 {
+			return errors.New("kind cannot be empty")
+		}
+		if p.Zones == nil || len(*p.Zones) == 0 {
+			return errors.New("zones cannot be empty")
+		}
 	}
 
 	return nil
