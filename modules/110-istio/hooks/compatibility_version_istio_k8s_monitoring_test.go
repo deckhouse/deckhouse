@@ -95,7 +95,7 @@ istio:
 			Expect(string(f.LoggerOutput.Contents())).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(2))
+			Expect(m).To(HaveLen(3))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  monitoringMetricsGroup,
 				Action: operation.ActionExpireMetrics,
@@ -126,7 +126,7 @@ istio:
 			Expect(f.LoggerOutput.Contents()).To(HaveLen(0))
 
 			m := f.MetricsCollector.CollectedMetrics()
-			Expect(m).To(HaveLen(1))
+			Expect(m).To(HaveLen(2))
 			Expect(m[0]).To(BeEquivalentTo(operation.MetricOperation{
 				Group:  monitoringMetricsGroup,
 				Action: operation.ActionExpireMetrics,
