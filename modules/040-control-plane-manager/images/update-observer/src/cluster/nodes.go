@@ -18,10 +18,11 @@ package cluster
 
 import (
 	"fmt"
-	"update-observer/pkg/version"
 
 	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
+
+	"update-observer/pkg/version"
 )
 
 type NodesState struct {

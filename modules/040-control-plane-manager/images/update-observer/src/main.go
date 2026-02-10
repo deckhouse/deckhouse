@@ -21,15 +21,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"update-observer/common"
 
 	"k8s.io/klog/v2"
+
+	"update-observer/common"
 )
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
-	manager, err := NewManager(ctx, false) // TODO pprof flag
+	manager, err := NewManager(ctx) // TODO pprof flag, removed bool because of linting
 	if err != nil {
 		klog.Fatalf("Failed to create a manager: %v", err)
 	}
