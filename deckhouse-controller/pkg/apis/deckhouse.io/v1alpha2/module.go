@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha2
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -115,19 +114,19 @@ type ModuleStatus struct {
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	Conditions []ModuleStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// InternalConditions represent internal conditions of the module.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	InternalConditions []ModuleStatusInternalCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	InternalConditions []metav1.Condition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 
 	// ResourceConditions represent conditions related to module resources.
 	// +optional
 	// +patchMergeKey=type
 	// +patchStrategy=merge
-	ResourceConditions []ModuleStatusResourceCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	ResourceConditions []metav1.Condition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ModuleStatusVersion struct {
@@ -138,78 +137,6 @@ type ModuleStatusVersion struct {
 	// Release channel from which the version was installed.
 	// +optional
 	Channel string `json:"channel,omitempty"`
-}
-
-type ModuleStatusCondition struct {
-	// Type of module condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-type ModuleStatusInternalCondition struct {
-	// Type of internal module condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// The last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-type ModuleStatusResourceCondition struct {
-	// Type of resource condition.
-	Type string `json:"type"`
-
-	// Status of the condition, one of True, False, Unknown.
-	Status corev1.ConditionStatus `json:"status"`
-
-	// Programmatic identifier indicating the reason for the condition's last transition.
-	// +optional
-	Reason string `json:"reason,omitempty"`
-
-	// Human readable message indicating details about the transition.
-	// +optional
-	Message string `json:"message,omitempty"`
-
-	// Last time the condition was probed.
-	// +optional
-	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
-
-	// Last time the condition transitioned from one status to another.
-	// +optional
-	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true
