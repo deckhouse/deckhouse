@@ -1,3 +1,15 @@
+diff --git a/Documentation/cmdref/cilium-agent.md b/Documentation/cmdref/cilium-agent.md
+index e207a79712..77465b5892 100644
+--- a/Documentation/cmdref/cilium-agent.md
++++ b/Documentation/cmdref/cilium-agent.md
+@@ -158,6 +158,7 @@ cilium-agent [flags]
+       --enable-l2-neigh-discovery                                 Enables L2 neighbor discovery used by kube-proxy-replacement and IPsec (default true)
+       --enable-l2-pod-announcements                               Enable announcing Pod IPs with Gratuitous ARP
+       --enable-l7-proxy                                           Enable L7 proxy for L7 policy enforcement (default true)
++      --enable-loadbalancer-icmp-reply                            Enable ICMP reply generation for LoadBalancer services
+       --enable-local-node-route                                   Enable installation of the route which points the allocation prefix of the local node (default true)
+       --enable-local-redirect-policy                              Enable Local Redirect Policy
+       --enable-masquerade-to-route-source                         Masquerade packets to the source IP provided from the routing layer rather than interface address
 diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
 index 15dacfa4df..495cc2c4ba 100644
 --- a/bpf/lib/lb.h
@@ -165,7 +177,7 @@ index 96e484911f..99da9bda87 100644
  	flags.MarkHidden(option.AddressScopeMax)
  	option.BindEnv(vp, option.AddressScopeMax)
 diff --git a/pkg/datapath/linux/config/config.go b/pkg/datapath/linux/config/config.go
-index a3243d93e3..d97fb282e7 100644
+index a3243d93e3..bd1cbb93a2 100644
 --- a/pkg/datapath/linux/config/config.go
 +++ b/pkg/datapath/linux/config/config.go
 @@ -430,6 +430,9 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
@@ -178,14 +190,6 @@ index a3243d93e3..d97fb282e7 100644
  		if option.Config.EnableIPv4 {
  			cDefinesMap["NODEPORT_NEIGH4"] = neighborsmap.Map4Name
  			cDefinesMap["NODEPORT_NEIGH4_SIZE"] = fmt.Sprintf("%d", option.Config.NeighMapEntriesGlobal)
-@@ -508,7 +511,6 @@ func (h *HeaderfileWriter) WriteNodeConfig(w io.Writer, cfg *datapath.LocalNodeC
- 				cDefinesMap["IPV6_RSS_PREFIX_BITS"] = "128"
- 			}
- 		}
--
- 		if option.Config.NodePortAcceleration != option.NodePortAccelerationDisabled {
- 			cDefinesMap["ENABLE_NODEPORT_ACCELERATION"] = "1"
- 		}
 diff --git a/pkg/defaults/defaults.go b/pkg/defaults/defaults.go
 index 1a25f14957..b57f3d2523 100644
 --- a/pkg/defaults/defaults.go
@@ -200,9 +204,18 @@ index 1a25f14957..b57f3d2523 100644
  	// EnableHealthCheckLoadBalancerIP
  	EnableHealthCheckLoadBalancerIP = false
 diff --git a/pkg/option/config.go b/pkg/option/config.go
-index e4390c0622..e77a0677eb 100644
+index e4390c0622..bc96d0abf3 100644
 --- a/pkg/option/config.go
 +++ b/pkg/option/config.go
+@@ -233,7 +233,7 @@ const (
+ 	// EnableHostFirewall enables network policies for the host
+ 	EnableHostFirewall = "enable-host-firewall"
+ 
+-	// EnableHostPort enables HostPort forwarding implemented by Cilium in BPF
++	// EnableHostPort enables HostPort forwarding implement`wed by Cilium in BPF
+ 	EnableHostPort = "enable-host-port"
+ 
+ 	// EnableHostLegacyRouting enables the old routing path via stack.
 @@ -245,6 +245,9 @@ const (
  	// EnableSVCSourceRangeCheck enables check of service source range checks
  	EnableSVCSourceRangeCheck = "enable-svc-source-range-check"
