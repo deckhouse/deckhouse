@@ -25,26 +25,28 @@ spec:
     targetLabel: name
     regex: kube_verticalpodautoscaler_labels
     replacement: ''
-  - sourceLabels: [controller_type]
-    regex: '^InternalVirtualizationVirtualMachineInstance$'
-    action: replace
-    targetLabel: controller_type
+  - sourceLabels:
+    - created_by_kind
+    regex: InternalVirtualizationVirtualMachineInstance
+    targetLabel: created_by_kind
     replacement: VirtualMachine
-  - sourceLabels: [controller]
-    regex: '^InternalVirtualizationVirtualMachineInstance(.*)$'
-    action: replace
-    targetLabel: controller
-    replacement: VirtualMachine${1}
-  - sourceLabels: [controller]
-    regex: "^Pod/(virt-launcher-|d8v-vm-)(.*)$"
-    action: replace
-    targetLabel: controller_type
-    replacement: "HotplugPod"
-  - sourceLabels: [controller]
-    regex: "^Pod/(virt-launcher-|d8v-vm-)(.*)$"
-    action: replace
-    targetLabel: controller
-    replacement: "HotplugPod/${1}${2}"
+  - sourceLabels:
+    - created_by_kind
+    - created_by_name
+    regex: Pod;(virt-launcher-|d8v-vm-)(.*)
+    targetLabel: created_by_kind
+    replacement: HotplugPod
+  - sourceLabels:
+    - owner_kind
+    regex: InternalVirtualizationVirtualMachineInstance
+    targetLabel: owner_kind
+    replacement: VirtualMachine
+  - sourceLabels:
+    - owner_kind
+    - owner_name
+    regex: Pod;(virt-launcher-|d8v-vm-)(.*)
+    targetLabel: owner_kind
+    replacement: HotplugPod
   - action: labeldrop
     regex: customresource_version|customresource_kind|customresource_group
   relabelings:
