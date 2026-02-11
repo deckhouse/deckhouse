@@ -52,6 +52,19 @@ const (
 	tracerName = "downloader"
 )
 
+// ErrModuleNameMismatch indicates that the module name in module.yaml doesn't match the expected registry module name
+var ErrModuleNameMismatch = errors.New("module name mismatch")
+
+// validateModuleDefinitionName checks that the name in module.yaml matches the expected registry name.
+// Empty definition names are allowed for backward compatibility (the registry name is used as default).
+func validateModuleDefinitionName(definitionName, expectedName string) error {
+	definitionName = strings.TrimSpace(definitionName)
+	if definitionName != "" && definitionName != expectedName {
+		return fmt.Errorf("%w: module.yaml contains name %q but expected %q (registry module name)", ErrModuleNameMismatch, definitionName, expectedName)
+	}
+	return nil
+}
+
 type ModuleDownloader struct {
 	dc                   dependency.Container
 	downloadedModulesDir string
@@ -134,6 +147,12 @@ func (md *ModuleDownloader) DownloadMetadataFromReleaseChannel(ctx context.Conte
 		return nil, err
 	}
 
+	if releaseImageInfo.Metadata.ModuleDefinition != nil {
+		if err := validateModuleDefinitionName(releaseImageInfo.Metadata.ModuleDefinition.Name, moduleName); err != nil {
+			return nil, err
+		}
+	}
+
 	res := &ModuleDownloadResult{
 		Checksum:         releaseImageInfo.Digest.String(),
 		ModuleVersion:    "v" + releaseImageInfo.Metadata.Version.String(),
@@ -158,6 +177,9 @@ func (md *ModuleDownloader) DownloadReleaseImageInfoByVersion(ctx context.Contex
 		Changelog:     releaseImageInfo.Metadata.Changelog,
 	}
 	if releaseImageInfo.Metadata.ModuleDefinition != nil {
+		if err := validateModuleDefinitionName(releaseImageInfo.Metadata.ModuleDefinition.Name, moduleName); err != nil {
+			return nil, err
+		}
 		res.ModuleDefinition = releaseImageInfo.Metadata.ModuleDefinition
 		return res, nil
 	}
@@ -467,6 +489,10 @@ func (md *ModuleDownloader) fetchModuleDefinitionFromModuleImage(moduleName stri
 		err = yaml.NewDecoder(rr.moduleReader).Decode(def)
 		if err != nil {
 			return nil, fmt.Errorf("yaml decode: %w", err)
+		}
+
+		if err := validateModuleDefinitionName(def.Name, moduleName); err != nil {
+			return nil, err
 		}
 	}
 
