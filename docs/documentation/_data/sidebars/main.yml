@@ -1238,6 +1238,10 @@ entries:
                 en: terraform-manager module
                 ru: Модуль terraform-manager
               url: /architecture/cluster-and-infrastructure/terraform-manager/
+            - title:
+                en: CSI-driver
+                ru: CSI-драйвер
+              url: /architecture/cluster-and-infrastructure/csi-driver/              
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1286,6 +1290,10 @@ entries:
                 en: ingress-nginx module
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx/
+            - title:
+                en: metallb module
+                ru: Модуль metallb
+              url: /architecture/network/metallb/
             - title:
                 en: Cluster architecture with Istio enabled
                 ru: Архитектура кластера с включенным Istio
