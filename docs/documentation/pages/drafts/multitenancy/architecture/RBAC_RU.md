@@ -73,7 +73,7 @@ lang: ru
 
 - Создание `ClusterRoleBinding` на роли и привилегии `d8:namespace:*`, `d8:project:*`, `d8:namespace-capability:*`, `d8:project-capability:*` и их `d8:custom:*` варианты запрещено.
 - `RoleBinding` не должен позволять эскалацию: пользователь с ролью `d8:namespace:admin` не может создать роль/привилегию, позволяющую управлять `ProjectRoleBinding`.
-- Агрегации должны быть безопасны: нельзя расширять роль правами на `ProjectRoleBinding` в namespace-скоупе.
+- Агрегации должны быть безопасны: нельзя добавлять права на `ProjectRoleBinding` в роли, которые выдаются через `RoleBinding` в пространстве имён (в том числе через агрегации).
 
 ## Расширение ролей и привилегий
 
