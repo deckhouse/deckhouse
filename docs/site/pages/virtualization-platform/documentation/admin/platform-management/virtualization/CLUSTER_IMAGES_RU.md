@@ -127,7 +127,7 @@ lang: ru
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
     metadata:
-      name: ubuntu-22-04
+      name: ubuntu-24-04
     spec:
       # Источник для создания образа.
       dataSource:
@@ -140,20 +140,20 @@ lang: ru
 1. Проверьте результат создания ресурса ClusterVirtualImage, выполнив следующую команду:
 
     ```shell
-    d8 k get clustervirtualimage ubuntu-22-04
+    d8 k get clustervirtualimage ubuntu-24-04
    ```
 
     Есть укороченный вариант команды:
 
     ```shell
-    d8 k get cvi ubuntu-22-04
+    d8 k get cvi ubuntu-24-04
     ```
 
     В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-22-04   Ready   false   100%       23h
+    ubuntu-24-04   Ready   false   100%       23h
     ```
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
@@ -173,26 +173,26 @@ lang: ru
 Чтобы отследить процесс создания образа, добавьте ключ `-w` к команде проверки результата создания ресурса:
 
 ```shell
-d8 k get cvi ubuntu-22-04 -w
+d8 k get cvi ubuntu-24-04 -w
 ```
 
 В результате будет выведена информация о прогрессе создания образа:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```shell
-d8 k describe cvi ubuntu-22-04
+d8 k describe cvi ubuntu-24-04
 ```
 
 Как создать образ с HTTP-сервера в веб-интерфейсе:

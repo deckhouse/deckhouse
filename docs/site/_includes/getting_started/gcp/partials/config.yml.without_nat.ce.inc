@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -141,7 +142,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128
     disableExternalIP: false
 # [<en>] A subnet to use for cluster nodes.
 # [<ru>] Адресное пространство узлов кластера.
