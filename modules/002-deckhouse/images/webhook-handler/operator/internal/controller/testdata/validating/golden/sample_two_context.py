@@ -7,7 +7,10 @@ from dotmap import DotMap
 config = """
 configVersion: v1
 kubernetesValidating:
-- matchConditions:
+- includeSnapshotsFrom:
+  - some_node
+  - some_node
+  matchConditions:
   - expression: request.resource.group != "rbac.authorization.k8s.io"
     name: yyyy
   name: validationwebhook.deployments.apps

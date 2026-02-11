@@ -252,13 +252,6 @@ spec:
                 description: A key to include snapshots from a group of schedule and
                   Kubernetes bindings. See grouping.
                 type: string
-              includeSnapshotsFrom:
-                description: An array of names of Kubernetes bindings in a hook. When
-                  specified, a list of monitored objects from these bindings will
-                  be added to the binding context in the snapshots field.
-                items:
-                  type: string
-                type: array
               labelSelector:
                 description: |-
                   A label selector is a label query over a set of resources. The result of matchLabels and

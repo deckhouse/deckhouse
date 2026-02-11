@@ -77,8 +77,6 @@ type AdmissionNamespaceSelector struct {
 type KubernetesAdmissionConfigV1 struct {
 	// Name should be a domain with at least three segments separated by dots.
 	Name string `json:"name"`
-	// An array of names of Kubernetes bindings in a hook. When specified, a list of monitored objects from these bindings will be added to the binding context in the snapshots field.
-	IncludeSnapshotsFrom []string `json:"includeSnapshotsFrom,omitempty"`
 	// A key to include snapshots from a group of schedule and Kubernetes bindings. See grouping.
 	Group string `json:"group,omitempty"`
 	// A required list of rules used to determine if a request to the Kubernetes API server should be sent to the hook.

@@ -8,6 +8,8 @@ config = """
 configVersion: v1
 kubernetesValidating:
 - group: main
+  includeSnapshotsFrom:
+  - services
   name: service.apps.kubernetes.io
   rules:
   - apiGroups:

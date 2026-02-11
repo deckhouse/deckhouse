@@ -33,10 +33,39 @@ var defaultFuncMap = template.FuncMap{
 	"split":    strings.Split,
 	"join":     strings.Join,
 	"getGroup": getGroup,
-	// "slice":    slice,
+}
+
+// validationRenderData is an internal struct used to pass data to the validation webhook template.
+// It replaces the raw ValidationWebhook struct so that we can inject includeSnapshotsFrom
+// (auto-populated from context names) into the ValidatingWebhook map before rendering.
+type validationRenderData struct {
+	ValidatingWebhook interface{}
+	Context           []deckhouseiov1alpha1.Context
+	Handler           deckhouseiov1alpha1.ValidationWebhookHandler
 }
 
 func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebhook) (*bytes.Buffer, error) {
+	// Convert ValidatingWebhook struct to map so we can inject includeSnapshotsFrom
+	whMap, err := structToMap(vh.ValidatingWebhook)
+	if err != nil {
+		return nil, fmt.Errorf("convert webhook to map: %w", err)
+	}
+
+	// Auto-populate includeSnapshotsFrom from context names
+	if len(vh.Context) > 0 {
+		names := make([]string, 0, len(vh.Context))
+		for _, ctx := range vh.Context {
+			names = append(names, ctx.Name)
+		}
+		whMap["includeSnapshotsFrom"] = names
+	}
+
+	data := validationRenderData{
+		ValidatingWebhook: whMap,
+		Context:           vh.Context,
+		Handler:           vh.Handler,
+	}
+
 	tplt, err := template.New("validation").Funcs(defaultFuncMap).Parse(tpl)
 	if err != nil {
 		return nil, fmt.Errorf("template parse: %w", err)
@@ -44,12 +73,26 @@ func RenderValidationTemplate(tpl string, vh *deckhouseiov1alpha1.ValidationWebh
 
 	var buf bytes.Buffer
 
-	err = tplt.Execute(&buf, vh)
+	err = tplt.Execute(&buf, data)
 	if err != nil {
 		return nil, fmt.Errorf("template execute: %w", err)
 	}
 
 	return &buf, nil
+}
+
+// structToMap converts a struct to map[string]interface{} via JSON round-trip.
+// This preserves JSON tag names and omitempty behavior.
+func structToMap(v interface{}) (map[string]interface{}, error) {
+	data, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func RenderConversionTemplate(tpl string, cwh *deckhouseiov1alpha1.ConversionWebhook) (*bytes.Buffer, error) {
@@ -107,7 +150,3 @@ func getGroup(name string) string {
 	}
 	return strings.Join(words, ".")
 }
-
-// func slice(s string, i, j int) string {
-// 	return s[i:j]
-// }

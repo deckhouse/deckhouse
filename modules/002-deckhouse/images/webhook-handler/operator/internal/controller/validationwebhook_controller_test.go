@@ -192,3 +192,24 @@ func TestTemplateEqual(t *testing.T) {
 
 	assert.Equal(t, string(ref), string(res))
 }
+
+func TestTemplateIncludeSnapshotsFrom(t *testing.T) {
+	r, k8sClient := setupTestReconciler()
+
+	vh, err := getStructFromYamlFile("testdata/validating/publicdomaintemplate.yaml")
+	assert.NoError(t, err)
+
+	err = k8sClient.Create(context.Background(), vh)
+	assert.NoError(t, err)
+
+	_, err = r.handleProcessValidatingWebhook(context.TODO(), vh)
+	assert.NoError(t, err)
+
+	ref, err := os.ReadFile("testdata/validating/golden/publicdomaintemplate.py")
+	assert.NoError(t, err)
+
+	res, err := os.ReadFile("hooks/public-domain-template/webhooks/validating/public-domain-template.py")
+	assert.NoError(t, err)
+
+	assert.Equal(t, string(ref), string(res))
+}

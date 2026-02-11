@@ -8,6 +8,8 @@ config = """
 configVersion: v1
 kubernetesValidating:
 - group: main
+  includeSnapshotsFrom:
+  - prometheusremotewrites
   name: prometheusremotewrite-policy.deckhouse.io
   rules:
   - apiGroups:
