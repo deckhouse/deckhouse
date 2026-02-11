@@ -145,3 +145,65 @@ The Kubernetes version update (controlled by the [kubernetesVersion](/products/k
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.
 
 {% include feature_gates.liquid %}
+
+## Control plane and kubelet update monitoring
+
+The `update-observer` is a component within the `control-plane-manager` module that provides comprehensive visibility into Kubernetes version updates across the entire Deckhouse-managed cluster Control Plane (kube-api-server, kube-scheduler, kube-controller-manager) and kubelets across all nodes. This component continuously monitors and reports the update status of both control plane components and worker nodes.
+
+### Data sources for monitoring:
+- Cluster Configuration: Monitors `d8-cluster-configuration` Secret for desired Kubernetes version
+- Node Information: Tracks kubelet versions via `nodeInfo.kubeletVersion` across all nodes
+- Control Plane Components: Collects versions from all control plane instances via `control-plane-manager.deckhouse.io/kubernetes-version` annotation
+- Update Status: Creates and maintains the `d8-cluster-kubernetes` ConfigMap as the single source of truth
+
+### Checking cluster update status
+```yaml
+d8 k get -n kube-system cm d8-cluster-kubernetes -o yaml
+```
+#### Example response 
+```yaml
+apiVersion: v1
+data:
+  spec: |
+    desiredVersion: v1.32
+    updateMode: Manual
+  status: |
+    currentVersion: v1.32 
+    phase: UpToDate
+    controlPlane:
+    - name: dkp-cluster-master-1 
+      phase: UpToDate
+      components:
+        kube-apiserver: v1.32
+        kube-controller-manager: v1.32
+        kube-scheduler: v1.32
+    - name: dkp-cluster-master-2 
+      phase: UpToDate
+      components:
+        kube-apiserver: v1.32
+        kube-controller-manager: v1.32
+        kube-scheduler: v1.32
+    - name: dkp-cluster-master-0 
+      phase: UpToDate
+      components:
+        kube-apiserver: v1.32
+        kube-controller-manager: 1.32
+        kube-scheduler: v1.32
+    nodes:
+      desiredCount: 6
+      upToDateCount: 6 
+kind: ConfigMap
+metadata: 
+  annotations: 
+    cause: idle 
+    lastReconciliationTime: "2026-02-02T01:13:05Z" lastUpToDateTime: "2026-01-30T16:26:36Z"
+  creationTimestamp: "2026-01-16T16:48:45Z"
+  labels: 
+    heritage: deckhouse
+    k8s-version: v1.32
+    max-k8s-version: v1.33 
+  name: d8-cluster-kubernetes 
+  namespace: kube-system
+  resourceVersion: "20837731"
+  uid: ba981996-f737-469c-9ce1-53aa46135994
+```
