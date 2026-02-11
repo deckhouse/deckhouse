@@ -52,6 +52,13 @@ const (
 	OperationCommanderDetach Operation = "CommanderDetach"
 )
 
+// ClusterConfig holds cluster parameters that affect phase list and progress.
+// Pass via SetClusterConfig as soon as meta config is parsed, before any phase is reported.
+// Extensible for future fields (e.g. cloud provider, features).
+type ClusterConfig struct {
+	ClusterType string
+}
+
 // Define common operations phases for such operations as bootstrap, converge and destroy.
 // Notice that each operation could define own phases (like attach operation do).
 const (
@@ -66,6 +73,7 @@ const (
 	DeleteResourcesPhase                   OperationPhase = "DeleteResources"
 	ExecPostBootstrapPhase                 OperationPhase = "ExecPostBootstrap"
 	// converge only
+	ConvergeCheckPhase          OperationPhase = "Check"
 	AllNodesPhase               OperationPhase = "AllNodes"
 	ScaleToMultiMasterPhase     OperationPhase = "ScaleToMultiMaster"
 	ScaleToSingleMasterPhase    OperationPhase = "ScaleToSingleMaster"
@@ -129,6 +137,13 @@ func BootstrapPhases() []PhaseWithSubPhases {
 
 func ConvergePhases() []PhaseWithSubPhases {
 	return []PhaseWithSubPhases{
+		{
+			Phase: ConvergeCheckPhase,
+			SubPhases: []OperationSubPhase{
+				OperationSubPhase(CheckInfra),
+				OperationSubPhase(CheckConfiguration),
+			},
+		},
 		{Phase: BaseInfraPhase, includeIf: ifNotStatic},
 		{Phase: InstallDeckhousePhase},
 		{Phase: AllNodesPhase},
@@ -180,7 +195,7 @@ func CommanderDetachPhases() []PhaseWithSubPhases {
 }
 
 type phasesOpts struct {
-	clusterType string
+	clusterConfig ClusterConfig
 }
 
 func operationPhases(operation Operation, opts phasesOpts) ([]PhaseWithSubPhases, bool) {
@@ -204,5 +219,5 @@ func operationPhases(operation Operation, opts phasesOpts) ([]PhaseWithSubPhases
 }
 
 func ifNotStatic(opts phasesOpts) bool {
-	return opts.clusterType != "Static"
+	return opts.clusterConfig.ClusterType != "Static"
 }

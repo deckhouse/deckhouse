@@ -171,7 +171,7 @@ func populateNodesState(ctx *context.Context) (map[string]state.NodeGroupInfrast
 }
 
 func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
-	if shouldStop, err := ctx.StartExecutionPhase(phases.AllNodesPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -210,7 +210,7 @@ func (r *runner) migrateTerraNodes(ctx *context.Context, metaConfig *config.Meta
 }
 
 func (r *runner) convergeTerraNodes(ctx *context.Context, metaConfig *config.MetaConfig, nodesState map[string]state.NodeGroupInfrastructureState) error {
-	if shouldStop, err := ctx.StartExecutionPhase(phases.AllNodesPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(phases.AllNodesPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -285,7 +285,7 @@ func (r *runner) convergeDeckhouseConfiguration(ctx *context.Context, commanderU
 		return err
 	}
 
-	if shouldStop, err := ctx.StartExecutionPhase(phases.InstallDeckhousePhase, false); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(phases.InstallDeckhousePhase, false); err != nil {
 		return err
 	} else if shouldStop {
 		return nil
@@ -417,8 +417,6 @@ func (r *runner) converge(ctx *context.Context) error {
 		return err
 	}
 
-	ctx.SetClusterType(metaConfig.ClusterType)
-
 	skipInfrastructure := metaConfig.ClusterType == config.StaticClusterType
 
 	if !skipInfrastructure && !r.isSkip(phases.BaseInfraPhase) {
@@ -468,7 +466,7 @@ func (r *runner) converge(ctx *context.Context) error {
 }
 
 func (r *runner) updateClusterState(ctx *context.Context, metaConfig *config.MetaConfig) error {
-	if shouldStop, err := ctx.StartExecutionPhase(phases.BaseInfraPhase, true); err != nil {
+	if shouldStop, err := ctx.StarExecutionPhase(phases.BaseInfraPhase, true); err != nil {
 		return err
 	} else if shouldStop {
 		return nil

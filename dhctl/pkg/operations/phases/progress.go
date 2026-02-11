@@ -32,7 +32,7 @@ type ProgressTracker struct {
 	mx       sync.Mutex
 
 	onProgressFunc func(Progress) error
-	clusterType    string
+	clusterConfig  ClusterConfig
 }
 
 type Progress struct {
@@ -92,18 +92,18 @@ func NewProgressTracker(operation Operation, onProgressFunc func(Progress) error
 	}
 }
 
-// SetClusterType sets the cluster type and syncs the phase list immediately.
+// SetClusterConfig sets the cluster config and syncs the phase list immediately.
 // Call as soon as meta config is parsed, before any phase is reported.
-func (p *ProgressTracker) SetClusterType(clusterType string) {
+func (p *ProgressTracker) SetClusterConfig(cfg ClusterConfig) {
 	p.mx.Lock()
 	defer p.mx.Unlock()
 
-	if p.clusterType == clusterType {
+	if p.clusterConfig == cfg {
 		return
 	}
 
-	phases, _ := operationPhases(p.progress.Operation, phasesOpts{clusterType: clusterType})
-	p.clusterType = clusterType
+	phases, _ := operationPhases(p.progress.Operation, phasesOpts{clusterConfig: cfg})
+	p.clusterConfig = cfg
 	p.progress.Phases = phases
 }
 

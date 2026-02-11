@@ -84,10 +84,6 @@ func (r *ClusterInfra) DestroyCluster(ctx context.Context, autoApprove bool) err
 		return err
 	}
 
-	if r.PhasedExecutionContext != nil {
-		r.PhasedExecutionContext.SetClusterType(metaConfig.ClusterType)
-	}
-
 	if r.infrastructureContext == nil {
 		providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 			TmpDir:           r.tmpDir,
