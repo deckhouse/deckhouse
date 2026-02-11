@@ -104,8 +104,10 @@ apiServer:
     {{- end }}
     {{- end }}
   extraArgs:
+    {{- if semverCompare "<=1.31" .Values.clusterConfiguration.kubernetesVersion }}
     - name: anonymous-auth
       value: "false"
+    {{- end }}
     - name: api-audiences
       value: {{ $audiences | join "," }}
     - name: service-account-issuer

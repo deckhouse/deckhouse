@@ -64,7 +64,9 @@ spec:
 
 {{- if hasKey $ "images" }}
   {{- if hasKey $.images "controlPlaneManager" }}
-    {{- if hasKey $.images.controlPlaneManager "kubeApiserverHealthcheck" }}
+
+{{- $healthcheckPort := ternary 3990 6443 (semverCompare "<=1.31" $.clusterConfiguration.kubernetesVersion) -}}
+{{- $healthcheckScheme := ternary "HTTP" "HTTPS" (semverCompare "<=1.31" $.clusterConfiguration.kubernetesVersion) -}}
 ---
 apiVersion: v1
 kind: Pod
@@ -90,27 +92,29 @@ spec:
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /healthz
-        port: 3990
-        scheme: HTTP
+        port: {{ $healthcheckPort }}
+        scheme: {{ $healthcheckScheme }}
     livenessProbe:
       httpGet:
     {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /livez
-        port: 3990
-        scheme: HTTP
+        port: {{ $healthcheckPort }}
+        scheme: {{ $healthcheckScheme }}
     startupProbe:
       httpGet:
     {{- if hasKey . "nodeIP" }}
         host: {{ .nodeIP | quote }}
     {{- end }}
         path: /livez
-        port: 3990
-        scheme: HTTP
+        port: {{ $healthcheckPort }}
+        scheme: {{ $healthcheckScheme }}
     env:
     - name: GOGC
       value: "50"
+  {{- if hasKey $.images.controlPlaneManager "kubeApiserverHealthcheck" }}
+    {{- if semverCompare "<=1.31" .Values.clusterConfiguration.kubernetesVersion }}
   - name: healthcheck
     image: {{ printf "%s%s@%s" $.registry.address $.registry.path (index $.images.controlPlaneManager "kubeApiserverHealthcheck") }}
     securityContext:
@@ -174,6 +178,7 @@ spec:
       path: /etc/kubernetes/pki/apiserver-kubelet-client.key
       type: File
     {{- end }}
+  {{- end }}
   {{- end }}
 {{- end }}
 
