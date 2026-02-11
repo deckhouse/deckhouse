@@ -56,6 +56,19 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 		}
 		discoveryData = mergeDiscoveryData(discoveryData, providerDiscoveryDataValues)
 	}
+
+	if discoveryData.APIVersion == "" {
+		discoveryData.APIVersion = "deckhouse.io/v1"
+	}
+
+	if discoveryData.Kind == "" {
+		discoveryData.Kind = "DVPCloudDiscoveryData"
+	}
+
+	if len(discoveryData.Zones) == 0 {
+		discoveryData.Zones = nil
+	}
+
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
 
 	return nil
