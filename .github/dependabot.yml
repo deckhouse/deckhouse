@@ -502,6 +502,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/038-registry/images/registry-proxy/reloader"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/039-registry-packages-proxy/images/registry-packages-proxy/src"
   labels:
   - "type/dependencies"
@@ -521,15 +530,6 @@ updates:
 
 - package-ecosystem: "gomod"
   directory: "/modules/040-control-plane-manager/images/kube-apiserver-healthcheck"
-  labels:
-  - "type/dependencies"
-  - "status/ok-to-test"
-  schedule:
-    interval: "daily"
-  open-pull-requests-limit: 0
-
-- package-ecosystem: "gomod"
-  directory: "/modules/040-control-plane-manager/images/kubernetes-api-proxy/reloader"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -583,7 +583,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/node-controller/src"
+  directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"
@@ -592,7 +592,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/040-node-manager/images/kubernetes-api-proxy/src"
+  directory: "/modules/040-node-manager/images/node-controller/src"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

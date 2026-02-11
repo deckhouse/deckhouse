@@ -267,7 +267,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"kubeScheduler133VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler133VexArtifact",
 		"kubeScheduler134":                    "imageHash-controlPlaneManager-kubeScheduler134",
 		"kubeScheduler134VexArtifact":         "imageHash-controlPlaneManager-kubeScheduler134VexArtifact",
-		"kubernetesApiProxy":                  "imageHash-controlPlaneManager-kubernetesApiProxy",
 		"updateObserver":                      "imageHash-controlPlaneManager-updateObserver",
 	},
 	"dashboard": map[string]interface{}{
@@ -474,6 +473,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"dockerDistribution":  "imageHash-registry-dockerDistribution",
 		"mirrorer":            "imageHash-registry-mirrorer",
 		"nodeservicesManager": "imageHash-registry-nodeservicesManager",
+		"registryProxy":       "imageHash-registry-registryProxy",
 	},
 	"registryPackagesProxy": map[string]interface{}{
 		"registryPackagesProxy": "imageHash-registryPackagesProxy-registryPackagesProxy",
@@ -546,6 +546,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nfsMount282":                     "imageHash-registrypackages-nfsMount282",
 		"nvmeCli211":                      "imageHash-registrypackages-nvmeCli211",
 		"pause":                           "imageHash-registrypackages-pause",
+		"registryProxy":                   "imageHash-registrypackages-registryProxy",
 		"socat1734":                       "imageHash-registrypackages-socat1734",
 		"systemctlPowerCommandsWrapper02": "imageHash-registrypackages-systemctlPowerCommandsWrapper02",
 		"tomlMerge01":                     "imageHash-registrypackages-tomlMerge01",

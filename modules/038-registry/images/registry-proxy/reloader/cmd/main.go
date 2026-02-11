@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"kubernetes-api-proxy-reloader/src"
+	"registry-proxy-reloader/src"
 )
 
 func main() {
