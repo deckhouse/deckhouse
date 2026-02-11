@@ -145,11 +145,11 @@ masterNodeGroup:
     # [<ru>] Возможно, захотите изменить.
     instanceType: c5.xlarge
     # [<en>] Amazon Machine Image ID.
-    # [<en>] The example uses the Ubuntu Server 22.04 image for the 'eu-central-1' region.
+    # [<en>] The example uses the Ubuntu Server 24.04 image for the 'eu-central-1' region.
     # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
     # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
     # [<ru>] ID образа виртуальной машины в Amazon.
-    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона 'eu-central-1'.
+    # [<ru>] В примере используется образ Ubuntu Server 24.04 для региона 'eu-central-1'.
     # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
     # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
     # [<en>] You might consider changing this.
