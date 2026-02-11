@@ -4,13 +4,13 @@ permalink: en/admin/configuration/storage/external/ceph.html
 description: "Configure Ceph distributed storage integration in Deckhouse Kubernetes Platform. RBD and CephFS setup, authentication configuration, and high availability storage management."
 ---
 
-Ceph is a scalable distributed storage system with high availability and fault tolerance. Deckhouse Kubernetes Platform (DKP) provides Ceph cluster integration using the [`csi-ceph`](/modules/csi-ceph/) module. This enables dynamic storage management and the use of StorageClass based on RADOS Block Device (RBD) or CephFS.
-
-This page provides instructions for connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
+Ceph is a scalable distributed storage system that ensures high availability and fault tolerance of data.Deckhouse Kubernetes Platform (DKP) provides Ceph cluster integration using the `csi-ceph` module. This enables dynamic storage management and the use of StorageClass based on RADOS Block Device (RBD) or CephFS.
 
 {% alert level="info" %}
 The [snapshot-controller](/modules/snapshot-controller/) module is required for working with snapshots.
 {% endalert %}
+
+This page provides instructions on connecting Ceph to Deckhouse, configuring authentication, creating StorageClass objects, and verifying storage functionality.
 
 ## Migration from `ceph-csi` module
 
@@ -27,7 +27,7 @@ When switching from the `ceph-csi` module to `csi-ceph`, an automatic migration 
 1. Restore operators to working state.
 
 {% alert level="warning" %}
-**Note:** If Ceph StorageClass was created without using the CephCSIDriver resource, manual migration will be required. Contact technical support.
+If Ceph StorageClass was created without using the `CephCSIDriver` resource, manual migration will be required. Contact technical support.
 {% endalert %}
 
 ## Connecting to Ceph cluster
@@ -56,7 +56,7 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    Example command:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: CephClusterConnection
@@ -88,7 +88,7 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    Example of creating StorageClass based on RBD:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: CephStorageClass
@@ -106,7 +106,7 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
    Example of creating StorageClass based on Ceph filesystem:
 
-   ```yaml
+   ```shell
    d8 k apply -f - <<EOF
    apiVersion: storage.deckhouse.io/v1alpha1
    kind: CephStorageClass
@@ -151,9 +151,9 @@ To connect to a Ceph cluster, follow the step-by-step instructions below. Execut
 
 Ceph cluster connection setup is complete. You can use the created StorageClass to create PersistentVolumeClaim in your applications.
 
-## Additional Information
+## Additional information
 
-### Getting RBD volumes list by nodes
+### How to get a list of RBD volumes separated by nodes
 
 For monitoring and diagnostics, it's useful to know which RBD volumes are connected to each cluster node. The following command provides detailed information about volume mapping:
 
@@ -162,29 +162,69 @@ d8 k -n d8-csi-ceph get po -l app=csi-node-rbd -o custom-columns=NAME:.metadata.
   | awk '{print "echo "$2"; kubectl -n d8-csi-ceph exec  "$1" -c node -- rbd showmapped"}' | bash
 ```
 
-### Supported Ceph cluster versions
+### Which versions of Ceph clusters are supported
 
 The `csi-ceph` module has specific requirements for the Ceph cluster version to ensure compatibility and stable operation. Officially supported versions are >= 16.2.0. In practice, the current version works with clusters of versions >=14.2.0, but it's recommended to update Ceph to the latest version.
 
-### Supported volume access modes
+### Which volume access modes are supported
 
 Different types of Ceph storage support different volume access modes, which is important to consider when planning application architecture.
 
 - **RBD**: Supports only ReadWriteOnce (RWO) — access to volume from only one cluster node.
 - **CephFS**: Supports ReadWriteOnce (RWO) and ReadWriteMany (RWX) — simultaneous access to volume from multiple cluster nodes.
 
-### Checking Ceph connection status
+### Examples of permissions (caps) for Ceph users
 
-To diagnose storage issues, you need to be able to check the status of the connection to the Ceph cluster and created StorageClasses.
+To ensure proper operation of the `csi-ceph` module, Ceph users must have appropriate permissions (caps) configured. The required permissions depend on the storage type being used (RBD, CephFS, or both). Below are examples of correct permission configurations for different scenarios.
 
-To check the connection status, execute the command:
+#### RBD
 
-```shell
-d8 k get cephclusterconnection <connection-name>
+For a single pool named `rbd`, the following permissions are required:
+
+```ini
+[client.name]
+        key = key
+        caps mgr = "profile rbd pool=rbd"
+        caps mon = "profile rbd"
+        caps osd = "profile rbd pool=rbd"
 ```
 
-To check the StorageClass status, execute the command:
+#### CephFS
+
+Before configuring CephFS permissions, ensure that a subvolumegroup `csi` (or another one specified in `Custom resources`) is created in CephFS.
+
+You can create a new subvolumegroup using the following command on the Ceph management node:
 
 ```shell
-d8 k get cephstorageclass <storageclass-name>
+ceph fs subvolumegroup create <fs_name> <group_name>
+```
+
+For example, to create a subvolumegroup `csi` for filesystem `myfs`:
+
+```shell
+ceph fs subvolumegroup create myfs csi
+```
+
+Required permissions for CephFS named `myfs`:
+
+```ini
+[client.name]
+        key = key
+        caps mds = "allow rwps fsname=myfs"
+        caps mgr = "allow rw"
+        caps mon = "allow r fsname=myfs"
+        caps osd = "allow rw tag cephfs data=myfs, allow rw tag cephfs metadata=myfs"
+```
+
+#### CephFS + RBD
+
+For a user that needs access to both CephFS `myfs` and RBD pool `rbd`, combine the permissions as follows:
+
+```ini
+[client.name]
+        key = key
+        caps mds = "allow rwps fsname=myfs"
+        caps mgr = "allow rw,profile rbd pool=rbd"
+        caps mon = "allow r fsname=myfs,profile rbd"
+        caps osd = "allow rw tag cephfs metadata=myfs, allow rw tag cephfs data=myfs,profile rbd pool=rbd"
 ```
