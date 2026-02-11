@@ -19,7 +19,7 @@ lang: ru
 Deckhouse Kubernetes Platform (DKP) может работать со следующими видами модулей:
 
 - Встроенные модули. Входят в состав DKP. Релизный цикл привязан к релизному циклу DKP.
-- Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). Релизный цикл таких моделей не привязан к релизному циклу DKP.
+- Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DKP.
 
 Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В этом ресурсе указывается адрес хранилища образов контейнеров, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
 

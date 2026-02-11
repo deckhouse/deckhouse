@@ -12,7 +12,7 @@ search: module development, deckhouse modules, module architecture, module devel
 Deckhouse Kubernetes Platform (DKP) может работать со следующими видами модулей:
 
 * Встроенные модули. Входят в состав DKP. Релизный цикл привязан к релизному циклу DKP.
-* Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). Релизный цикл таких моделей не привязан к релизному циклу DKP.
+* Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DKP.
 
 Создание модуля состоит из следующих этапов:
 
