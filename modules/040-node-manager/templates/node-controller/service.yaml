@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: node-controller-webhook
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+spec:
+  ports:
+  - port: 443
+    targetPort: webhook-server
+    protocol: TCP
+  selector:
+    app: node-controller

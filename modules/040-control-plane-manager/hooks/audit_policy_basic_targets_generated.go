@@ -53,6 +53,7 @@ var auditPolicyBasicServiceAccounts = []string{
 	"system:serviceaccount:d8-cloud-instance-manager:early-oom",
 	"system:serviceaccount:d8-cloud-instance-manager:fencing-agent",
 	"system:serviceaccount:d8-cloud-instance-manager:machine-controller-manager",
+	"system:serviceaccount:d8-cloud-instance-manager:node-controller",
 	"system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-gc",
 	"system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-master",
 	"system:serviceaccount:d8-cloud-instance-manager:node-feature-discovery-worker",
