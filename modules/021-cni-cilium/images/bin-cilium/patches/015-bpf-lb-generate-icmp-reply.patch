@@ -28,7 +28,7 @@ index 15dacfa4df..495cc2c4ba 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..110338919e 100644
+index 0142716855..d028cccf56 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -27,6 +27,7 @@
@@ -39,14 +39,15 @@ index 0142716855..110338919e 100644
  
  #define nodeport_nat_egress_ipv4_hook(ctx, ip4, info, tuple, l4_off, ext_err) CTX_ACT_OK
  #define nodeport_rev_dnat_ingress_ipv4_hook(ctx, ip4, tuple, tunnel_endpoint, src_sec_identity, \
-@@ -2679,6 +2680,63 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2679,6 +2680,64 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
 +/* ICMP reply handling code for LoadBalancer services
-+ * This code will be compiled when the feature is enabled */
-+static __always_inline 
++ * This code will be compiled when the feature is enabled
++ */
++static __always_inline
 +int make_icmp_responce_lb4(struct __ctx_buff *ctx,
 +					struct iphdr *ip4)
 +{
@@ -61,7 +62,7 @@ index 0142716855..110338919e 100644
 +	data = ctx_data(ctx);
 +	data_end = ctx_data_end(ctx);
 +
-+	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) + 
++	if (data + sizeof(struct ethhdr) + sizeof(struct iphdr) +
 +		sizeof(struct icmphdr) > data_end)
 +		return DROP_INVALID;
 +
@@ -73,12 +74,12 @@ index 0142716855..110338919e 100644
 +
 +	icmphdr = data + sizeof(struct ethhdr) + sizeof(struct iphdr);
 +
-+	if(icmphdr < 0)
++	if (icmphdr < 0)
 +		return CTX_ACT_OK;
 +
-+	if (icmphdr->type != ICMP_ECHO) 
++	if (icmphdr->type != ICMP_ECHO)
 +		return CTX_ACT_OK;
-+	
++
 +	/* Write reversed eth header, ready for egress */
 +	ethhdr = data;
 +	memcpy(ethhdr->h_dest, smac.addr, sizeof(smac.addr));
@@ -103,16 +104,14 @@ index 0142716855..110338919e 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2714,8 +2772,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
- 	}
- 
+@@ -2716,6 +2775,34 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
--
-+	
+ 
  	svc = lb4_lookup_service(&key, false);
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
-+	if(ip4->protocol == IPPROTO_ICMP) {
++	if (ip4->protocol == IPPROTO_ICMP) {
++#if 0
 +		struct ratelimit_key rkey = {
 +			.usage = RATELIMIT_USAGE_ICMPV4,
 +		};
@@ -126,17 +125,17 @@ index 0142716855..110338919e 100644
 +		rkey.key.icmpv4.netdev_idx = ctx_get_ifindex(ctx);
 +		if (!ratelimit_check_and_take(&rkey, &settings))
 +			return DROP_RATE_LIMITED;
-+
++#endif
 +		if (!svc) {
 +			key.dport = 0;
 +			key.proto = 6;
 +			svc = lb4_lookup_service(&key, true);
-+		} 
++		}
 +		if (svc && lb4_svc_is_loadbalancer(svc)) {
 +			return make_icmp_responce_lb4(ctx, ip4);
 +		}
 +	}
-+#endif //ENABLE_LOADBALANCER_ICMP_REPLY
++#endif /*  */
  	if (svc) {
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
