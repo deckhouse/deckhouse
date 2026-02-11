@@ -7,10 +7,6 @@ metadata:
 validationObject:
   name: publicdomaintemplate-policy.deckhouse.io
   group: main
-  includeSnapshotsFrom:
-  - d8-kube-dns-cm-wh
-  - d8-cluster-configuration
-  - kube-dns-module
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
