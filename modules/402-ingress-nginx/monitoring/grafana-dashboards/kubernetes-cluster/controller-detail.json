@@ -12877,7 +12877,7 @@
             }
           },
           "mappings": [],
-          "max": 1,
+          "max": 100,
           "min": 0,
           "thresholds": {
             "mode": "absolute",
@@ -12892,7 +12892,7 @@
               }
             ]
           },
-          "unit": "percentunit"
+          "unit": "bps"
         },
         "overrides": [
           {
