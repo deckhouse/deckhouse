@@ -283,23 +283,72 @@ func (c *huaweiCloudInstanceClass) ExtractCapacity(catalog *InstanceTypesCatalog
 	return catalog.Get(c)
 }
 
-type dvpInstanceClass struct {
-	CPU struct {
-		Cores int `json:"cores"`
-	} `json:"cpu"`
+//type dvpInstanceClass struct {
+//	CPU struct {
+//		Cores int `json:"cores"`
+//	} `json:"cpu"`
+//
+//	Memory int `json:"memory"`
+//}
 
-	Memory int `json:"memory"`
+/*
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  creationTimestamp: "2025-12-30T06:47:54Z"
+  generation: 1
+  name: worker
+  resourceVersion: "9580100"
+  uid: 878e51e6-a6e6-4f00-a408-d78a17ff0763
+spec:
+  rootDisk:
+    image:
+      kind: ClusterVirtualImage
+      name: ubuntu-24-04-lts
+    size: 30Gi
+    storageClass: replicated
+  virtualMachine:
+    bootloader: EFI
+    cpu:
+      coreFraction: 20%
+      cores: 4
+    liveMigrationPolicy: PreferForced
+    memory:
+      size: 8Gi
+    runPolicy: AlwaysOnUnlessStoppedManually
+    virtualMachineClassName: amd-epyc-gen-3
+`
+*/
+
+type dvpInstanceClass struct {
+	VirtualMachine struct {
+		CPU struct {
+			Cores int `json:"cores"`
+		} `json:"cpu"`
+
+		Memory struct {
+			Size string `json:"size"`
+		} `json:"memory"`
+	} `json:"virtualMachine"`
 }
 
 func (d dvpInstanceClass) ExtractCapacity(_ *InstanceTypesCatalog) (*v1alpha1.InstanceType, error) {
-	cpuStr := strconv.FormatInt(int64(d.CPU.Cores), 10)
-	memStr := strconv.FormatInt(int64(d.Memory), 10)
+	//cpuStr := strconv.FormatInt(int64(d.CPU.Cores), 10)
+	//memStr := strconv.FormatInt(int64(d.Memory), 10)
+
+	cpuStr := strconv.FormatInt(int64(d.VirtualMachine.CPU.Cores), 10)
+	//memStr := strconv.FormatInt(int64(d.VirtualMachine.Memory), 10)
 
 	cpuRes, err := resource.ParseQuantity(cpuStr)
 	if err != nil {
 		return nil, err
 	}
-	memRes, err := resource.ParseQuantity(memStr + "Mi")
+	//memRes, err := resource.ParseQuantity(memStr + "Mi")
+	//if err != nil {
+	//	return nil, err
+	//}
+
+	memRes, err := resource.ParseQuantity(d.VirtualMachine.Memory.Size)
 	if err != nil {
 		return nil, err
 	}
