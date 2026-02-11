@@ -1443,7 +1443,7 @@ function run-test() {
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
-  testRunAttempts=80
+  testRunAttempts=120
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
