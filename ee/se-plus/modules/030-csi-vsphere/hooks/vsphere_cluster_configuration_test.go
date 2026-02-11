@@ -80,7 +80,7 @@ data: {}
 	)
 	// todo(31337Ghost) eliminate the following dirty hack after `ee` subdirectory will be merged to the root
 	// Used to make dhctl config function able to validate `VsphereClusterConfiguration`.
-	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/se-plus/candi")
+	_ = os.Setenv("DHCTL_CLI_ADDITIONAL_SCHEMAS_PATHS", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi")
 	a := HookExecutionConfigInit(filledValues, `{}`)
 	Context("Cluster with module configuration without zones, with empty secret", func() {
 		BeforeEach(func() {

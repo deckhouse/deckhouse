@@ -126,7 +126,9 @@ func (c *Checker) Check(ctx context.Context) (*CheckResult, Cleaner, error) {
 		if err = c.PhasedExecutionContext.InitPipeline(c.StateCache); err != nil {
 			return nil, cleaner, err
 		}
-		defer c.PhasedExecutionContext.Finalize(c.StateCache)
+		defer func() {
+			_ = c.PhasedExecutionContext.Finalize(c.StateCache)
+		}()
 	}
 
 	if c.InfrastructureContext == nil {

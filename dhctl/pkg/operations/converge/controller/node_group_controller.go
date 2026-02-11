@@ -131,7 +131,6 @@ func (c *NodeGroupController) Run(ctx *context.Context) error {
 				})
 				ctx = newCtx
 			}
-
 		}
 	}
 

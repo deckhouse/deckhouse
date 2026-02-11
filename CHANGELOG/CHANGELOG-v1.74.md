@@ -4,6 +4,8 @@
 
 
  - #16795 unknown section "metrics-storage"
+ - #17702 unknown section "cloud-instance-manager"
+ - #17801 unknown section "docs-builder"
 
 ## Know before update
 
@@ -13,6 +15,7 @@
 ## Features
 
 
+ - **[candi]** Display lists of third-party (OSS) components in the modules documentation. [#17530](https://github.com/deckhouse/deckhouse/pull/17530)
  - **[candi]** Added GPU compute capability check to `check_gpu` bootstrap step. [#16665](https://github.com/deckhouse/deckhouse/pull/16665)
  - **[candi]** Added dynamic default for `maxPods` based on `podSubnetNodeCIDRPrefix`. [#16564](https://github.com/deckhouse/deckhouse/pull/16564)
     Kubelet will restart. The maximum default number of pods per node now automatically depends on the node CIDR size.
@@ -24,6 +27,7 @@
  - **[candi]** Added support for Kubernetes 1.34 and discontinued support for Kubernetes 1.29. [#15518](https://github.com/deckhouse/deckhouse/pull/15518)
     The minimum supported version of Kubernetes is now 1.30. All control plane components will restart.
  - **[cloud-provider-aws]** Adds support for PublicNetworkAllowList to restrict incoming traffic [#16854](https://github.com/deckhouse/deckhouse/pull/16854)
+ - **[cloud-provider-dvp]** Add validation for VirtualMachineClass and boot images before VM creation [#17755](https://github.com/deckhouse/deckhouse/pull/17755)
  - **[cloud-provider-huaweicloud]** Allowed users to overwrite default NIC in both CloudPermanent and CloudEphemeral nodes. [#15810](https://github.com/deckhouse/deckhouse/pull/15810)
  - **[cloud-provider-huaweicloud]** Added Virtual IP support. [#15600](https://github.com/deckhouse/deckhouse/pull/15600)
  - **[cni-cilium]** Added support for configuring the `mapDynamicSizeRatio` parameter for specific nodes using CiliumNodeConfig. [#16326](https://github.com/deckhouse/deckhouse/pull/16326)
@@ -68,6 +72,7 @@
 ## Fixes
 
 
+ - **[admission-policy-engine]** Refactor constraint templates [#17882](https://github.com/deckhouse/deckhouse/pull/17882)
  - **[admission-policy-engine]** Allow DELETE operations, add containerPorts check in case of hostNetwork [#17084](https://github.com/deckhouse/deckhouse/pull/17084)
  - **[candi]** Remove duplicate `additional_disks_hashes` definition in static-node Terraform module. [#17441](https://github.com/deckhouse/deckhouse/pull/17441)
  - **[candi]** Updated the bashible step to include Linux kernel versions that address CVE-2025-37999 [#17300](https://github.com/deckhouse/deckhouse/pull/17300)
@@ -128,6 +133,7 @@
  - **[deckhouse-controller]** Fixed module documentation collection from EROFS mounted modules. [#16495](https://github.com/deckhouse/deckhouse/pull/16495)
  - **[deckhouse-controller]** Now whenever hooks fail, Deckhouse handles and returns corresponding metrics along with an error. [#16319](https://github.com/deckhouse/deckhouse/pull/16319)
  - **[deckhouse-controller]** Fixed incorrect time value in minor release notification messages. [#16271](https://github.com/deckhouse/deckhouse/pull/16271)
+ - **[dhctl]** Improved reliability when connecting to dhctl servers by adding retry logic and better error handling during startup [#17698](https://github.com/deckhouse/deckhouse/pull/17698)
  - **[dhctl]** Eliminated double root-password prompts during Terraform validation. [#16591](https://github.com/deckhouse/deckhouse/pull/16591)
  - **[dhctl]** Now the `AllowTcpForwarding` preflight check can interrupt a bootstrap process. [#16250](https://github.com/deckhouse/deckhouse/pull/16250)
  - **[dhctl]** Fixed endless converge loop for clusters with NAT instances. [#16230](https://github.com/deckhouse/deckhouse/pull/16230)
@@ -135,6 +141,10 @@
  - **[dhctl]** Isolated temporary directory for singleshot RPC and dhctl to avoid cleanup race. [#15794](https://github.com/deckhouse/deckhouse/pull/15794)
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
  - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported. [#17823](https://github.com/deckhouse/deckhouse/pull/17823)
+    The ingress nginx controllers' pods will be restated.
+ - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs are fixed. [#17795](https://github.com/deckhouse/deckhouse/pull/17795)
+    The ingress nginx controllers' pods will be restated.
  - **[ingress-nginx]** Latest CVEs are fixed. [#17222](https://github.com/deckhouse/deckhouse/pull/17222)
     All pods running kube-rbac-proxy will be restarted.
  - **[ingress-nginx]** Improved stability of geoproxy service startup. [#17140](https://github.com/deckhouse/deckhouse/pull/17140)
@@ -142,6 +152,7 @@
  - **[istio]** Fixed false-positive alert `D8IstioRemoteClusterNotSynced` and improved its description. [#15826](https://github.com/deckhouse/deckhouse/pull/15826)
  - **[loki]** Fixed the `LokiDiscardedSamplesWarning` alert. [#16374](https://github.com/deckhouse/deckhouse/pull/16374)
  - **[metallb]** Fixed D8MetallbBGPSessionDown alert false positives caused by duplicate metrics without port information. [#17563](https://github.com/deckhouse/deckhouse/pull/17563)
+ - **[monitoring-kubernetes]** fix kube_persistentvolume_is_local recording rule when there are more than one kube-state-metrics exporter in cluster [#17877](https://github.com/deckhouse/deckhouse/pull/17877)
  - **[monitoring-kubernetes]** fix kube_persistentvolume_is_local recording rule for not-bound PVCs [#17638](https://github.com/deckhouse/deckhouse/pull/17638)
  - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
     Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
@@ -154,6 +165,7 @@
  - **[node-manager]** Updated helm-lib to ensure `privileged` is set to `false` whenever `allowPrivilegeEscalation` is `false`, preventing invalid configurations after the switch to SSA. [#16562](https://github.com/deckhouse/deckhouse/pull/16562)
  - **[node-manager]** Added early StaticInstance reservation with automatic rollback on failure. [#16315](https://github.com/deckhouse/deckhouse/pull/16315)
  - **[node-manager]** Moved `bb-label-node-bashible-first-run-finished` to a Bashible template. [#16307](https://github.com/deckhouse/deckhouse/pull/16307)
+ - **[prometheus]** Make Grafana redirect ingress pass the annotations validation. [#17816](https://github.com/deckhouse/deckhouse/pull/17816)
  - **[prometheus]** Added `ingressClassName` to the `grafana/prometheus` redirect Ingress. [#16116](https://github.com/deckhouse/deckhouse/pull/16116)
  - **[registry]** Fixed validation of input image list changes in the registry checker. [#17553](https://github.com/deckhouse/deckhouse/pull/17553)
  - **[registry]** Omitted the auth field in DockerConfig when credentials (username and password) are empty. [#17333](https://github.com/deckhouse/deckhouse/pull/17333)

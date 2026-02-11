@@ -21,6 +21,7 @@
   {{- if $vexFile }}
 ---
 image: {{ $imageName }}-vex-artifact
+fromCacheVersion: {{ div $context.Commit.Date.Unix (mul 60 60) }}v1
 fromImage: base/vex
 final: true
 secrets:

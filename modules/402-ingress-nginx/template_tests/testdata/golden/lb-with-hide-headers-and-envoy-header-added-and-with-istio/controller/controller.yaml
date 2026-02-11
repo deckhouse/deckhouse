@@ -38,8 +38,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 760c73ccae3e3ebdc189e2054048e99761fec03617816f6fc3be8fc775f4be3e
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
+    ingress-nginx-controller.deckhouse.io/checksum: bf2256aff20c9a5728a01e7e631ede90d1aa26a5a930837199651eb2afee2f09
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: LoadBalancer
   labels:
     app: controller
@@ -78,6 +78,7 @@ spec:
         - --shutdown-grace-period=120
         - --controller-class=ingress-nginx.deckhouse.io/nginx
         - --watch-ingress-without-class=true
+        - --enable-annotation-validation=false
         - --healthz-host=127.0.0.1
         - --election-id=ingress-controller-leader-nginx
         - --status-service-label=network.deckhouse.io/ingress-nginx-class=nginx
@@ -92,7 +93,7 @@ spec:
               fieldPath: metadata.namespace
         - name: POD_IP
           value: 127.0.0.1
-        image: registry.example.com@imageHash-ingressNginx-controller19
+        image: registry.example.com@imageHash-ingressNginx-controller110
         lifecycle:
           preStop:
             exec:
@@ -245,9 +246,6 @@ spec:
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
-          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
-          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
-          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
         image: registry.example.com@imageHash-ingressNginx-init
         name: init
         resources:

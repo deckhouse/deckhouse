@@ -36,12 +36,16 @@ import (
 //go:generate go run ./build.go --edition all
 
 const (
-	modulesFileName            = "modules-%s.yaml"
-	modulesWithExcludeFileName = "modules-with-exclude-%s.yaml"
-	modulesWithDependencies    = "modules-with-dependencies-%s.yaml"
-	candiFileName              = "candi-%s.yaml"
-	modulesExcluded            = "modules-excluded-%s.yaml"
+	modulesFileName             = "modules-%s.yaml"
+	modulesWithExcludeFileName  = "modules-with-exclude-%s.yaml"
+	modulesWithDependencies     = "modules-with-dependencies-%s.yaml"
+	candiFileName               = "candi-%s.yaml"
+	candiCloudProviders         = "candi-cloud-providers-%s.yaml"
+	modulesExcluded             = "modules-excluded-%s.yaml"
+	cloudProviderGlob           = "030-cloud-provider-*"
 )
+
+var cloudProviderNameRegexp = regexp.MustCompile(`cloud-provider-([a-zA-Z0-9]+)`)
 
 var workDir = cwd()
 
@@ -256,10 +260,70 @@ func deleteRevisionFiles(edition string) {
 	}
 }
 
+func writeCandiCloudProvidersSections(settings writeSettings) {
+	saveTo := fmt.Sprintf(settings.SaveTo, settings.Edition)
+
+	prefix := filepath.Join(workDir, settings.Prefix)
+	searchDir := filepath.Join(prefix, settings.Dir, cloudProviderGlob)
+
+	files, err := filepath.Glob(searchDir)
+	if err != nil {
+		log.Fatalf("globbing: %v", err)
+	}
+	var addEntries []addEntry
+
+	addNewFileEntry := func(file string) {
+		candiPath := filepath.Join(file, "candi")
+		info, err := os.Lstat(candiPath)
+		if err != nil {
+			log.Fatalf("cannot lstat file %s: %v", file, err)
+		}
+
+		if info.Mode()&os.ModeSymlink != 0 {
+			return
+		}
+
+		cloudProviderName := extractCloudProviderName(file)
+
+		addEntries = append(addEntries, addEntry{
+			Add:               strings.TrimPrefix(candiPath, workDir),
+			To:                filepath.Join("/deckhouse", "candi", "cloud-providers", cloudProviderName),
+			ExcludePaths:      settings.ExcludePaths,
+			StageDependencies: settings.StageDependencies,
+		})
+	}
+
+	for _, file := range files {
+		info, err := os.Stat(file)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if !info.IsDir() {
+			continue
+		}
+
+		addNewFileEntry(file)
+	}
+
+	var result []byte
+	if len(addEntries) != 0 {
+		result, err = yaml.Marshal(addEntries)
+		if err != nil {
+			log.Fatalf("converting entries to YAML: %v", err)
+		}
+	}
+
+	if err := writeToFile(saveTo, result); err != nil {
+		log.Fatal(err)
+	}
+}
+
 type addEntry struct {
 	Add               string              `yaml:"add"`
 	To                string              `yaml:"to"`
 	ExcludePaths      []string            `yaml:"excludePaths,omitempty"`
+	IncludePaths      []string            `yaml:"includePaths,omitempty"`
 	StageDependencies map[string][]string `yaml:"stageDependencies,omitempty"`
 }
 
@@ -389,6 +453,14 @@ func (e *executor) executeEdition(editionName string) {
 
 		prefix := strings.TrimPrefix(strings.TrimSuffix(ed.ModulesDir, "modules"), "/")
 
+		writeSettingCandiCloudProviders := writeSettings{
+			Edition:           editionName,
+			SaveTo:            candiCloudProviders,
+			Dir:               "modules",
+			Prefix:            prefix,
+			StageDependencies: stageDependenciesFile,
+		}
+
 		writeSettingCandi := writeSettings{
 			Edition:           editionName,
 			SaveTo:            candiFileName,
@@ -436,6 +508,7 @@ func (e *executor) executeEdition(editionName string) {
 		writeSections(writeSettingsExcludeFileName)
 		writeSections(writeSettingStageDeps)
 		writeSections(writeSettingCandi)
+		writeCandiCloudProvidersSections(writeSettingCandiCloudProviders)
 
 		if ed.Name == editionName {
 			// only for one edition
@@ -483,4 +556,12 @@ func fileExists(parts ...string) (bool, error) {
 		return false, err
 	}
 	return true, nil
+}
+
+func extractCloudProviderName(path string) string {
+	nameMatch := cloudProviderNameRegexp.FindSubmatch([]byte(path))
+	if len(nameMatch) == 0 {
+		return ""
+	}
+	return string(nameMatch[1])
 }

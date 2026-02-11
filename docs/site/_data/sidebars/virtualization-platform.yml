@@ -218,7 +218,7 @@ entries:
                       url: /virtualization-platform/documentation/admin/platform-management/network/other/dns.html
                     - title:
                         en: Caching DNS requests on cluster nodes
-                        ru: Кэширование DNS-запросов на узлах кластера
+                        ru: Кеширование DNS-запросов на узлах кластера
                       url: /virtualization-platform/documentation/admin/platform-management/network/other/dns-caching.html
                     - title:
                         en: BpfLB operation modes for external traffic processing
@@ -534,7 +534,7 @@ entries:
           folders:
             - title:
                 en: Caching DNS server in a cluster
-                ru: Кэширующий DNS-сервер в кластере
+                ru: Кеширующий DNS-сервер в кластере
               url: /virtualization-platform/documentation/architecture/network/dns-caching.html
         - title:
             en: Multitenancy

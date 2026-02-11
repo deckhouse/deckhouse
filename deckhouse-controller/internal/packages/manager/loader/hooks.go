@@ -59,147 +59,199 @@ var (
 	compiledHooksFound = regexp.MustCompile(`Found ([1-9]|[1-9]\d|[1-9]\d\d|[1-9]\d\d\d) items`)
 )
 
-// hookLoader handles discovery and loading of package hooks from the filesystem.
-// It supports both shell hooks (.sh, .py) and batch hooks (executables).
-// This causes executable hooks to be rejected and non-executable files to be accepted.
-type hookLoader struct {
-	path    string // Package directory path
-	keepTmp bool   // Whether to keep temporary files for debugging
-
-	name      string // Application name
-	namespace string // Application namespace
-
-	// readinessLoaded tracks if a readiness hook was found
-	readinessLoaded bool
-
+type hookLoadResult struct {
 	settingsCheck *kind.SettingsCheck
-
-	logger *log.Logger
+	hooks         []*hooks.ModuleHook
 }
 
-// newHookLoader creates a new hook loader for the specified package.
-func newHookLoader(namespace, name, path string, keepTmp bool, logger *log.Logger) *hookLoader {
-	return &hookLoader{
-		namespace: namespace,
-		name:      name,
-		path:      path,
-		keepTmp:   keepTmp,
-
-		logger: logger,
-	}
-}
-
-// load discovers and loads all package hooks from the filesystem.
+// loadAppHooks discovers and loads all package hooks from the filesystem.
 // It searches for both shell hooks (.sh, .py) and batch hooks (executables).
-func (l *hookLoader) load(ctx context.Context) ([]*hooks.ModuleHook, error) {
+func loadAppHooks(ctx context.Context, namespace, name, path string, logger *log.Logger) (*hookLoadResult, error) {
 	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "load")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", l.name))
-	span.SetAttributes(attribute.String("namespace", l.namespace))
-	span.SetAttributes(attribute.String("path", l.path))
+	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("namespace", namespace))
+	span.SetAttributes(attribute.String("path", path))
 
-	l.logger.Debug("load hooks")
+	logger.Debug("load hooks")
 
-	packagesHooks, err := l.searchPackageHooks()
+	res, err := searchBatchAppHooks(namespace, name, path, logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		return nil, fmt.Errorf("search hooks failed: %w", err)
+		return res, fmt.Errorf("search hooks failed: %w", err)
 	}
 
-	l.logger.Debug("found hooks", slog.Int("count", len(packagesHooks)))
+	logger.Debug("found hooks", slog.Int("count", len(res.hooks)))
 
-	return packagesHooks, nil
+	return res, nil
 }
 
-func (l *hookLoader) searchPackageHooks() ([]*hooks.ModuleHook, error) {
-	batchHooks, err := l.searchPackageBatchHooks()
+// loadModuleHooks discovers and loads all package hooks from the filesystem.
+// It searches for both shell hooks (.sh, .py) and batch hooks (executables).
+func loadModuleHooks(ctx context.Context, name, path string, logger *log.Logger) (*hookLoadResult, error) {
+	_, span := otel.Tracer(hooksLoaderTracer).Start(ctx, "load")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", name))
+	span.SetAttributes(attribute.String("path", path))
+
+	logger.Debug("load hooks")
+
+	res, err := searchBatchModuleHooks(name, path, logger)
 	if err != nil {
-		return nil, fmt.Errorf("search batch hooks: %w", err)
+		span.SetStatus(codes.Error, err.Error())
+		return res, fmt.Errorf("search hooks failed: %w", err)
 	}
 
-	result := make([]*hooks.ModuleHook, 0, len(batchHooks))
-	for _, h := range batchHooks {
-		result = append(result, hooks.NewModuleHook(h))
-	}
+	logger.Debug("found hooks", slog.Int("count", len(res.hooks)))
 
-	sort.SliceStable(result, func(i, j int) bool {
-		return result[i].GetPath() < result[j].GetPath()
-	})
-
-	return result, nil
+	return res, nil
 }
 
-func (l *hookLoader) searchPackageBatchHooks() ([]*kind.BatchHook, error) {
-	hooksPath := filepath.Join(l.path, hooksDir)
+func searchBatchAppHooks(namespace, name, path string, logger *log.Logger) (*hookLoadResult, error) {
+	hooksPath := filepath.Join(path, hooksDir)
 	if _, err := os.Stat(hooksPath); os.IsNotExist(err) {
-		return nil, nil
+		return &hookLoadResult{}, nil
 	}
 
-	hooksRelativePaths, err := l.getHookExecutablePaths(hooksPath, true)
+	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, true, logger)
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*kind.BatchHook, 0)
+	result := new(hookLoadResult)
+
+	readinessLoaded := false
 
 	// sort hooks by path
 	sort.Strings(hooksRelativePaths)
 
 	for _, hookPath := range hooksRelativePaths {
-		hookName, err := normalizeHookPath(filepath.Dir(l.path), hookPath)
+		hookName, err := normalizeHookPath(filepath.Dir(path), hookPath)
 		if err != nil {
 			return nil, fmt.Errorf("get hook name: %w", err)
 		}
 
-		hookConfig, err := kind.GetBatchHookConfig(l.name, hookPath)
+		hookConfig, err := kind.GetBatchHookConfig(name, hookPath)
 		if err != nil {
 			return nil, fmt.Errorf("get sdk config for hook '%s': %w", hookName, err)
 		}
 
 		if hookConfig.Readiness != nil {
-			if l.readinessLoaded {
+			if readinessLoaded {
 				return nil, fmt.Errorf("multiple readiness hooks found in '%s'", hookPath)
 			}
 
-			l.readinessLoaded = true
+			readinessLoaded = true
 
 			// add readiness hook
 			nestedHookName := fmt.Sprintf("%s-readiness", hookName)
-			logger := l.logger.Named("batch-hook")
+			hookLogger := logger.Named("batch-hook")
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
-				hookPath, l.namespace, l.name, kind.BatchHookReadyKey,
-				l.keepTmp, shapp.LogProxyHookJSON, logger)
+				hookPath, namespace, name, kind.BatchHookReadyKey,
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result = append(result, hook)
+			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
 		}
 
 		if hookConfig.HasSettingsCheck {
-			if l.settingsCheck != nil {
+			if result.settingsCheck != nil {
 				return nil, fmt.Errorf("multiple settings checks found in '%s'", hookPath)
 			}
 
-			logger := l.logger.Named("settings-check")
-			l.settingsCheck = kind.NewSettingsCheck(hookPath, os.TempDir(), logger)
+			settingsLogger := logger.Named("settings-check")
+			result.settingsCheck = kind.NewSettingsCheck(hookPath, os.TempDir(), settingsLogger)
 		}
 
 		for key, cfg := range hookConfig.Hooks {
 			nestedHookName := fmt.Sprintf("%s:%s:%s", hookName, cfg.Metadata.Name, key)
-			logger := l.logger.Named("batch-hook")
+			hookLogger := logger.Named("batch-hook")
 
 			hook := kind.NewApplicationBatchHook(nestedHookName,
-				hookPath, l.namespace, l.name, key,
-				l.keepTmp, shapp.LogProxyHookJSON, logger)
+				hookPath, namespace, name, key,
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
 
-			result = append(result, hook)
+			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
 		}
 	}
 
 	return result, nil
 }
 
-func (l *hookLoader) getHookExecutablePaths(dir string, checkBatch bool) ([]string, error) {
+func searchBatchModuleHooks(name, path string, logger *log.Logger) (*hookLoadResult, error) {
+	hooksPath := filepath.Join(path, hooksDir)
+	if _, err := os.Stat(hooksPath); os.IsNotExist(err) {
+		return &hookLoadResult{}, nil
+	}
+
+	hooksRelativePaths, err := getHookExecutablePaths(hooksPath, true, logger)
+	if err != nil {
+		return nil, err
+	}
+
+	result := new(hookLoadResult)
+
+	readinessLoaded := false
+
+	// sort hooks by path
+	sort.Strings(hooksRelativePaths)
+
+	for _, hookPath := range hooksRelativePaths {
+		hookName, err := normalizeHookPath(filepath.Dir(path), hookPath)
+		if err != nil {
+			return nil, fmt.Errorf("get hook name: %w", err)
+		}
+
+		hookConfig, err := kind.GetBatchHookConfig(name, hookPath)
+		if err != nil {
+			return nil, fmt.Errorf("get sdk config for hook '%s': %w", hookName, err)
+		}
+
+		if hookConfig.Readiness != nil {
+			if readinessLoaded {
+				return nil, fmt.Errorf("multiple readiness hooks found in '%s'", hookPath)
+			}
+
+			readinessLoaded = true
+
+			// add readiness hook
+			nestedHookName := fmt.Sprintf("%s-readiness", hookName)
+			hookLogger := logger.Named("batch-hook")
+
+			hook := kind.NewBatchHook(nestedHookName,
+				hookPath, name, kind.BatchHookReadyKey,
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
+
+			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+		}
+
+		if hookConfig.HasSettingsCheck {
+			if result.settingsCheck != nil {
+				return nil, fmt.Errorf("multiple settings checks found in '%s'", hookPath)
+			}
+
+			settingsLogger := logger.Named("settings-check")
+			result.settingsCheck = kind.NewSettingsCheck(hookPath, os.TempDir(), settingsLogger)
+		}
+
+		for key, cfg := range hookConfig.Hooks {
+			nestedHookName := fmt.Sprintf("%s:%s:%s", hookName, cfg.Metadata.Name, key)
+			hookLogger := logger.Named("batch-hook")
+
+			hook := kind.NewBatchHook(nestedHookName,
+				hookPath, name, key,
+				shapp.DebugKeepTmpFiles, shapp.LogProxyHookJSON, hookLogger)
+
+			result.hooks = append(result.hooks, hooks.NewModuleHook(hook))
+		}
+	}
+
+	return result, nil
+}
+
+func getHookExecutablePaths(dir string, checkBatch bool, logger *log.Logger) ([]string, error) {
 	paths := make([]string, 0)
 
 	err := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -217,13 +269,13 @@ func (l *hookLoader) getHookExecutablePaths(dir string, checkBatch bool) ([]stri
 		}
 
 		if err = isExecutable(f); err != nil {
-			log.Debug("file is skipped", slog.String("path", path), log.Err(err))
+			logger.Debug("file is skipped", slog.String("path", path), log.Err(err))
 			return nil
 		}
 
 		if checkBatch {
 			if err = isExecutableBatchHook(path, f); err != nil {
-				l.logger.Debug("skip file", slog.String("path", path), log.Err(err))
+				logger.Debug("skip file", slog.String("path", path), log.Err(err))
 
 				return nil
 			}

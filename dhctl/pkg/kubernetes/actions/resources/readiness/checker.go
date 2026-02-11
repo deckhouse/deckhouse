@@ -20,7 +20,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 )
@@ -67,7 +67,6 @@ func GetCheckerByGvk(gvk *schema.GroupVersionKind, params GetCheckerParams) (Res
 			WithReadyIfNoStatusOrConditions(true)
 
 		return conditionsChecker, nil
-
 	}
 
 	waitAttempts := 3
@@ -158,17 +157,17 @@ type byConditionsParams struct {
 
 var kindsByConditions = map[string]byConditionsParams{
 	"Deployment": {
-		waitAttemptsBeforeCheck: pointer.Int(3),
+		waitAttemptsBeforeCheck: ptr.To(3),
 		conditionsForCheck:      availableConditions,
 		checkAll:                false,
 	},
 	"APIService": {
-		waitAttemptsBeforeCheck: pointer.Int(2),
+		waitAttemptsBeforeCheck: ptr.To(2),
 		conditionsForCheck:      availableConditions,
 		checkAll:                false,
 	},
 	"NodeGroup": {
-		waitAttemptsBeforeCheck: pointer.Int(5),
+		waitAttemptsBeforeCheck: ptr.To(5),
 		conditionsForCheck: Conditions{
 			readyCondition: trueCondition,
 		},

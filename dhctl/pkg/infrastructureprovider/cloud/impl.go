@@ -128,7 +128,7 @@ func (p *Provider) IsVMChange(rc plan.ResourceChange) bool {
 		return dvp.IsVMManifest(rc, p.logger)
 	}
 
-	return rc.Type == p.settings.VmResourceType()
+	return rc.Type == p.settings.VMResourceType()
 }
 
 func (p *Provider) String() string {
@@ -535,7 +535,6 @@ func (p *Provider) downloadInfraUtil(ctx context.Context, rootDir, errPrefix str
 	}
 
 	return destination, nil
-
 }
 
 func (p *Provider) arch() string {

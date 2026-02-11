@@ -93,6 +93,10 @@
 
         {{.Content}}
 
+        {{- if and $currentModuleName (eq .File.ContentBaseName "README") }}
+          {{- partial "module-oss" (dict "ctx" $ "moduleName" $currentModuleName "moduleChannel" $currentModuleChannel) }}
+        {{- end }}
+
         {{- if and .IsPage ( or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") (eq .File.ContentBaseName "CONFIGURATION") ) }} {{/* Render module CRDs */}}
 
           {{- if or (eq .File.ContentBaseName "CRD") (eq .File.ContentBaseName "CR") }}

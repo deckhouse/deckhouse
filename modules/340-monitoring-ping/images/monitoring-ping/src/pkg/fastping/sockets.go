@@ -169,12 +169,12 @@ func (s *socketConn) SendPacket(host string) error {
 
 	// Build ICMP Echo Request packet
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.BigEndian, uint8(8))         // Type: Echo Request
-	binary.Write(&buf, binary.BigEndian, uint8(0))         // Code: 0
-	binary.Write(&buf, binary.BigEndian, uint16(0))        // Checksum placeholder
-	binary.Write(&buf, binary.BigEndian, uint16(s.id))     // Identifier
-	binary.Write(&buf, binary.BigEndian, uint16(seq))      // Sequence number
-	binary.Write(&buf, binary.BigEndian, uint64(sentTime)) // Payload: timestamp in nanoseconds
+	_ = binary.Write(&buf, binary.BigEndian, uint8(8))         // Type: Echo Request
+	_ = binary.Write(&buf, binary.BigEndian, uint8(0))         // Code: 0
+	_ = binary.Write(&buf, binary.BigEndian, uint16(0))        // Checksum placeholder
+	_ = binary.Write(&buf, binary.BigEndian, uint16(s.id))     // Identifier
+	_ = binary.Write(&buf, binary.BigEndian, uint16(seq))      // Sequence number
+	_ = binary.Write(&buf, binary.BigEndian, uint64(sentTime)) // Payload: timestamp in nanoseconds
 
 	pkt := buf.Bytes()
 	checksum := computeChecksum(pkt)
@@ -298,12 +298,12 @@ func (s *socketConn) ReadPacket(ctx context.Context, timeout time.Duration) (str
 	}
 }
 
-func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) error {
+func (p *Pinger) listenReplies(ctx context.Context, conn *socketConn) {
 	for {
 		select {
 		case <-ctx.Done():
 			log.Info("listenReplies stopped due to context cancellation")
-			return nil
+			return
 		default:
 			addr, rtt, err := conn.ReadPacket(ctx, p.timeout)
 			if err != nil {

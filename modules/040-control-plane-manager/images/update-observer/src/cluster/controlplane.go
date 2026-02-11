@@ -18,10 +18,11 @@ package cluster
 
 import (
 	"fmt"
-	"update-observer/pkg/version"
 
 	"golang.org/x/mod/semver"
 	corev1 "k8s.io/api/core/v1"
+
+	"update-observer/pkg/version"
 )
 
 type ControlPlaneState struct {
@@ -52,7 +53,7 @@ func GetControlPlaneState(controlPlanePods *corev1.PodList, desiredVersion strin
 	res := &ControlPlaneState{
 		DesiredCount: len(masterNodes),
 		MasterNodes:  masterNodes,
-		versions: version.NewUniqueAggregator(semver.Sort),
+		versions:     version.NewUniqueAggregator(semver.Sort),
 	}
 
 	res.aggregateNodesState(desiredVersion)

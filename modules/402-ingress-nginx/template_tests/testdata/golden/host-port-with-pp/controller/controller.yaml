@@ -38,8 +38,8 @@ apiVersion: apps.kruise.io/v1alpha1
 kind: DaemonSet
 metadata:
   annotations:
-    ingress-nginx-controller.deckhouse.io/checksum: 27b8f8e6897c803891bbfbf7938d783ccdcbb95ccda8bdc6a21bdaaf11773cad
-    ingress-nginx-controller.deckhouse.io/controller-version: "1.9"
+    ingress-nginx-controller.deckhouse.io/checksum: 6210433608cfec951481d67adf1f05d8f6be5125f78d87b6d4fb14cf6021bbe6
+    ingress-nginx-controller.deckhouse.io/controller-version: "1.10"
     ingress-nginx-controller.deckhouse.io/inlet: HostPortWithProxyProtocol
   labels:
     app: controller
@@ -76,6 +76,7 @@ spec:
         - --update-status=true
         - --shutdown-grace-period=60
         - --controller-class=ingress-nginx.deckhouse.io/test
+        - --enable-annotation-validation=false
         - --maxmind-mirror=https://geoproxy:4250/download
         - --maxmind-skip-tls-verification=true
         - --maxmind-retries-count=5
@@ -97,7 +98,7 @@ spec:
           value: 127.0.0.1
         - name: LUA_USE_GEOIP2
           value: "true"
-        image: registry.example.com@imageHash-ingressNginx-controller19
+        image: registry.example.com@imageHash-ingressNginx-controller110
         lifecycle:
           preStop:
             exec:
@@ -253,9 +254,6 @@ spec:
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
-          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
-          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
-          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
         image: registry.example.com@imageHash-ingressNginx-init
         name: init
         resources:

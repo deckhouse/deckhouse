@@ -80,15 +80,12 @@ func (pc *Checker) CheckDhctlEdition(ctx context.Context) error {
 }
 
 func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile, error) {
-	creds, err := pc.findRegistryAuthCredentials()
-	if err != nil {
-		return nil, fmt.Errorf("parse ClusterConfiguration.deckhouse.registryDockerCfg: %w", err)
-	}
-
+	creds := pc.findRegistryAuthCredentials()
 	registry := pc.metaConfig.Registry.Settings.RemoteData
 	image := pc.installConfig.GetRemoteImage(true)
 
 	var versionTagRef name.Reference
+	var err error
 	if strings.ToLower(string(registry.Scheme)) == "http" {
 		versionTagRef, err = name.ParseReference(image, name.Insecure)
 	} else {
@@ -99,6 +96,9 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 	}
 
 	client, err := pc.prepareTLS()
+	if err != nil {
+		return nil, fmt.Errorf("prepare TLS: %w", err)
+	}
 
 	config, err := pc.imageDescriptorProvider.ConfigFile(versionTagRef, remote.WithContext(ctx), remote.WithAuth(creds), remote.WithTransport(client.Transport))
 	if err != nil {
@@ -108,17 +108,17 @@ func (pc *Checker) getDeckhouseImageConfig(ctx context.Context) (*v1.ConfigFile,
 	return config, nil
 }
 
-func (pc *Checker) findRegistryAuthCredentials() (authn.Authenticator, error) {
+func (pc *Checker) findRegistryAuthCredentials() authn.Authenticator {
 	registry := pc.metaConfig.Registry.Settings.RemoteData
 
 	if registry.Username != "" && registry.Password != "" {
 		return authn.FromConfig(authn.AuthConfig{
 			Username: registry.Username,
 			Password: registry.Password,
-		}), nil
+		})
 	}
 
-	return authn.Anonymous, nil
+	return authn.Anonymous
 }
 
 func (pc *Checker) prepareTLS() (*http.Client, error) {

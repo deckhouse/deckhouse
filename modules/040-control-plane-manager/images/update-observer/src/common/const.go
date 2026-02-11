@@ -28,7 +28,7 @@ const (
 	LastUpToDateTime       = "lastUpToDateTime"
 	LastReconciliationTime = "lastReconciliationTime"
 	CauseLabelKey          = "cause"
-	KubeApiServer          = "kube-apiserver"
+	KubeAPIServer          = "kube-apiserver"
 	KubeScheduler          = "kube-scheduler"
 	KubeControllerManager  = "kube-controller-manager"
 )
