@@ -116,8 +116,8 @@ func (c *Checker) Check() checker.Result {
 		if err != nil {
 			return checker.Result{
 				Enabled: false,
-				Reason:  err.Error(),
-				Message: err.Error(),
+				Reason:  checker.ReasonDependencyLookupFailed,
+				Message: fmt.Sprintf("dependency '%s': %s", name, err.Error()),
 			}
 		}
 
@@ -127,17 +127,17 @@ func (c *Checker) Check() checker.Result {
 				continue // Optional dependency - skip validation
 			}
 
+			reason := checker.ReasonDependencyNotEnabled
 			suffix := "not enabled"
 			if moduleInfo.IsModuleEnabled == nil {
+				reason = checker.ReasonDependencyNotFound
 				suffix = "not found"
 			}
-			msg := fmt.Sprintf("dependency '%s' %s", name, suffix)
 
-			// Required dependency is missing - fail
 			return checker.Result{
 				Enabled: false,
-				Message: msg,
-				Reason:  msg,
+				Reason:  reason,
+				Message: fmt.Sprintf("dependency '%s' %s", name, suffix),
 			}
 		}
 
@@ -153,8 +153,8 @@ func (c *Checker) Check() checker.Result {
 		if _, errs := dep.Constraint.Validate(version); len(errs) != 0 {
 			return checker.Result{
 				Enabled: false,
-				Reason:  fmt.Sprintf("dependency %s error: %s", name, errs[0].Error()), // Return first validation error
-				Message: errs[0].Error(),
+				Reason:  checker.ReasonDependencyVersionMismatch,
+				Message: fmt.Sprintf("dependency '%s': %s", name, errs[0].Error()),
 			}
 		}
 	}

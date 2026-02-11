@@ -23,10 +23,11 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -143,7 +144,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Debug("application not found")
-
 			return ctrl.Result{}, nil
 		}
 
@@ -472,60 +472,25 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 }
 
 func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.ResourceConditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionTrue {
-				app.Status.ResourceConditions[idx].LastTransitionTime = now
-				app.Status.ResourceConditions[idx].Status = corev1.ConditionTrue
-			}
-
-			app.Status.ResourceConditions[idx].Reason = ""
-			app.Status.ResourceConditions[idx].Message = ""
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
+	meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
 		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
+		Status:             metav1.ConditionTrue,
+		Reason:             v1alpha1.ApplicationConditionReasonReconciled,
+		ObservedGeneration: app.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
-
 	return app
 }
 
-func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.ResourceConditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionFalse {
-				app.Status.ResourceConditions[idx].LastTransitionTime = now
-				app.Status.ResourceConditions[idx].Status = corev1.ConditionFalse
-			}
-
-			app.Status.ResourceConditions[idx].Reason = reason
-			app.Status.ResourceConditions[idx].Message = message
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
+func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType, reason, message string) *v1alpha1.Application {
+	meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
 		Type:               condType,
-		Status:             corev1.ConditionFalse,
+		Status:             metav1.ConditionFalse,
 		Reason:             reason,
 		Message:            message,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
+		ObservedGeneration: app.Generation,
+		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
 	})
-
 	return app
 }
 
@@ -533,8 +498,8 @@ func (r *reconciler) addOwnerReferences(app *v1alpha1.Application, apv *v1alpha1
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
 	ownerRefs := app.GetOwnerReferences()
-	trueLink := &[]bool{true}[0]
-	falseLink := &[]bool{false}[0]
+	trueLink := ptr.To(true)
+	falseLink := ptr.To(false)
 
 	isAPVRefSet := false
 	isAPRefSet := false

@@ -27,13 +27,9 @@ spec:
   packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
-    status: "True"
-    type: Processed
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: null
+    message: ""
+    reason: Reconciled
     status: "True"
     type: Processed
 ---

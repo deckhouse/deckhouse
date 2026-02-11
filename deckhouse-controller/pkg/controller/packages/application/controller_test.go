@@ -300,8 +300,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		})
 		require.NoError(suite.T(), err)
 		app = suite.getApplication("test-app", "foobar")
-		require.NotEmpty(suite.T(), app.Status.ResourceConditions)
-		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.ResourceConditions[0].Reason)
+		require.NotEmpty(suite.T(), app.Status.Conditions)
+		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.Conditions[0].Reason)
 	})
 
 	suite.Run("version is draft", func() {
