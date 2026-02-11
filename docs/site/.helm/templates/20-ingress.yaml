@@ -274,6 +274,7 @@ spec:
             name: frontend
             port:
               name: http
+{{- if eq $.Values.web.env "web-production" }}
       - path: /products/stronghold/documentation/
         pathType: Prefix
         backend:
@@ -295,6 +296,7 @@ spec:
             name: frontend
             port:
               name: http
+{{- end }}
 {{- if ne $.Values.web.env "web-production" }}
 ---
 apiVersion: deckhouse.io/v1
