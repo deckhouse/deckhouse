@@ -390,7 +390,7 @@ func TestProgressTracker_Progress_ExcludesPhase(t *testing.T) {
 		result = append(result, progress)
 		return nil
 	})
-	progressTracker.SetClusterType("Static")
+	progressTracker.SetClusterConfig(phases.ClusterConfig{ClusterType: "Static"})
 
 	require.NoError(t, progressTracker.Progress("", "", opts))
 	require.Len(t, result, 1)

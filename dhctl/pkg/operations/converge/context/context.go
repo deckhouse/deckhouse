@@ -158,13 +158,7 @@ func (c *Context) ProviderGetter() infrastructure.CloudProviderGetter {
 	return c.providerGetter
 }
 
-func (c *Context) SetClusterType(clusterType string) {
-	if c.phaseContext != nil {
-		c.phaseContext.SetClusterType(clusterType)
-	}
-}
-
-func (c *Context) StartExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {
+func (c *Context) StarExecutionPhase(phase phases.OperationPhase, isCritical bool) (bool, error) {
 	if c.phaseContext == nil {
 		return false, nil
 	}

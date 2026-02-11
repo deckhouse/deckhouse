@@ -313,9 +313,53 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		}
 	}
 
+	stateCache := cache.Global()
+
+	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return nil, err
+	}
+	c.lastState = nil
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
+
 	hasTerraformState := false
 
+	var convergeCtx *convergectx.Context
+	if c.Params.CommanderMode {
+		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		}, c.Params.CommanderModeParams)
+	} else {
+		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
+			KubeClient:     kubeCl,
+			Cache:          stateCache,
+			ChangeParams:   c.Params.ChangesSettings,
+			ProviderGetter: c.ProviderGetter,
+			Logger:         c.Logger,
+		})
+	}
+
+	metaConfig, err := convergeCtx.MetaConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c.PhasedExecutionContext.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+
 	if c.CommanderMode {
+		c.Checker.SetExternalPhasedContext(c.PhasedExecutionContext)
+
+		if shouldStop, err := c.PhasedExecutionContext.StartPhase(phases.ConvergeCheckPhase, false, stateCache); err != nil {
+			return nil, fmt.Errorf("unable to switch phase: %w", err)
+		} else if shouldStop {
+			return nil, nil
+		}
+
 		checkRes, cleaner, err := c.Checker.Check(ctx)
 		// we cannot use provider cleanup here because we do not have metaconfig here
 		cleanWithLog := func(err error) error {
@@ -363,40 +407,6 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 				}, cleanWithLog(nil)
 			}
 		}
-	}
-
-	stateCache := cache.Global()
-
-	if err := c.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return nil, err
-	}
-	c.lastState = nil
-	defer func() {
-		_ = c.PhasedExecutionContext.Finalize(stateCache)
-	}()
-
-	var convergeCtx *convergectx.Context
-	if c.Params.CommanderMode {
-		convergeCtx = convergectx.NewCommanderContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
-		}, c.Params.CommanderModeParams)
-	} else {
-		convergeCtx = convergectx.NewContext(ctx, convergectx.Params{
-			KubeClient:     kubeCl,
-			Cache:          stateCache,
-			ChangeParams:   c.Params.ChangesSettings,
-			ProviderGetter: c.ProviderGetter,
-			Logger:         c.Logger,
-		})
-	}
-
-	metaConfig, err := convergeCtx.MetaConfig()
-	if err != nil {
-		return nil, err
 	}
 
 	needAutomaticTofuMigrationForCommander := false
