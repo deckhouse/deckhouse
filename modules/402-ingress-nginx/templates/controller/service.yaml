@@ -12,13 +12,6 @@
     {{- $sourceRanges := $lb.sourceRanges | default list }}
     {{- $loadBalancerClass := $lb.loadBalancerClass | default "" }}
 
-    {{- $customPorts := dict -}}
-    {{- if $lb.httpPort }}
-      {{- $_ := set $customPorts "http" $lb.httpPort }}
-    {{- end }}
-    {{- if $lb.httpsPort }}
-      {{- $_ := set $customPorts "https" $lb.httpsPort }}
-    {{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -41,11 +34,11 @@ spec:
     {{- end }}
   ports:
   - name: http
-    port: {{ get $customPorts "http" | default "80" }}
+    port: {{ $lb.httpPort | default 80 }}
     targetPort: 80
     protocol: TCP
   - name: https
-    port: {{ get $customPorts "https" | default "443" }}
+    port: {{ $lb.httpsPort | default 443 }}
     targetPort: 443
     protocol: TCP
     {{- if $loadBalancerClass }}
