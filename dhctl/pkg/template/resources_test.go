@@ -142,3 +142,42 @@ func TestResourcesWithEmptyDocs(t *testing.T) {
 		require.Len(t, resources, 2)
 	})
 }
+
+func TestGetCloudNGs(t *testing.T) {
+	t.Run("returns two slices, one with ngs", func(t *testing.T) {
+		resources, err := ParseResources("testdata/resources/with_ngs.yaml", make(map[string]interface{}))
+
+		require.NoError(t, err)
+		require.Len(t, resources, 14)
+
+		cloudNGres, otherres := resources.GetCloudNGs()
+		require.Len(t, cloudNGres, 4)
+		require.Len(t, otherres, 10)
+	})
+}
+
+func TestResourcesDetailedGVKString(t *testing.T) {
+	t.Run("returns group if not empty", func(t *testing.T) {
+		cases := []struct {
+			title    string
+			resource Resource
+			expected string
+		}{
+			{
+				title:    "with group",
+				resource: Resource{GVK: schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1", Kind: "NodeGroup"}, Object: unstructured.Unstructured{}},
+				expected: "Group=deckhouse.io, ApiVersion=v1, Kind=NodeGroup",
+			},
+			{
+				title:    "without group",
+				resource: Resource{GVK: schema.GroupVersionKind{Group: "", Version: "v1", Kind: "Namespace"}, Object: unstructured.Unstructured{}},
+				expected: "ApiVersion=v1, Kind=Namespace",
+			},
+		}
+		for _, c := range cases {
+			t.Run(c.title, func(t *testing.T) {
+				require.Equal(t, c.expected, c.resource.DetailedGVKString())
+			})
+		}
+	})
+}
