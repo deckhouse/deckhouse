@@ -149,3 +149,8 @@ CVE-2026-24512
 CVE-2026-24513
 CVE-2026-24514
 https://groups.google.com/a/kubernetes.io/g/dev/c/9RYJrB8e8ts
+
+
+### 026-lua_ingress-use-request-host-for-https-redirect.patch
+
+This patch fixes HTTP-to-HTTPS redirect host selection in `lua_ingress`: when `Host` differs from the actual request host (for example with absolute-form requests), redirect now uses the request host (`$host`) instead of raw `Host` header to prevent redirects to arbitrary domains.

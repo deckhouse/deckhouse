@@ -63,6 +63,7 @@ shell:
   - patch -p1 < /patches/022-ingress-update-status.patch
   - patch -p1 < /patches/023-use-proxy-real-ip-cidr-v2.patch
   - patch -p1 < /patches/024-cve-03022026-controller.patch
+  - patch -p1 < /patches/026-lua_ingress-use-request-host-for-https-redirect.patch
   - cd /src/ingress-nginx/rootfs
   - patch -p1 < /patches/014-balancer-lua.patch
   - patch -p1 < /patches/003-nginx-tmpl.patch
