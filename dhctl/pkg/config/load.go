@@ -29,7 +29,10 @@ import (
 	"github.com/go-openapi/validate"
 	"github.com/go-openapi/validate/post"
 	"github.com/hashicorp/go-multierror"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 
 	transformer "github.com/deckhouse/deckhouse/dhctl/pkg/config/schema"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -39,6 +42,7 @@ type SchemaStore struct {
 	cache              map[SchemaIndex]*spec.Schema
 	moduleConfigsCache map[string]*spec.Schema
 	modulesCache       map[string]struct{}
+	conversionsStore   *conversion.ConversionsStore
 }
 
 var once sync.Once
@@ -109,6 +113,8 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		modulesCache:       make(map[string]struct{}),
 	}
 
+	st.conversionsStore = conversion.NewConversionsStore()
+
 	walkFunc := func(path string, info os.FileInfo, err error) error {
 		if info == nil {
 			return nil
@@ -145,6 +151,18 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 		return st
 	}
 
+	loadConversions := func(path string, moduleName string) error {
+		conversionPath := filepath.Join(filepath.Dir(path), "conversions")
+		stat, err := os.Stat(conversionPath)
+		if err == nil && stat.IsDir() {
+			err := st.conversionsStore.Add(moduleName, conversionPath)
+			log.DebugF("Found conversion for module %s. Latest version: %d\n", moduleName, st.conversionsStore.Get(moduleName).LatestVersion())
+
+			return err
+		}
+		return nil
+	}
+
 	loadConfigValuesSchema := func(path string, moduleName string) error {
 		content, err := os.ReadFile(path)
 		var schema *spec.Schema
@@ -164,6 +182,10 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 				schema,
 				&transformer.AdditionalPropertiesTransformer{},
 			)
+
+			if err := loadConversions(path, moduleName); err != nil {
+				return err
+			}
 
 			st.moduleConfigsCache[moduleName] = schema
 
@@ -305,7 +327,7 @@ func (s *SchemaStore) ValidateWithIndex(index *SchemaIndex, doc *[]byte, opts ..
 		}
 
 		var err error
-		docForValidate, err = yaml.Marshal(mc.Spec.Settings)
+		docForValidate, err = s.applyConversions(mc)
 		if err != nil {
 			return fmt.Errorf("Setting for validation module config failed: %v", err)
 		}
@@ -432,4 +454,28 @@ func applyOptions(opts ...ValidateOption) validateOptions {
 		opt(&options)
 	}
 	return options
+}
+
+func (s *SchemaStore) applyConversions(mc ModuleConfig) ([]byte, error) {
+	conversion := s.conversionsStore.Get(mc.GetName())
+	log.DebugF("Starting conversion for module %s. Latest version: %d\n", mc.GetName(), conversion.LatestVersion())
+	var err error
+	var conversed map[string]interface{}
+	if mc.Spec.Version < conversion.LatestVersion() {
+		set := &mc.Spec.Settings
+		unstructured, err := runtime.DefaultUnstructuredConverter.ToUnstructured(set)
+		if err != nil {
+			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
+		}
+		_, conversed, err = conversion.ConvertToLatest(mc.Spec.Version, unstructured)
+		if err != nil {
+			return []byte{}, fmt.Errorf("error converting to unstructured: %w", err)
+		}
+		log.DebugF("conversion successfully applyed for ModuleConfig %s\n", mc.GetName())
+	} else {
+		return yaml.Marshal(mc.Spec.Settings)
+	}
+
+	doc, err := yaml.Marshal(conversed)
+	return doc, err
 }
