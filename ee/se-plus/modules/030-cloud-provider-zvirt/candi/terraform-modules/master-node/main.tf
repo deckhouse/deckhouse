@@ -1,11 +1,3 @@
-terraform {
-  required_providers {
-    ovirt = {
-      source  = "oVirt/ovirt"
-      version = "2.1.5"
-    }
-  }
-}
 # Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
