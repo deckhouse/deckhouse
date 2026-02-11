@@ -126,14 +126,14 @@ When creating a disk, you can specify its desired size, which must be equal to o
 Using the example of the previously created image `VirtualImage`, let's consider the command that allows you to determine the size of the unpacked image:
 
 ```bash
-d8 k get vi ubuntu-22-04 -o wide
+d8 k get vi ubuntu-24-04 -o wide
 ```
 
 Example output:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   STOREDSIZE   UNPACKEDSIZE   REGISTRY URL                                                                       AGE
-ubuntu-22-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-22-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
+ubuntu-24-04   Ready   false   100%       285.9Mi      2.5Gi          dvcr.d8-virtualization.svc/cvi/ubuntu-24-04:eac95605-7e0b-4a32-bb50-cc7284fd89d0   122m
 ```
 
 The size you are looking for is specified in the **UNPACKEDSIZE** column and is 2.5Gi.
@@ -158,7 +158,7 @@ spec:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22-04
+      name: ubuntu-24-04
 EOF
 ```
 
@@ -180,7 +180,7 @@ spec:
     type: ObjectRef
     objectRef:
       kind: VirtualImage
-      name: ubuntu-22-04
+      name: ubuntu-24-04
 EOF
 ```
 

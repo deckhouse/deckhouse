@@ -145,16 +145,16 @@ masterNodeGroup:
     # [<ru>] Возможно, захотите изменить.
     instanceType: c5.xlarge
     # [<en>] Amazon Machine Image ID.
-    # [<en>] The example uses the Ubuntu Server 22.04 image for the 'eu-central-1' region.
+    # [<en>] The example uses the Ubuntu Server 24.04 image for the 'eu-central-1' region.
     # [<en>] Change the AMI ID if you use a different region (the 'provider.region' parameter).
     # [<en>] AMI Catalog in the AWS console: EC2 -> AMI Catalog.
     # [<ru>] ID образа виртуальной машины в Amazon.
-    # [<ru>] В примере используется образ Ubuntu Server 22.04 для региона 'eu-central-1'.
+    # [<ru>] В примере используется образ Ubuntu Server 24.04 для региона 'eu-central-1'.
     # [<ru>] Измените AMI ID, если используете другой регион в параметре 'provider.region'.
     # [<ru>] Каталог AMI в консоли AWS: EC2 -> AMI Catalog.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    ami: ami-0caef02b518350c8b
+    ami: ami-0aad10862ade98f27
 # [<en>] Address space of the AWS cloud.
 # [<ru>] Адресное пространство облака внутри AWS.
 vpcNetworkCIDR: "10.241.0.0/16"
@@ -272,7 +272,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

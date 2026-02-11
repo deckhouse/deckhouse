@@ -56,7 +56,6 @@ type phasedExecutionContext[OperationPhaseDataT any] struct {
 	lastState                 DhctlState
 	completedPhase            OperationPhase
 	completedPhaseData        OperationPhaseDataT
-	failedPhase               OperationPhase
 	currentPhase              OperationPhase
 	stopOperationCondition    bool
 	pipelineCompletionCounter int
@@ -89,7 +88,13 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) setLastState(stateCache 
 }
 
 func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPhase OperationPhase, completedPhaseState DhctlState, completedPhaseData OperationPhaseDataT, nextPhase OperationPhase, nextPhaseIsCritical bool, stateCache dstate.Cache) (bool, error) {
-	err := pec.progressTracker.Progress(completedPhase, "")
+	lastCompletedPhase, skipped := pec.progressTracker.FindLastCompletedPhase(completedPhase, nextPhase)
+	opts := ProgressOpts{}
+	if skipped {
+		opts.Action = ProgressActionSkip
+	}
+
+	err := pec.progressTracker.Progress(lastCompletedPhase, "", opts)
 	if err != nil {
 		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
 	}
@@ -113,7 +118,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 
 		pec.stopOperationCondition = true
 
-		if errors.Is(onPhaseErr, StopOperationCondition) {
+		if errors.Is(onPhaseErr, ErrStopOperationCondition) {
 			return true, nil
 		} else {
 			return false, onPhaseErr
@@ -133,7 +138,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) InitPipeline(stateCache 
 	return nil
 }
 
-// Finalize supposed to always be called when errors or no errors have occured (use defer pec.Finalize() for example).
+// Finalize supposed to always be called when errors or no errors have occurred (use defer pec.Finalize() for example).
 // Call Finalize in the same scope where InitPipeline has been called.
 //
 // It is not possible to use phasedExecutionContext after Finalize called.
@@ -141,6 +146,12 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) Finalize(stateCache dsta
 	if pec.stopOperationCondition {
 		return nil
 	}
+
+	err := pec.progressTracker.Complete(pec.completedPhase)
+	if err != nil {
+		log.ErrorF("Failed to complete progress: %v", err)
+	}
+
 	return pec.setLastState(stateCache)
 }
 
@@ -171,7 +182,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(stateCache
 
 // CompleteSubPhase completes specified sub phase.
 func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
-	err := pec.progressTracker.Progress("", completedSubPhase)
+	err := pec.progressTracker.Progress("", completedSubPhase, ProgressOpts{})
 	if err != nil {
 		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
 	}

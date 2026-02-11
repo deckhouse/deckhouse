@@ -20,16 +20,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	sdk "github.com/deckhouse/module-sdk/pkg/utils"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1alpha2"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/sshclient"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
-	sdk "github.com/deckhouse/module-sdk/pkg/utils"
 )
 
 type staticInstance struct {

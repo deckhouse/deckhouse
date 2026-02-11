@@ -471,7 +471,7 @@ build: bin/werf set-build-envs ## Build Deckhouse images.
     endif
   endif
 
-build-render: set-build-envs ## render werf.yaml for build Deckhouse images.
+build-render: bin/werf set-build-envs ## render werf.yaml for build Deckhouse images.
 	bin/werf config render --dev
 
 GO=$(shell which go)
@@ -510,7 +510,7 @@ YQ = $(LOCALBIN)/yq
 ## TODO: remap in yaml file (version.yaml or smthng)
 ## Tool Versions
 GOLANGCI_LINT_VERSION = v2.8.0
-DECKHOUSE_CLI_VERSION ?= v0.27.0
+DECKHOUSE_CLI_VERSION ?= v0.27.1
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
 YQ_VERSION ?= v4.47.2

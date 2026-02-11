@@ -122,7 +122,7 @@ Let's explore how to create a cluster image.
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
     metadata:
-      name: ubuntu-22-04
+      name: ubuntu-24-04
     spec:
       # Source for creating the image.
       dataSource:
@@ -135,20 +135,20 @@ Let's explore how to create a cluster image.
 1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
     ```shell
-    d8 k get clustervirtualimage ubuntu-22-04
+    d8 k get clustervirtualimage ubuntu-24-04
     ```
 
     A shorter version of the command:
 
    ```shell
-    d8 k get cvi ubuntu-22-04
+    d8 k get cvi ubuntu-24-04
     ```
 
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-22-04   Ready   false   100%       23h
+    ubuntu-24-04   Ready   false   100%       23h
     ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
@@ -169,26 +169,26 @@ Diagnosing problems with a resource is done by analyzing the information in the 
 You can trace the image creation process by adding the `-w` key to the command used for verification of the created resource:
 
 ```shell
-d8 k get cvi ubuntu-22-04 -w
+d8 k get cvi ubuntu-24-04 -w
 ```
 
 In the output, you should see information about the image creation progress:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 Additional information about the downloaded image can be retrieved by describing the `ClusterVirtualImage` resource:
 
 ```shell
-d8 k describe cvi ubuntu-22-04
+d8 k describe cvi ubuntu-24-04
 ```
 
 How to create an image from an HTTP server in the web interface:

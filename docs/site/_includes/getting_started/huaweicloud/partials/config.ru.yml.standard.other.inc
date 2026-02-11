@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -171,7 +172,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
+    imageName: ubuntu-24-04-cloud-amd64
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 50
@@ -202,7 +203,7 @@ spec:
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  imageName: ubuntu-24-04-cloud-amd64
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup
@@ -310,7 +311,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

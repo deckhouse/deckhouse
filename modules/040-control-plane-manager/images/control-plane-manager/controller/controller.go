@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -103,7 +104,7 @@ func main() {
 
 func httpServerClose() {
 	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
+		log.Fatal("HTTP close error", slog.String("error", err.Error()))
 	}
 }
 

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package debug provides a Unix socket-based HTTP server for runtime debugging and inspection.
+// Package debug provides a Unix socket-based HTTP server and client for runtime debugging and inspection.
 // The server exposes internal state and allows runtime operations via HTTP endpoints over a local socket.
 package debug
 

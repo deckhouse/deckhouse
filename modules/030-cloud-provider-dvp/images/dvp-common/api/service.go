@@ -32,6 +32,11 @@ type Service struct {
 	namespace string
 }
 
+// GetClient returns the controller-runtime client for making requests to parent DVP cluster
+func (s *Service) GetClient() client.Client {
+	return s.client
+}
+
 const defaultWaitCheckInterval = time.Second
 
 type WaitFn func(obj client.Object) (bool, error)

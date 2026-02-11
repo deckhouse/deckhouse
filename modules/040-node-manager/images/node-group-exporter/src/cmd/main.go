@@ -32,9 +32,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	"node-group-exporter/pkg/collector"
-
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	"node-group-exporter/pkg/collector"
 )
 
 var (
@@ -91,11 +91,11 @@ func main() {
 	mux.Handle("/metrics", promhttp.Handler())
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	server := &http.Server{
@@ -104,7 +104,7 @@ func main() {
 	}
 
 	go func() {
-		logger.Info("Starting HTTP server on ", slog.String("Address", *serverAddress))
+		logger.Info("Starting HTTP server on ", slog.String("address", *serverAddress))
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Fatal("HTTP server failed: ", log.Err(err))
 		}
@@ -112,7 +112,7 @@ func main() {
 	}()
 
 	logger.Info("Node group exporter is ready")
-	logger.Info("Metrics available at ", slog.String("Address", *serverAddress))
+	logger.Info("Metrics available at ", slog.String("address", *serverAddress))
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)

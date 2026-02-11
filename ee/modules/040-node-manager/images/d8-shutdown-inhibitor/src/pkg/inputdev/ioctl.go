@@ -6,6 +6,8 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package inputdev
 
 // Directions
+//
+//nolint:revive
 const (
 	_IOC_NONE  = 0
 	_IOC_WRITE = 1
@@ -43,6 +45,8 @@ const (
 //	      ((type) << _IOC_TYPESHIFT) | \   //  8
 //	      ((nr)   << _IOC_NRSHIFT) | \     //  0
 //	      ((size) << _IOC_SIZESHIFT))      // 16
+//
+//nolint:revive
 func _IOC(dir, typ, nr uint, size int) uint {
 	return ((dir) << _IOC_DIRSHIFT) |
 		((typ) << _IOC_TYPESHIFT) |
@@ -50,6 +54,7 @@ func _IOC(dir, typ, nr uint, size int) uint {
 		((uint(size)) << _IOC_SIZESHIFT)
 }
 
+//nolint:revive
 const (
 	_IOC_NRBITS   = 8
 	_IOC_TYPEBITS = 8

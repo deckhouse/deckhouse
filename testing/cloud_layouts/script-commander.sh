@@ -575,20 +575,42 @@ function bootstrap_static() {
       echo "Release branch ${DEV_BRANCH} on ${PROVIDER} provider detected"
       DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
     fi
-    D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-    D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r D8_MIRROR_USER D8_MIRROR_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | jq -r --arg reg "$D8_MIRROR_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
 
-    E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r D8_MODULES_USER D8_MODULES_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | jq -r --arg reg "$D8_MODULES_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
+
+    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r E2E_REGISTRY_USER E2E_REGISTRY_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | jq -r --arg reg "$E2E_REGISTRY_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
 
     IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
     D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
+
+    ssh_check_max_attempts=100
+    ssh_check_sleep_sec=10
+    for ((i=1; i<=ssh_check_max_attempts; i++)); do
+      if $ssh_command "$ssh_user@$bastion_ip" "true" >/dev/null 2>&1; then
+        echo "Bastion SSH is reachable (attempt $i/$ssh_check_max_attempts)"
+        break
+      fi
+
+      if [ "$i" -eq "$ssh_check_max_attempts" ]; then
+          echo "ERROR: bastion SSH not reachable after $ssh_check_max_attempts attempts (sleep ${ssh_check_sleep_sec}s)"
+          exit 1
+      fi
+
+      echo "Waiting for bastion SSH... ($i/$ssh_check_max_attempts). Sleeping ${ssh_check_sleep_sec}s"
+      sleep "$ssh_check_sleep_sec"
+    done
+
     testRunAttempts=20
     for ((i=1; i<=$testRunAttempts; i++)); do
       # Install http/https proxy on bastion node

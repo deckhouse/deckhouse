@@ -50,8 +50,8 @@ func NewSSHContainer(publicKey, publicKeyPath, password, username string, port i
 	}
 }
 
-func (c *sshContainer) Cmd() (args []string) {
-	args = []string{"run", "-d", "-e", "USER_NAME=" + c.Username, "-p", strconv.Itoa(c.Port) + ":2222"}
+func (c *sshContainer) Cmd() []string {
+	args := []string{"run", "-d", "-e", "USER_NAME=" + c.Username, "-p", strconv.Itoa(c.Port) + ":2222"}
 	if len(c.network) > 0 {
 		args = append(args, "--network")
 		args = append(args, c.network)
@@ -91,7 +91,7 @@ func (c *sshContainer) Cmd() (args []string) {
 
 	args = append(args, image)
 
-	return
+	return args
 }
 
 func (c *sshContainer) String() string {
@@ -113,11 +113,11 @@ func (c *sshContainer) WriteConfig() error {
 AuthorizedKeysFile	.ssh/authorized_keys
 `
 	if len(c.Password) > 0 {
-		config = config + `PasswordAuthentication yes`
+		config += `PasswordAuthentication yes`
 	} else {
-		config = config + `PasswordAuthentication no`
+		config += `PasswordAuthentication no`
 	}
-	config = config + `
+	config += `
 AllowTcpForwarding yes
 GatewayPorts no
 X11Forwarding no

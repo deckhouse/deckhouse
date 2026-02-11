@@ -48,8 +48,9 @@ import (
 )
 
 type detachParams struct {
-	request    *pb.CommanderDetachStart
-	logOptions logger.Options
+	request      *pb.CommanderDetachStart
+	sendProgress phases.OnProgressFunc
+	logOptions   logger.Options
 }
 
 func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
@@ -64,6 +65,12 @@ func (s *Service) CommanderDetach(server pb.DHCTL_CommanderDetachServer) error {
 	internalErrCh := make(chan error)
 	receiveCh := make(chan *pb.CommanderDetachRequest)
 	sendCh := make(chan *pb.CommanderDetachResponse)
+	pt := progressTracker[*pb.CommanderDetachResponse]{
+		sendCh: sendCh,
+		dataFunc: func(progress phases.Progress) *pb.CommanderDetachResponse {
+			return &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Progress{Progress: convertProgress(progress)}}
+		},
+	}
 
 	loggerDefault := logger.L(ctx).With(logTypeDHCTL)
 
@@ -109,8 +116,9 @@ connectionProcessor:
 				}
 				go func() {
 					result := s.commanderDetachSafe(ctx, detachParams{
-						request:    message.Start,
-						logOptions: logOptions,
+						request:      message.Start,
+						sendProgress: pt.sendProgress(),
+						logOptions:   logOptions,
 					})
 					sendCh <- &pb.CommanderDetachResponse{Message: &pb.CommanderDetachResponse_Result{Result: result}}
 				}()
@@ -127,6 +135,9 @@ connectionProcessor:
 	}
 }
 
+// keep named return to keep same defered recover behavior
+//
+//nolint:nonamedreturns
 func (s *Service) commanderDetachSafe(ctx context.Context, p detachParams) (result *pb.CommanderDetachResult) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -267,9 +278,10 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 		TmpDir:                s.params.TmpDir,
 		Logger:                loggerFor,
 		IsDebug:               s.params.IsDebug,
+		Embedded:              true,
 	})
 
-	detacher := detach.NewDetacher(checker, sshClient, detach.DetacherOptions{
+	detacher := detach.NewDetacher(checker, sshClient, &detach.Params{
 		CreateDetachResources: detach.DetachResources{
 			Template: p.request.CreateResourcesTemplate,
 			Values:   p.request.CreateResourcesValues.AsMap(),
@@ -278,7 +290,9 @@ func (s *Service) commanderDetach(ctx context.Context, p detachParams) *pb.Comma
 			Template: p.request.DeleteResourcesTemplate,
 			Values:   p.request.DeleteResourcesValues.AsMap(),
 		},
-		OnCheckResult: onCheckResult,
+		OnCheckResult:  onCheckResult,
+		OnPhaseFunc:    func(data phases.OnPhaseFuncData[phases.DefaultContextType]) error { return nil },
+		OnProgressFunc: p.sendProgress,
 	})
 
 	detachErr := detacher.Detach(ctx)

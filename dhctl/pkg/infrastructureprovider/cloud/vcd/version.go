@@ -59,14 +59,14 @@ func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) 
 		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
-	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
+	vcdURL, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
 	}
 	insecure := providerConfiguration.Insecure
 
 	vcdClient := govcd.NewVCDClient(
-		*vcdUrl,
+		*vcdURL,
 		insecure,
 	)
 

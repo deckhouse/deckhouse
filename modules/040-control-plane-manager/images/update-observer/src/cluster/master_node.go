@@ -19,11 +19,12 @@ package cluster
 import (
 	"fmt"
 	"slices"
-	podstatus "update-observer/pkg/pod-status"
-	"update-observer/pkg/version"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
+
+	podstatus "update-observer/pkg/pod-status"
+	"update-observer/pkg/version"
 )
 
 type MasterNode struct {

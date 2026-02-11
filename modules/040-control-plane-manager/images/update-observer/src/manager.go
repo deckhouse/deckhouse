@@ -20,15 +20,11 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"update-observer/common"
-	"update-observer/controller"
-	v1 "update-observer/pkg/v1"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
@@ -37,6 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
+	"update-observer/common"
+	"update-observer/controller"
+	v1 "update-observer/pkg/v1"
 )
 
 var (
@@ -52,7 +52,7 @@ type Manager struct {
 	runtimeManager manager.Manager
 }
 
-func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
+func NewManager(ctx context.Context) (*Manager, error) {
 	cfg := controllerruntime.GetConfigOrDie()
 	controllerruntime.SetLogger(textlogger.NewLogger(textlogger.NewConfig()))
 
