@@ -24,6 +24,18 @@ resource "ovirt_vm" "node_vm" {
 
   initialization_custom_script = local.cloud_init_script
 
+  dynamic "initialization_nic" {
+    for_each = local.use_cloud_config_network ? [1] : []
+    content {
+      name = lookup(local.instance_class, "networkInterfaceName", "")
+      ipv4 {
+        address = try(local.instance_class.networkInterfaceAddress[var.nodeIndex], "")
+        netmask = try(local.instance_class.networkInterfaceNetmask[var.nodeIndex], "")
+        gateway = lookup(local.instance_class, "networkInterfaceGateway", "")
+      }
+    }
+  }
+
   lifecycle {
     ignore_changes = [
       os_type,

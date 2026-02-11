@@ -1,3 +1,11 @@
+terraform {
+  required_providers {
+    ovirt = {
+      source  = "oVirt/ovirt"
+      version = "2.1.5"
+    }
+  }
+}
 # Copyright 2024 Flant JSC
 # Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 
@@ -23,6 +31,18 @@ resource "ovirt_vm" "master_vm" {
   vm_type = local.master_vm_type
 
   initialization_custom_script = local.master_cloud_init_script
+
+  dynamic "initialization_nic" {
+    for_each = local.use_cloud_config_network ? [1] : []
+    content {
+      name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "networkInterfaceName", "")
+      ipv4 {
+        address = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.networkInterfaceAddress[var.nodeIndex], "")
+        netmask = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.networkInterfaceNetmask[var.nodeIndex], "")
+        gateway = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "networkInterfaceGateway", "")
+      }
+    }
+  }
 
   lifecycle {
     ignore_changes = [

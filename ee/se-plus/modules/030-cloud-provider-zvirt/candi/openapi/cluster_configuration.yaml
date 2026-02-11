@@ -139,7 +139,15 @@ apiVersions:
                   type: string
                 uniqueItems: true
                 description: | 
-                  A set of IP-addresses for each node (in CIDR notation, for custom network configuration)
+                  A set of IP-addresses for each node (for custom network configuration)
+                example:  ["192.168.1.10/24", "192.168.1.11/24"]
+              networkInterfaceNetmask:
+                type: array
+                items:
+                  type: string
+                uniqueItems: true
+                description: |
+                  A set of netmasks for each node (in dot notation, for custom network configuration)
                 example:  ["192.168.1.10/24", "192.168.1.11/24"]
               networkInterfaceGateway:
                 type: string
