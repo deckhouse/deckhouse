@@ -85,38 +85,38 @@ spec:
     - profile
     - email
 `
+		// Use quoted filter values with explicit trailing newline to simulate
+		// what Kubernetes stores when users use YAML literal block scalars (|).
 		ldapWithTrailingNewlineCR = `
 ---
 apiVersion: deckhouse.io/v1
 kind: DexProvider
 metadata:
-	 name: openldap-demo
+  name: openldap-demo
 spec:
-	 type: LDAP
-	 displayName: OpenLDAP Demo
-	 ldap:
-	   host: ldap-service.openldap-demo:389
-	   insecureNoSSL: true
-	   insecureSkipVerify: true
-	   bindDN: cn=admin,dc=example,dc=org
-	   bindPW: admin
-	   usernamePrompt: Email Address
-	   userSearch:
-	     baseDN: ou=People,dc=example,dc=org
-	     filter: |
-	       (objectClass=person)
-	     username: mail
-	     idAttr: DN
-	     emailAttr: mail
-	     nameAttr: cn
-	   groupSearch:
-	     baseDN: ou=Groups,dc=example,dc=org
-	     filter: |
-	       (objectClass=groupOfNames)
-	     nameAttr: cn
-	     userMatchers:
-	     - userAttr: DN
-	       groupAttr: member
+  type: LDAP
+  displayName: OpenLDAP Demo
+  ldap:
+    host: ldap-service.openldap-demo:389
+    insecureNoSSL: true
+    insecureSkipVerify: true
+    bindDN: cn=admin,dc=example,dc=org
+    bindPW: admin
+    usernamePrompt: Email Address
+    userSearch:
+      baseDN: ou=People,dc=example,dc=org
+      filter: "(objectClass=person)\n"
+      username: mail
+      idAttr: DN
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: ou=Groups,dc=example,dc=org
+      filter: "(objectClass=groupOfNames)\n"
+      nameAttr: cn
+      userMatchers:
+      - userAttr: DN
+        groupAttr: member
 `
 	)
 
