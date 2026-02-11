@@ -144,8 +144,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#running-the-module-in-the-dkp-cluster'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#запуск-модуля-в-кластере-dkp'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -161,8 +161,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#running-the-module-in-the-dkp-cluster'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#запуск-модуля-в-кластере-dkp'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -178,8 +178,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#running-the-module-in-the-dkp-cluster'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#запуск-модуля-в-кластере-dkp'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -266,8 +266,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#running-the-module-in-the-dkp-cluster'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#запуск-модуля-в-кластере-dkp'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
@@ -310,8 +310,8 @@
     ],
     "editionsWithRestrictionsComments": {
       "cse-pro": {
-        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#running-the-module-in-the-dkp-cluster'>external source</a>",
-        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#запуск-модуля-в-кластере-dkp'>из внешнего источника</a>"
+        "en": "Not included in the edition. Can be used as a module from <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source'>external source</a>",
+        "ru": "Не входит в состав редакции. Может быть использован как модуль, подключаемый <a href='/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей'>из внешнего источника</a>"
       }
     },
     "external": "true",
