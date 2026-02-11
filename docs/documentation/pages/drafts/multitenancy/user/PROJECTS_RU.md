@@ -28,7 +28,7 @@ lang: ru
 1. К созданному пространству имён применяются унаследованные из Project квоты (ResourceQuota), RoleBinding и LimitRange, если они не были заданы в [ProjectNamespace](TODO).
 
 {% alert level="info" %}
-Ресурс `ProjectNamespace` можно создавать только в основном пространстве имён проекта. В дополнительных пространствах имён создание `ProjectNamespace` запрещено.
+Объект `ProjectNamespace` можно создавать только в основном пространстве имён проекта. В дополнительных пространствах имён создание `ProjectNamespace` запрещено.
 {% endalert %}
 
 ### Web UI
