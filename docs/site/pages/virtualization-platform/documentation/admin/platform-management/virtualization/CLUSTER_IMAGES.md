@@ -111,6 +111,207 @@ To increase the disk size for DVCR, you need to set a larger size in the virtual
     dvcr Bound  pvc-6a6cedb8-1292-4440-b789-5cc9d15bbc6b  57617188Ki  RWO            linstor-thick-data-r1  7d
     ```
 
+## Creating a golden image for Linux
+
+A golden image is a pre-configured virtual machine image that can be used to quickly create new VMs with pre-installed software and settings.
+
+1. Create a virtual machine, install the required software on it, and perform all necessary configurations.
+
+1. Install and configure qemu-guest-agent (recommended):
+
+  - For RHEL/CentOS:
+
+    ```bash
+    yum install -y qemu-guest-agent
+    ```
+
+  - For Debian/Ubuntu:
+
+    ```bash
+    apt-get update
+    apt-get install -y qemu-guest-agent
+    ```
+
+1. Enable and start the service:
+
+   ```bash
+   systemctl enable qemu-guest-agent
+   systemctl start qemu-guest-agent
+   ```
+
+1. Set the VM run policy to [`runPolicy: AlwaysOnUnlessStoppedManually`](/modules/virtualization/stable/cr.html#virtualmachine-v1alpha2-spec-runpolicy). This is required to be able to shut down the VM.
+
+1. Prepare the image. Clean unused filesystem blocks:
+
+   ```bash
+   fstrim -v /
+   fstrim -v /boot
+   ```
+
+1. Clean network settings:
+
+  - For RHEL:
+
+    ```bash
+    nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+    rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+    ```
+
+  - For Debian/Ubuntu:
+
+    ```bash
+    rm -f /etc/network/interfaces.d/*
+    ```
+
+1. Clean system identifiers:
+
+   ```bash
+   echo -n > /etc/machine-id
+   rm -f /var/lib/dbus/machine-id
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
+   ```
+
+1. Remove SSH host keys:
+
+   ```bash
+   rm -f /etc/ssh/ssh_host_*
+   ```
+
+1. Clean systemd journal:
+
+   ```bash
+   journalctl --vacuum-size=100M --vacuum-time=7d
+   ```
+
+1. Clean package manager cache:
+
+  - For RHEL:
+
+    ```bash
+    yum clean all
+    ```
+
+  - For Debian/Ubuntu:
+
+    ```bash
+    apt-get clean
+    ```
+
+1. Clean temporary files:
+
+   ```bash
+   rm -rf /tmp/*
+   rm -rf /var/tmp/*
+   ```
+
+1. Clean logs:
+
+   ```bash
+   find /var/log -name "*.log" -type f -exec truncate -s 0 {} \;
+   ```
+
+1. Clean command history:
+
+   ```bash
+   history -c
+   ```
+
+   For RHEL: reset and restore SELinux contexts (choose one of the following):
+
+  - Option 1: Check and restore contexts immediately:
+
+    ```bash
+    restorecon -R /
+    ```
+
+  - Option 2: Schedule relabel on next boot:
+
+    ```bash
+    touch /.autorelabel
+    ```
+
+1. Verify that `/etc/fstab` uses UUID or LABEL instead of device names (e.g., `/dev/sdX`). To check, run:
+
+   ```bash
+   blkid
+   cat /etc/fstab
+   ```
+
+1. Clean cloud-init state, logs, and seed (recommended method):
+
+   ```bash
+   cloud-init clean --logs --seed
+   ```
+
+1. Perform final synchronization and buffer cleanup:
+
+   ```bash
+   sync
+   echo 3 > /proc/sys/vm/drop_caches
+   ```
+
+1. Shut down the virtual machine:
+
+   ```bash
+   poweroff
+   ```
+
+1. Create a `VirtualImage` resource from the prepared VM disk:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualImage
+   metadata:
+     name: <image-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualDisk
+         name: <source-disk-name>
+   EOF
+   ```
+
+   Alternatively, create a `ClusterVirtualImage` to make the image available at the cluster level for all projects:
+
+    ```bash
+    d8 k apply -f -<<EOF
+    apiVersion: virtualization.deckhouse.io/v1alpha2
+    kind: ClusterVirtualImage
+    metadata:
+      name: <image-name>
+    spec:
+      dataSource:
+        type: ObjectRef
+        objectRef:
+          kind: VirtualDisk
+          name: <source-disk-name>
+          namespace: <namespace>
+    EOF
+    ```
+
+1. Create a VM disk from the created image:
+
+   ```bash
+   d8 k apply -f -<<EOF
+   apiVersion: virtualization.deckhouse.io/v1alpha2
+   kind: VirtualDisk
+   metadata:
+     name: <vm-disk-name>
+     namespace: <namespace>
+   spec:
+     dataSource:
+       type: ObjectRef
+       objectRef:
+         kind: VirtualImage
+         name: <image-name>
+   EOF
+   ```
+
+After completing these steps, you will have a golden image that can be used to quickly create new virtual machines with pre-installed software and configurations.
+
 ### Creating an image from an HTTP server
 
 Let's explore how to create a cluster image.

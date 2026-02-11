@@ -276,21 +276,34 @@ d8 k get vmop <vmop-name> -o json | jq '.status.resources'
 - `nameReplacements` — позволяет заменить имена существующих ресурсов на новые, чтобы избежать конфликтов;
 - `customization` — задает префикс или суффикс для имен всех клонируемых ресурсов ВМ (дисков, IP-адресов и т. д.).
 
-Пример конфигурации:
+Пример переименования конкретных ресурсов:
 
 ```yaml
 nameReplacements:
   - from:
-      kind: <resource type>
-      name: <old name>
+      kind: VirtualMachine
+      name: <old-vm-name>
     to:
-      name: <new name>
+      name: <new-vm-name>
+  - from:
+      kind: VirtualDisk
+      name: <old-disk-name>
+    to:
+      name: <new-disk-name>
+# ...
+```
+
+В результате будет создана ВМ с именем `<new-vm-name>`, а указанные ресурсы будут переименованы согласно правилам замены.
+
+Пример добавления префикса или суффикса ко всем ресурсам:
+
+```yaml
 customization:
   namePrefix: <prefix>
   nameSuffix: <suffix>
 ```
 
-В результате будет создана ВМ с именем <prefix><new name><suffix>.
+В результате будет создана ВМ с именем `<prefix><original-vm-name><suffix>`, а все ресурсы (диски, IP-адреса и т. д.) получат префикс и суффикс.
 
 Для операции клонирования возможно использовать один из трех режимов:
 
@@ -330,7 +343,7 @@ Windows:
 
 - выполнить генерализацию с помощью `sysprep` с параметром `/generalize` или использовать инструменты для очистки уникальных идентификаторов (SID, hostname и так далее).
 
-Пример создания клона ВМ:
+Для создания клона ВМ используйте следующий ресурс:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -352,11 +365,59 @@ spec:
 В процессе клонирования для виртуальной машины и всех её дисков автоматически создаются временные снимки. Именно из этих снимков затем собирается новая ВМ. После завершения процесса клонирования временные снимки автоматически удаляются — их не будет видно в списке ресурсов. Однако внутри спецификации клонируемых дисков будет оставаться ссылка (`dataSource`) на соответствующий снимок, даже если самого снимка уже не существует. Это ожидаемое поведение и не свидетельствует о проблемах: такие ссылки корректны, потому что к моменту запуска клона все необходимые данные уже были перенесены на новые диски.
 {% endalert %}
 
+В следующем примере показано клонирование ВМ с именем `database` и подключенного к ней диска `database-root`:
+
+Пример с переименованием конкретных ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+В результате будет создана ВМ с именем `database-clone` и диск с именем `database-clone-root`.
+
+Пример с использованием префикса для всех ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineOperation
+metadata:
+  name: clone-database
+spec:
+  type: Clone
+  virtualMachineName: database
+  clone:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+В результате будет создана ВМ с именем `clone-database-prod` и диск с именем `clone-database-root-prod`.
+
 ### Создание клона из снимка ВМ
 
 Клонирование ВМ из снимка выполняется с использованием ресурса VirtualMachineSnapshotOperation с типом операции `CreateVirtualMachine`.
 
-Пример создания клона ВМ из снимка:
+Для создания клона ВМ из снимка используйте следующий ресурс:
 
 ```yaml
 apiVersion: virtualization.deckhouse.io/v1alpha2
@@ -374,9 +435,63 @@ spec:
 
 Параметры `nameReplacements` и `customization` настраиваются в блоке `.spec.createVirtualMachine` (см. [общее описание](#создание-клона-вм) выше).
 
+Чтобы посмотреть список ресурсов, сохранённых в снимке, используйте команду:
+
+```bash
+d8 k get vmsnapshot <snapshot-name> -o jsonpath='{.status.resources}' | jq
+```
+
 {% alert level="info" %}
 При клонировании ВМ из снимка связанные с ней диски также создаются из соответствующих снимков, поэтому в спецификации диска будет указан параметр `dataSource` со ссылкой на нужный снимок диска.
 {% endalert %}
+
+В следующем примере показано клонирование из снимка ВМ с именем `database-snapshot`, который содержит ВМ `database` и диск `database-root`:
+
+Пример с переименованием конкретных ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    nameReplacements:
+      - from:
+          kind: VirtualMachine
+          name: database
+        to:
+          name: database-clone
+      - from:
+          kind: VirtualDisk
+          name: database-root
+        to:
+          name: database-clone-root
+```
+
+В результате будет создана ВМ с именем `database-clone` и диск с именем `database-clone-root`.
+
+Пример с использованием префикса для всех ресурсов:
+
+```yaml
+apiVersion: virtualization.deckhouse.io/v1alpha2
+kind: VirtualMachineSnapshotOperation
+metadata:
+  name: clone-database-from-snapshot
+spec:
+  type: CreateVirtualMachine
+  virtualMachineSnapshotName: database-snapshot
+  createVirtualMachine:
+    mode: Strict
+    customization:
+      namePrefix: clone-
+      nameSuffix: -prod
+```
+
+В результате будет создана ВМ с именем `clone-database-prod` и диск с именем `clone-database-root-prod`.
 
 ## Экспорт данных
 

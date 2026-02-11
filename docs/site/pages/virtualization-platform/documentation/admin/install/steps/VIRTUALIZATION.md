@@ -33,6 +33,7 @@ spec:
   enabled: true
   version: 1
   settings:
+    ingressClass: nginx # optional parameter
     dvcr:
       storage:
         persistentVolumeClaim:
@@ -130,6 +131,39 @@ To change the DVCR StorageClass, perform the following steps:
 
 {% alert level="warning" %}
 The storage that serves the `.spec.settings.dvcr.storage.persistentVolumeClaim.storageClassName` StorageClass must be accessible from the nodes where DVCR runs (system nodes, or worker nodes if there are no system nodes).
+{% endalert %}
+
+### Ingress settings
+
+The `.spec.settings.ingressClass` parameter defines the Ingress controller class that will be used to upload virtual machine images via the web interface or CLI.
+
+- If the parameter is not specified, the global value from the Deckhouse configuration is used.
+- The parameter is optional and should only be specified when you need to use an Ingress controller different from the global one.
+
+Example:
+
+```yaml
+spec:
+  settings:
+    ingressClass: nginx
+```
+
+{% alert level="info" %}
+
+When uploading large virtual machine images (especially over slow connections), it is recommended to increase the Ingress controller worker shutdown timeout. This prevents upload interruption during Ingress controller restart or update.
+
+Example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: nginx
+spec:
+  config:
+    worker-shutdown-timeout: 1800s  # 30 minutes or more if needed
+```
+
 {% endalert %}
 
 ### Network settings

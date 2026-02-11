@@ -11,7 +11,8 @@ To do this, download and publish it on any HTTP service accessible from the clus
 
 1. Create an empty disk for OS installation:
 
-    ```yaml
+    ```bash
+    d8 k apply -f -<<EOF
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: VirtualDisk
     metadata:
@@ -21,6 +22,7 @@ To do this, download and publish it on any HTTP service accessible from the clus
     persistentVolumeClaim:
     size: 100Gi
     storageClassName: local-path
+    EOF
     ```
 
 1. Create resources with iso-images of Windows OS and virtio drivers:
