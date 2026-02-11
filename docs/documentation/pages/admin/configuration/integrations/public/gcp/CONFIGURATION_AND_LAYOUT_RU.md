@@ -48,7 +48,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Обязательный параметр.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Обязательный параметр.
     diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
     disableExternalIP: false        # Необязательный параметр, по умолчанию master-узел имеет externalIP.
     additionalNetworkTags:          # Необязательный параметр.
@@ -62,7 +62,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Обязательный параметр.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Обязательный параметр.
     diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
     disableExternalIP: true         # Необязательный параметр, по умолчанию узлы не имеют externalIP.
     additionalNetworkTags:          # Необязательный параметр.
@@ -112,7 +112,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Обязательный параметр.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Обязательный параметр.
     diskSizeGb: 20                  # Необязательный параметр, Если не указан — используется локальный диск.
     additionalNetworkTags:          # Необязательный параметр.
     - tag1
@@ -125,7 +125,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Обязательный параметр.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Обязательный параметр.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Обязательный параметр.
     diskSizeGb: 20                  # Необязательный параметр. Если не указан — используется локальный диск.
     additionalNetworkTags:          # Необязательный параметр.
     - tag1

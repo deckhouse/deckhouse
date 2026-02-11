@@ -68,7 +68,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04
+  name: ubuntu-24-04
 spec:
   # Save the image to DVCR
   storage: ContainerRegistry
@@ -83,16 +83,16 @@ EOF
 Check the result of the `VirtualImage` creation:
 
 ```bash
-d8 k get virtualimage ubuntu-22-04
+d8 k get virtualimage ubuntu-24-04
 # or a shorter version
-d8 k get vi ubuntu-22-04
+d8 k get vi ubuntu-24-04
 ```
 
 Example output:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04   Ready   false   100%       23h
+ubuntu-24-04   Ready   false   100%       23h
 ```
 
 After creation the `VirtualImage` resource can be in the following states (phases):
@@ -111,26 +111,26 @@ Diagnosing problems with a resource is done by analyzing the information in the 
 You can trace the image creation process by adding the `-w` key to the previous command:
 
 ```bash
-d8 k get vi ubuntu-22-04 -w
+d8 k get vi ubuntu-24-04 -w
 ```
 
 Example output:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 The `VirtualImage` resource description provides additional information about the downloaded image:
 
 ```bash
-d8 k describe vi ubuntu-22-04
+d8 k describe vi ubuntu-24-04
 ```
 
 How to create an image from an HTTP server in the web interface:
@@ -152,7 +152,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04-pvc
+  name: ubuntu-24-04-pvc
 spec:
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
@@ -169,14 +169,14 @@ EOF
 Check the result of the `VirtualImage` creation:
 
 ```bash
-d8 k get vi ubuntu-22-04-pvc
+d8 k get vi ubuntu-24-04-pvc
 ```
 
 Example output:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04-pvc  Ready   false   100%       23h
+ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in module settings.
