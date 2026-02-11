@@ -46,28 +46,6 @@ locals {
   root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 50)*1024*1024*1024
 
   use_cloud_config_network = lookup(local.instance_class, "customNetworkConfig", false)
-  cloud_config_network = {
-    "network" = {
-      "varsion" = 1,
-      "config" = [
-        {
-          "type" = "physical",
-          "name" = lookup(local.instance_class, "networkInterfaceName", ""),
-          "subnets" = [
-            {
-              "type" = "static",
-              "address" = lookup(local.instance_class.networkInterfaceAddress, var.nodeIndex, ""),
-              "gateway" = lookup(local.instance_class, "networkInterfaceGateway", ""),
-            }
-          ],
-        },
-        {
-          "type" = "nameserver",
-          "address" = [lookup(local.instance_class, "networkInterfaceDNS", "")],
-        },
-      ],
-    }
-  }
 
   cloud_init_script = yamlencode(merge({
     "hostname": local.node_name,
@@ -75,5 +53,5 @@ locals {
     "ssh_deletekeys": true,
     "ssh_genkeytypes": ["rsa", "ecdsa", "ed25519"],
     "ssh_authorized_keys" : [local.ssh_pubkey]
-  }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({}), local.use_cloud_config_network ? local.cloud_config_network : tomap({})))
+  }, length(var.cloudConfig) > 0 ? yamldecode(base64decode(var.cloudConfig)) : tomap({})))
 }
