@@ -7,7 +7,7 @@ require (
 	github.com/bep/lazycache v0.8.0
 	github.com/bep/logg v0.4.0
 	github.com/bep/overlayfs v0.10.0
-	github.com/deckhouse/deckhouse/pkg/log v0.1.0
+	github.com/deckhouse/deckhouse/pkg/log v0.1.1
 	github.com/deckhouse/deckhouse/pkg/metrics-storage v0.3.0
 	github.com/gohugoio/hugo v0.150.1
 	github.com/mitchellh/mapstructure v1.5.1-0.20231216201459-8508981c8b6c
