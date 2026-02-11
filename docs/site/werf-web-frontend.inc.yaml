@@ -209,6 +209,15 @@ import:
   add: /app/_site
   to: /app/dkp-docs
   before: setup
+# Architecture diagrams
+- image: {{ .ModuleName }}/{{ .ImageName }}/diagrams-static
+  add: /app/diagrams
+  to: /app/dkp-docs/en/architecture/diagrams
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}/diagrams-static
+  add: /app/diagrams
+  to: /app/dkp-docs/ru/architecture/diagrams
+  before: setup
 ---
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-modules-static.inc.yaml" .ModulePath)) . }}
 {{ tpl (.Files.Get (printf "%sdocs/documentation/werf-documentation-static.inc.yaml" .ModulePath)) . }}
