@@ -116,7 +116,7 @@ spec:
     # Укажем размер больше чем значение .
     size: 10Gi
     # Подставьте ваше название StorageClass.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   # Источник из которого создается диск.
   dataSource:
     type: ObjectRef
@@ -505,13 +505,13 @@ spec:
 Пример: экспорт диска (выполняется на узле кластера):
 
 ```bash
-d8 data download -n <namespace> vd/<virtual-disk-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 Пример: экспорт снимка диска (выполняется на узле кластера):
 
 ```bash
-d8 data download -n <namespace> vds/<virtual-disksnapshot-name> -o file.img
+d8 data export download -n <namespace> vd/<virtual-disk-name> -o file.img
 ```
 
 Если вы выполняете экспорт данных не с узла кластера (например, с вашей локальной машины), используйте флаг `--publish`.

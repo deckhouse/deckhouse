@@ -5,11 +5,11 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource is used to upload virtual machine images to the in-cluster storage, enabling the creation of disks for virtual machines. This resource is available in any namespace or project within the cluster.
+The [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource is used to load virtual machine images into the intra-cluster storage. After that it can be used to create virtual machine disks. It is available in all cluster namespaces and projects.
 
-The process of creating an image involves the following steps:
+The image creation process includes the following steps:
 
-1. The user creates a [`ClusterVirtualImage`](/modules/virtualization/cr.html#clustervirtualimage) resource.
+1. The user creates a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource.
 1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
 1. Once the upload is complete, the resource becomes available for disk creation.
 
@@ -18,27 +18,16 @@ There are different types of images:
 - **ISO image**: An installation image used for the initial installation of an operating system (OS). Such images are released by OS vendors and are used for installation on physical and virtual servers.
 - **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. You can obtain pre-configured images from the distribution developers' resources or create them manually.
 
-Examples of resources for obtaining pre-installed virtual machine disk images:
+Examples of resources for obtaining virtual machine images:
 
-- Ubuntu
-  - [24.04 LTS (Noble Numbat)](https://cloud-images.ubuntu.com/noble/current/)
-  - [22.04 LTS (Jammy Jellyfish)](https://cloud-images.ubuntu.com/jammy/current/)
-  - [20.04 LTS (Focal Fossa)](https://cloud-images.ubuntu.com/focal/current/)
-  - [Minimal images](https://cloud-images.ubuntu.com/minimal/releases/)
-- Debian
-  - [12 bookworm](https://cdimage.debian.org/images/cloud/bookworm/latest/)
-  - [11 bullseye](https://cdimage.debian.org/images/cloud/bullseye/latest/)
-- AlmaLinux
-  - [9](https://repo.almalinux.org/almalinux/9/cloud/x86_64/images/)
-  - [8](https://repo.almalinux.org/almalinux/8/cloud/x86_64/images/)
-- RockyLinux
-  - [9.5](https://dl.rockylinux.org/vault/rocky/9.5/images/x86_64/)
-  - [8.10](https://download.rockylinux.org/pub/rocky/8.10/images/x86_64/)
-- CentOS
-  - [10 Stream](https://cloud.centos.org/centos/10-stream/x86_64/images/)
-  - [9 Stream](https://cloud.centos.org/centos/9-stream/x86_64/images/)
-  - [8 Stream](https://cloud.centos.org/centos/8-stream/x86_64/)
-  - [8](https://cloud.centos.org/centos/8/x86_64/images/)
+| Distribution                                                                      | Default user.             |
+| --------------------------------------------------------------------------------- | ------------------------- |
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
 
 The following preinstalled image formats are supported:
 
@@ -49,13 +38,23 @@ The following preinstalled image formats are supported:
 
 Image files can also be compressed with one of the following compression algorithms: `gz`, `xz`.
 
-After creating the resource, the type and size of the image are automatically determined and reflected in the resource's status.
+Once a resource is created, the image type and size are automatically determined, and this information is reflected in the resource status.
 
-Images can be downloaded from various sources, such as HTTP servers hosting image files or container registries. Additionally, there is an option to upload images directly from the command line using the `curl` utility.
+The image status shows two sizes:
 
-Images can also be created based on other images or virtual machine disks.
+- `STOREDSIZE` (storage size) — the amount of space the image actually occupies in storage (DVCR or PVC). For images uploaded in a compressed format (for example, `.gz` or `.xz`), this value is smaller than the unpacked size.
+- `UNPACKEDSIZE` (unpacked size) — the image size after unpacking. It is used when creating a disk from the image and defines the minimum disk size that can be created.
 
-For a complete description of the configuration parameters for the `ClusterVirtualImage` resource, refer to [the documentation](/modules/virtualization/cr.html#clustervirtualimage).
+{% alert level="info" %}
+When creating a disk from an image, set the disk size to `UNPACKEDSIZE` or larger .  
+If the size is not specified, the disk will be created with a size equal to `UNPACKEDSIZE`.
+{% endalert %}
+
+Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the `curl` utility.
+
+Images can be created from other images and virtual machine disks.
+
+For a full description of the ClusterVirtualImage resource configuration parameters, refer to [Custom Resources](/modules/virtualization/cr.html#clustervirtualimage).
 
 ## Increasing the size of DVCR
 
@@ -354,12 +353,14 @@ Let's explore how to create a cluster image.
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
 
-- `Pending` — waiting for all dependent resources required for image creation to become ready.
-- `WaitForUserUpload` — waiting for the user to upload the image (this phase exists only for `type=Upload`).
-- `Provisioning` — the image creation process is in progress.
-- `Ready` —  the image has been created and is ready for use.
-- `Failed` — an error occurred during the image creation process.
-- `Terminating` — the image is being deleted. The image may "hang" in this state if it is still attached to a virtual machine.
+- `Pending`: Waiting for all dependent resources required for image creation to become ready.
+- `WaitForUserUpload`: Waiting for the user to upload the image (this phase exists only for `type=Upload`).
+- `Provisioning`: The image creation process is in progress.
+- `Ready`: The image has been created and is ready for use.
+- `Failed`: An error occurred during the image creation process.
+- `Terminating`: The image is being deleted. The image may "hang" in this state if it is still attached to a virtual machine.
+- `ImageLost`: The image is missing in DVCR. The resource cannot be used.
+- `PVCLost`: The child PVC of the resource is missing. The resource cannot be used.
 
 Until the image transitions to the `Ready` phase, the contents of the `.spec` block can be modified. If any changes are made, the image creation process will be reinitiated.
 

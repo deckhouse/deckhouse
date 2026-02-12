@@ -159,7 +159,7 @@ spec:
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
     # Substitute your StorageClass name.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   # Source for image creation.
   dataSource:
     type: HTTP
