@@ -110,7 +110,7 @@ resource "openstack_networking_port_v2" "system_internal_without_security" {
 }
 
 resource "openstack_networking_port_v2" "worker_internal_without_security" {
-  for_each       = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each       = local.worker_nodes
   network_id     = openstack_networking_network_v2.internal.id
   admin_state_up = "true"
   fixed_ip {
@@ -260,10 +260,10 @@ resource "openstack_compute_instance_v2" "system" {
 }
 
 resource "openstack_blockstorage_volume_v3" "worker" {
-  for_each             = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each             = local.worker_nodes
   name                 = "candi-${var.PREFIX}-worker-${each.key}"
   size                 = "30"
-  image_id             = each.value
+  image_id             = each.value.image_id
   volume_type          = var.volume_type
   availability_zone    = var.az_zone
   enable_online_resize = true
