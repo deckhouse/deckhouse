@@ -615,7 +615,7 @@ spec:
 
 {% alert level="info" %}
 For most modern Linux distributions, it is recommended to use `bootloader: EFI`. For Windows, `bootloader: EFI` or `bootloader: EFIWithSecureBoot` is usually required.
-{% alert level="warning" %}
+{% endalert %}
 
 The `enableParavirtualization` parameter controls the use of the `virtio` bus for connecting virtual devices of the VM:
 
@@ -1142,7 +1142,7 @@ When changing placement parameters:
 
   - In commercial editions: The VM is automatically moved to a suitable node using live migration.
   - In the CE edition: The VM will require a reboot to apply.
-    {% endalert %}
+{% endalert %}
 
 How to manage VM placement parameters by nodes in the web interface:
 

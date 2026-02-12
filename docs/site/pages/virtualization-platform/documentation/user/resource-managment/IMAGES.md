@@ -25,6 +25,7 @@ There are different types of images:
 Examples of resources for obtaining virtual machine images:
 
 <a id="image-resources-table"></a>
+
 | Distribution                                                                      | Default user.             |
 | --------------------------------------------------------------------------------- | ------------------------- |
 | [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
