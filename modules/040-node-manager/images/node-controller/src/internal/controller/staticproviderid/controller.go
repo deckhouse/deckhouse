@@ -28,12 +28,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	"github.com/deckhouse/node-controller/internal/register"
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
-
-func init() {
-	register.RegisterController("static-provider-id", &corev1.Node{}, &Reconciler{})
-}
 
 const (
 	nodeTypeLabel         = nodecommon.NodeTypeLabel
@@ -43,10 +39,10 @@ const (
 )
 
 type Reconciler struct {
-	register.Base
+	dynctrl.Base
 }
 
-func (r *Reconciler) SetupWatches(_ register.Watcher) {}
+func (r *Reconciler) SetupWatches(_ dynctrl.Watcher) {}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -94,3 +90,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Info("providerID set successfully", "node", node.Name)
 	return ctrl.Result{}, nil
 }
+
+var _ dynctrl.Reconciler = (*Reconciler)(nil)

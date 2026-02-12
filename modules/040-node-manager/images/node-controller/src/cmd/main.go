@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,12 +36,14 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
-	_ "github.com/deckhouse/node-controller/internal/register/controllers"
+	_ "github.com/deckhouse/node-controller/internal/register/bootstrap"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -52,9 +54,11 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(capiv1beta2.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(mcmv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -104,6 +108,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Setup all webhooks
 	if err = webhook.SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)

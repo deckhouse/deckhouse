@@ -31,18 +31,14 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
-	"github.com/deckhouse/node-controller/internal/register"
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
-func init() {
-	register.RegisterController("node-template", &corev1.Node{}, &Reconciler{})
-}
-
 type Reconciler struct {
-	register.Base
+	dynctrl.Base
 }
 
-func (r *Reconciler) SetupWatches(w register.Watcher) {
+func (r *Reconciler) SetupWatches(w dynctrl.Watcher) {
 	allMapper := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: allRequestName}}}
 	})
@@ -147,3 +143,5 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 	logger.V(1).Info("reconcile all nodes completed", "totalNodes", len(nodes), "nodeGroups", len(ngByName), "changed", changedCount)
 	return ctrl.Result{}, nil
 }
+
+var _ dynctrl.Reconciler = (*Reconciler)(nil)

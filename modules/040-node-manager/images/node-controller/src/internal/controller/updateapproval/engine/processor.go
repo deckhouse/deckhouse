@@ -1,5 +1,5 @@
 /*
-Copyright 2026 Flant JSC
+Copyright 2025 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,13 +41,9 @@ type Processor struct {
 func (p Processor) ProcessUpdatedNodes(ctx context.Context, ng *v1.NodeGroup, nodes []ua.NodeInfo, ngChecksum string) (bool, error) {
 	logger := log.FromContext(ctx)
 	for _, node := range nodes {
-		// Match original hook: only process approved nodes.
-		if !node.IsApproved {
-			continue
-		}
-
 		checksumMatch := node.ConfigurationChecksum != "" && ngChecksum != "" && node.ConfigurationChecksum == ngChecksum
-		canRunCleanup := checksumMatch && node.IsReady
+		canRunApprovedCleanup := node.IsApproved && checksumMatch && node.IsReady
+		canRunLateDrainedCleanup := !node.IsApproved && node.IsDrained && node.IsUnschedulable && checksumMatch && node.IsReady
 		if node.IsApproved || node.IsDisruptionApproved || node.IsDrained || node.IsUnschedulable {
 			logger.Info(
 				"evaluate up-to-date candidate",
@@ -60,10 +56,11 @@ func (p Processor) ProcessUpdatedNodes(ctx context.Context, ng *v1.NodeGroup, no
 				"nodeChecksumEmpty", node.ConfigurationChecksum == "",
 				"ngChecksumEmpty", ngChecksum == "",
 				"checksumMatch", checksumMatch,
-				"canRunCleanup", canRunCleanup,
+				"canRunApprovedCleanup", canRunApprovedCleanup,
+				"canRunLateDrainedCleanup", canRunLateDrainedCleanup,
 			)
 		}
-		if !canRunCleanup {
+		if !canRunApprovedCleanup && !canRunLateDrainedCleanup {
 			logger.V(1).Info(
 				"skip up-to-date processing for node",
 				"node", node.Name,
@@ -75,7 +72,8 @@ func (p Processor) ProcessUpdatedNodes(ctx context.Context, ng *v1.NodeGroup, no
 				"nodeChecksumEmpty", node.ConfigurationChecksum == "",
 				"ngChecksumEmpty", ngChecksum == "",
 				"checksumMatch", checksumMatch,
-				"canRunCleanup", canRunCleanup,
+				"canRunApprovedCleanup", canRunApprovedCleanup,
+				"canRunLateDrainedCleanup", canRunLateDrainedCleanup,
 			)
 			continue
 		}

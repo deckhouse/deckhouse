@@ -32,4 +32,7 @@ const (
 
 	// Node metadata annotations
 	ConfigurationChecksumAnnotation = "node.deckhouse.io/configuration-checksum"
+
+	// Standard CAPI annotation set on Nodes managed by a CAPI Machine.
+	CAPIMachineAnnotation = "cluster.x-k8s.io/machine"
 )

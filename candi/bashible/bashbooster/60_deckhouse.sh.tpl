@@ -20,9 +20,10 @@
 %s
 
 {{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-machine-name" $ }}
 {{ template "bb-d8-node-ip" $ }}
+{{ template "bb-status" $ }}
 ` $lib) $ctx }}
-
 
 bb-kubectl() {
   kubectl --request-timeout 60s ${@}
@@ -35,6 +36,13 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     if bb-flag? disruption; then
       return 0
+    fi
+
+    local disruption_approval_step="${BASH_SOURCE[1]##*/}"
+    local disruption_approval_command="kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/disruption-approved="
+    local disruption_approval_message="Step needs to make some disruptive action. It will continue upon approval: ${disruption_approval_command}"
+    if [ -n "${disruption_approval_step}" ]; then
+      disruption_approval_message="${disruption_approval_step}: ${disruption_approval_message}"
     fi
 
     attempt=0
@@ -51,7 +59,7 @@ bb-deckhouse-get-disruptive-update-approval() {
     do
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            bb-log-error "ERROR: Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
+            bb-log-error "Failed to annotate Node with annotation 'update.node.deckhouse.io/disruption-required='."
             exit 1
         fi
         if bb-flag? rolling-update; then
@@ -72,23 +80,29 @@ bb-deckhouse-get-disruptive-update-approval() {
 
     bb-log-info "Disruption required, waiting for approval"
 
+    local disruption_waiting_status_set="no"
     attempt=0
     until
       bb-curl-kube "/api/v1/nodes/$(bb-d8-node-name)" | \
       jq -e '.metadata.annotations | has("update.node.deckhouse.io/disruption-approved")' >/dev/null
     do
+        if [ "$disruption_waiting_status_set" != "yes" ]; then
+            bb-disruption-approval-required "$disruption_approval_message"
+            disruption_waiting_status_set="yes"
+        fi
         attempt=$(( attempt + 1 ))
         if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-            bb-log-error "ERROR: Failed to get annotation 'update.node.deckhouse.io/disruption-approved' from Node."
-            exit 1
+            bb-disruption-approval-required "$disruption_approval_message"
+            bb-log-info "Waiting for annotation 'update.node.deckhouse.io/disruption-approved' exceeded retry limit (${MAX_RETRIES}). Continue waiting for approval."
+            attempt=0
         fi
         bb-log-info "Step needs to make some disruptive action. It will continue upon approval:"
-        bb-log-info "kubectl annotate node $(bb-d8-node-name) update.node.deckhouse.io/disruption-approved="
+        bb-log-info "${disruption_approval_command}"
         bb-log-info "Retry in 10sec..."
         sleep 10
     done
 
     bb-log-info "Disruption approved!"
+    bb-disruption-approval-not-required
     bb-flag-set disruption
 }
-

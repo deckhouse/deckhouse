@@ -25,12 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/deckhouse/node-controller/internal/register"
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
-
-func init() {
-	register.RegisterController("bashible-cleanup", &corev1.Node{}, &Reconciler{})
-}
 
 const (
 	bashibleFirstRunFinishedLabel = "node.deckhouse.io/bashible-first-run-finished"
@@ -38,10 +34,10 @@ const (
 )
 
 type Reconciler struct {
-	register.Base
+	dynctrl.Base
 }
 
-func (r *Reconciler) SetupWatches(_ register.Watcher) {}
+func (r *Reconciler) SetupWatches(_ dynctrl.Watcher) {}
 
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
@@ -96,3 +92,5 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger.Info("bashible cleanup completed", "node", node.Name, "removedLabel", true, "removedTaint", hasTaint)
 	return ctrl.Result{}, nil
 }
+
+var _ dynctrl.Reconciler = (*Reconciler)(nil)

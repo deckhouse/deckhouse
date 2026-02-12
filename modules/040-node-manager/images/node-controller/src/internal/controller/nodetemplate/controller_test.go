@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/register"
+	"github.com/deckhouse/node-controller/internal/register/dynctrl"
 )
 
 func testScheme(t *testing.T) *runtime.Scheme {
@@ -50,7 +50,7 @@ func testReconciler(t *testing.T, objs ...runtime.Object) *Reconciler {
 		WithScheme(scheme).
 		WithRuntimeObjects(objs...).
 		Build()
-	return &Reconciler{Base: register.Base{Client: cl}}
+	return &Reconciler{Base: dynctrl.Base{Client: cl}}
 }
 
 func reconcileAll(t *testing.T, r *Reconciler) {
