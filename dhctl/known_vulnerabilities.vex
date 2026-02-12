@@ -31,6 +31,20 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость CVE-2025-30153 связана с обработкой сжатых multipart/form-data запросов в компоненте ZipFileBodyDecoder библиотеки kin-openapi. terraform-provider-kubernetes использует kin-openapi только локально для чтения и валидации OpenAPI-схем, при этом прием multipart/form-data не реализован, уязвимый код не используется в провайдере",
       "timestamp": "2025-10-10T07:23:24.420648Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-02-11T10:38:09.437468469Z"
     }
   ],
   "timestamp": "2025-10-10T07:23:24Z"
