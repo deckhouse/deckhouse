@@ -2,6 +2,66 @@
 This file is covered by tests in `testing/werf_defines/oss-yaml`.
 Run: `go test ./testing/werf_defines/oss-yaml`.
 */}}
+
+{{/*
+Internal helpers.
+
+werf template function set differs between versions/contexts (e.g. `werf config render` in CI).
+Avoid using Helm-only helpers like `toYaml` here.
+*/}}
+{{- define "oss_yaml_render_condition" -}}
+  {{- $cond := index . 0 -}}
+  {{- $indent := (index . 1) | default "" -}}
+
+  {{- if not $cond -}}
+    {{- /* nothing */ -}}
+  {{- else -}}
+    {{- /* fromYaml returns map[interface{}]interface{}; normalize to map[string]interface{} for deterministic key sorting */ -}}
+    {{- $condStr := dict -}}
+    {{- range $k, $v := $cond -}}
+      {{- $_ := set $condStr (printf "%v" $k) $v -}}
+    {{- end -}}
+
+    {{- $keys := keys $condStr | sortAlpha -}}
+    {{- range $keys -}}
+      {{- $k := . -}}
+      {{- $val := index $condStr $k -}}
+
+      {{- if kindIs "slice" $val -}}
+        {{- printf "%s%s:\n" $indent ($k | quote) -}}
+        {{- range $val -}}
+          {{- printf "%s  - %s\n" $indent ((printf "%v" .) | quote) -}}
+        {{- end -}}
+      {{- else -}}
+        {{- printf "%s%s: %s\n" $indent ($k | quote) ((printf "%v" $val) | quote) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- define "oss_yaml_render_version_struct" -}}
+  {{- $v := index . 0 -}}
+  {{- $indent := (index . 1) | default "" -}}
+
+  {{- $ver := (index $v "version") | default "" -}}
+  {{- if eq $ver "" -}}
+    {{- fail "\n[ERROR] Version struct has empty .version" -}}
+  {{- end -}}
+
+  {{- printf "%sversion: %s\n" $indent ($ver | quote) -}}
+
+  {{- $name := (index $v "name") | default "" -}}
+  {{- if ne $name "" -}}
+    {{- printf "%sname: %s\n" $indent ($name | quote) -}}
+  {{- end -}}
+
+  {{- $cond := index $v "condition" -}}
+  {{- if $cond -}}
+    {{- printf "%scondition:\n" $indent -}}
+    {{- include "oss_yaml_render_condition" (list $cond (printf "%s  " $indent)) -}}
+  {{- end -}}
+{{- end -}}
+
 {{- define "get_oss_version_by_id" -}}
   {{- $id := index . 0 -}}
   {{- $ctx := index . 1 -}}
@@ -89,7 +149,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
 
   {{- if gt (len $versions) 0 -}}
     {{- if eq (len $versions) 1 -}}
-      {{- toYaml (index $versions 0) | trim -}}
+      {{- include "oss_yaml_render_version_struct" (list (index $versions 0) "") | trim -}}
     {{- else -}}
       {{- fail (printf "\n[ERROR] Multiple versions are defined for ID '%s' in file: %s. Use helper 'get_oss_version_by_id_and_condition' or 'get_oss_versions_by_id'." $id $ctx.OssYamlPath) -}}
     {{- end -}}
@@ -98,7 +158,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
     {{- if eq $version "" -}}
       {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
     {{- end -}}
-    {{- toYaml (dict "version" $version) | trim -}}
+    {{- include "oss_yaml_render_version_struct" (list (dict "version" $version) "") | trim -}}
   {{- end -}}
 {{- end -}}
 
@@ -214,7 +274,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
         {{- if not $c -}}
           {{- $c = dict -}}
         {{- end -}}
-        {{- $available = append $available ((toYaml $c | trim) | default "{}") -}}
+        {{- $available = append $available ((toJson $c) | default "{}") -}}
       {{- end -}}
       {{- fail (printf "\n[ERROR] Version for ID '%s' not found for condition %s in file: %s. Available conditions: %s" $id (toJson $condition) $ctx.OssYamlPath (join "; " $available)) -}}
     {{- end -}}
@@ -270,13 +330,32 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
   {{- end -}}
 
   {{- if gt (len $versions) 0 -}}
-    {{- toYaml $versions | trim -}}
+    {{- range $versions -}}
+      {{- $v := . -}}
+      {{- $ver := (index $v "version") | default "" -}}
+      {{- if eq $ver "" -}}
+        {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+
+      {{- printf "- version: %s\n" ($ver | quote) -}}
+
+      {{- $name := (index $v "name") | default "" -}}
+      {{- if ne $name "" -}}
+        {{- printf "  name: %s\n" ($name | quote) -}}
+      {{- end -}}
+
+      {{- $cond := index $v "condition" -}}
+      {{- if $cond -}}
+        {{- printf "  condition:\n" -}}
+        {{- include "oss_yaml_render_condition" (list $cond "    ") -}}
+      {{- end -}}
+    {{- end -}}
   {{- else -}}
     {{- $version := (index $item "version") | default "" -}}
     {{- if eq $version "" -}}
       {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
     {{- end -}}
-    {{- toYaml (list (dict "version" $version)) | trim -}}
+    {{- printf "- version: %s\n" ($version | quote) -}}
   {{- end -}}
 {{- end -}}
 
@@ -342,7 +421,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
 
     {{- $val := index $cond $key -}}
     {{- if eq $val nil -}}
-      {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toYaml $cond | trim)) -}}
+      {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toJson $cond)) -}}
     {{- end -}}
 
     {{- $ver := (index . "version") | default "" -}}
@@ -482,7 +561,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
 
       {{- $val := index $cond $key -}}
       {{- if eq $val nil -}}
-        {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toYaml $cond | trim)) -}}
+        {{- fail (printf "\n[ERROR] Condition key '%s' is not defined for ID '%s' in file: %s. Condition: %s" $key $id $ctx.OssYamlPath (toJson $cond)) -}}
       {{- end -}}
 
       {{- $ver := (index . "version") | default "" -}}
