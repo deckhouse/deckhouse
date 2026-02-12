@@ -273,7 +273,7 @@ resource "openstack_blockstorage_volume_v3" "worker" {
 }
 
 resource "openstack_compute_instance_v2" "worker" {
-  for_each          = {for image_name, image_id in local.worker_images : image_name => image_id}
+  for_each          = local.worker_nodes
   name              = "candi-${var.PREFIX}-worker-${each.key}"
   flavor_name       = var.flavor_name_large
   key_pair          = "candi-${var.PREFIX}-key"
