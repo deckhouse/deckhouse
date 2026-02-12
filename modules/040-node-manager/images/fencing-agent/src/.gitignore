@@ -3,3 +3,4 @@ test-watchdog-device
 .vscode/
 .idea/
 coverage.*
+../.env
