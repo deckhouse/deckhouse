@@ -23,7 +23,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/resources/readiness"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 )
 
@@ -55,18 +54,12 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 
 	defer func() {
 		c.attempt++
-		logger.LogInfoF("\n")
 	}()
-
-	logger.LogDebugF("Resource %s readiness attempts: %d\n", c.resourceName, c.attempt)
-
-	logger.LogInfoF("Checking if resource %s is ready...\n", c.resourceName)
 
 	kind := c.resource.GVK.Kind
 
 	// wait some attempts for set statuses in the resources
 	if c.attempt < c.resourceChecker.WaitAttemptsBeforeCheck() {
-		c.logNotReadyYet(logger)
 		logger.LogDebugF("Skip resource %s readiness checking for waiting set status\n", c.resourceName)
 		return false, nil
 	}
@@ -79,13 +72,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 
-	gvr, doc, err := resourceToGVR(c.resource, *apiRes)
-	if err != nil {
-		c.logNotReadyYet(logger)
-		logger.LogDebugF("Resource %s to GVR failed: %s\n", c.resourceName, err)
-		return false, nil
-	}
-
+	gvr, doc := resourceToGVR(c.resource, *apiRes)
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -95,7 +82,6 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 		Get(ctx, doc.GetName(), metav1.GetOptions{})
 
 	if err != nil {
-		c.logNotReadyYet(logger)
 		logger.LogDebugF("Getting resource %s from cluster failed: %s\n", c.resourceName, err)
 		return false, nil
 	}
@@ -103,14 +89,7 @@ func (c *resourceReadinessChecker) IsReady(ctx context.Context) (bool, error) {
 	ready, err := c.resourceChecker.IsReady(ctx, objectInCluster, c.resourceName)
 	if err != nil {
 		logger.LogInfoF("Readiness check for resource %s returns error: %v\n", c.resourceName, err)
-		c.logNotReadyYet(logger)
 		return false, nil
-	}
-
-	if ready {
-		logger.LogInfoF("Resource %s is ready!\n", c.resourceName)
-	} else {
-		c.logNotReadyYet(logger)
 	}
 
 	return ready, nil
@@ -122,10 +101,6 @@ func (c *resourceReadinessChecker) Name() string {
 
 func (c *resourceReadinessChecker) Single() bool {
 	return false
-}
-
-func (c *resourceReadinessChecker) logNotReadyYet(logger log.Logger) {
-	logger.LogInfoF("Resource %s has not been ready yet\n", c.resourceName)
 }
 
 func newResourceIsReadyChecker(r *template.Resource, params constructorParams) (*resourceReadinessChecker, error) {

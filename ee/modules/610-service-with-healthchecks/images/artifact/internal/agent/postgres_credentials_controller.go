@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -55,7 +54,7 @@ func (r *PostgreSQLCredentialsReconciler) Reconcile(ctx context.Context, req ctr
 		return ctrl.Result{}, nil
 	}
 
-	creds.TlsMode = getNativeTLSMode(string(secret.Data["tlsMode"]))
+	creds.TLSMode = getNativeTLSMode(string(secret.Data["tlsMode"]))
 	creds.User = string(secret.Data["user"])
 	creds.Password = string(secret.Data["password"])
 	creds.ClientCert = string(secret.Data["clientCert"])
@@ -82,35 +81,17 @@ func (r *PostgreSQLCredentialsReconciler) SetupWithManager(mgr ctrl.Manager) err
 			},
 			CreateFunc: func(e event.CreateEvent) bool {
 				secret := e.Object.(*corev1.Secret)
-				if secret.Type != secretTypePostgresqlCredentials {
-					return false
-				}
-				return true
+				return secret.Type == secretTypePostgresqlCredentials
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
 				secret := e.Object.(*corev1.Secret)
-				if secret.Type != secretTypePostgresqlCredentials {
-					return false
-				}
-				return true
+				return secret.Type == secretTypePostgresqlCredentials
 			},
 			GenericFunc: func(e event.GenericEvent) bool {
 				return false
 			},
 		}).
 		Complete(r)
-}
-
-func (r *PostgreSQLCredentialsReconciler) findObjectsForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
-	secret := obj.(*corev1.Secret)
-	return []reconcile.Request{
-		{
-			NamespacedName: types.NamespacedName{
-				Name:      secret.Name,
-				Namespace: secret.Namespace,
-			},
-		},
-	}
 }
 
 func (r *PostgreSQLCredentialsReconciler) GetCachedSecret(key types.NamespacedName) (PostgreSQLCredentials, error) {

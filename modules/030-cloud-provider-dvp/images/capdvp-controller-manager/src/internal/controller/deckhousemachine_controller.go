@@ -30,7 +30,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
@@ -470,6 +472,11 @@ func (r *DeckhouseMachineReconciler) createVM(
 		return nil, fmt.Errorf("clusterv1b1.Machine does not contain bootstrap script")
 	}
 
+	// Validate VirtualMachineClass and image exist before creating VM
+	if err := r.validateVMResources(ctx, dvpMachine); err != nil {
+		return nil, fmt.Errorf("resource validation failed: %w", err)
+	}
+
 	var cloudInitSecretName string
 	var createdDiskNames []string
 
@@ -637,6 +644,97 @@ func (r *DeckhouseMachineReconciler) createVM(
 	}
 
 	return vm, nil
+}
+
+// validateVMResources validates that VirtualMachineClass and boot image exist in parent DVP cluster
+func (r *DeckhouseMachineReconciler) validateVMResources(
+	ctx context.Context,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+) error {
+	logger := log.FromContext(ctx)
+	dvpNamespace := r.DVP.ProjectNamespace()
+
+	// Validate VirtualMachineClass exists
+	vmClassName := dvpMachine.Spec.VMClassName
+	vmClassGVK := schema.GroupVersionKind{
+		Group:   "virtualization.deckhouse.io",
+		Version: "v1alpha2",
+		Kind:    "VirtualMachineClass",
+	}
+
+	vmClass := &unstructured.Unstructured{}
+	vmClass.SetGroupVersionKind(vmClassGVK)
+	err := r.DVP.Service.GetClient().Get(ctx, client.ObjectKey{Name: vmClassName}, vmClass)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Error(err, "VirtualMachineClass not found in parent DVP cluster",
+				"vmClassName", vmClassName)
+			return fmt.Errorf("VirtualMachineClass '%s' not found in parent DVP cluster. "+
+				"Please ensure the VirtualMachineClass exists before creating VMs. "+
+				"Available VirtualMachineClasses can be listed with: kubectl get virtualmachineclasses",
+				vmClassName)
+		}
+		return fmt.Errorf("failed to validate VirtualMachineClass '%s': %w", vmClassName, err)
+	}
+	logger.V(1).Info("VirtualMachineClass validated successfully", "vmClassName", vmClassName)
+
+	// Validate boot image exists
+	imageKind := dvpMachine.Spec.BootDiskImageRef.Kind
+	imageName := dvpMachine.Spec.BootDiskImageRef.Name
+
+	// Validate image kind
+	if imageKind != "ClusterVirtualImage" && imageKind != "VirtualImage" {
+		return fmt.Errorf("unsupported boot disk image kind '%s', must be either 'ClusterVirtualImage' or 'VirtualImage'",
+			imageKind)
+	}
+
+	// Build image GVK and ObjectKey
+	imageGVK := schema.GroupVersionKind{
+		Group:   "virtualization.deckhouse.io",
+		Version: "v1alpha2",
+		Kind:    imageKind,
+	}
+
+	imageKey := client.ObjectKey{Name: imageName}
+	if imageKind == "VirtualImage" {
+		imageKey.Namespace = dvpNamespace
+	}
+
+	// Validate image exists
+	image := &unstructured.Unstructured{}
+	image.SetGroupVersionKind(imageGVK)
+	err = r.DVP.Service.GetClient().Get(ctx, imageKey, image)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			namespaceInfo := ""
+			if imageKind == "VirtualImage" {
+				namespaceInfo = fmt.Sprintf(" in namespace '%s'", dvpNamespace)
+			}
+
+			logger.Error(err, fmt.Sprintf("%s not found in parent DVP cluster", imageKind),
+				"imageName", imageName, "namespace", dvpNamespace)
+
+			resourceName := strings.ToLower(imageKind) + "s"
+			kubectlCmd := fmt.Sprintf("kubectl get %s", resourceName)
+			if imageKind == "VirtualImage" {
+				kubectlCmd += fmt.Sprintf(" -n %s", dvpNamespace)
+			}
+
+			return fmt.Errorf("%s '%s' not found%s in parent DVP cluster. "+
+				"Please ensure the image exists before creating VMs. "+
+				"Available %ss can be listed with: %s",
+				imageKind, imageName, namespaceInfo, imageKind, kubectlCmd)
+		}
+
+		namespaceInfo := ""
+		if imageKind == "VirtualImage" {
+			namespaceInfo = fmt.Sprintf(" in namespace '%s'", dvpNamespace)
+		}
+		return fmt.Errorf("failed to validate %s '%s'%s: %w", imageKind, imageName, namespaceInfo, err)
+	}
+
+	logger.V(1).Info("Boot disk image validated successfully", "imageKind", imageKind, "imageName", imageName)
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

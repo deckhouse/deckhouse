@@ -35,15 +35,15 @@ spec:
                     Условия представляют последние доступные наблюдения за состоянием приложения.
                   items:
                     properties:
-                      lastProbeTime:
-                        description: |
-                          Последнее время проверки условия.
                       lastTransitionTime:
                         description: |
                           Последнее время перехода условия из одного статуса в другой.
                       message:
                         description: |
                           Человеко-читаемое сообщение, указывающее детали перехода.
+                      observedGeneration:
+                        description: |
+                          Поколение метаданных (.metadata.generation), на основе которого было установлено условие.
                       reason:
                         description: |
                           Программный идентификатор, указывающий причину последнего перехода условия.
@@ -63,49 +63,3 @@ spec:
                     version:
                       description: |
                         Семантическая версия установленного приложения.
-                internalConditions:
-                  description: |
-                    Внутренние условия представляют внутренние условия приложения.
-                  items:
-                    properties:
-                      lastProbeTime:
-                        description: |
-                          Последнее время проверки условия.
-                      lastTransitionTime:
-                        description: |
-                          Последнее время перехода условия из одного статуса в другой.
-                      message:
-                        description: |
-                          Человеко-читаемое сообщение, указывающее детали перехода.
-                      reason:
-                        description: |
-                          Программный идентификатор, указывающий причину последнего перехода условия.
-                      status:
-                        description: |
-                          Статус условия, один из True, False, Unknown.
-                      type:
-                        description: |
-                          Тип внутреннего условия приложения.
-                resourceConditions:
-                  description: |
-                    Условия ресурсов представляют условия, связанные с ресурсами приложения.
-                  items:
-                    properties:
-                      lastProbeTime:
-                        description: |
-                          Последнее время проверки условия.
-                      lastTransitionTime:
-                        description: |
-                          Последнее время перехода условия из одного статуса в другой.
-                      message:
-                        description: |
-                          Человеко-читаемое сообщение, указывающее детали перехода.
-                      reason:
-                        description: |
-                          Программный идентификатор, указывающий причину последнего перехода условия.
-                      status:
-                        description: |
-                          Статус условия, один из True, False, Unknown.
-                      type:
-                        description: |
-                          Тип условия ресурса.

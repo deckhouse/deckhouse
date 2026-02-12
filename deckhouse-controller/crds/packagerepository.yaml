@@ -20,7 +20,7 @@ spec:
       type: string
     - jsonPath: .status.syncTime
       name: Sync
-      type: string
+      type: date
     - jsonPath: .status.conditions[?(@.type=='LastOperationScanFinished')].message
       name: MSG
       type: string
@@ -71,6 +71,15 @@ spec:
                 required:
                 - repo
                 type: object
+              scanInterval:
+                description: |
+                  Interval for registry scan.
+
+                  Defines the frequency of checking the container registry for new packages.
+                pattern: '^(\d+h)?(\d+m)?(\d+s)?$'
+                type: string
+                x-doc-default: 6h
+                x-doc-examples: ['5m', '1h', '6h30m']
             required:
             - registry
             type: object
@@ -82,30 +91,53 @@ spec:
                   of the repository's state.
                 items:
                   properties:
-                    lastProbeTime:
-                      description: Last time the condition was probed.
-                      format: date-time
-                      type: string
                     lastTransitionTime:
-                      description: Last time the condition transitioned from one status
-                        to another.
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
                       format: date-time
                       type: string
                     message:
-                      description: Human readable message indicating details about
-                        the transition.
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
                       type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
                     reason:
-                      description: Programmatic identifier indicating the reason for
-                        the condition's last transition.
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: Status of the condition, one of True, False, Unknown.
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
                       type: string
                     type:
-                      description: Type of repository condition.
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
                   required:
+                  - lastTransitionTime
+                  - message
+                  - reason
                   - status
                   - type
                   type: object

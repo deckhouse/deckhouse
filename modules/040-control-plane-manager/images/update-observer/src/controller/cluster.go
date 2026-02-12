@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"update-observer/cluster"
-	"update-observer/common"
-	podstatus "update-observer/pkg/pod-status"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"update-observer/cluster"
+	"update-observer/common"
+	podstatus "update-observer/pkg/pod-status"
 )
 
 func (r *reconciler) getClusterState(ctx context.Context, cfg *cluster.Configuration, downgradeInProgress bool) (*cluster.State, error) {
@@ -81,7 +82,7 @@ func (r *reconciler) getControlPlanePods(ctx context.Context, isRetry bool) (*co
 
 	labelSelector, err := labels.Parse(fmt.Sprintf(
 		"component in (%s,%s,%s)",
-		common.KubeApiServer,
+		common.KubeAPIServer,
 		common.KubeScheduler,
 		common.KubeControllerManager))
 	if err != nil {

@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 	"time"
-	"update-observer/cluster"
-	"update-observer/common"
-	"update-observer/pkg/version"
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"update-observer/cluster"
+	"update-observer/common"
+	"update-observer/pkg/version"
 )
 
 type ConfigMapData struct {

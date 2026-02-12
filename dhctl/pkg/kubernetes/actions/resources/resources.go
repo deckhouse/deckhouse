@@ -213,16 +213,6 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 		return err
 	}
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(c.resources))
-	for _, resource := range c.resources {
-		key := resource.GVK.String()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
-		}
-	}
-
 	for _, task := range c.mcTasks {
 		err := c.runSingleMCTask(ctx, task)
 		if err != nil {
@@ -238,18 +228,13 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 	}
 
 	if len(c.resources) > 0 {
-		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 		return ErrNotAllResourcesCreated
 	}
 
 	return nil
 }
 
-func (c *Creator) isNamespaced(gvk schema.GroupVersionKind, name string) (bool, error) {
-	return isNamespaced(c.kubeCl, gvk, name)
-}
-
-func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured, error) {
+func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*schema.GroupVersionResource, *unstructured.Unstructured) {
 	doc := resource.Object
 
 	gvr := &schema.GroupVersionResource{
@@ -268,16 +253,13 @@ func resourceToGVR(resource *template.Resource, apires metav1.APIResource) (*sch
 
 	docCopy.SetNamespace(namespace)
 
-	return gvr, docCopy, nil
+	return gvr, docCopy
 }
 
 func (c *Creator) createSingleResource(ctx context.Context, resource *template.Resource, apires metav1.APIResource) error {
 	// Wait up to 10 minutes
 	return retry.NewLoop(fmt.Sprintf("Create %s resources", resource.GVK.String()), 60, 10*time.Second).RunContext(ctx, func() error {
-		gvr, docCopy, err := resourceToGVR(resource, apires)
-		if err != nil {
-			return err
-		}
+		gvr, docCopy := resourceToGVR(resource, apires)
 		namespace := docCopy.GetNamespace()
 		manifestTask := actions.ManifestTask{
 			Name:     getUnstructuredName(docCopy),
@@ -301,7 +283,7 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 			},
 		}
 
-		err = manifestTask.CreateOrUpdate()
+		err := manifestTask.CreateOrUpdate()
 		if err != nil {
 			if strings.Contains(err.Error(), "the server could not find the requested resource") {
 				c.kubeCl.InvalidateDiscoveryCache()
@@ -327,6 +309,22 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	resourceCreator := NewCreator(kubeCl, resources, tasks)
 
 	waiter := NewWaiter(checkers)
+
+	gvks := make(map[string]struct{})
+	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
+	for _, resource := range resourceCreator.resources {
+		key := resource.DetailedGVKString()
+		if _, ok := gvks[key]; !ok {
+			gvks[key] = struct{}{}
+			resourcesToCreate = append(resourcesToCreate, key)
+		}
+	}
+
+	_ = log.Process("Create Resources", "Resources to create", func() error {
+		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
+		return nil
+	})
+
 	for {
 		err := resourceCreator.TryToCreate(ctx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {

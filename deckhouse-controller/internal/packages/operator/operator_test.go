@@ -60,7 +60,8 @@ func Test_buildScheduler(t *testing.T) {
 
 				var statusErr *status.Error
 				if assert.True(t, errors.As(err, &statusErr)) && assert.Len(t, statusErr.Conditions, 1) {
-					assert.Equal(t, string(statusErr.Conditions[0].Reason), "get version: discovery section not found in global values")
+					assert.Equal(t, "VersionLookupFailed", string(statusErr.Conditions[0].Reason))
+					assert.Contains(t, statusErr.Conditions[0].Message, "discovery section not found in global values")
 				}
 			})
 		})
@@ -89,7 +90,8 @@ func Test_buildScheduler(t *testing.T) {
 
 				var statusErr *status.Error
 				if assert.True(t, errors.As(err, &statusErr)) && assert.Len(t, statusErr.Conditions, 1) {
-					assert.Equal(t, string(statusErr.Conditions[0].Reason), "error receiving module information from the cluster: test error")
+					assert.Equal(t, "DependencyLookupFailed", string(statusErr.Conditions[0].Reason))
+					assert.Contains(t, statusErr.Conditions[0].Message, "test error")
 				}
 			})
 			t.Run("StatusReasonNotFound optional", func(t *testing.T) {
@@ -139,7 +141,8 @@ func Test_buildScheduler(t *testing.T) {
 
 				var statusErr *status.Error
 				if assert.True(t, errors.As(err, &statusErr)) && assert.Len(t, statusErr.Conditions, 1) {
-					assert.Equal(t, string(statusErr.Conditions[0].Reason), "dependency 'test' not found")
+					assert.Equal(t, "DependencyNotFound", string(statusErr.Conditions[0].Reason))
+					assert.Equal(t, "dependency 'test' not found", statusErr.Conditions[0].Message)
 				}
 			})
 			t.Run("1.20.0 is less than 1.21", func(t *testing.T) {
@@ -166,7 +169,8 @@ func Test_buildScheduler(t *testing.T) {
 
 				var statusErr *status.Error
 				if assert.True(t, errors.As(err, &statusErr)) && assert.Len(t, statusErr.Conditions, 1) {
-					assert.Equal(t, string(statusErr.Conditions[0].Reason), "dependency test error: 1.20.0 is less than 1.21")
+					assert.Equal(t, "DependencyVersionMismatch", string(statusErr.Conditions[0].Reason))
+					assert.Contains(t, statusErr.Conditions[0].Message, "1.20.0 is less than 1.21")
 				}
 			})
 			t.Run("StatusSuccess", func(t *testing.T) {

@@ -49,7 +49,7 @@ func NewDeploymentReadinessCheck(
 		name:           name,
 	}
 
-	d.deployInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = d.deployInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    d.onDeployAdded,
 		UpdateFunc: d.onDeployUpdate,
 		DeleteFunc: d.onDeployDelete,
@@ -67,7 +67,7 @@ func NewDeploymentReadinessCheck(
 		return d.deployInformer.HasSynced(), nil
 	})
 	switch {
-	case errors.Is(err, wait.ErrWaitTimeout):
+	case errors.Is(err, wait.ErrorInterrupted(err)):
 		return nil, fmt.Errorf("waiting for informer to sync: %w", err)
 	case err != nil:
 		return nil, fmt.Errorf("wait.ExponentialBackoffWithContext: %w", err)

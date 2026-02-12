@@ -4094,31 +4094,6 @@ alerts:
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
-    - name: DeprecatedGeoIPVersion
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/deprecated-geoip-version.tpl
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        An IngressNginxController and/or Ingress object in the cluster is using variables from the deprecated NGINX GeoIPv1 module. Support for this module has been discontinued in Ingress NGINX Controller version 1.10 and higher.
-
-        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
-
-        To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
-
-        ```shell
-        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
-        ```
-
-        To get a list of the Ingress objects using GeoIPv1 variables, run the following command:
-
-        ```shell
-        d8 k get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
-        ```
-      summary: |
-        Deprecated GeoIP version 1 is used in the cluster.
-      severity: "9"
-      markupFormat: markdown
     - name: EarlyOOMPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
       moduleUrl: 040-node-manager
@@ -4239,12 +4214,11 @@ alerts:
       module: ingress-nginx
       edition: ce
       description: |-
-        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database from MaxMind.
-        **Reason:** `{{ $labels.reason }}`
-        **Type:** `{{ $labels.type }}`
+        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database
+        from MaxMind for edition `{{ $labels.edition }}`.
         If this issue persists, investigate network connectivity or database availability.
       summary: |
-        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}).
+        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}), edition {{ $labels.edition }}.
       severity: "4"
       markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated

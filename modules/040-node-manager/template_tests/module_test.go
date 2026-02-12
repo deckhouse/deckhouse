@@ -80,6 +80,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   allowedBundles:
     - "ubuntu-lts"
     - "centos"
@@ -93,6 +97,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -158,6 +166,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -244,6 +256,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -299,6 +315,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -350,6 +370,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -435,6 +459,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -524,6 +552,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -590,6 +622,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -612,6 +648,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string
@@ -1761,6 +1801,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -1939,6 +1983,10 @@ internal:
     ca: string
     key: string
     crt: string
+  nodeControllerWebhookCert:
+    ca: string
+    key: string
+    crt: string
   machineDeployments: {}
   instancePrefix: myprefix
   clusterMasterAddresses: ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
@@ -2105,6 +2153,10 @@ internal:
     key: string
     crt: string
   capsControllerManagerWebhookCert:
+    ca: string
+    key: string
+    crt: string
+  nodeControllerWebhookCert:
     ca: string
     key: string
     crt: string

@@ -95,7 +95,7 @@ const (
 )
 
 var (
-	StopOperationCondition = errors.New("StopOperationCondition")
+	ErrStopOperationCondition = errors.New("StopOperationCondition")
 )
 
 // bootstrap sub phases

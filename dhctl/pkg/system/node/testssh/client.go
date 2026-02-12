@@ -445,16 +445,9 @@ func (c *Client) isStopped() bool {
 	return c.stopped
 }
 
-func (c *Client) appendProxy(p *kubeProxy) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-
-	c.kubeProxies = append(c.kubeProxies, p)
-}
-
 type kubeProxy struct{}
 
-func (k *kubeProxy) Start(useLocalPort int) (port string, err error) {
+func (k *kubeProxy) Start(useLocalPort int) (string, error) {
 	i := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
 	return fmt.Sprintf("%d", i), nil
 }
@@ -522,11 +515,11 @@ func (t *Script) WithRun(f func()) *Script {
 	return t
 }
 
-func (t *Script) Execute(context.Context) (stdout []byte, err error) {
+func (t *Script) Execute(context.Context) ([]byte, error) {
 	return t.execute()
 }
 
-func (t *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) (stdout []byte, err error) {
+func (t *Script) ExecuteBundle(ctx context.Context, parentDir, bundleDir string) ([]byte, error) {
 	return t.execute()
 }
 
@@ -539,7 +532,7 @@ func (t *Script) WithEnvs(envs map[string]string)     {}
 func (t *Script) WithCleanupAfterExec(doCleanup bool) {}
 func (t *Script) WithCommanderMode(enabled bool)      {}
 func (t *Script) WithExecuteUploadDir(dir string)     {}
-func (t *Script) execute() (stdout []byte, err error) {
+func (t *Script) execute() ([]byte, error) {
 	if t.handler != nil {
 		t.handler(string(t.stdOut))
 	}

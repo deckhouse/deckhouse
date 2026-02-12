@@ -72,8 +72,8 @@ func GetCheckers(kubeCl *client.KubernetesClient, resources template.Resources, 
 		loggerProvider: log.SimpleLoggerProvider(logger),
 	}
 
-	staticNGSChecker, err := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
-	tryToAppendCheck(staticNGSChecker, err)
+	staticNGSChecker := tryToGetClusterIsBootstrappedCheckerFromStaticNGS(params)
+	tryToAppendCheck(staticNGSChecker, nil)
 
 	type constructor func(resource *template.Resource, params constructorParams) (Checker, error)
 

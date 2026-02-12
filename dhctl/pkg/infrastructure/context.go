@@ -17,7 +17,6 @@ package infrastructure
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/name212/govalue"
 
@@ -29,11 +28,10 @@ import (
 type CloudProviderGetter func(ctx context.Context, metaConfig *config.MetaConfig) (CloudProvider, error)
 
 type Context struct {
-	infrastructureRunnerByName    map[string]RunnerInterface
-	infrastructureRunnerByNameMux sync.Mutex
-	provider                      CloudProviderGetter
-	stateChecker                  StateChecker
-	logger                        log.Logger
+	infrastructureRunnerByName map[string]RunnerInterface
+	provider                   CloudProviderGetter
+	stateChecker               StateChecker
+	logger                     log.Logger
 }
 
 func NewContextWithProvider(provider CloudProviderGetter, logger log.Logger) *Context {

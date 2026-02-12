@@ -31,7 +31,7 @@ To add nodes:
      name: worker-instance
    spec:
      flavorName: m1.medium
-     imageName: ubuntu-22-04-cloud-amd64
+     imageName: ubuntu-24-04-cloud-amd64
      rootDiskSize: 20
      mainNetwork: default
    ```
@@ -524,7 +524,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
      replicas: 2
      instanceClass:
        flavorName: m1.large
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
      volumeTypeMap:
@@ -799,7 +799,7 @@ To add master nodes in a cloud cluster:
      replicas: 3
      instanceClass:
        flavorName: m1.medium
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
    ```

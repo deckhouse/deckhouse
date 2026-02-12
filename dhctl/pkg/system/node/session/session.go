@@ -318,7 +318,8 @@ func (s *Session) selectNewHost() {
 	}
 
 	host := hosts[hostIndx]
-	s.remainingHosts = append(hosts[:hostIndx], hosts[hostIndx+1:]...)
+	s.remainingHosts = hosts[:hostIndx]
+	s.remainingHosts = append(s.remainingHosts, hosts[hostIndx+1:]...)
 
 	s.host = host.Host
 }

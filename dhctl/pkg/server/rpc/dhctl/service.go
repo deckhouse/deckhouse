@@ -180,7 +180,7 @@ func (b *fsmPhaseSwitcher[T, OperationPhaseDataT]) switchPhase(ctx context.Conte
 				return fmt.Errorf("server stopped, cancel task")
 			}
 		case <-ctx.Done():
-			switchErr = fmt.Errorf("%w: %w", phases.StopOperationCondition, ctx.Err())
+			switchErr = fmt.Errorf("%w: %w", phases.ErrStopOperationCondition, ctx.Err())
 		}
 
 		return switchErr
