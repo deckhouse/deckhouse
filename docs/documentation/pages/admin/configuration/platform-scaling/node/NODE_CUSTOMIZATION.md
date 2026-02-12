@@ -134,10 +134,20 @@ post-install() {
 
 ## Monitoring script execution
 
-You can view the script execution log on a node in the `bashible` service log using the following command:
+Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the node group** in the specified groups. DKP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
+
+DKP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DKP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
+
+You can view the node annotations set by DKP to start the update using the following command:
 
 ```bash
-journalctl -u bashible.service
+d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+```
+
+You can monitor script execution on the node in the `bashible` service logs using:
+
+```bash
+journalctl -fu bashible.service
 ```
 
 The scripts are located in the `/var/lib/bashible/bundle_steps/` directory on the node.
