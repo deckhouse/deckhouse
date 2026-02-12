@@ -12615,7 +12615,7 @@
               }
             ]
           },
-          "unit": "bps"
+          "unit": "ops"
         },
         "overrides": [
           {
@@ -12683,7 +12683,7 @@
           "datasource": {
             "uid": "$ds_prometheus"
           },
-          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $alt_by * 8 > 0",
+          "expr": "sum(rate(ingress_nginx_${metric}_requests_total{job=\"nginx-ingress-controller\", controller=~\"$controller\", app=~\"$app\", node=~\"$node\", namespace=~\"$namespace\", ingress=~\"$ingress\", service=~\"$service\", service_port=~\"$service_port\", vhost=~\"$vhost\", location=~\"$location\", content_kind=~\"$content_kind\"}[$__rate_interval])) $alt_by > 0",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "$alt_legend_format",
