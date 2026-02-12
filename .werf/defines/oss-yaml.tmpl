@@ -430,7 +430,7 @@ Run: `go test ./testing/werf_defines/oss-yaml`.
 
   {{- $sParts := splitList "." $start -}}
   {{- $eParts := splitList "." $end -}}
-  {{- if or (lt (len $sParts) 2) (lt (len $eParts) 2) -}}
+  {{- if or (ne (len $sParts) 2) (ne (len $eParts) 2) -}}
     {{- fail (printf "\n[ERROR] start/end must look like '<major>.<minor>' (e.g. 1.32). Got start=%s end=%s" $start $end) -}}
   {{- end -}}
 
