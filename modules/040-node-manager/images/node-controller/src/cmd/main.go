@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -36,6 +36,8 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/node-controller/internal/register"
+	_ "github.com/deckhouse/node-controller/internal/register/controllers"
 	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
@@ -55,10 +57,14 @@ func init() {
 func main() {
 	var metricsAddr string
 	var probeAddr string
+	var disabledControllers string
+	var maxConcurrentReconciles int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.StringVar(&logOptions.Format, "logging-format", logOptions.Format, "Logging format (text or json)")
+	flag.StringVar(&disabledControllers, "disable-controllers", "", "Comma-separated list of controllers to disable")
+	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 1, "Maximum number of concurrent reconciles per controller")
 
 	logs.AddGoFlags(flag.CommandLine)
 
@@ -86,8 +92,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = register.SetupAll(mgr, disabledControllers, maxConcurrentReconciles); err != nil {
+		setupLog.Error(err, "unable to setup controllers")
+		os.Exit(1)
+	}
+
 	if err = webhook.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "NodeGroup")
+		setupLog.Error(err, "unable to setup webhooks")
 		os.Exit(1)
 	}
 
