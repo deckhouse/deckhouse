@@ -9,7 +9,7 @@ lang: ru
 В руководстве администратора платформы представлены следующие разделы:
 
 - Запуск в ОС Linux
-  - [Запуск в ОС Linux](./standalone/installation.html) - быстрый старт с примером настройки кластера в режиме высокой дсотупности.
+  - [Запуск в ОС Linux](./standalone/installation.html) - быстрый старт с примером настройки кластера в режиме высокой доступности.
   - [Настройка](./standalone/configuration.html) - руководство по параметрам конфигурации Standalone исполнения.
   - [Поддержка HSM](./standalone/hsm.html) - шифрование ключей с помощью HSM (Hardware Security Module).
 - Запуск в Deckhouse Kubernetes Platform
