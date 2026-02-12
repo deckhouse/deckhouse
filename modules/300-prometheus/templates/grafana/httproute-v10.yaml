@@ -14,16 +14,10 @@ spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "grafana") }}
   parentRefs:
-  {{- range $parentRef := $.Values.global.modules.gatewayAPIParentRefs }}
-  - group: {{ $parentRef.group }}
-    kind: {{ $parentRef.kind }}
-    name: {{ $parentRef.name }}
-    {{- if eq $parentRef.kind "Gateway" }}
-    namespace: d8-alb-istio
-    {{- else }}
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-default-listener-set
     namespace: d8-monitoring
-    {{- end }}
-  {{- end }}
   rules:
   - backendRefs:
     - group: ""
