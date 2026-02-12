@@ -43,7 +43,6 @@ type Callback[P runtimePackage] func(ctx context.Context, event int, pkg P)
 //  3. Settings checksum differs → EventSettingsChanged (cancels previous settings apply)
 //  4. No change → callback is not invoked
 //
-// The callback f is invoked under the Store lock with the appropriate context and event.
 // For EventVersionChanged, app is nil on first install or the previously loaded app on upgrade.
 func (s *Store[P]) Update(name, version, settings string, f Callback[P]) {
 	pkg, ok := s.packages[name]

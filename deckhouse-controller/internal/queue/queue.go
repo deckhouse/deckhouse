@@ -109,10 +109,9 @@ func WithUnique() EnqueueOption {
 }
 
 // WithOnDone registers a callback invoked after the task completes successfully.
-// Not called when the task's context is cancelled.
-func WithOnDone(f func()) EnqueueOption {
+func WithOnDone(onDone func()) EnqueueOption {
 	return func(o *EnqueueOptions) {
-		o.onDone = f
+		o.onDone = onDone
 	}
 }
 
@@ -333,17 +332,6 @@ func (q *queue) processOne() bool {
 	q.mu.Unlock()
 
 	return true // Task was processed successfully
-}
-
-// Clear cancels tasks contexts
-func (q *queue) Clear() {
-	q.logger.Debug("clear queue")
-
-	q.mu.Lock()
-	for task := range q.deque.Iter() {
-		task.cancel()
-	}
-	q.mu.Unlock()
 }
 
 // Stop cancels all task contexts and the queue's context, then waits for the processing

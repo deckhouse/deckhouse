@@ -50,8 +50,8 @@ type moduleDump struct {
 // Used for debugging and introspection of operator internal state.
 // Skips packages that have been removed from the manager.
 func (r *Runtime) Dump() []byte {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
 	d := dump{
 		Apps:    make(map[string]appDump),
