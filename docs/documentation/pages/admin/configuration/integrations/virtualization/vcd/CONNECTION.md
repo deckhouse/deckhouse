@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
 ---
 

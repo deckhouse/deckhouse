@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Storage"
 permalink: en/admin/configuration/storage/
 description: "Configure storage solutions in Deckhouse Kubernetes Platform including SDS, external storage, snapshots, and supported storage types."
 ---

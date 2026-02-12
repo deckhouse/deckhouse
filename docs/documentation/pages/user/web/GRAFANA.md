@@ -1,5 +1,6 @@
 ---
-title: "Grafana"
+title: "Grafana web interface"
+description: "Grafana monitoring system web interface in Deckhouse Kubernetes Platform. Dashboards for visualizing cluster, node, pod, network, and security metrics."
 permalink: en/user/web/grafana.html
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Incoming traffic balancing"
 permalink: en/virtualization-platform/documentation/admin/platform-management/network/ingress/
 ---
 

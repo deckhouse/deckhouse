@@ -1,5 +1,6 @@
 ---
-title: "Circuit Breaker"
+title: "Configuring Circuit Breaker"
+description: "Configuring Circuit Breaker using Istio in Deckhouse Kubernetes Platform. Managing TCP connection limits, request timeouts, and excluding problematic endpoints via DestinationRule."
 permalink: en/user/network/circuit-breaker.html
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: "Введение в руководство администратора"
+title: "Руководство администратора Deckhouse Stronghold"
 permalink: ru/stronghold/documentation/admin/overview.html
 lang: ru
 ---

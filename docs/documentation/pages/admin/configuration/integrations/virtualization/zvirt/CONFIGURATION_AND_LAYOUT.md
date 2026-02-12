@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in zVirt
 permalink: en/admin/integrations/virtualization/zvirt/layout.html
 ---
 

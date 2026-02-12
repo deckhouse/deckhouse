@@ -1,5 +1,6 @@
 ---
 title: "Web interface for visualizing the cluster network stack"
+description: "Hubble web interface for visualizing network interactions in Deckhouse Kubernetes Platform. Analyzing traffic between pods and services, identifying network issues, working with cilium-hubble module."
 permalink: en/user/web/hubble.html
 ---
 

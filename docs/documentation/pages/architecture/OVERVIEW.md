@@ -1,5 +1,5 @@
 ---
-title: Kubernetes Cluster
+title: Architecture
 permalink: en/architecture/
 ---
 

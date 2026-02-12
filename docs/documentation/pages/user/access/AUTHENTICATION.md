@@ -1,7 +1,7 @@
 ---
-title: "Authentication"
+title: "Configuring authentication for applications"
+description: "Configuring authentication for user applications in Deckhouse Kubernetes Platform. Integration with external authentication providers LDAP, GitLab, GitHub..."
 permalink: en/user/access/authentication.html
-description: "Deckhouse Kubernetes Platform. Using authentication."
 ---
 
 ## Overview
