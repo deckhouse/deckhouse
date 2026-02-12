@@ -1937,6 +1937,12 @@ Virtual machines can be connected to additional networks: project networks (`Net
 
 To do this, specify the desired networks in the configuration section `.spec.networks`. If this block is not specified (which is the default behavior), the VM will use only the main cluster network.
 
+{% alert level="info" %}
+Specifying the main cluster network (`type: Main`) in `.spec.networks` is optional. If you do not need connectivity to the main cluster network, you can use only additional networks (`Network` or `ClusterNetwork`).
+
+If you specify the main network, it must be the first entry in the `.spec.networks` list.
+{% endalert %}
+
 Important considerations when working with additional network interfaces:
 
 - The order of listing networks in `.spec.networks` determines the order in which interfaces are connected inside the virtual machine.
@@ -1945,26 +1951,37 @@ Important considerations when working with additional network interfaces:
 - Network security policies (NetworkPolicy) do not apply to additional network interfaces.
 - Network parameters (IP addresses, gateways, DNS, etc.) for additional networks are configured manually from within the guest OS (for example, using Cloud-Init).
 
-Example of connecting a VM to the project network `user-net`:
+Example of connecting a VM to the main cluster network and the project network `user-net`:
 
 ```yaml
 spec:
   networks:
-    - type: Main # Must always be specified first
+    - type: Main # If specified, must be first
     - type: Network # Network type (Network \ ClusterNetwork)
       name: user-net # Network name
 ```
 
-Example of connecting to the cluster network `corp-net`:
+Example of connecting to multiple networks, including the cluster network `corp-net`:
 
 ```yaml
 spec:
   networks:
-    - type: Main # Must always be specified first
+    - type: Main # If specified, must be first
     - type: Network
       name: user-net
     - type: ClusterNetwork
       name: corp-net # Network name
+```
+
+Example of connecting a VM only to additional networks (without the main cluster network):
+
+```yaml
+spec:
+  networks:
+    - type: Network
+      name: isolated-net
+    - type: ClusterNetwork
+      name: corp-net
 ```
 
 You can view information about connected networks and their MAC addresses in the VM status:

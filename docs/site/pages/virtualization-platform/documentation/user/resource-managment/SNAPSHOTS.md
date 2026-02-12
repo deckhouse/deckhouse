@@ -9,10 +9,11 @@ Snapshots allow you to capture the current state of a resource for later recover
 
 Snapshots can be consistent or inconsistent; this is controlled by the `requiredConsistency` parameter. By default, `requiredConsistency` is set to `true`, which means a consistent snapshot is required.
 
-A consistent snapshot guarantees a consistent and complete state of the virtual machine's disks. Such a snapshot can be created when one of the following conditions is met:
+A consistent snapshot captures a complete and consistent state of disk data. You can create such a snapshot when one of the following conditions is met:
 
+- The disk is not attached to any virtual machine — the snapshot will always be consistent.
 - The virtual machine is turned off.
-- [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) is installed in the guest system, which temporarily suspends the file system at the time the snapshot is created to ensure its consistency.
+- [`qemu-guest-agent`](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) is installed and running in the guest OS. When a snapshot is created, it temporarily suspends ("freezes") the file system to ensure consistency.
 
 QEMU Guest Agent supports hook scripts that allow you to prepare applications for snapshot creation without stopping services, ensuring application-level consistency. For more information on configuring hooks scripts, see the [Guest OS agent](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#guest-os-agent) section.
 
@@ -71,9 +72,11 @@ d8 k get vdsnapshot
 Example output:
 
 ```console
-NAME                     PHASE     CONSISTENT   AGE
-linux-vm-root-1728027905   Ready                  3m2s
+NAME                       PHASE     CONSISTENT   AGE
+linux-vm-root-1728027905   Ready     true         3m2s
 ```
+
+The `CONSISTENT` field indicates whether the snapshot is consistent (`true`) or not (`false`). This value is determined automatically based on the snapshot creation conditions and cannot be changed.
 
 After creation, `VirtualDiskSnapshot` can be in the following states (phases):
 
@@ -322,9 +325,9 @@ d8 k get vmsop <vmsop-name> -o json | jq '.status.resources'
 
 VM cloning is performed using the VirtualMachineOperation resource with the `Clone` operation type.
 
-{% alert level="warning" %}
-Before cloning, the source VM must be [powered off](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#virtual-machine-startup-policy-and-virtual-machine-state-management).
+Cloning is supported for both powered-off and running virtual machines. When cloning a running VM, a consistent snapshot is automatically created, from which the clone is then formed.
 
+{% alert level="infp" %}
 It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
 {% endalert %}
 

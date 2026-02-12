@@ -327,6 +327,8 @@ Method #2:
 
 In commercial editions, you can migrate (move) a virtual machine disk to another storage by changing its StorageClass.
 
+Migration is supported for both statically attached disks and dynamically attached (hotplug) disks.
+
 {% alert level="warning" %}
 Limitations of disk migration between storage:
 
