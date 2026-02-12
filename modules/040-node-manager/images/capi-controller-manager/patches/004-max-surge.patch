@@ -1,0 +1,33 @@
+diff --git a/internal/controllers/machinedeployment/machinedeployment_rolling.go b/internal/controllers/machinedeployment/machinedeployment_rolling.go
+index d4102185c..86276f060 100644
+--- a/internal/controllers/machinedeployment/machinedeployment_rolling.go
++++ b/internal/controllers/machinedeployment/machinedeployment_rolling.go
+@@ -97,6 +97,12 @@ func (r *Reconciler) reconcileNewMachineSet(ctx context.Context, allMSs []*clust
+ 		return r.scaleMachineSet(ctx, newMS, *(deployment.Spec.Replicas), deployment)
+ 	}
+ 
++	// Wait for current newMS replicas to become Ready before the next scale-up step.
++	readyReplicas := ptr.Deref(newMS.Status.ReadyReplicas, 0)
++	if readyReplicas < *(newMS.Spec.Replicas) {
++		return nil
++	}
++
+ 	newReplicasCount, err := mdutil.NewMSNewReplicas(deployment, allMSs, *newMS.Spec.Replicas)
+ 	if err != nil {
+ 		return err
+diff --git a/internal/controllers/machinedeployment/mdutil/util.go b/internal/controllers/machinedeployment/mdutil/util.go
+index db7c4a24b..44f2d3e46 100644
+--- a/internal/controllers/machinedeployment/mdutil/util.go
++++ b/internal/controllers/machinedeployment/mdutil/util.go
+@@ -668,6 +668,11 @@ func NewMSNewReplicas(deployment *clusterv1.MachineDeployment, allMSs []*cluster
+ 		scaleUpCount := maxTotalMachines - currentMachineCount
+ 		// Do not exceed the number of desired replicas.
+ 		scaleUpCount = min(scaleUpCount, *(deployment.Spec.Replicas)-newMSReplicas)
++
++		// Limit each scale-up step to maxSurge
++		maxScaleUpStep := max(int32(maxSurge), 1)
++		scaleUpCount = min(scaleUpCount, maxScaleUpStep)
++
+ 		return newMSReplicas + scaleUpCount, nil
+ 	case clusterv1.OnDeleteMachineDeploymentStrategyType:
+ 		// Find the total number of machines
