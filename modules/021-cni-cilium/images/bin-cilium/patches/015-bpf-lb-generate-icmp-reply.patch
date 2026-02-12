@@ -97,7 +97,7 @@ index 0142716855..d028cccf56 100644
 +	ccsum += (0x08) << 8;
 +	icmphdr->checksum = bpf_htons(ccsum);
 +
-+	return redirect_self(ctx, ctx_get_ifindex(ctx), 0);
++	return ctx_redirect(ctx, ctx_get_ifindex(ctx), 0);
 +}
 +#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
 +
