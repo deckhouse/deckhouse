@@ -880,8 +880,8 @@ entries:
           draft: true
           url: /user/using-overview.html
         - title:
-            en: Access
-            ru: Доступ
+            en: IAM
+            ru: IAM
           folders:
           - title:
               en: Authentication

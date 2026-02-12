@@ -42,16 +42,16 @@ Authentication for applications that cannot independently handle authentication 
 
 To enable authentication for an application deployed in DKP, follow these steps:
 
-1. Create a `DexAuthenticator` object in the application's namespace.
+1. Create a [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) object in the application's namespace.
 
-   After the `DexAuthenticator` object is created, DKP will automatically deploy a set of components required for authentication:
+   After the DexAuthenticator object is created, DKP will automatically deploy a set of components required for authentication:
 
    - A Deployment with containers running the authentication/authorization proxy and a Redis data store;
    - A Service pointing to the authentication/authorization proxy;
    - An Ingress resource that handles requests at `https://<applicationDomain>/dex-authenticator` and forwards them to the proxy Service;
    - Secrets required for integration with the DKP authentication system.
 
-   Example `DexAuthenticator` manifest:
+   Example DexAuthenticator manifest:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -85,24 +85,24 @@ To enable authentication for an application deployed in DKP, follow these steps:
 
    Note the following capabilities when configuring authentication:
 
-   - The `applicationDomain` parameter in the `DexAuthenticator` defines the main domain of the application. Additional domains can be specified via the `additionalApplications.domain` parameter.
+   - The `applicationDomain` parameter in the DexAuthenticator defines the main domain of the application. Additional domains can be specified via the `additionalApplications.domain` parameter.
    - The `whitelistSourceRanges` and `additionalApplications.whitelistSourceRanges` parameters allow you to restrict authentication access to a specific list of IP addresses.
 
-     Refer to the [Authorization](../../admin/configuration/access/authorization/) section for information about configuring authorization. A full description of all `DexAuthenticator` parameters can be found in the [Reference](/modules/user-authn/configuration.html) section.
+     Refer to the [Authorization](../../admin/configuration/access/authorization/) section for information about configuring authorization.
 
 1. Add the following annotations to the application's Ingress resource:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`
+   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.<CLUSTER_DOMAIN>/dex-authenticator/auth`
 
      Where:
 
-     - `NAME` is the value of `metadata.name` from the `DexAuthenticator` resource;
-     - `NS` is the value of `metadata.namespace` from the `DexAuthenticator` resource;
-     - `C_DOMAIN` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) resource).
+     - `<NAME>` is the value of `metadata.name` from the DexAuthenticator;
+     - `<NS>` is the value of `metadata.namespace` from the DexAuthenticator;
+     - `<CLUSTER_DOMAIN>` is the cluster domain (defined in the `clusterDomain` field of the [ClusterConfiguration](../../reference/api/cr.html#clusterconfiguration-clusterdomain), by default it is `cluster.local`).
 
-        Example (for a `DexAuthenticator` named `app-name` in namespace `app-ns`):
+        Example (for a DexAuthenticator named `app-name` in namespace `app-ns`):
 
         ```yaml
         annotations:
