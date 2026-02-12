@@ -30,9 +30,9 @@ properties:
     description: |
       Общие параметры модулей Deckhouse.
     properties:
-      gatewayAPIParentRefs:
+      gatewayAPIdefaultGateway:
         description: |
-          Список Gateway API родительских объектов (Gateways и/или XListenerSets), используемых для модулей Deckhouse.
+          Имя Gateway по-умолчанию, используемого для модулей Deckhouse, если включен Gateway API.
       ingressClass:
         description: |
           Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемый для модулей Deckhouse.

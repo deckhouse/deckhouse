@@ -36,16 +36,10 @@ spec:
   hostnames:
   - {{ $app.domain }}
   parentRefs:
-  {{- range $parentRef := $.Values.global.modules.gatewayAPIParentRefs }}
-  - group: {{ $parentRef.group }}
-    kind: {{ $parentRef.kind }}
-    name: {{ $parentRef.name }}
-    {{- if eq $parentRef.kind "Gateway" }}
-    namespace: d8-alb-istio
-    {{- else }}
+  - group: gateway.networking.x-k8s.io
+    kind: XListenerSet
+    name: d8-default-listener-set
     namespace: {{ $crd.namespace }}
-    {{- end }}
-  {{- end }}
   rules:
   - backendRefs:
     - group: ""
