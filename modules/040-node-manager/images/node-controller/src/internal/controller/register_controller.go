@@ -33,10 +33,9 @@ type controllerEntry struct {
 
 var controllers []controllerEntry
 
-// Register adds a controller to the registry. Call this in init() or as var _ = Register(...).
-func Register(name string, setup SetupFunc) bool {
+// Register adds a controller to the registry. Call this in init() of controller packages.
+func Register(name string, setup SetupFunc) {
 	controllers = append(controllers, controllerEntry{name: name, setup: setup})
-	return true
 }
 
 // Names returns the names of all registered controllers.
@@ -49,6 +48,7 @@ func Names() []string {
 }
 
 // SetupAll registers all controllers with the manager.
+// Controllers auto-register via init() in their packages.
 // disabledControllers is a comma-separated list of controller names to skip.
 func SetupAll(mgr ctrl.Manager, disabledControllers string) error {
 	setupLog := ctrl.Log.WithName("setup")
