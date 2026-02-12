@@ -98,6 +98,8 @@ If the parameter is not specified, no group-based filtering will be applied.
            enabled: true
      ```
 
+After setting up integration in the cluster with an external authentication provider, authentication through it will become possible in the platform's web interfaces. Information on setting up authentication for user applications can be found in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).
+
 ### OIDC (OpenID Connect) integration
 
 Authentication via an OIDC provider requires registering a client (or creating an application). Follow your provider's documentation to do this (e.g., [Okta](https://help.okta.com/en-us/Content/Topics/Apps/Apps_App_Integration_Wizard_OIDC.htm), [Keycloak](https://www.keycloak.org/docs/latest/server_admin/index.html#proc-creating-oidc-client_server_administration_guide), [Gluu](https://gluu.org/docs/gluu-server/4.4/admin-guide/openid-connect/#manual-client-registration), or [Blitz](https://docs.identityblitz.ru/latest/integration-guide/oidc-app-enrollment.html)).
