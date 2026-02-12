@@ -674,7 +674,7 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Укажите необходимые разрешения. Обязатлеьно укажите полный доступ в строке «Repository», чтобы были доступ все операции с образами контейнеров.
+Укажите необходимые разрешения. Обязательно укажите полный доступ в строке «Repository», чтобы были доступ все операции с образами контейнеров.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Главная страница Harbor...">
