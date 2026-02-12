@@ -79,6 +79,8 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause) *kingpin.CmdClause {
 			TmpDir:         tmpDir,
 			Logger:         logger,
 			IsDebug:        isDebug,
+
+			NoSwitchToNodeUser: app.ForceNoSwitchToNodeUser(),
 		})
 		_, err = converger.Converge(ctx)
 
