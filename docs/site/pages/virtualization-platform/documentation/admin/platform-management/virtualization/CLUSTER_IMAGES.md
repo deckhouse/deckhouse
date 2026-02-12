@@ -118,13 +118,13 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Install and configure qemu-guest-agent (recommended):
 
-  - For RHEL/CentOS:
+- For RHEL/CentOS:
 
     ```bash
     yum install -y qemu-guest-agent
     ```
 
-  - For Debian/Ubuntu:
+- For Debian/Ubuntu:
 
     ```bash
     apt-get update
@@ -149,14 +149,14 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean network settings:
 
-  - For RHEL:
+- For RHEL:
 
     ```bash
     nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
     rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
     ```
 
-  - For Debian/Ubuntu:
+- For Debian/Ubuntu:
 
     ```bash
     rm -f /etc/network/interfaces.d/*
@@ -184,13 +184,13 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean package manager cache:
 
-  - For RHEL:
+- For RHEL:
 
     ```bash
     yum clean all
     ```
 
-  - For Debian/Ubuntu:
+- For Debian/Ubuntu:
 
     ```bash
     apt-get clean
@@ -217,13 +217,13 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    For RHEL: reset and restore SELinux contexts (choose one of the following):
 
-  - Option 1: Check and restore contexts immediately:
+- Option 1: Check and restore contexts immediately:
 
     ```bash
     restorecon -R /
     ```
 
-  - Option 2: Schedule relabel on next boot:
+- Option 2: Schedule relabel on next boot:
 
     ```bash
     touch /.autorelabel
