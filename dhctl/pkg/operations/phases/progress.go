@@ -128,10 +128,11 @@ func (p *ProgressTracker) FindLastCompletedPhase(completedPhase, nextPhase Opera
 	return nOrEmpty(p.progress.Phases, nextPhaseIndex-1).Phase, true
 }
 
-// Progress updates the progress state with a completed phase or subphase
-// It recalculates current/next phases and triggers the onProgress callback
+// Progress updates the progress state with a completed phase or subphase.
+// currentPhase is the phase we're in now; when non-empty it is used as-is (so progress is correct when phases are skipped).
+// When empty, current phase is inferred as the next in list after completedPhase.
 func (p *ProgressTracker) Progress(
-	completedPhase OperationPhase, completedSubPhase OperationSubPhase, opts ProgressOpts,
+	completedPhase, currentPhase OperationPhase, completedSubPhase OperationSubPhase, opts ProgressOpts,
 ) error {
 	if p.onProgressFunc == nil {
 		return nil
@@ -140,8 +141,8 @@ func (p *ProgressTracker) Progress(
 	p.mx.Lock()
 
 	var progress Progress
-	if completedPhase == "" && completedSubPhase == "" || completedPhase != "" {
-		progress = calculatePhaseProgress(p.progress, completedPhase, opts)
+	if (completedPhase == "" && completedSubPhase == "") || completedPhase != "" {
+		progress = calculatePhaseProgress(p.progress, completedPhase, currentPhase, opts)
 	} else {
 		progress = calculateSubPhaseProgress(p.progress, completedSubPhase, opts)
 	}
@@ -236,7 +237,7 @@ func (p *ProgressTracker) Complete(lastCompletedPhase OperationPhase) error {
 	return p.onProgressFunc(clonedProgress)
 }
 
-func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts ProgressOpts) Progress {
+func calculatePhaseProgress(p Progress, completedPhase, currentPhase OperationPhase, opts ProgressOpts) Progress {
 	if len(p.Phases) == 0 {
 		return p
 	}
@@ -265,7 +266,19 @@ func calculatePhaseProgress(p Progress, completedPhase OperationPhase, opts Prog
 		// return progress as is if there is no known completedPhase for given operation
 		return p
 	}
+
 	currentPhaseIndex := completedPhaseIndex + 1
+	if currentPhase != "" {
+		idx := slices.IndexFunc(p.Phases, func(ph PhaseWithSubPhases) bool { return ph.Phase == currentPhase })
+		if idx > completedPhaseIndex {
+			for i := completedPhaseIndex + 1; i < idx; i++ {
+				if p.Phases[i].Action == nil {
+					p.Phases[i].Action = ptr.To(ProgressActionSkip)
+				}
+			}
+			currentPhaseIndex = idx
+		}
+	}
 
 	// iterate over all previous phases, if action was nil, set action
 	// if current action is skip, then skip all previous nil actions

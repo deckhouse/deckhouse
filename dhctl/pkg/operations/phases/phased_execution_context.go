@@ -95,7 +95,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) callOnPhase(completedPha
 		opts.Action = ProgressActionSkip
 	}
 
-	err := pec.progressTracker.Progress(lastCompletedPhase, "", opts)
+	err := pec.progressTracker.Progress(lastCompletedPhase, nextPhase, "", opts)
 	if err != nil {
 		log.ErrorF("Failed to write progress for phase %v: %v", completedPhase, err)
 	}
@@ -189,7 +189,7 @@ func (pec *phasedExecutionContext[OperationPhaseDataT]) CompletePhase(stateCache
 
 // CompleteSubPhase completes specified sub phase.
 func (pec *phasedExecutionContext[OperationPhaseDataT]) CompleteSubPhase(completedSubPhase OperationSubPhase) {
-	err := pec.progressTracker.Progress("", completedSubPhase, ProgressOpts{})
+	err := pec.progressTracker.Progress("", "", completedSubPhase, ProgressOpts{})
 	if err != nil {
 		log.ErrorF("Failed to write progress for sub phase %v: %v", completedSubPhase, err)
 	}
