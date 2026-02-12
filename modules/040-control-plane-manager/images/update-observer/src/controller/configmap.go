@@ -50,9 +50,10 @@ type Status struct {
 }
 
 type ControlPlaneNode struct {
-	Name       string            `yaml:"name"`
-	Phase      string            `yaml:"phase"`
-	Components map[string]string `yaml:"components"`
+	Name        string            `yaml:"name"`
+	Phase       string            `yaml:"phase"`
+	Description string            `yaml:"description,omitempty"`
+	Components  map[string]string `yaml:"components"`
 }
 
 type Nodes struct {
@@ -140,9 +141,10 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 		controlPlanes := make([]ControlPlaneNode, 0, len(m))
 		for name, nodeState := range m {
 			controlPlaneNode := ControlPlaneNode{
-				Name:       name,
-				Phase:      string(nodeState.Phase),
-				Components: make(map[string]string, len(nodeState.Components)),
+				Name:        name,
+				Phase:       string(nodeState.Phase),
+				Description: nodeState.Description,
+				Components:  make(map[string]string, len(nodeState.Components)),
 			}
 
 			for component, componentState := range nodeState.Components {
