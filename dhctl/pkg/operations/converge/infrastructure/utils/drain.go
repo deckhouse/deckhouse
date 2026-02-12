@@ -51,7 +51,7 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 }
 
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
-	// todo it is deeper for pass from command root, use app. directly
+	// todo it is deeper for pass from command root, use app package directly
 	if app.SkipDrainingNodes() {
 		log.InfoF("Skipping draining node %s because draining disabled by env\n", nodeName)
 		return nil
