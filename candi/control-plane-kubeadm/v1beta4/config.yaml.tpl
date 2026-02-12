@@ -104,7 +104,7 @@ apiServer:
     {{- end }}
     {{- end }}
   extraArgs:
-    {{- if semverCompare "<=1.31" .Values.clusterConfiguration.kubernetesVersion }}
+    {{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
     - name: anonymous-auth
       value: "false"
     {{- end }}
