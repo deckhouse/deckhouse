@@ -17,7 +17,7 @@ type NodesGetter interface {
 }
 
 type Publisher interface {
-	Subscribe(ctx context.Context) <-chan domain.Event
+	Subscribe(ctx context.Context) (<-chan domain.Event, error)
 }
 
 type Server struct {
@@ -56,7 +56,10 @@ func (s *Server) StreamEvents(_ *emptypb.Empty, stream pb.Fencing_StreamEventsSe
 	s.logger.Info("grpc call: StreamEvents")
 	ctx := stream.Context()
 
-	events := s.publisher.Subscribe(ctx)
+	events, err := s.publisher.Subscribe(ctx)
+	if err != nil {
+		return err
+	}
 
 	for {
 		select {

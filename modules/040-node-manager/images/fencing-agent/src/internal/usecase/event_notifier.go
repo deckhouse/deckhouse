@@ -1,4 +1,4 @@
-package event
+package usecase
 
 import (
 	"log/slog"
@@ -14,17 +14,17 @@ import (
 type Producer interface {
 	Publish(event domain.Event)
 }
-type Handler struct {
+type Notifier struct {
 	logger   *log.Logger
 	eventBus Producer
 }
 
-func NewHandler(logger *log.Logger, eventBus Producer) *Handler {
-	return &Handler{logger: logger, eventBus: eventBus}
+func NewNotifier(logger *log.Logger, eventBus Producer) *Notifier {
+	return &Notifier{logger: logger, eventBus: eventBus}
 }
 
-func (h *Handler) NotifyJoin(node *memberlist.Node) {
-	h.logger.Debug("Node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
+func (h *Notifier) NotifyJoin(node *memberlist.Node) {
+	h.logger.Debug("node joined", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false joining?
 	event := domain.Event{
 		Node: domain.Node{
@@ -37,8 +37,8 @@ func (h *Handler) NotifyJoin(node *memberlist.Node) {
 	h.eventBus.Publish(event)
 }
 
-func (h *Handler) NotifyLeave(node *memberlist.Node) {
-	h.logger.Debug("Node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
+func (h *Notifier) NotifyLeave(node *memberlist.Node) {
+	h.logger.Debug("node left", slog.String("node_name", node.Name), slog.String("node_addr", node.Addr.String()))
 	// TODO false leaving?
 	event := domain.Event{
 		Node: domain.Node{
@@ -51,6 +51,6 @@ func (h *Handler) NotifyLeave(node *memberlist.Node) {
 	h.eventBus.Publish(event)
 }
 
-func (h *Handler) NotifyUpdate(node *memberlist.Node) {
-	h.logger.Debug("Node updated", slog.String("node", node.Name))
+func (h *Notifier) NotifyUpdate(node *memberlist.Node) {
+	h.logger.Debug("node updated", slog.String("node", node.Name))
 }

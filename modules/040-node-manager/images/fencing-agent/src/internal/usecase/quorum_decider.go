@@ -1,22 +1,19 @@
-package domain
+package usecase
 
 import (
+	"fencing-agent/internal/domain"
 	"sync"
 	"time"
 )
 
-type NodesNumber struct {
-	TotalNodes int   `json:"total_nodes"`
-	Timestamp  int64 `json:"timestamp"`
-}
 type QuorumDecider struct {
-	nodesNumber NodesNumber
+	nodesNumber domain.NodeGroupState
 	mtx         sync.RWMutex
 }
 
 func NewQuorumDecider(totalNodes int) *QuorumDecider {
 	return &QuorumDecider{
-		nodesNumber: NodesNumber{
+		nodesNumber: domain.NodeGroupState{
 			TotalNodes: totalNodes,
 			Timestamp:  time.Now().UnixMilli(),
 		},
@@ -31,7 +28,7 @@ func (qd *QuorumDecider) ShouldFeed(numMembers int) bool {
 	return numMembers >= quorum
 }
 
-func (qd *QuorumDecider) SetTotalNodes(nodesNumber NodesNumber) {
+func (qd *QuorumDecider) SetTotalNodes(nodesNumber domain.NodeGroupState) {
 	qd.mtx.Lock()
 	defer qd.mtx.Unlock()
 
