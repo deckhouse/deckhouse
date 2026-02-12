@@ -29,6 +29,7 @@ import (
 
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	regClient "github.com/deckhouse/deckhouse/pkg/registry/client"
 )
@@ -49,13 +50,13 @@ func NewOperationService(ctx context.Context, client client.Client, repoName str
 	}
 
 	// Create registry service for the packages path
-	svc, err := psm.Service(
-		repo.Spec.Registry.Repo,
-		repo.Spec.Registry.DockerCFG,
-		repo.Spec.Registry.CA,
-		"deckhouse-package-controller",
-		repo.Spec.Registry.Scheme,
-	)
+	svc, err := psm.Service(repo.Spec.Registry.Repo, utils.RegistryConfig{
+		DockerConfig: repo.Spec.Registry.DockerCFG,
+		Credentials:  repo.Spec.Registry.Credentials,
+		CA:           repo.Spec.Registry.CA,
+		Scheme:       repo.Spec.Registry.Scheme,
+		UserAgent:    "deckhouse-package-controller",
+	})
 	if err != nil {
 		return nil, fmt.Errorf("create package service: %w", err)
 	}

@@ -59,6 +59,10 @@ spec:
                   ca:
                     description: Certificate authority data for TLS verification.
                     type: string
+                  credentials:
+                    description: Login password from the repository in user:password
+                      format (base64)
+                    type: string
                   dockerCfg:
                     description: Docker configuration for authentication.
                     type: string
@@ -90,6 +94,8 @@ spec:
                 description: Conditions represent the latest available observations
                   of the repository's state.
                 items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-

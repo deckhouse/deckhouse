@@ -275,12 +275,17 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 		require.NoError(suite.T(), err)
 	} else {
 		got := singleDocToManifests(gotB)
+
 		expB, err := os.ReadFile(goldenFile)
 		require.NoError(suite.T(), err)
 		exp := singleDocToManifests(expB)
+		// "there is no authorization data"
 		assert.Equal(suite.T(), len(got), len(exp), "The number of `got` manifests must be equal to the number of `exp` manifests")
+
 		for i := range got {
-			assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match")
+			if assert.YAMLEq(suite.T(), exp[i], got[i], "Got and exp manifests must match") {
+				suite.T().Logf("test data file: %s", goldenFile)
+			}
 		}
 	}
 }

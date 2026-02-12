@@ -47,7 +47,7 @@ func checkRelease(_ context.Context, input *go_hook.HookInput, dc dependency.Con
 	if tag == "" {
 		tag = "latest"
 	}
-	regCli, err := dc.GetRegistryClient(repo, cr.WithAuth(""))
+	regCli, err := dc.GetRegistryClient(repo, cr.WithAuth("", ""))
 	if err != nil {
 		return err
 	}

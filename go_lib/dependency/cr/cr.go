@@ -88,7 +88,7 @@ func NewClient(repo string, options ...Option) (Client, error) {
 	}
 
 	if !opts.withoutAuth {
-		authConfig, err := readAuthConfig(repo, opts.dockerCfg)
+		authConfig, err := readAuthConfig(repo, opts.dockerCfg, opts.credentials)
 		if err != nil {
 			return nil, fmt.Errorf("read auth config: %w", err)
 		}
@@ -196,7 +196,29 @@ func (r *client) Digest(ctx context.Context, tag string) (string, error) {
 	return d.String(), nil
 }
 
-func readAuthConfig(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
+// param credentialsBase64 string base64 user:password
+func readAuthConfig(repo, dockerCfgBase64, credentialsBase64 string) (authn.AuthConfig, error) {
+	if credentialsBase64 != "" {
+		cred, err := base64.StdEncoding.DecodeString(credentialsBase64)
+		if err != nil {
+			return authn.AuthConfig{}, fmt.Errorf("decode credentials: %w", err)
+		}
+
+		parts := strings.Split(string(cred), ":")
+		if len(parts) != 2 {
+			return authn.AuthConfig{}, fmt.Errorf("credentials must be in form of <username>:<password>")
+		}
+
+		return authn.AuthConfig{
+			Username: parts[0],
+			Password: parts[1],
+		}, nil
+	}
+
+	return readAuthFromDockerCfg(repo, dockerCfgBase64) // old logic
+}
+
+func readAuthFromDockerCfg(repo, dockerCfgBase64 string) (authn.AuthConfig, error) {
 	r, err := parse(repo)
 	if err != nil {
 		return authn.AuthConfig{}, fmt.Errorf("parse repo: %w", err)
@@ -260,6 +282,7 @@ type registryOptions struct {
 	useHTTP     bool
 	withoutAuth bool
 	dockerCfg   string
+	credentials string
 	userAgent   string
 	timeout     time.Duration
 }
@@ -281,11 +304,14 @@ func WithInsecureSchema(insecure bool) Option {
 }
 
 // WithAuth use docker config base64 as authConfig
-// if dockerCfg is empty - will use client without auth
-func WithAuth(dockerCfg string) Option {
+// if both dockerCfg and credentials parameters are filled in, credentials is the priority.
+// if both are empty, will use client without auth
+func WithAuth(dockerCfg string, credentials string) Option {
 	return func(options *registryOptions) {
 		options.dockerCfg = dockerCfg
-		if dockerCfg == "" {
+		options.credentials = credentials
+
+		if dockerCfg == "" && credentials == "" {
 			options.withoutAuth = true
 		}
 	}
