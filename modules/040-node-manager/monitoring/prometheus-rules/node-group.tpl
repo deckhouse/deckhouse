@@ -143,9 +143,9 @@
       plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated cgroup v1 – migration to v2 required.
       description: |
-        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} is using cgroup v1,
-        but in Kubernetes 1.35 cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
-        Cgroup v2 must be used. To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support cgroup v2.
+        Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
 
   - alert: D8NodeContainerdV2NotSupported
     expr: |
@@ -164,6 +164,6 @@
       plk_labels_as_annotations: "node,node_group"
       summary: Node {{`{{ $labels.node }}`}} is using deprecated containerd v1 – migration to v2 required.
       description: |
-        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} is using containerd v1,
-        but in Kubernetes 1.36 support for containerd v1.y [is dropped](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
-        Containerd v2 must be used. Please migrate to containerd v2 to ensure continued compatibility.
+        Node {{`{{ $labels.node }}`}} in NodeGroup {{`{{ $labels.node_group }}`}} does not support containerd v2.
+        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Please check the requirements for containerd v2 and schedule your migration plan.
