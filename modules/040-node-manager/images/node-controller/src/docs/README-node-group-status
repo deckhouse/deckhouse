@@ -1,0 +1,452 @@
+# NodeGroupStatusReconciler
+
+Controller that updates `NodeGroup.status` based on actual cluster state.
+
+Replaces Go hook `hooks/update_node_group_status.go` from `040-node-manager` module.
+
+---
+
+## Table of Contents
+
+- [Overview](#overview)
+- [Watches](#watches)
+- [Reconcile Logic](#reconcile-logic)
+- [Status Fields Calculation](#status-fields-calculation)
+- [Conditions Calculation](#conditions-calculation)
+- [Events](#events)
+
+---
+
+## Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  NodeGroupStatusReconciler                                                   │
+│                                                                             │
+│  Input (from cache):                    Output:                             │
+│  ├─ NodeGroup                           └─ NodeGroup.status                 │
+│  ├─ Node (with label node.deckhouse.io/group)   ├─ nodes                    │
+│  ├─ Machine (MCM + CAPI)                        ├─ ready                    │
+│  ├─ MachineDeployment (MCM + CAPI)              ├─ upToDate                 │
+│  └─ Secret (checksums, zones)                   ├─ instances                │
+│                                                 ├─ desired                  │
+│                                                 ├─ min, max                 │
+│                                                 ├─ conditions               │
+│                                                 └─ conditionSummary         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Watches
+
+The controller watches the following resources:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  WATCHES                                                                    │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  For(&v1.NodeGroup{})                           [PRIMARY]            │   │
+│  │                                                                     │   │
+│  │  On NodeGroup change:                                               │   │
+│  │  → Reconcile(nodeGroup.Name)                                        │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Watches(&corev1.Node{})                        [SECONDARY]          │   │
+│  │                                                                     │   │
+│  │  Predicate: only Nodes with label node.deckhouse.io/group           │   │
+│  │  MapFunc: nodeToNodeGroup()                                         │   │
+│  │                                                                     │   │
+│  │  On Node change:                                                    │   │
+│  │  → extract node.Labels["node.deckhouse.io/group"]                   │   │
+│  │  → Reconcile(nodeGroupName)                                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Watches(Machine MCM + CAPI)                    [SECONDARY]          │   │
+│  │                                                                     │   │
+│  │  MCM:  machine.sapcloud.io/v1alpha1                                 │   │
+│  │  CAPI: cluster.x-k8s.io/v1beta1                                     │   │
+│  │                                                                     │   │
+│  │  MapFunc: machineToNodeGroup()                                      │   │
+│  │  → extract labels["node.deckhouse.io/group"] or labels["node-group"]│   │
+│  │  → Reconcile(nodeGroupName)                                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │  Watches(MachineDeployment MCM + CAPI)          [SECONDARY]          │   │
+│  │                                                                     │   │
+│  │  MCM:  machine.sapcloud.io/v1alpha1                                 │   │
+│  │  CAPI: cluster.x-k8s.io/v1beta1                                     │   │
+│  │                                                                     │   │
+│  │  MapFunc: machineDeploymentToNodeGroup()                            │   │
+│  │  → extract labels["node-group"]                                     │   │
+│  │  → Reconcile(nodeGroupName)                                         │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Reconcile Logic
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  Reconcile(ctx, Request{Name: "worker"})                                    │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 1: Get NodeGroup                                                      │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    ng := &v1.NodeGroup{}                                                    │
+│    r.Client.Get(ctx, req.NamespacedName, ng)                               │
+│                                                                             │
+│    If NodeGroup not found → return (nothing to do)                          │
+│                                                                             │
+│    ▼ Reads from cache, NOT an API request                                   │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 2: Get all Nodes for this NodeGroup                                   │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    nodeList := &corev1.NodeList{}                                           │
+│    r.Client.List(ctx, nodeList, client.MatchingLabels{                     │
+│        "node.deckhouse.io/group": "worker",                                │
+│    })                                                                       │
+│                                                                             │
+│    ▼ Reads from cache, NOT an API request                                   │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 3: Get configuration checksum                                         │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    Secret "d8-cloud-instance-manager/configuration-checksums"               │
+│    configChecksum := secret.Data["worker"]                                  │
+│                                                                             │
+│    Used to determine upToDate nodes                                         │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 4: Calculate basic node metrics                                       │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    for _, node := range nodes {                                             │
+│        nodesCount++                                                         │
+│                                                                             │
+│        // Check Ready condition                                             │
+│        if isNodeReady(&node) {                                              │
+│            readyCount++                                                     │
+│        }                                                                    │
+│                                                                             │
+│        // Check checksum for upToDate                                       │
+│        nodeChecksum := node.Annotations["node.deckhouse.io/configuration-checksum"]│
+│        if nodeChecksum == configChecksum {                                  │
+│            upToDateCount++                                                  │
+│        } else {                                                             │
+│            // Node is not upToDate — check why                              │
+│            if hasDisruptionRequired && !hasApproved {                       │
+│                waitingForApprovalNodes = append(...)                        │
+│            } else {                                                         │
+│                updatingNodes = append(...)                                  │
+│            }                                                                │
+│        }                                                                    │
+│    }                                                                        │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 5: For CloudEphemeral — get data from Machine/MachineDeployment       │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    if ng.Spec.NodeType == CloudEphemeral {                                  │
+│                                                                             │
+│        // 5.1 Get zones count                                               │
+│        zonesCount := getZonesCount(ctx, ng)                                 │
+│        // From ng.Spec.CloudInstances.Zones or Secret d8-node-manager-cloud-provider│
+│                                                                             │
+│        // 5.2 Calculate min/max                                             │
+│        minCount = ng.Spec.CloudInstances.MinPerZone * zonesCount            │
+│        maxCount = ng.Spec.CloudInstances.MaxPerZone * zonesCount            │
+│                                                                             │
+│        // 5.3 Get data from MachineDeployment                               │
+│        desired, failures, isFrozen = getMachineDeploymentInfo(ctx, ngName)  │
+│        //  - desired = sum of spec.replicas from all MDs                    │
+│        //  - failures = status.failedMachines                               │
+│        //  - isFrozen = condition Frozen=True                               │
+│                                                                             │
+│        if minCount > desired {                                              │
+│            desired = minCount                                               │
+│        }                                                                    │
+│                                                                             │
+│        // 5.4 Count instances (Machines)                                    │
+│        instancesCount = getMachinesCount(ctx, ngName)                       │
+│        // Count MCM Machines + CAPI Machines                                │
+│                                                                             │
+│        // 5.5 Build errorMsg from failures                                  │
+│        if len(failures) > 0 {                                               │
+│            sort by time                                                     │
+│            errorMsg = lastFailure.Message                                   │
+│        }                                                                    │
+│    }                                                                        │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 6: Create Event on errors                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    if errorMsg != "" {                                                      │
+│        // Create Event only if message changed                              │
+│        // (deduplication as in original hook)                               │
+│        r.createEventIfChanged(ng, errorMsg)                                 │
+│                                                                             │
+│        // Write generic message to status                                   │
+│        errorMsg = "Machine creation failed. Check events for details."     │
+│    }                                                                        │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 7: Calculate Conditions                                               │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    conditions = calculateConditions(                                        │
+│        ng, nodes, readyCount, desired, instancesCount,                      │
+│        isFrozen, errorMsg, updatingNodes, waitingForApprovalNodes,          │
+│    )                                                                        │
+│                                                                             │
+│    // See "Conditions Calculation" section for details                      │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 8: Calculate ConditionSummary                                         │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    conditionSummary = {                                                     │
+│        Ready: "True" / "False",                                             │
+│        StatusMessage: "Error: ...; Updating: ..."                           │
+│    }                                                                        │
+│                                                                             │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│  STEP 9: Apply Patch                                                        │
+│  ═══════════════════════════════════════════════════════════════════════   │
+│                                                                             │
+│    patch := client.MergeFrom(ng.DeepCopy())                                 │
+│                                                                             │
+│    ng.Status.Nodes = nodesCount                                             │
+│    ng.Status.Ready = readyCount                                             │
+│    ng.Status.UpToDate = upToDateCount                                       │
+│    ng.Status.Conditions = conditions                                        │
+│    ng.Status.ConditionSummary = conditionSummary                            │
+│                                                                             │
+│    if CloudEphemeral {                                                      │
+│        ng.Status.Desired = desired                                          │
+│        ng.Status.Min = minCount                                             │
+│        ng.Status.Max = maxCount                                             │
+│        ng.Status.Instances = instancesCount                                 │
+│    }                                                                        │
+│                                                                             │
+│    r.Client.Status().Patch(ctx, ng, patch)                                  │
+│                                                                             │
+│    ▲ ONLY API request in the entire Reconcile                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Status Fields Calculation
+
+| Field | Description | Formula |
+|-------|-------------|---------|
+| `nodes` | Total nodes in the group | `len(nodes)` |
+| `ready` | Ready nodes count | Nodes with `condition Ready=True` |
+| `upToDate` | Nodes with current configuration | `node.annotation[checksum] == secret.data[ngName]` |
+| `instances` | Machine count (CloudEphemeral only) | `len(MCM Machines) + len(CAPI Machines)` |
+| `desired` | Desired count (CloudEphemeral only) | `sum(MachineDeployment.spec.replicas)` or `minPerZone * zones` |
+| `min` | Minimum nodes (CloudEphemeral only) | `minPerZone * zonesCount` |
+| `max` | Maximum nodes (CloudEphemeral only) | `maxPerZone * zonesCount` |
+
+### Zones Count Determination
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  getZonesCount(ng)                                                          │
+│                                                                             │
+│  1. If ng.Spec.CloudInstances.Zones is specified:                           │
+│     → return len(ng.Spec.CloudInstances.Zones)                              │
+│                                                                             │
+│  2. Otherwise read Secret kube-system/d8-node-manager-cloud-provider:       │
+│     zones := json.Unmarshal(secret.Data["zones"])                           │
+│     → return len(zones)                                                     │
+│                                                                             │
+│  3. If Secret not found or zones is empty:                                  │
+│     → return 1 (default)                                                    │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Conditions Calculation
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  CONDITION: Ready                                                           │
+│                                                                             │
+│  For CloudEphemeral:                                                        │
+│    True  — readyCount >= desired && desired > 0                             │
+│    False — readyCount < desired || desired == 0                             │
+│                                                                             │
+│  For Static/CloudStatic/CloudPermanent:                                     │
+│    True  — readyCount == nodesCount && nodesCount > 0                       │
+│    False — readyCount < nodesCount || nodesCount == 0                       │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONDITION: Updating                                                        │
+│                                                                             │
+│  True  — there are nodes with outdated checksum (not waiting for approval)  │
+│  False — all nodes are upToDate or waiting for approval                     │
+│                                                                             │
+│  Message: "Nodes updating: node-1, node-2"                                  │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONDITION: WaitingForDisruptiveApproval                                    │
+│                                                                             │
+│  True  — there are nodes with annotations:                                  │
+│          update.node.deckhouse.io/disruption-required != ""                 │
+│          update.node.deckhouse.io/approved == ""                            │
+│  False — no such nodes                                                      │
+│                                                                             │
+│  Message: "Nodes waiting for approval: node-3"                              │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONDITION: Error                                                           │
+│                                                                             │
+│  True  — there are Machine creation errors                                  │
+│  False — no errors                                                          │
+│                                                                             │
+│  Message: "Machine creation failed. Check events for details."              │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONDITION: Scaling (CloudEphemeral only)                                   │
+│                                                                             │
+│  True (ScalingUp)   — instances < desired                                   │
+│  True (ScalingDown) — instances > desired                                   │
+│  False              — instances == desired                                  │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  CONDITION: Frozen (CloudEphemeral only)                                    │
+│                                                                             │
+│  True  — MachineDeployment has condition Frozen=True                        │
+│  False — not added (condition absent)                                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### LastTransitionTime
+
+The controller preserves `LastTransitionTime` from the previous condition if status hasn't changed. This follows Kubernetes conventions.
+
+```go
+if prev.Status == new.Status {
+    new.LastTransitionTime = prev.LastTransitionTime
+} else {
+    new.LastTransitionTime = now
+}
+```
+
+---
+
+## Events
+
+On Machine creation errors, the controller creates Kubernetes Events:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  createEventIfChanged(ng, errorMsg)                                         │
+│                                                                             │
+│  1. Check if message differs from previous                                  │
+│     (deduplication as in original hook)                                     │
+│                                                                             │
+│  2. If message is new:                                                      │
+│     - EventType: Warning                                                    │
+│     - Reason: MachineFailed                                                 │
+│     - Message: <error details from MachineDeployment.status.failedMachines> │
+│                                                                             │
+│  3. Exception: "Started Machine creation process"                           │
+│     - EventType: Normal                                                     │
+│     - Reason: MachineCreating                                               │
+│                                                                             │
+│  Example:                                                                   │
+│  $ kubectl describe ng worker                                               │
+│  Events:                                                                    │
+│    Type     Reason         Message                                          │
+│    ----     ------         -------                                          │
+│    Warning  MachineFailed  Cloud provider error: insufficient quota         │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                                                                             │
+│                            DATA FLOW                                        │
+│                                                                             │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐   ┌─────────────┐     │
+│  │  NodeGroup  │   │    Node     │   │   Machine   │   │ MachineDepl │     │
+│  │             │   │             │   │  (MCM/CAPI) │   │ (MCM/CAPI)  │     │
+│  └──────┬──────┘   └──────┬──────┘   └──────┬──────┘   └──────┬──────┘     │
+│         │                 │                 │                 │            │
+│         │    Watch        │    Watch        │    Watch        │   Watch    │
+│         ▼                 ▼                 ▼                 ▼            │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                      SHARED INFORMER CACHE                           │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    │ event                                  │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                          MapFunc                                     │   │
+│  │                                                                     │   │
+│  │  Node → nodeToNodeGroup() → node.Labels["node.deckhouse.io/group"]  │   │
+│  │  Machine → machineToNodeGroup() → labels["node-group"]              │   │
+│  │  MD → machineDeploymentToNodeGroup() → labels["node-group"]         │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    │ Reconcile(nodeGroupName)               │
+│                                    ▼                                        │
+│  ┌─────────────────────────────────────────────────────────────────────┐   │
+│  │                         Reconcile()                                  │   │
+│  │                                                                     │   │
+│  │  1. r.Get(NodeGroup)       ──► from cache                           │   │
+│  │  2. r.List(Nodes)          ──► from cache                           │   │
+│  │  3. r.Get(Secret checksums)──► from cache                           │   │
+│  │  4. r.Get(Secret zones)    ──► from cache                           │   │
+│  │  5. r.List(MachineDeployments) ──► from cache                       │   │
+│  │  6. r.List(Machines)       ──► from cache                           │   │
+│  │  7. Calculate status                                                │   │
+│  │  8. r.Status().Patch()     ──► API request                          │   │
+│  │                                                                     │   │
+│  └─────────────────────────────────────────────────────────────────────┘   │
+│                                    │                                        │
+│                                    │ PATCH                                  │
+│                                    ▼                                        │
+│                           ┌─────────────────┐                               │
+│                           │   API Server    │                               │
+│                           └─────────────────┘                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
