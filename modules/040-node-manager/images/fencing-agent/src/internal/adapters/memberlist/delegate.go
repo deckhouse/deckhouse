@@ -15,7 +15,7 @@ import (
 
 // NodesNumberReceiver is called when a NodesNumber message is received
 type NodesNumberReceiver interface {
-	SetTotalNodes(nodesNumber domain.NodesNumber)
+	SetTotalNodes(nodesNumber domain.NodeGroupState)
 }
 
 // simpleBroadcast implements memberlist.Broadcast interface
@@ -67,7 +67,7 @@ func NewDelegate(logger *log.Logger, numNodes func() int, receiver NodesNumberRe
 
 // BroadcastNodesNumber queues a broadcast message with current nodes count
 func (d *Delegate) BroadcastNodesNumber(totalNodes int) {
-	msg := domain.NodesNumber{
+	msg := domain.NodeGroupState{
 		TotalNodes: totalNodes,
 		Timestamp:  time.Now().UnixMilli(),
 	}
@@ -98,7 +98,7 @@ func (d *Delegate) NotifyMsg(data []byte) {
 		return
 	}
 
-	var msg domain.NodesNumber
+	var msg domain.NodeGroupState
 	if err := json.Unmarshal(data, &msg); err != nil {
 		d.logger.Warn("failed to unmarshal broadcast message", sl.Err(err))
 		return

@@ -31,10 +31,8 @@ import (
 	"fencing-agent/internal/adapters/memberlist"
 	"fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/config"
-	"fencing-agent/internal/controllers/event"
 	"fencing-agent/internal/controllers/grpc"
 	"fencing-agent/internal/controllers/http"
-	"fencing-agent/internal/domain"
 	"fencing-agent/internal/lib/logger"
 	"fencing-agent/internal/lib/logger/sl"
 	"fencing-agent/internal/usecase"
@@ -69,12 +67,6 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		return fmt.Errorf("failed to create KubernetesAPI client: %w", err)
 	}
 
-	err = kubeClient.Start(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to start KubernetesAPI client: %w", err)
-	}
-	defer kubeClient.Stop()
-
 	ip, err := kubeClient.GetCurrentNodeIP(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get current node IP: %w", err)
@@ -89,11 +81,11 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	totalNodes := len(ips)
 	log.Info("total nodes", "total_nodes", totalNodes)
 
-	quorumDecider := domain.NewQuorumDecider(totalNodes)
+	quorumDecider := usecase.NewQuorumDecider(totalNodes)
 
 	eventBus := usecase.NewEventsBus()
 
-	eventHandler := event.NewHandler(log, eventBus)
+	eventHandler := usecase.NewNotifier(log, eventBus)
 
 	mblist, err := memberlist.New(cfg.Memberlist, log, ip, cfg.NodeName, totalNodes, eventHandler, quorumDecider)
 	if err != nil {
@@ -109,10 +101,17 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 
 	mblist.BroadcastNodesNumber(totalNodes)
 
-	// -------- clear mblist functionality over -------
 	if cfg.FencingMode == Watchdog {
 		log.Info("Watchdog enabled, starting health monitor")
+
+		if infErr := kubeClient.StartInformer(ctx); infErr != nil {
+			return fmt.Errorf("failed to start informer: %w", infErr)
+		}
+		defer kubeClient.StopInformer()
+
 		softdog := watchdog.New(cfg.Watchdog.Device)
+
+		fallback := usecase.NewFallback(log, kubeClient)
 
 		fencingAgent := usecase.NewHealthMonitor(
 			kubeClient,
@@ -120,7 +119,7 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 			mblist,
 			softdog,
 			quorumDecider,
-			kubeClient,
+			fallback,
 			log,
 		)
 
@@ -133,9 +132,6 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 		log.Info("Dryrun mode enabled, no fencing will be performed")
 	}
 
-	// ------- clear fencingAgent functionality over -------
-
-	// get_nodes usecase
 	nodesGetter := usecase.NewGetNodes(mblist)
 
 	grpcSrv := grpc.NewServer(log, eventBus, nodesGetter)
@@ -148,8 +144,6 @@ func AppRun(cfg config.Config, log *log.Logger) error {
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(grpcSrvRunner.Run)
-
-	// ------- clear grpcSrvRunner functionality over -------
 
 	healthzSrv := http.New(log, cfg.HealthProbeBindAddress)
 
