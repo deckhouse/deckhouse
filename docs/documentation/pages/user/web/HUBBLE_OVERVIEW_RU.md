@@ -1,5 +1,6 @@
 ---
 title: "Веб-интерфейс визуализации сетевого стека кластера"
+description: "Веб-интерфейс Hubble для визуализации сетевых взаимодействий в Deckhouse Kubernetes Platform. Анализ трафика между подами и сервисами, выявление сетевых проблем, работа с модулем cilium-hubble."
 permalink: ru/user/web/hubble.html
 lang: ru
 ---

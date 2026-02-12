@@ -1,8 +1,8 @@
 ---
-title: "Аутентификация"
+title: "Настройка аутентификации для приложений"
+description: "Настройка аутентификации для пользовательских приложений в Deckhouse Kubernetes Platform. Интеграция с внешними провайдерами аутентификации LDAP, GitLab, GitHub..."
 permalink: ru/user/access/authentication.html
 lang: ru
-description: "Deckhouse Kubernetes Platform. Использование аутентификации."
 search: user authentication, authentication methods, user access control, user management, login methods, аутентификация пользователей, методы аутентификации пользователей, контроль доступа, управление пользователями, методы входа
 ---
 

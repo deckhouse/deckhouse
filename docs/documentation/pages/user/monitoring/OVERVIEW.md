@@ -1,5 +1,6 @@
 ---
-title: "Monitoring"
+title: "Application and Infrastructure Monitoring"
+description: "Overview of the monitoring system in Deckhouse Kubernetes Platform. Ready-made Grafana dashboards, Prometheus alerts, application metrics collection. Configuring monitoring for user applications and creating custom dashboards."
 permalink: en/user/monitoring/
 ---
 

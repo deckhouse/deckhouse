@@ -1,5 +1,6 @@
 ---
 title: "Incoming traffic processing"
+description: "Configuring Network Load Balancer (NLB) and Application Load Balancer (ALB) in Deckhouse Kubernetes Platform. Balancing TCP/UDP traffic and HTTP/HTTPS requests. Providing external access to applications."
 permalink: en/user/network/ingress/
 ---
 

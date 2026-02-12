@@ -1,5 +1,6 @@
 ---
-title: "Сканирование контейнерных образов на уязвимости"
+title: "Настройка яканирования контейнерных образов на уязвимости"
+description: "Сканирование контейнерных образов на уязвимости в Deckhouse Kubernetes Platform с помощью Trivy. CIS Kubernetes Benchmark проверки, просмотр отчётов в Grafana, фильтрация уязвимостей."
 permalink: ru/user/security/scanning.html
 lang: ru
 ---

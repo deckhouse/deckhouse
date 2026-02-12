@@ -1,5 +1,6 @@
 ---
-title: "Мониторинг"
+title: "Мониторинг приложений и инфраструктуры"
+description: "Обзор системы мониторинга в Deckhouse Kubernetes Platform. Готовые дашборды Grafana, алерты Prometheus, сбор метрик приложений. Настройка мониторинга пользовательских приложений и создание собственных дашбордов."
 permalink: ru/user/monitoring/
 lang: ru
 search: monitoring overview, cluster monitoring, metrics collection, monitoring setup, observability, обзор мониторинга, мониторинг кластера, сбор метрик, наблюдаемость
