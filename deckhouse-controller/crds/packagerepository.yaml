@@ -60,8 +60,8 @@ spec:
                     description: Certificate authority data for TLS verification.
                     type: string
                   credentials:
-                    description: Login password from the repository in user:password
-                      format (base64)
+                    description: Username and password for authentication in username:password format,
+                      encoded in Base64.
                     type: string
                   dockerCfg:
                     description: Docker configuration for authentication.
