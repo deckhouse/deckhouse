@@ -49,9 +49,9 @@ func init() {
 }
 
 const (
-	NodeGroupLabel                  = "node.deckhouse.io/group"
-	ConfigurationChecksumAnnotation = "node.deckhouse.io/configuration-checksum"
-	MachineNamespace                = "d8-cloud-instance-manager"
+	NodeGroupLabel                   = "node.deckhouse.io/group"
+	ConfigurationChecksumAnnotation  = "node.deckhouse.io/configuration-checksum"
+	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
 	CloudProviderSecretName          = "d8-node-manager-cloud-provider"
 	DisruptiveApprovalAnnotation     = "update.node.deckhouse.io/disruption-required"
