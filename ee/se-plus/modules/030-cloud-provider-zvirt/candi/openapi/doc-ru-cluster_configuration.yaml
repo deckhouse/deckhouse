@@ -58,6 +58,30 @@ apiVersions:
                 type: string
                 description: |
                   ID домена хранения.
+              customNetworkConfig:
+                type: boolean
+                description: |
+                  Использовать ручную конфиграцию сетевых интерфейсов для узлов
+              networkInterfaceName:
+                type: string
+                description: |
+                  Название сетевого интерфейса (для ручной конфигурации сети)
+              networkInterfaceAddress:
+                type: array
+                items:
+                  type: string
+                description: |
+                  Массив IP-адресов для нод (для ручной конфигурации сети)
+              networkInterfaceNetmask:
+                type: array
+                items:
+                  type: string
+                description: |
+                  Массив масок подсети для нод (для ручной конфигурации сети)
+              networkInterfaceGateway:
+                type: string
+                description: |
+                  Шлюз по умолчанию (для ручной конфигурации сети)
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
@@ -131,4 +155,3 @@ apiVersions:
             type: boolean
             description:  Установите значение `true`, если Zvirt имеет самоподписанный сертификат.
             x-doc-default: false
-

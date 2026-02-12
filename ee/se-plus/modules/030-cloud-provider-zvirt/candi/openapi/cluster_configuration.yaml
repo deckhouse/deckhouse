@@ -154,14 +154,6 @@ apiVersions:
                 description: |
                   Network interface gateway (for custom network configuration)
                 example: 192.168.1.1
-              networkInterfaceDNS:
-                type: array
-                items:
-                  type: string
-                uniqueItems: true
-                description: |
-                  A set of DNS (for custom network configuration)
-                example:  ["8.8.8.8", "8.8.4.4"]
       nodeGroups:
         type: array
         description: |
