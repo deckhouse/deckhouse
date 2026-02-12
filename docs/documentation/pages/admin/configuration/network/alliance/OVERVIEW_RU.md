@@ -1,5 +1,5 @@
 ---
-title: "Межкластерное взаимодействие (альянс)"
+title: "Межкластерное взаимодействие (альянс кластеров)"
 permalink: ru/admin/configuration/network/alliance/
 lang: ru
 ---
