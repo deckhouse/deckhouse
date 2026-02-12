@@ -10,6 +10,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
+{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
+{{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
@@ -105,8 +108,6 @@ apiServer:
     {{- end }}
     {{- end }}
   extraArgs:
-    - name: anonymous-auth
-      value: "false"
     - name: api-audiences
       value: {{ $audiences | join "," }}
     - name: service-account-issuer
