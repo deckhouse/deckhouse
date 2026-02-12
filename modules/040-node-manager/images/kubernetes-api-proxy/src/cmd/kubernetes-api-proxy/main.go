@@ -108,14 +108,15 @@ func main() {
 	cancel()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
 
 	_ = srv.Shutdown(shutdownCtx)
 	if err := lb.Shutdown(); err != nil {
 		logger.Error("shutdown error", slog.String("error", err.Error()))
+		shutdownCancel()
 		os.Exit(1)
 	}
 
+	shutdownCancel()
 	logger.Info("stopped")
 }
 

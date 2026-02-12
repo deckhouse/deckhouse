@@ -63,7 +63,7 @@ func (u *Upstream) HealthCheck(ctx context.Context) (Tier, error) {
 // response. A non-200 status is treated as an error.
 func (u *Upstream) healthCheck(ctx context.Context) error {
 	url := "https://" + u.Addr + "/readyz"
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}

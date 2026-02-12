@@ -30,11 +30,11 @@ type fileWatcher struct {
 	ticker   *time.Ticker
 }
 
-func newFileWatcher(filePath string, onChange func([]*Upstream)) (*fileWatcher, error) {
+func newFileWatcher(filePath string, onChange func([]*Upstream)) *fileWatcher {
 	return &fileWatcher{
 		filePath: filePath,
 		onChange: onChange,
-	}, nil
+	}
 }
 
 func (fw *fileWatcher) Start(ctx context.Context) {

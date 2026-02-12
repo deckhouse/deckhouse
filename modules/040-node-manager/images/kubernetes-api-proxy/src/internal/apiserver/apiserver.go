@@ -33,9 +33,7 @@ import (
 // The data path is implemented by the loadbalancer package (tcpproxy-based),
 // while upstream health is tracked via HTTP /readyz probes.
 type LoadBalancer struct {
-	lb                 loadbalancer.Balancer
-	healthCheckOptions []upstream.ListOption
-
+	lb       loadbalancer.Balancer
 	endpoint string
 }
 

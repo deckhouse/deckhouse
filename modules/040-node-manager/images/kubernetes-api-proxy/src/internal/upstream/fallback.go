@@ -43,16 +43,12 @@ func WithUpstreamsFromArgs(upstreamsFromArgs []string) FallbackListOption {
 
 func WithFileWatcher(filePath string) FallbackListOption {
 	return func(l *FallbackList) error {
-		watcher, err := newFileWatcher(
+		watcher := newFileWatcher(
 			filePath,
 			func(upstreams []*Upstream) {
 				l.Reconcile(upstreams, false)
 			},
 		)
-
-		if err != nil {
-			return err
-		}
 
 		l.watcher = watcher
 
