@@ -5,21 +5,28 @@ permalink: en/virtualization-platform/documentation/admin/platform-management/vi
 
 ## Images
 
-The [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource is used to load virtual machine images into the intra-cluster storage. After that it can be used to create virtual machine disks. It is available in all cluster namespaces and projects.
+The [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
+
+{% alert level="warning" %}
+Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
+{% endalert %}
+
+When connected to a virtual machine, the image is accessed in read-only mode.
 
 The image creation process includes the following steps:
 
-1. The user creates a [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage) resource.
-1. Once created, the image is automatically uploaded from the source specified in the specification to the storage (DVCR).
-1. Once the upload is complete, the resource becomes available for disk creation.
+- The user creates a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource.
+- After creation, the image is automatically downloaded from the source specified in the specification to DVCR or PVC storage, depending on the type.
+- Once the download is complete, the resource becomes available for disk creation.
 
 There are different types of images:
 
-- **ISO image**: An installation image used for the initial installation of an operating system (OS). Such images are released by OS vendors and are used for installation on physical and virtual servers.
-- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. You can obtain pre-configured images from the distribution developers' resources or create them manually.
+- **ISO image**: an installation image used for the initial installation of an operating system. Such images are released by OS vendors and are used for installation on physical and virtual servers.
+- **Preinstalled disk image**: contains an already installed and configured operating system ready for use after the virtual machine is created. Ready images can be obtained from the distribution developers' resources or created by yourself.
 
 Examples of resources for obtaining virtual machine images:
 
+<a id="image-resources-table"></a>
 | Distribution                                                                      | Default user.             |
 | --------------------------------------------------------------------------------- | ------------------------- |
 | [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
@@ -31,14 +38,14 @@ Examples of resources for obtaining virtual machine images:
 
 The following preinstalled image formats are supported:
 
-- `qcow2`
-- `raw`
-- `vmdk`
-- `vdi`
+- qcow2
+- raw
+- vmdk
+- vdi
 
-Image files can also be compressed with one of the following compression algorithms: `gz`, `xz`.
+Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
-Once a resource is created, the image type and size are automatically determined, and this information is reflected in the resource status.
+Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.
 
 The image status shows two sizes:
 
@@ -50,11 +57,18 @@ When creating a disk from an image, set the disk size to `UNPACKEDSIZE` or large
 If the size is not specified, the disk will be created with a size equal to `UNPACKEDSIZE`.
 {% endalert %}
 
-Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the `curl` utility.
+Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the curl utility.
 
 Images can be created from other images and virtual machine disks.
 
-For a full description of the ClusterVirtualImage resource configuration parameters, refer to [Custom Resources](/modules/virtualization/cr.html#clustervirtualimage).
+Project image two storage options are supported:
+
+- `ContainerRegistry` - the default type in which the image is stored in `DVCR`.
+- `PersistentVolumeClaim` - the type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
+
+{% alert level="warning" %}
+Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
+{% endalert %}
 
 ## Increasing the size of DVCR
 
