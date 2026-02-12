@@ -236,44 +236,67 @@ v1 → v1alpha1/v1alpha2:
 ## Project Structure
 
 ```
-node-controller/
+node-controller/src/
 ├── api/deckhouse.io/
-│   ├── v1/                         # Hub version (storage)
+│   ├── v1/                                    # Hub version (storage)
 │   │   ├── groupversion_info.go
-│   │   ├── nodegroup_types.go      # Type definitions with all fields
-│   │   ├── nodegroup_conversion.go # Hub() marker
+│   │   ├── nodegroup_types.go                 # Type definitions with all fields
+│   │   ├── nodegroup_conversion.go            # Hub() marker
 │   │   └── zz_generated.deepcopy.go
-│   ├── v1alpha1/                   # Spoke version
+│   ├── v1alpha1/                              # Spoke version
 │   │   ├── doc.go
 │   │   ├── groupversion_info.go
 │   │   ├── nodegroup_types.go
-│   │   ├── nodegroup_conversion.go # ConvertTo/ConvertFrom
-│   │   ├── conversion.go          # Custom field mappings
+│   │   ├── nodegroup_conversion.go            # ConvertTo/ConvertFrom
+│   │   ├── conversion.go                      # Custom field mappings
 │   │   └── zz_generated.deepcopy.go
-│   └── v1alpha2/                   # Spoke version (+ NotManaged, ContainerdV2)
-│       └── ...
+│   └── v1alpha2/                              # Spoke version (+ NotManaged, ContainerdV2)
+│       ├── doc.go
+│       ├── groupversion_info.go
+│       ├── nodegroup_types.go
+│       ├── nodegroup_conversion.go
+│       └── zz_generated.deepcopy.go
 ├── cmd/
-│   └── main.go                     # Entry point, manager setup
+│   └── main.go                                # Entry point, manager setup
 ├── internal/
 │   ├── controller/
-│   │   ├── register_controller.go          # Auto-registration via init()
-│   │   └── nodegroupstatus/                # Status reconciler package
-│   │       ├── controller.go               # Main reconciler logic
-│   │       ├── controller_test.go          # Unit tests
-│   │       └── README.md                   # Package documentation
+│   │   ├── register_controller.go             # Registry + SetupAll for auto-registration
+│   │   ├── nodegroup_status_controller.go     # Status reconciler (init() auto-registers)
+│   │   └── nodegroup_status_controller_test.go
 │   └── webhook/
-│       ├── nodegroup_webhook.go             # Validation webhook (17 checks)
-│       └── nodegroup_conversion_handler.go  # Conversion webhook
+│       ├── nodegroup_webhook.go               # Validation webhook (17 checks)
+│       ├── nodegroup_webhook_test.go
+│       ├── nodegroup_conversion_handler.go    # Conversion webhook
+│       └── nodegroup_conversion_handler_test.go
 ├── docs/
-│   ├── conversion-migration.md
 │   └── hooks-migration.md
 ├── hack/
 │   └── boilerplate.go.txt
 ├── go.mod
 ├── go.sum
 ├── Makefile
-└── PROJECT
+├── PROJECT
+└── README.md
 ```
+
+### Adding a New Controller
+
+To add a new controller, create a file in `internal/controller/` with an `init()` function:
+
+```go
+// internal/controller/my_new_controller.go
+package controller
+
+func init() {
+    Register("MyNew", SetupMyNewController)
+}
+
+func SetupMyNewController(mgr ctrl.Manager) error {
+    return (&MyNewReconciler{...}).SetupWithManager(mgr)
+}
+```
+
+No changes to `main.go` required — all controllers in the `controller` package auto-register via `init()`.
 
 ## Building
 
