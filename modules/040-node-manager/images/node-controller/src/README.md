@@ -256,7 +256,11 @@ node-controller/
 │   └── main.go                     # Entry point, manager setup
 ├── internal/
 │   ├── controller/
-│   │   └── nodegroup_status_controller.go  # Status reconciler
+│   │   ├── register_controller.go          # Auto-registration via init()
+│   │   └── nodegroupstatus/                # Status reconciler package
+│   │       ├── controller.go               # Main reconciler logic
+│   │       ├── controller_test.go          # Unit tests
+│   │       └── README.md                   # Package documentation
 │   └── webhook/
 │       ├── nodegroup_webhook.go             # Validation webhook (17 checks)
 │       └── nodegroup_conversion_handler.go  # Conversion webhook
