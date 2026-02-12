@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Amazon Web Services
 permalink: ru/admin/integrations/public/amazon/layout.html
 lang: ru
 ---

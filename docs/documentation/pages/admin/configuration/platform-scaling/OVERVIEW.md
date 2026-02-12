@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Platform scaling and node management"
 permalink: en/admin/configuration/platform-scaling/overview.html
 description: "Scale and manage Deckhouse Kubernetes Platform infrastructure with control plane and node management. High availability, auto-scaling, and cluster architecture optimization."
 ---

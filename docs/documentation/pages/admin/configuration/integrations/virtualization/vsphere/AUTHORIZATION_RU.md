@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в VMware vSphere
 permalink: ru/admin/integrations/virtualization/vsphere/authorization.html
 lang: ru
 ---

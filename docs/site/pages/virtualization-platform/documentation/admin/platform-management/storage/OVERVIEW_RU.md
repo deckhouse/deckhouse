@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Настройка хранилищ"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/storage/
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: Интеграция с облаком DVP
+title: Интеграция с облаком Deckhouse Virtualization Platform
 permalink: ru/admin/integrations/virtualization/dvp/services.html
 lang: ru
 ---

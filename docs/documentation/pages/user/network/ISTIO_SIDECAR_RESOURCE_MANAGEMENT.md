@@ -1,5 +1,6 @@
 ---
 title: "Configuring resources for istio-proxy sidecars"
+description: "Managing istio-proxy sidecar resources in Deckhouse Kubernetes Platform. Configuring CPU and memory limits via sidecar.istio.io annotations for individual workloads."
 permalink: en/user/network/istio-sidecar-resource-management.html
 ---
 

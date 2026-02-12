@@ -1,5 +1,6 @@
 ---
 title: "Web interface of the platform"
+description: "Deckhouse Kubernetes Platform web interface. Monitoring, parameter configuration, node and module management, security and network configuration."
 permalink: en/user/web/ui.html
 search: web UI, web interface
 ---

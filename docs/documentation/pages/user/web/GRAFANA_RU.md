@@ -1,5 +1,6 @@
 ---
-title: "Grafana"
+title: "Веб-интерфейс Grafana"
+description: "Веб-интерфейс системы мониторинга Grafana в Deckhouse Kubernetes Platform. Дашборды для визуализации метрик кластера, узлов, подов, сетевого взаимодействия и безопасности."
 permalink: ru/user/web/grafana.html
 lang: ru
 search: grafana, monitoring interface, dashboards, metrics visualization, web interface, grafana, интерфейс мониторинга, дашборды, визуализация метрик, веб-интерфейс

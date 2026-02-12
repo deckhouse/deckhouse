@@ -1,5 +1,6 @@
 ---
 title: "Активация Istio для приложений"
+description: "Активация Istio для приложений в Deckhouse Kubernetes Platform. Добавление sidecar-контейнеров через sidecar-injector. Использование лейблов istio-injection и аннотаций для управления трафиком."
 permalink: ru/user/network/app_istio_activation.html
 lang: ru
 ---

@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Incoming traffic balancing"
 permalink: en/admin/configuration/network/ingress/
 description: "Configure ingress load balancing in Deckhouse Kubernetes Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
 ---

@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: High reliability and availability
 permalink: en/virtualization-platform/documentation/admin/platform-management/high-reliability-and-availability/
 description: High reliability and availability
 lang: en
