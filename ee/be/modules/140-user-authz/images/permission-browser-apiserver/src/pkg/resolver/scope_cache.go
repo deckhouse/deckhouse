@@ -44,10 +44,10 @@ type ResourceScopeCache struct {
 // on the next refresh cycle.
 func NewResourceScopeCache(discoveryClient discovery.DiscoveryInterface) *ResourceScopeCache {
 	c := &ResourceScopeCache{
-		discoveryClient: discoveryClient,
-		refreshInterval: defaultRefreshInterval,
+		discoveryClient:   discoveryClient,
+		refreshInterval:   defaultRefreshInterval,
 		bootstrapInterval: bootstrapRefreshInterval,
-		scopeMap:        make(map[string]bool),
+		scopeMap:          make(map[string]bool),
 	}
 
 	// Perform initial population

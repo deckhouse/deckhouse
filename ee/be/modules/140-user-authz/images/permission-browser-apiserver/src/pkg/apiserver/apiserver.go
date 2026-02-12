@@ -16,8 +16,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/apiserver/pkg/server/healthz"
 	genericapiserver "k8s.io/apiserver/pkg/server"
+	"k8s.io/apiserver/pkg/server/healthz"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -241,12 +241,14 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		klog.Info("Resource scope cache initialized and refresh loop started")
 
 		// Ensure readiness fails until the cache has been populated at least once.
-		genericServer.AddReadyzChecks(healthz.NamedCheck("resource-scope-cache", func(_ *http.Request) error {
+		if err := genericServer.AddReadyzChecks(healthz.NamedCheck("resource-scope-cache", func(_ *http.Request) error {
 			if !scopeCache.HasData() {
 				return fmt.Errorf("resource scope cache is empty")
 			}
 			return nil
-		}))
+		})); err != nil {
+			klog.Warningf("Failed to add resource-scope-cache readyz check: %v", err)
+		}
 	}
 
 	// Create namespace resolver for AccessibleNamespace API
