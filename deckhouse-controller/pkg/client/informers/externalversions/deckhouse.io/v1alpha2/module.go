@@ -58,13 +58,25 @@ func NewFilteredModuleInformer(client versioned.Interface, resyncPeriod time.Dur
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha2().Modules().List(context.TODO(), options)
+				return client.DeckhouseV1alpha2().Modules().List(context.Background(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.DeckhouseV1alpha2().Modules().Watch(context.TODO(), options)
+				return client.DeckhouseV1alpha2().Modules().Watch(context.Background(), options)
+			},
+			ListWithContextFunc: func(ctx context.Context, options v1.ListOptions) (runtime.Object, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha2().Modules().List(ctx, options)
+			},
+			WatchFuncWithContext: func(ctx context.Context, options v1.ListOptions) (watch.Interface, error) {
+				if tweakListOptions != nil {
+					tweakListOptions(&options)
+				}
+				return client.DeckhouseV1alpha2().Modules().Watch(ctx, options)
 			},
 		},
 		&apisdeckhouseiov1alpha2.Module{},
