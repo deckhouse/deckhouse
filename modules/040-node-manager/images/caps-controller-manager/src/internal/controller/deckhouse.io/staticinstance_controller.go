@@ -17,16 +17,18 @@ limitations under the License.
 package controller
 
 import (
+	"caps-controller-manager/internal/controller"
+	"caps-controller-manager/internal/event"
+	"caps-controller-manager/internal/scope"
 	"context"
 	"fmt"
 
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -35,9 +37,6 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/controller"
-	"caps-controller-manager/internal/event"
-	"caps-controller-manager/internal/scope"
 )
 
 // StaticInstanceReconciler reconciles a StaticInstance object
@@ -99,20 +98,29 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
 		logger.Error(err, "failed to load SSHCredentials")
-		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
-			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
+		if status == nil || status.Status != metav1.ConditionFalse || status.Reason != err.Error() {
+			conditions.Set(instanceScope.Instance, metav1.Condition{
+				Type:   infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status: metav1.ConditionFalse,
+				Message: err.Error(),
+			})
 		}
+
 		if instanceScope.Instance.Status.CurrentStatus == nil || instanceScope.Instance.Status.CurrentStatus.Phase == "" {
 			instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhaseError)
 		}
+
 		err2 := instanceScope.Patch(ctx)
 		if err2 != nil {
 			return ctrl.Result{}, errors.Wrap(err2, "failed to set StaticInstance to Error phase")
 		}
 		return ctrl.Result{}, errors.Wrap(err, "failed to load SSHCredentials")
 	} else {
-		if status == nil || status.Status != corev1.ConditionTrue {
-			conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
+		if status == nil || status.Status != metav1.ConditionTrue {
+			conditions.Set(instanceScope.Instance, metav1.Condition{
+				Type:   infrav1.StaticInstanceWaitingForCredentialsRefReason,
+				Status: metav1.ConditionTrue,
+			})
 		}
 		err = instanceScope.Patch(ctx)
 		if err != nil {
@@ -163,8 +171,13 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 	if (instanceScope.Instance.Status.CurrentStatus == nil ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
-		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
-		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
+		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == metav1.ConditionTrue {
+
+		conditions.Set(instanceScope.Instance, metav1.Condition{
+			Type:    infrav1.StaticInstanceWaitingForCredentialsRefReason,
+			Status:  metav1.ConditionTrue,
+		})
+
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)
@@ -173,6 +186,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 		}
 
 		instanceScope.Logger.Info("StaticInstance is pending")
+
 	}
 
 	if instanceScope.MachineScope != nil {

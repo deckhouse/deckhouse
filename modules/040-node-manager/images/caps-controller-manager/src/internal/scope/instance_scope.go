@@ -17,19 +17,19 @@ limitations under the License.
 package scope
 
 import (
+	"caps-controller-manager/internal/event"
 	"context"
 	"time"
 
 	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
 	k8sClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/event"
 )
 
 // InstanceScope defines a scope defined around an instance and its machine.
@@ -132,18 +132,10 @@ func (i *InstanceScope) SetPhase(phase deckhousev1.StaticInstanceStatusCurrentSt
 
 // Patch updates the StaticInstance resource.
 func (i *InstanceScope) Patch(ctx context.Context) error {
-	conditions.SetSummary(i.Instance,
-		conditions.WithConditions(
-			infrav1.StaticInstanceBootstrapSucceededCondition,
-		),
-		conditions.WithStepCounterIf(i.Instance.ObjectMeta.DeletionTimestamp.IsZero()),
-		conditions.WithStepCounter(),
-	)
-
 	err := i.PatchHelper.Patch(
 		ctx,
 		i.Instance,
-		patch.WithOwnedConditions{Conditions: []clusterv1.ConditionType{
+		patch.WithOwnedConditions{Conditions: []string{
 			clusterv1.ReadyCondition,
 			infrav1.StaticInstanceAddedToNodeGroupCondition,
 			infrav1.StaticInstanceBootstrapSucceededCondition,
@@ -161,7 +153,11 @@ func (i *InstanceScope) ToPending(ctx context.Context) error {
 	i.Instance.Status.CurrentStatus = nil
 	i.setLoggerContext()
 
-	conditions.MarkFalse(i.Instance, infrav1.StaticInstanceBootstrapSucceededCondition, infrav1.StaticInstanceWaitingForNodeRefReason, clusterv1.ConditionSeverityInfo, "")
+	conditions.Set(i.Instance, metav1.Condition{
+		Type:   infrav1.StaticInstanceBootstrapSucceededCondition,
+		Status: metav1.ConditionFalse,
+		Reason: infrav1.StaticInstanceWaitingForNodeRefReason,
+	})
 
 	i.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 

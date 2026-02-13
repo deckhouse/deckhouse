@@ -46,23 +46,37 @@ func (r *StaticInstance) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 ///+kubebuilder:webhook:path=/mutate-deckhouse-io-v1alpha1-staticinstance,mutating=true,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=create;update,versions=v1alpha1,name=mstaticinstance.deckhouse.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &StaticInstance{}
+type StaticInstanceCustomDefaulter struct{}
+
+var _ webhook.CustomDefaulter = &StaticInstanceCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticInstance) Default() {
-	staticinstancelog.Info("default", "name", r.Name)
+func (r *StaticInstanceCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	staticInstance, ok := obj.(*StaticInstance)
+	if !ok {
+		return fmt.Errorf("expected an StaticInstance object but got %T", obj)
+	}
+
+	staticinstancelog.Info("default", "name", staticInstance.GetName())
+
+	return nil
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-deckhouse-io-v1alpha1-staticinstance,mutating=false,failurePolicy=fail,sideEffects=None,groups=deckhouse.io,resources=staticinstances,verbs=update;delete,versions=v1alpha1,name=vstaticinstance.deckhouse.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &StaticInstance{}
+type StaticInstanceCustomValidator struct{}
+
+var _ webhook.CustomValidator = &StaticInstanceCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
-	staticinstancelog.Info("validate create", "name", r.Name)
+func (r *StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	staticInstance, ok := obj.(*StaticInstance)
+	if !ok {
+		return nil, fmt.Errorf("expected an StaticInstance object but got %T", obj)
+	}
 
-	ctx := context.Background()
+	staticinstancelog.Info("validate create", "name", staticInstance.GetName())
 
 	mgr, err := ctrl.GetConfig()
 	if err != nil {
@@ -74,7 +88,7 @@ func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
 	}
 
-	if err := r.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
+	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, cli); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 
@@ -82,16 +96,25 @@ func (r *StaticInstance) ValidateCreate() (admission.Warnings, error) {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	staticinstancelog.Info("validate update", "name", r.Name)
+func (r *StaticInstanceCustomValidator) ValidateUpdate(_ context.Context, new, old runtime.Object) (admission.Warnings, error) {
+	staticInstance, ok := new.(*StaticInstance)
+	if !ok {
+		return nil, fmt.Errorf("expected an StaticInstance object but got %T", new)
+	}
 
-	oldStaticInstance := old.(*StaticInstance)
-	if oldStaticInstance.Spec.Address != r.Spec.Address {
+	staticinstancelog.Info("validate update", "name", staticInstance.GetName())
+
+	oldStaticInstance, ok := old.(*StaticInstance)
+	if !ok {
+		return nil, fmt.Errorf("expected an StaticInstance object but got %T", old)
+	}
+
+	if oldStaticInstance.Spec.Address != staticInstance.Spec.Address {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), "StaticInstance address is immutable")
 	}
 
-	_, ok := r.Annotations[SkipBootstrapPhaseAnnotation]
-	if ok && r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending {
+	_, ok = staticInstance.Annotations[SkipBootstrapPhaseAnnotation]
+	if ok && staticInstance.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending {
 		return nil, field.Forbidden(field.NewPath("metadata", "annotations"), fmt.Sprintf("Annotation '%s' can be set only when StaticInstance is in Pending phase", SkipBootstrapPhaseAnnotation))
 	}
 
@@ -99,16 +122,21 @@ func (r *StaticInstance) ValidateUpdate(old runtime.Object) (admission.Warnings,
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticInstance) ValidateDelete() (admission.Warnings, error) {
-	staticinstancelog.Info("validate delete", "name", r.Name)
+func (r *StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
+	staticInstance, ok := obj.(*StaticInstance)
+	if !ok {
+		return nil, fmt.Errorf("expected an StaticInstance object but got %T", obj)
+	}
 
-	if r.Status.CurrentStatus == nil ||
-		(r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhaseError &&
-			r.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending) {
+	staticinstancelog.Info("validate delete", "name", staticInstance.GetName())
+
+	if staticInstance.Status.CurrentStatus == nil ||
+		(staticInstance.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhaseError &&
+			staticInstance.Status.CurrentStatus.Phase != StaticInstanceStatusCurrentStatusPhasePending) {
 		return nil, apierrors.NewForbidden(schema.GroupResource{
-			Group:    r.GroupVersionKind().Group,
+			Group:    staticInstance.GroupVersionKind().Group,
 			Resource: "staticinstances",
-		}, r.Name, errors.New(`if you need to delete a StaticInstance that is not Pending or Error, you need to add the label '"node.deckhouse.io/allow-bootstrap": "false"' to the StaticInstance, after which you need to wait until the StaticInstance status becomes 'Pending'. Do not forget to decrease the 'NodeGroup.spec.staticInstances.count' field by 1, if needed`))
+		}, staticInstance.Name, errors.New(`if you need to delete a StaticInstance that is not Pending or Error, you need to add the label '"node.deckhouse.io/allow-bootstrap": "false"' to the StaticInstance, after which you need to wait until the StaticInstance status becomes 'Pending'. Do not forget to decrease the 'NodeGroup.spec.staticInstances.count' field by 1, if needed`))
 	}
 
 	return nil, nil

@@ -17,6 +17,11 @@ limitations under the License.
 package controller
 
 import (
+	"caps-controller-manager/internal/client"
+	"caps-controller-manager/internal/controller"
+	"caps-controller-manager/internal/event"
+	"caps-controller-manager/internal/pool"
+	"caps-controller-manager/internal/scope"
 	"context"
 	"fmt"
 	"time"
@@ -24,11 +29,12 @@ import (
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -41,11 +47,6 @@ import (
 
 	deckhousev1 "caps-controller-manager/api/deckhouse.io/v1alpha2"
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
-	"caps-controller-manager/internal/client"
-	"caps-controller-manager/internal/controller"
-	"caps-controller-manager/internal/event"
-	"caps-controller-manager/internal/pool"
-	"caps-controller-manager/internal/scope"
 )
 
 const (
@@ -136,7 +137,11 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			}
 		}
 
-		conditions.MarkFalse(staticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.ClusterOrResourcePausedReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.Set(staticMachine, metav1.Condition{
+			Type:   infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason: infrav1.ClusterOrResourcePausedReason,
+			Status: metav1.ConditionFalse,
+		})
 
 		return ctrl.Result{}, nil
 	}
@@ -183,10 +188,15 @@ func (r *StaticMachineReconciler) reconcileNormal(
 		}
 	}
 
-	if !machineScope.ClusterScope.Cluster.Status.InfrastructureReady {
+	if !conditions.IsTrue(machineScope.ClusterScope.Cluster, clusterv1.InfrastructureReadyCondition) {
 		machineScope.Logger.V(1).Info("Cluster infrastructure is not ready yet")
 
-		conditions.MarkFalse(machineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.StaticMachineWaitingForClusterInfrastructureReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.Set(machineScope.StaticMachine, metav1.Condition{
+			Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:  infrav1.StaticMachineWaitingForClusterInfrastructureReason,
+			Status:  metav1.ConditionFalse,
+			Message: "Cluster infrastructure is not ready yet",
+		})
 
 		return ctrl.Result{}, nil
 	}
@@ -194,7 +204,12 @@ func (r *StaticMachineReconciler) reconcileNormal(
 	if machineScope.Machine.Spec.Bootstrap.DataSecretName == nil {
 		machineScope.Logger.V(1).Info("Bootstrap Data Secret not available yet")
 
-		conditions.MarkFalse(machineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.StaticMachineWaitingForBootstrapDataSecretReason, clusterv1.ConditionSeverityInfo, "")
+		conditions.Set(machineScope.StaticMachine, metav1.Condition{
+			Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
+			Reason:  infrav1.StaticMachineWaitingForBootstrapDataSecretReason,
+			Status:  metav1.ConditionFalse,
+			Message: "Bootstrap Data Secret not available yet",
+		})
 
 		return ctrl.Result{}, nil
 	}
@@ -211,7 +226,12 @@ func (r *StaticMachineReconciler) reconcileNormal(
 
 			r.Recorder.SendWarningEvent(machineScope.StaticMachine, machineScope.StaticMachine.Labels["node-group"], "StaticInstanceSelectionFailed", "No available StaticInstance")
 
-			conditions.MarkFalse(machineScope.StaticMachine, infrav1.StaticMachineStaticInstanceReadyCondition, infrav1.StaticMachineStaticInstancesUnavailableReason, clusterv1.ConditionSeverityInfo, "")
+			conditions.Set(machineScope.StaticMachine, metav1.Condition{
+				Type:    infrav1.StaticMachineStaticInstanceReadyCondition,
+				Reason:  infrav1.StaticMachineStaticInstancesUnavailableReason,
+				Status:  metav1.ConditionFalse,
+				Message: "No available StaticInstance",
+			})
 
 			return ctrl.Result{RequeueAfter: RequeueForStaticInstancePending}, nil
 		}
@@ -291,13 +311,8 @@ func (r *StaticMachineReconciler) cleanup(
 		}
 
 		// Cluster API controller is a raceful service. We must fix bug https://github.com/kubernetes-sigs/cluster-api/issues/7237.
-		if instanceScope.MachineScope.Machine.Status.NodeRef == nil {
-			instanceScope.MachineScope.Machine.Status.NodeRef = &corev1.ObjectReference{
-				APIVersion: instanceScope.Instance.Status.NodeRef.APIVersion,
-				Kind:       instanceScope.Instance.Status.NodeRef.Kind,
-				Name:       instanceScope.Instance.Status.NodeRef.Name,
-				UID:        instanceScope.Instance.Status.NodeRef.UID,
-			}
+		if instanceScope.MachineScope.Machine.Status.NodeRef.Name == "" {
+			instanceScope.MachineScope.Machine.Status.NodeRef.Name = instanceScope.Instance.Status.NodeRef.Name
 		}
 
 		if instanceScope.MachineScope.Machine.Annotations == nil {
@@ -308,8 +323,8 @@ func (r *StaticMachineReconciler) cleanup(
 			instanceScope.MachineScope.Machine.Annotations[clusterv1.PreTerminateDeleteHookAnnotationPrefix] = "true"
 		}
 
-		cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.PreTerminateDeleteHookSucceededCondition)
-		if cond != nil && cond.Status == corev1.ConditionFalse {
+		cond := conditions.Get(instanceScope.MachineScope.Machine, clusterv1.DeletingCondition)
+		if cond != nil && cond.Status == metav1.ConditionTrue {
 			err = r.HostClient.Cleanup(ctx, instanceScope)
 			if err != nil {
 				instanceScope.Logger.Error(err, "failed to clean up StaticInstance")
