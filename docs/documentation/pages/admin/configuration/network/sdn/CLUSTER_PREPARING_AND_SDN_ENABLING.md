@@ -58,7 +58,7 @@ In this example, each cluster node has two network interfaces: eth0 (DKP local n
 
 ### Marking interfaces for organizing additional software-defined networks
 
-To enable the configuration of [additional software-defined networks](), label the dedicated interfaces that are planned to be used for network creation (in the example above, eth1) with an appropriate label:
+To enable the configuration of [additional software-defined networks](#configuring-and-connecting-additional-virtual-networks-for-use-in-application-pods), label the dedicated interfaces that are planned to be used for network creation (in the example above, eth1) with an appropriate label:
 
 ```shell
 d8 k label nodenetworkinterface virtlab-ap-0-nic-1c61b4a68c2a nic-group=extra
