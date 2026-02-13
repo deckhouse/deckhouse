@@ -1,6 +1,7 @@
 {{- define "authenticationConfiguration" }}
 apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
+{{- if .apiserver.oidcIssuerURL }}
 jwt:
 - issuer:
     url: {{ .apiserver.oidcIssuerURL }}
@@ -32,6 +33,7 @@ jwt:
     message: 'username cannot used reserved system: prefix'
   - expression: "user.groups.all(group, !group.startsWith('system:'))"
     message: 'groups cannot used reserved system: prefix'
+{{- end }}
 anonymous:
   enabled: true
   conditions:
