@@ -130,6 +130,8 @@ libs/libnl-libnl3_2_25: "sha256:0b7ec20c37f9396d0582de349fdcff40a666d5c63adaf91a
 libs/libnl: "sha256:0b7ec20c37f9396d0582de349fdcff40a666d5c63adaf91a1165590e9b037696" # from: builder/scratch
 libs/libnvme: "sha256:0a5aec71870f12fa9e41c40f11ac7cdeb0c06ea4627b5d18aacb3c8db1210511" # from: builder/scratch
 libs/libnvme-v1.16.1: "sha256:0a5aec71870f12fa9e41c40f11ac7cdeb0c06ea4627b5d18aacb3c8db1210511" # from: builder/scratch
+libs/libpcap-pwru: "sha256:4a9e0f2b2bc597b813db37bd5204c51079c1000afe709b125a96867b2a293df1" # from: builder/scratch
+libs/libpcap-pwru-v1.0.11: "sha256:4a9e0f2b2bc597b813db37bd5204c51079c1000afe709b125a96867b2a293df1" # from: builder/scratch
 libs/libpq-REL_17_5: "sha256:165ad1257a1099ce4dce141b6235aa6f881781ffeacdf2540622058cf7d7809a" # from: builder/scratch
 libs/libpq: "sha256:165ad1257a1099ce4dce141b6235aa6f881781ffeacdf2540622058cf7d7809a" # from: builder/scratch
 libs/libpsl-0.21.5: "sha256:94b7ae5f2586af497bc9b2d192c5e25137d1a8a22d7bd80c7d72b453cfe5ce2e" # from: builder/scratch
@@ -280,8 +282,8 @@ tools/openssl-3.6.0: "sha256:896458be79e46e65908591d42695a913901ab62ec6a283be84e
 tools/openssl: "sha256:896458be79e46e65908591d42695a913901ab62ec6a283be84e34532638c9835" # from: builder/scratch
 tools/procps: "sha256:ed974c745caa6cb87df1b37955f83316b6a5d3e20c8c027c3dcae8bfb2b260a2" # from: builder/scratch
 tools/procps-v4.0.5: "sha256:ed974c745caa6cb87df1b37955f83316b6a5d3e20c8c027c3dcae8bfb2b260a2" # from: builder/scratch
-tools/pwru: "sha256:a8c8c022d4a48896086b8d783dd8cbec353a35933c7acf428b5109a2da0aa81d" # from: builder/scratch
-tools/pwru-v1.0.10: "sha256:a8c8c022d4a48896086b8d783dd8cbec353a35933c7acf428b5109a2da0aa81d" # from: builder/scratch
+tools/pwru: "sha256:753348bdc1653faed2a6353794b8cfba0c5e3feb77d9cb25bdb2fe793ec7df89" # from: builder/scratch
+tools/pwru-v1.0.11: "sha256:753348bdc1653faed2a6353794b8cfba0c5e3feb77d9cb25bdb2fe793ec7df89" # from: builder/scratch
 tools/rpcbind-rpcbind-1_2_8: "sha256:46819a27144bb3f049b2e34dcec3beb90184ad366c78a8af5fa692b5039bf403" # from: builder/scratch
 tools/rpcbind: "sha256:46819a27144bb3f049b2e34dcec3beb90184ad366c78a8af5fa692b5039bf403" # from: builder/scratch
 tools/sed: "sha256:034af4bc8824a78eb576221a81393e0d2163eb641e120d0b65f1c4b84ecbdb6c" # from: builder/scratch
