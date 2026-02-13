@@ -5,10 +5,6 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.19.0
   name: extensionconfigs.runtime.cluster.x-k8s.io
-  labels:
-    heritage: deckhouse
-    module: node-manager
-    cluster.x-k8s.io/provider: cluster-api
 spec:
   group: runtime.cluster.x-k8s.io
   names:
