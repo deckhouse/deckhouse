@@ -28,18 +28,10 @@ index 15dacfa4df..495cc2c4ba 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..99c9d1e1f4 100644
+index 0142716855..9df37f8a9f 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
-@@ -27,6 +27,7 @@
- #include "proxy_hairpin.h"
- #include "fib.h"
- #include "srv6.h"
-+#include "ratelimit.h"
- 
- #define nodeport_nat_egress_ipv4_hook(ctx, ip4, info, tuple, l4_off, ext_err) CTX_ACT_OK
- #define nodeport_rev_dnat_ingress_ipv4_hook(ctx, ip4, tuple, tunnel_endpoint, src_sec_identity, \
-@@ -2679,6 +2680,64 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
+@@ -2679,6 +2679,64 @@ static __always_inline int nodeport_svc_lb4(struct __ctx_buff *ctx,
  				  ext_err);
  }
  
@@ -104,29 +96,13 @@ index 0142716855..99c9d1e1f4 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2716,6 +2775,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2716,6 +2774,19 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
 +	if (ip4->protocol == IPPROTO_ICMP) {
-+		printk("MEG: GOT NEW PACKET");
-+#if 0
-+		struct ratelimit_key rkey = {
-+			.usage = RATELIMIT_USAGE_ICMPV4,
-+		};
-+		/* Rate limit to 30 ICMP packets per second, burstable to 60 packets/s */
-+		struct ratelimit_settings settings = {
-+			.bucket_size = 60,
-+			.tokens_per_topup = 30,
-+			.topup_interval_ns = NSEC_PER_SEC,
-+		};
-+
-+		rkey.key.icmpv4.netdev_idx = ctx_get_ifindex(ctx);
-+		if (!ratelimit_check_and_take(&rkey, &settings))
-+			return DROP_RATE_LIMITED;
-+#endif
 +		if (!svc) {
 +			key.dport = 0;
 +			key.proto = 6;
@@ -140,28 +116,6 @@ index 0142716855..99c9d1e1f4 100644
  	if (svc) {
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
-diff --git a/bpf/lib/ratelimit.h b/bpf/lib/ratelimit.h
-index e170b73dfd..dd8197d782 100644
---- a/bpf/lib/ratelimit.h
-+++ b/bpf/lib/ratelimit.h
-@@ -8,6 +8,7 @@
- 
- #define RATELIMIT_USAGE_ICMPV6 1
- #define RATELIMIT_USAGE_EVENTS_MAP 2
-+#define RATELIMIT_USAGE_ICMPV4 3
- 
- struct ratelimit_key {
- 	__u32 usage;
-@@ -15,6 +16,9 @@ struct ratelimit_key {
- 		struct {
- 			__u32 netdev_idx;
- 		} icmpv6;
-+		struct {
-+			__u32 netdev_idx;
-+		} icmpv4;
- 	} key;
- };
- 
 diff --git a/daemon/cmd/daemon_main.go b/daemon/cmd/daemon_main.go
 index 96e484911f..99da9bda87 100644
 --- a/daemon/cmd/daemon_main.go
