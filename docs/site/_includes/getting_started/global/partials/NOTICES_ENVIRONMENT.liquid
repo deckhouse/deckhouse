@@ -86,6 +86,27 @@ After the virtual machine is started, the following services associated with thi
 * `cloud-init.service`.
 {%- endif %}
 {% endalert %}
+
+{%- if page.platform_code == "vcd" %}
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. DKP выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+{%- else %}
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+{%- endif %}
+{% endalert %}
+{%- endif %}
+
+{%- if page.platform_code == "vsphere" %}
+{% alert level="warning" %}
+{%- if page.lang == "ru" %}
+Отключите VMware Guest OS Customization (а также любые механизмы vApp/OS customization, если они применимы в вашей схеме) для шаблона и виртуальных машин кластера в vSphere. DKP выполняет первичную настройку узлов через `cloud-init` (datasource VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+{%- else %}
+Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DKP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
+{%- endif %}
+{% endalert %}
+{%- endif %}
+
 {% alert level="warning" %}
 {%- if page.lang == "ru" %}
 Провайдер поддерживает работу только с одним диском в шаблоне виртуальной машины. Убедитесь, что шаблон содержит только один диск.
