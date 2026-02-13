@@ -2016,7 +2016,7 @@ nodeplacement-update-dabk4   Completed   Evict   linux-vm            1m
 # Сбор отладочной информации для виртуальной машины 'linux-vm'
 d8 v collect-debug-info linux-vm > debug-info.tar.gz
 
-# Сбор отладочной информации для ВМ с указанием namespace
+# Сбор отладочной информации для ВМ с указанием неймспейса
 d8 v collect-debug-info linux-vm -n mynamespace > debug-info.tar.gz
 
 # Сбор отладочной информации для ВМ с указанием полного имени (name.namespace)
