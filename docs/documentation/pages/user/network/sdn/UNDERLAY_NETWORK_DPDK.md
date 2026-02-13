@@ -3,12 +3,16 @@ title: "Connecting physical network interfaces to DPDK application pods"
 permalink: en/user/network/sdn/underlay-network-dpdk.html
 ---
 
+If your namespace (project) hosts high-performance workloads that require direct access to hardware (e.g., DPDK applications), you can use direct connection of physical network interfaces (Physical Functions and Virtual Functions) to pods via Kubernetes Dynamic Resource Allocation (DRA). Physical network interfaces can be connected to pods in one of two modes: Shared (Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, and multiple pods can share the same hardware) and Dedicated (each pod gets exclusive access to the entire PF). For more information about the capabilities and features of working with Underlay networks in DKP, see the section [Configuring and connecting underlay networks for hardware device forwarding](../../../admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough).
+
+## Connecting physical network interfaces to pods
+
 To use physical network interfaces (PF/VF) directly in pods for DPDK applications, you need to:
 
-1. Ensure that your namespace has been [marked](../../../admin/configuration/network/sdn/underlay-networks.html#preparing-namespaces-for-underlaynetwork-usage) by the administrator for use with UnderlayNetwork.
-1. Create a pod with an annotation requesting the UnderlayNetwork device.
+1. Ensure that your namespace has been [marked](../../../admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html#preparing-namespaces-for-underlaynetwork-usage) by the administrator for use with UnderlayNetwork.
+1. Create a pod with an annotation requesting the Underlay network device.
 
-## Creating a pod with UnderlayNetwork device
+### Creating a pod with a device from the Underlay network
 
 Create a pod that requests a device from an UnderlayNetwork. The pod annotation should specify:
 
