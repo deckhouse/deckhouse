@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
+  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
+  "version": 10,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-24137"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/sigstore/sigstore@v1.8.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал TUF клиента с использованием уязвимого кода sigstore версии v1.8.8 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы, что исключает возможность эксплуатации данной уязвимости.",
+      "timestamp": "2026-02-13T10:05:00Z"
+    }
+  ],
+  "timestamp": "2026-02-13T10:05:00Z",
+  "last_updated": "2026-02-13T10:05:00Z"
+}
