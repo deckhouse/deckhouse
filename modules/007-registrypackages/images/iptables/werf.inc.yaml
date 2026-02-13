@@ -1,6 +1,8 @@
 {{/* Important! The iptables binaries from artifact are also used in other modules: kube-proxy, cni-simple-bridge, cni-cilium, cni-flannel, node-local-dns, ingress-nginx, openvpn, network-policy-engine and network-gateway. */}}
-{{- $version := "1.8.9" }}
-{{- $image_version := $version | replace "." "-" }}
+{{- $iptables_version := include "get_oss_version_by_id" (list "iptables" $ )  -}}
+{{- $libmnl_version := include "get_oss_version_by_id" (list "libmnl" $ )  -}}
+{{- $libnftnl_version := include "get_oss_version_by_id" (list "libnftnl" $ )  -}}
+{{- $image_version := $iptables_version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}
 final: false
@@ -16,11 +18,11 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone -b libmnl-1.0.5 --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
+  - git clone -b libmnl-{{ $libmnl_version }} --depth 1 $(cat /run/secrets/SOURCE_REPO)/netfilter/libmnl /src/libmnl
   - rm -rf /src/libmnl/.git
-  - git clone -b libnftnl-1.2.6 --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
+  - git clone -b libnftnl-{{ $libnftnl_version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/libnftnl /src/libnftnl
   - rm -rf /src/libnftnl/.git
-  - git clone -b v{{ $version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
+  - git clone -b v{{ $iptables_version }} --depth 1  $(cat /run/secrets/SOURCE_REPO)/netfilter/iptables /src/iptables
   - rm -rf /src/iptables/.git
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}
@@ -37,7 +39,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "all", "version": "all", "iptables": "{{ $version }}" }
+    labels: { "distro": "all", "version": "all", "iptables": "{{ $iptables_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true

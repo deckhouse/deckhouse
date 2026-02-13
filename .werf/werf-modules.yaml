@@ -43,7 +43,7 @@
       {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
       {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
       {{- $_ := set $ctx "ModuleName" $moduleName }}
-      {{- $_ := set $ctx "OssYamlPath" (printf "%s/modules/%s-%s/oss.yaml" $ctx.ModulePath $ctx.ModulePriority $ctx.ModuleName) }}
+      {{- $_ := set $ctx "OssYamlPath" (printf "%smodules/%s-%s/oss.yaml" $ctx.ModulePath $ctx.ModulePriority $ctx.ModuleName) }}
       {{- $_ := set $ctx "ImageName" $ImageData._3 }}
       {{- $_ := set $ctx "ImageBuildData" $content }}
       {{- $_ := set $ctx "Files" $Root.Files }}

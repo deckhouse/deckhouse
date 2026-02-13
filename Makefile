@@ -153,7 +153,7 @@ tests-modules: ## Run unit tests for modules hooks and templates.
   ##~ Options: FOCUS=module-name
 	go test -cover -race -timeout=${TESTS_TIMEOUT} -vet=off ${TESTS_PATH}
 
-dmt-lint:
+dmt-lint: yq
 	export DMT_METRICS_URL="${DMT_METRICS_URL}"
 	export DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}"
 	docker run --rm -v ${PWD}:/deckhouse-src -e DMT_METRICS_URL="${DMT_METRICS_URL}" -e DMT_METRICS_TOKEN="${DMT_METRICS_TOKEN}" --user $(id -u):$(id -g) ubuntu /deckhouse-src/tools/dmt-lint.sh
@@ -513,7 +513,7 @@ GOLANGCI_LINT_VERSION = v2.8.0
 DECKHOUSE_CLI_VERSION ?= v0.27.1
 CONTROLLER_TOOLS_VERSION ?= v0.18.0
 CODE_GENERATOR_VERSION ?= v0.32.10
-YQ_VERSION ?= v4.47.2
+YQ_VERSION ?= v4.52.2
 
 ## Generate werf
 .PHONY: generate-werf

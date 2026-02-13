@@ -1,4 +1,4 @@
-{{- $version := "6.7.0" }}
+{{- $version := include "get_oss_version_by_id" (list "xfsprogs" $ )  -}}
 {{- $image_version := $version | replace "." "-" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}

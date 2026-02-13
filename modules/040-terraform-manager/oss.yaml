@@ -1,5 +1,58 @@
+# Keep this versions in sync with candi/cloud-providers/*/terraform-modules/versions.tf
+# and ee/candi/cloud-providers/*/terraform-modules/versions.tf
+
 - name: Terraform
   link: https://github.com/hashicorp/terraform
   description: A tool for building, changing, and versioning infrastructure safely and efficiently.
   logo: /images/logos/terraform.png
   license: Mozilla Public License 2.0
+  id: terraform
+  version: 0.14.8
+
+- name: OpenTofu
+  link: https://github.com/opentofu/opentofu
+  description: An open-source fork of Terraform.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: opentofu
+  version: 1.9.4
+
+- name: Terraform Provider AWS
+  link: https://github.com/hashicorp/terraform-provider-aws
+  description: Terraform provider for AWS.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-aws
+  version: 5.83.1
+
+- name: Terraform Provider AzureRM
+  link: https://github.com/hashicorp/terraform-provider-azurerm
+  description: Terraform provider for AzureRM.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-azurerm
+  version: 3.117.1
+
+- name: Terraform Provider Google
+  link: https://github.com/hashicorp/terraform-provider-google
+  description: Terraform provider for Google Cloud.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-google
+  version: 3.48.0
+
+- name: Terraform Provider Kubernetes
+  link: https://github.com/hashicorp/terraform-provider-kubernetes
+  description: Terraform provider for Kubernetes.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-kubernetes
+  version: 2.35.1
+
+- name: Terraform Provider Yandex
+  link: https://github.com/yandex-cloud/terraform-provider-yandex
+  description: Terraform provider for Yandex Cloud.
+  logo: /images/logos/terraform.png
+  license: Mozilla Public License 2.0
+  id: terraform-provider-yandex
+  version: 0.174.0

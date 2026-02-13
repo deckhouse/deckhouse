@@ -132,6 +132,9 @@ linters-settings:
       license:
         files:
           - images/nvidia-dcgm/scripts/llvm.sh
+          - images/caps-controller-manager/src/bin/controller-gen
+          - images/bashible-apiserver/src/hack/update-codegen.sh
+          - images/bashible-apiserver/src/hack/kube_codegen.sh
   openapi:
     exclude-rules:
       enum:
