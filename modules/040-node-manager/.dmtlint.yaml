@@ -125,6 +125,10 @@ linters-settings:
           name: node-manager:nvidia-gpu:node-feature-discovery-worker
         - kind: RoleBinding
           name: node-manager:nvidia-gpu:node-feature-discovery-worker
+        - kind: Role
+          name: d8:node-manager:bashible:rpp
+        - kind: RoleBinding
+          name: d8:node-manager:bashible:rpp
   module:
     conversions:
       disable: true
