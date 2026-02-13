@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package updateapproval
 
 import (
 	"context"
@@ -79,11 +79,14 @@ func newNodeGroup(name string, nodeType v1.NodeType, opts ...func(*v1.NodeGroup)
 
 func withDisruptions(mode string, drainBefore *bool) func(*v1.NodeGroup) {
 	return func(ng *v1.NodeGroup) {
-		// NOTE: Adjust types based on actual API definition
-		// If ApprovalMode is a custom type, use: ng.Spec.Disruptions.ApprovalMode = v1.ApprovalMode(mode)
-		// If it's a string, use: ng.Spec.Disruptions.ApprovalMode = mode
+		if ng.Spec.Disruptions == nil {
+			ng.Spec.Disruptions = &v1.DisruptionsSpec{}
+		}
 		ng.Spec.Disruptions.ApprovalMode = v1.DisruptionApprovalMode(mode)
 		if drainBefore != nil {
+			if ng.Spec.Disruptions.Automatic == nil {
+				ng.Spec.Disruptions.Automatic = &v1.AutomaticDisruptionSpec{}
+			}
 			ng.Spec.Disruptions.Automatic.DrainBeforeApproval = drainBefore
 		}
 	}
@@ -91,6 +94,9 @@ func withDisruptions(mode string, drainBefore *bool) func(*v1.NodeGroup) {
 
 func withMaxConcurrent(val intstr.IntOrString) func(*v1.NodeGroup) {
 	return func(ng *v1.NodeGroup) {
+		if ng.Spec.Update == nil {
+			ng.Spec.Update = &v1.UpdateSpec{}
+		}
 		ng.Spec.Update.MaxConcurrent = &val
 	}
 }

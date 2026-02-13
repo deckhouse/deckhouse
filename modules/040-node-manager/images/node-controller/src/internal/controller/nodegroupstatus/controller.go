@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package nodegroupstatus
 
 import (
 	"context"
@@ -42,10 +42,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/registry"
 )
 
 func init() {
-	Register("NodeGroupStatus", SetupNodeGroupStatusController)
+	registry.Register("NodeGroupStatus", Setup)
 }
 
 const (
@@ -90,8 +91,8 @@ type NodeGroupStatusReconciler struct {
 	lastEventMessages sync.Map
 }
 
-// SetupNodeGroupStatusController registers the controller with the manager.
-func SetupNodeGroupStatusController(mgr ctrl.Manager) error {
+// Setup registers the controller with the manager.
+func Setup(mgr ctrl.Manager) error {
 	return (&NodeGroupStatusReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
