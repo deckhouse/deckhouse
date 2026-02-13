@@ -28,7 +28,7 @@ index 15dacfa4df..495cc2c4ba 100644
  		return DROP_UNKNOWN_L4;
  	}
 diff --git a/bpf/lib/nodeport.h b/bpf/lib/nodeport.h
-index 0142716855..d028cccf56 100644
+index 0142716855..99c9d1e1f4 100644
 --- a/bpf/lib/nodeport.h
 +++ b/bpf/lib/nodeport.h
 @@ -27,6 +27,7 @@
@@ -104,13 +104,14 @@ index 0142716855..d028cccf56 100644
  /* Main node-port entry point for host-external ingressing node-port traffic
   * which handles the case of: i) backend is local EP, ii) backend is remote EP,
   * iii) reply from remote backend EP.
-@@ -2716,6 +2775,34 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
+@@ -2716,6 +2775,35 @@ static __always_inline int nodeport_lb4(struct __ctx_buff *ctx,
  	lb4_fill_key(&key, &tuple);
  
  	svc = lb4_lookup_service(&key, false);
 +
 +#ifdef ENABLE_LOADBALANCER_ICMP_REPLY
 +	if (ip4->protocol == IPPROTO_ICMP) {
++		printk("MEG: GOT NEW PACKET");
 +#if 0
 +		struct ratelimit_key rkey = {
 +			.usage = RATELIMIT_USAGE_ICMPV4,
@@ -135,7 +136,7 @@ index 0142716855..d028cccf56 100644
 +			return make_icmp_responce_lb4(ctx, ip4);
 +		}
 +	}
-+#endif /*  */
++#endif /* ENABLE_LOADBALANCER_ICMP_REPLY */
  	if (svc) {
  		return nodeport_svc_lb4(ctx, &tuple, svc, &key, ip4, l3_off,
  					has_l4_header, l4_off,
