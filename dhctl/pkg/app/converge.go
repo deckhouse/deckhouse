@@ -15,6 +15,7 @@
 package app
 
 import (
+	"os"
 	"time"
 
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -52,4 +53,21 @@ func DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd *kingpin.CmdClause) {
 	cmd.Flag("check-has-terraform-state-before-migrate-to-tofu", "Check cluster has terraform state before migrate state to tofu.").
 		Default("false").
 		BoolVar(&CheckHasTerraformStateBeforeMigrateToTofu)
+}
+
+func ForceNoSwitchToNodeUser() bool {
+	return getEnvBool("NO_SWITCH_TO_NODE_USER")
+}
+
+func SkipDrainingNodes() bool {
+	return getEnvBool("SKIP_DRAINING_NO_NODES")
+}
+
+func getEnvBool(name string) bool {
+	envName := configEnvName(name)
+	if val, ok := os.LookupEnv(envName); ok && val == "true" {
+		return true
+	}
+
+	return false
 }

@@ -402,7 +402,8 @@ func (f *Context) GetBootstrapNodeRunner(ctx context.Context, metaConfig *config
 	r := NewRunnerFromConfig(metaConfig, stateCache, executor).
 		WithVariables(nodeConfig).
 		WithName(opts.NodeName).
-		WithLogger(opts.RunnerLogger)
+		WithLogger(opts.RunnerLogger).
+		WithAdditionalStateSaverDestination(opts.AdditionalStateSaverDestinations...)
 
 	addProviderAfterCleanupFuncForRunner(cloudProvider, opts.NodeName, r)
 	return applyAutomaticSettingsForBootstrap(r, f.stateChecker), nil

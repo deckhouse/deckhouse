@@ -271,7 +271,18 @@ func (c *NodeGroupController) deleteRedundantNodes(
 	return allErrs.ErrorOrNil()
 }
 
-func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]interface{}) error {
+func getNodeTemplateDiff(fromNG map[string]any, fromConfig map[string]any) string {
+	// prevent compare nil and empty map
+	// this case generates diff for gcmp.Diff
+	if len(fromNG) == 0 && len(fromConfig) == 0 {
+		log.DebugF("Node templates does not have keys. Returns no diff\n")
+		return ""
+	}
+
+	return gcmp.Diff(fromNG, fromConfig)
+}
+
+func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTemplate map[string]any) error {
 	nodeTemplatePath := []string{"spec", "nodeTemplate"}
 	for {
 		ng, err := entity.GetNodeGroup(ctx.Ctx(), ctx.KubeClient(), c.name)
@@ -284,7 +295,7 @@ func (c *NodeGroupController) tryUpdateNodeTemplate(ctx *context.Context, nodeTe
 			return err
 		}
 
-		diff := gcmp.Diff(templateInCluster, nodeTemplate)
+		diff := getNodeTemplateDiff(templateInCluster, nodeTemplate)
 		if diff == "" {
 			log.DebugF("Node template of the %s NodeGroup is not changed", c.name)
 			return nil
