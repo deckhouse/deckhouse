@@ -17,7 +17,9 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"context"
 	"reflect"
+	"fmt"
 
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -42,31 +44,51 @@ func (r *StaticMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 ///+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=create;update,versions=v1alpha1,name=mstaticmachine.deckhouse.io,admissionReviewVersions=v1
 
-var _ webhook.Defaulter = &StaticMachine{}
+type StaticMachineCustomDefaulter struct{}
+
+var _ webhook.CustomDefaulter = &StaticMachineCustomDefaulter{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *StaticMachine) Default() {
-	staticmachinelog.Info("default", "name", r.Name)
+func (r *StaticMachineCustomDefaulter) Default(_ context.Context, obj runtime.Object) error {
+	staticMachine, ok := obj.(*StaticMachine)
+	if !ok {
+		return fmt.Errorf("expected a StaticMachine object but got %T", obj)
+	}
+
+	staticmachinelog.Info("default", "name", staticMachine.GetName())
+
+	return nil
 }
 
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-staticmachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=staticmachines,verbs=update,versions=v1alpha1,name=vstaticmachine.deckhouse.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &StaticMachine{}
+type StaticMachineCustomValidator struct{}
+
+var _ webhook.CustomValidator = &StaticMachineCustomValidator{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachine) ValidateCreate() (admission.Warnings, error) {
-	staticmachinelog.V(2).Info("validate create", "name", r.Name, "allowed", true)
+func (r *StaticMachineCustomValidator) ValidateCreate(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	staticMachine, ok := obj.(*StaticMachine)
+	if !ok {
+		return nil, fmt.Errorf("expected a StaticMachine object but got %T", obj)
+	}
 
+	staticmachinelog.V(2).Info("validate create", "name", staticMachine.GetName(), "allowed", true)
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
+func (r *StaticMachineCustomValidator) ValidateUpdate(ctx context.Context, new, old runtime.Object) (admission.Warnings, error) {
+	staticMachine, ok := new.(*StaticMachine)
+	if !ok {
+		return nil, fmt.Errorf("expected a StaticMachine object but got %T", new)
+	}
+
 	var errs field.ErrorList
 
 	// By convention, StaticMachine.spec is immutable except for the providerID field.
-	newStaticMachine, err := runtime.DefaultUnstructuredConverter.ToUnstructured(r)
+	newStaticMachine, err := runtime.DefaultUnstructuredConverter.ToUnstructured(new)
 	if err != nil {
 		return nil, apierrors.NewInternalError(errors.Wrap(err, "failed to convert new StaticMachine to unstructured object"))
 	}
@@ -87,20 +109,25 @@ func (r *StaticMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, 
 		errs = append(errs, field.Forbidden(field.NewPath("spec"), "cannot be modified"))
 	}
 
-	aggErr := aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
+	aggErr := aggregateObjErrors(staticMachine.GroupVersionKind().GroupKind(), staticMachine.GetName(), errs)
 	if aggErr != nil {
-		staticmachinelog.Error(aggErr, "validate update rejected", "name", r.Name, "allowed", false)
+		staticmachinelog.Error(aggErr, "validate update rejected", "name", staticMachine.GetName(), "allowed", false)
 		return nil, aggErr
 	}
 
-	staticmachinelog.V(2).Info("validate update accepted", "name", r.Name, "allowed", true)
+	staticmachinelog.V(2).Info("validate update accepted", "name", staticMachine.GetName(), "allowed", true)
 
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *StaticMachine) ValidateDelete() (admission.Warnings, error) {
-	staticmachinelog.V(2).Info("validate delete", "name", r.Name, "allowed", true)
+func (r *StaticMachineCustomValidator) ValidateDelete(ctx context.Context, obj runtime.Object) (admission.Warnings, error) {
+	staticMachine, ok := obj.(*StaticMachine)
+	if !ok {
+		return nil, fmt.Errorf("expected a StaticMachine object but got %T", obj)
+	}
+
+	staticmachinelog.V(2).Info("validate delete", "name", staticMachine.GetName(), "allowed", true)
 
 	return nil, nil
 }

@@ -16,11 +16,9 @@ limitations under the License.
 
 package v1alpha1
 
-import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-
 // Conditions and Reasons defined on StaticInstance.
 const (
-	StaticInstanceAddedToNodeGroupCondition clusterv1.ConditionType = "AddedToNodeGroup"
+	StaticInstanceAddedToNodeGroupCondition = "AddedToNodeGroup"
 
 	// StaticInstanceWaitingForNodeGroupReason indicates when a StaticInstance is waiting for a NodeGroup to be assigned.
 	StaticInstanceWaitingForNodeGroupReason = "WaitingForNodeGroupToBeAssigned"
@@ -34,7 +32,7 @@ const (
 	// Checking ssh connection
 	StaticInstanceCheckSSHCondition = "CheckSshCondition"
 
-	StaticInstanceBootstrapSucceededCondition clusterv1.ConditionType = "BootstrapSucceeded"
+	StaticInstanceBootstrapSucceededCondition = "BootstrapSucceeded"
 
 	// StaticInstanceWaitingForMachineRefReason indicates when a StaticInstance is registered into a capacity pool and
 	// waiting for a StaticInstance.Status.MachineRef to be assigned.
@@ -48,7 +46,7 @@ const (
 // Conditions and Reasons defined on StaticMachine.
 const (
 	// StaticMachineStaticInstanceReadyCondition documents the k8s node is ready and can take on workloads.
-	StaticMachineStaticInstanceReadyCondition clusterv1.ConditionType = "StaticInstanceReady"
+	StaticMachineStaticInstanceReadyCondition = "StaticInstanceReady"
 
 	// StaticMachineWaitingForClusterInfrastructureReason indicates the cluster that the StaticMachine belongs to
 	// is waiting to be owned by the corresponding CAPI Cluster.

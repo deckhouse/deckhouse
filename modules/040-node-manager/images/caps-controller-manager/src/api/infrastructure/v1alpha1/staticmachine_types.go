@@ -17,11 +17,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
-
 	"caps-controller-manager/internal/providerid"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/core/v1beta2"
+	"sigs.k8s.io/cluster-api/errors"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -64,7 +64,7 @@ type StaticMachineStatus struct {
 
 	// Conditions defines current service state of the StaticMachine.
 	// +optional
-	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -96,11 +96,11 @@ func init() {
 }
 
 // GetConditions gets the StaticInstance status conditions
-func (r *StaticMachine) GetConditions() clusterv1.Conditions {
+func (r *StaticMachine) GetConditions() []metav1.Condition {
 	return r.Status.Conditions
 }
 
 // SetConditions sets the StaticInstance status conditions
-func (r *StaticMachine) SetConditions(conditions clusterv1.Conditions) {
+func (r *StaticMachine) SetConditions(conditions []metav1.Condition) {
 	r.Status.Conditions = conditions
 }
