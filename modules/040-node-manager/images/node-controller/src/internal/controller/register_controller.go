@@ -17,26 +17,60 @@ limitations under the License.
 package controller
 
 import (
+	"fmt"
+	"strings"
+
 	ctrl "sigs.k8s.io/controller-runtime"
-
-	"github.com/deckhouse/node-controller/internal/registry"
-
-	// Import controller packages to trigger init() registration.
-	_ "github.com/deckhouse/node-controller/internal/controller/nodegroupstatus"
-	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 )
 
+// SetupFunc is a function that sets up a controller with the manager.
+type SetupFunc func(mgr ctrl.Manager) error
+
+type controllerEntry struct {
+	name  string
+	setup SetupFunc
+}
+
+var controllers []controllerEntry
+
 // Register adds a controller to the registry. Call this in init() of controller packages.
-func Register(name string, setup registry.SetupFunc) {
-	registry.Register(name, setup)
+func Register(name string, setup SetupFunc) {
+	controllers = append(controllers, controllerEntry{name: name, setup: setup})
 }
 
 // Names returns the names of all registered controllers.
 func Names() []string {
-	return registry.Names()
+	names := make([]string, len(controllers))
+	for i, c := range controllers {
+		names[i] = c.name
+	}
+	return names
 }
 
 // SetupAll registers all controllers with the manager.
+// Controllers auto-register via init() in their packages.
+// disabledControllers is a comma-separated list of controller names to skip.
 func SetupAll(mgr ctrl.Manager, disabledControllers string) error {
-	return registry.SetupAll(mgr, disabledControllers)
+	setupLog := ctrl.Log.WithName("setup")
+
+	disabled := make(map[string]bool)
+	for _, name := range strings.Split(disabledControllers, ",") {
+		name = strings.TrimSpace(name)
+		if name != "" {
+			disabled[name] = true
+		}
+	}
+
+	for _, c := range controllers {
+		if disabled[c.name] {
+			setupLog.Info("controller disabled", "controller", c.name)
+			continue
+		}
+		if err := c.setup(mgr); err != nil {
+			return fmt.Errorf("unable to setup %s controller: %w", c.name, err)
+		}
+		setupLog.Info("controller enabled", "controller", c.name)
+	}
+
+	return nil
 }
