@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package updateapproval
 
 import (
 	"context"
@@ -41,10 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/registry"
 )
 
 func init() {
-	controller.Register("UpdateApproval", Setup)
+	registry.Register("UpdateApproval", Setup)
 }
 
 const (
@@ -395,7 +396,11 @@ func (r *Reconciler) approveUpdates(ctx context.Context, ng *v1.NodeGroup, nodes
 	logger := log.FromContext(ctx)
 
 	// Calculate concurrency
-	concurrency := calculateConcurrency(ng.Spec.Update.MaxConcurrent, len(nodes))
+	var maxConcurrent *intstr.IntOrString
+	if ng.Spec.Update != nil {
+		maxConcurrent = ng.Spec.Update.MaxConcurrent
+	}
+	concurrency := calculateConcurrency(maxConcurrent, len(nodes))
 
 	// Count already approved nodes and check if any are waiting
 	currentUpdates := 0
@@ -560,7 +565,7 @@ func (r *Reconciler) deleteInstance(ctx context.Context, instanceName string) er
 }
 
 func getApprovalMode(ng *v1.NodeGroup) string {
-	if ng.Spec.Disruptions.ApprovalMode != "" {
+	if ng.Spec.Disruptions != nil && ng.Spec.Disruptions.ApprovalMode != "" {
 		return string(ng.Spec.Disruptions.ApprovalMode)
 	}
 	return "Automatic"
@@ -593,17 +598,58 @@ func calculateConcurrency(maxConcurrent *intstr.IntOrString, totalNodes int) int
 }
 
 // isInAllowedWindow checks if current time is within any of the allowed disruption windows.
-// NOTE: This assumes v1.DisruptionWindow has an IsAllowed(time.Time) method.
-// If the API doesn't have this, implement the time window check logic here.
 func isInAllowedWindow(windows []v1.DisruptionWindow, now time.Time) bool {
 	if len(windows) == 0 {
 		return true // No windows = always allowed
 	}
 
 	for _, w := range windows {
-		if w.IsAllowed(now) {
+		if isWindowAllowed(w, now) {
 			return true
 		}
 	}
 	return false
+}
+
+// isWindowAllowed checks if the given time falls within a single disruption window.
+func isWindowAllowed(w v1.DisruptionWindow, now time.Time) bool {
+	// Check day of week if days are specified
+	if len(w.Days) > 0 {
+		currentDay := now.Weekday().String()
+		dayMatch := false
+		for _, d := range w.Days {
+			if strings.EqualFold(d, currentDay) {
+				dayMatch = true
+				break
+			}
+		}
+		if !dayMatch {
+			return false
+		}
+	}
+
+	// Parse From and To times (expected format "HH:MM")
+	fromParts := strings.Split(w.From, ":")
+	toParts := strings.Split(w.To, ":")
+	if len(fromParts) != 2 || len(toParts) != 2 {
+		return false
+	}
+
+	fromHour, err1 := strconv.Atoi(fromParts[0])
+	fromMin, err2 := strconv.Atoi(fromParts[1])
+	toHour, err3 := strconv.Atoi(toParts[0])
+	toMin, err4 := strconv.Atoi(toParts[1])
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil {
+		return false
+	}
+
+	nowMinutes := now.Hour()*60 + now.Minute()
+	fromMinutes := fromHour*60 + fromMin
+	toMinutes := toHour*60 + toMin
+
+	if fromMinutes <= toMinutes {
+		return nowMinutes >= fromMinutes && nowMinutes < toMinutes
+	}
+	// Window crosses midnight
+	return nowMinutes >= fromMinutes || nowMinutes < toMinutes
 }
