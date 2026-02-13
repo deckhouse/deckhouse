@@ -1096,7 +1096,7 @@ entries:
         - title:
             en: System requirements
             ru: Системные требования
-          draft: true            
+          draft: true
           url: /architecture/system-requirements/
         - title:
             en: C4 model
@@ -1153,7 +1153,7 @@ entries:
             - title:
                 en: Geo-reserving
                 ru: Георезервирование
-              url: /architecture/disaster-resilience/geo-reserving.html                     
+              url: /architecture/disaster-resilience/geo-reserving.html
         - title:
             en: Updating
             ru: Обновление
@@ -1193,7 +1193,7 @@ entries:
             - title:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
-              url: /architecture/vpa.html                       
+              url: /architecture/vpa.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1217,7 +1217,7 @@ entries:
             - title:
                 en: CloudEphemeral nodes management
                 ru: Управление CloudEphemeral-узлами
-              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes/              
+              url: /architecture/cluster-and-infrastructure/cloud-ephemeral-nodes/
             - title:
                 en: CloudPermanent nodes management
                 ru: Управление CloudPermanent-узлами
@@ -1241,7 +1241,7 @@ entries:
             - title:
                 en: CSI-driver
                 ru: CSI-драйвер
-              url: /architecture/cluster-and-infrastructure/csi-driver/              
+              url: /architecture/cluster-and-infrastructure/csi-driver/
         - title:
             en: IAM subsystem
             ru: Подсистема IAM
@@ -1249,7 +1249,7 @@ entries:
             - title:
                 en: Overview
                 ru: Обзор
-              url: /architecture/iam/            
+              url: /architecture/iam/
             - title:
                 en: Authentication
                 ru: Аутентификация
@@ -1269,7 +1269,7 @@ entries:
             - title:
                 en: Overview
                 ru: Обзор
-              url: /architecture/security/          
+              url: /architecture/security/
             - title:
                 en: Integrity control
                 ru: Контроль целостности
@@ -1305,7 +1305,7 @@ entries:
             - title:
                 en: Caching DNS server in a cluster
                 ru: Кеширующий DNS-сервер в кластере
-              url: /architecture/network/dns-caching.html              
+              url: /architecture/network/dns-caching.html
         - title:
             en: Observability subsystem
             ru: Подсистема Observability
@@ -1317,30 +1317,15 @@ entries:
             - title:
                 en: Monitoring
                 ru: Мониторинг
-              url: /architecture/monitoring/              
+              url: /architecture/monitoring/
             - title:
                 en: Log collection and delivery
                 ru: Сбор и доставка логов
-              url: /architecture/logging/delivery.html              
+              url: /architecture/logging/delivery.html
             - title:
                 en: Logging modules
                 ru: Модули логирования
               url: /architecture/observability/logging/
-  # ------------- Architecture OLD -------------
-    - title:
-        en: Architecture Old
-        ru: Архитектура Старое
-      folders:
-        - title:
-            en: Overview
-            ru: Обзор
-          url: /architecture/overview.html
-        - title:
-            en: TODO Installation
-            ru: TODO Установка
-          url: /architecture/installation.html
-          draft: true
-
     - title:
         en: Reference
         ru: Справка

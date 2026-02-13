@@ -2,7 +2,7 @@
 title: Обзор
 permalink: ru/architecture/observability/
 lang: ru
-search: observability, наблюдаемость, подсистема наблюдаеммости
+search: observability, наблюдаемость, подсистема наблюдаемости
 ---
 
 В данном подразделе описывается архитектура подсистемы **Observability** (подсистемы наблюдаемости) DKP.
