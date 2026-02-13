@@ -19,6 +19,8 @@ package controller
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 	"time"
 
 	"go.yaml.in/yaml/v2"
@@ -153,6 +155,10 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 
 			controlPlanes = append(controlPlanes, controlPlaneNode)
 		}
+
+		slices.SortFunc(controlPlanes, func(a, b ControlPlaneNode) int {
+			return strings.Compare(a.Name, b.Name)
+		})
 
 		return controlPlanes
 	}

@@ -18,6 +18,7 @@ package cluster
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"golang.org/x/mod/semver"
@@ -89,6 +90,7 @@ func (s *ControlPlaneState) aggregateNodesState() {
 		switch {
 		case failedComponents > 0:
 			masterNode.Phase = MasterNodeFailed
+			slices.Sort(descriptions)
 			masterNode.Description = strings.Join(descriptions, ", ")
 		case updatingComponents > 0:
 			masterNode.Phase = MasterNodeUpdating
