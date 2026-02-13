@@ -1,0 +1,175 @@
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: worker
+spec:
+  rootDiskSizeGb: 40
+  sizingPolicy:  c4m8
+  storageProfile: vSAN-R5
+  template: "ubuntu-22.04"
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: worker
+spec:
+  cloudInstances:
+    classReference:
+      kind: VCDInstanceClass
+      name: worker
+    maxPerZone: 1
+    maxSurgePerZone: 0
+    maxUnavailablePerZone: 0
+    minPerZone: 1
+  nodeType: CloudEphemeral  
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: system
+spec:
+  rootDiskSizeGb: 40
+  sizingPolicy:  c4m8
+  storageProfile: vSAN-R5
+  template: "ubuntu-22.04"
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: system
+spec:
+  cloudInstances:
+    classReference:
+      kind: VCDInstanceClass
+      name: system
+    maxPerZone: 1
+    maxSurgePerZone: 0
+    maxUnavailablePerZone: 0
+    minPerZone: 1
+  nodeType: CloudEphemeral  
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+      node-role.kubernetes.io/system: ""
+    taints:
+      - effect: NoSchedule
+        key: dedicated.deckhouse.io
+        value: system
+---
+apiVersion: deckhouse.io/v1
+kind: VCDInstanceClass
+metadata:
+  name: frontend
+spec:
+  rootDiskSizeGb: 40
+  sizingPolicy:  c4m8
+  storageProfile: vSAN-R5
+  template: "ubuntu-22.04"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vcd
+spec:
+  version: 1
+  enabled: true
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  loadBalancer:
+    loadBalancerClass: ingress
+    annotations:
+      network.deckhouse.io/l2-load-balancer-external-ips-count: "1"
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  tolerations:
+  - operator: Exists
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  version: 2
+  enabled: true
+  settings:
+    speaker:
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+      - operator: Exists
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: MetalLoadBalancerClass
+metadata:
+  name: ingress
+spec:
+  addressPool:
+    - 10.10.60.200/32
+  isDefault: false
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: ""
+  type: L2
+---
+apiVersion: deckhouse.io/v1
+kind: NodeUser
+metadata:
+  annotations:
+  generation: 2
+  name: test
+spec:
+  isSudoer: true
+  nodeGroups:
+  - '*'
+  passwordHash: dGVzdHRlc3R0ZXN0Cg==
+  sshPublicKeys:
+  - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSvjHvdJYYTUvBWCGYLqxGIPE5xktnYdTRpVsAxcbQE root@b6138135c8e1
+  uid: 1234
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  settings:
+    bundle: Default
+    logLevel: Info
+  version: 1
+---
+apiVersion: v1
+data:
+  key: value
+kind: ConfigMap
+metadata:
+  name: some-cm
+  namespace: test-ns
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: another-ns
+---
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: example
+spec:
+  privileged: false  # Don't allow privileged pods!
+  # The rest fills in some required fields.
+  seLinux:
+    rule: RunAsAny
+  supplementalGroups:
+    rule: RunAsAny
+  runAsUser:
+    rule: RunAsAny
+  fsGroup:
+    rule: RunAsAny
+  volumes:
+    - '*'

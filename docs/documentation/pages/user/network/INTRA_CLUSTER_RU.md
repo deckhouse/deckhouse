@@ -1,5 +1,6 @@
 ---
 title: "Внутрикластерное взаимодействие"
+description: "Организация внутрикластерного взаимодействия в Deckhouse Kubernetes Platform через Service. Стандартная балансировка нагрузки и расширенная балансировка с модулем service-with-healthchecks."
 permalink: ru/user/network/intra-cluster.html
 lang: ru
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Настройка мониторинга приложений"
+description: "Настройка мониторинга приложений в Deckhouse Kubernetes Platform. Подключение через лейблы, ServiceMonitor, PodMonitor, ScrapeConfig. Интеграция с Prometheus и blackbox-exporter для проверки доступности."
 permalink: ru/user/monitoring/app.html
 lang: ru
 ---

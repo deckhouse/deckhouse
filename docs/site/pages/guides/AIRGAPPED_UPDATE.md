@@ -6,13 +6,11 @@ lang: en
 layout: sidebar-guides
 ---
 
-{% alert level="warning" %}
+{% alert level="info" %}
 This guide is intended for DKP Enterprise Edition,
 but the mechanism is the same [for other editions](../documentation/v1/reference/revision-comparison.html).
-{% endalert %}
 
-{% alert level="info" %}
-This guide was tested on [d8 v0.17.1](../documentation/v1/cli/d8/).
+To run the commands given in the guide, you need to authenticate in the container registry `registry.deckhouse.io`. Use `license-token` as the username and the your license token as the password for authentication.
 
 The guide uses the third-party utility [crane](https://github.com/google/go-containerregistry?tab=readme-ov-file#crane) to analyze the container registry.
 Install it first following the [official instructions](https://github.com/google/go-containerregistry/blob/main/cmd/crane/README.md#installation).
@@ -34,12 +32,12 @@ Example output:
 Stable
 ```
 
-Technically, a DKP update works as follows: the registry contains an image with a fixed name `release-channel`
+Technically, a DKP update works as follows: the registry contains an image with the name `release-channel`
 and a tag corresponding to the release channel.
 This tag points to an image of a specific DKP version (when a new version is released,
 the tag is updated to point to the new image).
 
-Let's examine the contents of a DKP Enterprise Edition image with the `alpha` release channel.
+Let's examine the contents of a DKP Enterprise Edition image with the Alpha release channel.
 
 To do that, run the following command:
 
@@ -143,9 +141,9 @@ Skipping minor releases may result in:
 - Cluster malfunction due to missed migrations
 {% endalert %}
 
-## Module update mechanism
+## Module from source update mechanism
 
-Modules have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
+Modules from source have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
 
 The cluster contains [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource) resources tracked by DKP,
 which determine the list of available modules.

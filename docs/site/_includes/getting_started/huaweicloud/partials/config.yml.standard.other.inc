@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -171,7 +172,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ виртуальной машины.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    imageName: ubuntu-22-04-cloud-amd64
+    imageName: ubuntu-24-04-cloud-amd64
     # [<en>] Disk size for the root FS.
     # [<ru>] Размер диска для корневой ФС.
     rootDiskSize: 40
@@ -202,7 +203,7 @@ spec:
   # [<ru>] Используемый образ виртуальной машины.
   # [<en>] You might consider changing this.
   # [<ru>] Возможно, захотите изменить.
-  imageName: ubuntu-22-04-cloud-amd64
+  imageName: ubuntu-24-04-cloud-amd64
 ---
 # [<en>] Section containing the parameters of worker node group.
 # [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup

@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Dynamix
 permalink: ru/admin/integrations/private/dynamix/layout.html
 lang: ru
 ---

@@ -1,5 +1,6 @@
 ---
 title: "Configuring request retries with Istio"
+description: "Configuring request retries for HTTP requests using Istio in Deckhouse Kubernetes Platform. VirtualService configuration with retry parameters, attempts, perTryTimeout."
 permalink: en/user/network/retry_istio.html
 ---
 

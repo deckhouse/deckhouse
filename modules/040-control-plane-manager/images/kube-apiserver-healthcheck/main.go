@@ -23,7 +23,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -158,7 +157,7 @@ func run() error {
 	tlsConfig := &tls.Config{}
 
 	if caCert != "" {
-		b, err := ioutil.ReadFile(caCert)
+		b, err := os.ReadFile(caCert)
 		if err != nil {
 			return fmt.Errorf("error reading certificate %q: %v", caCert, err)
 		}

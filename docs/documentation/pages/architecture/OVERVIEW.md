@@ -1,4 +1,4 @@
 ---
-title: Overview
+title: Architecture
 permalink: en/architecture/
 ---

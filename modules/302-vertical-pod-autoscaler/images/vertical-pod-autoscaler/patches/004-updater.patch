@@ -1,0 +1,214 @@
+Index: vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go b/vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go
+--- a/vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go	(revision 8ae882e1ff332ab2fa56e80097aab2bc55db7df4)
++++ b/vertical-pod-autoscaler/pkg/updater/restriction/pods_eviction_restriction.go	(revision 22799913896ab36b15044126c2d3f9d9e554c3f1)
+@@ -57,6 +57,10 @@
+ 	cr, present := e.podToReplicaCreatorMap[getPodID(pod)]
+ 	if present {
+ 		singleGroupStats, present := e.creatorToSingleGroupStatsMap[cr]
++		if present && singleGroupStats.belowMinReplicas {
++			klog.V(2).InfoS("Skipping eviction: replica group below minReplicas (in-place update may still be used)", "pod", klog.KObj(pod), "creator", cr.Name)
++			return false
++		}
+ 		if pod.Status.Phase == apiv1.PodPending {
+ 			return true
+ 		}
+Index: vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction_test.go b/vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction_test.go
+--- a/vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction_test.go	(revision 8ae882e1ff332ab2fa56e80097aab2bc55db7df4)
++++ b/vertical-pod-autoscaler/pkg/updater/restriction/pods_inplace_restriction_test.go	(revision 22799913896ab36b15044126c2d3f9d9e554c3f1)
+@@ -240,6 +240,10 @@
+ 	}
+ }
+ 
++// TestInPlaceTooFewReplicas: with minReplicas=10 and only 5 live pods the group is belowMinReplicas.
++// Eviction is blocked; in-place is still allowed. All pods get InPlaceApproved initially.
++// In one "loop" we can only do as many in-place updates as evictionTolerance allows
++// (isPodDisruptable() becomes false after that). With tolerance 0.5, evictionTolerance=2 → first 2 succeed, rest fail.
+ func TestInPlaceTooFewReplicas(t *testing.T) {
+ 	featuregatetesting.SetFeatureGateDuringTest(t, features.MutableFeatureGate, features.InPlaceOrRecreate, true)
+ 
+@@ -275,13 +279,22 @@
+ 	assert.NoError(t, err)
+ 	inplace := factory.NewPodsInPlaceRestriction(creatorToSingleGroupStatsMap, podToReplicaCreatorMap)
+ 
+-	for _, pod := range pods {
+-		assert.Equal(t, utils.InPlaceDeferred, inplace.CanInPlaceUpdate(pod))
+-	}
+-
++	// belowMinReplicas does not block in-place: all pods are initially InPlaceApproved.
+ 	for _, pod := range pods {
++		assert.Equal(t, utils.InPlaceApproved, inplace.CanInPlaceUpdate(pod))
++	}
++
++	// In one loop, inPlaceUpdateInitiated is incremented after each successful update.
++	// isPodDisruptable() requires actuallyAlive > shouldBeAlive; with tolerance 0.5, configured=5,
++	// evictionTolerance=2 → after 2 updates actuallyAlive=3, shouldBeAlive=3 → no more allowed.
++	allowedInOneLoop := 2
++	for i, pod := range pods {
+ 		err := inplace.InPlaceUpdate(pod, basicVpa, test.FakeEventRecorder())
+-		assert.Error(t, err, "Error expected")
++		if i < allowedInOneLoop {
++			assert.NoError(t, err)
++		} else {
++			assert.Error(t, err, "Expected error after %d in-place updates in one loop (tolerance limit)", allowedInOneLoop)
++		}
+ 	}
+ }
+ 
+@@ -379,3 +392,64 @@
+ 		assert.Error(t, err, "Error expected")
+ 	}
+ }
++
++func TestMinReplicasAllowsInPlaceForSingletonButBlocksEviction(t *testing.T) {
++	featuregatetesting.SetFeatureGateDuringTest(t, features.MutableFeatureGate, features.InPlaceOrRecreate, true)
++
++	// replica controller reports replicas = 1
++	replicas := int32(1)
++	livePods := 1
++	tolerance := 0.5
++
++	rc := apiv1.ReplicationController{
++		ObjectMeta: metav1.ObjectMeta{
++			Name:      "rc-minrep-singleton",
++			Namespace: "default",
++		},
++		TypeMeta: metav1.TypeMeta{
++			Kind: "ReplicationController",
++		},
++		Spec: apiv1.ReplicationControllerSpec{
++			Replicas: &replicas,
++		},
++	}
++
++	// create exactly one pod (livePods = 1)
++	pods := make([]*apiv1.Pod, livePods)
++	for i := range pods {
++		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&rc.ObjectMeta, &rc.TypeMeta).Get()
++	}
++
++	// fake clock / no prior in-place attempts
++	clock := baseclocktest.NewFakeClock(time.Time{})
++	lipatm := map[string]time.Time{}
++
++	// VPA configured with InPlaceOrRecreate (helper provides this)
++	iporVpa := getIPORVpa()
++
++	// minReplicas = 2: group is below minReplicas, but we still include it with belowMinReplicas=true.
++	// In-place is allowed; eviction is blocked.
++	factory, err := getRestrictionFactory(&rc, nil, nil, nil, 2 /*minReplicas*/, tolerance, clock, lipatm, GetFakeCalculatorsWithFakeResourceCalc())
++	assert.NoError(t, err)
++
++	creatorToSingleGroupStatsMap, podToReplicaCreatorMap, err := factory.GetCreatorMaps(pods, iporVpa)
++	assert.NoError(t, err)
++
++	inplace := factory.NewPodsInPlaceRestriction(creatorToSingleGroupStatsMap, podToReplicaCreatorMap)
++	eviction := factory.NewPodsEvictionRestriction(creatorToSingleGroupStatsMap, podToReplicaCreatorMap)
++
++	// In-place is allowed even when livePods < minReplicas (belowMinReplicas only blocks eviction).
++	for _, pod := range pods {
++		assert.Equal(t, utils.InPlaceApproved, inplace.CanInPlaceUpdate(pod))
++	}
++	// Eviction is blocked when below minReplicas (fallback to Recreate would do nothing).
++	for _, pod := range pods {
++		assert.False(t, eviction.CanEvict(pod))
++	}
++
++	// In-place update succeeds.
++	for _, pod := range pods {
++		err := inplace.InPlaceUpdate(pod, iporVpa, test.FakeEventRecorder())
++		assert.NoError(t, err)
++	}
++}
+Index: vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory.go b/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory.go
+--- a/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory.go	(revision 8ae882e1ff332ab2fa56e80097aab2bc55db7df4)
++++ b/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory.go	(revision 22799913896ab36b15044126c2d3f9d9e554c3f1)
+@@ -208,9 +208,9 @@
+ 
+ 	for creator, replicas := range livePods {
+ 		actual := len(replicas)
+-		if actual < required {
+-			klog.V(2).InfoS("Too few replicas", "kind", creator.Kind, "object", klog.KRef(creator.Namespace, creator.Name), "livePods", actual, "requiredPods", required, "globalMinReplicas", f.minReplicas)
+-			continue
++		belowMinReplicas := actual < required
++		if belowMinReplicas {
++			klog.V(2).InfoS("Replica group below minReplicas; eviction will be blocked, in-place still allowed", "kind", creator.Kind, "object", klog.KRef(creator.Namespace, creator.Name), "livePods", actual, "requiredPods", required, "globalMinReplicas", f.minReplicas)
+ 		}
+ 
+ 		var configured int
+@@ -229,6 +229,7 @@
+ 		singleGroup := singleGroupStats{}
+ 		singleGroup.configured = configured
+ 		singleGroup.evictionTolerance = int(float64(configured) * f.evictionToleranceFraction) // truncated
++		singleGroup.belowMinReplicas = belowMinReplicas
+ 		for _, pod := range replicas {
+ 			podToReplicaCreatorMap[getPodID(pod)] = creator
+ 			if pod.Status.Phase == apiv1.PodPending {
+@@ -332,18 +333,21 @@
+ 	running                int
+ 	evictionTolerance      int
+ 	evicted                int
+-	inPlaceUpdateOngoing   int // number of pods from last loop that are still in-place updating
+-	inPlaceUpdateInitiated int // number of pods from the current loop that have newly requested in-place resize
++	inPlaceUpdateOngoing   int  // number of pods from last loop that are still in-place updating
++	inPlaceUpdateInitiated int  // number of pods from the current loop that have newly requested in-place resize
++	belowMinReplicas       bool // true when livePods < minReplicas; eviction is blocked, in-place is still allowed (e.g. InPlaceOrRecreate)
+ }
+ 
+-// isPodDisruptable checks if all pods are running and eviction tolerance is small, we can
+-// disrupt the current pod.
++// isPodDisruptable decides whether one more pod in this replica group can be "disrupted"
++// (evicted or in-place updated) without breaking availability. It ensures we don't remove
++// or resize too many pods at once: actuallyAlive (running minus already evicted/updated this loop)
++// must stay above shouldBeAlive (configured minus evictionTolerance). Used by both eviction
++// (CanEvict) and in-place (CanInPlaceUpdate) to limit how many pods are touched per updater loop.
+ func (s *singleGroupStats) isPodDisruptable() bool {
+ 	shouldBeAlive := s.configured - s.evictionTolerance
+ 	actuallyAlive := s.running - (s.evicted + s.inPlaceUpdateInitiated)
+ 	return actuallyAlive > shouldBeAlive ||
+ 		(s.configured == s.running && s.evictionTolerance == 0 && s.evicted == 0 && s.inPlaceUpdateInitiated == 0)
+-	// we don't want to block pods from being considered for eviction if tolerance is small and some pods are potentially stuck resizing
+ }
+ 
+ // isInPlaceUpdating checks whether or not the given pod is currently in the middle of an in-place update
+Index: vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory_test.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory_test.go b/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory_test.go
+--- a/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory_test.go	(revision 8ae882e1ff332ab2fa56e80097aab2bc55db7df4)
++++ b/vertical-pod-autoscaler/pkg/updater/restriction/pods_restriction_factory_test.go	(revision 22799913896ab36b15044126c2d3f9d9e554c3f1)
+@@ -368,15 +368,15 @@
+ 			},
+ 		},
+ 		{
+-			name:              "Cannot in-place a single Pod under default settings.",
++			name:              "Can in-place a single Pod under default settings (belowMinReplicas allows in-place, blocks eviction).",
+ 			replicas:          1,
+ 			evictionTolerance: 0.5,
+ 			vpa:               getIPORVpa(),
+ 			pods: []podWithExpectations{
+ 				{
+ 					pod:                  generatePod().Get(),
+-					canInPlaceUpdate:     utils.InPlaceDeferred,
+-					inPlaceUpdateSuccess: false,
++					canInPlaceUpdate:     utils.InPlaceApproved,
++					inPlaceUpdateSuccess: true,
+ 				},
+ 			},
+ 		},

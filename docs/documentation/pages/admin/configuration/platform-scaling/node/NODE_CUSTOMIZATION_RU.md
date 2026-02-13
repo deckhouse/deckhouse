@@ -49,7 +49,7 @@ cloudProvider:
     externalNetworkNames:
     - public
     instances:
-      imageName: ubuntu-22-04-cloud-amd64
+      imageName: ubuntu-24-04-cloud-amd64
       mainNetwork: kube
       securityGroups:
       - kube
@@ -133,13 +133,23 @@ post-install() {
 
 ## Мониторинг выполнения скриптов
 
+Применение NodeGroupConfiguration запускает обновление **конфигурации `bashible` группы узлов** в указанных группах. DKP автоматически обнаруживает изменение этой конфигурации, затем выставляет поле `UPTODATE` (в выводе команды `d8 k get nodegroup`) в `0`. Поле `UPTODATE` показывает, сколько узлов уже приведены к **целевой конфигурации `bashible` группы узлов**; значение `0` означает, что пока ни один узел не приведён к целевой конфигурации `bashible` (т.е. обновление ещё не применено ни на одном узле).
+
+DKP управляет запуском обновления на узлах через аннотацию `update.node.deckhouse.io/approved` на объекте `Node`. По умолчанию обновление выполняется одновременно на одном узле из каждой группы. Параллельность обновления задаётся параметром [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) в конфигурации группы узлов. Когда DKP выбирает узел для обновления (с учётом очереди и `maxConcurrent`), на него проставляется аннотация `update.node.deckhouse.io/approved`, после чего сервис `bashible` на этом узле начинает применять **целевую конфигурацию `bashible` группы узлов**.
+
+Проставленные DKP аннотации узлов на запуск обновления можно посмотреть с помощью команды:
+
+```bash
+d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
+```
+
 Ход выполнения скриптов можно увидеть на узле в журнале сервиса `bashible` c помощью команды:
 
 ```bash
-journalctl -u bashible.service
-```  
+journalctl -fu bashible.service
+```
 
-Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.  
+Сами скрипты находятся на узле в директории `/var/lib/bashible/bundle_steps/`.
 
 ## Механизм повторного запуска скриптов
 

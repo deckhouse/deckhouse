@@ -66,7 +66,7 @@ func (p *PowerKeyInhibitor) acquireLock() error {
 		return err
 	}
 	if p.inhibitLock != 0 {
-		p.dbusCon.ReleaseInhibitLock(p.inhibitLock)
+		_ = p.dbusCon.ReleaseInhibitLock(p.inhibitLock)
 	}
 	p.inhibitLock = lock
 	return nil

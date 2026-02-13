@@ -16,6 +16,7 @@ package operator
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -28,6 +29,7 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
+	"github.com/go-chi/chi/v5"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/utils/ptr"
 	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
@@ -208,7 +210,33 @@ func (o *Operator) registerDebugServer(sockerPath string) error {
 		w.Write(o.queueService.Dump()) //nolint:errcheck
 	})
 
+	o.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, r *http.Request) {
+		o.handlePackageRender(w, r)
+	})
+
 	return nil
+}
+
+func (o *Operator) handlePackageRender(w http.ResponseWriter, r *http.Request) {
+	packageName := chi.URLParam(r, "name")
+	if packageName == "" {
+		http.Error(w, "package name is required", http.StatusBadRequest)
+		return
+	}
+
+	rendered, err := o.manager.Render(r.Context(), packageName)
+	if err != nil {
+		if errors.Is(err, nelm.ErrPackageNotHelm) {
+			http.Error(w, fmt.Sprintf("package %s is not a Helm chart", packageName), http.StatusBadRequest)
+			return
+		}
+		http.Error(w, fmt.Sprintf("render failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/yaml")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte(rendered)) //nolint:errcheck
 }
 
 // Status returns the status service

@@ -590,8 +590,8 @@ entries:
                         ru: Egress Gateway
                       url: /admin/configuration/network/egress/gateway.html
                 - title:
-                    en: Inter-cluster cooperation (alliance)
-                    ru: Межкластерное взаимодействие (альянс)
+                    en: Inter-cluster cooperation
+                    ru: Межкластерное взаимодействие
                   folders:
                     - title:
                         en: Overview
@@ -880,8 +880,8 @@ entries:
           draft: true
           url: /user/using-overview.html
         - title:
-            en: Access
-            ru: Доступ
+            en: IAM
+            ru: IAM
           folders:
           - title:
               en: Authentication

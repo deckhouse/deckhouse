@@ -19,10 +19,6 @@ package controller
 import (
 	"context"
 	"time"
-	"update-observer/cluster"
-	"update-observer/common"
-
-	v1 "update-observer/pkg/v1"
 
 	"golang.org/x/mod/semver"
 	"golang.org/x/time/rate"
@@ -39,6 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"update-observer/cluster"
+	"update-observer/common"
+	v1 "update-observer/pkg/v1"
 )
 
 const (

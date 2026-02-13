@@ -1,0 +1,16 @@
+diff --git a/rootfs/etc/nginx/template/nginx.tmpl b/rootfs/etc/nginx/template/nginx.tmpl
+index a43d3054a..881b4d6d0 100644
+--- a/rootfs/etc/nginx/template/nginx.tmpl
++++ b/rootfs/etc/nginx/template/nginx.tmpl
+@@ -1233,11 +1233,7 @@ stream {
+             {{ else }}
+             auth_request        {{ $authPath }};
+             auth_request_set    $auth_cookie $upstream_http_set_cookie;
+-            {{ if $externalAuth.AlwaysSetCookie }}
+             add_header          Set-Cookie $auth_cookie always;
+-            {{ else }}
+-            add_header          Set-Cookie $auth_cookie;
+-            {{ end }}
+             {{- range $line := buildAuthResponseHeaders $proxySetHeader $externalAuth.ResponseHeaders false }}
+             {{ $line }}
+             {{- end }}

@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Application scaling and resource management"
 permalink: en/admin/configuration/app-scaling/overview.html
 description: "Configure application scaling and pod management in Deckhouse Kubernetes Platform. HPA, VPA, pod eviction, and resource optimization for high availability and efficient resource utilization."
 ---

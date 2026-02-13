@@ -1,5 +1,6 @@
 ---
-title: Использование TLS-сертификатов
+title: Настройка использования TLS-сертификатов
+description: "Управление TLS-сертификатами в Deckhouse Kubernetes Platform. Работа с Certificate и ClusterIssuer, автоматическое получение сертификатов через tls-acme, интеграция с Let's Encrypt и другими CA."
 permalink: ru/user/security/tls.html
 lang: ru
 ---

@@ -33,10 +33,10 @@ status:
     - errors:
       - error: 'ensure application package version: create application package version:
           simulated create error for v1.1.0'
-        name: v1.1.0
+        version: v1.1.0
       - error: 'ensure application package version: create application package version:
           simulated create error for v1.2.0'
-        name: v1.2.0
+        version: v1.2.0
       name: test-package
     processed:
     - name: test-package

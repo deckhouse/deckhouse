@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in VMware vSphere
 permalink: en/admin/integrations/virtualization/vsphere/authorization.html
 ---
 

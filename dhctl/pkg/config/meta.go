@@ -153,7 +153,6 @@ func (m *MetaConfig) prepareRegistry() error {
 	}
 
 	switch {
-
 	// Check configuration conflict
 	case initConfig != nil && deckhouseSettings != nil:
 		return fmt.Errorf(
@@ -173,6 +172,19 @@ func (m *MetaConfig) prepareRegistry() error {
 					"'moduleConfig/deckhouse.spec.settings.registry'. Supported CRI types: %v",
 				defaultCRI,
 				registry_const.SupportedCRI,
+			)
+		}
+
+		// Check bootstrap mode
+		switch deckhouseSettings.Mode {
+		case registry_const.ModeLocal, registry_const.ModeProxy:
+			return fmt.Errorf(
+				"bootstrap is not supported with registry mode '%s'. "+
+					"Please use one of the supported bootstrap modes: %v. ",
+				deckhouseSettings.Mode,
+				[]registry_const.ModeType{
+					registry_const.ModeUnmanaged, registry_const.ModeDirect,
+				},
 			)
 		}
 
@@ -573,8 +585,8 @@ func (m *MetaConfig) LoadVersionMap(filename string) error {
 
 func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	type proxy struct {
-		HttpProxy  string   `json:"httpProxy" yaml:"httpProxy"`
-		HttpsProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
+		HTTPProxy  string   `json:"httpProxy" yaml:"httpProxy"`
+		HTTPSProxy string   `json:"httpsProxy" yaml:"httpsProxy"`
 		NoProxy    []string `json:"noProxy" yaml:"noProxy"`
 	}
 
@@ -610,11 +622,11 @@ func (m *MetaConfig) EnrichProxyData() (map[string]interface{}, error) {
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
 
 	ret := make(map[string]interface{})
-	if p.HttpProxy != "" {
-		ret["httpProxy"] = p.HttpProxy
+	if p.HTTPProxy != "" {
+		ret["httpProxy"] = p.HTTPProxy
 	}
-	if p.HttpsProxy != "" {
-		ret["httpsProxy"] = p.HttpsProxy
+	if p.HTTPSProxy != "" {
+		ret["httpsProxy"] = p.HTTPSProxy
 	}
 	ret["noProxy"] = p.NoProxy
 

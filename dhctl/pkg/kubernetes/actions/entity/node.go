@@ -17,6 +17,7 @@ package entity
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net"
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
@@ -129,10 +131,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
 					}
 				}
-			} else {
-				if nodeGroupName == global.MasterNodeGroupName {
-					logger.LogDebugLn("Got empty apiserver endpoints from arguments")
-				}
+			} else if nodeGroupName == global.MasterNodeGroupName {
+				logger.LogDebugLn("Got empty apiserver endpoints from arguments")
 			}
 
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
@@ -502,4 +502,20 @@ func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientPr
 	}
 
 	return nodeIPs, nil
+}
+
+func UnstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
+	content, err := o.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	var ng v1.NodeGroup
+
+	err = json.Unmarshal(content, &ng)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	return &ng, nil
 }

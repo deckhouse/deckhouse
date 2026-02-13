@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Deckhouse Code user guide"
 permalink: en/code/documentation/user/
 ---
 

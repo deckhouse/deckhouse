@@ -16,7 +16,12 @@ lang: ru
 
 ### Источник модулей
 
-Чтобы указать в кластере источник, откуда нужно загружать информацию о модулях, необходимо создать ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В этом ресурсе указывается адрес container registry, откуда DKP будет загружать модули, параметры аутентификации и другие настройки.
+Deckhouse Kubernetes Platform (DKP) может работать со следующими видами модулей:
+
+- Встроенные модули. Входят в состав DKP. Релизный цикл привязан к релизному циклу DKP.
+- Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DKP.
+
+Чтобы указать, откуда кластеру получать информацию о модулях, создайте ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В нем задаются адрес хранилища образов контейнеров, из которого DKP будет загружать модули, параметры аутентификации и другие настройки доступа.
 
 Пример ресурса ModuleSource:
 
@@ -145,7 +150,7 @@ status:
 
 За включение модуля отвечает параметр `enabled` ModuleConfig. Если модуль доступен из нескольких источников (ресурс ModuleSource), необходимый источник можно указать в параметре `source`.
 
-Политику обновления (имя ModuleUpdatePolicy) можно указать в параметре `updatePolicy`. Политику обновления можно не указывать, — в этом случае она будет унаследована от параметров обновления Deckhouse. :
+Политику обновления (имя ModuleUpdatePolicy) можно указать в параметре `updatePolicy`. Политику обновления можно не указывать, — в этом случае она будет унаследована от параметров обновления Deckhouse Kubernetes Platform ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) и [update](/modules/deckhouse/configuration.html#parameters-update) ModuleConfig `deckhouse`).
 
 Пример ModuleConfig для включения модуля `module-one` из источника `example`:
 

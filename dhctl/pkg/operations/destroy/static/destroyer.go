@@ -181,7 +181,6 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 			file := sshClient.File()
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 			if err != nil {
-
 				return err
 			}
 			hostToExclude = strings.TrimSpace(string(bytes))
@@ -239,13 +238,11 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 
 			err = d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 			if err != nil {
-
 				return err
 			}
 
 			logger.LogDebugF("Host %s was cleaned up successfully\n", host.Host)
 		}
-
 	}
 
 	for _, host := range masterHosts {
@@ -268,7 +265,6 @@ func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error 
 
 		err := d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 		if err != nil {
-
 			return err
 		}
 	}

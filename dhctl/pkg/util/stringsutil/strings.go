@@ -56,7 +56,7 @@ func ExcludeElementFromSlice(list []string, elem string) []string {
 	indx := Index(list, elem)
 
 	if indx >= 0 {
-		var res []string
+		res := make([]string, 0, len(list)-1)
 
 		res = append(res, list[:indx]...)
 		res = append(res, list[indx+1:]...)

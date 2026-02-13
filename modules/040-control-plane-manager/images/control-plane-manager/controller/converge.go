@@ -50,7 +50,7 @@ func generateEtcdPerformancePatch() error {
 // ensuring the destination contains exactly the same set of files as in the config.
 func syncExtraFiles() error {
 	dstDir := filepath.Join(deckhousePath, "extra-files")
-	log.Infof("phase: sync extra files to %s", dstDir)
+	log.Info("phase: sync extra files", slog.String("dir", dstDir))
 
 	if err := os.MkdirAll(dstDir, 0o700); err != nil {
 		return err
@@ -109,7 +109,7 @@ func syncExtraFiles() error {
 }
 
 func convergeComponents() error {
-	log.Infof("phase: converge kubernetes components")
+	log.Info("phase: converge kubernetes components")
 
 	var components []string
 	if config.EtcdArbiter {
@@ -136,7 +136,7 @@ func rejoinEtcdMemberIfNeeded(etcd *Etcd) error {
 		}
 
 		if !memberExists {
-			log.Infof("etcd member folder exists but %s is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", config.NodeName)
+			log.Info("etcd member folder exists but the node is not a member of the cluster, cleanup etcd folder and re-join member to the cluster", slog.String("node", config.NodeName))
 			if err := cleanupEtcdFolder(); err != nil {
 				return fmt.Errorf("failed to cleanup etcd folder: %w", err)
 			}
@@ -260,7 +260,7 @@ func prepareConverge(componentName string, isTemp bool) error {
 	c := exec.Command(kubeadmPath, args...)
 	out, err := c.CombinedOutput()
 	for _, s := range strings.Split(string(out), "\n") {
-		log.Infof("%s", s)
+		log.Info(s)
 	}
 	return err
 }
@@ -323,7 +323,7 @@ metadata:
   namespace: kube-system
   annotations:
     control-plane-manager.deckhouse.io/checksum: "%s"`
-	log.Infof("write checksum patch for component %s", componentName)
+	log.Info("write checksum patch for component", slog.String("component", componentName))
 	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", componentName+"999checksum.yaml")
 	content := fmt.Sprintf(patch, componentName, checksum)
 	return os.WriteFile(patchFile, []byte(content), 0o600)
@@ -331,7 +331,7 @@ metadata:
 
 func waitPodIsReady(componentName string, checksum string) error {
 	tries := 0
-	log.Infof("waiting for the %s pod component to be ready with the new manifest in apiserver", componentName)
+	log.Info("waiting for the component pod to be ready with the new manifest in apiserver", slog.String("component", componentName))
 	for {
 		tries++
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
