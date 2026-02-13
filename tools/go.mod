@@ -73,7 +73,6 @@ require (
 	github.com/golangci/unconvert v0.0.0-20180507085042-28b1c447d1f4 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
-	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20210225214923-2e10b2664254 // indirect
 	github.com/gostaticanalysis/analysisutil v0.4.1 // indirect
@@ -185,10 +184,10 @@ require (
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	helm.sh/helm/v3 v3.17.4 // indirect
 	honnef.co/go/tools v0.1.4 // indirect
-	k8s.io/api v0.33.7 // indirect
-	k8s.io/apiextensions-apiserver v0.33.7 // indirect
-	k8s.io/apimachinery v0.33.7 // indirect
-	k8s.io/client-go v0.33.7 // indirect
+	k8s.io/api v0.33.8 // indirect
+	k8s.io/apiextensions-apiserver v0.33.8 // indirect
+	k8s.io/apimachinery v0.33.8 // indirect
+	k8s.io/client-go v0.33.8 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	mvdan.cc/gofumpt v0.1.1 // indirect
