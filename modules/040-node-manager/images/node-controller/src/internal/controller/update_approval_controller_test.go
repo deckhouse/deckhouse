@@ -82,7 +82,7 @@ func withDisruptions(mode string, drainBefore *bool) func(*v1.NodeGroup) {
 		// NOTE: Adjust types based on actual API definition
 		// If ApprovalMode is a custom type, use: ng.Spec.Disruptions.ApprovalMode = v1.ApprovalMode(mode)
 		// If it's a string, use: ng.Spec.Disruptions.ApprovalMode = mode
-		ng.Spec.Disruptions.ApprovalMode = mode
+		ng.Spec.Disruptions.ApprovalMode = v1.DisruptionApprovalMode(mode)
 		if drainBefore != nil {
 			ng.Spec.Disruptions.Automatic.DrainBeforeApproval = drainBefore
 		}
