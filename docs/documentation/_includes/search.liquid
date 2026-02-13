@@ -10,10 +10,18 @@
 }
 {%- unless forloop.last %},{% endunless %}
 {%- endfor -%}
+{%- assign faqpages = site.pages | where: "faqIndexPage", true | where: "lang", page.lang %}
+{%- for faqpage in faqpages %}
+,{"title": "{{ faqpage.title | escape }}",
+"url": "{{ faqpage.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"keywords": {{ faqpage.search | jsonify }},
+"content": "" }
+{%- endfor -%}
 {%- assign searchedpages = site.faq | where: "searchable", true | where: "lang", page.lang %}
+{%- if faqpages.size > 0 and searchedpages.size > 0 %},{% endif %}
 {%- for page in searchedpages %}
 {"title": "{{ page.title | escape }}",
-"url": "{{ page.url | remove_first: "/" | regex_replace: '^(ru/|en/)', '' }}",
+"url": "faq.html#{{ page.title | slugify }}",
 "keywords": {{ page.search | jsonify }},
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
 }
