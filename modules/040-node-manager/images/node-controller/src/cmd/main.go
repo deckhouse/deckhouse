@@ -37,6 +37,10 @@ import (
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller"
 	"github.com/deckhouse/node-controller/internal/webhook"
+
+	// Import controller packages to trigger init() registration.
+	_ "github.com/deckhouse/node-controller/internal/controller/nodegroupstatus"
+	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 

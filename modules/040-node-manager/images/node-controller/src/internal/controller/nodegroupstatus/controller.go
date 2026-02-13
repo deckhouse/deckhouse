@@ -42,11 +42,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/registry"
+	"github.com/deckhouse/node-controller/internal/controller"
 )
 
 func init() {
-	registry.Register("NodeGroupStatus", Setup)
+	controller.Register("NodeGroupStatus", Setup)
 }
 
 const (
