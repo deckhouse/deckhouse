@@ -799,13 +799,15 @@ resources:
 				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcEmpty)
 				f.HelmRender()
 			})
-			It("extra-file-authentication-config.yaml should not be created", func() {
+			It("extra-file-authentication-config.yaml should be created", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
-				Expect(authConfig).Should(BeEmpty())
+				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
+				Expect(config.JWT).Should(BeEmpty())
+				Expect(config.Anonymous.Enabled).To(Equal(true))
 			})
 		})
 	})
