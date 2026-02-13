@@ -25,16 +25,6 @@ spec:
     targetLabel: name
     regex: kube_verticalpodautoscaler_labels
     replacement: ''
-  - sourceLabels:
-    - created_by_kind
-    regex: InternalVirtualizationVirtualMachineInstance
-    targetLabel: created_by_kind
-    replacement: VirtualMachine
-  - sourceLabels:
-    - owner_kind
-    regex: InternalVirtualizationVirtualMachineInstance
-    targetLabel: owner_kind
-    replacement: VirtualMachine
   - action: labeldrop
     regex: customresource_version|customresource_kind|customresource_group
   relabelings:
