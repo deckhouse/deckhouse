@@ -42,6 +42,14 @@ class ModuleSearch {
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
     this.searchTimeout = null; // For debouncing search input
+    this.useSearchWorker = typeof Worker !== 'undefined';
+    this.workerCompatibilityChecked = false;
+    this.searchWorker = null;
+    this.workerInitialized = false;
+    this.workerInitResolve = null;
+    this.workerInitReject = null;
+    this.workerRequestCounter = 0;
+    this.workerPendingRequests = new Map();
     this.indexedDBAvailable = false; // Flag to track IndexedDB availability
     this.dbName = 'ModuleSearchDB';
     this.dbVersion = 1;
@@ -54,6 +62,7 @@ class ModuleSearch {
       searchDebounceMs: 300, // Debounce search input by 300ms
       backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
       searchContext: '', // Search context message to display above ready message
+      workerPath: '/assets/js/search-v3-worker.js',
       ...options
     };
 
@@ -129,6 +138,237 @@ class ModuleSearch {
     } else if (htmlLang === 'en') {
       this.currentLang = 'en';
     }
+  }
+
+  // Reads the cache-busting version from the loaded search-v3.js tag.
+  getCurrentScriptVersion() {
+    const matchingScript = Array.from(document.scripts).find((script) =>
+      script.src && script.src.includes('/assets/js/search-v3.js')
+    );
+    if (!matchingScript) {
+      return '';
+    }
+    const url = new URL(matchingScript.src, window.location.origin);
+    return url.searchParams.get('v') || '';
+  }
+
+  // Builds the worker URL and keeps it on the same asset version as main script.
+  getWorkerUrl() {
+    const version = this.getCurrentScriptVersion();
+    if (!version) {
+      return this.options.workerPath;
+    }
+    return `${this.options.workerPath}?v=${encodeURIComponent(version)}`;
+  }
+
+  // Compatibility gate: verifies Worker APIs and basic execution.
+  async canUseSearchWorker() {
+    if (this.workerCompatibilityChecked) {
+      return this.useSearchWorker;
+    }
+    this.workerCompatibilityChecked = true;
+
+    if (typeof Worker === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
+      this.useSearchWorker = false;
+      return false;
+    }
+
+    let testUrl = null;
+    try {
+      const testBlob = new Blob(
+        ["self.onmessage=function(){self.postMessage('ok');};"],
+        { type: 'application/javascript' }
+      );
+      testUrl = URL.createObjectURL(testBlob);
+
+      const isSupported = await new Promise((resolve) => {
+        const testWorker = new Worker(testUrl);
+        const timer = setTimeout(() => {
+          testWorker.terminate();
+          resolve(false);
+        }, 1500);
+
+        testWorker.onmessage = () => {
+          clearTimeout(timer);
+          testWorker.terminate();
+          resolve(true);
+        };
+
+        testWorker.onerror = () => {
+          clearTimeout(timer);
+          testWorker.terminate();
+          resolve(false);
+        };
+
+        testWorker.postMessage('ping');
+      });
+
+      this.useSearchWorker = isSupported;
+      return isSupported;
+    } catch (error) {
+      this.useSearchWorker = false;
+      return false;
+    } finally {
+      if (testUrl) {
+        URL.revokeObjectURL(testUrl);
+      }
+    }
+  }
+
+  // Creates the dedicated worker and wires message/error handlers once.
+  async initSearchWorker() {
+    if (!this.useSearchWorker) {
+      return false;
+    }
+
+    if (this.searchWorker) {
+      return true;
+    }
+
+    try {
+      this.searchWorker = new Worker(this.getWorkerUrl());
+
+      this.searchWorker.onmessage = (event) => {
+        const { type, payload } = event.data || {};
+        if (type === 'READY') {
+          this.workerInitialized = true;
+          this.availableModules = new Set(payload.availableModules || []);
+          if (this.workerInitResolve) {
+            this.workerInitResolve(true);
+          }
+          this.workerInitResolve = null;
+          this.workerInitReject = null;
+          return;
+        }
+
+        if (type === 'SEARCH_RESULT') {
+          const requestId = payload.requestId;
+          const pending = this.workerPendingRequests.get(requestId);
+          if (pending) {
+            this.workerPendingRequests.delete(requestId);
+            pending.resolve(payload);
+          }
+          return;
+        }
+
+        if (type === 'ERROR') {
+          const requestId = payload && payload.requestId;
+          if (requestId && this.workerPendingRequests.has(requestId)) {
+            const pending = this.workerPendingRequests.get(requestId);
+            this.workerPendingRequests.delete(requestId);
+            pending.reject(new Error(payload.message || 'Worker search error'));
+          } else if (this.workerInitReject) {
+            this.workerInitReject(new Error(payload.message || 'Worker initialization failed'));
+            this.workerInitResolve = null;
+            this.workerInitReject = null;
+          }
+        }
+      };
+
+      this.searchWorker.onerror = (event) => {
+        console.warn('Search worker error, falling back to main thread:', event.message);
+        this.useSearchWorker = false;
+        this.workerInitialized = false;
+        if (this.searchWorker) {
+          this.searchWorker.terminate();
+          this.searchWorker = null;
+        }
+        if (this.workerInitReject) {
+          this.workerInitReject(new Error(event.message || 'Search worker error'));
+        }
+        this.workerInitResolve = null;
+        this.workerInitReject = null;
+      };
+    } catch (error) {
+      console.warn('Failed to create search worker, falling back to main thread:', error);
+      this.useSearchWorker = false;
+      if (this.workerInitReject) {
+        this.workerInitReject(error);
+      }
+      this.workerInitResolve = null;
+      this.workerInitReject = null;
+      return false;
+    }
+
+    return true;
+  }
+
+  // Initializes search in worker first, then falls back to in-thread indexing.
+  async initializeSearchEngine() {
+    if (this.useSearchWorker) {
+      await this.canUseSearchWorker();
+    }
+
+    if (this.useSearchWorker) {
+      try {
+        const workerCreated = await this.initSearchWorker();
+        if (!workerCreated) {
+          throw new Error('Worker was not created');
+        }
+
+        this.workerInitialized = false;
+        const readyPromise = new Promise((resolve, reject) => {
+          const timeoutId = setTimeout(() => {
+            if (!this.workerInitialized) {
+              reject(new Error('Search worker initialization timeout'));
+            }
+          }, 20000);
+          this.workerInitResolve = (value) => {
+            clearTimeout(timeoutId);
+            resolve(value);
+          };
+          this.workerInitReject = (error) => {
+            clearTimeout(timeoutId);
+            reject(error);
+          };
+        });
+
+        this.searchWorker.postMessage({
+          type: 'INIT',
+          payload: {
+            searchData: this.searchData,
+            currentLang: this.currentLang
+          }
+        });
+
+        await readyPromise;
+        return;
+      } catch (error) {
+        console.warn('Worker init failed, falling back to main thread:', error);
+        this.useSearchWorker = false;
+        this.workerInitialized = false;
+        if (this.searchWorker) {
+          this.searchWorker.terminate();
+          this.searchWorker = null;
+        }
+      }
+    }
+
+    this.buildLunrIndex();
+    this.buildSearchDictionary();
+    this.buildFuseIndex();
+    this.extractAvailableModules();
+  }
+
+  // Sends a search request to worker and resolves by requestId.
+  searchWithWorker(query) {
+    return new Promise((resolve, reject) => {
+      if (!this.searchWorker || !this.workerInitialized) {
+        reject(new Error('Search worker is not ready'));
+        return;
+      }
+
+      const requestId = ++this.workerRequestCounter;
+      this.workerPendingRequests.set(requestId, { resolve, reject });
+
+      this.searchWorker.postMessage({
+        type: 'SEARCH',
+        payload: {
+          requestId,
+          query
+        }
+      });
+    });
   }
 
   // Initialize IndexedDB
@@ -623,10 +863,7 @@ class ModuleSearch {
       // Refresh language detection before building index
       this.refreshLanguageDetection();
 
-      this.buildLunrIndex();
-      this.buildSearchDictionary();
-      this.buildFuseIndex();
-      this.extractAvailableModules();
+      await this.initializeSearchEngine();
       this.isDataLoaded = true;
 
       // Only hide loading UI if not loading in background
@@ -1086,7 +1323,7 @@ class ModuleSearch {
       await this.loadSearchIndex();
     }
 
-    if (!this.lunrIndex) {
+    if (!this.useSearchWorker && !this.lunrIndex) {
       this.showError('Search index not loaded yet.');
       return;
     }
@@ -1101,35 +1338,53 @@ class ModuleSearch {
       // Clear any existing fuzzy search messages
       this.clearFuzzySearchMessages();
 
-      // First try exact search with sanitized query
+      // Search is executed in worker when available, otherwise in main thread.
       let results = [];
       let highlightQuery = sanitizedQuery; // Use sanitized query for highlighting
 
-      try {
-        results = this.lunrIndex.search(sanitizedQuery);
-      } catch (error) {
-        console.warn('Lunr search error with sanitized query:', error);
-        // If sanitized query still fails, try a more aggressive sanitization
-        const fallbackQuery = sanitizedQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-        if (fallbackQuery !== sanitizedQuery) {
-          try {
-            results = this.lunrIndex.search(fallbackQuery);
-            highlightQuery = fallbackQuery;
-            console.log(`Fallback search successful with: "${fallbackQuery}"`);
-          } catch (fallbackError) {
-            console.error('Fallback search also failed:', fallbackError);
-            this.showError('Search query contains invalid characters. Please try a different search term.');
-            return;
+      if (this.useSearchWorker && this.workerInitialized) {
+        try {
+          const workerResponse = await this.searchWithWorker(query);
+          results = workerResponse.results || [];
+          highlightQuery = workerResponse.highlightQuery || sanitizedQuery;
+        } catch (workerError) {
+          console.warn('Worker search failed, falling back to main thread:', workerError);
+          this.useSearchWorker = false;
+          if (!this.lunrIndex) {
+            this.buildLunrIndex();
+            this.buildSearchDictionary();
+            this.buildFuseIndex();
+            this.extractAvailableModules();
           }
-        } else {
-          this.showError('Search query contains invalid characters. Please try a different search term.');
-          return;
         }
       }
 
-      // If no results and fuzzy search is available, try fuzzy search
-      if (results.length === 0 && this.fuseIndex) {
-        const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
+      if (!this.useSearchWorker || !this.workerInitialized) {
+        try {
+          results = this.lunrIndex.search(sanitizedQuery);
+        } catch (error) {
+          console.warn('Lunr search error with sanitized query:', error);
+          // If sanitized query still fails, try a more aggressive sanitization
+          const fallbackQuery = sanitizedQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+          if (fallbackQuery !== sanitizedQuery) {
+            try {
+              results = this.lunrIndex.search(fallbackQuery);
+              highlightQuery = fallbackQuery;
+              console.log(`Fallback search successful with: "${fallbackQuery}"`);
+            } catch (fallbackError) {
+              console.error('Fallback search also failed:', fallbackError);
+              this.showError('Search query contains invalid characters. Please try a different search term.');
+              return;
+            }
+          } else {
+            this.showError('Search query contains invalid characters. Please try a different search term.');
+            return;
+          }
+        }
+
+        // If no results and fuzzy search is available, try fuzzy search
+        if (results.length === 0 && this.fuseIndex) {
+          const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
 
           if (fuzzySuggestions.length > 0) {
             // Try searching with the best fuzzy suggestion
@@ -1139,18 +1394,19 @@ class ModuleSearch {
             // Use the fuzzy suggestion for highlighting
             highlightQuery = bestSuggestion;
           }
-      }
+        }
 
-      // If still no results, try searching with individual words from fuzzy suggestions
-      if (results.length === 0 && this.fuseIndex) {
-        const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
-        for (const suggestion of fuzzySuggestions.slice(0, 3)) { // Try top 3 suggestions
-          const wordResults = this.lunrIndex.search(suggestion.item);
-          if (wordResults.length > 0) {
-            results = wordResults;
-            // Use the fuzzy suggestion for highlighting
-            highlightQuery = suggestion.item;
-            break;
+        // If still no results, try searching with individual words from fuzzy suggestions
+        if (results.length === 0 && this.fuseIndex) {
+          const fuzzySuggestions = this.getFuzzySuggestions(sanitizedQuery);
+          for (const suggestion of fuzzySuggestions.slice(0, 3)) { // Try top 3 suggestions
+            const wordResults = this.lunrIndex.search(suggestion.item);
+            if (wordResults.length > 0) {
+              results = wordResults;
+              // Use the fuzzy suggestion for highlighting
+              highlightQuery = suggestion.item;
+              break;
+            }
           }
         }
       }
