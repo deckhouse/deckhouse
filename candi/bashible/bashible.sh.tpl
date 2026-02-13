@@ -310,10 +310,15 @@ function get_rpp_address() {
     local labelSelector="app%3Dregistry-packages-proxy"
 
     rpp_ips=$(get_pods $namespace $labelSelector $token | jq -r '.items[] | select(.status.phase == "Running") | .status.podIP')
-    port=4129
+    port=4219
     ips_csv=$(echo "$rpp_ips" | grep -v '^[[:space:]]*$' | sed "s/$/:$port/" | tr '\n' ',' | sed 's/,$//')
     echo "$ips_csv"
   fi
+}
+
+function get_rpp_token() {
+  local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
+  echo "{rpp_token}"
 }
 
 function main() {
@@ -343,6 +348,11 @@ function main() {
   rpp_addr="$(get_rpp_address)"
   if [[ -n $rpp_addr ]]; then
     export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
+  fi
+  rpp_token=="$(get_rpp_token)"
+  if [[ -n $rpp_addr ]]; then
+    export PACKAGES_PROXY_TOKEN="${get_rpp_token}"
+  fi
   {{- end }}
 {{- end }}
 
