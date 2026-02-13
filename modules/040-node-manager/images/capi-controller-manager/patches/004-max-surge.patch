@@ -1,20 +1,44 @@
 diff --git a/internal/controllers/machinedeployment/machinedeployment_rolling.go b/internal/controllers/machinedeployment/machinedeployment_rolling.go
-index d4102185c..86276f060 100644
+index d4102185c..7ed2cb552 100644
 --- a/internal/controllers/machinedeployment/machinedeployment_rolling.go
 +++ b/internal/controllers/machinedeployment/machinedeployment_rolling.go
-@@ -97,6 +97,12 @@ func (r *Reconciler) reconcileNewMachineSet(ctx context.Context, allMSs []*clust
+@@ -97,10 +97,36 @@ func (r *Reconciler) reconcileNewMachineSet(ctx context.Context, allMSs []*clust
  		return r.scaleMachineSet(ctx, newMS, *(deployment.Spec.Replicas), deployment)
  	}
  
-+	// Wait for current newMS replicas to become Ready before the next scale-up step.
++	// Wait for current newMS replicas to become Ready before the next scale-up step
 +	readyReplicas := ptr.Deref(newMS.Status.ReadyReplicas, 0)
-+	if readyReplicas < *(newMS.Spec.Replicas) {
++	replicas := *newMS.Spec.Replicas
++	log := ctrl.LoggerFrom(ctx)
++	maxSurge := mdutil.MaxSurge(*deployment)
++
++	if readyReplicas < replicas {
++		log.Info("Waiting for current scale-up step to become Ready before scaling further",
++			"readyReplicas", readyReplicas,
++			"newMSReplicas", replicas,
++			"desiredReplicas", *deployment.Spec.Replicas,
++			"maxSurge", maxSurge,
++		)
 +		return nil
 +	}
 +
  	newReplicasCount, err := mdutil.NewMSNewReplicas(deployment, allMSs, *newMS.Spec.Replicas)
  	if err != nil {
  		return err
+ 	}
++
++	maxScaleUpStep := max(int32(maxSurge), 1)
++
++	log.Info("Applying new MachineSet scale-up step",
++		"fromReplicas", replicas,
++		"toReplicas", newReplicasCount,
++		"maxSurge", maxSurge,
++		"maxScaleUpStep", maxScaleUpStep,
++	)
++
+ 	return r.scaleMachineSet(ctx, newMS, newReplicasCount, deployment)
+ }
+ 
 diff --git a/internal/controllers/machinedeployment/mdutil/util.go b/internal/controllers/machinedeployment/mdutil/util.go
 index db7c4a24b..44f2d3e46 100644
 --- a/internal/controllers/machinedeployment/mdutil/util.go
