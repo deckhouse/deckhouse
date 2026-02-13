@@ -298,6 +298,9 @@ Avoid using Helm-only helpers like `toYaml` here.
     - if `versions` exists: returns it as YAML
     - else if scalar `version` exists: returns a single-item list: [{version: "<value>"}]
 
+  Note:
+    - `versions[].condition` is optional.
+
   Typical usage:
     {{- $versions := include "get_oss_versions_by_id" (list "example-service" $) | fromYaml -}}
     {{- range $versions }}...{{- end -}}
@@ -356,6 +359,65 @@ Avoid using Helm-only helpers like `toYaml` here.
       {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
     {{- end -}}
     {{- printf "- version: %s\n" ($version | quote) -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+  Returns YAML array of version strings for a given id.
+
+  Input: (list <id:string> <ctx:werf_context>)
+
+  Behaviour:
+    - if `versions` exists: returns list of `.version` values
+    - else if scalar `version` exists: returns single-item list
+
+  Intended for cases where `versions[]` items have no `condition` and you need all versions.
+
+  Typical usage:
+    {{- $raw := printf "data:\n%s" (include "get_oss_version_strings_by_id" (list "example-service" $)) | fromYaml -}}
+    {{- $versions := index $raw "data" -}}
+*/}}
+{{- define "get_oss_version_strings_by_id" -}}
+  {{- $id := index . 0 -}}
+  {{- $ctx := index . 1 -}}
+
+  {{- if not ($ctx.Files.Exists $ctx.OssYamlPath) -}}
+    {{- fail (printf "\n[ERROR] OSS file not found at path: %s" $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $raw := printf "data:\n%s" ($ctx.Files.Get $ctx.OssYamlPath) | fromYaml -}}
+
+  {{- $item := dict -}}
+  {{- range $raw.data -}}
+    {{- if eq .id $id -}}
+      {{- $item = . -}}
+      {{- break -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if eq (len $item) 0 -}}
+    {{- fail (printf "\n[ERROR] ID '%s' not found in file: %s" $id $ctx.OssYamlPath) -}}
+  {{- end -}}
+
+  {{- $versions := index $item "versions" -}}
+  {{- if not $versions -}}
+    {{- $versions = list -}}
+  {{- end -}}
+
+  {{- if gt (len $versions) 0 -}}
+    {{- range $versions -}}
+      {{- $ver := (index . "version") | default "" -}}
+      {{- if eq $ver "" -}}
+        {{- fail (printf "\n[ERROR] Empty version in versions[] for ID '%s' in file: %s" $id $ctx.OssYamlPath) -}}
+      {{- end -}}
+      {{- printf "- %s\n" ($ver | quote) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $version := (index $item "version") | default "" -}}
+    {{- if eq $version "" -}}
+      {{- fail (printf "\n[ERROR] Version for ID '%s' is empty or not found in file: %s" $id $ctx.OssYamlPath) -}}
+    {{- end -}}
+    {{- printf "- %s\n" ($version | quote) -}}
   {{- end -}}
 {{- end -}}
 

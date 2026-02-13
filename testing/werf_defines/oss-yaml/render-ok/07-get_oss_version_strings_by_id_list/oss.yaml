@@ -1,0 +1,5 @@
+- name: Example service
+  id: example-service
+  versions:
+    - version: 1.2.1
+    - version: 1.2.2
