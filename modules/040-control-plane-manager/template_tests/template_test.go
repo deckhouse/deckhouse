@@ -97,6 +97,12 @@ type AuthenticationConfigurationV1beta1 struct {
 			Extra    []ExtraClaimMapping       `yaml:"extra"`
 		} `yaml:"claimMappings"`
 	} `yaml:"jwt"`
+	Anonymous struct {
+		Enabled    bool `yaml:"enabled"`
+		Conditions []struct {
+			Path string `yaml:"path"`
+		} `yaml:"conditions"`
+	} `yaml:"anonymous"`
 }
 
 var _ = Describe("Module :: control-plane-manager :: helm template :: arguments secret", func() {
@@ -799,15 +805,21 @@ resources:
 				f.ValuesSetFromYaml("controlPlaneManager", apiServerWithOidcEmpty)
 				f.HelmRender()
 			})
-			It("extra-file-authentication-config.yaml should be created", func() {
+			It("extra-file-authentication-config.yaml must exist and contain anonymous settings", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				s := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
 				Expect(s.Exists()).To(BeTrue())
 				authConfig, err := base64.StdEncoding.DecodeString(s.Field("data.extra-file-authentication-config\\.yaml").String())
 				Expect(err).ShouldNot(HaveOccurred())
+				var config AuthenticationConfigurationV1beta1
+				err = yaml.Unmarshal(authConfig, &config)
 				Expect(config.APIVersion).To(Equal("apiserver.config.k8s.io/v1beta1"))
 				Expect(config.JWT).Should(BeEmpty())
 				Expect(config.Anonymous.Enabled).To(Equal(true))
+				Expect(config.Anonymous.Conditions).To(ContainElements(
+					HaveField("Path", "/livez"),
+					HaveField("Path", "/healthz"),
+				))
 			})
 		})
 	})
