@@ -592,6 +592,9 @@ func calculateConcurrency(maxConcurrent *intstr.IntOrString, totalNodes int) int
 	return 1
 }
 
+// isInAllowedWindow checks if current time is within any of the allowed disruption windows.
+// NOTE: This assumes v1.DisruptionWindow has an IsAllowed(time.Time) method.
+// If the API doesn't have this, implement the time window check logic here.
 func isInAllowedWindow(windows []v1.DisruptionWindow, now time.Time) bool {
 	if len(windows) == 0 {
 		return true // No windows = always allowed
