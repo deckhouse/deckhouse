@@ -137,6 +137,17 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 		return errors.New("Internal error. SSH provider did not pass")
 	}
 
+	return d.params.PhasedActionProvider().Run(phases.AllNodesPhase, true, func() (phases.DefaultContextType, error) {
+		err := d.destroyCluster(ctx, autoApprove)
+		if err != nil {
+			return nil, err
+		}
+
+		return nil, nil
+	})
+}
+
+func (d *Destroyer) destroyCluster(ctx context.Context, autoApprove bool) error {
 	if !autoApprove {
 		if !input.NewConfirmation().WithMessage("Do you really want to cleanup control-plane nodes?").Ask() {
 			return fmt.Errorf("Cleanup master nodes disallow")
@@ -170,7 +181,6 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 			file := sshClient.File()
 			bytes, err := file.DownloadBytes(ctx, "/var/lib/bashible/discovered-node-ip")
 			if err != nil {
-
 				return err
 			}
 			hostToExclude = strings.TrimSpace(string(bytes))
@@ -228,13 +238,11 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 
 			err = d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 			if err != nil {
-
 				return err
 			}
 
 			logger.LogDebugF("Host %s was cleaned up successfully\n", host.Host)
 		}
-
 	}
 
 	for _, host := range masterHosts {
@@ -257,7 +265,6 @@ func (d *Destroyer) DestroyCluster(ctx context.Context, autoApprove bool) error 
 
 		err := d.processStaticHost(ctx, sshClient, host, stdOutErrHandler, cmd)
 		if err != nil {
-
 			return err
 		}
 	}

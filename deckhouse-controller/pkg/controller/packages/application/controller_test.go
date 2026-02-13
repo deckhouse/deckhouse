@@ -300,8 +300,8 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		})
 		require.NoError(suite.T(), err)
 		app = suite.getApplication("test-app", "foobar")
-		require.NotEmpty(suite.T(), app.Status.ResourceConditions)
-		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.ResourceConditions[0].Reason)
+		require.NotEmpty(suite.T(), app.Status.Conditions)
+		require.Equal(suite.T(), v1alpha1.ApplicationConditionReasonVersionNotFound, app.Status.Conditions[0].Reason)
 	})
 
 	suite.Run("version is draft", func() {
@@ -356,6 +356,68 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		})
 		require.NoError(suite.T(), err)
 	})
+
+	suite.Run("version update cleans up old APV", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("version-update.yaml", withDependencyContainer(dc))
+
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+
+		// Verify old APV no longer has the app in usedBy
+		oldAPV := new(v1alpha1.ApplicationPackageVersion)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "deckhouse-test-v1.0.1"}, oldAPV)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 0, oldAPV.Status.UsedByCount, "Old APV should have usedByCount=0")
+		assert.Empty(suite.T(), oldAPV.Status.UsedBy, "Old APV should have empty usedBy list")
+
+		// Verify new APV has the app in usedBy
+		newAPV := new(v1alpha1.ApplicationPackageVersion)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "deckhouse-test-v1.0.2"}, newAPV)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 1, newAPV.Status.UsedByCount, "New APV should have usedByCount=1")
+		assert.Len(suite.T(), newAPV.Status.UsedBy, 1, "New APV should have 1 app in usedBy")
+		assert.Equal(suite.T(), "test-app", newAPV.Status.UsedBy[0].Name)
+		assert.Equal(suite.T(), "foobar", newAPV.Status.UsedBy[0].Namespace)
+
+		// Verify app owner references updated
+		updatedApp := suite.getApplication("test-app", "foobar")
+		ownerRefs := updatedApp.GetOwnerReferences()
+		apvRefCount := 0
+		var apvRefName string
+		for _, ref := range ownerRefs {
+			if ref.Kind == v1alpha1.ApplicationPackageVersionKind {
+				apvRefCount++
+				apvRefName = ref.Name
+			}
+		}
+		assert.Equal(suite.T(), 1, apvRefCount, "App should have exactly 1 APV owner reference")
+		assert.Equal(suite.T(), "deckhouse-test-v1.0.2", apvRefName, "App should reference new APV")
+
+		// Verify ApplicationPackage usedBy version is updated
+		ap := new(v1alpha1.ApplicationPackage)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "test"}, ap)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 1, ap.Status.UsedByCount, "AP should have usedByCount=1")
+		require.Len(suite.T(), ap.Status.UsedBy, 1, "AP should have 1 app in usedBy")
+		assert.Equal(suite.T(), "test-app", ap.Status.UsedBy[0].Name)
+		assert.Equal(suite.T(), "foobar", ap.Status.UsedBy[0].Namespace)
+		assert.Equal(suite.T(), "v1.0.2", ap.Status.UsedBy[0].Version, "AP usedBy version should be updated to new version")
+	})
 }
 
 // nolint:unparam
@@ -376,7 +438,7 @@ func (m *moduleManagerStub) AreModulesInited() bool {
 type operatorStub struct {
 }
 
-func (o *operatorStub) Update(_ registry.Registry, _ packageoperator.Instance) {
+func (o *operatorStub) Update(_ registry.Remote, _ packageoperator.Instance) {
 	return
 }
 

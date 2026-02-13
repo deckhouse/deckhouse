@@ -76,6 +76,9 @@ spec:
         - key: security.deckhouse.io/skip-pss-check
           operator: NotIn
           values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
     namespaceSelector:
       matchExpressions:
       {{- if eq $standard "baseline" }}
@@ -134,6 +137,9 @@ spec:
         - key: security.deckhouse.io/skip-pss-check
           operator: NotIn
           values: ["true"]
+        - key: gatekeeper.sh/operation
+          operator: NotIn
+          values: ["webhook"]
     namespaceSelector:
       matchExpressions:
     {{- if eq $standard "baseline" }}

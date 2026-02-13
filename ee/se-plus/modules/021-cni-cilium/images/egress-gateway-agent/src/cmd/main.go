@@ -65,7 +65,7 @@ func main() {
 		c.NextProtos = []string{"http/1.1"}
 	}
 
-	tlsOpts := []func(*tls.Config){}
+	tlsOpts := make([]func(*tls.Config), 0, 1)
 	tlsOpts = append(tlsOpts, disableHTTP2)
 
 	webhookServer := webhook.NewServer(webhook.Options{
@@ -91,11 +91,7 @@ func main() {
 	}
 
 	anounceLogger := EmptyLogger{}
-	excludeRegex, err := regexp.Compile(excludeInterfacesPrefixes)
-	if err != nil {
-		setupLog.Error(err, "unable to compile exclude regex")
-		os.Exit(1)
-	}
+	excludeRegex := regexp.MustCompile(excludeInterfacesPrefixes)
 	virtualIPAnnounces, err := layer2.New(anounceLogger, excludeRegex)
 	if err != nil {
 		setupLog.Error(err, "unable to create virtual IP announcement")

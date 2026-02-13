@@ -16,7 +16,7 @@ Depending on the configuration, DKP supports two authentication approaches:
   The User resource stores a hashed version of the password (bcrypt), not the plain-text password.
 - [Integration with external providers](./external-authentication-providers.html) — enables connection to systems like LDAP, GitLab, GitHub, and others to support single sign-on across multiple DKP clusters.
 
-From the perspective of a cluster user or application developer, the method chosen by the administrator to configure authentication in DKP does not matter — the authentication interface and integration steps are the same.
+From the perspective of a cluster user or application developer, the method chosen by the administrator to configure authentication in DKP does not matter — the authentication interface and integration steps are the same. You can learn about configuring authentication for applications in the section [Usage → IAM → Authentication](../../../../user/access/authentication.html).
 
 The platform also provides capabilities for:
 

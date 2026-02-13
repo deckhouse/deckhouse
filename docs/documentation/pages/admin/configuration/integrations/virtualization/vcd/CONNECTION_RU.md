@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в VMware Cloud Director
 permalink: ru/admin/integrations/virtualization/vcd/connection-and-authorization.html
 lang: ru
 ---

@@ -41,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/go_lib/d8env"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -56,8 +55,7 @@ type Manager struct {
 
 	onValuesChanged func(name string)
 
-	loader            *loader.ApplicationLoader // Loads packages from filesystem
-	nelm              *nelm.Service             // nelm service to install/uninstall releases
+	nelm              *nelm.Service // nelm service to install/uninstall releases
 	scheduler         *schedule.Scheduler
 	kubeObjectPatcher *objectpatch.ObjectPatcher
 	scheduleManager   schedulemanager.ScheduleManager
@@ -76,14 +74,14 @@ type Config struct {
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
 }
 
-// New creates a new package manager with the specified apps directory.
+// New creates a new Manager for application packages.
+// The Manager does not use an implicit apps directory; packages are loaded
+// explicitly by path via LoadPackage.
 func New(conf Config, logger *log.Logger) *Manager {
-	appsPath := filepath.Join(d8env.GetDownloadedModulesDir(), "apps", "deployed")
 	return &Manager{
 		apps: make(map[string]*apps.Application),
 
 		onValuesChanged:   conf.OnValuesChanged,
-		loader:            loader.NewApplicationLoader(appsPath, logger),
 		nelm:              conf.NelmService,
 		scheduler:         conf.Scheduler,
 		kubeEventsManager: conf.KubeEventsManager,
@@ -97,22 +95,29 @@ func New(conf Config, logger *log.Logger) *Manager {
 // LoadPackage loads a package from filesystem and stores it in the manager.
 // It discovers hooks, parses OpenAPI schemas, and initializes values storage.
 // It returns the loaded version
-func (m *Manager) LoadPackage(ctx context.Context, registry registry.Registry, namespace, name string) (string, error) {
+func (m *Manager) LoadPackage(ctx context.Context, repo registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(managerTracer).Start(ctx, "LoadPackage")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("name", name))
-	span.SetAttributes(attribute.String("namespace", namespace))
-	span.SetAttributes(attribute.String("registry", registry.Name))
+	span.SetAttributes(attribute.String("path", packagePath))
+	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	app, err := m.loader.Load(ctx, registry, name)
+	conf, err := loader.LoadAppConf(ctx, packagePath, m.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", newLoadFailedErr(err)
+	}
+
+	conf.Repository = repo
+
+	app, err := apps.NewAppByConfig(filepath.Base(packagePath), conf)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
 	}
 
 	m.mu.Lock()
-	m.apps[name] = app
+	m.apps[app.GetName()] = app
 	m.scheduler.Add(app)
 	m.mu.Unlock()
 
@@ -184,7 +189,7 @@ func (m *Manager) StartupPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run on startup hooks", slog.String("name", name))
 
-	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, shtypes.OnStartup, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newStartupHookErr(err)
 	}
@@ -225,14 +230,14 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	m.logger.Debug("run before helm hooks", slog.String("name", name))
 
-	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, addontypes.BeforeHelm, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newBeforeHelmHookErr(err)
 	}
 
 	m.logger.Debug("run nelm upgrade", slog.String("name", name))
 
-	if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		return newHelmUpgradeErr(err)
 	}
@@ -241,13 +246,13 @@ func (m *Manager) RunPackage(ctx context.Context, name string) error {
 
 	// Check if AfterHelm hooks modified values (would require nelm upgrade)
 	oldChecksum := app.GetValuesChecksum()
-	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m); err != nil {
+	if err := app.RunHooksByBinding(ctx, addontypes.AfterHelm, m.kubeObjectPatcher); err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return newAfterHelmHookErr(err)
 	}
 
 	if oldChecksum != app.GetValuesChecksum() {
-		if err := m.nelm.Upgrade(ctx, app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := m.nelm.Upgrade(ctx, app.GetNamespace(), app); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			return newHelmUpgradeErr(err)
 		}
@@ -287,7 +292,7 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 	if !keep {
 		m.logger.Debug("delete nelm release", slog.String("name", name))
 		// Delete package release
-		if err := m.nelm.Delete(ctx, app); err != nil {
+		if err := m.nelm.Delete(ctx, app.GetNamespace(), app.GetName()); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return err
 		}
@@ -295,7 +300,7 @@ func (m *Manager) DisablePackage(ctx context.Context, name string, keep bool) er
 		m.logger.Debug("run after delete helm hooks", slog.String("name", name))
 
 		// Run after delete helm hooks
-		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m); err != nil {
+		if err := app.RunHooksByBinding(ctx, addontypes.AfterDeleteHelm, m.kubeObjectPatcher); err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			return fmt.Errorf("run after delete helm hooks: %w", err)
 		}
@@ -381,4 +386,18 @@ func (m *Manager) GetAppInfo(name string) apps.Info {
 	}
 
 	return app.GetInfo()
+}
+
+// Render renders manifests for a loaded package.
+// Returns ErrPackageNotFound if the package isn't loaded.
+func (m *Manager) Render(ctx context.Context, name string) (string, error) {
+	m.mu.Lock()
+	app := m.apps[name]
+	m.mu.Unlock()
+
+	if app == nil {
+		return "", fmt.Errorf("package %s not loaded", name)
+	}
+
+	return m.nelm.Render(ctx, app.GetNamespace(), app)
 }

@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Logging
 permalink: en/admin/configuration/logging/
 description: "Configure logging in Deckhouse Kubernetes Platform with built-in log collection, delivery, and storage. Centralized logging solution for cluster monitoring and troubleshooting."
 ---

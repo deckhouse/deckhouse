@@ -1,0 +1,35 @@
+- name: d8.prometheus.remote_write
+  rules:
+  - alert: PrometheusRemoteWriteEndpointUnavailable
+    expr: |
+      group by(namespace, url) (
+        prometheus_remote_storage_samples_pending{job="prometheus"} > 0
+          or
+        increase(prometheus_remote_storage_samples_failed_total{job="prometheus"}[1h]) > 0
+      )
+    labels:
+      tier: cluster
+      severity_level: "7"
+    annotations:
+      plk_markup_format: markdown
+      plk_protocol_version: "1"
+      for: "10m"
+      summary: Prometheus remote write endpoint is unavailable.
+      description: |
+        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
+
+        To troubleshoot you can:
+         1. Get list of all Prometheus pods:
+            ```shell
+            d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
+            ```
+
+            Review logs of each prometheus pod to find the detailed error information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
+            ```
+
+         2. Get logs from all Prometheus pods to find detailed information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
+            ```

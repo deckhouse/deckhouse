@@ -7,7 +7,6 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -35,7 +34,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -46,7 +45,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.30.0
+    kubernetesVersion: 1.31.0
     clusterUUID: cluster
 `
 
@@ -166,19 +165,6 @@ const tolerationsAnyNodeWithUninitialized = `
 
 var _ = Describe("Module :: cloud-provider-huaweicloud :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/huaweicloud", "/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/huaweicloud", "/deckhouse/ee/modules/030-cloud-provider-huaweicloud/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("HuaweiCloud Suite A", func() {
 		BeforeEach(func() {

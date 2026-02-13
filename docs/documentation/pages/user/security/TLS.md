@@ -1,5 +1,6 @@
 ---
-title: Using TLS certificates
+title: Configuration of using TLS certificates
+description: "Managing TLS certificates in Deckhouse Kubernetes Platform. Working with Certificate and ClusterIssuer, automatic certificate retrieval via tls-acme, integration with Let's Encrypt and other CAs."
 permalink: en/user/security/tls.html
 ---
 

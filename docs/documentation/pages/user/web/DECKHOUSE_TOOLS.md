@@ -1,5 +1,6 @@
 ---
-title: "Web interface for downloading Deckhouse utilities"
+title: "Web interface for downloading CLI utilities"
+description: "Web interface for downloading Deckhouse CLI (d8) in Deckhouse Kubernetes Platform. Centralized access to Deckhouse CLI executable files for Linux, macOS, Windows with update notifications."
 permalink: en/user/web/deckhouse-tools.html
 ---
 

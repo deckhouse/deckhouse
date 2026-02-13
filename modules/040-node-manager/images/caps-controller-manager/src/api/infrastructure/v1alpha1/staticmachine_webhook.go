@@ -87,15 +87,15 @@ func (r *StaticMachine) ValidateUpdate(old runtime.Object) (admission.Warnings, 
 		errs = append(errs, field.Forbidden(field.NewPath("spec"), "cannot be modified"))
 	}
 
-	warnings, aggErr := aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
+	aggErr := aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, errs)
 	if aggErr != nil {
 		staticmachinelog.Error(aggErr, "validate update rejected", "name", r.Name, "allowed", false)
-		return warnings, aggErr
+		return nil, aggErr
 	}
 
 	staticmachinelog.V(2).Info("validate update accepted", "name", r.Name, "allowed", true)
 
-	return warnings, nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

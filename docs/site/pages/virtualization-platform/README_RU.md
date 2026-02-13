@@ -1,5 +1,5 @@
 ---
-title: "Введение"
+title: "Документация Deckhouse Virtualization Platform"
 permalink: ru/virtualization-platform/documentation/
 lang: ru
 ---

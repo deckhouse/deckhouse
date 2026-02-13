@@ -51,7 +51,7 @@ clusterConfiguration:
 discovery:
   clusterMasterCount: 3
   prometheusScrapeInterval: 30
-  kubernetesVersion: "1.30.0"
+  kubernetesVersion: "1.31.0"
   d8SpecificNodeCountByRole:
     system: 1
 modules:
@@ -265,6 +265,25 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 		It("Renders ValidatingWebhookConfiguration with deny-exec-heritage webhook only", func() {
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
 			checkVWC(f, 1, denyExecHeritageRules)
+		})
+	})
+
+	Context("Cluster with deckhouse on master node with bootstrapped module and trackedConstraintResources", func() {
+		BeforeEach(func() {
+			f.ValuesSet("admissionPolicyEngine.internal.bootstrapped", true)
+			f.ValuesSetFromYaml("admissionPolicyEngine.internal.trackedConstraintResources", `[{"apiGroups":[""],"resources":["pods"]}]`)
+			f.HelmRender()
+		})
+
+		It("Everything must render properly", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+		})
+
+		It("Renders ValidatingWebhookConfiguration with main webhook, deny-exec-heritage webhook and security-policy-exception webhook", func() {
+			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]}]`
+			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
+			securityPolicyExceptionRules := mainRules
+			checkVWC(f, 3, mainRules, denyExecHeritageRules, securityPolicyExceptionRules)
 		})
 	})
 

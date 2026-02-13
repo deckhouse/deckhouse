@@ -67,7 +67,7 @@ func RegisterHook(handler Handler, c Config) bool {
 }
 
 func applyProviderClusterConfigurationSecretFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	var secret = &v1.Secret{}
+	secret := &v1.Secret{}
 	err := sdk.FromUnstructured(obj, secret)
 	if err != nil {
 		return nil, fmt.Errorf("cannot convert secret from unstructured: %v", err)
@@ -86,28 +86,36 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput, handler
 	snaps := input.Snapshots.Get("provider_cluster_configuration")
 	if len(snaps) > 0 {
 		secretFound = true
-		var secret = new(v1.Secret)
+		secret := new(v1.Secret)
 		err := snaps[0].UnmarshalTo(secret)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal secret: %w", err)
 		}
 
+		// We are forced to keep such a variable as a workaround in order to pass the tests during the build stage
+		// This variable (and this package) will be removed after the cloud provider modules are externalized
+		additionalOpenAPISchemasPaths := []string{
+			"/deckhouse/modules/030-cloud-provider-yandex/candi/openapi",
+			"/deckhouse/modules/030-cloud-provider-gcp/candi/openapi",
+			"/deckhouse/modules/030-cloud-provider-azure/candi/openapi",
+		}
+
+		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
+			err := json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
+			if err != nil {
+				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
+			}
+			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, additionalOpenAPISchemasPaths)
+			if err != nil {
+				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+			}
+		}
 		if clusterConfigurationYAML, ok := secret.Data["cloud-provider-cluster-configuration.yaml"]; ok && len(clusterConfigurationYAML) > 0 {
 			m, err := config.ParseConfigFromData(ctx, string(clusterConfigurationYAML), hookConfig.PreparatorProvider)
 			if err != nil {
 				return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 			}
 			metaCfg = m
-		}
-		if discoveryDataJSON, ok := secret.Data["cloud-provider-discovery-data.json"]; ok && len(discoveryDataJSON) > 0 {
-			err := json.Unmarshal(discoveryDataJSON, &providerDiscoveryData)
-			if err != nil {
-				return fmt.Errorf("cannot unmarshal cloud-provider-discovery-data.json key: %v", err)
-			}
-			_, err = config.ValidateDiscoveryData(&discoveryDataJSON, []string{})
-			if err != nil {
-				return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
-			}
 		}
 	}
 

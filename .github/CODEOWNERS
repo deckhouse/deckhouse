@@ -12,10 +12,13 @@
 036-kube-proxy/                          @AndreyPavlovFlant @apolovov
 038-registry/                            @RaveNoX
 039-registry-packages-proxy/             @RomanenkoDenys @name212 @090809 @sprait
-040-control-plane-manager/               @name212 @090809 @sprait
+040-control-plane-manager/               @sprait
+040-control-plane-manager/images/kubernetes-api-proxy/               @090809
 040-node-manager/                        @name212 @090809
-040-node-manager/templates/fencing-agent @yalosev @Evgeniy-Bondarenko
-040-node-manager/images/fencing-agent    @yalosev @Evgeniy-Bondarenko
+040-node-manager/templates/fencing-agent @yalosev
+040-node-manager/images/fencing-agent    @yalosev
+040-node-manager/templates/cluster-autoscaler/   @yalosev
+040-node-manager/images/cluster-autoscaler/   @yalosev
 040-terraform-manager/                   @name212 @090809 @aleksey-su
 042-kube-dns/                            @AndreyPavlovFlant @apolovov
 050-network-policy-engine/               @AndreyPavlovFlant @apolovov
@@ -59,7 +62,6 @@ candi/version_map.yml                    @sprait
 candi/cloud-providers/                   @aleksey-su
 candi/terraform_versions.yml             @aleksey-su
 cloud-controller-manager/                @aleksey-su
-cluster-autoscaler/                      @evgeniy-bondarenko
 csi/                                     @AleksZimin @duckhawk
 deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
@@ -71,4 +73,5 @@ openapi/                                 @nabokihms @z9r5
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
 /release.yaml                            @yalosev @nabokihms
+go_lib/cloud-data/                       @aleksey-su
 go_lib/registry/                         @RaveNoX

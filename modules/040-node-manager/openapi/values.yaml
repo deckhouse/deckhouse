@@ -43,6 +43,25 @@ properties:
             type: string
             x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
 
+      nodeControllerWebhookCert:
+        type: object
+        default: { }
+        x-required-for-helm:
+          - crt
+          - key
+          - ca
+        properties:
+          crt:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          key:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+          ca:
+            type: string
+            x-examples: [ "YjY0ZW5jX3N0cmluZwo=" ]
+
+
       machineControllerManagerEnabled:
         type: boolean
       capiControllerManagerEnabled:
@@ -160,6 +179,16 @@ properties:
           Bootstrap tokens for node groups.
         x-examples:
           - worker: mytoken
+
+      customMIGNames:
+        type: object
+        default: {}
+        description: |
+          Resolved MIG configuration names for node groups with custom MIG partitions.
+        additionalProperties:
+          type: string
+        x-examples:
+          - worker-gpu-custom: custom-worker-gpu-custom-12345678
 
       instancePrefix:
         type: string
@@ -293,7 +322,7 @@ properties:
               description: |
                 Major.Minor of the Kubernetes version used in cluster.
               x-examples:
-                - "1.30"
+                - "1.31"
             updateEpoch:
               type: [integer, string]
               x-examples:
@@ -374,7 +403,7 @@ properties:
                 ami: myami
                 instanceType: t2.medium
               nodeType: CloudEphemeral
-              kubernetesVersion: "1.30"
+              kubernetesVersion: "1.31"
               cri:
                 type: "Docker"
               cloudInstances:

@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка VMware Cloud Director
 permalink: ru/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 lang: ru
 ---

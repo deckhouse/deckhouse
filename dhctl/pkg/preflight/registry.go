@@ -61,11 +61,11 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 
 	log.DebugLn("Checking if registry is accessible through proxy")
 
-	proxyUrl, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
+	proxyURL, noProxyAddresses, err := getProxyFromMetaConfig(pc.metaConfig)
 	if err != nil {
 		return fmt.Errorf("get proxy config: %w", err)
 	}
-	if proxyUrl == nil {
+	if proxyURL == nil {
 		log.DebugLn("No proxy is configured, skipping check")
 		return nil
 	}
@@ -77,7 +77,7 @@ func (pc *Checker) CheckRegistryAccessThroughProxy(ctx context.Context) error {
 		return nil
 	}
 
-	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), proxyUrl)
+	tun, err := setupSSHTunnelToProxyAddr(wrapper.Client(), proxyURL)
 	if err != nil {
 		return fmt.Errorf(`Cannot setup tunnel to control-plane host: %w.
 Please check connectivity to control-plane host and that the sshd config parameters 'AllowTcpForwarding' is set to 'yes' and 'DisableForwarding' is set to 'no' on the control-plane node.`, err)
@@ -96,7 +96,7 @@ Please check connectivity to control-plane host and that the sshd config paramet
 		return fmt.Errorf("prepare request: %w", err)
 	}
 
-	httpCl := buildHTTPClientWithLocalhostProxy(proxyUrl)
+	httpCl := buildHTTPClientWithLocalhostProxy(proxyURL)
 	resp, err := httpCl.Do(req)
 	if err != nil {
 		return fmt.Errorf(`Container registry API connectivity check was failed with error: %w.

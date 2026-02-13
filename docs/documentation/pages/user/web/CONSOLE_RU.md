@@ -1,5 +1,6 @@
 ---
 title: "Веб-интерфейс платформы"
+description: "Веб-интерфейс Deckhouse Kubernetes Platform. Мониторинг, настройка параметров, управление узлами и модулями, конфигурация безопасности и сети."
 permalink: ru/user/web/ui.html
 search: веб-интерфейс
 lang: ru

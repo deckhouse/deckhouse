@@ -120,6 +120,10 @@ func (g *gracefulShutdownPostpone) uncordonOnStart(ctx context.Context, nodeName
 	dlog.Info("uncordonOnStart: shutdown progress state", slog.String("node", nodeName), slog.Bool("inProgress", isShutdownInProgress))
 
 	podsPresentCondition, err := node.GetConditionByReason(ReasonPodsArePresent)
+	if err != nil {
+		return false, err
+	}
+
 	isInhibited := g.isShutdownInhibitedByPods(podsPresentCondition)
 	dlog.Info("uncordonOnStart: inhibitor state", slog.String("node", nodeName), slog.Bool("inhibited", isInhibited))
 

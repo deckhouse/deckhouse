@@ -36,7 +36,7 @@ func NewLogWriter[T any](l *slog.Logger, sendCh chan T, f func(lines []string) T
 	}
 }
 
-func (w *LogWriter[T]) Write(p []byte) (n int, err error) {
+func (w *LogWriter[T]) Write(p []byte) (int, error) {
 	w.m.Lock()
 	defer w.m.Unlock()
 
@@ -75,7 +75,7 @@ func NewDebugLogWriter(l *slog.Logger) *DebugLogWriter {
 	}
 }
 
-func (w *DebugLogWriter) Write(p []byte) (n int, err error) {
+func (w *DebugLogWriter) Write(p []byte) (int, error) {
 	// slog is thread safe
 	w.l.Debug(string(p))
 

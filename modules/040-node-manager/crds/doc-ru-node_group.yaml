@@ -507,7 +507,47 @@ spec:
                       properties:
                         partedConfig:
                           description: |
-                            Имя используемой конфигурация MIG.
+                            Имя используемой конфигурации MIG.
+
+                            Поддерживаются стандартные профили вида `all-*` (одинаковое разбиение для всех GPU) или значение `custom`, позволяющее задать разбиение отдельно для каждой видеокарты.
+                          x-doc-default: all-1g.5gb
+                        customConfigs:
+                          description: |
+                            Кастомное разбиение MIG по индексам GPU.
+                            
+                            Используется только при значении `partedConfig: custom`.
+
+                            Представляет собой массив устройств (map по `index`), где каждый элемент указывает на GPU по его индексу и описывает создаваемые срезы.
+                          x-doc-examples:
+                            - profile: 3g.40gb
+                              count: 2
+                            - profile: 1g.10gb.me
+                              count: 1
+                          items:
+                            properties:
+                              index:
+                                description: Индекс GPU на узле.
+                              slices:
+                                description: Список создаваемых MIG-срезов.
+                                items:
+                                  properties:
+                                    profile:
+                                      description: Имя MIG-профиля.
+                                    count:
+                                      description: Количество срезов выбранного профиля.
+                      oneOf:
+                        - properties:
+                            partedConfig:
+                              pattern: "^all-(balanced|disabled|[0-9]g[.][0-9]{1,2}gb([.]me)?)$"
+                          not:
+                            required:
+                              - customConfigs
+                        - properties:
+                            partedConfig:
+                              pattern: "^custom$"
+                          required:
+                            - partedConfig
+                            - customConfigs
                     timeSlicing:
                       description: |
                         Параметры для стратегии `TimeSlicing`.
@@ -902,3 +942,4 @@ spec:
                           В качестве Watchdog используется модуль ядра softdog с параметрами `soft_margin=60` и `soft_panic=1`. Это означает, что время таймаута сторожевого таймера составляет 60 секунд. По истечении этого времени происходит kernel-panic, и узел остается в этом состоянии до тех пор, пока пользователь не выполнит его перезагрузку.
 
                         - Fencing-controller — контроллер, который отслеживает все узлы с установленной меткой `node-manager.deckhouse.io/fencing-enabled`. Если какой-либо из узлов становится недоступным на протяжении более 60 секунд, контроллер удаляет все поды с этого узла и затем удаляет сам узел.
+

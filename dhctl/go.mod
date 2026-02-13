@@ -18,7 +18,7 @@ require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0
 	github.com/deckhouse/lib-gossh v0.0.0-20251127140437-3b6d4f6a4f51
 	github.com/deckhouse/module-sdk v0.2.0
-	github.com/flant/kube-client v1.5.1
+	github.com/flant/kube-client v1.5.2
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/go-openapi/spec v0.19.8
 	github.com/go-openapi/strfmt v0.19.5
@@ -52,7 +52,7 @@ require (
 	k8s.io/apimachinery v0.32.10
 	k8s.io/client-go v0.32.10
 	k8s.io/klog/v2 v2.130.1
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
+	k8s.io/utils v0.0.0-20260108192941-914a6e750570
 	sigs.k8s.io/yaml v1.4.0
 )
 

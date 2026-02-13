@@ -35,6 +35,10 @@ type Interface interface {
 	ModuleConfigs() ModuleConfigInformer
 	// ModuleDocumentations returns a ModuleDocumentationInformer.
 	ModuleDocumentations() ModuleDocumentationInformer
+	// ModulePackages returns a ModulePackageInformer.
+	ModulePackages() ModulePackageInformer
+	// ModulePackageVersions returns a ModulePackageVersionInformer.
+	ModulePackageVersions() ModulePackageVersionInformer
 	// ModulePullOverrides returns a ModulePullOverrideInformer.
 	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleReleases returns a ModuleReleaseInformer.
@@ -97,6 +101,16 @@ func (v *version) ModuleConfigs() ModuleConfigInformer {
 // ModuleDocumentations returns a ModuleDocumentationInformer.
 func (v *version) ModuleDocumentations() ModuleDocumentationInformer {
 	return &moduleDocumentationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModulePackages returns a ModulePackageInformer.
+func (v *version) ModulePackages() ModulePackageInformer {
+	return &modulePackageInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModulePackageVersions returns a ModulePackageVersionInformer.
+func (v *version) ModulePackageVersions() ModulePackageVersionInformer {
+	return &modulePackageVersionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // ModulePullOverrides returns a ModulePullOverrideInformer.

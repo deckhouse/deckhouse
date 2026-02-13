@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в Dynamix
 permalink: ru/admin/integrations/private/dynamix/storage.html
 lang: ru
 ---

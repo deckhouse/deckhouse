@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Управление сетью"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/
 lang: ru
 ---

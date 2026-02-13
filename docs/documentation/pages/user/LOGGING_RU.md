@@ -1,5 +1,6 @@
 ---
-title: "Настройки логирования"
+title: "Настройка сборки логов приложений"
+description: "Настройка сбора и доставки логов в Deckhouse Kubernetes Platform. Работа с PodLoggingConfig, фильтрация логов, отправка в Loki и Elasticsearch, обогащение метаданными Kubernetes."
 permalink: ru/user/logging/
 lang: ru
 search: logging configuration, log collection, log filtering, log shipping, centralized logging, настройка логирования, сбор логов, фильтрация логов, отправка логов, централизованное логирование
