@@ -47,7 +47,6 @@ kubeadm init phase etcd local --config {{ $kubeadmDir}}/config.yaml
 check_container_running "etcd"
 kubeadm init phase control-plane all --config {{ $kubeadmDir}}/config.yaml
 check_container_running "kube-apiserver"
-check_container_running "healthcheck"
 check_container_running "kube-controller-manager"
 check_container_running "kube-scheduler"
 kubeadm init phase mark-control-plane --config {{ $kubeadmDir}}/config.yaml
