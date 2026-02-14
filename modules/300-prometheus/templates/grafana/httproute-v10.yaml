@@ -3,6 +3,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   annotations:
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
     alb-istio.network.deckhouse.io/auth-signin: https://{{ include "helm_lib_module_public_domain" (list . "grafana") }}/dex-authenticator/sign_in
     alb-istio.network.deckhouse.io/auth-url: {{ .Values.prometheus.auth.externalAuthentication.authURL | quote }}
     alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "MUTUAL", "caCertificates": "/etc/kube-rbac-proxy-client-ssl/ca.crt", "clientCertificate": "/etc/kube-rbac-proxy-client-ssl/client.crt", "privateKey": "/etc/kube-rbac-proxy-client-ssl/client.key", "insecureSkipVerify": true}'
