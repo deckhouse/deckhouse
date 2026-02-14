@@ -25,6 +25,7 @@ metadata:
   annotations:
     alb-istio.network.deckhouse.io/backend-tls-settings: '{"mode": "SIMPLE", "insecureSkipVerify": true}'
     alb-istio.network.deckhouse.io/tls-secrets: {{ $crd.namespace }}/{{ $app.ingressSecretName }}
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
   name: {{ $ingName }}
   namespace: {{ $crd.namespace }}
   {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}

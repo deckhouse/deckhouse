@@ -3,6 +3,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   annotations:
+    alb-istio.network.deckhouse.io/auto-create-xlistenerset: "true"
     alb-istio.network.deckhouse.io/limit-rps: "50"
   {{- if (include "helm_lib_module_https_ingress_tls_enabled" .) }}
     alb-istio.network.deckhouse.io/tls-secrets: d8-{{ .Chart.Name }}/{{ include "helm_lib_module_https_secret_name" (list . "ingress-tls") }}
