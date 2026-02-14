@@ -19,6 +19,7 @@ spec:
     kind: XListenerSet
     name: d8-default-listener-set
     namespace: d8-{{ .Chart.Name }}
+    sectionName: dex
   rules:
   - backendRefs:
     - group: ""
