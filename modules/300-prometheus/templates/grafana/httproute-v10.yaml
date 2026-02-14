@@ -18,6 +18,7 @@ spec:
     kind: XListenerSet
     name: d8-default-listener-set
     namespace: d8-monitoring
+    sectionName: grafana
   rules:
   - backendRefs:
     - group: ""
