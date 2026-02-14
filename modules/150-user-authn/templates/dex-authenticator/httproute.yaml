@@ -41,6 +41,7 @@ spec:
     kind: XListenerSet
     name: d8-default-listener-set
     namespace: {{ $crd.namespace }}
+    sectionName: {{ $ingName }}
   rules:
   - backendRefs:
     - group: ""
