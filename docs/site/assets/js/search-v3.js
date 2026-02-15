@@ -1419,6 +1419,27 @@ class ModuleSearch {
       }
 
       if (!this.useSearchWorker || !this.workerInitialized) {
+        const mergeSearchResults = (baseResults, synonymResults, synonymBoost = 1.15) => {
+          const mergedByRef = new Map();
+
+          baseResults.forEach((result) => {
+            mergedByRef.set(result.ref, result);
+          });
+
+          synonymResults.forEach((result) => {
+            const boostedSynonymResult = {
+              ...result,
+              score: (result.score || 0) * synonymBoost
+            };
+            const existing = mergedByRef.get(result.ref);
+            if (!existing || (existing.score || 0) < boostedSynonymResult.score) {
+              mergedByRef.set(result.ref, boostedSynonymResult);
+            }
+          });
+
+          return Array.from(mergedByRef.values());
+        };
+
         const searchWithFallback = (inputQuery) => {
           try {
             return {
@@ -1447,20 +1468,22 @@ class ModuleSearch {
           return;
         }
 
-        // If there are no direct matches, try mapped synonyms.
-        if (results.length === 0) {
-          const synonymCandidates = this.getSynonymCandidates(sanitizedQuery);
-          for (const synonymQuery of synonymCandidates) {
-            try {
-              const synonymSearch = searchWithFallback(synonymQuery);
-              if (synonymSearch.results.length > 0) {
-                results = synonymSearch.results;
-                highlightQuery = synonymSearch.highlightQuery;
-                break;
-              }
-            } catch (synonymError) {
-              console.warn('Synonym search failed:', synonymError);
-            }
+        // Try mapped synonyms and merge their matches with the original result set.
+        const synonymCandidates = this.getSynonymCandidates(sanitizedQuery);
+        const synonymResults = [];
+        for (const synonymQuery of synonymCandidates) {
+          try {
+            const synonymSearch = searchWithFallback(synonymQuery);
+            synonymResults.push(...synonymSearch.results);
+          } catch (synonymError) {
+            console.warn('Synonym search failed:', synonymError);
+          }
+        }
+        if (synonymResults.length > 0) {
+          const hadInitialResults = results.length > 0;
+          results = mergeSearchResults(results, synonymResults);
+          if (!hadInitialResults) {
+            highlightQuery = sanitizedQuery;
           }
         }
 

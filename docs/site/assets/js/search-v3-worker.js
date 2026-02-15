@@ -383,6 +383,26 @@ function runSearch(query) {
   const sanitizedQuery = sanitizeQueryForSearch(query);
   let results = [];
   let highlightQuery = sanitizedQuery;
+  const mergeSearchResults = (baseResults, synonymResults, synonymBoost = 1.15) => {
+    const mergedByRef = new Map();
+
+    baseResults.forEach((result) => {
+      mergedByRef.set(result.ref, result);
+    });
+
+    synonymResults.forEach((result) => {
+      const boostedSynonymResult = {
+        ...result,
+        score: (result.score || 0) * synonymBoost
+      };
+      const existing = mergedByRef.get(result.ref);
+      if (!existing || (existing.score || 0) < boostedSynonymResult.score) {
+        mergedByRef.set(result.ref, boostedSynonymResult);
+      }
+    });
+
+    return Array.from(mergedByRef.values());
+  };
   const searchWithFallback = (inputQuery) => {
     try {
       return {
@@ -405,19 +425,21 @@ function runSearch(query) {
   results = initialSearch.results;
   highlightQuery = initialSearch.highlightQuery;
 
-  if (results.length === 0) {
-    const synonymCandidates = getSynonymCandidates(sanitizedQuery);
-    for (const synonymQuery of synonymCandidates) {
-      try {
-        const synonymSearch = searchWithFallback(synonymQuery);
-        if (synonymSearch.results.length > 0) {
-          results = synonymSearch.results;
-          highlightQuery = synonymSearch.highlightQuery;
-          break;
-        }
-      } catch (synonymError) {
-        // Ignore invalid synonym query and continue with next candidate.
-      }
+  const synonymCandidates = getSynonymCandidates(sanitizedQuery);
+  const synonymResults = [];
+  for (const synonymQuery of synonymCandidates) {
+    try {
+      const synonymSearch = searchWithFallback(synonymQuery);
+      synonymResults.push(...synonymSearch.results);
+    } catch (synonymError) {
+      // Ignore invalid synonym query and continue with next candidate.
+    }
+  }
+  if (synonymResults.length > 0) {
+    const hadInitialResults = results.length > 0;
+    results = mergeSearchResults(results, synonymResults);
+    if (!hadInitialResults) {
+      highlightQuery = sanitizedQuery;
     }
   }
 
