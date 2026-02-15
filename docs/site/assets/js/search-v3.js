@@ -948,7 +948,7 @@ class ModuleSearch {
           const docData = {
             id: `doc_${docCounter}`,
             title: doc.title || '',
-            keywords: doc.keywords || '',
+            keywords: this.normalizeKeywords(doc.keywords),
             module: doc.module || '',
             summary: doc.summary || '',
             content: doc.content || '',
@@ -973,7 +973,7 @@ class ModuleSearch {
           const paramData = {
             id: `param_${paramCounter}`,
             title: param.name || '',
-            keywords: param.keywords || '',
+            keywords: this.normalizeKeywords(param.keywords),
             module: param.module || '',
             resName: param.resName || '',
             content: param.content || '',
@@ -993,6 +993,29 @@ class ModuleSearch {
     });
   }
 
+  // Splits keywords into normalized items; string values are split by commas.
+  parseKeywords(keywords) {
+    if (Array.isArray(keywords)) {
+      return keywords
+        .filter((keyword) => typeof keyword === 'string')
+        .flatMap((keyword) => keyword.split(','))
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0);
+    }
+    if (typeof keywords === 'string') {
+      return keywords
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0);
+    }
+    return [];
+  }
+
+  // Converts parsed keywords to search text used by Lunr/boosting.
+  normalizeKeywords(keywords) {
+    return this.parseKeywords(keywords).join(' ');
+  }
+
   buildSearchDictionary() {
     const dictionary = new Set();
 
@@ -1004,8 +1027,9 @@ class ModuleSearch {
           this.extractWords(doc.title).forEach(word => dictionary.add(word));
         }
         // Add keywords
-        if (doc.keywords && Array.isArray(doc.keywords)) {
-          doc.keywords.forEach(keyword => {
+        const docKeywords = this.parseKeywords(doc.keywords);
+        if (docKeywords.length > 0) {
+          docKeywords.forEach((keyword) => {
             this.extractWords(keyword).forEach(word => dictionary.add(word));
           });
         }
@@ -1028,8 +1052,9 @@ class ModuleSearch {
           this.extractWords(param.name).forEach(word => dictionary.add(word));
         }
         // Add keywords
-        if (param.keywords && Array.isArray(param.keywords)) {
-          param.keywords.forEach(keyword => {
+        const paramKeywords = this.parseKeywords(param.keywords);
+        if (paramKeywords.length > 0) {
+          paramKeywords.forEach((keyword) => {
             this.extractWords(keyword).forEach(word => dictionary.add(word));
           });
         }
@@ -1445,7 +1470,7 @@ class ModuleSearch {
         // Check for parameter field matches with specific priority order
         if (doc.type === 'parameter') {
           const nameLower = (doc.name || '').toLowerCase();
-          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const keywordsLower = this.normalizeKeywords(doc.keywords).toLowerCase();
           const contentLower = (doc.content || '').toLowerCase();
 
           // Priority 1: Name field matches (highest priority)
@@ -1469,7 +1494,7 @@ class ModuleSearch {
         } else {
           // For non-parameters (documents), use document field priority order
           const titleLower = (doc.title || '').toLowerCase();
-          const keywordsLower = (doc.keywords && typeof doc.keywords === 'string') ? doc.keywords.toLowerCase() : '';
+          const keywordsLower = this.normalizeKeywords(doc.keywords).toLowerCase();
           const contentLower = (doc.content || '').toLowerCase();
 
           // Priority 1: Title field matches (highest priority)

@@ -26,6 +26,27 @@ let searchDictionary = [];
 let fuseIndex = null;
 let availableModules = [];
 
+function parseKeywords(keywords) {
+  if (Array.isArray(keywords)) {
+    return keywords
+      .filter((keyword) => typeof keyword === 'string')
+      .flatMap((keyword) => keyword.split(','))
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0);
+  }
+  if (typeof keywords === 'string') {
+    return keywords
+      .split(',')
+      .map((keyword) => keyword.trim())
+      .filter((keyword) => keyword.length > 0);
+  }
+  return [];
+}
+
+function normalizeKeywords(keywords) {
+  return parseKeywords(keywords).join(' ');
+}
+
 try {
   self.importScripts(
     '/assets/js/lunr/lunr.js',
@@ -63,7 +84,7 @@ function buildLunrIndex() {
         const docData = {
           id: `doc_${docCounter}`,
           title: doc.title || '',
-          keywords: doc.keywords || '',
+          keywords: normalizeKeywords(doc.keywords),
           module: doc.module || '',
           summary: doc.summary || '',
           content: doc.content || '',
@@ -86,7 +107,7 @@ function buildLunrIndex() {
         const paramData = {
           id: `param_${paramCounter}`,
           title: param.name || '',
-          keywords: param.keywords || '',
+          keywords: normalizeKeywords(param.keywords),
           module: param.module || '',
           resName: param.resName || '',
           content: param.content || '',
@@ -128,8 +149,9 @@ function buildSearchDictionary() {
       if (doc.title) {
         extractWords(doc.title).forEach(word => dictionary.add(word));
       }
-      if (doc.keywords && Array.isArray(doc.keywords)) {
-        doc.keywords.forEach(keyword => {
+      const docKeywords = parseKeywords(doc.keywords);
+      if (docKeywords.length > 0) {
+        docKeywords.forEach((keyword) => {
           extractWords(keyword).forEach(word => dictionary.add(word));
         });
       }
@@ -147,8 +169,9 @@ function buildSearchDictionary() {
       if (param.name) {
         extractWords(param.name).forEach(word => dictionary.add(word));
       }
-      if (param.keywords && Array.isArray(param.keywords)) {
-        param.keywords.forEach(keyword => {
+      const paramKeywords = parseKeywords(param.keywords);
+      if (paramKeywords.length > 0) {
+        paramKeywords.forEach((keyword) => {
           extractWords(keyword).forEach(word => dictionary.add(word));
         });
       }
