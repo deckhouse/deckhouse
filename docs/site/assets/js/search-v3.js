@@ -63,6 +63,15 @@ class ModuleSearch {
       backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
       searchContext: '', // Search context message to display above ready message
       workerPath: '/assets/js/search-v3-worker.js',
+      synonyms: {
+        'update policy': ['moduleupdatepolicy'],
+        'dex Providers': ['dexprovider'],
+        'провайдеры аутентификации': ['dexprovider'],
+        'переопределение': ['modulepulloverride'],
+        moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
+        dexprovider: ['провайдеры аутентификации', 'dex providers'],
+        modulepulloverride: ['переопределение']
+      },
       ...options
     };
 
@@ -327,7 +336,8 @@ class ModuleSearch {
           type: 'INIT',
           payload: {
             searchData: this.searchData,
-            currentLang: this.currentLang
+            currentLang: this.currentLang,
+            synonyms: this.options.synonyms
           }
         });
 
@@ -1335,6 +1345,30 @@ class ModuleSearch {
     return query;
   }
 
+  normalizeSynonymKey(value) {
+    return String(value || '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  getSynonymCandidates(query) {
+    const normalizedQuery = this.normalizeSynonymKey(query);
+    if (!normalizedQuery || !this.options.synonyms) {
+      return [];
+    }
+
+    const rawCandidates = this.options.synonyms[normalizedQuery];
+    if (!rawCandidates) {
+      return [];
+    }
+
+    const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+    return items
+      .map((item) => this.sanitizeQueryForSearch(this.normalizeSynonymKey(item)))
+      .filter((item) => item && item !== normalizedQuery);
+  }
+
   async handleSearch(query) {
     if (!query.trim()) {
 
@@ -1385,25 +1419,48 @@ class ModuleSearch {
       }
 
       if (!this.useSearchWorker || !this.workerInitialized) {
+        const searchWithFallback = (inputQuery) => {
+          try {
+            return {
+              results: this.lunrIndex.search(inputQuery),
+              highlightQuery: inputQuery
+            };
+          } catch (error) {
+            const fallbackQuery = inputQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+            if (fallbackQuery !== inputQuery) {
+              return {
+                results: this.lunrIndex.search(fallbackQuery),
+                highlightQuery: fallbackQuery
+              };
+            }
+            throw error;
+          }
+        };
+
         try {
-          results = this.lunrIndex.search(sanitizedQuery);
+          const initialSearch = searchWithFallback(sanitizedQuery);
+          results = initialSearch.results;
+          highlightQuery = initialSearch.highlightQuery;
         } catch (error) {
           console.warn('Lunr search error with sanitized query:', error);
-          // If sanitized query still fails, try a more aggressive sanitization
-          const fallbackQuery = sanitizedQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-          if (fallbackQuery !== sanitizedQuery) {
+          this.showError('Search query contains invalid characters. Please try a different search term.');
+          return;
+        }
+
+        // If there are no direct matches, try mapped synonyms.
+        if (results.length === 0) {
+          const synonymCandidates = this.getSynonymCandidates(sanitizedQuery);
+          for (const synonymQuery of synonymCandidates) {
             try {
-              results = this.lunrIndex.search(fallbackQuery);
-              highlightQuery = fallbackQuery;
-              console.log(`Fallback search successful with: "${fallbackQuery}"`);
-            } catch (fallbackError) {
-              console.error('Fallback search also failed:', fallbackError);
-              this.showError('Search query contains invalid characters. Please try a different search term.');
-              return;
+              const synonymSearch = searchWithFallback(synonymQuery);
+              if (synonymSearch.results.length > 0) {
+                results = synonymSearch.results;
+                highlightQuery = synonymSearch.highlightQuery;
+                break;
+              }
+            } catch (synonymError) {
+              console.warn('Synonym search failed:', synonymError);
             }
-          } else {
-            this.showError('Search query contains invalid characters. Please try a different search term.');
-            return;
           }
         }
 

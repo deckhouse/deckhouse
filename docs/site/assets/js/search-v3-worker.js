@@ -25,6 +25,15 @@ let lunrIndex = null;
 let searchDictionary = [];
 let fuseIndex = null;
 let availableModules = [];
+let synonyms = {
+  'update policy': ['moduleupdatepolicy'],
+  'dex Providers': ['dexprovider'],
+  'провайдеры аутентификации': ['dexprovider'],
+  'переопределение': ['modulepulloverride'],
+  moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
+  dexprovider: ['провайдеры аутентификации', 'dex providers'],
+  modulepulloverride: ['переопределение']
+};
 
 function parseKeywords(keywords) {
   if (Array.isArray(keywords)) {
@@ -322,6 +331,30 @@ function sanitizeQueryForSearch(query) {
   return hasChanges ? sanitized.trim() : query;
 }
 
+function normalizeSynonymKey(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getSynonymCandidates(query) {
+  const normalizedQuery = normalizeSynonymKey(query);
+  if (!normalizedQuery || !synonyms) {
+    return [];
+  }
+
+  const rawCandidates = synonyms[normalizedQuery];
+  if (!rawCandidates) {
+    return [];
+  }
+
+  const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+  return items
+    .map((item) => sanitizeQueryForSearch(normalizeSynonymKey(item)))
+    .filter((item) => item && item !== normalizedQuery);
+}
+
 // Extracts unique module names for synthetic "module page" results in UI.
 function buildAvailableModules() {
   const modules = new Set();
@@ -350,16 +383,41 @@ function runSearch(query) {
   const sanitizedQuery = sanitizeQueryForSearch(query);
   let results = [];
   let highlightQuery = sanitizedQuery;
-
-  try {
-    results = lunrIndex.search(sanitizedQuery);
-  } catch (error) {
-    const fallbackQuery = sanitizedQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-    if (fallbackQuery !== sanitizedQuery) {
-      results = lunrIndex.search(fallbackQuery);
-      highlightQuery = fallbackQuery;
-    } else {
+  const searchWithFallback = (inputQuery) => {
+    try {
+      return {
+        results: lunrIndex.search(inputQuery),
+        highlightQuery: inputQuery
+      };
+    } catch (error) {
+      const fallbackQuery = inputQuery.replace(/[^\w\s-]/g, ' ').replace(/\s+/g, ' ').trim();
+      if (fallbackQuery !== inputQuery) {
+        return {
+          results: lunrIndex.search(fallbackQuery),
+          highlightQuery: fallbackQuery
+        };
+      }
       throw error;
+    }
+  };
+
+  const initialSearch = searchWithFallback(sanitizedQuery);
+  results = initialSearch.results;
+  highlightQuery = initialSearch.highlightQuery;
+
+  if (results.length === 0) {
+    const synonymCandidates = getSynonymCandidates(sanitizedQuery);
+    for (const synonymQuery of synonymCandidates) {
+      try {
+        const synonymSearch = searchWithFallback(synonymQuery);
+        if (synonymSearch.results.length > 0) {
+          results = synonymSearch.results;
+          highlightQuery = synonymSearch.highlightQuery;
+          break;
+        }
+      } catch (synonymError) {
+        // Ignore invalid synonym query and continue with next candidate.
+      }
     }
   }
 
@@ -398,6 +456,7 @@ self.onmessage = (event) => {
     try {
       searchData = payload.searchData || { documents: [], parameters: [] };
       currentLang = payload.currentLang || 'en';
+      synonyms = payload.synonyms || synonyms;
       buildLunrIndex();
       buildSearchDictionary();
       buildFuseIndex();
