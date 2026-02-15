@@ -1696,6 +1696,52 @@ class ModuleSearch {
     return html;
   }
 
+  renderBreadcrumbsRow(breadcrumbs, query) {
+    if (!Array.isArray(breadcrumbs) || breadcrumbs.length === 0) {
+      return '';
+    }
+
+    const maxPathLength = 100;
+    const normalizedItems = breadcrumbs
+      .filter((item) => typeof item === 'string' && item.trim().length > 0)
+      .map((item) => item.trim());
+
+    if (normalizedItems.length === 0) {
+      return '';
+    }
+
+    const visibleItems = [];
+    let currentLength = 0;
+    let isTruncated = false;
+
+    for (let i = 0; i < normalizedItems.length; i++) {
+      const item = normalizedItems[i];
+      const separatorLength = i > 0 ? 3 : 0; // " > "
+      const nextLength = currentLength + separatorLength + item.length;
+      if (nextLength > maxPathLength) {
+        isTruncated = true;
+        break;
+      }
+      visibleItems.push(item);
+      currentLength = nextLength;
+    }
+
+    const breadcrumbBadges = visibleItems.map((item, index) => {
+      const separator = index > 0 ? '<span class="result-breadcrumbs-separator">→</span>' : '';
+      return `${separator}<span class="result-breadcrumbs">${this.highlightText(item, query)}</span>`;
+    });
+
+    if (isTruncated) {
+      breadcrumbBadges.push('<span class="result-breadcrumbs-separator">→</span><span class="result-breadcrumbs-ellipsis">...</span>');
+    }
+
+    if (breadcrumbBadges.length === 0) {
+      return '';
+    }
+
+    return `<div class="breadcrumbs-row">${breadcrumbBadges.join('')}</div>`;
+  }
+
   renderResultGroup(results, query, groupType) {
     const displayedCount = this.displayedCounts[groupType];
     const topResults = results.slice(0, displayedCount);
@@ -1719,7 +1765,7 @@ class ModuleSearch {
 
       if (!doc) return;
 
-      let title, module, description;
+      let title, module, description, breadcrumbs;
 
       if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
         // For configuration results (parameters) and isResource parameters
@@ -1728,11 +1774,13 @@ class ModuleSearch {
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       } else {
         // For other documentation
         title = this.highlightText(doc.title || '', query);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
         description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
       }
 
@@ -1740,6 +1788,7 @@ class ModuleSearch {
         <a href="${this.buildTargetUrl(doc.url, doc.moduletype, doc.module)}" class="result-item">
           <div class="result-title">${title}</div>
           ${module}
+          ${breadcrumbs}
           <div class="result-description">${description}</div>
         </a>
       `;
