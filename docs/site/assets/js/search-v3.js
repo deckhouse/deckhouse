@@ -946,7 +946,7 @@ class ModuleSearch {
 
       // Configure fields
       this.field('title', { boost: 10 });
-      this.field('keywords', { boost: 8 });
+      this.field('keywords', { boost: 9 });
       this.field('module', { boost: 6 });
       this.field('summary', { boost: 3 });
       this.field('content', { boost: 1 });
@@ -1565,7 +1565,7 @@ class ModuleSearch {
 
           // Priority 2: Keywords field matches
           if (keywordsLower && keywordsLower.includes(queryLower)) {
-            boost *= 2.0; // Moderate boost for keyword matches
+            boost *= 3; // Moderate-high boost for keyword matches
           }
 
           // Priority 3: Content field matches (lowest priority for parameters)
@@ -1589,7 +1589,7 @@ class ModuleSearch {
 
           // Priority 2: Keywords field matches
           if (keywordsLower && keywordsLower.includes(queryLower)) {
-            boost *= 2.0; // Moderate boost for keyword matches
+            boost *= 3; // Moderate-high boost for keyword matches
           }
 
           // Priority 3: Content field matches (lowest priority for documents)

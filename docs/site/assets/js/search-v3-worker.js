@@ -82,7 +82,7 @@ function buildLunrIndex() {
     }
 
     this.field('title', { boost: 10 });
-    this.field('keywords', { boost: 8 });
+    this.field('keywords', { boost: 9 });
     this.field('module', { boost: 6 });
     this.field('summary', { boost: 3 });
     this.field('content', { boost: 1 });
