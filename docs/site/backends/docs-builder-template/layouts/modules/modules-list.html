@@ -14,9 +14,9 @@
   {{ "<!--/noindex-->" | safeHTML }}
 
   <!--start search-->
-  {{- $cachingTime := "60" }}
+  {{- $cachingTime := "240" }}
   {{- if eq site.Params.mode "module" }}
-    {{- $cachingTime = "15" }}
+    {{- $cachingTime = "60" }}
   {{- end -}}
   <div class="searchV3">
     <div class="container">
