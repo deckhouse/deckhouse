@@ -1894,6 +1894,8 @@ class ModuleSearch {
 
   buildTargetUrl(originalTargetUrl, moduleType = null, moduleName = null) {
     // console.debug('buildTargetUrl called with:', originalTargetUrl, 'moduleType:', moduleType, 'moduleName:', moduleName);
+    const dkpDocBaseUrl = "/products/kubernetes-platform/documentation/v1/";
+
 
     // If originalTargetUrl is already a full URL or starts with http/https, return as is
     if (originalTargetUrl && (originalTargetUrl.startsWith('http://') || originalTargetUrl.startsWith('https://'))) {
@@ -1943,9 +1945,12 @@ class ModuleSearch {
 
       // Find the base URL
       let baseUrl = currentPageUrlWithoutVersion;
-      if (isCurrentModulePage && currentPageUrlWithoutVersion.endsWith(relativeCurrentPageURL)) {
+      if (isCurrentModulePage && currentPageUrlWithoutVersion.endsWith(relativeCurrentPageURL) && isModuleResult) {
         baseUrl = currentPageUrlWithoutVersion.substring(0, currentPageUrlWithoutVersion.length - relativeCurrentPageURL.length);
         // console.debug('Base URL calculated:', baseUrl);
+      } if (isCurrentModulePage && !isModuleResult) {
+        baseUrl = dkpDocBaseUrl;
+        console.debug('Base URL calculated (from module to DKP doc):', baseUrl);
       } else if (isCurrentPageVersioned && isModuleResult ) {
         baseUrl = '/';
         // console.debug('Base URL calculated (from versioned page to module):', baseUrl);
@@ -1978,6 +1983,11 @@ class ModuleSearch {
 
       // console.debug('No target relative path, returning base URL:', baseUrl);
       return baseUrl;
+    }
+
+    if (isCurrentModulePage && !originalTargetUrl.startsWith('/modules/')) {
+      console.debug('No meta tag found and link from module to DKP doc, returning:', dkpDocBaseUrl + originalTargetUrl);
+      return dkpDocBaseUrl + originalTargetUrl;
     }
 
     // Fallback: return original URL as is

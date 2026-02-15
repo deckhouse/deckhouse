@@ -23,7 +23,7 @@
 {%- if faqpages.size > 0 and searchedpages.size > 0 %},{% endif %}
 {%- for page in searchedpages %}
 {"title": "{{ page.title | escape }}",
-"url": "faq.html#{{ page.title | slugify }}",
+"url": "faq.html#{{ page.title | slugify | truncate: 64, "" }}",
 "keywords": {{ page.search | jsonify }},
 "bc": ["FAQ"],
 "content": {{ page.content | normalizeSearchContent | jsonify -}}
