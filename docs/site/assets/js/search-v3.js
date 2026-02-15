@@ -68,6 +68,7 @@ class ModuleSearch {
         'dex Providers': ['dexprovider'],
         'провайдеры аутентификации': ['dexprovider'],
         'переопределение': ['modulepulloverride'],
+        'release.deckhouse.io/approved': ['Ручное подтверждение обновлений'],
         moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
         dexprovider: ['провайдеры аутентификации', 'dex providers'],
         modulepulloverride: ['переопределение']
