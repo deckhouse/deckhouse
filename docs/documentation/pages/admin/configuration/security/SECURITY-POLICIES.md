@@ -693,7 +693,7 @@ of the SecurityPolicy resource, specifying the public key generated in step 1.
     kubectl  -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
     kubectl  -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
     ```
-   
+
 With this policy, if a container image address matches the value of the `reference` parameter
 and the image is unsigned or the signature does not match the specified keys, Pod creation will be denied.
 
