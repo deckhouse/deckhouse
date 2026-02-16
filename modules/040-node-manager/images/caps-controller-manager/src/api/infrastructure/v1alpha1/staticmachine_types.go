@@ -69,6 +69,10 @@ type StaticMachineStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
 //+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
 //+kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Static instance ID"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this StaticMachine"

@@ -74,6 +74,8 @@ const (
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
 //+kubebuilder:subresource:status
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
 //+kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.currentStatus.phase",description="Static instance state"
 //+kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".status.machineRef.name",description="Static machine associated with this static instance"
