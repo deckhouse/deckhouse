@@ -148,7 +148,7 @@ func (c *Client) bootstrapStaticInstance(ctx context.Context, instanceScope *sco
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (result ctrl.Result, err error) {
+func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, instanceScope *scope.InstanceScope) (ctrl.Result, error) {
 	instanceScope.Logger.Info("Starting reservation process",
 		"instance", instanceScope.Instance.Name,
 		"machine", instanceScope.MachineScope.StaticMachine.Name,
@@ -156,8 +156,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		"address", instanceScope.Instance.Spec.Address,
 	)
 
-	err = c.reserveStaticInstance(ctx, instanceScope)
-	if err != nil {
+	var err error
+
+	if err = c.reserveStaticInstance(ctx, instanceScope); err != nil {
 		instanceScope.Logger.Error(err, "Failed to reserve StaticInstance",
 			"instance", instanceScope.Instance.Name,
 			"machine", instanceScope.MachineScope.StaticMachine.Name,
@@ -187,9 +188,9 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 	delay := c.tcpCheckRateLimiter.When(address)
 	instanceScope.Logger.V(1).Info("Scheduling TCP check", "address", address, "timeout", delay)
 
-	tcpCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+	tcpCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection)
 	if tcpCondition == nil || tcpCondition.Status != corev1.ConditionTrue {
-		tcpTaskID := fmt.Sprintf("%s", address)
+		tcpTaskID := address
 		instanceScope.Logger.V(1).Info("Scheduling TCP check",
 			"address", address,
 			"timeout", delay,
@@ -198,7 +199,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 		)
 		done := c.tcpCheckTaskManager.spawn(taskID(tcpTaskID), func() bool {
 			start := time.Now()
-			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection)
 			instanceScope.Logger.V(1).Info("Waiting for TCP connection for boostrap with timeout", "address", address, "timeout", delay.String())
 			conn, err := net.DialTimeout("tcp", address, delay)
 			if err != nil {
@@ -206,7 +207,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 					c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceTcpFailed", err.Error())
 					instanceScope.Logger.Error(err, "Failed to check the StaticInstance address by establishing a tcp connection", "address", address)
-					conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection, err.Error(), clusterv1.ConditionSeverityError, "")
+					conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection, err.Error(), clusterv1.ConditionSeverityError, "")
 					err2 := instanceScope.Patch(ctx)
 					if err2 != nil {
 						instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
@@ -216,7 +217,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 			}
 			defer conn.Close()
 			if status == nil || status.Status != corev1.ConditionTrue {
-				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTcpConnection)
+				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckTCPConnection)
 				err := instanceScope.Patch(ctx)
 				if err != nil {
 					instanceScope.Logger.Error(err, "Failed to set StaticInstance: tcpCheck")
@@ -247,12 +248,12 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 
 	c.tcpCheckRateLimiter.Forget(address)
 
-	sshCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+	sshCondition := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
 	if sshCondition == nil || sshCondition.Status != corev1.ConditionTrue {
-		sshTaskID := fmt.Sprintf("%s", address)
+		sshTaskID := address
 		check := c.checkTaskManager.spawn(taskID(sshTaskID), func() bool {
 			start := time.Now()
-			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+			status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
 			var sshCl ssh.SSH
 			var err error
 			if instanceScope.SSHLegacyMode {
@@ -276,7 +277,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 						if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 							c.recorder.SendWarningEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceSshFailed", str)
 							instanceScope.Logger.Error(err, "StaticInstance: Failed to connect via ssh")
-							conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition, err.Error(), clusterv1.ConditionSeverityError, "")
+							conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition, err.Error(), clusterv1.ConditionSeverityError, "")
 							err2 := instanceScope.Patch(ctx)
 							if err2 != nil {
 								instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")
@@ -287,7 +288,7 @@ func (c *Client) setStaticInstancePhaseToBootstrapping(ctx context.Context, inst
 				return false
 			}
 			if status == nil || status.Status != corev1.ConditionTrue {
-				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSshCondition)
+				conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceCheckSSHCondition)
 				err = instanceScope.Patch(ctx)
 				if err != nil {
 					instanceScope.Logger.Error(err, "Failed to set StaticInstance: Failed to connect via ssh")

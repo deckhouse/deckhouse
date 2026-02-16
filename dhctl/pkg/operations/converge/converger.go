@@ -64,6 +64,8 @@ type Params struct {
 	Logger  log.Logger
 	IsDebug bool
 
+	NoSwitchToNodeUser bool
+
 	CheckHasTerraformStateBeforeMigration bool
 }
 
@@ -187,7 +189,9 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		return err
 	}
 	c.lastState = nil
-	defer c.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
@@ -234,7 +238,13 @@ func (c *Converger) ConvergeMigration(ctx context.Context) error {
 		inLockRunner = lock.NewInLockLocalRunner(convergeCtx, "local-converger")
 	}
 
-	r := newRunner(inLockRunner, nil).
+	switcher := convergectx.NewKubeClientSwitcher(convergeCtx, nil, convergectx.KubeClientSwitcherParams{
+		TmpDir:        c.TmpDir,
+		Logger:        c.Logger,
+		DisableSwitch: true,
+	})
+
+	r := newRunner(inLockRunner, switcher).
 		WithCommanderUUID(c.CommanderUUID)
 
 	err = r.RunConvergeMigration(convergeCtx, c.Params.CheckHasTerraformStateBeforeMigration)
@@ -361,7 +371,9 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 		return nil, err
 	}
 	c.lastState = nil
-	defer c.PhasedExecutionContext.Finalize(stateCache)
+	defer func() {
+		_ = c.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	var convergeCtx *convergectx.Context
 	if c.Params.CommanderMode {
@@ -422,9 +434,10 @@ func (c *Converger) Converge(ctx context.Context) (*ConvergeResult, error) {
 	}
 
 	kubectlSwitcher := convergectx.NewKubeClientSwitcher(convergeCtx, inLockRunner, convergectx.KubeClientSwitcherParams{
-		TmpDir:  c.TmpDir,
-		Logger:  c.Logger,
-		IsDebug: c.IsDebug,
+		TmpDir:        c.TmpDir,
+		Logger:        c.Logger,
+		IsDebug:       c.IsDebug,
+		DisableSwitch: c.NoSwitchToNodeUser,
 	})
 
 	phasesToSkip := make([]phases.OperationPhase, 0)
@@ -493,8 +506,7 @@ func (c *Converger) AutoConverge(listenAddress string, checkInterval time.Durati
 		}
 	}
 
-	var convergeCtx *convergectx.Context
-	convergeCtx = convergectx.NewContext(context.Background(), convergectx.Params{
+	convergeCtx := convergectx.NewContext(context.Background(), convergectx.Params{
 		KubeClient:     kubeCl,
 		Cache:          cache.Global(),
 		ChangeParams:   c.Params.ChangesSettings,

@@ -5,4 +5,5 @@ subsystems:
 namespace: d8-csi-vsphere
 stage: General Availability
 descriptions:
-  en: CSI vSphere Driver
+  en: Provides CSI for for VMware vSphere environments.
+  ru: Предоставляет CSI для сред VMware vSphere.

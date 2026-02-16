@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -33,9 +34,6 @@ import (
 const (
 	// this is util to manage dm-verity
 	verityCommand = "veritysetup"
-
-	dmTemplate = "/dev/mapper/%s"
-
 	// formatArg computes the Merkle tree
 	formatArg = "format"
 	// verifyArg verifies and gets the root hash
@@ -44,6 +42,8 @@ const (
 	openArg = "open"
 	// closeArg closes device mapper
 	closeArg = "close"
+	// statusArg returns device mapper info, that contains loop info(backing file)
+	statusArg = "status"
 
 	blockSizeArg = "--data-block-size=4096"
 	hashSizeArg  = "--hash-block-size=4096"
@@ -52,6 +52,11 @@ const (
 	magicVeritySalt = "dc0f616e4bf75776061d5ffb7a6f45e1313b7cc86f3aa49b68de4f6d187bad2b"
 
 	saltArg = "--salt=" + magicVeritySalt
+)
+
+var (
+	ErrVersionNotFound = errors.New("version not found")
+	ErrEmptyHash       = errors.New("empty hash")
 )
 
 // CreateMapper creates device mapper for the erofs image.
@@ -103,22 +108,22 @@ func waitUntilMapperCreated(ctx context.Context, name, imagePath, hash string) e
 	return err
 }
 
-// CloseMapper closes device mapper for the module
+// CloseMapper closes device mapper
 // Equivalent shell command:
-// veritysetup close <module>
-func CloseMapper(ctx context.Context, module string) error {
+// veritysetup close <name>
+func CloseMapper(ctx context.Context, name string) error {
 	ctx, span := otel.Tracer(tracerName).Start(ctx, "CloseMapper")
 	defer span.End()
 
-	span.SetAttributes(attribute.String("module", module))
+	span.SetAttributes(attribute.String("name", name))
 
 	args := []string{
 		closeArg,
 
-		module,
+		name,
 	}
 
-	// veritysetup close <module>
+	// veritysetup close <name>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		// mapper not found
@@ -171,7 +176,7 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
 	}
 
 	if len(hash) == 0 {
-		return "", errors.New("empty hash")
+		return "", ErrEmptyHash
 	}
 
 	return hash, nil
@@ -242,4 +247,51 @@ func extractRootHash(output string) string {
 	}
 
 	return ""
+}
+
+// GetVersionByDevice retrieves the image version from an active dm-verity device
+// by querying its status via veritysetup and parsing the data device path.
+// Equivalent shell command:
+// veritysetup status <name>
+func GetVersionByDevice(ctx context.Context, name string) (string, error) {
+	ctx, span := otel.Tracer(tracerName).Start(ctx, "GetVersionByDevice")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("name", name))
+
+	args := []string{
+		statusArg,
+
+		name,
+	}
+
+	// veritysetup status <name>
+	cmd := exec.CommandContext(ctx, verityCommand, args...)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("veritysetup status: %w (output: %s)", err, string(output))
+	}
+
+	if version := parseImageVersion(string(output)); version != "" {
+		return version, nil
+	}
+
+	return "", ErrVersionNotFound
+}
+
+// parseImageVersion extracts version from veritysetup status output.
+// Parses "data loop: /path/to/v0.6.22.erofs" and returns "v0.6.22".
+func parseImageVersion(output string) string {
+	_, after, found := strings.Cut(output, "data loop:")
+	if !found {
+		return ""
+	}
+
+	// Extract value until newline
+	path, _, _ := strings.Cut(after, "\n")
+	if path = strings.TrimSpace(path); path == "" {
+		return ""
+	}
+
+	return strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 }

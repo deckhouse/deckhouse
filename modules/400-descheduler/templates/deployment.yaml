@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: descheduler
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "descheduler"

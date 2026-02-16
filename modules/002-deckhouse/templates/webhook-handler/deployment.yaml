@@ -17,7 +17,7 @@ spec:
     kind: Deployment
     name: webhook-handler
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: handler

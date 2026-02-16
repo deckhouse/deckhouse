@@ -39,8 +39,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
 
-// Full method example: /dhctl.DHCTL/Check
-const singlethreadedMethodsPrefix = "/dhctl.DHCTL"
+const SinglethreadedMethodsPrefix = "/dhctl.DHCTL" // full method example: /dhctl.DHCTL/Check
 
 // Serve starts GRPC server
 func Serve(params settings.ServerParams) error {
@@ -54,7 +53,7 @@ func Serve(params settings.ServerParams) error {
 	log := logger.NewLogger(lvl).With(slog.String("component", "server"))
 
 	dhctlProxy, err := NewStreamDirector(StreamDirectorParams{
-		MethodsPrefix: singlethreadedMethodsPrefix,
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        params.TmpDir,
 	})
 
@@ -83,25 +82,19 @@ func Serve(params settings.ServerParams) error {
 		log.Info("grpc server stopped")
 	})
 
-	listener, err := net.Listen(params.Network, params.Address)
-	if err != nil {
-		log.Error("failed to listen", logger.Err(err))
-		return err
-	}
-
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
 			interceptors.UnaryLogger(log),
 			logging.UnaryServerInterceptor(interceptors.Logger()),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.UnaryParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.UnaryParallelTasksLimiter(sem, SinglethreadedMethodsPrefix),
 			interceptors.UnaryRequestsCounter(requestsCounter),
 		),
 		grpc.ChainStreamInterceptor(
 			interceptors.StreamLogger(log),
 			logging.StreamServerInterceptor(interceptors.Logger()),
 			recovery.StreamServerInterceptor(recovery.WithRecoveryHandlerContext(interceptors.PanicRecoveryHandler())),
-			interceptors.StreamParallelTasksLimiter(sem, singlethreadedMethodsPrefix),
+			interceptors.StreamParallelTasksLimiter(sem, SinglethreadedMethodsPrefix),
 			interceptors.StreamRequestsCounter(requestsCounter),
 		),
 		grpc.UnknownServiceHandler(proxy.TransparentHandler(dhctlProxy.Director())),
@@ -110,6 +103,7 @@ func Serve(params settings.ServerParams) error {
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/#define-a-grpc-liveness-probe
 	healthService := health.NewServer()
 	grpc_health_v1.RegisterHealthServer(s, healthService)
+	healthService.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	// grpcurl -plaintext host:port describe
 	reflection.Register(s)
@@ -127,6 +121,13 @@ func Serve(params settings.ServerParams) error {
 
 		s.GracefulStop()
 	}()
+
+	listener, err := net.Listen(params.Network, params.Address)
+	if err != nil {
+		log.Error("failed to listen", logger.Err(err))
+		return err
+	}
+	log.Debug("grpc server listening, accepting connections")
 
 	if err = s.Serve(listener); err != nil {
 		log.Error("failed to serve", logger.Err(err))

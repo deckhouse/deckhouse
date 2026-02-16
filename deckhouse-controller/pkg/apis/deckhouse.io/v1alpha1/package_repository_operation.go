@@ -72,6 +72,9 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name=Count,type=integer,JSONPath=.status.packages.total
+// +kubebuilder:printcolumn:name=Processed,type=string,JSONPath=.status.conditions[?(@.type=='Processed')].status
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Processed')].message
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -89,58 +92,125 @@ type PackageRepositoryOperation struct {
 }
 
 type PackageRepositoryOperationSpec struct {
-	PackageRepository string                            `json:"packageRepository"`
-	Type              string                            `json:"type"`
-	Update            *PackageRepositoryOperationUpdate `json:"update,omitempty"`
+	// Name of the package repository to operate on.
+	PackageRepositoryName string `json:"packageRepositoryName"`
+
+	// Type of operation to perform.
+	Type string `json:"type"`
+
+	// Configuration for update operations.
+	// +optional
+	Update *PackageRepositoryOperationUpdate `json:"update,omitempty"`
 }
 
 type PackageRepositoryOperationUpdate struct {
-	FullScan bool   `json:"fullScan,omitempty"`
-	Timeout  string `json:"timeout,omitempty"`
+	// Whether to perform a full scan of the repository.
+	// +optional
+	FullScan bool `json:"fullScan,omitempty"`
+
+	// Timeout for the operation.
+	// +optional
+	Timeout string `json:"timeout,omitempty"`
 }
 
 type PackageRepositoryOperationStatus struct {
-	Phase          string                                      `json:"phase,omitempty"`
-	StartTime      *metav1.Time                                `json:"startTime,omitempty"`
-	CompletionTime *metav1.Time                                `json:"completionTime,omitempty"`
-	Packages       *PackageRepositoryOperationStatusPackages   `json:"packages,omitempty"`
-	Conditions     []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// Current phase of the operation.
+	// +optional
+	Phase string `json:"phase,omitempty"`
+
+	// Time when the operation started.
+	// +optional
+	StartTime *metav1.Time `json:"startTime,omitempty"`
+
+	// Time when the operation completed.
+	// +optional
+	CompletionTime *metav1.Time `json:"completionTime,omitempty"`
+
+	// Information about packages processed during the operation.
+	// +optional
+	Packages *PackageRepositoryOperationStatusPackages `json:"packages,omitempty"`
+
+	// Conditions represent the latest available observations of the operation's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	Conditions []PackageRepositoryOperationStatusCondition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type PackageRepositoryOperationStatusPackages struct {
-	Discovered       []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
-	Failed           []PackageRepositoryOperationStatusFailedPackage     `json:"failed,omitempty"`
-	Processed        []PackageRepositoryOperationStatusPackage           `json:"processed,omitempty"`
-	ProcessedOverall int                                                 `json:"processedOverall,omitempty"`
-	Total            int                                                 `json:"total,omitempty"`
+	// List of packages discovered during the operation.
+	// +optional
+	Discovered []PackageRepositoryOperationStatusDiscoveredPackage `json:"discovered,omitempty"`
+
+	// List of packages that failed processing.
+	// +optional
+	Failed []PackageRepositoryOperationStatusFailedPackage `json:"failed,omitempty"`
+
+	// List of packages successfully processed.
+	// +optional
+	Processed []PackageRepositoryOperationStatusPackage `json:"processed,omitempty"`
+
+	// Total number of packages processed.
+	// +optional
+	ProcessedOverall int `json:"processedOverall,omitempty"`
+
+	// Total number of packages found.
+	// +optional
+	Total int `json:"total,omitempty"`
 }
 
 type PackageRepositoryOperationStatusDiscoveredPackage struct {
+	// Name of the discovered package.
 	Name string `json:"name"`
 }
 
 type PackageRepositoryOperationStatusFailedPackage struct {
-	Name   string                                               `json:"name"`
+	// Name of the package that failed.
+	Name string `json:"name"`
+
+	// List of errors encountered while processing this package.
 	Errors []PackageRepositoryOperationStatusFailedPackageError `json:"errors"`
 }
 
 type PackageRepositoryOperationStatusFailedPackageError struct {
-	Name  string `json:"name"`
+	// Version of the package that failed.
+	Version string `json:"version"`
+
+	// Error message.
 	Error string `json:"error"`
 }
 
 type PackageRepositoryOperationStatusPackage struct {
+	// Name of the processed package.
 	Name string `json:"name"`
+
+	// Type of the package.
+	// +optional
 	Type string `json:"type,omitempty"`
 }
 
 type PackageRepositoryOperationStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
+	// Type of operation condition.
+	Type string `json:"type"`
+
+	// Status of the condition, one of True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status"`
+
+	// Programmatic identifier indicating the reason for the condition's last transition.
+	// +optional
+	Reason string `json:"reason,omitempty"`
+
+	// Human readable message indicating details about the transition.
+	// +optional
+	Message string `json:"message,omitempty"`
+
+	// Last time the condition was probed.
+	// +optional
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+
+	// Last time the condition transitioned from one status to another.
+	// +optional
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

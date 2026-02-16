@@ -8,8 +8,8 @@ title: "Managing control plane: FAQ"
 
 > It is important to have an odd number of masters to ensure a quorum.
 
-When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../ node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
-To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
+When installing Deckhouse Kubernetes Platform with default settings, the NodeGroup `master` lacks the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Because of this, after changing the number of `staticInstances` nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/ node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), when adding a regular node using Cluster API Provider Static (CAPS), it can be "intercepted" and added to the NodeGroup `master`, even if the corresponding `StaticInstance` (in `metadata`) specifies a label with a `role` different from `master`.
+To avoid this "interception", after installing DKP, edit the NodeGroup `master` — add the section [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) with label filter settings for `staticInstances` resources. Example of NodeGroup `master` with `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -44,7 +44,7 @@ spec:
 ```
 
 {% alert level="info" %}
-When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](../node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
+When adding new master nodes using CAPS and changing the number of master nodes in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), please note the following:
 
 When bootstrapping the cluster, the configuration specifies the first master node on which the installation takes place.
 If, after bootstrapping, you need to create a multi-master cluster and add master nodes using CAPS, you must specify the number of nodes in the `spec.staticInstances.count` parameter of the NodeGroup `master` as one less than the desired number.
@@ -320,6 +320,137 @@ If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure 
 1. Update the master nodes following the [instructions](#how-do-i-switch-to-a-different-os-image-in-a-multi-master-cluster).
 1. Convert your multi-master cluster to a single-master one according to [the guide on excluding master nodes from the cluster](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster).
 
+## How to configure HA mode with two master nodes and an arbiter node?
+
+Deckhouse Kubernetes Platform allows you to configure HA mode with two master nodes and an arbiter node. This approach allows you to meet HA requirements in conditions of limited resources.
+
+Only etcd is placed on the arbiter node, without the other control plane components. This node is used to ensure the etcd quorum.
+
+Requirements for the arbiter node:
+
+* At least 2 CPU cores
+* At least 4 GB of RAM
+* At least 8 GB of disk space for etcd
+
+The network latency requirements for the arbiter node are similar to those for the master nodes.
+
+### Configuring in a cloud cluster
+
+The example below applies to a cloud cluster with three master nodes.
+To configure HA mode with two master nodes and an arbiter node in a cloud cluster, you need to remove one master node from the cluster and add one arbiter node.
+
+To do this, follow these steps:
+
+{% alert level="warning" %}
+The following steps must be performed starting from the first master node (`master-0`) in the cluster. This is because the cluster scales in order — for example, it is not possible to remove `master-0` and `master-1` while leaving `master-2`.
+{% endalert %}
+
+{% alert level="warning" %}
+If your cluster uses the [`stronghold`](/modules/stronghold/) module, make sure the module is fully operational before adding or removing a master node. We strongly recommend creating a [backup of the module’s data](/modules/stronghold/auto_snapshot.html) before making any changes.
+{% endalert %}
+
+1. Create a [backup of etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#backing-up-etcd) and the `/etc/kubernetes` directory.
+1. Copy the resulting archive outside the cluster (for example, to a local machine).
+1. Ensure there are no alerts in the cluster that may interfere with the master node update process.
+1. Make sure the DKP queue is empty:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. On the **local machine**, run the DKP installer container for the corresponding edition and version (change the container registry address if needed):
+
+   ```bash
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.io/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **In the installer container**, run the following command:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Change the cloud provider settings:
+
+   * Set `masterNodeGroup.replicas` to `2`.
+   * Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: ""` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+
+     ```yaml
+     nodeGroups:
+       - name: arbiter
+         replicas: 1
+         nodeTemplate:
+           labels:
+             node.deckhouse.io/etcd-arbiter: ""
+           taints:
+             - key: node.deckhouse.io/etcd-arbiter
+               effect: NoSchedule
+         zones:
+           - europe-west3-b
+         instanceClass:
+           machineType: n1-standard-4
+       # ... the rest of the manifest
+     ```
+
+   * Save your changes.
+
+   > For **Yandex Cloud**, if external IPs are used for master nodes, the number of items in the `masterNodeGroup.instanceClass.externalIPAddresses` array must match the number of master nodes. Even when using `Auto` (automatic public IP allocation), the number of entries must still match.
+   >
+   > For example, for a single master node (`masterNodeGroup.replicas: 1`) and automatic IP assignment, the `masterNodeGroup.instanceClass.externalIPAddresses` section would look as follows:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. **In the installer container**, run the following command to trigger the scaling operation:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
+   ```
+
+   > **Important**. For **OpenStack** and **VK Cloud (OpenStack)**, after confirming the node deletion, it is extremely important to check the disk deletion `<prefix>kubernetes-data-N` in OpenStack itself.
+   >
+   > For example, when deleting the `cloud-demo-master-2` node in the OpenStack web interface or in the OpenStack CLI, it is necessary to check the absence of the `cloud-demo-kubernetes-data-2` disk.
+   >
+   > If the `kubernetes-data` disk remains, there may be problems with etcd operation as the number of master nodes increases.
+
+1. Check the Deckhouse queue with the following command and make sure there are no errors:
+
+   ```shell
+   d8 system queue list
+   ```
+
+### Configuring in a static cluster
+
+To configure HA mode with two master nodes and an arbiter node in a static cluster, follow these steps:
+
+1. Create a NodeGroup for the arbiter node. The arbiter node **must have** the label `node-role.deckhouse.io/etcd-only: “”` and a taint that prevents user workloads from being placed on it. Example of a NodeGroup description for the arbiter node:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+     kind: NodeGroup
+     metadata:
+       name: arbiter
+     spec:
+       nodeType: Static
+       nodeTemplate:
+         labels:
+           node.deckhouse.io/etcd-arbiter: ""
+         taints:
+           - key: node.deckhouse.io/etcd-arbiter
+             effect: NoSchedule
+     # ... the rest of the manifest
+     ```
+
+1. Add a node to the cluster that will be used as an arbiter node in a [way that is convenient](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#adding-nodes-to-a-bare-metal-cluster) for you.
+1. [Ensure](#how-do-i-view-the-list-of-etcd-members) that the added arbiter node is in the list of etcd cluster members.
+1. [Remove](#how-do-i-dismiss-the-master-role-while-keeping-the-node) one master node from the cluster.
+
 ## How do I view the list of etcd members?
 
 ### Option 1
@@ -378,17 +509,25 @@ This operation is unsafe and breaks the guarantees given by the consensus protoc
 
 This method may be necessary if the `--force-new-cluster` option doesn't restore etcd work. Such a scenario can occur during an unsuccessful converge of master nodes, where a new master node was created with an old etcd disk, changed its internal address, and other master nodes are absent. Symptoms indicating the need for this method include: the etcd container being stuck in an endless restart with the log showing the error: `panic: unexpected removal of unknown remote peer`.
 
-1. Install the [etcdutl](https://github.com/etcd-io/etcd/releases) utility.
+1. Find the `etcdutl` utility on the master node and copy the executable to `/usr/local/bin/`:
+
+   ```shell
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
 1. Create a new etcd database snapshot from the current local snapshot (`/var/lib/etcd/member/snap/db`):
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   * `<HOSTNAME>` — the name of the master node;
-   * `<ADDRESS>` — the address of the master node.
+   where:
+
+   * `<HOSTNAME>`: Name of the master node.
+   * `<ADDRESS>`: Address of the master node.
 
 1. Execute the following commands to use the new snapshot:
 
@@ -642,7 +781,7 @@ spec:
 
 ### How to deal with the audit log?
 
-There must be some `log scraper` on master nodes  *([log-shipper](../log-shipper/cr.html#clusterloggingconfig), promtail, filebeat)* that will monitor the log file:
+There must be some `log scraper` on master nodes  *([log-shipper](/modules/log-shipper/cr.html#clusterloggingconfig), promtail, filebeat)* that will monitor the log file:
 
 ```bash
 /var/log/kube-audit/audit.log
@@ -764,7 +903,7 @@ Follow these steps to restore a single-master cluster on master node:
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl` using the command:
@@ -838,29 +977,38 @@ Follow these steps to restore a single-master cluster on master node:
 
 #### Restoring a multi-master cluster
 
-Follow these steps to restore a multi-master cluster:
+To properly restore a multi-master cluster, follow these steps:
 
-1. Explicitly set the High Availability (HA) mode by specifying the [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability) parameter. This is necessary, for example, in order not to lose one Prometheus replica and its PVC, since HA is disabled by default in single-master mode.
+1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
-1. Switch the cluster to single-master mode according to [instruction](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) for cloud clusters or independently remove static master-node from the cluster.
+1. Switch the cluster to single-master mode:
 
-1. On a single master-node, perform the steps to restore etcd from backup in accordance with the [instructions](#restoring-a-single-master-cluster) for a single-master cluster.
+   - In a cloud cluster, follow the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master).
+   - In a static cluster, remove any unnecessary master nodes from the `control-plane` role by following the [instructions](#how-do-i-dismiss-the-master-role-while-keeping-the-node) and then remove them from the cluster.
+   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master) to remove the additional master nodes and the arbiter node.
 
-1. When etcd operation is restored, delete the information about the master nodes already deleted in step 1 from the cluster:
+1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-single-master-cluster) for restoring a cluster with a single master node.
+
+1. Once etcd is restored, remove the records of the previously deleted master nodes from the cluster using the following command (replace with the actual node name):
 
    ```shell
-   d8 k delete node MASTER_NODE_I
+   d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Restart all nodes of the cluster.
+   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
 
-1. Wait for the deckhouse queue to complete:
+1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
+
+1. Wait for Deckhouse to process all tasks in the queue:
 
    ```shell
    d8 system queue main
    ```
 
-1. Switch the cluster back to multi-master mode according to [instructions](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) for cloud clusters or [instructions](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster) for static or hybrid clusters.
+1. Switch the cluster back to multi-master mode. Follow the respective instructions for [cloud clusters](#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master) and [static clusters](#how-do-i-add-a-master-node-to-a-static-or-hybrid-cluster).
+
+Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 
 ### How do I restore a Kubernetes object from an etcd backup?
 
@@ -1143,7 +1291,7 @@ To update the certificates, do the following on each master node:
 1. Find the `kubeadm` utility on the master node and create a symbolic link using the following command:
 
    ```shell
-   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s $(find /var/lib/containerd -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 2. Update the certificates:

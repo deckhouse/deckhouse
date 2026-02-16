@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -109,10 +110,14 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	BeforeSuite(func() {
 		err := os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
 		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/permission-browser-apiserver", "/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
+		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
 		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		Expect(err).ShouldNot(HaveOccurred())
+		err = os.Remove("/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -129,10 +134,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
+			// Make SecurityPolicyException available for template rendering.
+			// In CI template-tests, `.Capabilities.APIVersions` is typically empty, so we emulate discovery.
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
 			f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
 			f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
+			f.ValuesSet("userAuthz.internal.apiserverCertificate.ca", "test")
+			f.ValuesSet("userAuthz.internal.apiserverCertificate.crt", "test")
+			f.ValuesSet("userAuthz.internal.apiserverCertificate.key", "test")
 
 			f.HelmRender()
 		})
@@ -280,6 +291,80 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
+		})
+
+		It("Should configure user-authz-webhook to use local kube-apiserver endpoint", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+			Expect(ds.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+
+			// Webhook listens on a node-local port, kube-apiserver calls it via https://127.0.0.1:40443.
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(40443)))
+			Expect(ds.Field("spec.template.spec.containers.0.ports.0.protocol").String()).To(Equal("TCP"))
+
+			Expect(ds.Field("spec.template.spec.containers.0.env.0.name").String()).To(Equal("KUBERNETES_SERVICE_HOST"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.0.valueFrom.fieldRef.fieldPath").String()).To(Equal("status.hostIP"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.1.name").String()).To(Equal("KUBERNETES_SERVICE_PORT"))
+			Expect(ds.Field("spec.template.spec.containers.0.env.1.value").String()).To(Equal("6443"))
+		})
+
+		It("Should allow node-local webhook port in SecurityPolicyException", func() {
+			rendered := map[string]string{}
+			f.HelmRender(WithFilteredRenderOutput(rendered, []string{"webhook/daemonset.yaml"}))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			manifest := ""
+			for k, v := range rendered {
+				if strings.Contains(k, "webhook/daemonset.yaml") {
+					manifest = v
+					break
+				}
+			}
+			if manifest == "" {
+				if len(rendered) == 1 {
+					for _, v := range rendered {
+						manifest = v
+						break
+					}
+				}
+			}
+			Expect(manifest).ToNot(BeEmpty())
+			Expect(manifest).To(ContainSubstring("kind: SecurityPolicyException"))
+			Expect(manifest).To(ContainSubstring("name: user-authz-webhook"))
+			Expect(manifest).To(ContainSubstring("allowedValue: true"))
+			Expect(manifest).To(ContainSubstring("hostPorts:"))
+			Expect(manifest).To(ContainSubstring("port: 40443"))
+			Expect(manifest).To(ContainSubstring("protocol: TCP"))
+		})
+
+		It("Should deploy permission-browser-apiserver and supporting objects", func() {
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "permission-browser-apiserver-kubeconfig").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ServiceAccount", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("APIService", "v1alpha1.authorization.deckhouse.io").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:bulk-sar-creator").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:self-bulk-sar-creator").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:permission-browser-apiserver:auth-delegator").Exists()).To(BeTrue())
+		})
+
+		It("Should configure permission-browser-apiserver deployment correctly", func() {
+			deploy := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--secure-port=8443"))
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.containerPort").Int()).To(Equal(int64(8443)))
+			Expect(deploy.Field("spec.template.spec.containers.0.ports.0.name").String()).To(Equal("https"))
+		})
+
+		It("Should configure APIService correctly", func() {
+			apiService := f.KubernetesGlobalResource("APIService", "v1alpha1.authorization.deckhouse.io")
+			Expect(apiService.Field("spec.group").String()).To(Equal("authorization.deckhouse.io"))
+			Expect(apiService.Field("spec.version").String()).To(Equal("v1alpha1"))
+			Expect(apiService.Field("spec.service.name").String()).To(Equal("permission-browser-apiserver"))
+			Expect(apiService.Field("spec.service.namespace").String()).To(Equal("d8-user-authz"))
 		})
 	})
 

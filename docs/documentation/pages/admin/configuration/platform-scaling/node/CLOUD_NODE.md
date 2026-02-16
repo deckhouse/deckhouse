@@ -31,7 +31,7 @@ To add nodes:
      name: worker-instance
    spec:
      flavorName: m1.medium
-     imageName: ubuntu-22-04-cloud-amd64
+     imageName: ubuntu-24-04-cloud-amd64
      rootDiskSize: 20
      mainNetwork: default
    ```
@@ -524,7 +524,7 @@ To add CloudPermanent nodes to a DKP cloud cluster:
      replicas: 2
      instanceClass:
        flavorName: m1.large
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
      volumeTypeMap:
@@ -668,7 +668,7 @@ A brief example of adding a static node to a cluster using Cluster API Provider 
    EOF
    ```
 
-1. Create a [StaticInstance](cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
+1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance) resource in the cluster and specify the IP address of the static node server:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -799,7 +799,7 @@ To add master nodes in a cloud cluster:
      replicas: 3
      instanceClass:
        flavorName: m1.medium
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
    ```

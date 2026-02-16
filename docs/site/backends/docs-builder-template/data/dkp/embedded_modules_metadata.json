@@ -1,0 +1,1676 @@
+{
+  "modules": {
+    "admission-policy-engine": {
+      "name": "admission-policy-engine",
+      "stage": "General Availability",
+      "subsystems": [
+        "security"
+      ],
+      "namespace": "d8-admission-policy-engine",
+      "descriptions": {
+        "en": "Enforces the security policies in the cluster according to the Kubernetes Pod Security Standards using the Gatekeeper solution.",
+        "ru": "Позволяет использовать в кластере политики безопасности согласно Pod Security Standards Kubernetes с использованием решения Gatekeeper."
+      },
+      "oss": [
+        {
+          "name": "Gatekeeper",
+          "link": "https://github.com/open-policy-agent/gatekeeper",
+          "description": "Policy-based control for cloud native environments",
+          "logo": "https://d33wubrfki0l68.cloudfront.net/a5bf5cefceefdba8ab3a9297fddab246355169a2/4a6f4/img/logo-white.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "basic-auth": {
+      "name": "basic-auth",
+      "stage": "General Availability",
+      "namespace": "kube-basic-auth",
+      "descriptions": {
+        "en": "Installs a service for basic authorization. Does not have any mandatory settings.",
+        "ru": "Устанавливает сервис для базовой авторизации. Не предназначен для высоких нагрузок."
+      },
+      "oss": []
+    },
+    "cert-manager": {
+      "name": "cert-manager",
+      "stage": "General Availability",
+      "subsystems": [
+        "security"
+      ],
+      "namespace": "d8-cert-manager",
+      "descriptions": {
+        "en": "Manages TLS certificates in the cluster. Supports automatic certificate provisioning from various CAs, certificate renewal, and monitoring of certificate validity.",
+        "ru": "Управляет TLS-сертификатами в кластере. Поддерживает автоматическое получение сертификатов из различных CA, обновление сертификатов и мониторинг их действительности."
+      },
+      "oss": [
+        {
+          "name": "cert-manager",
+          "link": "https://github.com/jetstack/cert-manager",
+          "description": "A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources.",
+          "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "chrony": {
+      "name": "chrony",
+      "critical": true,
+      "weight": 470,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-chrony",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Provides time synchronization on all cluster nodes using chrony. Ensures consistent time across all nodes for proper cluster operation.",
+        "ru": "Обеспечивает синхронизацию времени на всех узлах кластера с помощью chrony. Гарантирует единое время на всех узлах для корректной работы кластера."
+      },
+      "oss": [
+        {
+          "name": "Chrony",
+          "link": "https://chrony.tuxfamily.org",
+          "description": "chrony is a versatile implementation of the Network Time Protocol (NTP)",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "GNU General Public License version 2"
+        }
+      ]
+    },
+    "cilium-hubble": {
+      "name": "cilium-hubble",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-cni-cilium",
+      "descriptions": {
+        "en": "Provides visualization of the cluster network stack when Cilium CNI is enabled. Requires Linux kernel version 5.8 or higher with eBPF support.",
+        "ru": "Обеспечивает визуализацию сетевого стека кластера при включенном CNI Cilium. Требует версию ядра Linux 5.8 или выше с поддержкой eBPF."
+      },
+      "requirements": {
+        "modules": {
+          "cni-cilium": ">= 0.0.0"
+        }
+      },
+      "oss": [
+        {
+          "name": "Cilium Hubble",
+          "link": "https://github.com/cilium/hubble",
+          "description": "Hubble is a fully distributed networking and security observability platform for cloud native workloads. It is built on top of Cilium and eBPF to enable deep visibility into the communication and behavior of services as well as the networking infrastructure in a completely transparent manner.",
+          "logo": "https://raw.githubusercontent.com/cilium/hubble/9429bbf4b5b504a9b0f6752ccfbb16a2878bb51e/Documentation/images/hubble_logo.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "cloud-provider-aws": {
+      "name": "cloud-provider-aws",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-aws",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with AWS cloud resources. Allows to use AWS resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами AWS. Позволяет использовать ресурсы AWS при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-azure": {
+      "name": "cloud-provider-azure",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-azure",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with Azure cloud resources. Allows to use Azure resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами Azure. Позволяет использовать ресурсы Azure при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-dvp": {
+      "name": "cloud-provider-dvp",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-dvp",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with Deckhouse Virtualization Platform resources. Allows to use DVP resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с ресурсами Deckhouse Virtualization Platform. Позволяет использовать ресурсы DVP при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-dynamix": {
+      "name": "cloud-provider-dynamix",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-dynamix",
+      "stage": "Preview",
+      "descriptions": {
+        "en": "Manages interaction with Dynamix resources. Allows to use Dynamix resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами Базис.DynamiX. Позволяет использовать ресурсы Базис.DynamiX при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-gcp": {
+      "name": "cloud-provider-gcp",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-gcp",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with Google cloud resources. Allows to use GCP resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами Google Cloud. Позволяет использовать ресурсы GCP при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-huaweicloud": {
+      "name": "cloud-provider-huaweicloud",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-huaweicloud",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with Huawei Cloud resources. Allows to use Huawei Cloud resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами Huawei Cloud. Позволяет использовать ресурсы Huawei Cloud при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-openstack": {
+      "name": "cloud-provider-openstack",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-openstack",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with OpenStack-based cloud resources. Allows to use OpenStack resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами OpenStack. Позволяет использовать ресурсы OpenStack при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-vcd": {
+      "name": "cloud-provider-vcd",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-vcd",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with VMware Cloud Director resources. Allows to use VMware Cloud Director resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами VMware Cloud Director. Позволяет использовать ресурсы VMware Cloud Director при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-vsphere": {
+      "name": "cloud-provider-vsphere",
+      "descriptions": {
+        "en": "Manages interaction with VMware vSphere-based cloud resources. Allows to use vSphere resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами VMware vSphere. Позволяет использовать ресурсы vSphere при создании узлов."
+      },
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-vsphere",
+      "stage": "General Availability",
+      "oss": []
+    },
+    "cloud-provider-yandex": {
+      "name": "cloud-provider-yandex",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-yandex",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with Yandex Cloud resources. Allows to use Yandex Cloud resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами Yandex Cloud. Позволяет использовать ресурсы Yandex Cloud при создании узлов."
+      },
+      "oss": []
+    },
+    "cloud-provider-zvirt": {
+      "name": "cloud-provider-zvirt",
+      "critical": true,
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-provider-zvirt",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages interaction with zVirt resources. Allows to use zVirt resources for provisioning nodes.",
+        "ru": "Управляет взаимодействием с облачными ресурсами zVirt. Позволяет использовать ресурсы zVirt при создании узлов."
+      },
+      "oss": []
+    },
+    "cni-cilium": {
+      "name": "cni-cilium",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 21,
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-cni-cilium",
+      "descriptions": {
+        "en": "Provides networking in a Kubernetes cluster using the Cilium CNI with eBPF-based networking and security.",
+        "ru": "Обеспечивает работу сети в кластере Kubernetes с помощью CNI Cilium на базе eBPF."
+      },
+      "oss": [
+        {
+          "name": "Cilium",
+          "link": "https://github.com/cilium/cilium",
+          "description": "Cilium is open source software for providing and transparently securing network connectivity and loadbalancing between application workloads such as application containers or processes.",
+          "logo": "/images/logos/cilium.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "cni-flannel": {
+      "name": "cni-flannel",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 35,
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-cni-flannel",
+      "descriptions": {
+        "en": "Provides a network between multiple nodes in a cluster using the flannel module.",
+        "ru": "Обеспечивает работу сети в кластере с помощью модуля flannel."
+      },
+      "oss": [
+        {
+          "name": "Flannel",
+          "link": "https://github.com/flannel-io/flannel",
+          "description": "A simple and easy way to configure a layer 3 network fabric designed for Kubernetes.",
+          "logo": "https://github.com/flannel-io/flannel/raw/master/logos/flannel-glyph-color.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "cni-simple-bridge": {
+      "name": "cni-simple-bridge",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 35,
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-cni-simple-bridge",
+      "descriptions": {
+        "en": "Provides networking with limited functionality in Kubernetes clusters.",
+        "ru": "Обеспечивает работу сети с ограниченной функциональностью в кластерах Kubernetes."
+      },
+      "oss": []
+    },
+    "control-plane-manager": {
+      "name": "control-plane-manager",
+      "critical": true,
+      "weight": 40,
+      "subsystems": [
+        "kubernetes"
+      ],
+      "namespace": "kube-system",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Manages the cluster's control plane components including certificates, configurations, and versions.",
+        "ru": "Управляет компонентами control plane кластера, включая сертификаты, конфигурации и версии."
+      },
+      "oss": [
+        {
+          "name": "Kubernetes",
+          "link": "https://github.com/kubernetes/kubernetes",
+          "description": "An open source system for managing containerized applications across multiple hosts.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Etcd",
+          "link": "https://github.com/etcd-io/etcd",
+          "description": "A distributed reliable key-value store for the most critical data of a distributed system.",
+          "logo": "/images/logos/etcd-icon-color.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "csi-vsphere": {
+      "name": "csi-vsphere",
+      "weight": 30,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-csi-vsphere",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "CSI vSphere Driver for provisioning disks in static clusters based on VMware vSphere.",
+        "ru": "CSI-драйвер vSphere для организации заказа дисков в статических кластерах на базе VMware vSphere."
+      },
+      "oss": []
+    },
+    "dashboard": {
+      "name": "dashboard",
+      "stage": "Deprecated",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-dashboard",
+      "requirements": {
+        "user-authz": ">= 0.0.0"
+      },
+      "descriptions": {
+        "en": "Installs Kubernetes Dashboard Web UI for managing applications in the cluster. Integrated with user authentication and authorization modules.",
+        "ru": "Устанавливает Web UI Kubernetes Dashboard для управления приложениями в кластере. Интегрирован с модулями аутентификации и авторизации пользователей."
+      },
+      "oss": [
+        {
+          "name": "Kubernetes Dashboard",
+          "link": "https://github.com/kubernetes/dashboard",
+          "description": "A general purpose, web-based UI for Kubernetes clusters.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "deckhouse": {
+      "name": "deckhouse",
+      "critical": true,
+      "weight": 2,
+      "stage": "General Availability",
+      "subsystems": [
+        "deckhouse"
+      ],
+      "namespace": "d8-system",
+      "disable": {
+        "confirmation": true,
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+      },
+      "descriptions": {
+        "en": "Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.",
+        "ru": "Настраивает основные параметры Deckhouse: уровень логирования, набор модулей, включенных по умолчанию, и канал обновлений."
+      },
+      "oss": [
+        {
+          "name": "Shell operator",
+          "link": "https://github.com/flant/shell-operator",
+          "description": "A tool for running event-driven scripts in a Kubernetes cluster",
+          "logo": "/images/logos/shell-operator-small.png",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Addon operator",
+          "link": "https://github.com/flant/addon-operator",
+          "description": "A tool to combine Helm charts with hooks and values storage to transform charts into smart modules that configure themselves and respond to changes in the cluster.",
+          "logo": "/images/logos/addon-operator-small.png",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Helm",
+          "link": "https://github.com/helm/helm",
+          "description": "The package manager for Kubernetes",
+          "logo": "https://helm.sh/img/helm.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "JQ",
+          "link": "https://github.com/stedolan/jq",
+          "description": "A lightweight and flexible command-line JSON processor.",
+          "logo": "/images/logos/jq.svg",
+          "license": "Mixed (https://github.com/stedolan/jq/blob/master/COPYING)"
+        },
+        {
+          "name": "image-syncer",
+          "link": "https://github.com/AliyunContainerService/image-syncer",
+          "description": "image-syncer is a docker registry tools. With image-syncer you can synchronize docker images from some source registries to target registries, which include most popular public docker registry services",
+          "logo": "https://avatars.githubusercontent.com/u/16377432?s=200&v=4",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "deckhouse-tools": {
+      "name": "deckhouse-tools",
+      "namespace": "d8-system",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Creates a web UI with links to download Deckhouse CLI tool for various operating systems.",
+        "ru": "Создает веб-интерфейс для скачивания из кластера утилиты Deckhouse CLI под различные операционные системы."
+      },
+      "oss": []
+    },
+    "descheduler": {
+      "name": "descheduler",
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-descheduler",
+      "descriptions": {
+        "en": "Analyzes the cluster state every 15 minutes and performs pod eviction according to conditions described in active strategies. Evicted pods are rescheduled considering the current cluster state.",
+        "ru": "Анализирует состояние кластера каждые 15 минут и выполняет вытеснение подов согласно условиям, описанным в активных стратегиях. Позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией."
+      },
+      "stage": "General Availability",
+      "oss": [
+        {
+          "name": "Descheduler",
+          "link": "https://github.com/kubernetes-sigs/descheduler",
+          "description": "A tool to auto-fix scheduling issues Kubernetes does not cover itself.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "documentation": {
+      "name": "documentation",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
+        "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform."
+      },
+      "namespace": "d8-system",
+      "oss": []
+    },
+    "extended-monitoring": {
+      "name": "extended-monitoring",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Extends cluster monitoring capabilities with additional metrics exporters, which allow you to identify potential problems before they affect the operation of services.",
+        "ru": "Расширяет возможности мониторинга кластера за счёт дополнительных экспортеров метрик, которые позволяют выявлять потенциальные проблемы до того, как они скажутся на работе сервисов."
+      },
+      "oss": []
+    },
+    "ingress-nginx": {
+      "name": "ingress-nginx",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-ingress-nginx",
+      "descriptions": {
+        "en": "Installs and manages Ingress NGINX Controller using Custom Resources. Supports multiple controllers and high availability mode for traffic routing and load balancing.",
+        "ru": "Устанавливает и управляет Ingress NGINX Controller с помощью Custom Resources. Поддерживает несколько контроллеров и режим высокой доступности для маршрутизации трафика и балансировки нагрузки."
+      },
+      "oss": [
+        {
+          "name": "NGINX Ingress Controller",
+          "link": "https://github.com/kubernetes/ingress-nginx",
+          "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "OpenKruise",
+          "link": "https://openkruise.io/",
+          "description": "OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.",
+          "logo": "https://openkruise.io/img/openkruise.ico",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "istio": {
+      "name": "istio",
+      "stage": "General Availability",
+      "subsystems": [
+        "infrastructure",
+        "networking"
+      ],
+      "namespace": "d8-istio",
+      "descriptions": {
+        "en": "Implements Service Mesh for centralized management of network traffic in the cluster. Provides mutual TLS, authorization, traffic routing, load balancing, and observability.",
+        "ru": "Реализует Service Mesh для централизованного управления сетевым трафиком в кластере. Обеспечивает mutual TLS, авторизацию, маршрутизацию трафика, балансировку нагрузки и наблюдаемость."
+      },
+      "oss": [
+        {
+          "name": "Istio",
+          "link": "https://github.com/istio/istio",
+          "description": "An open platform to connect, manage, and secure microservices.",
+          "logo": "https://github.com/istio/istio/raw/master/logo/istio-bluelogo-whitebackground-unframed.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Kiali",
+          "link": "https://github.com/kiali/kiali",
+          "description": "Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.",
+          "logo": "/images/logos/kiali.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "keepalived": {
+      "name": "keepalived",
+      "stage": "General Availability",
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-keepalived",
+      "descriptions": {
+        "en": "Configures keepalived clusters on nodes via custom resources. Does not work with the cilium module.",
+        "ru": "Настраивает keepalived-кластеры на узлах через custom resources. Не работает с модулем cilium."
+      },
+      "oss": [
+        {
+          "name": "keepalived",
+          "link": "https://github.com/acassen/keepalived",
+          "description": "Provides simple and robust facilities for loadbalancing and high-availability to Linux system and Linux based infrastructures.",
+          "logo": "https://pbs.twimg.com/profile_images/1132878189515218945/bq-C0K5C_400x400.png",
+          "license": "GNU General Public License v2.0"
+        }
+      ]
+    },
+    "kube-dns": {
+      "name": "kube-dns",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 42,
+      "subsystems": [
+        "kubernetes",
+        "networking"
+      ],
+      "namespace": "kube-system",
+      "descriptions": {
+        "en": "Installs CoreDNS components for managing DNS in the Kubernetes cluster. Deletes all previously installed kubeadm Deployments, ConfigMaps and RBAC for CoreDNS.",
+        "ru": "Устанавливает компоненты CoreDNS для управления DNS в кластере Kubernetes. Удаляет ранее установленные kubeadm'ом Deployment, ConfigMap и RBAC для CoreDNS."
+      },
+      "oss": [
+        {
+          "name": "CoreDNS",
+          "link": "https://github.com/coredns/coredns",
+          "description": "A DNS server/forwarder that chains plugins.",
+          "logo": "https://raw.githubusercontent.com/coredns/logo/master/Icon/CoreDNS_Colour_Icon.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "kube-proxy": {
+      "name": "kube-proxy",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 36,
+      "subsystems": [
+        "kubernetes",
+        "networking"
+      ],
+      "namespace": "kube-system",
+      "descriptions": {
+        "en": "Manages kube-proxy components for service networking and load balancing in the cluster. Replaces kubeadm's kube-proxy with a custom implementation.",
+        "ru": "Управляет компонентами kube-proxy для сетевого взаимодействия сервисов и балансировки нагрузки в кластере. Заменяет kube-proxy от kubeadm на собственную реализацию."
+      },
+      "oss": []
+    },
+    "local-path-provisioner": {
+      "name": "local-path-provisioner",
+      "stage": "General Availability",
+      "weight": 31,
+      "critical": true,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-local-path-provisioner",
+      "descriptions": {
+        "en": "Provides local storage on Kubernetes nodes using HostPath volumes. Creates StorageClass resources for managing local storage provisioning.",
+        "ru": "Предоставляет локальное хранилище на узлах Kubernetes с использованием томов HostPath. Создает ресурсы StorageClass для управления выделением локального хранилища."
+      },
+      "oss": [
+        {
+          "name": "Local-path-provisioner",
+          "link": "https://github.com/rancher/local-path-provisioner",
+          "description": "Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage in each node by creating hostPath based persistent volume on the node automatically.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "log-shipper": {
+      "name": "log-shipper",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-log-shipper",
+      "descriptions": {
+        "en": "Simplifies the configuration of log collection in Kubernetes. Allows organization of log collection from applications running in the cluster and from nodes themselves.",
+        "ru": "Упрощает настройку сбора логов в Kubernetes. Позволяет организовать сбор логов с приложений, запущенных в кластере, и с узлов, а затем отправлять их в систему хранения (Loki, Elasticsearch, S3 и другие)."
+      },
+      "oss": [
+        {
+          "name": "Vector",
+          "link": "https://github.com/timberio/vector",
+          "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
+          "logo": "/images/logos/vector.svg",
+          "license": "Mozilla Public License, version 2.0"
+        }
+      ]
+    },
+    "loki": {
+      "name": "loki",
+      "stage": "Preview",
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Deploys operational log storage based on Grafana Loki in the cluster. Provides centralized log collection and access via Grafana for short-term log retention.",
+        "ru": "Разворачивает хранилище логов на базе Grafana Loki в кластере. Обеспечивает централизованный сбор логов и доступ к ним через Grafana для краткосрочного хранения."
+      },
+      "oss": [
+        {
+          "name": "Loki",
+          "link": "https://github.com/grafana/loki",
+          "description": "Loki: like Prometheus, but for logs.",
+          "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
+          "license": "GNU Affero General Public License v3.0"
+        }
+      ]
+    },
+    "metallb": {
+      "name": "metallb",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-metallb",
+      "descriptions": {
+        "en": "Implements LoadBalancer mechanism for services in bare metal clusters. Supports Layer 2 mode with improved load balancing and BGP mode based on MetalLB solution.",
+        "ru": "Реализует механизм LoadBalancer для сервисов в кластерах bare metal. Поддерживает режим Layer 2 с улучшенной балансировкой нагрузки и режим BGP на базе решения MetalLB."
+      },
+      "oss": [
+        {
+          "name": "MetalLB",
+          "link": "https://github.com/metallb/metallb",
+          "description": "A load-balancer implementation for bare metal Kubernetes clusters, using standard routing protocols.",
+          "logo": "https://raw.githubusercontent.com/metallb/metallb/1b9dc1d57e5e75749570dfcb06fb35ce08745b42/website/static/images/logo/metallb-blue.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "monitoring-applications": {
+      "name": "monitoring-applications",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Collects information about applications running in the cluster and configures monitoring dashboards for them.",
+        "ru": "Собирает информацию о работающих в кластере приложениях и настраивает для них дашборды мониторинга."
+      },
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "oss": []
+    },
+    "monitoring-custom": {
+      "name": "monitoring-custom",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Simplifies monitoring setup for custom applications by requiring only a specific label on Service or Pod. Enables collection of application metrics without manual Prometheus configuration.",
+        "ru": "Упрощает настройку мониторинга пользовательских приложений, требуя только указания определённого лейбла на Service или Pod. Позволяет собирать метрики приложений без ручной настройки Prometheus."
+      },
+      "oss": []
+    },
+    "monitoring-deckhouse": {
+      "name": "monitoring-deckhouse",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+        "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+      },
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "oss": []
+    },
+    "monitoring-kubernetes": {
+      "name": "monitoring-kubernetes",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.",
+        "ru": "Обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов."
+      },
+      "oss": [
+        {
+          "name": "Node exporter",
+          "link": "https://github.com/prometheus/node_exporter",
+          "description": "Prometheus exporter for hardware and OS metrics exposed by *NIX kernels, written in Go with pluggable metric collectors.",
+          "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "kube-state-metrics",
+          "link": "https://github.com/kubernetes/kube-state-metrics",
+          "description": "A simple service that listens to the Kubernetes API server and generates metrics about the state of the objects.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "monitoring-kubernetes-control-plane": {
+      "name": "monitoring-kubernetes-control-plane",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "kubernetes": ">= 1.22.0",
+        "deckhouse": ">= 1.22.0",
+        "modules": {
+          "prometheus": ">= 0.0.0",
+          "control-plane-manager": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Monitors the Kubernetes control plane components. Safely scrapes metrics and provides basic monitoring rules for kube-apiserver, kube-controller-manager, kube-scheduler, and etcd.",
+        "ru": "Мониторит компоненты control plane Kubernetes. Организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга для kube-apiserver, kube-controller-manager, kube-scheduler и etcd."
+      },
+      "oss": []
+    },
+    "monitoring-ping": {
+      "name": "monitoring-ping",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "modules": {
+          "monitoring-kubernetes": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Monitors network connectivity between all cluster nodes using ICMP ping. Exports metrics and provides monitoring dashboards.",
+        "ru": "Мониторит сетевую связность между всеми узлами кластера с помощью ICMP ping. Экспортирует метрики и предоставляет дашборды в системе мониторинга."
+      },
+      "oss": []
+    },
+    "multitenancy-manager": {
+      "name": "multitenancy-manager",
+      "stage": "Preview",
+      "subsystems": [
+        "deckhouse"
+      ],
+      "namespace": "d8-multitenancy-manager",
+      "descriptions": {
+        "en": "Enables creation of isolated projects in a cluster. Projects provide resource quotas, network isolation, and security features beyond standard namespaces.",
+        "ru": "Позволяет создавать изолированные проекты в кластере. Проекты обеспечивают квоты ресурсов, сетевую изоляцию и функции безопасности, выходящие за рамки стандартных пространств имён."
+      },
+      "oss": []
+    },
+    "namespace-configurator": {
+      "name": "namespace-configurator",
+      "stage": "General Availability",
+      "namespace": "d8-system",
+      "descriptions": {
+        "en": "Automatically assigns annotations and labels to namespaces based on configuration patterns. Monitors namespaces and applies labels and annotations from configuration to matching namespaces.",
+        "ru": "Автоматически назначает аннотации и лейблы пространствам имён на основе шаблонов конфигурации. Отслеживает пространства имён и применяет лейблы и аннотации из конфигурации к соответствующим пространствам имён."
+      },
+      "oss": []
+    },
+    "network-gateway": {
+      "name": "network-gateway",
+      "stage": "General Availability",
+      "critical": true,
+      "weight": 450,
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-network-gateway",
+      "descriptions": {
+        "en": "Creates a network gateway using Kubernetes nodes. It contains a DHCP server and a SNAT manager.",
+        "ru": "Создает сетевой шлюз из Kubernetes-узлов. Содержит в себе DHCP-сервер и настройщик SNAT."
+      },
+      "oss": []
+    },
+    "network-policy-engine": {
+      "name": "network-policy-engine",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-system",
+      "descriptions": {
+        "en": "Manages network policies in the cluster. Do not use if the cilium module is enabled because it already has network policy management.",
+        "ru": "Управляет сетевыми политиками в кластере. Не используйте модуль, если включен модуль cilium, так как в нем уже есть функционал управления сетевыми политиками."
+      },
+      "oss": [
+        {
+          "name": "Kube-router",
+          "link": "https://github.com/cloudnativelabs/kube-router",
+          "description": "A turnkey solution for Kubernetes networking with aim to provide operational simplicity and high performance.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "node-local-dns": {
+      "name": "node-local-dns",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "kube-system",
+      "requirements": {
+        "modules": {
+          "kube-dns": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Deploys a caching DNS server on each cluster node and exports data to the monitoring system for analysis.",
+        "ru": "Разворачивает кеширующий DNS-сервер на каждом узле кластера, экспортирует данные в систему мониторинга для анализа."
+      },
+      "oss": []
+    },
+    "node-manager": {
+      "name": "node-manager",
+      "critical": true,
+      "weight": 40,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-instance-manager",
+      "descriptions": {
+        "en": "Manages nodes in the Kubernetes cluster as a related group. Configures and updates cluster nodes, manages cluster scaling in the cloud, and manages local users on nodes.",
+        "ru": "Управляет узлами кластера Kubernetes как связанной группой. Настраивает и обновляет узлы кластера, управляет масштабированием кластера в облаке и управляет локальными пользователями на узлах."
+      },
+      "stage": "General Availability",
+      "oss": [
+        {
+          "name": "Gardener Machine Controller Manager",
+          "link": "https://github.com/gardener/machine-controller-manager",
+          "description": "An operator that manages VMs as a kubernetes custom resource.",
+          "logo": "https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "okmeter": {
+      "name": "okmeter",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-okmeter",
+      "descriptions": {
+        "en": "Installs the Okmeter agent in the cluster.",
+        "ru": "Устанавливает агент Okmeter в кластере."
+      },
+      "oss": []
+    },
+    "openvpn": {
+      "name": "openvpn",
+      "stage": "General Availability",
+      "subsystems": [
+        "networking"
+      ],
+      "namespace": "d8-openvpn",
+      "descriptions": {
+        "en": "Provides access to cluster resources via OpenVPN with certificate-based authentication. Includes a web interface for managing certificates and generating configuration files.",
+        "ru": "Предоставляет доступ к ресурсам кластера через OpenVPN с аутентификацией по сертификатам. Включает веб-интерфейс для управления сертификатами и генерации конфигурационных файлов."
+      },
+      "oss": [
+        {
+          "name": "OpenVPN",
+          "link": "https://github.com/OpenVPN/openvpn",
+          "description": "A secure tunneling daemon.",
+          "logo": "/images/logos/openvpn.png",
+          "license": "<a target=\"_blank\" href=\"https://github.com/OpenVPN/openvpn/blob/master/COPYING\">Mixed</a>"
+        }
+      ]
+    },
+    "operator-prometheus": {
+      "name": "operator-prometheus",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-operator-prometheus",
+      "descriptions": {
+        "en": "Installs the Prometheus Operator, which automates the deployment and management of Prometheus installations.",
+        "ru": "Устанавливает Prometheus Operator, который автоматизирует развёртывание и управление инсталляциями Prometheus."
+      },
+      "oss": [
+        {
+          "name": "Prometheus Operator",
+          "link": "https://github.com/prometheus-operator/prometheus-operator",
+          "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
+          "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "prometheus": {
+      "name": "prometheus",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "descriptions": {
+        "en": "Deploys monitoring stack with preset configuration for platform and applications. Includes ready-made alerts and dashboards.",
+        "ru": "Разворачивает стек мониторинга с предустановленной конфигурацией для платформы и приложений. Включает готовые алерты и дашборды."
+      },
+      "requirements": {
+        "modules": {
+          "operator-prometheus": ">= 0.0.0"
+        }
+      },
+      "oss": [
+        {
+          "name": "Prometheus",
+          "link": "https://github.com/prometheus/prometheus",
+          "description": "A systems and service monitoring system.",
+          "logo": "/images/logos/prometheus-icon-color.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Grafana",
+          "link": "https://github.com/grafana/grafana",
+          "description": "An open-source platform for monitoring and observability.",
+          "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
+          "license": "GNU Affero General Public License v3.0"
+        },
+        {
+          "name": "Trickster",
+          "link": "https://github.com/trickstercache/trickster",
+          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
+          "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "Mimir",
+          "link": "https://github.com/grafana/mimir",
+          "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
+          "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
+          "license": "AGPL-3.0 license"
+        },
+        {
+          "name": "Promxy",
+          "link": "https://github.com/jacksontj/promxy",
+          "logo": "/images/logos/prometheus-icon-color.svg",
+          "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
+          "license": "MIT License"
+        },
+        {
+          "name": "Memcached",
+          "link": "https://github.com/memcached/memcached",
+          "logo": "/images/logos/memcached-icon.svg",
+          "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
+          "license": "BSD-3-Clause license"
+        }
+      ]
+    },
+    "prometheus-metrics-adapter": {
+      "name": "prometheus-metrics-adapter",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-monitoring",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Enables HPA and VPA autoscalers to use monitoring metrics for scaling decisions. Implements Kubernetes resource metrics API, custom metrics API, and external metrics API.",
+        "ru": "Позволяет HPA и VPA автоскейлерам использовать метрики мониторинга для принятия решений о масштабировании. Реализует API метрик ресурсов Kubernetes, API пользовательских метрик и API внешних метрик."
+      },
+      "oss": [
+        {
+          "name": "Kubernetes Metrics Server",
+          "link": "https://github.com/kubernetes-sigs/metrics-server",
+          "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
+          "logo": "/images/logos/kubernetes.svg",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "prometheus-pushgateway": {
+      "name": "prometheus-pushgateway",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "kube-prometheus-pushgateway",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0"
+        }
+      },
+      "descriptions": {
+        "en": "Installs Prometheus Pushgateway into the cluster, designed to receive metrics from an application and pushes them to Prometheus.",
+        "ru": "Устанавливает в кластер Prometheus Pushgateway, предназначенный для приема метрик от приложения и отдачи их Prometheus."
+      },
+      "oss": [
+        {
+          "name": "Prometheus Pushgateway",
+          "link": "https://github.com/prometheus/pushgateway",
+          "description": "A tool to allow ephemeral and batch jobs to expose their metrics to Prometheus.",
+          "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
+          "license": "Apache License 2.0"
+        }
+      ]
+    },
+    "registry": {
+      "name": "registry",
+      "critical": true,
+      "weight": 38,
+      "stage": "Preview",
+      "subsystems": [
+        "deckhouse",
+        "infrastructure",
+        "kubernetes"
+      ],
+      "namespace": "d8-system",
+      "disable": {
+        "confirmation": true,
+        "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+      },
+      "descriptions": {
+        "en": "Manages the configuration of the registry of Deckhouse components and provides an internal container registry.",
+        "ru": "Отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров."
+      },
+      "oss": [
+        {
+          "name": "Docker auth",
+          "link": "https://github.com/cesanta/docker_auth",
+          "description": "docker_auth is an authentication server for Docker Registry 2.0, providing token-based authentication and authorization, with support for multiple user authentication methods and ACLs for access control. Configurable via YAML, it facilitates setups ranging from simple static lists to complex database integrations.",
+          "license": "Apache License 2.0 (https://github.com/cesanta/docker_auth/blob/1.12.0/LICENSE)"
+        },
+        {
+          "name": "Docker distribution",
+          "link": "https://github.com/distribution/distribution",
+          "description": "distribution/distribution is an open-source toolkit used to pack, ship, store, and deliver container content, providing a secure and scalable foundation for developing large-scale registry solutions or managing private registries. It supports the OCI Distribution Specification, which is used by major registry operators like Docker Hub and GitHub Container Registry.",
+          "logo": "https://github.com/distribution/distribution/blob/main/distribution-logo.svg",
+          "license": "Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)"
+        }
+      ]
+    },
+    "registry-packages-proxy": {
+      "name": "registry-packages-proxy",
+      "critical": true,
+      "weight": 39,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-cloud-instance-manager",
+      "descriptions": {
+        "en": "Internal registry packages proxy.",
+        "ru": "Внутренний прокси-сервер пакетов registry."
+      },
+      "stage": "General Availability",
+      "oss": []
+    },
+    "secret-copier": {
+      "name": "secret-copier",
+      "namespace": "default",
+      "stage": "General Availability",
+      "subsystems": [
+        "security"
+      ],
+      "descriptions": {
+        "en": "Automatically copies Secrets to all namespaces in the cluster. Simplifies distribution of shared secrets.",
+        "ru": "Автоматически копирует секреты во все пространства имён кластера. Упрощает распространение общих секретов."
+      },
+      "oss": []
+    },
+    "service-with-healthchecks": {
+      "name": "service-with-healthchecks",
+      "stage": "General Availability",
+      "namespace": "d8-service-with-healthchecks",
+      "descriptions": {
+        "en": "Provides an internal LoadBalancer with per-port healthchecks. Allows independent health checks for different ports, unlike the standard Kubernetes Service load balancer.",
+        "ru": "Предоставляет внутренний LoadBalancer с проверками работоспособности для каждого порта. Позволяет выполнять независимые проверки работоспособности для разных портов, в отличие от стандартного балансировщика Service Kubernetes."
+      },
+      "oss": []
+    },
+    "terraform-manager": {
+      "name": "terraform-manager",
+      "critical": true,
+      "weight": 40,
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "d8-system",
+      "stage": "General Availability",
+      "descriptions": {
+        "en": "Provides tools for working with Terraform state in the Kubernetes cluster. Consists of two parts that check Terraform state and apply non-destructive changes or export cluster metrics.",
+        "ru": "Предоставляет инструменты для работы с состоянием Terraform в кластере Kubernetes. Состоит из двух частей, которые проверяют состояние Terraform и применяют недеструктивные изменения или экспортируют метрики кластера."
+      },
+      "oss": [
+        {
+          "name": "Terraform",
+          "link": "https://github.com/hashicorp/terraform",
+          "description": "A tool for building, changing, and versioning infrastructure safely and efficiently.",
+          "logo": "/images/logos/terraform.png",
+          "license": "Mozilla Public License 2.0"
+        }
+      ]
+    },
+    "upmeter": {
+      "name": "upmeter",
+      "stage": "General Availability",
+      "subsystems": [
+        "observability"
+      ],
+      "namespace": "d8-upmeter",
+      "descriptions": {
+        "en": "Monitors platform availability and cluster component status in real time. Provides dashboards and metrics for SLA monitoring and component health tracking.",
+        "ru": "Мониторит доступность платформы и состояние компонентов кластера в реальном времени. Предоставляет дашборды и метрики для мониторинга SLA и отслеживания работоспособности компонентов."
+      },
+      "oss": []
+    },
+    "user-authn": {
+      "name": "user-authn",
+      "critical": true,
+      "stage": "Preview",
+      "subsystems": [
+        "security"
+      ],
+      "namespace": "d8-user-authn",
+      "weight": 150,
+      "oss": [
+        {
+          "name": "Dex",
+          "link": "https://github.com/dexidp/dex",
+          "description": "A Federated OpenID Connect Provider with pluggable connectors.",
+          "logo": "/images/logos/dex-icon-color.svg",
+          "license": "Apache License 2.0"
+        },
+        {
+          "name": "OAuth2 Proxy",
+          "link": "https://github.com/oauth2-proxy/oauth2-proxy",
+          "description": "A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.",
+          "logo": "https://raw.githubusercontent.com/oauth2-proxy/oauth2-proxy/master/docs/static/img/logos/OAuth2_Proxy_icon.svg",
+          "license": "MIT License"
+        }
+      ]
+    },
+    "user-authz": {
+      "name": "user-authz",
+      "stage": "General Availability",
+      "namespace": "d8-user-authz",
+      "subsystems": [
+        "security"
+      ],
+      "descriptions": {
+        "en": "Implements role-based access control. Creates cluster roles for managing user and group access to cluster resources.",
+        "ru": "Реализует ролевую модель доступа. Создает кластерные роли для управления доступом пользователей и групп к ресурсам кластера."
+      },
+      "oss": []
+    },
+    "vertical-pod-autoscaler": {
+      "name": "vertical-pod-autoscaler",
+      "subsystems": [
+        "infrastructure"
+      ],
+      "namespace": "kube-system",
+      "requirements": {
+        "modules": {
+          "prometheus": ">= 0.0.0",
+          "prometheus-metrics-adapter": ">= 0.0.0"
+        }
+      },
+      "stage": "Deprecated",
+      "descriptions": {
+        "en": "Automatically calculates and sets resource request parameters for pods based on actual consumption. Can recommend resource values or automatically adjust CPU and memory reservations.",
+        "ru": "Автоматически рассчитывает и устанавливает параметры resource requests для подов на основе фактического потребления. Может рекомендовать значения ресурсов или автоматически корректировать резервирование CPU и памяти."
+      },
+      "oss": []
+    }
+  },
+  "oss": {
+    "Addon operator": {
+      "link": "https://github.com/flant/addon-operator",
+      "description": "A tool to combine Helm charts with hooks and values storage to transform charts into smart modules that configure themselves and respond to changes in the cluster.",
+      "logo": "/images/logos/addon-operator-small.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "deckhouse"
+      ]
+    },
+    "cert-manager": {
+      "link": "https://github.com/jetstack/cert-manager",
+      "description": "A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources.",
+      "logo": "https://github.com/jetstack/cert-manager/raw/master/logo/logo.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "cert-manager"
+      ]
+    },
+    "Chrony": {
+      "link": "https://chrony.tuxfamily.org",
+      "description": "chrony is a versatile implementation of the Network Time Protocol (NTP)",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "GNU General Public License version 2",
+      "modules": [
+        "chrony"
+      ]
+    },
+    "Cilium": {
+      "link": "https://github.com/cilium/cilium",
+      "description": "Cilium is open source software for providing and transparently securing network connectivity and loadbalancing between application workloads such as application containers or processes.",
+      "logo": "/images/logos/cilium.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "cni-cilium"
+      ]
+    },
+    "Cilium Hubble": {
+      "link": "https://github.com/cilium/hubble",
+      "description": "Hubble is a fully distributed networking and security observability platform for cloud native workloads. It is built on top of Cilium and eBPF to enable deep visibility into the communication and behavior of services as well as the networking infrastructure in a completely transparent manner.",
+      "logo": "https://raw.githubusercontent.com/cilium/hubble/9429bbf4b5b504a9b0f6752ccfbb16a2878bb51e/Documentation/images/hubble_logo.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "cilium-hubble"
+      ]
+    },
+    "CoreDNS": {
+      "link": "https://github.com/coredns/coredns",
+      "description": "A DNS server/forwarder that chains plugins.",
+      "logo": "https://raw.githubusercontent.com/coredns/logo/master/Icon/CoreDNS_Colour_Icon.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "kube-dns"
+      ]
+    },
+    "Descheduler": {
+      "link": "https://github.com/kubernetes-sigs/descheduler",
+      "description": "A tool to auto-fix scheduling issues Kubernetes does not cover itself.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "descheduler"
+      ]
+    },
+    "Dex": {
+      "link": "https://github.com/dexidp/dex",
+      "description": "A Federated OpenID Connect Provider with pluggable connectors.",
+      "logo": "/images/logos/dex-icon-color.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "user-authn"
+      ]
+    },
+    "Docker auth": {
+      "link": "https://github.com/cesanta/docker_auth",
+      "description": "docker_auth is an authentication server for Docker Registry 2.0, providing token-based authentication and authorization, with support for multiple user authentication methods and ACLs for access control. Configurable via YAML, it facilitates setups ranging from simple static lists to complex database integrations.",
+      "logo": null,
+      "license": "Apache License 2.0 (https://github.com/cesanta/docker_auth/blob/1.12.0/LICENSE)",
+      "modules": [
+        "registry"
+      ]
+    },
+    "Docker distribution": {
+      "link": "https://github.com/distribution/distribution",
+      "description": "distribution/distribution is an open-source toolkit used to pack, ship, store, and deliver container content, providing a secure and scalable foundation for developing large-scale registry solutions or managing private registries. It supports the OCI Distribution Specification, which is used by major registry operators like Docker Hub and GitHub Container Registry.",
+      "logo": "https://github.com/distribution/distribution/blob/main/distribution-logo.svg",
+      "license": "Apache License 2.0 (https://github.com/distribution/distribution/blob/v2.8.3/LICENSE)",
+      "modules": [
+        "registry"
+      ]
+    },
+    "Etcd": {
+      "link": "https://github.com/etcd-io/etcd",
+      "description": "A distributed reliable key-value store for the most critical data of a distributed system.",
+      "logo": "/images/logos/etcd-icon-color.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "control-plane-manager"
+      ]
+    },
+    "Flannel": {
+      "link": "https://github.com/flannel-io/flannel",
+      "description": "A simple and easy way to configure a layer 3 network fabric designed for Kubernetes.",
+      "logo": "https://github.com/flannel-io/flannel/raw/master/logos/flannel-glyph-color.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "cni-flannel"
+      ]
+    },
+    "Gardener Machine Controller Manager": {
+      "link": "https://github.com/gardener/machine-controller-manager",
+      "description": "An operator that manages VMs as a kubernetes custom resource.",
+      "logo": "https://raw.githubusercontent.com/gardener/gardener/master/logo/gardener-large.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "node-manager"
+      ]
+    },
+    "Gatekeeper": {
+      "link": "https://github.com/open-policy-agent/gatekeeper",
+      "description": "Policy-based control for cloud native environments",
+      "logo": "https://d33wubrfki0l68.cloudfront.net/a5bf5cefceefdba8ab3a9297fddab246355169a2/4a6f4/img/logo-white.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "admission-policy-engine"
+      ]
+    },
+    "Grafana": {
+      "link": "https://github.com/grafana/grafana",
+      "description": "An open-source platform for monitoring and observability.",
+      "logo": "https://grafana.com/static/img/about/grafana_logo_swirl_fullcolor.jpg",
+      "license": "GNU Affero General Public License v3.0",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "Helm": {
+      "link": "https://github.com/helm/helm",
+      "description": "The package manager for Kubernetes",
+      "logo": "https://helm.sh/img/helm.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "deckhouse"
+      ]
+    },
+    "image-syncer": {
+      "link": "https://github.com/AliyunContainerService/image-syncer",
+      "description": "image-syncer is a docker registry tools. With image-syncer you can synchronize docker images from some source registries to target registries, which include most popular public docker registry services",
+      "logo": "https://avatars.githubusercontent.com/u/16377432?s=200&v=4",
+      "license": "Apache License 2.0",
+      "modules": [
+        "deckhouse"
+      ]
+    },
+    "Istio": {
+      "link": "https://github.com/istio/istio",
+      "description": "An open platform to connect, manage, and secure microservices.",
+      "logo": "https://github.com/istio/istio/raw/master/logo/istio-bluelogo-whitebackground-unframed.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "istio"
+      ]
+    },
+    "JQ": {
+      "link": "https://github.com/stedolan/jq",
+      "description": "A lightweight and flexible command-line JSON processor.",
+      "logo": "/images/logos/jq.svg",
+      "license": "Mixed (https://github.com/stedolan/jq/blob/master/COPYING)",
+      "modules": [
+        "deckhouse"
+      ]
+    },
+    "keepalived": {
+      "link": "https://github.com/acassen/keepalived",
+      "description": "Provides simple and robust facilities for loadbalancing and high-availability to Linux system and Linux based infrastructures.",
+      "logo": "https://pbs.twimg.com/profile_images/1132878189515218945/bq-C0K5C_400x400.png",
+      "license": "GNU General Public License v2.0",
+      "modules": [
+        "keepalived"
+      ]
+    },
+    "Kiali": {
+      "link": "https://github.com/kiali/kiali",
+      "description": "Visualisation tool for the istio service mesh topology, and features like circuit breakers or request rates.",
+      "logo": "/images/logos/kiali.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "istio"
+      ]
+    },
+    "Kube-router": {
+      "link": "https://github.com/cloudnativelabs/kube-router",
+      "description": "A turnkey solution for Kubernetes networking with aim to provide operational simplicity and high performance.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "network-policy-engine"
+      ]
+    },
+    "kube-state-metrics": {
+      "link": "https://github.com/kubernetes/kube-state-metrics",
+      "description": "A simple service that listens to the Kubernetes API server and generates metrics about the state of the objects.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "monitoring-kubernetes"
+      ]
+    },
+    "Kubernetes": {
+      "link": "https://github.com/kubernetes/kubernetes",
+      "description": "An open source system for managing containerized applications across multiple hosts.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "control-plane-manager"
+      ]
+    },
+    "Kubernetes Dashboard": {
+      "link": "https://github.com/kubernetes/dashboard",
+      "description": "A general purpose, web-based UI for Kubernetes clusters.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "dashboard"
+      ]
+    },
+    "Kubernetes Metrics Server": {
+      "link": "https://github.com/kubernetes-sigs/metrics-server",
+      "description": "A scalable, efficient source of container resource metrics for Kubernetes built-in autoscaling pipelines.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "prometheus-metrics-adapter"
+      ]
+    },
+    "Local-path-provisioner": {
+      "link": "https://github.com/rancher/local-path-provisioner",
+      "description": "Local Path Provisioner provides a way for the Kubernetes users to utilize the local storage in each node by creating hostPath based persistent volume on the node automatically.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "local-path-provisioner"
+      ]
+    },
+    "Loki": {
+      "link": "https://github.com/grafana/loki",
+      "description": "Loki: like Prometheus, but for logs.",
+      "logo": "https://raw.githubusercontent.com/grafana/loki/master/docs/sources/logo.png",
+      "license": "GNU Affero General Public License v3.0",
+      "modules": [
+        "loki"
+      ]
+    },
+    "Memcached": {
+      "link": "https://github.com/memcached/memcached",
+      "description": "High performance multithreaded event-based key/value cache store intended to be used in a distributed system.",
+      "logo": "/images/logos/memcached-icon.svg",
+      "license": "BSD-3-Clause license",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "MetalLB": {
+      "link": "https://github.com/metallb/metallb",
+      "description": "A load-balancer implementation for bare metal Kubernetes clusters, using standard routing protocols.",
+      "logo": "https://raw.githubusercontent.com/metallb/metallb/1b9dc1d57e5e75749570dfcb06fb35ce08745b42/website/static/images/logo/metallb-blue.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "metallb"
+      ]
+    },
+    "Mimir": {
+      "link": "https://github.com/grafana/mimir",
+      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
+      "logo": "https://grafana.com/static/img/logos/logo-mimir.svg",
+      "license": "AGPL-3.0 license",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "NGINX Ingress Controller": {
+      "link": "https://github.com/kubernetes/ingress-nginx",
+      "description": "A ingress controller for Kubernetes using NGINX as a reverse proxy and load balancer.",
+      "logo": "/images/logos/kubernetes.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "ingress-nginx"
+      ]
+    },
+    "Node exporter": {
+      "link": "https://github.com/prometheus/node_exporter",
+      "description": "Prometheus exporter for hardware and OS metrics exposed by *NIX kernels, written in Go with pluggable metric collectors.",
+      "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
+      "license": "Apache License 2.0",
+      "modules": [
+        "monitoring-kubernetes"
+      ]
+    },
+    "OAuth2 Proxy": {
+      "link": "https://github.com/oauth2-proxy/oauth2-proxy",
+      "description": "A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group.",
+      "logo": "https://raw.githubusercontent.com/oauth2-proxy/oauth2-proxy/master/docs/static/img/logos/OAuth2_Proxy_icon.svg",
+      "license": "MIT License",
+      "modules": [
+        "user-authn"
+      ]
+    },
+    "OpenKruise": {
+      "link": "https://openkruise.io/",
+      "description": "OpenKruise is an extended component suite for Kubernetes, which mainly focuses on application automations, such as deployment, upgrade, ops and availability protection.",
+      "logo": "https://openkruise.io/img/openkruise.ico",
+      "license": "Apache License 2.0",
+      "modules": [
+        "ingress-nginx"
+      ]
+    },
+    "OpenVPN": {
+      "link": "https://github.com/OpenVPN/openvpn",
+      "description": "A secure tunneling daemon.",
+      "logo": "/images/logos/openvpn.png",
+      "license": "<a target=\"_blank\" href=\"https://github.com/OpenVPN/openvpn/blob/master/COPYING\">Mixed</a>",
+      "modules": [
+        "openvpn"
+      ]
+    },
+    "Prometheus": {
+      "link": "https://github.com/prometheus/prometheus",
+      "description": "A systems and service monitoring system.",
+      "logo": "/images/logos/prometheus-icon-color.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "Prometheus Operator": {
+      "link": "https://github.com/prometheus-operator/prometheus-operator",
+      "description": "Kubernetes native deployment and management of Prometheus and related monitoring components.",
+      "logo": "https://avatars.githubusercontent.com/u/66682517?s=200&v=4",
+      "license": "Apache License 2.0",
+      "modules": [
+        "operator-prometheus"
+      ]
+    },
+    "Prometheus Pushgateway": {
+      "link": "https://github.com/prometheus/pushgateway",
+      "description": "A tool to allow ephemeral and batch jobs to expose their metrics to Prometheus.",
+      "logo": "https://avatars.githubusercontent.com/u/3380462?s=200&v=4",
+      "license": "Apache License 2.0",
+      "modules": [
+        "prometheus-pushgateway"
+      ]
+    },
+    "Promxy": {
+      "link": "https://github.com/jacksontj/promxy",
+      "description": "Promxy is a prometheus proxy that makes many shards of prometheus appear as a single API endpoint to the user. This significantly simplifies operations and use of prometheus at scale (when you have more than one prometheus host).",
+      "logo": "/images/logos/prometheus-icon-color.svg",
+      "license": "MIT License",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "Shell operator": {
+      "link": "https://github.com/flant/shell-operator",
+      "description": "A tool for running event-driven scripts in a Kubernetes cluster",
+      "logo": "/images/logos/shell-operator-small.png",
+      "license": "Apache License 2.0",
+      "modules": [
+        "deckhouse"
+      ]
+    },
+    "Terraform": {
+      "link": "https://github.com/hashicorp/terraform",
+      "description": "A tool for building, changing, and versioning infrastructure safely and efficiently.",
+      "logo": "/images/logos/terraform.png",
+      "license": "Mozilla Public License 2.0",
+      "modules": [
+        "terraform-manager"
+      ]
+    },
+    "Trickster": {
+      "link": "https://github.com/trickstercache/trickster",
+      "description": "A HTTP reverse proxy/cache for http applications and a dashboard query accelerator for time series databases.",
+      "logo": "https://raw.githubusercontent.com/trickstercache/trickster/master/docs/images/logos/trickster-logo.svg",
+      "license": "Apache License 2.0",
+      "modules": [
+        "prometheus"
+      ]
+    },
+    "Vector": {
+      "link": "https://github.com/timberio/vector",
+      "description": "Vector is a high-performance, observability data pipeline for logs and metrics",
+      "logo": "/images/logos/vector.svg",
+      "license": "Mozilla Public License, version 2.0",
+      "modules": [
+        "log-shipper"
+      ]
+    }
+  }
+}

@@ -23,7 +23,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -36,6 +35,7 @@ import (
 	toolsWatch "k8s.io/client-go/tools/watch"
 
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Watcher struct {
@@ -161,7 +161,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 	moduleSourcesWatcher, err := toolsWatch.NewRetryWatcher("1", &cache.ListWatch{WatchFunc: watchFunc})
 	if err != nil {
-		w.logger.Errorf("Watch module sources: %v", err)
+		w.logger.Error("Watch module sources: %v", err)
 		return
 	}
 	defer moduleSourcesWatcher.Stop()
@@ -179,7 +179,7 @@ func (w *Watcher) watchModuleSources(ctx context.Context) {
 
 			err = w.processModuleSourceEvent(event)
 			if err != nil {
-				w.logger.Errorf("Process module source event: %v", err)
+				w.logger.Error("Process module source event: %v", err)
 			}
 		}
 	}

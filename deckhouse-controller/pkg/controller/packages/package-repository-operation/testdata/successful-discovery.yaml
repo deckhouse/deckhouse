@@ -13,7 +13,7 @@ metadata:
     name: deckhouse
     uid: ""
 spec:
-  packageRepository: deckhouse
+  packageRepositoryName: deckhouse
   type: Update
   update:
     fullScan: true

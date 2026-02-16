@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Deckhouse Virtualization Platform
 permalink: ru/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 lang: ru
 ---

@@ -8,12 +8,11 @@ metadata:
   resourceVersion: "2"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.0
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.0
 status:
-  resourceConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: ApplicationPackageVersion '' not found
     reason: VersionNotFound
     status: "False"

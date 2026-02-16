@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Сеть"
 permalink: ru/admin/configuration/network/
 description: "Настройка сети в Deckhouse Kubernetes Platform включая CNI, ingress, egress, балансировку нагрузки и сетевые политики. Полное руководство по конфигурации и управлению сетью."
 lang: ru

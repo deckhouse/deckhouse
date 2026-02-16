@@ -17,6 +17,7 @@ package entity
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"maps"
 	"net"
@@ -25,14 +26,17 @@ import (
 	"time"
 
 	"gopkg.in/yaml.v3"
-	apiv1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 
+	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -43,6 +47,20 @@ import (
 var (
 	nodeGroupResource = schema.GroupVersionResource{Group: "deckhouse.io", Version: "v1", Resource: "nodegroups"}
 )
+
+type NodeIP struct {
+	InternalIP string
+	ExternalIP string
+	NodeName   string
+}
+
+func (i *NodeIP) Name() string {
+	if i.NodeName != "" {
+		return i.NodeName
+	}
+
+	return i.InternalIP
+}
 
 func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, logger log.Logger, apiserverHosts ...string) (string, error) {
 	var cloudData string
@@ -113,10 +131,8 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
 					}
 				}
-			} else {
-				if nodeGroupName == global.MasterNodeGroupName {
-					logger.LogDebugLn("Got empty apiserver endpoints from arguments")
-				}
+			} else if nodeGroupName == global.MasterNodeGroupName {
+				logger.LogDebugLn("Got empty apiserver endpoints from arguments")
 			}
 
 			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
@@ -231,8 +247,8 @@ func WaitForSingleNodeBecomeReady(ctx context.Context, kubeCl *client.Kubernetes
 			}
 
 			for _, c := range node.Status.Conditions {
-				if c.Type == apiv1.NodeReady {
-					if c.Status == apiv1.ConditionTrue {
+				if c.Type == corev1.NodeReady {
+					if c.Status == corev1.ConditionTrue {
 						return nil
 					}
 				}
@@ -261,8 +277,8 @@ func WaitForNodesBecomeReady(ctx context.Context, kubeCl *client.KubernetesClien
 
 			for _, node := range nodes.Items {
 				for _, c := range node.Status.Conditions {
-					if c.Type == apiv1.NodeReady {
-						if c.Status == apiv1.ConditionTrue {
+					if c.Type == corev1.NodeReady {
+						if c.Status == corev1.ConditionTrue {
 							readyNodes[node.Name] = struct{}{}
 						}
 					}
@@ -291,7 +307,7 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 	return retry.NewLoop("Waiting for nodes to become Ready", 100, 20*time.Second).
 		RunContext(ctx, func() error {
 			desiredReadyNodes := len(nodes)
-			var nodesList apiv1.NodeList
+			var nodesList corev1.NodeList
 
 			for _, nodeName := range nodes {
 				node, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -305,8 +321,8 @@ func WaitForNodesListBecomeReady(ctx context.Context, kubeCl *client.KubernetesC
 
 			for _, node := range nodesList.Items {
 				for _, c := range node.Status.Conditions {
-					if c.Type == apiv1.NodeReady {
-						if c.Status == apiv1.ConditionTrue {
+					if c.Type == corev1.NodeReady {
+						if c.Status == corev1.ConditionTrue {
 							ready := true
 							if checker != nil {
 								var err error
@@ -430,36 +446,76 @@ func IsNodeExistsInCluster(ctx context.Context, kubeCl *client.KubernetesClient,
 	return exists, err
 }
 
-func WaitForNodeUserPresentOnNode(ctx context.Context, kubeCl *client.KubernetesClient) error {
-	return retry.NewLoop(fmt.Sprintf("Waiting for NodeUser %s present on master hosts", global.ConvergeNodeUserName), 30, 5*time.Second).
-		RunContext(ctx, func() error {
-			present := make(map[string]bool)
+var (
+	getMasterNodesIPsDefaultOpts = retry.AttemptsWithWaitOpts(5, 5*time.Second)
+)
 
-			nodesForClient, err := kubeCl.CoreV1().Nodes().List(ctx, metav1.ListOptions{
-				LabelSelector: "node.deckhouse.io/group=master",
-			})
-			if err != nil {
-				return err
+func GetMasterNodesIPs(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, loopParams retry.Params) ([]NodeIP, error) {
+	selector, err := kubernetes.GetLabelSelector(global.NodeGroupLabel, selection.Equals, []string{global.MasterNodeGroupName})
+	if err != nil {
+		return nil, err
+	}
+
+	listOpts := metav1.ListOptions{LabelSelector: selector}
+
+	var nodes *corev1.NodeList
+
+	loopParams = retry.SafeCloneOrNewParams(loopParams, getMasterNodesIPsDefaultOpts...).
+		WithName("Get control plane nodes IPs from Kubernetes cluster")
+
+	err = retry.NewLoopWithParams(loopParams).RunContext(ctx, func() error {
+		var err error
+		kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+		if err != nil {
+			return err
+		}
+
+		nodes, err = kubeCl.CoreV1().Nodes().List(ctx, listOpts)
+		if err != nil {
+			log.DebugF("Cannot get nodes. Got error: %v", err)
+			return err
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.DebugF("Cannot get nodes after %d attempts\n", loopParams.Attempts())
+		return nil, err
+	}
+
+	var nodeIPs []NodeIP
+
+	for _, node := range nodes.Items {
+		ip := NodeIP{
+			NodeName: node.GetName(),
+		}
+
+		for _, addr := range node.Status.Addresses {
+			if addr.Type == "InternalIP" {
+				ip.InternalIP = addr.Address
 			}
-
-			for _, node := range nodesForClient.Items {
-				present[node.Name] = false
-
-				if node.Annotations != nil {
-					value, ok := node.Annotations[global.ConvergerNodeUserAnnotation]
-					if ok && value == "true" {
-						present[node.Name] = true
-					}
-				}
-
+			if addr.Type == "ExternalIP" {
+				ip.ExternalIP = addr.Address
 			}
+		}
+		nodeIPs = append(nodeIPs, ip)
+	}
 
-			for node, ok := range present {
-				if !ok {
-					return fmt.Errorf("NodeUser %s is not present on %s yet", global.ConvergeNodeUserName, node)
-				}
-			}
+	return nodeIPs, nil
+}
 
-			return nil
-		})
+func UnstructuredToNodeGroup(o *unstructured.Unstructured) (*v1.NodeGroup, error) {
+	content, err := o.MarshalJSON()
+	if err != nil {
+		return nil, fmt.Errorf("Cannot marshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	var ng v1.NodeGroup
+
+	err = json.Unmarshal(content, &ng)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot unmarshal nodegroup %s: %v", o.GetName(), err)
+	}
+
+	return &ng, nil
 }

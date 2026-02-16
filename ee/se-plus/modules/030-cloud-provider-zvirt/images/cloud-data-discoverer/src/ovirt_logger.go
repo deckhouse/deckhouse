@@ -8,8 +8,9 @@ package main
 import (
 	"context"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	ovirtclientlog "github.com/ovirt/go-ovirt-client-log/v3"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func NewOvirtLogger(logger *log.Logger) ovirtclientlog.Logger {

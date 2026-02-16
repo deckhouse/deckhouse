@@ -26,6 +26,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
@@ -40,6 +41,12 @@ const (
 )
 
 var ErrAuthSSHFailed = errors.New("authentication failed")
+
+// sshClientProvider is an interface for types that can provide an SSH client.
+// This allows both *ssh.NodeInterfaceWrapper and test mocks to work.
+type sshClientProvider interface {
+	Client() node.SSHClient
+}
 
 func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 	if app.PreflightSkipSSHForward {
@@ -61,7 +68,7 @@ func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 
 	remotePortStr := strconv.Itoa(defaultTunnelRemotePort)
 
-	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthUrl(defaultTunnelRemotePort))
+	checkingScript, err := template.RenderAndSavePreflightReverseTunnelOpenScript(healthURL(defaultTunnelRemotePort))
 	if err != nil {
 		return fmt.Errorf("Cannot render reverse tunnel checking script: %v", err)
 	}
@@ -71,7 +78,7 @@ func (pc *Checker) CheckSSHTunnel(ctx context.Context) error {
 		return fmt.Errorf("Cannot render kill reverse tunnel script: %v", err)
 	}
 
-	shutdownServer, err := startHttpServer(ctx, defaultTunnelLocalPort)
+	shutdownServer, err := startHTTPServer(ctx, defaultTunnelLocalPort)
 	if err != nil {
 		return err
 	}
@@ -125,7 +132,7 @@ func (pc *Checker) CheckSSHCredential(ctx context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(sshClientProvider)
 	if !ok {
 		log.InfoLn("SSH credentials preflight check was skipped (local run)")
 		return nil
@@ -148,7 +155,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic(_ context.Context) error {
 		return nil
 	}
 
-	wrapper, ok := pc.nodeInterface.(*ssh.NodeInterfaceWrapper)
+	wrapper, ok := pc.nodeInterface.(sshClientProvider)
 	if !ok {
 		log.InfoLn("Only one --ssh-host parameter used preflight check was skipped (local run)")
 		return nil
@@ -164,7 +171,7 @@ func (pc *Checker) CheckSingleSSHHostForStatic(_ context.Context) error {
 
 type shutdownServerFunc func()
 
-func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) {
+func startHTTPServer(ctx context.Context, port int) (shutdownServerFunc, error) {
 	mux := http.NewServeMux()
 
 	// Register handlers for specific paths
@@ -173,8 +180,12 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	})
 
 	address := fmt.Sprintf(":%d", port)
+	listener, err := net.Listen("tcp", address)
+	if err != nil {
+		log.ErrorF("Cannot listen on %s: %v\n", address, err)
+		return nil, fmt.Errorf("Cannot start HTTP server for tunnel preflight check on %s: %w", address, err)
+	}
 	server := &http.Server{
-		Addr:         address,
 		Handler:      mux,
 		ReadTimeout:  20 * time.Second,
 		WriteTimeout: 20 * time.Second,
@@ -182,7 +193,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 
 	go func() {
 		log.DebugF("Starting HTTP server for tunnel preflight check on %s\n", address)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.InfoF("Error starting HTTP server for tunnel preflight check on %s: %v\n", address, err)
 		}
 	}()
@@ -197,11 +208,11 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 		log.DebugLn("Server for checking ssh tunnel stopped")
 	}
 
-	url := healthUrl(defaultTunnelLocalPort)
+	url := healthURL(defaultTunnelLocalPort)
 
 	client := &http.Client{}
 
-	err := retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 5, 1*time.Millisecond).RunContext(ctx, func() error {
+	err = retry.NewSilentLoop("Check HTTP server running for tunnel preflight check", 5, 100*time.Millisecond).RunContext(ctx, func() error {
 		cctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 		defer cancel() // Ensure the context is canceled to release resources
 
@@ -236,7 +247,7 @@ func startHttpServer(ctx context.Context, port int) (shutdownServerFunc, error) 
 	return shutdownServer, nil
 }
 
-func healthUrl(port int) string {
+func healthURL(port int) string {
 	return fmt.Sprintf("http://%s:%d%s", localhost, port, httpPath)
 }
 

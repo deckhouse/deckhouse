@@ -22,16 +22,14 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/ssh"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/terminal"
 )
 
 func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	metaConfig, err := config.ParseConfig(
 		ctx,
@@ -79,8 +77,10 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 		return err
 	}
 
-	_, err = InstallDeckhouse(ctx, kubeCl, installConfig, func() error {
-		return nil
+	_, err = InstallDeckhouse(ctx, kubeCl, installConfig, InstallDeckhouseParams{
+		BeforeDeckhouseTask: func() error { return nil },
+		State:               NewBootstrapState(cache.Global()),
 	})
+
 	return err
 }

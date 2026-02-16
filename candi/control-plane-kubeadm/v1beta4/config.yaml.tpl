@@ -3,8 +3,12 @@ RotateKubeletServerCertificate default is true, but CIS benchmark wants it to be
 https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */ -}}
 {{- $baseFeatureGates := list "TopologyAwareHints=true" "RotateKubeletServerCertificate=true" -}}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
 {{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
+{{- end }}
+{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
+  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
@@ -64,10 +68,12 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 {{- $audiences = $audiences | uniq -}}
 {{- $audiences = without $audiences $defaultAud -}}
 {{- $audiences = append $audiences $defaultAud -}}
+{{- $k8sMeta := (get .k8s (.clusterConfiguration.kubernetesVersion | toString) | default dict) -}}
+{{- $k8sPatch := (get $k8sMeta "patch" | default 0) -}}
 {{- /* ClusterConfiguration */ -}}
 apiVersion: kubeadm.k8s.io/v1beta4
 kind: ClusterConfiguration
-kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) (index .k8s .clusterConfiguration.kubernetesVersion "patch" | toString) }}
+kubernetesVersion: {{ printf "%s.%s" (.clusterConfiguration.kubernetesVersion | toString) ($k8sPatch | toString) }}
 controlPlaneEndpoint: "127.0.0.1:6445"
 certificatesDir: /etc/kubernetes/pki
 certificateValidityPeriod: 8760h0m0s
@@ -159,11 +165,9 @@ apiServer:
       value: {{ $apiserverFeatureGatesStr | quote }}
     - name: runtime-config
       value: {{ $runtimeConfig }}
-    {{ if .apiserver.webhookURL }}
-    - name: authorization-mode
-      value: Node,Webhook,RBAC
-    - name: authorization-webhook-config-file
-      value: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml
+    {{- if .apiserver.webhookURL }}
+    - name: authorization-config
+      value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
     {{- end -}}
     {{ if .apiserver.authnWebhookURL }}
     - name: authentication-token-webhook-config-file
@@ -186,7 +190,7 @@ apiServer:
     - name: request-timeout
       value: 60s
     - name: tls-cipher-suites
-      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_256_GCM_SHA384,TLS_RSA_WITH_AES_128_GCM_SHA256
+      value: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256
     {{- if .apiserver.oidcIssuerURL }}
     - name: authentication-config
       value: /etc/kubernetes/deckhouse/extra-files/authentication-config.yaml

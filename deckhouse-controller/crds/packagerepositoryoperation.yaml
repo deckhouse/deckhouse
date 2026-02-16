@@ -1,0 +1,190 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.18.0
+  name: packagerepositoryoperations.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: PackageRepositoryOperation
+    listKind: PackageRepositoryOperationList
+    plural: packagerepositoryoperations
+    singular: packagerepositoryoperation
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.packages.total
+      name: Count
+      type: integer
+    - jsonPath: .status.conditions[?(@.type=='Processed')].status
+      name: Processed
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Processed')].message
+      name: MSG
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: PackageRepositoryOperation represents an operation to scan/update
+          a package repository.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the behavior of a PackageRepositoryOperation.
+            properties:
+              packageRepositoryName:
+                description: Name of the package repository to operate on.
+                type: string
+              type:
+                description: Type of operation to perform.
+                type: string
+              update:
+                description: Configuration for update operations.
+                properties:
+                  fullScan:
+                    description: Whether to perform a full scan of the repository.
+                    type: boolean
+                  timeout:
+                    description: Timeout for the operation.
+                    type: string
+                type: object
+            required:
+            - packageRepositoryName
+            - type
+            type: object
+          status:
+            description: Status of a PackageRepositoryOperation.
+            properties:
+              completionTime:
+                description: Time when the operation completed.
+                format: date-time
+                type: string
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the operation's state.
+                items:
+                  properties:
+                    lastProbeTime:
+                      description: Last time the condition was probed.
+                      format: date-time
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: Human readable message indicating details about
+                        the transition.
+                      type: string
+                    reason:
+                      description: Programmatic identifier indicating the reason for
+                        the condition's last transition.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of operation condition.
+                      type: string
+                  required:
+                  - status
+                  - type
+                  type: object
+                type: array
+              packages:
+                description: Information about packages processed during the operation.
+                properties:
+                  discovered:
+                    description: List of packages discovered during the operation.
+                    items:
+                      properties:
+                        name:
+                          description: Name of the discovered package.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  failed:
+                    description: List of packages that failed processing.
+                    items:
+                      properties:
+                        errors:
+                          description: List of errors encountered while processing
+                            this package.
+                          items:
+                            properties:
+                              error:
+                                description: Error message.
+                                type: string
+                              version:
+                                description: Version of the package that failed.
+                                type: string
+                            required:
+                            - error
+                            - version
+                            type: object
+                          type: array
+                        name:
+                          description: Name of the package that failed.
+                          type: string
+                      required:
+                      - errors
+                      - name
+                      type: object
+                    type: array
+                  processed:
+                    description: List of packages successfully processed.
+                    items:
+                      properties:
+                        name:
+                          description: Name of the processed package.
+                          type: string
+                        type:
+                          description: Type of the package.
+                          type: string
+                      required:
+                      - name
+                      type: object
+                    type: array
+                  processedOverall:
+                    description: Total number of packages processed.
+                    type: integer
+                  total:
+                    description: Total number of packages found.
+                    type: integer
+                type: object
+              phase:
+                description: Current phase of the operation.
+                type: string
+              startTime:
+                description: Time when the operation started.
+                format: date-time
+                type: string
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

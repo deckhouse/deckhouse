@@ -22,12 +22,12 @@ import (
 	"os/signal"
 	"syscall"
 
+	_ "github.com/jpfuentes2/go-env/autoload"
+	"go.uber.org/zap"
+
 	"fencing-controller/internal/agent"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/watchdog/softdog"
-
-	_ "github.com/jpfuentes2/go-env/autoload"
-	"go.uber.org/zap"
 )
 
 func main() {

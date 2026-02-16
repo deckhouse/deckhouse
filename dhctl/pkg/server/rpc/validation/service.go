@@ -44,6 +44,7 @@ func optionsFromRequest(opts *pb.ValidateOptions) []config.ValidateOption {
 	}
 }
 
+//nolint:musttag
 func errorToResponse(err error) (string, error) {
 	if err == nil {
 		return "", nil

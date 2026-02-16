@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in VMware vSphere
 permalink: en/admin/integrations/virtualization/vsphere/layout.html
 ---
 

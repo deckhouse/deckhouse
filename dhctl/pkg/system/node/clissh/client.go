@@ -178,6 +178,10 @@ func (s *Client) PrivateKeys() []session.AgentPrivateKey {
 	return s.privateKeys
 }
 
+func (s *Client) RefreshPrivateKeys() error {
+	return s.Agent.AddKeys(s.PrivateKeys())
+}
+
 // Loop Looping all available hosts
 func (s *Client) Loop(fn node.SSHLoopHandler) error {
 	var err error

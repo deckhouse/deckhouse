@@ -35,7 +35,10 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - cd /src
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o safe-agent-updater .`) | indent 4 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="-s -w" -o safe-agent-updater .` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown 64535:64535 /src/safe-agent-updater
   - chmod 0700 /src/safe-agent-updater
 ---

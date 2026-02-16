@@ -22,11 +22,11 @@ import (
 	"net/http"
 	"time"
 
-	"fencing-controller/internal/watchdog"
-
 	"go.uber.org/zap"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+
+	"fencing-controller/internal/watchdog"
 )
 
 const (

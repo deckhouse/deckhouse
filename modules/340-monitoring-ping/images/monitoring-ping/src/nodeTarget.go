@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
-
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type NodeTracker struct {
@@ -136,13 +136,16 @@ func createInformer(cfgMapName, namespace string, handler func(interface{}), cli
 	)
 
 	informer := cache.NewSharedInformer(lw, &v1.ConfigMap{}, 0)
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, err := informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    handler,
 		UpdateFunc: func(_, obj interface{}) { handler(obj) },
 		DeleteFunc: func(obj interface{}) {
 			log.Warn("%s deleted — list will not be updated until recreated", cfgMapName)
 		},
 	})
+	if err != nil {
+		log.Error("Failed to add event handler to informer", log.Err(err))
+	}
 
 	return informer
 }

@@ -21,12 +21,12 @@ import (
 	"net/url"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/vmware/go-vcloud-director/v3/govcd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/settings"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/version"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
-	"github.com/vmware/go-vcloud-director/v3/govcd"
 )
 
 func VersionContentProvider(ctx context.Context, settings settings.ProviderSettings, metaConfig *config.MetaConfig, logger log.Logger) ([]byte, string, error) {
@@ -59,14 +59,14 @@ func newVcdCloudClient(m *config.MetaConfig, _ log.Logger) (cloudClient, error) 
 		return nil, fmt.Errorf("unable to unmarshal provider configuration: %v", err)
 	}
 
-	vcdUrl, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
+	vcdURL, err := url.ParseRequestURI(fmt.Sprintf("%s/api", providerConfiguration.Server))
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse VCD provider url: %v", err)
 	}
 	insecure := providerConfiguration.Insecure
 
 	vcdClient := govcd.NewVCDClient(
-		*vcdUrl,
+		*vcdURL,
 		insecure,
 	)
 

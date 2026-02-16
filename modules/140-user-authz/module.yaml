@@ -1,10 +1,8 @@
 name: user-authz
-stage: "General Availability"
+stage: General Availability
 namespace: d8-user-authz
 subsystems:
   - security
-description: |
-  The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
 descriptions:
-  en: |
-    The module generates role-based access model objects, based on the standard Kubernetes RBAC mechanism.
+  en: Implements role-based access control. Creates cluster roles for managing user and group access to cluster resources.
+  ru: Реализует ролевую модель доступа. Создает кластерные роли для управления доступом пользователей и групп к ресурсам кластера.

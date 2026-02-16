@@ -1,7 +1,7 @@
 ---
 title: Управление внутренним container registry
 permalink: ru/admin/configuration/registry/internal.html
-description: "Настройка внутреннего container registry в Deckhouse Kubernetes Platform. Кэширование образов, оптимизация хранилища и управление высокодоступным registry."
+description: "Настройка внутреннего container registry в Deckhouse Kubernetes Platform. Кеширование образов, оптимизация хранилища и управление высокодоступным registry."
 lang: ru
 ---
 
@@ -26,12 +26,6 @@ lang: ru
 ## Ограничения по работе с внутренним registry
 
 Работа с внутренним registry с помощью [модуля `registry`](/modules/registry/) имеет ряд ограничений и особенностей, касающихся установки, условий работы и переключения режимов.
-
-### Ограничения при установке кластера
-
-Bootstrap кластера Deckhouse Kubernetes Platform с включенным режимом `Direct` не поддерживается. Кластер разворачивается с настройками для режима `Unmanaged`. Настройки registry во время bootstrap задаются через [initConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
-
-Конфигурация registry через moduleConfig `deckhouse` во время bootstrap кластера DKP не поддерживается.
 
 ### Ограничения по условиям работы
 

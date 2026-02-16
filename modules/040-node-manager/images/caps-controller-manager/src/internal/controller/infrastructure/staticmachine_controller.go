@@ -87,7 +87,7 @@ type StaticMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
-func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, err error) {
+func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx).WithValues("staticMachine", req.NamespacedName.String())
 	ctx = ctrl.LoggerInto(ctx, logger)
 
@@ -95,8 +95,7 @@ func (r *StaticMachineReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Fetch the StaticMachine.
 	staticMachine := &infrav1.StaticMachine{}
-	err = r.Get(ctx, req.NamespacedName, staticMachine)
-	if err != nil {
+	if err := r.Get(ctx, req.NamespacedName, staticMachine); err != nil {
 		if apierrors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
@@ -327,7 +326,7 @@ func (r *StaticMachineReconciler) cleanup(
 		return ctrl.Result{RequeueAfter: RequeueForStaticMachineDeleting}, nil
 	}
 
-	estimated := DefaultStaticInstanceCleanupTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+	estimated := DefaultStaticInstanceCleanupTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 	if instanceScope.GetPhase() == deckhousev1.StaticInstanceStatusCurrentStatusPhaseCleaning && estimated < (10*time.Second) {
 		instanceScope.MachineScope.Fail(capierrors.DeleteMachineError, errors.New("timed out waiting for StaticInstance to clean up"))
@@ -372,7 +371,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.Logger.V(1).Info("StaticInstance is adopting")
 
 		estimated := DefaultStaticInstanceAdoptTimeout -
-			time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+			time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail(capierrors.UpdateMachineError,
@@ -401,7 +400,7 @@ func (r *StaticMachineReconciler) reconcileStaticInstancePhase(
 		instanceScope.MachineScope.SetNotReady()
 		instanceScope.Logger.V(1).Info("StaticInstance is bootstrapping")
 
-		estimated := DefaultStaticInstanceBootstrapTimeout - time.Now().Sub(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
+		estimated := DefaultStaticInstanceBootstrapTimeout - time.Since(instanceScope.Instance.Status.CurrentStatus.LastUpdateTime.Time)
 
 		if estimated < (10 * time.Second) {
 			instanceScope.MachineScope.Fail(capierrors.CreateMachineError, errors.New("timed out waiting for StaticInstance to bootstrap"))

@@ -292,7 +292,9 @@ spec:
                       required: ["port", "protocol"]
                     hostNetwork:
                       type: object
-                      description: Exceptions for the `hostNetwork` parameter.
+                      description: |
+                        Exceptions for the `hostNetwork` parameter.
+                        For pods with `hostNetwork: true`, an additional exception is performed on the ports specified in `containerPort`.
                       properties:
                         allowedValue:
                           type: boolean

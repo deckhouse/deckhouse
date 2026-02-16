@@ -24,6 +24,7 @@ Configuring an egress gateway requires two custom resources:
 ### Node maintenance
 
 To perform maintenance on a node that is currently the active egress gateway, follow these steps:
+
 1. Remove the node label to exclude it from the egress gateway candidate pool. Egress-label is the label specified in `spec.nodeSelector` of your EgressGateway.
 
     ```bash
@@ -53,7 +54,7 @@ To avoid immediate failback, temporarily reduce the number of EgressGateway repl
 
 The CiliumEgressGatewayPolicy implies configuring only one node as an egress gateway. If it fails, there are no failover mechanisms and the network connection will be broken.
 
-### Configuration examples
+### Egress Gateway configuration examples
 
 #### EgressGateway in PrimaryIPFromEgressGatewayNodeInterface mode (basic mode)
 
@@ -113,4 +114,68 @@ spec:
       matchLabels:
         app: backend
         io.kubernetes.pod.namespace: my-ns
+```
+
+## HubbleMonitoringConfig
+
+The cluster-scoped [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource is intended to configure data export from Hubble, which runs inside Cilium agents.
+
+### HubbleMonitoringConfig configuration examples
+
+#### Enabling extended metrics and flow logs export (with filters and field mask)
+
+{% alert level="warning" %}
+The [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig) resource **must be named** `hubble-monitoring-config`.
+{% endalert %}
+
+Example of enabling metrics and export:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: HubbleMonitoringConfig
+metadata:
+  name: hubble-monitoring-config
+spec:
+  extendedMetrics:
+    enabled: true
+    collectors:
+      - name: drop
+        # Add additional labels context for the selected collector.
+        contextOptions: "labelsContext=source_ip,source_namespace,source_pod,destination_ip,destination_namespace,destination_pod"
+      - name: flow
+  flowLogs:
+    enabled: true
+    # Allow only the specified events to be written to the log file /var/log/cilium/hubble/flow.log.
+    allowFilterList:
+      - verdict: ["DROPPED", "ERROR"]
+    # Exclude events matching the denyFilterList from the log file.
+    denyFilterList:
+      - source_pod:
+        - kube-system/
+      - destination_pod:
+        - kube-system/
+    # Persist only the specified fields in each record.
+    fieldMaskList:
+      - time
+      - verdict
+    # Maximum log file size (in MB) before rotation.
+    fileMaxSizeMB: 30
+```
+
+### Collecting Hubble flow logs with the log-shipper module
+
+To collect flow logs, use the [`log-shipper`](https://deckhouse.ru/modules/log-shipper/) module.
+
+Create a ClusterLoggingConfig resource that reads the log file from the node filesystem:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ClusterLoggingConfig
+metadata:
+  name: cilium-hubble-flow-logs
+spec:
+  type: File
+  file:
+    include:
+      - /var/log/cilium/hubble/flow.log
 ```

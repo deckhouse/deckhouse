@@ -30,12 +30,13 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/pkg/errors"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -62,6 +63,12 @@ type EtcdPerformanceParams struct {
 	ElectionTimeout   int
 }
 
+type EtcdMember struct {
+	NodeName  string
+	IsLearner bool
+	ID        uint64
+}
+
 func GetEtcdPerformanceParams() EtcdPerformanceParams {
 	defaultParams := EtcdPerformanceParams{
 		HeartbeatInterval: 100,
@@ -74,7 +81,7 @@ func GetEtcdPerformanceParams() EtcdPerformanceParams {
 	}
 
 	if config.EtcdArbiter {
-		log.Infof("using increased etcd timeouts for EtcdArbiter mode: heartbeat=%dms, election=%dms", etcdArbiterParams.HeartbeatInterval, etcdArbiterParams.ElectionTimeout)
+		log.Info("using increased etcd timeouts for EtcdArbiter mode", slog.Int("heartbeat_interval_ms", etcdArbiterParams.HeartbeatInterval), slog.Int("election_timeout_ms", etcdArbiterParams.ElectionTimeout))
 		return etcdArbiterParams
 	}
 
@@ -100,14 +107,13 @@ spec:
 	patchFile := filepath.Join(deckhousePath, "kubeadm", "patches", "etcd800performance.yaml")
 	content := fmt.Sprintf(patchTemplate, params.HeartbeatInterval, params.ElectionTimeout)
 
-	log.Infof("generating etcd performance patch: file=%s, heartbeat_interval_ms=%d, election_timeout_ms=%d", patchFile, params.HeartbeatInterval, params.ElectionTimeout)
+	log.Info("generating etcd performance patch", slog.String("file", patchFile), slog.Int("heartbeat_interval_ms", params.HeartbeatInterval), slog.Int("election_timeout_ms", params.ElectionTimeout))
 
 	return os.WriteFile(patchFile, []byte(content), 0o600)
 }
 
 func EtcdJoinConverge() error {
-	var etcdSubphase string = "etcd" // default subphase
-
+	var args []string
 	v, err := semver.NewVersion(config.KubernetesVersion)
 	if err != nil {
 		return fmt.Errorf("version not being parsable: %s", err.Error())
@@ -117,10 +123,10 @@ func EtcdJoinConverge() error {
 		return fmt.Errorf("constraint not being parsable: %s", err.Error())
 	}
 	if c.Check(v) { // >= 1.33
-		etcdSubphase = "etcd-join"
+		args = []string{"-v=5", "join", "phase", "etcd-join", "--config", deckhousePath + "/kubeadm/config.yaml"}
+	} else {
+		args = []string{"-v=5", "join", "phase", "control-plane-join", "etcd", "--config", deckhousePath + "/kubeadm/config.yaml"}
 	}
-
-	args := []string{"-v=5", "join", "phase", "control-plane-join", etcdSubphase, "--config", deckhousePath + "/kubeadm/config.yaml"}
 
 	log.Info("run kubeadm",
 		slog.String("phase", "etcd-join-converge"),
@@ -137,13 +143,12 @@ func EtcdJoinConverge() error {
 	return err
 }
 
-func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
+func (c *Etcd) findAllMembers() ([]EtcdMember, error) {
 	var (
-		learnerIDs []uint64
-		lastErr    error
-		attempts   int
+		members  []EtcdMember
+		lastErr  error
+		attempts int
 	)
-
 	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
 		attempts++
 
@@ -152,30 +157,55 @@ func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
 
 		resp, err := c.client.MemberList(ctx)
 		if err != nil {
-			log.Infof("[d8][etcd] memberList failed on attempt %d: %v", attempts, err)
+			log.Info("[d8][etcd] memberList failed", slog.Int("attempt", attempts), slog.Any("error", err))
 			lastErr = err
 			return false, nil
 		}
-
-		var ids []uint64
 		for _, m := range resp.Members {
-			if m.IsLearner {
-				log.Infof("[d8][etcd] Found learner member: ID=%d Name=%q PeerURLs=%v", m.ID, m.Name, m.PeerURLs)
-				ids = append(ids, m.ID)
-			}
+			members = append(members, EtcdMember{
+				NodeName:  m.Name,
+				IsLearner: m.IsLearner,
+				ID:        m.ID,
+			})
 		}
-		learnerIDs = ids
 		return true, nil
 	})
-
-	if err == wait.ErrWaitTimeout {
-		log.Errorf("[d8][etcd] failed to list members after %d attempts: %v", attempts, lastErr)
+	if wait.Interrupted(err) {
+		log.Error("[d8][etcd] failed to list members after a number of attempts", slog.Int("attempt", attempts), slog.Any("error", lastErr))
 		return nil, fmt.Errorf("[d8][etcd] memberList request failed: %v", lastErr)
 	}
-	return learnerIDs, err
+	return members, nil
 }
 
-func (c *Etcd) PromoteLearnersIfNeeded() error {
+func (c *Etcd) checkMemberExists(nodeName string) (bool, error) {
+	members, err := c.findAllMembers()
+	if err != nil {
+		return false, fmt.Errorf("[d8][etcd] failed to find all members: %v", err)
+	}
+	for _, member := range members {
+		if member.NodeName == nodeName {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func (c *Etcd) findAllLearnerMembers() ([]uint64, error) {
+	var learnerIDs []uint64
+	members, err := c.findAllMembers()
+	if err != nil {
+		return nil, fmt.Errorf("[d8][etcd] failed to find all members: %v", err)
+	}
+	for _, member := range members {
+		if member.IsLearner {
+			learnerIDs = append(learnerIDs, member.ID)
+		}
+	}
+
+	return learnerIDs, nil
+}
+
+func (c *Etcd) promoteLearnersIfNeeded() error {
 	learnerIDs, err := c.findAllLearnerMembers()
 	if err != nil {
 		return fmt.Errorf("[d8][etcd] failed to find learner members: %v", err)
@@ -223,7 +253,7 @@ func (c *Etcd) newEtcdCli() (*clientv3.Client, error) {
 		endpoints = defaultETCDendpoints
 	}
 
-	log.Infof("[d8][etcd] found etcd endpoints: %v", endpoints)
+	log.Info("[d8][etcd] found etcd endpoints", slog.Any("endpoints", endpoints))
 
 	tlsConfig, err := c.buildTLSConfig(caCertPath, certPath, keyPath)
 	if err != nil {
@@ -267,7 +297,7 @@ func (c *Etcd) buildTLSConfig(caFile, certFile, keyFile string) (*tls.Config, er
 }
 
 func (c *Etcd) MemberPromote(learnerID uint64) error {
-	log.Infof("[d8][etcd] promoting a learner as a voting member: %s", strconv.FormatUint(learnerID, 16))
+	log.Info("[d8][etcd] promoting a learner as a voting member", slog.String("learner_id", strconv.FormatUint(learnerID, 16)))
 	var lastError error
 	attempts := 0
 	err := wait.ExponentialBackoff(c.wb, func() (bool, error) {
@@ -277,16 +307,16 @@ func (c *Etcd) MemberPromote(learnerID uint64) error {
 
 		_, err := c.client.MemberPromote(ctx, learnerID)
 		if err == nil {
-			log.Infof("[d8][etcd] learner was promoted as a voting member: %s after %d attempts", strconv.FormatUint(learnerID, 16), attempts)
+			log.Info("[d8][etcd] learner was promoted as a voting member", slog.String("learner_id", strconv.FormatUint(learnerID, 16)), slog.Int("attempt", attempts))
 			return true, nil
 		}
-		log.Infof("[d8][etcd] promoting the learner %s failed on attempt %d: %v", strconv.FormatUint(learnerID, 16), attempts, err)
+		log.Info("[d8][etcd] promoting the learner failed", slog.String("learner_id", strconv.FormatUint(learnerID, 16)), slog.Int("attempt", attempts), slog.Any("error", err))
 		lastError = err
 		return false, nil
 	})
 
-	if err == wait.ErrWaitTimeout {
-		log.Errorf("[d8][etcd] failed to promote learner %s after %d attempts: %v", strconv.FormatUint(learnerID, 16), attempts, lastError)
+	if wait.Interrupted(err) {
+		log.Error("[d8][etcd] failed to promote learner", slog.String("learner_id", strconv.FormatUint(learnerID, 16)), slog.Int("attempt", attempts), slog.Any("error", lastError))
 		return lastError
 	}
 	return err
@@ -305,8 +335,7 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Durat
 				return false, nil
 			}
 			if len(etcdEndpoints) == 0 || overallEtcdPodCount != len(etcdEndpoints) {
-				log.Debugf("[d8][etcd] found a total of %d etcd pods and the following endpoints: %v; retrying",
-					overallEtcdPodCount, etcdEndpoints)
+				log.Debug("[d8][etcd] found a number of etcd pods and etcd endpoints; retrying", slog.Int("etcd_pod_count", overallEtcdPodCount), slog.Any("etcd_endpoints", etcdEndpoints))
 				return false, nil
 			}
 			return true, nil
@@ -326,7 +355,7 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotation(interval, timeout time.Durat
 // and "no endpoints found and pods were listed", so they can skip retrying.
 // from kubeadm
 func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int, error) {
-	log.Debugf("[d8][etcd] retrieving etcd endpoints from %q annotation in etcd Pods", EtcdAdvertiseClientUrlsAnnotationKey)
+	log.Debug("[d8][etcd] retrieving etcd endpoints from the annotation in etcd Pods", slog.String("annotation_key", EtcdAdvertiseClientUrlsAnnotationKey))
 	podList, err := config.K8sClient.CoreV1().Pods(metav1.NamespaceSystem).List(
 		context.TODO(),
 		metav1.ListOptions{
@@ -347,11 +376,11 @@ func (c *Etcd) getRawEtcdEndpointsFromPodAnnotationWithoutRetry() ([]string, int
 			}
 		}
 		if !podIsReady {
-			log.Debugf("[d8][etcd] etcd pod %q is not ready", pod.ObjectMeta.Name)
+			log.Debug("[d8][etcd] etcd pod is not ready", slog.String("pod", pod.ObjectMeta.Name))
 		}
 		etcdEndpoint, ok := pod.ObjectMeta.Annotations[EtcdAdvertiseClientUrlsAnnotationKey]
 		if !ok {
-			log.Debugf("[d8][etcd] etcd Pod %q is missing the %q annotation; cannot infer etcd advertise client URL using the Pod annotation", pod.ObjectMeta.Name, EtcdAdvertiseClientUrlsAnnotationKey)
+			log.Debug("[d8][etcd] etcd Pod is missing the annotation; cannot infer etcd advertise client URL using the Pod annotation", slog.String("pod", pod.ObjectMeta.Name), slog.String("annotation_key", EtcdAdvertiseClientUrlsAnnotationKey))
 			continue
 		}
 		etcdEndpoints = append(etcdEndpoints, etcdEndpoint)

@@ -8,12 +8,11 @@ package tasks
 import (
 	"context"
 	"fmt"
-
 	"log/slog"
 
-	"d8_shutdown_inhibitor/pkg/systemd"
-
 	dlog "github.com/deckhouse/deckhouse/pkg/log"
+
+	"d8_shutdown_inhibitor/pkg/systemd"
 )
 
 type PowerKeyInhibitor struct {
@@ -67,7 +66,7 @@ func (p *PowerKeyInhibitor) acquireLock() error {
 		return err
 	}
 	if p.inhibitLock != 0 {
-		p.dbusCon.ReleaseInhibitLock(p.inhibitLock)
+		_ = p.dbusCon.ReleaseInhibitLock(p.inhibitLock)
 	}
 	p.inhibitLock = lock
 	return nil

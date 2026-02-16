@@ -514,54 +514,54 @@ spec:
                             Sets threshold values to identify to identify under utilized nodes.
 
                             If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
                             cpu:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: CPU fraction in percents
-                              default: 20
                             memory:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Memory fraction in percents
-                              default: 20
                             pods:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Pods count in percents
-                              default: 20
                           additionalProperties: true
                         targetThresholds:
                           description: |-
                             Sets threshold values to identify to identify over utilized nodes.
 
                             If the resource usage of the node exceeds at least one of the threshold values, then the node is considered over utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
                             cpu:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: CPU fraction in percents
-                              default: 70
                             memory:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Memory fraction in percents
-                              default: 70
                             pods:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Pods count in percents
-                              default: 70
                           additionalProperties: true
                     highNodeUtilization:
                       type: object
@@ -581,27 +581,27 @@ spec:
                             Sets threshold values to identify to identify under utilized nodes.
 
                             If the resource usage of the node is below **all** threshold values, then the node is considered under utilized.
+
+                            If a resource threshold is not specified, it is treated as 100% and does not
+                            participate in node utilization calculations.
                           type: object
                           default: {}
                           properties:
                             cpu:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: CPU fraction in percents
-                              default: 20
                             memory:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Memory fraction in percents
-                              default: 20
                             pods:
                               type: integer
-                              minimal: 0
-                              maximal: 100
+                              minimum: 0
+                              maximum: 100
                               description: Pods count in percents
-                              default: 20
                           additionalProperties: true
                     removeDuplicates:
                       type: object

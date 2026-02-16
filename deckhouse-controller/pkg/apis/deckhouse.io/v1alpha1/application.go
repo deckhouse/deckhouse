@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -27,44 +26,17 @@ const (
 	ApplicationResource = "applications"
 	ApplicationKind     = "Application"
 
-	ApplicationConditionRequirementsMet        = "RequirementsMet"
-	ApplicationConditionStartupHooksSuccessful = "StartupHooksSuccessful"
-	ApplicationConditionManifestsDeployed      = "ManifestsDeployed"
-	ApplicationConditionReplicasAvailable      = "ReplicasAvailable"
-
 	// ApplicationConditionTypeProcessed changes only by application controller
 	ApplicationConditionTypeProcessed                    = "Processed"
+	ApplicationConditionReasonReconciled                 = "Reconciled"
 	ApplicationConditionReasonVersionNotFound            = "VersionNotFound"
 	ApplicationConditionReasonApplicationPackageNotFound = "ApplicationPackageNotFound"
 	ApplicationConditionReasonVersionIsDraft             = "VersionIsDraft"
 	ApplicationConditionReasonVersionSpecIsCorrupted     = "VersionSpecIsCorrupted"
 
-	// Application condition types
-	ApplicationConditionInstalled            = "Installed"
-	ApplicationConditionUpdateInstalled      = "UpdateInstalled"
-	ApplicationConditionConfigurationApplied = "ConfigurationApplied"
-	ApplicationConditionPartiallyDegraded    = "PartiallyDegraded"
-	ApplicationConditionManaged              = "Managed"
-	ApplicationConditionReady                = "Ready"
-
-	// Application condition reasons
-	ApplicationConditionInstalledReasonDownloading                              = "Downloading"
-	ApplicationConditionInstalledReasonInstallationInProgress                   = "InstallationInProgress"
-	ApplicationConditionInstalledReasonDownloadWasFailed                        = "DownloadWasFailed"
-	ApplicationConditionInstalledReasonRequirementsNotMet                       = "RequirementsNotMet"
-	ApplicationConditionInstalledReasonManifestsDeploymentFailed                = "ManifestsDeploymentFailed"
-	ApplicationConditionInstalledReasonLicenseCheckFailed                       = "LicenseCheckFailed"
-	ApplicationConditionInstalledReasonUpdateWasFailed                          = "UpdateWasFailed"
-	ApplicationConditionUpdateInstalledReasonDownloading                        = "Downloading"
-	ApplicationConditionUpdateInstalledReasonUpdateInProgress                   = "UpdateInProgress"
-	ApplicationConditionUpdateInstalledReasonUpdateFailed                       = "UpdateFailed"
-	ApplicationConditionUpdateInstalledReasonRequirementsNotMet                 = "RequirementsNotMet"
-	ApplicationConditionConfigurationAppliedReasonConfigurationValidationFailed = "ConfigurationValidationFailed"
-	ApplicationConditionPartiallyDegradedReasonScalingInProgress                = "ScalingInProgress"
-	ApplicationConditionManagedReasonOperationFailed                            = "OperationFailed"
-	ApplicationConditionReadyReasonNotReady                                     = "NotReady"
-
 	ApplicationFinalizerStatisticRegistered = "application.deckhouse.io/statistic-registered"
+
+	ApplicationAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 )
 
 var (
@@ -85,7 +57,14 @@ var _ runtime.Object = (*Application)(nil)
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:scope=Namespaced,shortName=app
+// +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
+// +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
+// +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
+// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status
+// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
+// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
 
 // Application represents a namespace-scoped application instance.
 type Application struct {
@@ -103,53 +82,49 @@ type Application struct {
 }
 
 type ApplicationSpec struct {
-	PackageName       string `json:"packageName"`
-	PackageRepository string `json:"packageRepository,omitempty"`
-	Version           string `json:"version"`
-	ReleaseChannel    string `json:"releaseChannel,omitempty"`
+	// Name of the application package to install.
+	PackageName string `json:"packageName"`
+
+	// Name of the repository where the package is located.
+	// If not specified, the default repository is used.
+	// +optional
+	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
+
+	// Version of the application package to install.
+	PackageVersion string `json:"packageVersion"`
+
+	// Release channel for the application package.
+	// +optional
+	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Configuration settings for the application.
 	// +kubebuilder:pruning:PreserveUnknownFields
+	// +optional
 	Settings *MappedFields `json:"settings,omitempty"`
 }
 
 type ApplicationStatus struct {
-	CurrentVersion     *ApplicationStatusVersion            `json:"currentVersion,omitempty"`
-	Repository         string                               `json:"repository,omitempty"`
-	Status             string                               `json:"status,omitempty"`
-	Conditions         []ApplicationStatusCondition         `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	InternalConditions []ApplicationInternalStatusCondition `json:"internalConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
-	ResourceConditions []ApplicationResourceStatusCondition `json:"resourceConditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+	// Information about the currently installed version.
+	// +optional
+	CurrentVersion *ApplicationStatusVersion `json:"currentVersion,omitempty"`
+
+	// Conditions represent the latest available observations of the application's state.
+	// +optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
 type ApplicationStatusVersion struct {
-	Current string `json:"current,omitempty"`
+	// Semantic version of the installed application.
+	// +optional
+	Version string `json:"version,omitempty"`
+
+	// Release channel from which the version was installed.
+	// +optional
 	Channel string `json:"channel,omitempty"`
-}
-
-type ApplicationStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
-}
-
-type ApplicationInternalStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
-}
-
-type ApplicationResourceStatusCondition struct {
-	Type               string                 `json:"type"`
-	Status             corev1.ConditionStatus `json:"status"`
-	Reason             string                 `json:"reason,omitempty"`
-	Message            string                 `json:"message,omitempty"`
-	LastProbeTime      metav1.Time            `json:"lastProbeTime,omitempty"`
-	LastTransitionTime metav1.Time            `json:"lastTransitionTime,omitempty"`
 }
 
 // +kubebuilder:object:root=true

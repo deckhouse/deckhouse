@@ -4,13 +4,13 @@ search: add a node to the cluster, set up a GPU-enabled node, ephemeral nodes
 description: Managing nodes of a Kubernetes cluster. Adding or removing nodes in a cluster. Changing the CRI of the node.
 ---
 
-## How do I add a master nodes to a cloud cluster (single-master to a multi-master)?
+## How do I add master nodes to a cloud cluster?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-add-a-master-nodes-to-a-cloud-cluster-single-master-to-a-multi-master)
+For the procedure of converting a cluster with a single master node to a multi-master cluster, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-add-master-nodes-to-a-cloud-cluster) of the `control-plane-manager` module.
 
-## How do I reduce the number of master nodes in a cloud cluster (multi-master to single-master)?
+## How do I reduce the number of master nodes in a cloud cluster?
 
-See [the control-plane-manager module FAQ.](../control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster-multi-master-to-single-master)
+For the procedure of converting a multi-master cluster to a cluster with a single master node, refer to the [FAQ](/modules/control-plane-manager/faq.html#how-do-i-reduce-the-number-of-master-nodes-in-a-cloud-cluster) of the `control-plane-manager` module.
 
 ## Static nodes
 
@@ -348,11 +348,11 @@ You can analyze `cloud-init` to find out what's happening on a node during the b
    ```shell
    d8 k get instances dev-worker-2a6158ff-6764d-nrtbj -o yaml | grep 'bootstrapStatus' -B0 -A2
    bootstrapStatus:
-     description: Use 'nc 192.168.199.178 8000' to get bootstrap logs.
-     logsEndpoint: 192.168.199.178:8000
+     description: Use 'curl -N http://192.168.199.158:8000' to get bootstrap logs.
+     logsEndpoint: http://192.168.199.158:8000
    ```
 
-1. Run the command you got (`nc 192.168.199.115 8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
+1. Run the command you got (`curl -N http://192.168.199.158:8000` according to the example above) to see `cloud-init` logs and determine the cause of the problem on the node.
 
 The logs of the initial node configuration are located at `/var/log/cloud-init-output.log`.
 
@@ -644,12 +644,12 @@ node updates or requires manual confirmation.
 
 When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
 
-The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
+The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at least one of the following conditions is true:
 
-- Kernel version is at least 5.8;
-- systemd version is at least 244;
-- cgroup v2 is enabled;
-- The EROFS filesystem is available.
+- Kernel version lower than 5.8;
+- systemd version lower than 244
+- cgroup v2 is disabled
+- EROFS file system is unavailable.
 
 The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
 
@@ -1500,10 +1500,12 @@ Starting with Deckhouse 1.71, if a `NodeGroup` contains the `spec.gpu` section, 
 - applies the required system settings (including fixes for the NVIDIA Container Toolkit);
 - deploys system components: **NFD**, **GFD**, **NVIDIA Device Plugin**, **DCGM Exporter**, and, if needed, **MIG Manager**.
 
+For the list of platforms supported by NVIDIA Container Toolkit, see [the official documentation](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/supported-platforms.html).
+
 {% alert level="info" %}
 Always specify the desired mode in `spec.gpu.sharing` (`Exclusive`, `TimeSlicing`, or `MIG`).
 
-Manual containerd configuration (via `NodeGroupConfiguration`, TOML, etc.) is not required and must not be combined with the automatic setup.
+containerd on GPU nodes is configured automatically. Do not change its configuration manually (e.g. via `NodeGroupConfiguration` or TOML config).
 {% endalert %}
 
 To add a GPU node to the cluster, perform the following steps:
@@ -1968,6 +1970,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
 Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
+
+## How to set a custom per-GPU MIG layout on a node?
+
+Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1    # Can be in the range from 1 to 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 2
+            - profile: 1g.10gb
+              count: 1
+        # Add more indexes as needed.
+```
+
+As a result, the `node-manager` module automatically:
+
+- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
+- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
+
+A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
 
 ## MIG profile does not activate — what to check?
 

@@ -62,11 +62,11 @@ func cleanup(iptablesMgr *iptables.IPTables) error {
 	}
 
 	log.Println("Cleaning up mangle restore rules...")
-	if err := iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHttpMarkRule...); err != nil {
-		errs = append(errs, fmt.Errorf("failed to delete restoreHttpMarkRule: %w", err))
+	if err := iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHTTPMarkRule...); err != nil {
+		errs = append(errs, fmt.Errorf("failed to delete restoreHTTPMarkRule: %w", err))
 	}
-	if err := iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHttpsMarkRule...); err != nil {
-		errs = append(errs, fmt.Errorf("failed to delete restoreHttpsMarkRule: %w", err))
+	if err := iptablesMgr.DeleteIfExists("mangle", "PREROUTING", restoreHTTPSMarkRule...); err != nil {
+		errs = append(errs, fmt.Errorf("failed to delete restoreHTTPSMarkRule: %w", err))
 	}
 
 	log.Println("Deleting dummy interface...")

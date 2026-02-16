@@ -52,6 +52,18 @@ properties:
           crt:
             type: string
             x-examples: [ "testcrt" ]
+      apiserverCertificate:
+        type: object
+        properties:
+          ca:
+            type: string
+            x-examples: [ "testca" ]
+          key:
+            type: string
+            x-examples: [ "testkey" ]
+          crt:
+            type: string
+            x-examples: [ "testcrt" ]
       clusterAuthRuleCrds:
         type: array
         items:
@@ -211,6 +223,10 @@ properties:
         default: []
     x-examples:
     - webhookCertificate:
+        ca: castring
+        key: keystring
+        crt: certificatestring
+      apiserverCertificate:
         ca: castring
         key: keystring
         crt: certificatestring

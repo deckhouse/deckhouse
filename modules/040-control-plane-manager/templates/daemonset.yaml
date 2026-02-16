@@ -8,6 +8,11 @@ cpu: 10m
 memory: 10Mi
 {{- end }}
 
+{{- define "update_observer_resources" }}
+cpu: 10m
+memory: 10Mi
+{{- end }}
+
 {{- $profiles := list "main" }}
 {{- if .Values.controlPlaneManager.internal.hasEtcdArbiterNode }}
   {{- $profiles = append $profiles "etcd-arbiter" }}
@@ -41,7 +46,7 @@ memory: 10Mi
 {{- $_ := set $tpl_context "registry" $registry }}
 {{- $_ := set $tpl_context "clusterConfiguration" .Values.global.clusterConfiguration }}
 {{- $_ := set $tpl_context.clusterConfiguration "kubernetesVersion" .Values.controlPlaneManager.internal.effectiveKubernetesVersion }}
-{{- $_ := set $tpl_context "kubeadmDir"  (ternary "kubeadm/v1beta4" "kubeadm/v1beta3" (semverCompare ">=1.31" $tpl_context.clusterConfiguration.kubernetesVersion))}}
+{{- $_ := set $tpl_context "kubeadmDir" "kubeadm/v1beta4" -}}
 {{- $_ := set $tpl_context "nodesCount" .Values.controlPlaneManager.internal.nodesCount }}
 {{- $_ := set $tpl_context "apiserver" dict }}
 {{- $_ := set $tpl_context "scheduler" dict }}
@@ -137,8 +142,10 @@ kubeadm-config.yaml: {{ tpl ($context.Files.Get (printf "%s/config.yaml.tpl" $tp
   {{- if $tpl_context.apiserver.oidcCA }}
 extra-file-oidc-ca.crt: {{ $tpl_context.apiserver.oidcCA | b64enc }}
   {{- end }}
-  {{- if $tpl_context.apiserver.webhookCA }}
-extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $tpl_context.apiserver.webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+  {{- if $tpl_context.apiserver.webhookURL }}
+  {{- $webhookCA := required "controlPlaneManager.apiserver.authz.webhookCA is required when controlPlaneManager.apiserver.authz.webhookURL is set" $tpl_context.apiserver.webhookCA }}
+extra-file-webhook-config.yaml: {{ include "webhookTemplate" (dict "webhookCA" $webhookCA "webhookURL" $tpl_context.apiserver.webhookURL) | b64enc }}
+extra-file-authorization-config.yaml: {{ include "authorizationConfigTemplate" $tpl_context | b64enc }}
   {{- end }}
 
   {{- if $tpl_context.apiserver.auditWebhookURL }}
@@ -195,7 +202,7 @@ spec:
     kind: DaemonSet
     name: {{ $dsMode }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: control-plane-manager
@@ -212,6 +219,12 @@ spec:
         cpu: 10m
         memory: 10Mi
     {{- end }}
+    - containerName: update-observer
+      minAllowed:
+        {{- include "update_observer_resources" $ | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 80Mi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -260,7 +273,6 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/etcd
           name: etcd
-          readOnly: true
         - mountPath: /pki
           name: pki
           readOnly: true
@@ -290,6 +302,10 @@ spec:
           value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         {{- if eq $profile "etcd-arbiter" }}
         - name: ETCD_ARBITER
           value: "true"
@@ -321,6 +337,23 @@ spec:
           requests:
             {{- include "image_holder_resources" $ | nindent 12 }}
 {{- end }}
+      - name: update-observer
+        {{ include "helm_lib_module_container_security_context_pss_restricted_flexible" dict  | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list $ "updateObserver") }}
+        command:
+        - /update-observer
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}
+  {{- if not ( $.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "update_observer_resources" $ | nindent 12 }}
+  {{- end }}
+        env:
+        - name: LEADER_ELECTION_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- include "helm_lib_envs_for_proxy" $ | nindent 8 }}
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
       priorityClassName: system-cluster-critical

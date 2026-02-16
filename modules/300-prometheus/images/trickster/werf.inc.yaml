@@ -45,13 +45,14 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $TricksterVersion }} $(cat /run/secrets/SOURCE_REPO)/trickstercache/trickster.git /src/trickster
   - cd /src/trickster
+  - git rev-parse HEAD > GITCOMMIT
   - git apply /patches/*.patch --verbose
   - rm -r vendor
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alt-svace" }}
+fromImage: {{ eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
   add: /src/trickster
@@ -65,7 +66,7 @@ secrets:
 shell:
   install:
   - cd /src
-  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH={{ $.Commit.Hash }}
+  - export GOPROXY=$(cat /run/secrets/GOPROXY) CGO_ENABLED=0 GOOS=linux GOARCH=amd64 COMMIT_HASH="$(cat GITCOMMIT)"
   - |
     export LDFLAGS="-X main.applicationBuildTime=$(date +%Y%m%d-%H:%M:%S) \
     -X main.applicationGitCommitID=${COMMIT_HASH} \
@@ -75,7 +76,10 @@ shell:
   - go mod tidy
   - go mod vendor
   - |
-    {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go`) | indent 6 }}
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags="${LDFLAGS}" -o ./OPATH/trickster -a -v ./cmd/trickster/*.go` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
   - chown -R 64535:64535 /src
   - chmod 0700 /src/OPATH/trickster
 ---

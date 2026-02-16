@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в Microsoft Azure
 permalink: ru/admin/integrations/public/azure/storage.html
 lang: ru
 ---

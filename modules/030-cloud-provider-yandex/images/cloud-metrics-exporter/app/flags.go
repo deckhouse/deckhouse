@@ -70,5 +70,4 @@ func InitFlags(cmd *kingpin.Application) {
 		Envar("HTTP_PORT").
 		Default(AutoRenewIAMToken.String()).
 		DurationVar(&AutoRenewIAMToken)
-
 }

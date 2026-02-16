@@ -49,6 +49,7 @@ var _ runtime.Object = (*ApplicationPackage)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:printcolumn:name="UsedBy",type=integer,JSONPath=`.status.usedByCount`
 
 // ApplicationPackage represents information about available application package.
 type ApplicationPackage struct {
@@ -62,25 +63,42 @@ type ApplicationPackage struct {
 	Status ApplicationPackageStatus `json:"status,omitempty"`
 }
 
-type NamespaceName string
-
 type ApplicationPackageStatus struct {
-	Installed             map[NamespaceName][]ApplicationPackageStatusInstalled `json:"installed,omitempty"`
-	InstalledOverall      int                                                   `json:"installedOverall,omitempty"`
-	AvailableRepositories []string                                              `json:"availableRepositories,omitempty"`
+	// Information about applications using this package.
+	// +optional
+	UsedBy []ApplicationPackageStatusInstance `json:"usedBy,omitempty"`
+
+	// Number of applications using this package.
+	// +optional
+	UsedByCount int `json:"usedByCount,omitempty"`
+
+	// List of repository names where this application package is available.
+	// +optional
+	AvailableRepositories []string `json:"availableRepositories,omitempty"`
 }
 
-type ApplicationPackageStatusInstalled struct {
+type ApplicationPackageStatusInstance struct {
+	// Namespace where the application is installed.
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// Name of the application instance.
+	// +optional
 	Name string `json:"name,omitempty"`
+
+	// Version of the package used by this application.
+	// +optional
+	Version string `json:"version,omitempty"`
 }
 
+// IsAppInstalled checks if a specific application is installed in the given namespace.
 func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bool {
-	if len(a.Status.Installed) == 0 {
+	if len(a.Status.UsedBy) == 0 {
 		return false
 	}
 
-	for _, v := range a.Status.Installed[NamespaceName(namespace)] {
-		if v.Name == appName {
+	for _, v := range a.Status.UsedBy {
+		if v.Namespace == namespace && v.Name == appName {
 			return true
 		}
 	}
@@ -88,38 +106,56 @@ func (a *ApplicationPackage) IsAppInstalled(namespace string, appName string) bo
 	return false
 }
 
-func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string) *ApplicationPackage {
-	apStatusInstalledApp := ApplicationPackageStatusInstalled{Name: appName}
-
-	// initialize map if it is nil or empty
-	if len(a.Status.Installed) == 0 {
-		a.Status.Installed = make(map[NamespaceName][]ApplicationPackageStatusInstalled)
+// GetAppVersion returns the version of an installed app, or empty string if not found.
+func (a *ApplicationPackage) GetAppVersion(namespace string, appName string) string {
+	for _, v := range a.Status.UsedBy {
+		if v.Namespace == namespace && v.Name == appName {
+			return v.Version
+		}
 	}
 
-	a.Status.Installed[NamespaceName(namespace)] = append(a.Status.Installed[NamespaceName(namespace)], apStatusInstalledApp)
+	return ""
+}
 
-	a.Status.InstalledOverall++
+// UpdateAppVersion updates the version for an installed app. Returns true if updated.
+func (a *ApplicationPackage) UpdateAppVersion(namespace, appName, version string) bool {
+	for i := range a.Status.UsedBy {
+		if a.Status.UsedBy[i].Namespace == namespace && a.Status.UsedBy[i].Name == appName {
+			if a.Status.UsedBy[i].Version != version {
+				a.Status.UsedBy[i].Version = version
+				return true
+			}
+			return false
+		}
+	}
+
+	return false
+}
+
+// AddInstalledApp adds an application to the list of applications using this package.
+func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string, version string) *ApplicationPackage {
+	apStatusInstalledApp := ApplicationPackageStatusInstance{
+		Namespace: namespace,
+		Name:      appName,
+		Version:   version,
+	}
+
+	a.Status.UsedBy = append(a.Status.UsedBy, apStatusInstalledApp)
+
+	a.Status.UsedByCount++
 
 	return a
 }
 
+// RemoveInstalledApp removes an application from the list of applications using this package.
 func (a *ApplicationPackage) RemoveInstalledApp(namespace string, appName string) *ApplicationPackage {
-	if len(a.Status.Installed) == 0 {
-		return a
-	}
-
-	newSlice := slices.DeleteFunc(a.Status.Installed[NamespaceName(namespace)], func(v ApplicationPackageStatusInstalled) bool {
-		return v.Name == appName
+	prevLen := len(a.Status.UsedBy)
+	a.Status.UsedBy = slices.DeleteFunc(a.Status.UsedBy, func(v ApplicationPackageStatusInstance) bool {
+		return v.Namespace == namespace && v.Name == appName
 	})
 
-	if len(a.Status.Installed[NamespaceName(namespace)]) == 0 {
-		delete(a.Status.Installed, NamespaceName(namespace))
-	}
-
-	a.Status.Installed[NamespaceName(namespace)] = newSlice
-
-	if a.Status.InstalledOverall > 0 {
-		a.Status.InstalledOverall--
+	if len(a.Status.UsedBy) < prevLen && a.Status.UsedByCount > 0 {
+		a.Status.UsedByCount--
 	}
 
 	return a

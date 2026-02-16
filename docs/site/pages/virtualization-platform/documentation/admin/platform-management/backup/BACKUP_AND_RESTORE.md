@@ -13,7 +13,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    ```shell
    cp $(find /var/lib/containerd/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
    ```
 
    Check the version of `etcdutl`:
@@ -24,7 +24,7 @@ To properly restore the cluster, follow these steps on the master node:
 
    Make sure the output of `etcdutl version` is displayed without errors.
 
-   If `etcdutl` is not found, download the binary from [the official etcd repository]((https://github.com/etcd-io/etcd/releases)), choosing a version that matches your cluster's etcd version:
+   If `etcdutl` is not found, download the binary from [the official etcd repository](https://github.com/etcd-io/etcd/releases), choosing a version that matches your cluster's etcd version:
 
    ```shell
    wget "https://github.com/etcd-io/etcd/releases/download/v3.6.1/etcd-v3.6.1-linux-amd64.tar.gz"
@@ -122,9 +122,12 @@ To properly restore a multi-master cluster, follow these steps:
 
 1. Enable High Availability (HA) mode. This is necessary to preserve at least one Prometheus replica and its PVC, since HA is disabled by default in single-master clusters.
 
-1. Switch the cluster to single master mode:
+1. Switch the cluster to single-master mode:
 
-   - In a static cluster, manually remove the additional master nodes.
+   - In a cloud cluster, follow the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
+   - In a static cluster, remove any unnecessary master nodes from the `control-plane` role by following the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#removing-the-master-role-from-a-node-without-deleting-the-node-itself), and then remove them from the cluster.
+   - In a static cluster with the configured HA mode based on two master nodes and an arbiter node, remove the arbiter node and additional master nodes.
+   - In a cloud cluster with the configured HA mode based on two master nodes and an arbiter node, use the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios) to remove the additional master nodes and the arbiter node.
 
 1. Restore etcd from the backup on the only remaining master node. Follow the [instructions](#restoring-a-cluster-with-a-single-control-plane-node) for restoring a cluster with a single control-plane node.
 
@@ -134,7 +137,9 @@ To properly restore a multi-master cluster, follow these steps:
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. Reboot all cluster nodes. Ensure that after the reboot all nodes are available and functioning correctly.
+   > **Warning.** If the `d8 k` or `kubectl` commands are unavailable on the node, check the `/etc/kubernetes/kubernetes-api-proxy/nginx.conf` configuration file. It should only specify your current API server. If the configuration contains lines with IP addresses of old master nodes, remove them. Edit the configuration in a similar way on all other nodes.
+
+1. Reboot the master node. Ensure that the other nodes transition to the `Ready` state.
 
 1. Wait for Deckhouse to process all tasks in the queue:
 
@@ -142,7 +147,7 @@ To properly restore a multi-master cluster, follow these steps:
    d8 system queue main
    ```
 
-1. Switch the cluster back to multi-master mode.
+1. Switch the cluster back to multi-master mode. For cloud clusters, follow the [instructions](./platform-management/platform-scaling/control-plane/scaling-and-changing-master-nodes.html#common-scaling-scenarios).
 
 Once you go through these steps, the cluster will be successfully restored in the multi-master configuration.
 
@@ -367,7 +372,7 @@ KUBERNETES_VERSION=1.28.0                   # Kubernetes version.
 mv /etc/kubernetes/manifests/etcd.yaml ~/etcd.yaml 
 mkdir ./etcd_old
 mv /var/lib/etcd ~/etcd_old
-ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
 ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore etcd-backup.snapshot --data-dir=/var/lib/etcd 
 
@@ -419,7 +424,7 @@ If you prefer to manually make changes during cluster recovery after the master 
 
      ```shell
      ETCD_SNAPSHOT_PATH="./etcd-backup.snapshot" # Path to the etcd snapshot.
-     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl)
+     ETCDUTL_PATH=$(find /var/lib/containerd/ -name etcdutl -print -quit)
 
      ETCDCTL_API=3 $ETCDUTL_PATH snapshot restore \
        etcd-backup.snapshot \

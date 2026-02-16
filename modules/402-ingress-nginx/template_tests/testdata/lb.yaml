@@ -10,7 +10,7 @@ spec:
   additionalLogFields:
     my-cookie: "$cookie_MY_COOKIE"
   validationEnabled: true
-  controllerVersion: "1.9"
+  controllerVersion: "1.10"
   inlet: LoadBalancer
   hsts: true
   hstsOptions:
@@ -27,5 +27,7 @@ spec:
     sourceRanges:
       - 1.1.1.1
       - 2.2.2.2
+    acceptClientIPHeadersFrom:
+    - 0.0.0.0/0
   maxReplicas: 6
   minReplicas: 2

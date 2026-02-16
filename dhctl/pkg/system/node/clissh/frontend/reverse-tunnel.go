@@ -23,12 +23,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
-
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/clissh/cmd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/node/session"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 type tunnelWaitResult struct {
@@ -173,7 +172,6 @@ func (t *ReverseTunnel) StartHealthMonitor(ctx context.Context, checker node.Rev
 			log.DebugF("[%d] Signal was sent. Chan len: %d\n", id, len(restartCh))
 		}
 		for {
-
 			if !checkReverseTunnel(id) {
 				go restart(id)
 			}

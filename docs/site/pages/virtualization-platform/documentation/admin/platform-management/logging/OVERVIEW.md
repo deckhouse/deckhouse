@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Logging
 permalink: en/virtualization-platform/documentation/admin/platform-management/logging/
 ---
 

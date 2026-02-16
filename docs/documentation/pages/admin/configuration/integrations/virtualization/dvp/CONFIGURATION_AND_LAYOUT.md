@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Deckhouse Virtualization Platform
 permalink: en/admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html
 ---
 
