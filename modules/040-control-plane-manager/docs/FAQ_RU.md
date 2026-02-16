@@ -328,6 +328,136 @@ spec:
 
 <div id='как-посмотреть-список-memberов-в-etcd'></div>
 
+## Как настроить режим HA c двумя master-узлами и arbiter-узлом?
+
+В Deckhouse Kubernetes Platform возможна настройка режима HA c двумя master-узлами и arbiter-узлом. Такой подход позволяет обеспечить требования по HA в условиях ограниченных ресурсов.
+
+На arbiter-узле размещается только etcd, без остальных компонентов control plane. Этот узел используется для обеспечения кворума etcd.
+
+Требования к arbiter-узлу:
+
+* не менее 2 ядер CPU;
+* не менее 4 ГБ RAM;
+* не менее 8 ГБ дискового пространства под etcd.
+
+Требования к сетевым задержкам для arbiter-узла аналогичны требованиям для master-узлов.
+
+### Настройка в облачном кластере
+
+Пример ниже актуален для облачного кластера с тремя master-узлами.
+Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в облачном кластере, необходимо удалить из кластера один master-узел и добавить один arbiter-узел.
+
+{% alert level="warning" %}
+
+Описанные ниже шаги необходимо выполнять с первого по порядку master-узла кластера (`master-0`). Это связано с тем, что кластер всегда масштабируется по порядку: например, невозможно удалить узлы `master-0` и `master-1`, оставив `master-2`.
+{% endalert %}
+
+{% alert level="warning" %}
+Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед добавлением или удалением master-узла убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом любых изменений рекомендуется создать [резервную копию данных модуля](/modules/stronghold/auto_snapshot.html).  
+{% endalert %}
+
+1. Сделайте [резервную копию etcd](/products/kubernetes-platform/documentation/v1/admin/configuration/backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
+1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
+1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
+1. Убедитесь, что очередь DKP пуста:
+
+   ```shell
+   d8 system queue list
+   ```
+
+1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес container registry при необходимости):
+
+   ```bash
+   DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
+   DH_EDITION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/edition}' | tr '[:upper:]' '[:lower:]' ) 
+   docker run --pull=always -it -v "$HOME/.ssh/:/tmp/.ssh/" \
+     registry.deckhouse.ru/deckhouse/${DH_EDITION}/install:${DH_VERSION} bash
+   ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду:
+
+   ```bash
+   dhctl config edit provider-cluster-configuration --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> \
+     --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST>
+   ```
+
+   Измените настройки облачного провайдера:
+
+   * В параметре `masterNodeGroup.replicas` укажите `2`.
+   * Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+
+     ```yaml
+     nodeGroups:
+       - name: arbiter
+         replicas: 1
+         nodeTemplate:
+           labels:
+             node.deckhouse.io/etcd-arbiter: ""
+           taints:
+             - key: node.deckhouse.io/etcd-arbiter
+               effect: NoSchedule
+         zones:
+           - europe-west3-b
+         instanceClass:
+           machineType: n1-standard-4
+       # ... остальная часть манифеста
+     ```
+
+   * Сохраните изменения.
+
+   > Для **Yandex Cloud** при использовании внешних адресов на master-узлах количество элементов массива в параметре `masterNodeGroup.instanceClass.externalIPAddresses` должно равняться количеству master-узлов. При использовании значения `Auto` (автоматический заказ публичных IP-адресов) количество элементов в массиве все равно должно соответствовать количеству master-узлов.
+   >
+   > Например, при одном master-узле (`masterNodeGroup.replicas: 1`) и автоматическом заказе адресов параметр `masterNodeGroup.instanceClass.externalIPAddresses` будет выглядеть следующим образом:
+   >
+   > ```yaml
+   > externalIPAddresses:
+   > - "Auto"
+   > ```
+
+1. **В контейнере с инсталлятором** выполните следующую команду для запуска масштабирования:
+
+   ```bash
+   dhctl converge --ssh-agent-private-keys=/tmp/.ssh/<SSH_KEY_FILENAME> --ssh-user=<USERNAME> --ssh-host <MASTER-NODE-0-HOST> --ssh-host <MASTER-NODE-1-HOST>
+   ```
+
+   > **Важно**. Для **OpenStack** и **VK Cloud (OpenStack)** после подтверждения удаления узла обязательно проверьте удаление диска `<prefix>kubernetes-data-N` в самом OpenStack.
+   >
+   > Например, при удалении узла `cloud-demo-master-2` в веб-интерфейсе OpenStack или в OpenStack CLI необходимо проверить отсутствие диска `cloud-demo-kubernetes-data-2`.
+   >
+   > В случае, если диск `kubernetes-data` останется, при увеличении количества master-узлов могут возникнуть проблемы в работе etcd.
+
+1. Проверьте очередь Deckhouse с помощью следующей команды и убедитесь, что отсутствуют ошибки:
+
+   ```shell
+   d8 system queue list
+   ```
+
+### Настройка в статическом кластере
+
+Чтобы настроить режим HA c двумя master-узлами и arbiter-узлом в статическом кластере, выполните следующие действия:
+
+1. Создайте NodeGroup для arbiter-узла. На arbiter-узле **обязательно** должен быть лейбл `node-role.deckhouse.io/etcd-only: ""` и taint, предотвращающий размещение на нем пользовательской нагрузки. Пример описания NodeGroup для arbiter-узла:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1
+     kind: NodeGroup
+     metadata:
+       name: arbiter
+     spec:
+       nodeType: Static
+       nodeTemplate:
+         labels:
+           node.deckhouse.io/etcd-arbiter: ""
+         taints:
+           - key: node.deckhouse.io/etcd-arbiter
+             effect: NoSchedule
+     # ... остальная часть манифеста
+   ```
+
+1. Добавьте [удобным вам способом](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/bare-metal-node.html#добавление-узлов-в-bare-metal-кластере) в кластер узел, который будет использовать как arbiter-узел.
+1. [Убедитесь](#как-посмотреть-список-узлов-кластера-в-etcd), что добавленный arbiter-узел находится в списке членов кластера etcd.
+1. [Удалите](#как-убрать-роль-master-узла-сохранив-узел) один master-узел из кластера.
+
 ## Как посмотреть список узлов кластера в etcd?
 
 ### Вариант 1
@@ -388,19 +518,27 @@ done
 
 Этот способ может понадобиться, если использование параметра `--force-new-cluster` не восстанавливает работу etcd. Это может произойти, если converge master-узлов прошел неудачно, в результате чего новый master-узел был создан на старом диске etcd, изменил свой адрес в локальной сети, а другие master-узлы отсутствуют. Этот метод стоит использовать если контейнер etcd находится в бесконечном цикле перезапуска, а в его логах появляется ошибка: `panic: unexpected removal of unknown remote peer`.
 
-1. Установите утилиту [etcdutl](https://github.com/etcd-io/etcd/releases).
-1. С текущего локального снапшота базы etcd (`/var/lib/etcd/member/snap/db`) выполните создание нового снапшота:
+1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   ./etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
-   --initial-cluster=HOSTNAME=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://ADDRESS:2380 \
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
+1. Создайте новый снимок базы etcd на основе текущего локального снимка (`/var/lib/etcd/member/snap/db`):
+
+   ```shell
+   etcdutl snapshot restore /var/lib/etcd/member/snap/db --name <HOSTNAME> \
+   --initial-cluster=<HOSTNAME>=https://<ADDRESS>:2380 --initial-advertise-peer-urls=https://<ADDRESS>:2380 \
    --skip-hash-check=true --data-dir /var/lib/etcdtest
    ```
 
-   * `<HOSTNAME>` — название master-узла;
-   * `<ADDRESS>` — адрес master-узла.
+   где:
 
-1. Выполните следующие команды для использования нового снапшота:
+   - `<HOSTNAME>` — имя master-узла;
+   - `<ADDRESS>` — адрес master-узла.
+
+1. Выполните следующие команды для использования нового снимка:
 
    ```shell
    cp -r /var/lib/etcd /tmp/etcd-backup
@@ -777,8 +915,13 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 1. Найдите утилиту `etcdutl` на master-узле и скопируйте исполняемый файл в `/usr/local/bin/`:
 
    ```shell
-   cp $(find /var/lib/containerd/io.containerd.snapshotter.v1.overlayfs/snapshots/ \
-   -name etcdutl -print | tail -n 1) /usr/local/bin/etcdutl
+   cp $(find /var/lib/containerd/ \
+   -name etcdutl -print -quit) /usr/local/bin/etcdutl
+   ```
+
+   Проверьте версию `etcdutl` с помощью команды:
+
+   ```shell
    etcdutl version
    ```
 
@@ -848,21 +991,28 @@ rm -r ./kubernetes ./etcd-backup.snapshot
 
 #### Восстановление мультимастерного кластера
 
-Для корректного восстановления выполните следующие шаги:
+Для корректного восстановления мультимастерного кластера выполните следующие шаги:
 
-1. Включите режим High Availability (HA) с помощью глобального параметра [highAvailability](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-highavailability). Это необходимо для сохранения хотя бы одной реплики Prometheus и его PVC, поскольку в режиме кластера с одним master-узлом HA по умолчанию отключён.
+1. Активируйте режим High Availability (HA). Это необходимо, чтобы сохранить хотя бы одну реплику Prometheus и его PVC, поскольку в кластере с одним master-узлом HA по умолчанию отключён.
 
-1. Переведите кластер в режим с одним master-узлом в соответствии с [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для облачных кластеров, или самостоятельно выведите статические master-узлы из кластера.
+1. Переведите кластер в режим с одним master-узлом:
 
-1. На оставшемся единственном master-узле выполните шаги по восстановлению etcd из резервной копии в соответствии с [инструкцией](#восстановление-кластера-single-master) для кластера с одним master-узлом.
+   - В облачном кластере воспользуйтесь [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере).
+   - В статическом кластере выведите лишние master-узлы из роли `control-plane` по [инструкции](#как-убрать-роль-master-узла-сохранив-узел), после чего удалите их из кластера.
+   - В статическом кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла удалите arbiter-узел и лишние master-узлы.
+   - В облачном кластере с настроенным режимом HA на базе двух master-узлов и arbiter-узла воспользуйтесь [инструкцией](#как-уменьшить-число-master-узлов-в-облачном-кластере) для удаления лишних мастер-узлов и arbiter-узла.
+
+1. Восстановите etcd из резервной копии на единственном оставшемся master-узле. Следуйте [инструкции](#восстановление-кластера-single-master) для кластера с одним master-узлом.
 
 1. Когда работа etcd будет восстановлена, удалите из кластера информацию об уже удаленных в первом пункте master-узлах, воспользовавшись следующей командой (укажите название узла):
 
    ```shell
-   d8 k delete node <MASTER_NODE_I>
+   d8 k delete node <ИМЯ_MASTER_УЗЛА>
    ```
 
-1. Перезапустите все узлы кластера.
+   > **Внимание.** При недоступности команд `d8 k` или `kubectl` на узле проверьте конфиг `/etc/kubernetes/kubernetes-api-proxy/nginx.conf`, в нем должен быть указан только ваш текущий API-сервер. Если в конфиге содержатся IP-адреса старых мастеров, то удалите строчки содержащие их, в этом случае конфиг так же нужно исправить на всех остальных узлах.
+
+1. Перезапустите master-узел. Убедитесь, что остальные узлы перешли в состояние `Ready`.
 
 1. Дождитесь выполнения заданий из очереди Deckhouse:
 
@@ -870,7 +1020,9 @@ rm -r ./kubernetes ./etcd-backup.snapshot
    d8 system queue main
    ```
 
-1. Переведите кластер обратно в режим мультимастерного в соответствии с [инструкцией](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master) для облачных кластеров или [инструкцией](#как-добавить-master-узел-в-статическом-или-гибридном-кластере) для статических или гибридных кластеров.
+1. Переведите кластер обратно в мультимастерный режим. Для облачных кластеров используйте [инструкцию](#как-добавить-master-узлы-в-облачном-кластере-single-master-в-multi-master). Для статических кластеров используйте [инструкцию](#как-добавить-master-узел-в-статическом-или-гибридном-кластере).
+
+После этих шагов кластер будет успешно восстановлен в мультимастерной конфигурации.
 
 ### Как восстановить объект Kubernetes из резервной копии etcd?
 
@@ -1102,7 +1254,7 @@ Node 1, Node 5, Node 2, Node 6, Node 3, Node 4
 * Использование TLS.
 * Доступность через сервис внутри кластера.
 * Поддержка стандартных `Verbs` (`filterVerb = filter`, `prioritizeVerb = prioritize`).
-* Также, предполагается что все подключаемые плагины могут кэшировать информацию об узле (`nodeCacheCapable: true`).
+* Также, предполагается что все подключаемые плагины могут кешировать информацию об узле (`nodeCacheCapable: true`).
 
 Подключить `extender` можно при помощи ресурса [KubeSchedulerWebhookConfiguration](cr.html#kubeschedulerwebhookconfiguration).
 
@@ -1150,7 +1302,7 @@ Kubelet использует клиентский TLS-сертификат (`/va
 1. Найдите утилиту `kubeadm` на master-узле и создайте символьную ссылку c помощью следующей команды:
 
    ```shell
-   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print) /usr/bin/kubeadm
+   ln -s  $(find /var/lib/containerd  -name kubeadm -type f -executable -print -quit) /usr/bin/kubeadm
    ```
 
 2. Обновите сертификаты:

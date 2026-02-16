@@ -114,15 +114,15 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 
 	cloudDiscoveryData := secret.Data["cloud-provider-discovery-data.json"]
 
+	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{"/deckhouse/modules/030-cloud-provider-aws/candi/openapi", "/deckhouse/candi/cloud-providers/aws/openapi"})
+	if err != nil {
+		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
+	}
+
 	metaCfg, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), infrastructureprovider.MetaConfigPreparatorProvider(
 		infrastructureprovider.NewPreparatorProviderParamsWithoutLogger()))
 	if err != nil {
 		return fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
-	}
-
-	_, err = config.ValidateDiscoveryData(&cloudDiscoveryData, []string{})
-	if err != nil {
-		return fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 	}
 
 	var provider Provider
@@ -141,6 +141,14 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		if err := json.Unmarshal(metaCfg.ProviderClusterConfig["tags"], &tags); err != nil {
 			return err
 		}
+	}
+
+	if raw, ok := metaCfg.ProviderClusterConfig["publicNetworkAllowList"]; ok && len(raw) != 0 {
+		var publicNetworkAllowList []string
+		if err := json.Unmarshal(raw, &publicNetworkAllowList); err != nil {
+			return err
+		}
+		input.Values.Set("cloudProviderAws.internal.publicNetworkAllowList", publicNetworkAllowList)
 	}
 
 	input.Values.Set("cloudProviderAws.internal.keyName", discoveryData.KeyName)

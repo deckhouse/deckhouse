@@ -1,14 +1,14 @@
 ---
-title: "ALB средствами NGINX Ingress controller"
+title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/ingress/alb/nginx.html
 lang: ru
 ---
 
-Для реализации ALB средствами [NGINX Ingress controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
+Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
 
 <!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
 
-Модуль `ingress-nginx` устанавливает NGINX Ingress controller и управляет им с помощью кастомных ресурсов.
+Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов кластеров.
 
 Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
@@ -30,7 +30,7 @@ lang: ru
 
 ## Терминация HTTPS
 
-Для каждого экземпляра NGINX Ingress Controller можно настраивать политики безопасности HTTPS, включая:
+Для каждого экземпляра Ingress NGINX Controller можно настраивать политики безопасности HTTPS, включая:
 
 * параметры HSTS;
 * набор доступных версий SSL/TLS и протоколов шифрования.
@@ -248,6 +248,8 @@ metallb:
 
 1. Создайте ресурс MetalLoadBalancerClass:
 
+   > Metallb-балансировщики должны размещаться на тех же узлах, что и ingress-контроллеры. В [типовых сценариях развертывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этого используются frontend-узлы (для развертывания ingress-контроллеров и Metallb-балансировщиков на frontend-узлах используйте в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`).
+
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
    kind: MetalLoadBalancerClass
@@ -258,7 +260,7 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # Cелектор узлов-балансировщиков.
+       node-role.deckhouse.io/frontend: "" # Селектор узлов-балансировщиков.
      type: L2
    ```
 
@@ -277,7 +279,16 @@ metallb:
        annotations:
          # Количество адресов, которые будут выделены из пула, описанного в MetalLoadBalancerClass.
          network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+     nodeSelector:
+       node-role.deckhouse.io/frontend: ""
+     tolerations:
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
    ```
+
+    > При создании ingress-контроллера также можно указать определенные IP-адреса из пула, которые будут ему присвоены. Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`). [Пример использования аннотаций](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула) для присвоения сервису определенных адресов из пула.
 
 Платформа создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
 

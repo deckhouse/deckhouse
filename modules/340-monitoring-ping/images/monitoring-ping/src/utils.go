@@ -26,32 +26,33 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func Summarize(rtts []float64) (min, max, mean, std, sum float64) {
+func Summarize(rtts []float64) (float64, float64, float64, float64, float64) {
 	n := float64(len(rtts))
 	if n == 0 {
 		return 0, 0, 0, 0, 0
 	}
 
-	min = slices.Min(rtts)
-	max = slices.Max(rtts)
+	min := slices.Min(rtts)
+	max := slices.Max(rtts)
 
+	var sum float64
 	for _, v := range rtts {
 		sum += v
 	}
-	mean = sum / n
+	mean := sum / n
 
 	var variance float64
 	for _, v := range rtts {
 		d := v - mean
 		variance += d * d
 	}
-	std = math.Sqrt(variance / n)
+	std := math.Sqrt(variance / n)
 
 	// Sanity check
 	if math.IsNaN(std) {
 		std = 0
 	}
-	return
+	return min, max, mean, std, sum
 }
 
 // GetTargetName returns the name if it's non-empty, otherwise returns the address.

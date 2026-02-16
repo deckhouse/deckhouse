@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -137,7 +138,7 @@ masterNodeGroup:
     # [<ru>] Для получения можете воспользоваться командой:
     # [<ru>] yc compute image list --folder-id standard-images --format json | jq -r '[.[] | select(.family == "ubuntu-2404-lts")] | sort_by(.created_at)[-1].id'
     # [<ru>] Возможно, захотите изменить.
-    imageID: fd85m9q2qspfnsv055rh
+    imageID: fd83ica41cade1mj35sr
     externalIPAddresses:
     - "Auto"
 # [<en>] This subnet will be split into three equal parts; they will serve as a basis for subnets in three Yandex Cloud zones.
@@ -199,9 +200,9 @@ spec:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -245,7 +246,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

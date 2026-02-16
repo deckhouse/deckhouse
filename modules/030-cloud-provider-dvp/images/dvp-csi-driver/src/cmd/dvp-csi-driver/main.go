@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"dvp-csi-driver/internal/config"
 	"flag"
 	"fmt"
 	"os"
@@ -25,6 +24,7 @@ import (
 
 	"k8s.io/klog/v2"
 
+	"dvp-csi-driver/internal/config"
 	dvpcsidriver "dvp-csi-driver/pkg/dvp-csi-driver"
 )
 
@@ -57,6 +57,5 @@ func main() {
 	if err := driver.Run(); err != nil {
 		fmt.Printf("Failed to run driver: %s\n", err.Error())
 		os.Exit(1)
-
 	}
 }

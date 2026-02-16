@@ -19,7 +19,6 @@ package service
 import (
 	"context"
 	"crypto/md5"
-	"dvp-csi-driver/pkg/utils"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -28,12 +27,13 @@ import (
 	"strings"
 
 	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"k8s.io/klog/v2"
 	"k8s.io/utils/mount"
+
+	"dvp-csi-driver/pkg/utils"
 )
 
 type NodeService struct {
@@ -170,7 +170,7 @@ func (n *NodeService) getDevicePath(ctx context.Context, diskName string) (strin
 	_, err = os.Stat(device)
 	if err != nil {
 		msg := fmt.Errorf("device path %s for disk ID %v does not exists", device, diskName)
-		klog.Errorf(msg.Error())
+		klog.Errorf("%s", msg.Error())
 		return "", msg
 	}
 
@@ -210,12 +210,20 @@ func (n *NodeService) NodeUnpublishVolume(
 	_ context.Context,
 	req *csi.NodeUnpublishVolumeRequest,
 ) (*csi.NodeUnpublishVolumeResponse, error) {
+	target := req.GetTargetPath()
+	if target == "" {
+		return nil, status.Error(codes.InvalidArgument, "targetpath not provided")
+	}
+
+	klog.Infof("NodeUnpublishVolume: unmounting %s", target)
+
 	mounter := mount.New("")
-	klog.Infof("Unmounting %s", req.GetTargetPath())
-	err := mounter.Unmount(req.GetTargetPath())
-	if err != nil {
-		klog.Infof("Failed to unmount")
-		return nil, err
+
+	err := mount.CleanupMountPoint(target, mounter, false)
+	if err == nil || strings.Contains(fmt.Sprint(err), "not mounted") {
+		klog.Infof("NodeUnpublishVolume: target %s already unmounted (or not a mount), ignoring: %v", target, err)
+	} else {
+		return nil, status.Errorf(codes.Internal, "failed to unmount target %s: %v", target, err)
 	}
 
 	return &csi.NodeUnpublishVolumeResponse{}, nil

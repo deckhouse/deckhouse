@@ -32,70 +32,28 @@ The choice of platform architecture is described in detail in the [Architecture 
 
 ## Hardware Requirements
 
-### Requirements for the installation machine
+Deckhouse Virtualization Platform has no additional restrictions and is compatible with any hardware supported by the operating systems on which it can be installed.
 
-The Deckhouse installer runs on this machine. It can be an administrator's laptop or any other computer that is not intended to be added to the cluster. Requirements for this machine:
+## Hardware and software requirements
 
-- OS: Windows 10+, macOS 10.15+, Linux (Ubuntu 18.04+, Fedora 35+);
-- Installed Docker Engine or Docker Desktop (instructions for [Ubuntu](https://docs.docker.com/engine/install/ubuntu/), [macOS](https://docs.docker.com/desktop/mac/install/), [Windows](https://docs.docker.com/desktop/windows/install/));
-- HTTPS access to the container image registry `registry.deckhouse.io`;
-- SSH key-based access to the node that will become the cluster **master node**;
-- SSH key-based access to the node that will become the cluster **worker node** (if the cluster will contain more than one master node).
+Hardware requirements for the Deckhouse Virtualization Platform match the requirements for the [Deckhouse Kubernetes Platform](/products/kubernetes-platform/guides/production.html#resource-requirements), with an additional requirement: CPU virtualization support on the hosts where virtual machines will be launched.
 
-### General requirements for physical servers (bare-metal)
+### Additional requirements for virtualization support
 
-All cluster nodes must meet the following baseline hardware requirements:
+On all cluster nodes where virtual machines are planned to be launched, hardware virtualization support must be provided:
 
-- **CPU**:
-  - x86_64 architecture;
-  - Intel-VT (VMX) or AMD-V (SVM) support.
-- **Compatibility**:
-  - The platform has no additional restrictions and can run on any server hardware supported by the selected operating system.
-- **Resources**:
-  - CPU, RAM, and disk must meet the selected cluster architecture (see [minimum requirements](#minimum-platform-requirements));
-  - Fast disk (≥400 IOPS), at least 60 GB capacity;
-  - Additional disks may be required when using SDS.
-- **Operating system** — [from the supported list](#supported-os-for-platform-nodes), Linux kernel version `5.8` or newer.
-- **Software**:
-  - Installed `cloud-init` and `cloud-utils` packages (package names may vary depending on the distribution).
-- **Networking**:
-  - HTTPS access to `registry.deckhouse.io` and OS package repositories;
-  - SSH access from the installation machine on port `22/TCP` (see details in [requirements for the installation machine](#requirements-for-the-installation-machine));
-  - Unique hostname across all cluster nodes.
+- CPU: Support for Intel-VT (VMX) or AMD-V (SVM) instructions.
+- BIOS/UEFI: Hardware virtualization support enabled in the BIOS/UEFI settings.
 
 {% alert level="warning" %}
-The container runtime will be installed automatically, so the `containerd` and/or `docker` packages must not be preinstalled.
-{% endalert %}
+Ensuring the stable operation of live migration mechanisms requires using the same Linux kernel version on all cluster nodes.
 
-#### Additional requirements for master nodes
-
-Master nodes host the cluster control plane components. Minimum resource requirements for master nodes are specified in the [minimum requirements](#minimum-platform-requirements) table.
-
-#### Additional requirements for worker nodes
-
-Worker nodes host virtual machines. Resource requirements depend on the number and size of the planned VMs (see details in the [minimum platform requirements](#minimum-platform-requirements)). If SDS is used, additional dedicated disk space may be required for storage.
-
-### Storage hardware requirements
-
-Depending on the selected storage type, additional resources may be required. For details, see [Storage Management](/products/virtualization-platform/documentation/admin/platform-management/storage/sds/lvm-local.html).
-
-## Supported OS for platform nodes
-
-| Linux distribution | Supported versions  |
-| ------------------ | ------------------- |
-| CentOS             | 7, 8, 9             |
-| Debian             | 10, 11, 12          |
-| Ubuntu             | 20.04, 22.04, 24.04 |
-
-{% alert level="warning" %}
-Ensuring stable operation of live migration mechanisms requires the use of an identical version of the Linux kernel on all cluster nodes.
-
-This is because differences in kernel versions can lead to incompatible interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
+Differences between kernel versions can lead to incompatible interfaces, system calls, and resource handling, which can disrupt the virtual machine migration process.
 {% endalert %}
 
 ## Supported guest operating systems
 
-The virtualization platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
+Deckhouse Virtualization Platform supports operating systems running on `x86` and `x86_64` architectures as guest operating systems. For correct operation in paravirtualization mode, `VirtIO` drivers must be installed to ensure efficient interaction between the virtual machine and the hypervisor.
 
 Successful startup of the operating system is determined by the following criteria:
 
@@ -115,7 +73,7 @@ For Windows family operating systems, the platform supports initialization with 
 
 ## Supported storage systems
 
-Virtual machines use PersistentVolume resources. To manage these resources and allocate disk space within the cluster, one or more supported storage systems must be installed:
+Virtual machine disks are created using PersistentVolume resources. To manage these resources and allocate disk space in the cluster, one or more supported storage systems must be deployed:
 
 | Storage System            | Disk Location             |
 |---------------------------|---------------------------|
@@ -127,3 +85,40 @@ Virtual machines use PersistentVolume resources. To manage these resources and a
 | Huawei Dorado             | External storage          |
 | HPE 3par                  | External storage          |
 | NetApp                    | External storage          |
+
+## Distribution of components across cluster nodes
+
+The distribution of components across cluster nodes depends on the cluster's configuration. For example, a cluster may consist of:
+
+- Only master nodes, for running the control plane and workload components.
+- Only master nodes and worker nodes.
+- Master nodes, system nodes, and worker nodes.
+- Other combinations (depending on the architecture).
+
+{% alert level="warning" %}
+In this context, worker nodes are nodes that do not have taints preventing regular workloads (pods, virtual machines) from running.
+{% endalert %}
+
+The table lists the main components of the `virtualization` module control plane and the nodes where they can be placed. Components are scheduled by priority: if a suitable node type is available in the cluster, the component will be placed on it.
+
+| Component name                | Node group        | Comment                               |
+|-------------------------------|-------------------|---------------------------------------|
+| `cdi-operator-*`              | system/worker     |                                       |
+| `cdi-apiserver-*`             | master            |                                       |
+| `cdi-deployment-*`            | system/worker     |                                       |
+| `virt-api-*`                  | master            |                                       |
+| `virt-controller-*`           | system/worker     |                                       |
+| `virt-operator-*`             | system/worker     |                                       |
+| `virtualization-api-*`        | master            |                                       |
+| `virtualization-controller-*` | master            |                                       |
+| `virtualization-audit-*`      | system/worker     |                                       |
+| `dvcr-*`                      | system/worker     | Storage must be available on the node |
+| `virt-handler-*`              | All cluster nodes |                                       |
+| `vm-route-forge-*`            | All cluster nodes |                                       |
+
+Components used to create and import virtual machine images or disks (they run only for the duration of the creation or import operation):
+
+| Component name | Node group    | Comment |
+|----------------|---------------|---------|
+| `importer-*`   | system/worker |         |
+| `uploader-*`   | system/worker |         |

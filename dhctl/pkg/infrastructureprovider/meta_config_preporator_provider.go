@@ -21,6 +21,7 @@ import (
 	"github.com/name212/govalue"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/dvp"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/validation"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/vcd"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider/cloud/yandex"
@@ -35,9 +36,14 @@ const (
 	DhctlPhaseBootstrap DhctlPhase = "bootstrap"
 )
 
+type PreflightChecks struct {
+	DVPValidateKubeAPI bool
+}
+
 type PreparatorProviderParams struct {
-	logger log.Logger
-	phase  DhctlPhase
+	logger          log.Logger
+	phase           DhctlPhase
+	PreflightChecks PreflightChecks
 }
 
 func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
@@ -46,6 +52,10 @@ func (p *PreparatorProviderParams) WithPhase(phase DhctlPhase) {
 
 func (p *PreparatorProviderParams) WithPhaseBootstrap() {
 	p.WithPhase(DhctlPhaseBootstrap)
+}
+
+func (p *PreparatorProviderParams) WithPreflightChecks(checks PreflightChecks) {
+	p.PreflightChecks = checks
 }
 
 func NewPreparatorProviderParams(logger log.Logger) PreparatorProviderParams {
@@ -84,6 +94,12 @@ func MetaConfigPreparatorProvider(params PreparatorProviderParams) config.MetaCo
 				PrepareMetaConfig:     true,
 				ValidateClusterPrefix: true,
 			}, logger)
+		case dvp.ProviderName:
+			prep := dvp.NewMetaConfigPreparator().WithLogger(logger)
+			if params.phase != DhctlPhaseBootstrap {
+				return prep
+			}
+			return prep.EnableValidateKubeConfig(params.PreflightChecks.DVPValidateKubeAPI)
 		default:
 			return &defaultCloudOnlyPrefixValidatorPreparator{}
 		}

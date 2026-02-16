@@ -118,6 +118,23 @@ func (l *LeaseLock) Lock(ctx context.Context, force bool) error {
 	return nil
 }
 
+func (l *LeaseLock) IsLocked(ctx context.Context, checkStillLocked bool) (bool, error) {
+	lease, err := l.getter.KubeClient().CoordinationV1().Leases(l.config.Namespace).Get(ctx, l.config.Name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("Can't get current lease %v", err)
+	}
+
+	if !checkStillLocked {
+		return true, nil
+	}
+
+	return l.isStillLocked(lease), nil
+}
+
 func (l *LeaseLock) Unlock(ctx context.Context) {
 	l.lockLease.Lock()
 	defer l.lockLease.Unlock()
@@ -137,7 +154,7 @@ func (l *LeaseLock) Unlock(ctx context.Context) {
 		return err
 	})
 	if err != nil {
-		log.Errorf("Error while Unlock lease %v", err)
+		log.Error("Error while Unlock lease %v", err)
 	}
 
 	l.lease = nil
@@ -159,7 +176,9 @@ func (l *LeaseLock) startAutoRenew(ctx context.Context) {
 		case <-l.exitRenewCh:
 			return
 		case <-t.C:
+			l.lockLease.Lock()
 			lease, err := l.tryRenew(ctx, l.lease, true)
+			l.lockLease.Unlock()
 			if err == nil {
 				l.lease = lease
 				continue
@@ -207,14 +226,14 @@ func (l *LeaseLock) tryAcquire(ctx context.Context, force bool) (*coordinationv1
 	return lease, err
 }
 
-func (l *LeaseLock) createLease(ctx context.Context) (lease *coordinationv1.Lease, err error) {
+func (l *LeaseLock) createLease(ctx context.Context) (*coordinationv1.Lease, error) {
 	userInfo := NewLockUserInfo(l.config.AdditionalUserInfo)
 	userInfoStr, err := json.Marshal(userInfo)
 	if err != nil {
 		userInfoStr = nil
 	}
 
-	lease = &coordinationv1.Lease{
+	lease := &coordinationv1.Lease{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: l.config.Name,
 			Annotations: map[string]string{
@@ -237,6 +256,10 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 		return nil, fmt.Errorf("Lease is nil")
 	}
 
+	if lease.Spec.HolderIdentity == nil {
+		return nil, fmt.Errorf("Lease holder identity is nil")
+	}
+
 	if *lease.Spec.HolderIdentity != l.config.Identity {
 		return nil, getCurrentLockerError(lease)
 	}
@@ -246,7 +269,11 @@ func (l *LeaseLock) tryRenew(ctx context.Context, lease *coordinationv1.Lease, f
 			return nil, getCurrentLockerError(lease)
 		}
 
-		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", lease.Spec.RenewTime.Time.String()))
+		renewTime := "nil"
+		if lease.Spec.RenewTime != nil {
+			renewTime = lease.Spec.RenewTime.Time.String()
+		}
+		log.Warn("Lease finished, try to renew lease", slog.String("identity", l.config.Identity), slog.String("renew_time", renewTime))
 	}
 
 	var newLease *coordinationv1.Lease
@@ -355,7 +382,7 @@ func RemoveLease(ctx context.Context, kubeCl *client.KubernetesClient, config *L
 		return err
 	}
 
-	log.Infof("Starting remove lease lock")
+	log.Info("Starting remove lease lock")
 
 	err = retry.NewSilentLoop("release lease", 5, config.RetryWaitDuration).RunContext(ctx, func() error {
 		err := leasesCl.Delete(ctx, lease.Name, metav1.DeleteOptions{})

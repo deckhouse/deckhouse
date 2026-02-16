@@ -1,4 +1,5 @@
-{{- $version := "ef0c2c1c47c6aa6afb0d08f4a2488d7df004c2f7" }}
+{{- $version := include "get_oss_version_by_id" (list "descheduler" $ ) }}
+{{- $version = printf "v%s" $version }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
 fromImage: common/src-artifact
@@ -54,3 +55,7 @@ git:
 imageSpec:
   config:
     entrypoint: ["/descheduler"]
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
+
+

@@ -19,7 +19,7 @@
         description: |-
           The `prometheus-longterm` component is used to display historical monitoring data and is not crucial.
           However, its extended downtime may prevent access to statistics.
-          
+
           This issue is often caused by problems with disk availability. For example, if the disk cannot be mounted to a Node.
 
           Troubleshooting steps:
@@ -27,19 +27,19 @@
           1. Check the StatefulSet status:
 
              ```shell
-             kubectl -n d8-monitoring describe statefulset prometheus-longterm
+             d8 k -n d8-monitoring describe statefulset prometheus-longterm
              ```
 
           2. Inspect the PersistentVolumeClaim (if used):
 
              ```shell
-             kubectl -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
+             d8 k -n d8-monitoring describe pvc prometheus-longterm-db-prometheus-longterm-0
              ```
 
           3. Inspect the Pod's state:
 
              ```shell
-             kubectl -n d8-monitoring describe pod prometheus-longterm-0
+             d8 k -n d8-monitoring describe pod prometheus-longterm-0
              ```
 {{- end }}
 
@@ -61,7 +61,7 @@
         description: |-
           The following modules use the Trickster component:
 
-          * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+          * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
           * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
           * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -70,13 +70,13 @@
           1. Inspect the Deployment's stats:
 
              ```shell
-             kubectl -n d8-monitoring describe deployment trickster
+             d8 k -n d8-monitoring describe deployment trickster
              ```
 
           2. Inspect the Pod's stats:
 
              ```shell
-             kubectl -n d8-monitoring describe pod -l app=trickster
+             d8 k -n d8-monitoring describe pod -l app=trickster
              ```
 
           3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -84,7 +84,7 @@
              Make sure Prometheus is running:
 
              ```shell
-             kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+             d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
              ```
 
     - alert: D8TricksterTargetAbsent
@@ -105,7 +105,7 @@
         description: |-
           The following modules use the Trickster component:
 
-          * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `kubectl`.
+          * `prometheus-metrics-adapter`: Its unavailability means horizontal pod autoscaling (HPA) is not working, and you cannot view resource consumption using `d8 k`.
           * `vertical-pod-autoscaler`: Short-term unavailability for this module is tolerable, as VPA looks at the consumption history for 8 days.
           * `grafana`: All dashboards use Trickster by default to cache Prometheus queries. You can retrieve data directly from Prometheus (bypassing the Trickster). However, this may lead to high memory usage by Prometheus and cause unavailability.
 
@@ -114,13 +114,13 @@
           1. Inspect the Deployment's stats:
 
              ```shell
-             kubectl -n d8-monitoring describe deployment trickster
+             d8 k -n d8-monitoring describe deployment trickster
              ```
 
           2. Inspect the Pod's stats:
 
              ```shell
-             kubectl -n d8-monitoring describe pod -l app=trickster
+             d8 k -n d8-monitoring describe pod -l app=trickster
              ```
 
           3. Trickster often becomes unavailable due to Prometheus issues, since its `readinessProbe` depends on Prometheus being accessible.
@@ -128,5 +128,40 @@
              Make sure Prometheus is running:
 
              ```shell
-             kubectl -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
+             d8 k -n d8-monitoring describe pod -l app.kubernetes.io/name=prometheus,prometheus=main
              ```
+
+    - alert: D8PrometheusConfigReloadFailed
+      expr: prometheus_config_last_reload_successful{job="prometheus", service="prometheus", namespace="d8-monitoring"} == 0
+      for: 10m
+      labels:
+        severity_level: "5"
+        tier: cluster
+        d8_module: prometheus
+        d8_component: prometheus
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        plk_grouped_by__d8_prometheus_malfunctioning: "D8PrometheusMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+        summary: >
+          Prometheus configuration reload failed.
+        description: |-
+          The Prometheus configuration reload has failed in the `d8-monitoring` namespace.
+
+          This usually happens when:
+          - Invalid scrape configuration (e.g., from ServiceMonitor/PodMonitor resources).
+          - Invalid RemoteWrite configuration.
+
+          Prometheus will continue running with the old configuration, but new rules, targets, or remote write endpoints will not be active.
+          Troubleshooting steps:
+
+          1. Check the Prometheus container logs for configuration errors:
+
+             ```shell
+             d8 k -n d8-monitoring logs prometheus-main-0 -c prometheus
+             ```
+
+          2. If using remote write, verify the remote write configuration.
+
+          Note: In HA configurations with multiple Prometheus replicas, check prometheus-main-1 logs as well.

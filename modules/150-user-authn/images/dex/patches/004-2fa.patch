@@ -137,7 +137,7 @@ index 463751ed..a4a1f2cb 100644
  github.com/prometheus/client_golang v1.23.0/go.mod h1:i/o0R9ByOnHX0McrTMTyhYvKE4haaf2mW08I+jGAjEE=
  github.com/prometheus/client_model v0.6.2 h1:oBsgwpGs7iVziMvrGhE53c/GrLUsZdHnqNwqPLxwZyk=
 diff --git a/server/handlers.go b/server/handlers.go
-index 93266b8d..17688448 100644
+index 93266b8d..92dfe993 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
 @@ -11,7 +11,6 @@ import (
@@ -160,7 +160,7 @@ index 93266b8d..17688448 100644
  		return a, nil
  	}
  	if err := s.storage.UpdateAuthRequest(ctx, authReq.ID, updater); err != nil {
-@@ -558,63 +562,81 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -558,52 +562,62 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		"connector_id", authReq.ConnectorID, "username", claims.Username,
  		"preferred_username", claims.PreferredUsername, "email", email, "groups", claims.Groups)
  
@@ -233,10 +233,22 @@ index 93266b8d..17688448 100644
  		}
  	}
  
+-	// we can skip the redirect to /approval and go ahead and send code if it's not required
+-	if s.skipApproval && !authReq.ForceApprovalPrompt {
 +	// Update existing OfflineSession obj with new RefreshTokenRef.
 +	if err := s.storage.UpdateOfflineSessions(ctx, identity.UserID, authReq.ConnectorID, func(old storage.OfflineSessions) (storage.OfflineSessions, error) {
 +		if len(identity.ConnectorData) > 0 {
 +			old.ConnectorData = identity.ConnectorData
++		}
++		// If 2FA was enabled after OfflineSessions creation, existing users may have empty TOTP.
++		// Populate it to avoid broken login flows.
++		if old.TOTP == "" && s.totp.enabledForConnector(authReq.ConnectorID) {
++			generated, err := s.totp.generate(authReq.ConnectorID, identity.Email)
++			if err != nil {
++				s.logger.ErrorContext(ctx, "failed to generate totp for offline session", "err", err)
++				return old, err
++			}
++			old.TOTP = generated.String()
 +		}
 +		return old, nil
 +	}); err != nil {
@@ -244,26 +256,23 @@ index 93266b8d..17688448 100644
 +		return "", false, err
 +	}
 +
- 	// we can skip the redirect to /approval and go ahead and send code if it's not required
- 	if s.skipApproval && !authReq.ForceApprovalPrompt {
++	// we can skip the redirect to /approval and /totp and go ahead and send code if it's not required
++	if s.skipApproval && !authReq.ForceApprovalPrompt && !s.totp.enabledForConnector(authReq.ConnectorID) {
  		return "", true, nil
  	}
  
-+	// we can skip the redirect to /approval and /totp and go ahead and send code if it's not required
-+	if s.skipApproval && !authReq.ForceApprovalPrompt && !s.totp.enabledForConnector(authReq.ConnectorID) {
-+		return "", true, nil
-+	}
-+
- 	// an HMAC is used here to ensure that the request ID is unpredictable, ensuring that an attacker who intercepted the original
- 	// flow would be unable to poll for the result at the /approval endpoint
- 	h := hmac.New(sha256.New, authReq.HMACKey)
+@@ -613,8 +627,25 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  	h.Write([]byte(authReq.ID))
  	mac := h.Sum(nil)
  
 -	returnURL := path.Join(s.issuerURL.Path, "/approval") + "?req=" + authReq.ID + "&hmac=" + base64.RawURLEncoding.EncodeToString(mac)
 -	return returnURL, false, nil
 +	// Deep copy issuer URL to avoid modifying the global one.
-+	returnURL, _ := url.Parse(s.issuerURL.String())
++	returnURL, err := url.Parse(s.issuerURL.String())
++	if err != nil {
++		s.logger.ErrorContext(ctx, "failed to parse issuer URL", "err", err)
++		return "", false, err
++	}
 +	values := returnURL.Query()
 +	values.Set("req", authReq.ID)
 +	values.Set("hmac", base64.RawURLEncoding.EncodeToString(mac))
@@ -280,15 +289,32 @@ index 93266b8d..17688448 100644
  }
  
  func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
-@@ -636,7 +658,7 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
- 		s.renderError(r, w, http.StatusInternalServerError, "Database error.")
+@@ -652,6 +683,25 @@ func (s *Server) handleApproval(w http.ResponseWriter, r *http.Request) {
  		return
  	}
--	if !authReq.LoggedIn {
-+	if !authReq.LoggedIn || !authReq.TOTPValidated {
- 		s.logger.ErrorContext(r.Context(), "auth request does not have an identity for approval")
- 		s.renderError(r, w, http.StatusInternalServerError, "Login process not yet finalized.")
- 		return
+ 
++	// If 2FA was enabled after AuthRequest creation, users can end up on /approval with TOTPValidated=false.
++	// Redirect them to /totp to complete 2FA.
++	if s.totp.enabledForConnector(authReq.ConnectorID) && !authReq.TOTPValidated {
++		returnURL, err := url.Parse(s.issuerURL.String())
++		if err != nil {
++			s.logger.ErrorContext(r.Context(), "failed to parse issuer URL", "err", err)
++			s.renderError(r, w, http.StatusInternalServerError, "Internal server error.")
++			return
++		}
++		values := returnURL.Query()
++		values.Set("req", authReq.ID)
++		values.Set("hmac", macEncoded)
++		values.Set("state", authReq.Claims.UserID)
++		returnURL = returnURL.JoinPath("totp")
++		returnURL.RawQuery = values.Encode()
++		http.Redirect(w, r, returnURL.String(), http.StatusSeeOther)
++		return
++	}
++
+ 	switch r.Method {
+ 	case http.MethodGet:
+ 		client, err := s.storage.GetClient(ctx, authReq.ClientID)
 diff --git a/server/server.go b/server/server.go
 index 90b1c076..97450af1 100644
 --- a/server/server.go

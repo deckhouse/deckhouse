@@ -25,6 +25,10 @@ type FakeDeckhouseV1alpha2 struct {
 	*testing.Fake
 }
 
+func (c *FakeDeckhouseV1alpha2) Modules() v1alpha2.ModuleInterface {
+	return newFakeModules(c)
+}
+
 func (c *FakeDeckhouseV1alpha2) ModulePullOverrides() v1alpha2.ModulePullOverrideInterface {
 	return newFakeModulePullOverrides(c)
 }

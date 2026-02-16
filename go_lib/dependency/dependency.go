@@ -111,7 +111,7 @@ func (dc *dependencyContainer) GetEtcdClient(endpoints []string, options ...etcd
 
 	cli, err := etcd.New(endpoints, options...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new: %w", err)
 	}
 
 	return cli, nil
@@ -133,7 +133,7 @@ func (dc *dependencyContainer) GetK8sClient(options ...k8s.Option) (k8s.Client, 
 	if dc.k8sClient == nil {
 		kc, err := k8s.NewClient(options...)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("new client: %w", err)
 		}
 
 		dc.k8sClient = kc
@@ -162,7 +162,7 @@ func (dc *dependencyContainer) GetRegistryClient(repo string, options ...cr.Opti
 
 	client, err := cr.NewClient(repo, options...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new client: %w", err)
 	}
 
 	return client, nil
@@ -175,7 +175,7 @@ func (dc *dependencyContainer) GetVsphereClient(config *vsphere.ProviderClusterC
 
 	client, err := vsphere.NewClient(config)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("new client: %w", err)
 	}
 
 	dc.vsphereClient = client
@@ -189,7 +189,7 @@ func (dc *dependencyContainer) GetClientConfig() (*rest.Config, error) {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("in cluster config: %w", err)
 	}
 
 	caCert, err := os.ReadFile(config.TLSClientConfig.CAFile)

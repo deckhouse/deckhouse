@@ -17,9 +17,6 @@ import (
 	"strings"
 	"time"
 
-	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/vmware/govmomi"
 	"github.com/vmware/govmomi/cns"
 	"github.com/vmware/govmomi/cns/types"
@@ -27,7 +24,10 @@ import (
 	"github.com/vmware/govmomi/vim25"
 	"github.com/vmware/govmomi/vim25/soap"
 
+	v1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency/vsphere"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
@@ -175,6 +175,11 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		}
 	}
 
+	err := d.vsphereClient.RefreshClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to refresh vSphere client: %v", err)
+	}
+
 	zonesDatastores, err := d.vsphereClient.GetZonesDatastores()
 	if err != nil {
 		return nil, fmt.Errorf("error on GetZonesDatastores: %v", err)
@@ -204,7 +209,7 @@ func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryDa
 		return nil, fmt.Errorf("failed to marshal discovery data: %w", err)
 	}
 
-	d.logger.Debug("discovery data:", "discoveryDataJSON", discoveryDataJSON)
+	d.logger.Debug("discovery data:", "discovery_data_json", discoveryDataJSON)
 	return discoveryDataJSON, nil
 }
 

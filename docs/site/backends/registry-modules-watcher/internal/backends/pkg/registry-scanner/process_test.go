@@ -36,6 +36,49 @@ import (
 	"registry-modules-watcher/internal/backends/pkg/registry-scanner/cache"
 )
 
+func TestGetMetadataFromImage(t *testing.T) {
+	t.Run("parses module.yaml with critical=true", func(t *testing.T) {
+		image := createMockImageWithModuleYaml("1.2.3", "name: test-module\ncritical: true\n")
+
+		metadata, err := getMetadataFromImage(image)
+
+		assert.NoError(t, err)
+		assert.Equal(t, "1.2.3", metadata.Version)
+		assert.True(t, metadata.ModuleDefinitionFound)
+		assert.True(t, metadata.ModuleCritical)
+	})
+
+	t.Run("parses module.yaml with critical=false", func(t *testing.T) {
+		image := createMockImageWithModuleYaml("1.2.3", "name: test-module\ncritical: false\n")
+
+		metadata, err := getMetadataFromImage(image)
+
+		assert.NoError(t, err)
+		assert.True(t, metadata.ModuleDefinitionFound)
+		assert.False(t, metadata.ModuleCritical)
+	})
+
+	t.Run("parses module.yaml without critical field", func(t *testing.T) {
+		image := createMockImageWithModuleYaml("1.2.3", "name: test-module\n")
+
+		metadata, err := getMetadataFromImage(image)
+
+		assert.NoError(t, err)
+		assert.True(t, metadata.ModuleDefinitionFound)
+		assert.False(t, metadata.ModuleCritical) // defaults to false
+	})
+
+	t.Run("handles missing module.yaml", func(t *testing.T) {
+		image := createMockImageWithModuleYaml("1.2.3", "")
+
+		metadata, err := getMetadataFromImage(image)
+
+		assert.NoError(t, err)
+		assert.False(t, metadata.ModuleDefinitionFound)
+		assert.False(t, metadata.ModuleCritical)
+	})
+}
+
 func Test_RegistryScannerProcess(t *testing.T) {
 	t.Run("processes initial registry data", func(t *testing.T) {
 		mc := minimock.NewController(t)
@@ -309,6 +352,34 @@ func createMockImage(hex, version string) *crfake.FakeImage {
 				FilesContent: map[string]string{
 					"version.json": `{"version":"` + version + `"}`,
 				},
+			}}, nil
+		},
+	}
+}
+
+func createMockImageWithModuleYaml(version, moduleYamlContent string) *crfake.FakeImage {
+	filesContent := map[string]string{
+		"version.json": `{"version":"` + version + `"}`,
+	}
+	if moduleYamlContent != "" {
+		filesContent["module.yaml"] = moduleYamlContent
+	}
+
+	return &crfake.FakeImage{
+		DigestStub: func() (v1.Hash, error) {
+			return v1.Hash{
+				Algorithm: "sha256",
+				Hex:       "test",
+			}, nil
+		},
+		ManifestStub: func() (*v1.Manifest, error) {
+			return &v1.Manifest{
+				Layers: []v1.Descriptor{},
+			}, nil
+		},
+		LayersStub: func() ([]v1.Layer, error) {
+			return []v1.Layer{&FakeLayer{
+				FilesContent: filesContent,
 			}}, nil
 		},
 	}

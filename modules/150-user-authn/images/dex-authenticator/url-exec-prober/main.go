@@ -36,7 +36,7 @@ func main() {
 	customTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	client := &http.Client{Transport: customTransport}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		log.Fatalf("Failed to create request: %v", err)
 	}
@@ -45,9 +45,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to send request: %v", err)
 	}
-	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+	resp.Body.Close()
 	if err != nil {
 		log.Fatalf("Failed to read response: %v", err)
 	}

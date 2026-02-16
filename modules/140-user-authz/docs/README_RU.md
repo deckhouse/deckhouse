@@ -83,7 +83,7 @@ Manage-роль определяет права на доступ:
 
 ### Подсистемы ролевой модели
 
-Каждый модуль DKP принадлежит определённой подсистемы. Для каждой подсистемы существует набор ролей с разными уровнями доступа. Роли обновляются автоматически при включении или отключении модуля.
+Каждый модуль DKP принадлежит определённой подсистеме. Для каждой подсистемы существует набор ролей с разными уровнями доступа. Роли обновляются автоматически при включении или отключении модуля.
 
 Например, для подсистемы `networking` существуют следующие manage-роли, которые можно использовать в `ClusterRoleBinding`:
 
@@ -224,6 +224,10 @@ create,patch,update:
 delete,deletecollection:
     - apps/replicasets
     - extensions/replicasets
+read-write:
+    - deckhouse.io/authorizationrules
+    - rbac.authorization.k8s.io/rolebindings
+    - rbac.authorization.k8s.io/roles
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):

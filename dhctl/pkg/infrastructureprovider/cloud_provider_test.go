@@ -42,7 +42,7 @@ import (
 
 const (
 	yandexTestLayout    = "without-nat"
-	yandexPluginVersion = "0.83.0"
+	yandexPluginVersion = "0.174.0"
 
 	gcpTestLayout    = "without-nat"
 	gcpPluginVersion = "3.48.0"
@@ -181,7 +181,7 @@ func TestCloudProviderGet(t *testing.T) {
 	testName := "TestCloudProviderGet"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	getMetaConfig := func(t *testing.T, providerName, layout string) *config.MetaConfig {
@@ -292,7 +292,7 @@ func TestDefaultCloudProvidersCache(t *testing.T) {
 	testName := "TestDefaultCloudProvidersCache"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	getMetaConfig := func(t *testing.T, providerName, layout string) *config.MetaConfig {
@@ -450,7 +450,7 @@ func TestCloudProviderWithTofuExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTofuExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -586,7 +586,7 @@ func TestCloudProviderWithTerraformExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTerraformExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -722,7 +722,7 @@ func TestCloudProviderWithTofuOutputExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTofuOutputExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -760,7 +760,7 @@ func TestCloudProviderWithTerraformOutputExecutorGetting(t *testing.T) {
 	testName := "TestCloudProviderWithTerraformOutputExecutorGetting"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -798,7 +798,7 @@ func TestTofuInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTofuInitAndPlanWithCreatingWorkerFilesInRoot"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -861,7 +861,7 @@ func TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTerraformInitAndPlanWithCreatingWorkerFilesInRoot"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -924,7 +924,7 @@ func TestTofuApplyWithCreatingWorkerFilesInRoot(t *testing.T) {
 	testName := "TestTofuApplyWithCreatingWorkerFilesInRoot"
 
 	if os.Getenv("SKIP_PROVIDER_TEST") == "true" {
-		t.Skip(fmt.Sprintf("Skipping %s test", testName))
+		t.Skipf("Skipping %s test", testName)
 	}
 
 	params := getTestCloudProviderGetterParams(t, testName)
@@ -1528,7 +1528,7 @@ func provideTestMetaConfig(t *testing.T, params testProvideMetaConfigParams) *co
 	configPath := os.Getenv(params.env)
 
 	if configPath == "" {
-		t.Skip(fmt.Sprintf("Skipping %s test. Use %s for provide configuration", params.testName, params.env))
+		t.Skipf("Skipping %s test. Use %s for provide configuration", params.testName, params.env)
 	}
 
 	stat, err := os.Stat(configPath)
@@ -1620,10 +1620,37 @@ type executorTestInitParams struct {
 	pluginVersion string
 }
 
+func testFindDirWithPrefix(t *testing.T, root, prefix string) string {
+	found := ""
+	err := filepath.Walk(root, func(p string, info os.FileInfo, err error) error {
+		if found != "" {
+			return nil
+		}
+
+		require.NoError(t, err, p)
+
+		// Process only dirs
+		if !info.IsDir() {
+			return nil
+		}
+
+		if strings.HasPrefix(path.Base(p), prefix) {
+			found = p
+		}
+
+		return nil
+	})
+
+	require.NoError(t, err)
+
+	return found
+}
+
 func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T, params executorTestInitParams) {
 	t.Helper()
 
 	require.False(t, govalue.IsNil(params.provider))
+	require.False(t, govalue.IsNil(params.params.Logger))
 	require.NotEmpty(t, params.step)
 	require.NotEmpty(t, params.layout)
 	require.NotEmpty(t, params.pluginsDir)
@@ -1632,7 +1659,10 @@ func asserProviderDirContainsWorkingFilesAndSourcesNotContainsLock(t *testing.T,
 
 	infraRoot := filepath.Join(params.provider.RootDir(), params.pluginVersion)
 
-	tmp := filepath.Join(infraRoot, "tf_dhctl")
+	tmp := testFindDirWithPrefix(t, infraRoot, "tf_")
+	require.NotEmpty(t, tmp)
+
+	params.params.Logger.LogInfoF("Found tmp dir %s\n", tmp)
 
 	assertIsNotEmptyDir(t, tmp)
 	assertPluginsPresent(t, path.Join(tmp, "providers"), params.pluginsDir, params.params.FSDIParams.PluginsDir)
@@ -1746,6 +1776,7 @@ func assertTerraformDirNotExistsInHomeAndPresentInInfraRoot(t *testing.T, params
 			"terraform-modules",
 			"registry.terraform.io",
 			"registry.opentofu.org",
+			"terraform_versions.yml",
 			infraBin,
 		}
 

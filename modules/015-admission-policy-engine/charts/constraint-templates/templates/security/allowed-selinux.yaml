@@ -59,17 +59,94 @@ spec:
 
               # Disallow top-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 has_field(input.review.object.spec.securityContext, "seLinuxOptions")
                 not allowed_by_any_seLinuxOptions(input.review.object.spec.securityContext.seLinuxOptions)
-                msg := sprintf("SELinux options are not allowed, pod: %v. Allowed options: %v", [input.review.object.metadata.name, input.parameters.allowedSELinuxOptions])
+                actual_value := sprintf("Actual SELinux options: %v", [input.review.object.spec.securityContext.seLinuxOptions])
+                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
+                exception_allowed := exception_allowed_selinux_value
+                msg := build_selinux_message(input.review.object.metadata.name, "", actual_value, allowed_by_policy, exception_allowed)
               }
 
               # Disallow container-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 c := input_security_context[_]
                 has_field(c.securityContext, "seLinuxOptions")
                 not allowed_by_any_seLinuxOptions(c.securityContext.seLinuxOptions)
-                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. Allowed options: %v", [input.review.object.metadata.name, c.name, input.parameters.allowedSELinuxOptions])
+                actual_value := sprintf("Actual SELinux options: %v", [c.securityContext.seLinuxOptions])
+                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
+                exception_allowed := exception_allowed_selinux_value
+                msg := build_selinux_message(input.review.object.metadata.name, c.name, actual_value, allowed_by_policy, exception_allowed)
+              }
+
+              exception_allowed_selinux_value := out if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
+                allowed_options := exception.spec.securityContext.seLinuxOptions.allowedValues
+                out := sprintf("SecurityPolicyException allowed options: %v", [allowed_options])
+              }
+
+              exception_allowed_selinux_value := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "seLinuxOptions")
+              }
+
+              exception_allowed_selinux_value := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                not has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
+              }
+
+              build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                container_name != ""
+                exception_allowed != ""
+                msg := sprintf("SELinux options are not allowed, pod: %v, container %v.\n%v\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                container_name != ""
+                exception_allowed == ""
+                msg := sprintf("SELinux options are not allowed, pod: %v, container %v.\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy])
+              }
+
+              build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                container_name == ""
+                exception_allowed != ""
+                msg := sprintf("SELinux options are not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_selinux_message(pod_name, container_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
+                container_name == ""
+                exception_allowed == ""
+                msg := sprintf("SELinux options are not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any_seLinuxOptions(options) if {
@@ -84,6 +161,9 @@ spec:
                 label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := input.review.object.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "seLinuxOptions")
+                has_field(exception.spec.securityContext.seLinuxOptions, "allowedValues")
                 exception_params := exception.spec.securityContext.seLinuxOptions.allowedValues[_]
                 seLinuxOptions_fields_allowed(options, exception_params)
               }
@@ -110,6 +190,18 @@ spec:
 
               field_allowed(field, options, params) if {
                 not has_field(options, field)
+              }
+
+              # If level is empty in constraint, allow any level value
+              field_allowed(field, options, params) if {
+                field == "level"
+                not has_field(params, field)
+              }
+
+              field_allowed(field, options, params) if {
+                field == "level"
+                has_field(params, field)
+                params[field] == ""
               }
 
               input_security_context contains c if {

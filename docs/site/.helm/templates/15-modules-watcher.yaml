@@ -74,7 +74,7 @@ metadata:
     prometheus.deckhouse.io/custom-target: registry-modules-watcher
     app.kubernetes.io/part-of: deckhouse-docs
   annotations:
-    prometheus.deckhouse.io/sample-limit: "10000"
+    prometheus.deckhouse.io/sample-limit: "15000"
 spec:
   clusterIP: None
   selector:
@@ -121,7 +121,7 @@ metadata:
 {{- if eq $.Values.web.env "web-production" }}
   name: registry-modules-watcher
 {{- else }}
-  name: registry-modules-watcher-{{ .Release.Namespace }} 
+  name: registry-modules-watcher-{{ .Release.Namespace }}
 {{- end }}
 spec:
   folder: Custom
@@ -142,4 +142,4 @@ spec:
   definition: |
 {{ tpl (.Files.Get "dashboards/modules-validation.yaml") . | indent 4 }}
 {{- end }}
-{{- end }} 
+{{- end }}

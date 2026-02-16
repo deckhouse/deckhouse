@@ -23,15 +23,14 @@ import (
 	"syscall"
 	"time"
 
-	"registry-packages-proxy/internal/app"
-	"registry-packages-proxy/internal/credentials"
-
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/proxy"
 	"github.com/deckhouse/deckhouse/go_lib/registry-packages-proxy/registry"
+
+	"registry-packages-proxy/internal/app"
+	"registry-packages-proxy/internal/credentials"
 )
 
 func main() {
-
 	config, err := app.InitFlags()
 	if err != nil {
 		fmt.Println(err)
@@ -82,7 +81,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-    go rp.Serve(&proxy.Config{SignCheck: config.SignCheck})
+	go rp.Serve(&proxy.Config{SignCheck: config.SignCheck})
 
 	<-ctx.Done()
 

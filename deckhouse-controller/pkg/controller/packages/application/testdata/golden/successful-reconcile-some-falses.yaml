@@ -3,30 +3,52 @@ apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
   creationTimestamp: null
+  finalizers:
+  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
-  resourceVersion: "4"
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.2
+    uid: ""
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackage
+    name: test
+    uid: ""
+  resourceVersion: "3"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.2
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Reconciled
     status: "True"
     type: Processed
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    message: A newer version v1.0.2 is available.
-    reason: NewerVersionAvailable
-    status: "False"
-    type: UpdateAvailable
-  internalConditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: UpdateNotified
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  creationTimestamp: null
+  labels:
+    heritage: deckhouse
+  name: test
+  resourceVersion: "2"
+status:
+  availableRepositories:
+  - deckhouse
+  usedBy:
+  - name: test-app
+    namespace: foobar
+    version: v1.0.2
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
@@ -36,11 +58,11 @@ metadata:
     packages.deckhouse.io/package: test
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.2
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test
-  packageRepository: deckhouse
-  version: v1.0.2
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.2
 status:
   conditions:
   - lastProbeTime: null
@@ -56,8 +78,10 @@ status:
       deckhouse: '>=1.0.0'
       kubernetes: '>=1.26'
     stage: Preview
-  packageName: test
-  version: v1.0.2
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

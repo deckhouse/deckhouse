@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: cluster.local
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Settings for the bootstrapping the Deckhouse cluster
 # [<en>] https://deckhouse.io/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration
@@ -135,7 +136,7 @@ masterNodeGroup:
     # [<ru>] Как найти URN: https://learn.microsoft.com/en-us/azure/virtual-machines/linux/cli-ps-findimage
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    urn: Canonical:0001-com-ubuntu-server-jammy:22_04-lts:22.04.202212140
+    urn: Canonical:ubuntu-24_04-lts:server:latest
     enableExternalIP: true
 provider:
   # [<en>] Subscription ID.
@@ -201,9 +202,9 @@ spec:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -247,7 +248,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

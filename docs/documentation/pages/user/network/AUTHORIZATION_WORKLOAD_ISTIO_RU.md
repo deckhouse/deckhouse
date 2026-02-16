@@ -1,5 +1,6 @@
 ---
-title: "Управление авторизацией и доступом к workload c Istio"
+title: "Управление авторизацией и доступом к нагрузке c Istio"
+description: "Управление авторизацией и контролем доступа к workload в Deckhouse Kubernetes Platform с использованием Istio. Настройка AuthorizationPolicy с политиками ALLOW и DENY для контроля трафика."
 permalink: ru/user/network/authorization-workload-istio.html
 lang: ru
 ---

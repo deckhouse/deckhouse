@@ -1,0 +1,126 @@
+{{- if (.Values.global.enabledModules | has "cni-cilium") }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-local-dns-safe-updater
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: node-local-dns-safe-updater-leader-election
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "watch", "list", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: node-local-dns-safe-updater-leader-election
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: node-local-dns-safe-updater
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: node-local-dns-safe-updater-leader-election
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: kube-system
+  name: node-local-dns-safe-updater
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "watch", "get", "delete"]
+  - apiGroups: ["apps"]
+    resources: ["controllerrevisions"]
+    verbs: ["list", "watch", "get"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["list", "watch", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: kube-system
+  name: node-local-dns-safe-updater
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: node-local-dns-safe-updater
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: node-local-dns-safe-updater
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: d8-cni-cilium
+  name: node-local-dns-safe-updater
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["list", "watch", "get"]
+  - apiGroups: ["apps"]
+    resources: ["controllerrevisions"]
+    verbs: ["list", "watch", "get"]
+  - apiGroups: ["apps"]
+    resources: ["daemonsets"]
+    verbs: ["list", "watch", "get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: d8-cni-cilium
+  name: node-local-dns-safe-updater
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: node-local-dns-safe-updater
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: node-local-dns-safe-updater
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: kube-system
+  name: node-local-dns-safe-updater-events
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+rules:
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create", "patch", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: kube-system
+  name: node-local-dns-safe-updater-events
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-local-dns-safe-updater")) | nindent 2 }}
+subjects:
+  - kind: ServiceAccount
+    name: node-local-dns-safe-updater
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: node-local-dns-safe-updater-events
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

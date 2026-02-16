@@ -92,9 +92,15 @@ func (c *DeployTimeService) ProcessMinorReleaseDeployTime(release v1alpha1.Relea
 }
 
 type DeployTimeResult struct {
-	ReleaseApplyTime      time.Time
+	// ReleaseApplyTime is the final deploy time, including all delays (canary, notification, windows).
+	ReleaseApplyTime time.Time
+
+	// ReleaseApplyAfterTime is now + minimalNotificationTime, WITHOUT window adjustment.
+	// Used for release's applyAfter field. For webhooks, use GetNotificationApplyTime() instead.
 	ReleaseApplyAfterTime time.Time
-	Reason                DeployDelayReason
+
+	// Reason is a bitmask of delay reasons (notification, window, manual approval, etc.).
+	Reason DeployDelayReason
 }
 
 func (c *DeployTimeService) checkCanary(dtr *DeployTimeResult, release v1alpha1.Release) {
@@ -110,11 +116,12 @@ func (c *DeployTimeService) checkCanary(dtr *DeployTimeResult, release v1alpha1.
 	}
 }
 
+// checkNotify delays deployment if notification recipients haven't had
+// MinimalNotificationTime to react since the webhook was sent.
 func (c *DeployTimeService) checkNotify(dtr *DeployTimeResult, release v1alpha1.Release) {
 	if !release.GetNotified() &&
 		c.settings.NotificationConfig.MinimalNotificationTime.Duration > 0 {
 		minApplyTime := c.now.Add(c.settings.NotificationConfig.MinimalNotificationTime.Duration)
-
 		dtr.ReleaseApplyAfterTime = dtr.ReleaseApplyTime
 
 		if !minApplyTime.Before(dtr.ReleaseApplyTime) {

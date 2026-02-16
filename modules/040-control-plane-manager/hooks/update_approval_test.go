@@ -150,6 +150,7 @@ metadata:
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
 spec:
   nodeName: worker-1
 status:
@@ -164,6 +165,7 @@ metadata:
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
 spec:
   nodeName: worker-2
 status:
@@ -178,6 +180,7 @@ metadata:
   namespace: kube-system
   labels:
     app: d8-control-plane-manager
+    component: control-plane-manager
 spec:
   nodeName: worker-3
 status:

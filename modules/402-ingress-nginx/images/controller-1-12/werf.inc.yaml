@@ -1,5 +1,5 @@
 {{ $controllerBranch := "controller-v1.12.1" }}
-{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.26.1" }}
+{{ $nginxDepsBranch := "controller-v1.12.1-nginx-v1.26.1-modsecurity-v1.0.4" }}
 {{ $nginxVersion := "1.26.1" }}
 {{ $nlohmannJsonBranch := "v3.11.3" }}
 {{ $ngxBrotliCommit := "63ca02abdcf79c9e788d2eedcc388d2335902e52" }}
@@ -16,7 +16,7 @@
 {{ $icuVersion := "release-77-1" }}
 {{ $pcreVersion := "8.45" }}
 {{ $libmaxminddbVersion := "1.12.2" }}
-{{ $curlVersion := "curl-8_12_1" }}
+{{ $curlVersion := "curl-8_17_0" }}
 {{ $zlibVersion := "v1.3.1" }}
 {{ $cAresVersion := "v1.34.5" }}
 {{ $opensslVersion := "3.6.0" }}
@@ -610,8 +610,17 @@ shell:
       mkdir -p ${dir};
       chown -R deckhouse:deckhouse ${dir};
     done
-  - rm -rf /etc/nginx/owasp-modsecurity-crs/.git
+ 
+  #remove owasp-modsecurity-crs unnecessary files and folders
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/*.md
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/docs
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/util
   - rm -rf /etc/nginx/owasp-modsecurity-crs/tests
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/plugins
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/regex-assembly
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/renovate.json
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/LICENSE
+  - rm -rf /etc/nginx/owasp-modsecurity-crs/.[^.]*
 
   # remove .a files
   - find /usr/local -name "*.a" -print | xargs /bin/rm
@@ -664,6 +673,14 @@ import:
 - image: tools/libcap
   add: /usr/sbin/setcap
   to: /tools/setcap
+  before: install
+#/bin/sh is required for modsecurity lib to work
+- image: tools/bash
+  add: /usr
+  to: /chroot
+  includePaths:
+  - bin/bash
+  - bin/sh
   before: install
 - image: tools/curl
   add: /usr/bin/curl-static

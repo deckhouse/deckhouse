@@ -1,3 +1,5 @@
+//go:build linux
+
 /*
 Copyright 2025 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
@@ -24,8 +26,8 @@ import (
 )
 
 const (
-	healthUrl = "http://127.0.0.1:9225/health"
-	metricUrl = "http://127.0.0.1:4224/metrics"
+	healthURL = "http://127.0.0.1:9225/health"
+	metricURL = "http://127.0.0.1:4224/metrics"
 
 	dnsServer              = "169.254.20.10"
 	kubeClusterDomainEnv   = "KUBE_CLUSTER_DOMAIN"
@@ -40,7 +42,7 @@ const (
 )
 
 var (
-	requestTimeout = time.Duration(1 * time.Second)
+	requestTimeout = 1 * time.Second
 )
 
 func main() {
@@ -81,9 +83,10 @@ func main() {
 	}
 }
 
-func doHttpRequest(client *http.Client, url string) error {
-	ctx, _ := context.WithTimeout(context.Background(), requestTimeout)
-	req, err := http.NewRequestWithContext(ctx, "GET", healthUrl, nil)
+func doHTTPRequest(client *http.Client, url string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return err
 	}
@@ -93,7 +96,7 @@ func doHttpRequest(client *http.Client, url string) error {
 	return err
 }
 
-func doDnsRequest(domain, dnsServer string) error {
+func doDNSRequest(domain, dnsServer string) error {
 	c := new(dns.Client)
 	c.Timeout = requestTimeout
 
@@ -123,10 +126,7 @@ func doDnsRequest(domain, dnsServer string) error {
 				return nil
 			}
 		}
-
 	}
-
-	return fmt.Errorf("failed to get A record for %s domain", domain)
 }
 
 func livenessCheck() error {
@@ -134,11 +134,11 @@ func livenessCheck() error {
 		Timeout: requestTimeout,
 	}
 
-	if err := doHttpRequest(client, healthUrl); err != nil {
+	if err := doHTTPRequest(client, healthURL); err != nil {
 		return err
 	}
 
-	if err := doHttpRequest(client, metricUrl); err != nil {
+	if err := doHTTPRequest(client, metricURL); err != nil {
 		return err
 	}
 
@@ -149,7 +149,7 @@ func livenessCheck() error {
 
 	domain := fmt.Sprintf(domainTemplate, clusterDomain)
 
-	return doDnsRequest(domain, dnsServer)
+	return doDNSRequest(domain, dnsServer)
 }
 
 func setupInterface(kubeDNSSvcIP string) error {
@@ -239,23 +239,23 @@ func deleteIPtablesRule(mgr *iptables.IPTables, iptableName, chainName string, r
 	return nil
 }
 
-func setupIPtables(kubeDNSSvcIp string) error {
+func setupIPtables(kubeDNSSvcIP string) error {
 	iptablesMgr, err := iptables.New(iptables.IPFamily(iptables.ProtocolIPv4), iptables.Timeout(60))
 	if err != nil {
 		return fmt.Errorf("failed to init iptables manager: %w", err)
 	}
 
-	dnsTCPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p tcp -m tcp --sport 53 -j NOTRACK", kubeDNSSvcIp))
+	dnsTCPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p tcp -m tcp --sport 53 -j NOTRACK", kubeDNSSvcIP))
 	if err := appendIPtablesRule(iptablesMgr, "raw", "OUTPUT", dnsTCPRule); err != nil {
 		return fmt.Errorf("failed to append iptables tcp rules: %w", err)
 	}
 
-	dnsUDPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p udp -m udp --sport 53 -j NOTRACK", kubeDNSSvcIp))
+	dnsUDPRule := strings.Fields(fmt.Sprintf("-s %s/32 -p udp -m udp --sport 53 -j NOTRACK", kubeDNSSvcIP))
 	if err := appendIPtablesRule(iptablesMgr, "raw", "OUTPUT", dnsUDPRule); err != nil {
 		return fmt.Errorf("failed to append iptables udp rules: %w", err)
 	}
 
-	socketRule := strings.Fields(fmt.Sprintf("-d %s/32 -m socket --nowildcard -j NOTRACK", kubeDNSSvcIp))
+	socketRule := strings.Fields(fmt.Sprintf("-d %s/32 -m socket --nowildcard -j NOTRACK", kubeDNSSvcIP))
 	if err := deleteIPtablesRule(iptablesMgr, "raw", "OUTPUT", socketRule); err != nil {
 		return fmt.Errorf("failed to delete iptables rules: %w", err)
 	}

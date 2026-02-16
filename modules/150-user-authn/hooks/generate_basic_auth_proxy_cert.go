@@ -99,6 +99,9 @@ type provider struct {
 	OIDC struct {
 		EnableBasicAuth bool `json:"enableBasicAuth"`
 	} `json:"oidc"`
+	LDAP struct {
+		EnableBasicAuth bool `json:"enableBasicAuth"`
+	} `json:"ldap"`
 }
 
 func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -125,13 +128,19 @@ func generateProxyAuthCert(_ context.Context, input *go_hook.HookInput, dc depen
 	for _, prov := range providers {
 		if prov.Typ == "Crowd" && prov.Crowd.EnableBasicAuth {
 			if config != nil {
-				return errors.New("only one enableBasicAuth must be enabled")
+				return errors.New("multiple 'enableBasicAuth: true' options are enabled while only one is supported, review your authentication configuration")
 			}
 			config = &prov
 		}
 		if prov.Typ == "OIDC" && prov.OIDC.EnableBasicAuth {
 			if config != nil {
-				return errors.New("only one enableBasicAuth must be enabled")
+				return errors.New("multiple 'enableBasicAuth: true' options are enabled while only one is supported, review your authentication configuration")
+			}
+			config = &prov
+		}
+		if prov.Typ == "LDAP" && prov.LDAP.EnableBasicAuth {
+			if config != nil {
+				return errors.New("multiple 'enableBasicAuth: true' options are enabled while only one is supported, review your authentication configuration")
 			}
 			config = &prov
 		}

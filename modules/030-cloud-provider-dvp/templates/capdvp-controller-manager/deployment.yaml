@@ -18,7 +18,7 @@ spec:
     kind: Deployment
     name: capdvp-controller-manager
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "capdvp-controller-manager"
@@ -91,6 +91,11 @@ spec:
               secretKeyRef:
                 name: dvp-credentials-capdvp
                 key: namespace
+          - name: CLUSTER_UUID
+            valueFrom:
+              secretKeyRef:
+                name: dvp-credentials-capdvp
+                key: clusterUUID
         livenessProbe:
           httpGet:
             path: /healthz

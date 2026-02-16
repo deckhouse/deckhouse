@@ -30,6 +30,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+clusterIsBootstrapped: true
 enabledModules: ["vertical-pod-autoscaler", "csi-vsphere"]
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
@@ -126,6 +127,35 @@ const moduleValuesB = `
         vmFolderPath: dev/test
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-csi-vsphere"
+
 var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -140,18 +170,19 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-csi-vsphere")
-			registrySecret := f.KubernetesResource("Secret", "d8-csi-vsphere", "deckhouse-registry")
-			csiCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-csi-vsphere", "csi-controller")
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
+			csiCongrollerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
-			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-csi-vsphere", "csi-node")
-			csiSA := f.KubernetesResource("ServiceAccount", "d8-csi-vsphere", "csi")
+			csiNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			csiSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:csi-vsphere:csi:controller:external-provisioner")
 			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:csi-vsphere:csi:controller:external-provisioner")
 			csiAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:csi-vsphere:csi:controller:external-attacher")
 			csiAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:csi-vsphere:csi:controller:external-attacher")
 			csiResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:csi-vsphere:csi:controller:external-resizer")
 			csiResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:csi-vsphere:csi:controller:external-resizer")
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -159,8 +190,10 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Exists()).To(BeTrue())
+			Expect(csiNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiSA.Exists()).To(BeTrue())
 			Expect(csiCongrollerPluginSS.Exists()).To(BeTrue())
+			Expect(csiCongrollerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiAttacherCR.Exists()).To(BeTrue())
 			Expect(csiAttacherCRB.Exists()).To(BeTrue())
 			Expect(csiProvisionerCR.Exists()).To(BeTrue())
@@ -178,12 +211,16 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 			Expect(scMydsname2.Exists()).To(BeTrue())
 
 			Expect(scMydsname2.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 	})
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.HelmRender()
@@ -191,7 +228,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("csiVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -200,14 +237,14 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 			It("CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("Deployment", "d8-csi-vsphere", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 			})
 		})
 	})
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)

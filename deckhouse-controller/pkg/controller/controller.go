@@ -48,6 +48,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
@@ -59,9 +60,12 @@ import (
 	modulerelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/release"
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
-	packageapplication "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
-	packageapplicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
+	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
+	modulev2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
+	modulepackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package"
+	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -82,6 +86,10 @@ const (
 	kubernetesNamespace = "kube-system"
 
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
+	defaultModuleVersion    = "v2.0.0"
+
+	envEnablePackageSystem  = "DECKHOUSE_ENABLE_PACKAGE_SYSTEM"
+	envEnableModulePackages = "DECKHOUSE_ENABLE_MODULE_PACKAGES"
 )
 
 type DeckhouseController struct {
@@ -195,12 +203,19 @@ func NewDeckhouseController(
 	}
 
 	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+	if os.Getenv(envEnablePackageSystem) == "true" {
 		opts.Cache.ByObject[&v1alpha1.PackageRepository{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.PackageRepositoryOperation{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
+	}
+
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
+		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(operator.KubeClient().RestConfig(), opts)
@@ -233,7 +248,7 @@ func NewDeckhouseController(
 		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
 		}); err != nil {
-			return "", err
+			return "", fmt.Errorf("on error: %w", err)
 		}
 
 		// set some version for the modules overridden by mpos
@@ -324,8 +339,29 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module documentation controller: %w", err)
 	}
 
+	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
+	if err != nil {
+		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
+	packageOperator, err := packageoperator.New(operator.ModuleManager, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("create package operator: %w", err)
+	}
+
+	// package should not run before converge done
+	operator.ConvergeState.SetOnConvergeStart(func() {
+		logger.Debug("start converge")
+		packageOperator.Scheduler().Pause()
+	})
+
+	operator.ConvergeState.SetOnConvergeFinish(func() {
+		logger.Debug("finish converge")
+		packageOperator.Scheduler().Resume()
+	})
+
 	// Package system controllers (feature flag)
-	if os.Getenv("DECKHOUSE_ENABLE_PACKAGE_SYSTEM") == "true" {
+	if os.Getenv(envEnablePackageSystem) == "true" {
 		logger.Info("Package system controllers are enabled")
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
@@ -338,15 +374,34 @@ func NewDeckhouseController(
 			return nil, fmt.Errorf("register package repository operation controller: %w", err)
 		}
 
-		err = packageapplicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
+		err = applicationpackageversion.RegisterController(runtimeManager, dc, logger.Named("application-package-version-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
 
-		packageOperator := applicationpackage.NewPackageOperator(logger.Named("package-operator"))
-		err = packageapplication.RegisterController(runtimeManager, dc, packageOperator, logger.Named("application-controller"))
+		err = application.RegisterController(runtimeManager, packageOperator, operator.ModuleManager, dc, logger.Named("application-controller"))
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
+		}
+	}
+
+	// Module package controllers (feature flag)
+	if os.Getenv(envEnableModulePackages) == "true" {
+		logger.Info("Module package controllers are enabled")
+
+		err = modulepackage.RegisterController(runtimeManager, dc, logger.Named("module-package-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package controller: %w", err)
+		}
+
+		err = modulepackageversion.RegisterController(runtimeManager, dc, logger.Named("module-package-version-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module package version controller: %w", err)
+		}
+
+		err = modulev2.RegisterController(runtimeManager, dc, logger.Named("module-v2-controller"))
+		if err != nil {
+			return nil, fmt.Errorf("register module v2 controller: %w", err)
 		}
 	}
 
@@ -354,6 +409,7 @@ func NewDeckhouseController(
 		operator.AdmissionServer,
 		runtimeManager.GetClient(),
 		operator.ModuleManager,
+		packageOperator,
 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
 		loader,
 		operator.MetricStorage,

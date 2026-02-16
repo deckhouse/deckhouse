@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -76,10 +77,20 @@ func main() {
 	runPhase(checkKubeletConfig())
 	runPhase(installKubeadmConfig())
 	runPhase(installBasePKIfiles())
+	if config.EtcdArbiter {
+		runPhase(generateEtcdPerformancePatch())
+	}
 	runPhase(fillTmpDirWithPKIData())
 	runPhase(renewCertificates())
-	runPhase(renewKubeconfigs())
-	runPhase(updateRootKubeconfig())
+
+	if !config.EtcdArbiter {
+		runPhase(renewKubeconfigs())
+		runPhase(updateRootKubeconfig())
+	} else {
+		log.Info("ETCD_ARBITER mode: creating only admin.conf for kubeadm")
+		runPhase(renewAdminKubeconfig())
+	}
+
 	runPhase(syncExtraFiles())
 	runPhase(convergeComponents())
 	runPhase(config.writeLastAppliedConfigurationChecksum())
@@ -93,7 +104,7 @@ func main() {
 
 func httpServerClose() {
 	if err := server.Close(); err != nil {
-		log.Fatalf("HTTP close error: %v", err)
+		log.Fatal("HTTP close error", slog.String("error", err.Error()))
 	}
 }
 

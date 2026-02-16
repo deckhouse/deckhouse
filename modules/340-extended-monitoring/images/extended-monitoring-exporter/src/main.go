@@ -18,23 +18,24 @@ package main
 
 import (
 	"context"
-	met "extended-monitoring/metrics"
-	w "extended-monitoring/watcher"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
+
+	met "extended-monitoring/metrics"
+	w "extended-monitoring/watcher"
 )
 
 func main() {
-	var listenAddr string = "127.0.0.1:8080"
+	var listenAddr = "127.0.0.1:8080"
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	go func() {
 		sigCh := make(chan os.Signal, 1)
@@ -46,13 +47,17 @@ func main() {
 
 	config, err := rest.InClusterConfig()
 	if err != nil {
+		cancel()
 		log.Fatal("Error kubernetes config: %v\n", err)
 	}
 
 	kubeClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
+		cancel()
 		log.Fatal("Error getting kubernetes config: %v\n", err)
 	}
+
+	defer cancel()
 
 	registry := prometheus.NewRegistry()
 

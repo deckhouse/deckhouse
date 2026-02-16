@@ -5,7 +5,7 @@ properties:
       Доменное имя сервера vCenter.
   username:
     description: |
-      Login ID.
+      Логин.
   password:
     description: |
       Пароль.

@@ -47,6 +47,14 @@ type ModuleConfigListerExpansion interface{}
 // ModuleDocumentationLister.
 type ModuleDocumentationListerExpansion interface{}
 
+// ModulePackageListerExpansion allows custom methods to be added to
+// ModulePackageLister.
+type ModulePackageListerExpansion interface{}
+
+// ModulePackageVersionListerExpansion allows custom methods to be added to
+// ModulePackageVersionLister.
+type ModulePackageVersionListerExpansion interface{}
+
 // ModulePullOverrideListerExpansion allows custom methods to be added to
 // ModulePullOverrideLister.
 type ModulePullOverrideListerExpansion interface{}
@@ -66,6 +74,10 @@ type ModuleSourceListerExpansion interface{}
 // ModuleUpdatePolicyListerExpansion allows custom methods to be added to
 // ModuleUpdatePolicyLister.
 type ModuleUpdatePolicyListerExpansion interface{}
+
+// ObjectKeeperListerExpansion allows custom methods to be added to
+// ObjectKeeperLister.
+type ObjectKeeperListerExpansion interface{}
 
 // PackageRepositoryListerExpansion allows custom methods to be added to
 // PackageRepositoryLister.

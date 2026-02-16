@@ -85,10 +85,13 @@ func RegisterController(runtimeManager manager.Manager,
 		return fmt.Errorf("create controller: %w", err)
 	}
 
-	return ctrl.NewControllerManagedBy(runtimeManager).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		For(&v1alpha2.ModulePullOverride{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Complete(pullOverrideController)
+		Complete(pullOverrideController); err != nil {
+		return fmt.Errorf("complete: %w", err)
+	}
+	return nil
 }
 
 type reconciler struct {
@@ -156,7 +159,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		if !apierrors.IsNotFound(err) {
 			r.log.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
 
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
 		r.log.Warn("module not found", slog.String("name", mpo.Name))
@@ -190,6 +193,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		r.log.Debug("module is disabled, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleDisabled {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleDisabled
+			// unset image digest to trigger latter downloading
+			mpo.Status.ImageDigest = ""
 			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
 				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
 				return ctrl.Result{}, uerr
@@ -243,7 +248,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	if err = r.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
 			r.log.Error("failed to get the module source for the module pull override", slog.String("source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageSourceNotFound {
@@ -321,7 +326,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
 		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
@@ -357,7 +362,9 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 				return err
 			}
 		} else {
-			values = addonutils.Values(config.Spec.Settings)
+			settings := config.Spec.Settings.GetMap()
+
+			values = addonutils.Values(settings)
 		}
 	}
 	if err = def.Validate(values, r.log); err != nil {
@@ -434,5 +441,8 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 func (r *reconciler) updateModulePullOverrideStatus(ctx context.Context, mpo *v1alpha2.ModulePullOverride) error {
 	mpo.Status.UpdatedAt = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
-	return r.client.Status().Update(ctx, mpo)
+	if err := r.client.Status().Update(ctx, mpo); err != nil {
+		return fmt.Errorf("update: %w", err)
+	}
+	return nil
 }

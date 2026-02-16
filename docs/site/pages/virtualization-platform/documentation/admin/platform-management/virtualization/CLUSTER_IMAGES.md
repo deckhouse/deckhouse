@@ -122,7 +122,7 @@ Let's explore how to create a cluster image.
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
     metadata:
-      name: ubuntu-22-04
+      name: ubuntu-24-04
     spec:
       # Source for creating the image.
       dataSource:
@@ -135,20 +135,20 @@ Let's explore how to create a cluster image.
 1. Check the result of creating the `ClusterVirtualImage` with the following command:
 
     ```shell
-    d8 k get clustervirtualimage ubuntu-22-04
+    d8 k get clustervirtualimage ubuntu-24-04
     ```
 
     A shorter version of the command:
 
    ```shell
-    d8 k get cvi ubuntu-22-04
+    d8 k get cvi ubuntu-24-04
     ```
 
     In the output, you should see information about the `ClusterVirtualImage` resource:
 
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-22-04   Ready   false   100%       23h
+    ubuntu-24-04   Ready   false   100%       23h
     ```
 
 After creation, the `ClusterVirtualImage` resource may have the following states (phases):
@@ -169,26 +169,26 @@ Diagnosing problems with a resource is done by analyzing the information in the 
 You can trace the image creation process by adding the `-w` key to the command used for verification of the created resource:
 
 ```shell
-d8 k get cvi ubuntu-22-04 -w
+d8 k get cvi ubuntu-24-04 -w
 ```
 
 In the output, you should see information about the image creation progress:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 Additional information about the downloaded image can be retrieved by describing the `ClusterVirtualImage` resource:
 
 ```shell
-d8 k describe cvi ubuntu-22-04
+d8 k describe cvi ubuntu-24-04
 ```
 
 How to create an image from an HTTP server in the web interface:
@@ -328,3 +328,49 @@ How to perform the operation in the web interface:
 - Select the file in the file manager that opens.
 - Click the "Create" button.
 - Wait until the image changes to `Ready` status.
+
+### Cleaning up image storage
+
+{% alert level="info" %}
+Available in [version 1.2.0](/products/virtualization-platform/documentation/release-notes.html#v120) and later.
+{% endalert %}
+
+Over time, the creation and deletion of ClusterVirtualImage, VirtualImage, and VirtualDisk resources leads to the accumulation
+of outdated images in the intra-cluster storage. Scheduled garbage collection is implemented to keep the storage up to
+date, but this feature is disabled by default.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  # ...
+  settings:
+    dvcr:
+      gc:
+        schedule: "0 20 * * *"
+  # ...
+```
+
+While garbage collection is running, the storage is switched to read-only mode, and all resources created during this time will wait for the cleanup to finish.
+
+To check for outdated images in the storage, you can run the following command:
+
+```bash
+d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+```
+
+It prints information about the storage status and a list of outdated images that can be deleted.
+
+```console
+Found 2 cvi, 5 vi, 1 vd manifests in registry
+Found 1 cvi, 5 vi, 11 vd resources in cluster
+  Total     Used    Avail     Use%
+36.3GiB  13.1GiB  22.4GiB      39%
+Images eligible for cleanup:
+KIND                   NAMESPACE            NAME
+ClusterVirtualImage                         debian-12
+VirtualDisk            default              debian-10-root
+VirtualImage           default              ubuntu-2204
+```

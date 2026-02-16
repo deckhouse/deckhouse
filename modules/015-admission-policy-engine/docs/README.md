@@ -12,7 +12,7 @@ The module does not apply policies to system namespaces.
 {% endalert %}
 
 {% alert level="info" %}
-Please note that when the [multitenancy-manager](/modules/multitenancy-manager) module is enabled, it creates its own OperationPolicy objects (e.g., in the "default" namespace). These are not affected by the [podSecurityStandards](../configuration.html#parameters-podsecuritystandards) settings. 
+When the [`multitenancy-manager`](/modules/multitenancy-manager/) module is enabled, it creates its own OperationPolicy objects (for example, in the `default` namespace). These are not affected by the [`podSecurityStandards`](configuration.html#parameters-podsecuritystandards) settings.
 {% endalert %}
 
 List of policies available for use:
@@ -46,7 +46,7 @@ d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
 
 The policies define by the module can be expanded. Examples of policy extensions can be found in the [FAQ](faq.html).
 
-### Operation policies
+## Operation policies
 
 The module provides a set of operating policies and best practices for the secure operation of your applications.
 Operational policies are described using a custom resource [`OperationPolicy`](/modules/admission-policy-engine/cr.html#operationpolicy).
@@ -92,7 +92,7 @@ spec:
 To apply the policy, it will be sufficient to set the label `operation-policy.deckhouse.io/enabled: "true"` on the desired namespace.
 The above policy is generic and recommended by Deckhouse team. Similarly, you can configure your own policy with the necessary settings.
 
-### Security policies
+## Security policies
 
 The module allows defining security policies for making sure the workload running in the cluster meets certain security requirements.
 
@@ -164,7 +164,7 @@ To apply the policy, it will be sufficient to set the label `enforce: "mypolicy"
 
 > **Warning**. The `allowPrivilegeEscalation` and `allowPrivileged` parameters default to `false` — even if not explicitly set. This means containers cannot run in privileged mode or escalate privileges by default. To allow this behavior, set the corresponding parameter to `true`.
 
-### Modifying Kubernetes resources
+## Modifying Kubernetes resources
 
 The module allows you to use the [Gatekeeper Custom Resources](gatekeeper-cr.html) to modify objects in the cluster, such as
 - [AssignMetadata](gatekeeper-cr.html#assignmetadata) — defines changes to the `metadata` section of a resource.

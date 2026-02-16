@@ -3,10 +3,9 @@ title: "Module registry: configuration"
 ---
 
 {% alert level="warning" %}
+To configure connection parameters to the container registry and manage the container registry operating mode, use the [`registry`](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration.
+
+The parameters of the `registry` module itself are specified in ModuleConfig `registry`.
 {% endalert %}
 
-{% include module-alerts.liquid %}
-
-{% include module-bundle.liquid %}
-
-To manage working with the container registry, use the [`registry`](../deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration, where you can specify connection parameters to the registry and manage its operating mode.
+<!-- SCHEMA -->

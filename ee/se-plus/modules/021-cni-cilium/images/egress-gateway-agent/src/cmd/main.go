@@ -12,22 +12,19 @@ import (
 	"os"
 	"regexp"
 
-	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/controller"
 	"github.com/deckhouse/deckhouse/egress-gateway-agent/internal/layer2"
-
-	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
-
 	internalv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/internal.network/v1alpha1"
+	networkv1alpha1 "github.com/deckhouse/deckhouse/egress-gateway-agent/pkg/apis/v1alpha1"
 )
 
 const (
@@ -50,7 +47,7 @@ func main() {
 	var probeAddr string
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":9870", "The address the probe endpoint binds to.")
 	opts := zap.Options{
-		Development: true,
+		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
@@ -68,7 +65,7 @@ func main() {
 		c.NextProtos = []string{"http/1.1"}
 	}
 
-	tlsOpts := []func(*tls.Config){}
+	tlsOpts := make([]func(*tls.Config), 0, 1)
 	tlsOpts = append(tlsOpts, disableHTTP2)
 
 	webhookServer := webhook.NewServer(webhook.Options{
@@ -94,11 +91,7 @@ func main() {
 	}
 
 	anounceLogger := EmptyLogger{}
-	excludeRegex, err := regexp.Compile(excludeInterfacesPrefixes)
-	if err != nil {
-		setupLog.Error(err, "unable to compile exclude regex")
-		os.Exit(1)
-	}
+	excludeRegex := regexp.MustCompile(excludeInterfacesPrefixes)
 	virtualIPAnnounces, err := layer2.New(anounceLogger, excludeRegex)
 	if err != nil {
 		setupLog.Error(err, "unable to create virtual IP announcement")

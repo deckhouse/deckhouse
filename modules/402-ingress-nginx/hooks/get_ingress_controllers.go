@@ -74,6 +74,7 @@ func applyControllerFilter(obj *unstructured.Unstructured) (go_hook.FilterResult
 
 	setDefaultEmptyObjectOnCondition("loadBalancer", spec, inlet == "LoadBalancer")
 	setDefaultEmptyObjectOnCondition("loadBalancerWithProxyProtocol", spec, inlet == "LoadBalancerWithProxyProtocol")
+	setDefaultEmptyObjectOnCondition("loadBalancerWithSSLPassthrough", spec, inlet == "LoadBalancerWithSSLPassthrough")
 	setDefaultEmptyObjectOnCondition("hostPort", spec, inlet == "HostPort")
 	setDefaultEmptyObjectOnCondition("hostPortWithProxyProtocol", spec, inlet == "HostPortWithProxyProtocol")
 	setDefaultEmptyObjectOnCondition("hostWithFailover", spec, inlet == "HostWithFailover")
@@ -208,6 +209,27 @@ func setInternalValues(_ context.Context, input *go_hook.HookInput) error {
 				"controller_name": controller.Name,
 			})
 		}
+
+		// fire alert if maxmindAccountID not set.
+		_, licFound, err := unstructured.NestedString(controller.Spec, "geoIP2", "maxmindLicenseKey")
+		if err != nil {
+			input.Logger.Error(fmt.Sprintf("cannot get maxmindLicenseKey from ingress controller spec.geoIP2: %v", err))
+			continue
+		}
+
+		_, acFound, err := unstructured.NestedString(controller.Spec, "geoIP2", "maxmindAccountID")
+		if err != nil {
+			input.Logger.Error(fmt.Sprintf("cannot get maxmindAccountID from ingress controller spec.geoIP2: %v", err))
+			continue
+		}
+
+		val := 0.0
+		if licFound && !acFound {
+			val = 1.0
+		}
+		input.MetricsCollector.Set("d8_ingress_nginx_controller_maxmind_account_id_not_set", val, map[string]string{
+			"controller_name": controller.Name,
+		})
 	}
 
 	input.Values.Set("ingressNginx.internal.ingressControllers", controllers)

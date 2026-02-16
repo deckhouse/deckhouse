@@ -32,8 +32,16 @@ func SaveMasterHostsToCache(cache Cache, hosts map[string]string) {
 }
 
 func GetMasterHostsIPs(cache Cache) ([]session.Host, error) {
+	inCache, err := cache.InCache(MasterHostsCacheKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if !inCache {
+		return make([]session.Host, 0), nil
+	}
 	var hosts map[string]string
-	err := cache.LoadStruct(MasterHostsCacheKey, &hosts)
+	err = cache.LoadStruct(MasterHostsCacheKey, &hosts)
 	if err != nil {
 		return nil, err
 	}

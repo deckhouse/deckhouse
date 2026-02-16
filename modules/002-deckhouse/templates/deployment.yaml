@@ -77,9 +77,6 @@ spec:
         checksum/registry: {{ include (print $.Template.BasePath "/registry-secret.yaml") . | sha256sum }}
         checksum/registry-version: {{ .Values.global.modulesImages.registry.hash | default "" | quote }}
         kubectl.kubernetes.io/default-container: deckhouse
-{{- if and (.Values.deckhouse.internal.chrootMode) (semverCompare "< 1.30" .Values.global.discovery.kubernetesVersion) }}
-        container.apparmor.security.beta.kubernetes.io/deckhouse: unconfined
-{{- end }}
     spec:
       affinity:
         podAntiAffinity:
@@ -184,6 +181,8 @@ spec:
 {{- end }}
             - name: LOG_LEVEL
               value: {{ .Values.deckhouse.logLevel }}
+            - name: DECKHOUSE_ENABLE_PACKAGE_SYSTEM
+              value: "false"
             - name: USE_NELM
               value: "true"
             - name: LOG_TYPE
@@ -360,6 +359,10 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
 {{- else }}
       dnsPolicy: Default
+      hostAliases:
+      - ip: "127.0.0.1"
+        hostnames:
+        - "registry.d8-system.svc"
 {{- end}}
       serviceAccountName: deckhouse
       automountServiceAccountToken: true

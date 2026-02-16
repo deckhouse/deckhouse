@@ -24,10 +24,12 @@
     "cloud"
   ],
   "cloud-provider-dvp": [
-    "virtualization"
+    "virtualization",
+    "cloud"
   ],
   "cloud-provider-dynamix": [
-    "bare-metal"
+    "bare-metal",
+    "cloud"
   ],
   "cloud-provider-gcp": [
     "cloud"
@@ -64,6 +66,9 @@
   ],
   "control-plane-manager": [
     "core"
+  ],
+  "csi-vsphere": [
+    "storage"
   ],
   "dashboard": [
     "observability",
@@ -127,6 +132,9 @@
   "monitoring-custom": [
     "observability"
   ],
+  "monitoring-deckhouse": [
+    "observability"
+  ],
   "monitoring-kubernetes": [
     "observability"
   ],
@@ -169,9 +177,6 @@
   "operator-prometheus": [
     "observability"
   ],
-  "operator-trivy": [
-    "security"
-  ],
   "pod-reloader": [
     "core"
   ],
@@ -187,6 +192,9 @@
   "registry": [
     "core",
     "registry"
+  ],
+  "registry-packages-proxy": [
+    "core"
   ],
   "runtime-audit-engine": [
     "security"

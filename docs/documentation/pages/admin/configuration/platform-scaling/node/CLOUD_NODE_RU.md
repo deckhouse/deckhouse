@@ -31,7 +31,7 @@ CloudEphemeral-узлы автоматически создаются и упр�
      name: worker-instance
    spec:
      flavorName: m1.medium
-     imageName: ubuntu-22-04-cloud-amd64
+     imageName: ubuntu-24-04-cloud-amd64
      rootDiskSize: 20
      mainNetwork: default
    ```
@@ -523,7 +523,7 @@ spec:
      replicas: 2
      instanceClass:
        flavorName: m1.large
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
      volumeTypeMap:
@@ -800,7 +800,7 @@ Deckhouse Kubernetes Platform может работать поверх серв�
      replicas: 3
      instanceClass:
        flavorName: m1.medium
-       imageName: ubuntu-22-04-cloud-amd64
+       imageName: ubuntu-24-04-cloud-amd64
        rootDiskSize: 20
        mainNetwork: default
    ```

@@ -1,16 +1,19 @@
+<!--noindex-->
 <div class="navigation__container">
-  <div style="display: flex; justify-content: start; margin-right: 135px; padding-top: 20px; padding-bottom: 25px; gap: 25px;">
+  {%- if page.product_code == 'kubernetes-platform' %}
+  <div class="navigation__container--versions">
     <div>
       {%- if site.mode == 'module' %}
-        <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong></div>
+        <strong>{{ site.data.i18n.common['version'][page.lang] | capitalize }}: </strong>
       {%- else if page.sidebar == 'embedded-modules' %}
-        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong>
       {%- else %}
-        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong></div>
+        <strong>{{ site.data.i18n.common['channel_or_version'][page.lang] | capitalize }}: </strong>
       {%- endif %}
+    </div>
 
-      <!-- module-version-badge -->
-      <div id="doc-versions-menu" class="channel-menu submenu-parent">
+    <!-- module-version-badge -->
+    <div id="doc-versions-menu" class="channel-menu submenu-parent">
         {%- unless site.mode == 'module' %}
           {%- if page.sidebar == 'embedded-modules' %}
             <!--#include virtual="/includes/channel-menu-module.html" -->
@@ -20,6 +23,9 @@
         {%- endunless -%}
       </div>
   </div>
+  {%- else %}
+  <div class="navigation__container--versions"></div>
+  {%- endif %}
   <div class="breadcrumbs__container">
     <ol class="breadcrumbs">
       {% include nav-breadcrumbs-pagepath.html %}
@@ -31,7 +37,7 @@
       <div class="container">
         <div class="input-wrapper">
           <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
-          data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json:1.0:240"
+          data-search-index-path="/products/{{ page.product_code | default: 'kubernetes-platform' }}/documentation/search.json:1.0:1440"
           data-search-context="{{ site.data.i18n.common.search_context_only_product_docs[page.lang] }}"
           >
           <div id="search-results" class="results" style="display: none"></div>
@@ -40,9 +46,10 @@
     </div>
     <!--end search-->
     <!--loading search JS-->
-    {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+    {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
     <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
     <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
     <!--end loading search JS-->
   {%- endif %}
 </div>
+<!--/noindex-->

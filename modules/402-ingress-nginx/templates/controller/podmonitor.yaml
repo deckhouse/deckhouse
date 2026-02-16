@@ -16,6 +16,7 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
     - regex: endpoint|pod|container
       action: labeldrop
@@ -44,6 +45,7 @@ spec:
       key: "token"
     tlsConfig:
       insecureSkipVerify: true
+    honorLabels: true
     relabelings:
     - regex: endpoint|pod|container
       action: labeldrop

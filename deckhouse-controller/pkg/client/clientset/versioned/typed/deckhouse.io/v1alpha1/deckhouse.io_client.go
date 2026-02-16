@@ -32,11 +32,14 @@ type DeckhouseV1alpha1Interface interface {
 	ModulesGetter
 	ModuleConfigsGetter
 	ModuleDocumentationsGetter
+	ModulePackagesGetter
+	ModulePackageVersionsGetter
 	ModulePullOverridesGetter
 	ModuleReleasesGetter
 	ModuleSettingsDefinitionsGetter
 	ModuleSourcesGetter
 	ModuleUpdatePoliciesGetter
+	ObjectKeepersGetter
 	PackageRepositoriesGetter
 	PackageRepositoryOperationsGetter
 }
@@ -74,6 +77,14 @@ func (c *DeckhouseV1alpha1Client) ModuleDocumentations() ModuleDocumentationInte
 	return newModuleDocumentations(c)
 }
 
+func (c *DeckhouseV1alpha1Client) ModulePackages() ModulePackageInterface {
+	return newModulePackages(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ModulePackageVersions() ModulePackageVersionInterface {
+	return newModulePackageVersions(c)
+}
+
 func (c *DeckhouseV1alpha1Client) ModulePullOverrides() ModulePullOverrideInterface {
 	return newModulePullOverrides(c)
 }
@@ -92,6 +103,10 @@ func (c *DeckhouseV1alpha1Client) ModuleSources() ModuleSourceInterface {
 
 func (c *DeckhouseV1alpha1Client) ModuleUpdatePolicies() ModuleUpdatePolicyInterface {
 	return newModuleUpdatePolicies(c)
+}
+
+func (c *DeckhouseV1alpha1Client) ObjectKeepers() ObjectKeeperInterface {
+	return newObjectKeepers(c)
 }
 
 func (c *DeckhouseV1alpha1Client) PackageRepositories() PackageRepositoryInterface {

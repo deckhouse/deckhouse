@@ -14,9 +14,9 @@ lang: ru
 
 Процесс создания образа включает следующие шаги:
 
-1. Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html).
-1. После создания образ автоматически загружается из указанного в спецификации источника в хранилище (DVCR).
-1. После завершения загрузки ресурс становится доступным для создания дисков.
+- Пользователь создаёт ресурс [VirtualImage](/modules/virtualization/cr.html#virtualimage.html).
+- После создания образ автоматически загружается из указанного в спецификации источника в хранилище DVCR или PVC в зависимости от типа.
+- После завершения загрузки ресурс становится доступным для создания дисков.
 
 Существуют различные типы образов:
 
@@ -25,8 +25,10 @@ lang: ru
 
 Примеры ресурсов для получения образов виртуальной машины:
 
+<a id="image-resources-table"></a>
+
 | Дистрибутив                                                                       | Пользователь по умолчанию |
-| --------------------------------------------------------------------------------- | ------------------------- |
+|-----------------------------------------------------------------------------------|---------------------------|
 | [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
 | [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
 | [AltLinux](https://ftp.altlinux.ru/pub/distributions/ALTLinux/)                   | `altlinux`                |
@@ -73,7 +75,7 @@ lang: ru
    apiVersion: virtualization.deckhouse.io/v1alpha2
    kind: VirtualImage
    metadata:
-     name: ubuntu-22-04
+     name: ubuntu-24-04
    spec:
      # Сохраним образ в DVCR.
      storage: ContainerRegistry
@@ -88,16 +90,16 @@ lang: ru
 1. Проверьте результат создания `VirtualImage`:
 
    ```bash
-   d8 k get virtualimage ubuntu-22-04
+   d8 k get virtualimage ubuntu-24-04
    # или более короткий вариант
-   d8 k get vi ubuntu-22-04
+   d8 k get vi ubuntu-24-04
    ```
 
    Пример вывода:
 
    ```console
    NAME           PHASE   CDROM   PROGRESS   AGE
-   ubuntu-22-04   Ready   false   100%       23h
+   ubuntu-24-04   Ready   false   100%       23h
    ```
 
 После создания ресурс `VirtualImage` может находиться в следующих состояниях (фазах):
@@ -116,26 +118,26 @@ lang: ru
 Отследить процесс создания образа можно путем добавления ключа `-w` к предыдущей команде:
 
 ```bash
-d8 k get vi ubuntu-22-04 -w
+d8 k get vi ubuntu-24-04 -w
 ```
 
 Пример вывода:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 В описание ресурса `VirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```bash
-d8 k describe vi ubuntu-22-04
+d8 k describe vi ubuntu-24-04
 ```
 
 Как создать образ с HTTP-сервера в веб-интерфейсе:
@@ -157,7 +159,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04-pvc
+  name: ubuntu-24-04-pvc
 spec:
   # Настройки хранения проектного образа.
   storage: PersistentVolumeClaim
@@ -175,14 +177,14 @@ EOF
 Проверьте результат создания `VirtualImage`:
 
 ```bash
-d8 k get vi ubuntu-22-04-pvc
+d8 k get vi ubuntu-24-04-pvc
 ```
 
 Пример вывода:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04-pvc  Ready   false   100%       23h
+ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
 
 Если параметр `.spec.persistentVolumeClaim.storageClassName` не указан, то будет использован `StorageClass` по умолчанию на уровне кластера, либо для образов, если он указан в настройках модуля.

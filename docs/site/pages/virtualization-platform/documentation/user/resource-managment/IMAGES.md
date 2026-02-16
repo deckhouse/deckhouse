@@ -14,7 +14,7 @@ When connected to a virtual machine, the image is accessed in read-only mode.
 The image creation process includes the following steps:
 
 - The user creates a `VirtualImage` resource.
-- After creation, the image is automatically loaded from the specified source into the storage (DVCR).
+- After creation, the image is automatically downloaded from the source specified in the specification to DVCR or PVC storage, depending on the type.
 - Once the download is complete, the resource becomes available for disk creation.
 
 There are different types of images:
@@ -24,14 +24,16 @@ There are different types of images:
 
 Examples of resources for obtaining virtual machine images:
 
-| Distribution                                                                      | Default user.             |
-| --------------------------------------------------------------------------------- | ------------------------- |
-| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
-| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
-| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
-| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
-| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
-| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
+<a id="image-resources-table"></a>
+
+| Distribution                                                   | Default user. |
+|----------------------------------------------------------------|---------------|
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images) | `almalinux`   |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                  | `alpine`      |
+| [CentOS](https://cloud.centos.org/centos/)                     | `cloud-user`  |
+| [Debian](https://cdimage.debian.org/images/cloud/)             | `debian`      |
+| [Rocky](https://rockylinux.org/download/)                      | `rocky`       |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                     | `ubuntu`      |
 
 The following preinstalled image formats are supported:
 
@@ -68,7 +70,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04
+  name: ubuntu-24-04
 spec:
   # Save the image to DVCR
   storage: ContainerRegistry
@@ -83,16 +85,16 @@ EOF
 Check the result of the `VirtualImage` creation:
 
 ```bash
-d8 k get virtualimage ubuntu-22-04
+d8 k get virtualimage ubuntu-24-04
 # or a shorter version
-d8 k get vi ubuntu-22-04
+d8 k get vi ubuntu-24-04
 ```
 
 Example output:
 
 ```console
 NAME           PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04   Ready   false   100%       23h
+ubuntu-24-04   Ready   false   100%       23h
 ```
 
 After creation the `VirtualImage` resource can be in the following states (phases):
@@ -111,26 +113,26 @@ Diagnosing problems with a resource is done by analyzing the information in the 
 You can trace the image creation process by adding the `-w` key to the previous command:
 
 ```bash
-d8 k get vi ubuntu-22-04 -w
+d8 k get vi ubuntu-24-04 -w
 ```
 
 Example output:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 The `VirtualImage` resource description provides additional information about the downloaded image:
 
 ```bash
-d8 k describe vi ubuntu-22-04
+d8 k describe vi ubuntu-24-04
 ```
 
 How to create an image from an HTTP server in the web interface:
@@ -152,7 +154,7 @@ d8 k apply -f - <<EOF
 apiVersion: virtualization.deckhouse.io/v1alpha2
 kind: VirtualImage
 metadata:
-  name: ubuntu-22-04-pvc
+  name: ubuntu-24-04-pvc
 spec:
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
@@ -169,14 +171,14 @@ EOF
 Check the result of the `VirtualImage` creation:
 
 ```bash
-d8 k get vi ubuntu-22-04-pvc
+d8 k get vi ubuntu-24-04-pvc
 ```
 
 Example output:
 
 ```console
 NAME              PHASE   CDROM   PROGRESS   AGE
-ubuntu-22-04-pvc  Ready   false   100%       23h
+ubuntu-24-04-pvc  Ready   false   100%       23h
 ```
 
 If the `.spec.persistentVolumeClaim.storageClassName` parameter is not specified, the default `StorageClass` at the cluster level will be used, or for images if specified in module settings.
@@ -187,7 +189,7 @@ How to create an image and store it in PVC in the web interface:
 - Go to the "Virtualization" → "Disk Images" section.
 - Click "Create Image".
 - Select "Load data from link (HTTP)" from the list.
-- In the form that opens, enter the image name in the "mage name" field.
+- In the form that opens, enter the image name in the "Image name" field.
 - In the "Storage" field, select `PersistentVolumeClaim`.
 - In the "Storage class" field, you can select StorageClass or leave the default selection.
 - In the URL field, specify the link to the image.

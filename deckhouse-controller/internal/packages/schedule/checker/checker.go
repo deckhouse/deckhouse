@@ -14,6 +14,16 @@
 
 package checker
 
+// Reason constants for checker results.
+// Must match Kubernetes condition reason pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+const (
+	ReasonDependencyLookupFailed    = "DependencyLookupFailed"
+	ReasonDependencyNotFound        = "DependencyNotFound"
+	ReasonDependencyNotEnabled      = "DependencyNotEnabled"
+	ReasonDependencyVersionMismatch = "DependencyVersionMismatch"
+	ReasonVersionLookupFailed       = "VersionLookupFailed"
+)
+
 // Checker evaluates a condition and returns whether a package should be enabled.
 //
 // Examples of checkers:
@@ -28,6 +38,7 @@ type Checker interface {
 
 // Result represents the outcome of a checker evaluation.
 type Result struct {
-	Enabled bool   // Whether the package should be enabled based on this check
-	Reason  string // Human-readable reason (typically set when Enabled=false)
+	Enabled bool
+	Reason  string
+	Message string
 }

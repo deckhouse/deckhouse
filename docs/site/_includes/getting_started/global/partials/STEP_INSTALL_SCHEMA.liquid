@@ -61,8 +61,12 @@ This guide focuses on deploying a Kubernetes cluster using Deckhouse in a privat
 
 Installation in a private environment is generally similar to installation on [bare metal](../bm/step2.html). The only difference is in some additional settings.
 
+{% alert level="info" %}
+For more details on installing and updating DKP in an air-gapped environment, see the [“Installing DKP in an air-gapped environment”](/products/kubernetes-platform/guides/private-environment.html) and [“Updating DKP in an air-gapped environment”](/products/kubernetes-platform/guides/airgapped-update.html) guides.
+{% endalert %}
+
 Scheme of Deckhouse installation in a private environment:<br />
-<img src="/images/gs/private-env-schema.svg" alt="Scheme of Deckhouse installation in a private environment">
+<img src="/images/gs/private-env-schema.png" alt="Scheme of Deckhouse installation in a private environment">
 
 {% alert %}An internal repository of OS packages is necessary to install curl on future cluster nodes (if there is no access to the official repositories via a proxy server).
 {% endalert %}
@@ -133,6 +137,10 @@ Scheme of Deckhouse installation in a private environment:<br />
    <p><strong>Physical server or virtual machine for the master node.</strong></p>
    {% offtopic title="Requirements..." %}
 
+   {% alert level="info" %}
+   Starting with version 1.74, the Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where Deckhouse is installed supports the `erofs` kernel module. If this kernel module is not present, Deckhouse will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+   {% endalert %}
+
    {% alert level="warning" %}
    In the next step of this guide, `ContainerdV2` is specified as the default container runtime on the cluster nodes.
    To use `ContainerdV2` as the container runtime on cluster nodes, they must meet the following requirements:
@@ -178,8 +186,7 @@ Scheme of Deckhouse installation in a private environment:<br />
 {% if page.platform_type == "baremetal" or page.platform_type == "baremetal" or page.platform_type == "cloud" %}
 {% alert level="warning" %}
 The recommendations above provide the minimum {% if page.platform_type == "cloud" %}summary{% endif %} resources required for the initial deployment of a cluster with one master node and one worker node.
-This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read [the recommendations for preparing
-for production](../../guides/production.html) and [the instructions](/products/kubernetes-platform/guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
+This configuration is sufficient for introductory purposes, but it is not suitable for production environments. Read the [recommendations for going for production](/products/kubernetes-platform/guides/production.html), [recommendations for disk layout and sizing](/products/kubernetes-platform/guides/fs-requirements.html) and the [instructions](/products/kubernetes-platform/guides/hardware-requirements.html) for choosing the types and number of cluster nodes, as well as the resources for them, depending on your requirements
 for the operation of the future cluster.
 {% endalert %}
 {%- endif %}

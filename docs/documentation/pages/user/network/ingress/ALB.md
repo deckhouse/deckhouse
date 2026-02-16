@@ -1,5 +1,6 @@
 ---
-title: "ALB"
+title: "Utilizing Application Load Balancer (ALB)"
+description: "Configuring Application Load Balancer for HTTP/HTTPS/gRPC traffic in Deckhouse Kubernetes Platform. Using ingress-nginx and istio for request routing, SSL/TLS termination, and application publishing."
 permalink: en/user/network/ingress/alb.html
 ---
 
@@ -51,9 +52,9 @@ spec:
               number: 80
 ```
 
-## Example of an NGINX Ingress resource
+## Example of an Ingress NGINX resource
 
-To work with NGINX Ingress, the Deckhouse Kubernetes Platform administrator must configure
+To work with Ingress NGINX, the Deckhouse Kubernetes Platform administrator must configure
 the Ingress controller by adding an Istio sidecar to it.
 To do this,
 set the [`enableIstioSidecar`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-enableistiosidecar) parameter

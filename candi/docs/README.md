@@ -28,7 +28,7 @@ clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: 1.30
+kubernetesVersion: 1.31
 defaultCRI: "ContainerdV2"
 clusterDomain: cluster.local
 ---
@@ -51,7 +51,6 @@ For validation and values defaulting, each configuration object has its OpenAPI 
 | GCPClusterConfiguration        | GCP specific configuration | [candi/cloud-providers/gcp/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/gcp/openapi/cluster_configuration.yaml) |
 | vSphereClusterConfiguration    | vSphere specific configuration | [candi/cloud-providers/vsphere/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/ee/se-plus/candi/cloud-providers/vsphere/openapi/cluster_configuration.yaml) |
 | YandexClusterConfiguration     | Yandex Cloud specific configuration | [candi/cloud-providers/yandex/openapi/openapi/cluster_configuration.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/cloud-providers/yandex/openapi/cluster_configuration.yaml) |
-| BashibleTemplateData           | Bashible Bundle compiling settings (only for dhctl render bashible-bunble) | [candi/bashible/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/bashible/openapi.yaml) |
 | KubeadmConfigTemplateData      | Kubeadm config compiling settings (only for dhctl render kubeadm-config) | [candi/control-plane-kubeadm/openapi.yaml](https://github.com/deckhouse/deckhouse/blob/main/candi/control-plane-kubeadm/openapi.yaml)|
 
 ### Bootstrap
@@ -95,8 +94,8 @@ If every node in cluster has only one network interface `StaticClusterConfigurat
 
 #### Preparations
 
-* **SSH connection check**: dhctl will quite the bootstrap process if does not manage connect to the host.
-* **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basdic software (jq, curl) and st up the network.
+* **SSH connection check**: dhctl will quit the bootstrap process if does not manage connect to the host.
+* **Execute bootstrap.sh and bootstrap-network.sh**: scripts to install basic software (jq, curl) and set up the network.
 
 > **Note!** dhctl will check the ssh connection first.
 
@@ -138,7 +137,7 @@ The `Ready` state is a signal for `dhctl` to create the `NodeGroup` object for m
 
 #### Create additional master or static nodes
 
-On additional cluster nodes boostrap, dhctl make calls to the Kubernetes API.
+On additional cluster nodes bootstrap, dhctl make calls to the Kubernetes API.
 * Creates desired NodeGroup objects
 * Waits for Secrets with the cloud config for the particular node group
 * Execute corresponding terraform pipeline (for master node or static node)

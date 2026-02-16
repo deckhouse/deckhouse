@@ -24,6 +24,7 @@ podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: "Automatic"
 clusterDomain: "cluster.local"
+defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
 # [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
@@ -141,7 +142,7 @@ masterNodeGroup:
     # [<ru>] Используемый образ.
     # [<en>] You might consider changing this.
     # [<ru>] Возможно, захотите изменить.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128
     disableExternalIP: false
 # [<en>] A subnet to use for cluster nodes.
 # [<ru>] Адресное пространство узлов кластера.
@@ -199,9 +200,9 @@ spec:
     approvalMode: Automatic
   nodeType: CloudEphemeral
 ---
-# [<en>] Section containing the parameters of NGINX Ingress controller.
+# [<en>] Section containing the parameters of Ingress NGINX Controller.
 # [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
-# [<ru>] Секция, описывающая параметры NGINX Ingress controller.
+# [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
 # [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
@@ -245,7 +246,7 @@ spec:
   # [<en>] This is a hash of the password <GENERATED_PASSWORD>, generated when loading the page of the Getting Started.
   # [<en>] Generate your own or use it at your own risk (for testing purposes)
   # [<en>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
-  # [<ru>] Это хэш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
+  # [<ru>] Это хеш пароля <GENERATED_PASSWORD>, сгенерированного при загрузке страницы "Быстрого Старта".
   # [<ru>] Сгенерируйте свой или используйте этот, но только для тестирования
   # [<ru>] echo -n '<GENERATED_PASSWORD>' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # [<en>] You might consider changing this.

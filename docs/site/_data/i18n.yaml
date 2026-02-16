@@ -18,6 +18,7 @@ be: Basic Edition
 se: Standard Edition
 se-plus: Standard Edition+
 ee: Enterprise Edition
+cse: Certified Security Edition
 kubernetes-platform: Deckhouse Kubernetes Platform
 virtualization-platform: Deckhouse Virtualization Platform
 stronghold: Deckhouse Stronghold
@@ -312,6 +313,9 @@ common:
   additional_property_name:
     en: item (key) name
     ru: имя параметра (ключ объекта)
+  pattern_property_name:
+    en: regular expression for parameter name
+    ru: регулярное выражение для имени параметра
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

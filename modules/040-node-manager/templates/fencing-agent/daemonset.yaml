@@ -63,14 +63,14 @@ spec:
           securityContext:
             privileged: true
             readOnlyRootFilesystem: true
-          seLinuxOptions:
-            level: 's0'
-            type: 'spc_t'
-          capabilities:
-            add:
-              - SYS_ADMIN
-            drop:
-              - ALL
+            seLinuxOptions:
+              level: 's0'
+              type: 'spc_t'
+            capabilities:
+              add:
+                - SYS_ADMIN
+              drop:
+                - ALL
           imagePullPolicy: IfNotPresent
           env:
             - name: LOG_LEVEL

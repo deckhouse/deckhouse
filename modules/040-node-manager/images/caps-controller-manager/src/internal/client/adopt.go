@@ -63,10 +63,7 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 		return ctrl.Result{}, errors.Wrap(err, "failed to patch StaticInstance MachineRef")
 	}
 
-	ok, err := c.adoptStaticInstance(instanceScope)
-	if err != nil {
-		return ctrl.Result{}, errors.Wrap(err, "failed to adopt StaticInstance")
-	}
+	ok := c.adoptStaticInstance(instanceScope)
 	if !ok {
 		return ctrl.Result{}, nil
 	}
@@ -81,15 +78,15 @@ func (c *Client) AdoptStaticInstance(ctx context.Context, instanceScope *scope.I
 	return ctrl.Result{}, nil
 }
 
-func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, error) {
+func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) bool {
 	done := c.adoptTaskManager.spawn(taskID(instanceScope.MachineScope.StaticMachine.Spec.ProviderID), func() bool {
 		var sshCl ssh.SSH
 		var err error
 		if instanceScope.SSHLegacyMode {
-			instanceScope.Logger.Info("using clissh")
+			instanceScope.Logger.V(1).Info("using clissh")
 			sshCl, err = clissh.CreateSSHClient(instanceScope)
 		} else {
-			instanceScope.Logger.Info("using gossh")
+			instanceScope.Logger.V(1).Info("using gossh")
 			sshCl, err = gossh.CreateSSHClient(instanceScope)
 		}
 
@@ -116,11 +113,11 @@ func (c *Client) adoptStaticInstance(instanceScope *scope.InstanceScope) (bool, 
 		return true
 	})
 	if done == nil || !*done {
-		instanceScope.Logger.Info("Adopting is not finished yet, waiting...")
-		return false, nil
+		instanceScope.Logger.V(1).Info("Adopting is not finished yet, waiting...")
+		return false
 	}
 
 	c.recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "AdoptionScriptSucceeded", "Adoption script executed successfully")
 
-	return true, nil
+	return true
 }

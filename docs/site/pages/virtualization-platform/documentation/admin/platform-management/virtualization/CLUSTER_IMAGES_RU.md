@@ -127,7 +127,7 @@ lang: ru
     apiVersion: virtualization.deckhouse.io/v1alpha2
     kind: ClusterVirtualImage
     metadata:
-      name: ubuntu-22-04
+      name: ubuntu-24-04
     spec:
       # Источник для создания образа.
       dataSource:
@@ -140,20 +140,20 @@ lang: ru
 1. Проверьте результат создания ресурса ClusterVirtualImage, выполнив следующую команду:
 
     ```shell
-    d8 k get clustervirtualimage ubuntu-22-04
+    d8 k get clustervirtualimage ubuntu-24-04
    ```
 
     Есть укороченный вариант команды:
 
     ```shell
-    d8 k get cvi ubuntu-22-04
+    d8 k get cvi ubuntu-24-04
     ```
 
     В результате будет выведена информация о ресурсе `ClusterVirtualImage`:
 
     ```console
     NAME           PHASE   CDROM   PROGRESS   AGE
-    ubuntu-22-04   Ready   false   100%       23h
+    ubuntu-24-04   Ready   false   100%       23h
     ```
 
 После создания ресурс `ClusterVirtualImage` может находиться в следующих состояниях (фазах):
@@ -173,26 +173,26 @@ lang: ru
 Чтобы отследить процесс создания образа, добавьте ключ `-w` к команде проверки результата создания ресурса:
 
 ```shell
-d8 k get cvi ubuntu-22-04 -w
+d8 k get cvi ubuntu-24-04 -w
 ```
 
 В результате будет выведена информация о прогрессе создания образа:
 
 ```console
 NAME           PHASE          CDROM   PROGRESS   AGE
-ubuntu-22-04   Provisioning   false              4s
-ubuntu-22-04   Provisioning   false   0.0%       4s
-ubuntu-22-04   Provisioning   false   28.2%      6s
-ubuntu-22-04   Provisioning   false   66.5%      8s
-ubuntu-22-04   Provisioning   false   100.0%     10s
-ubuntu-22-04   Provisioning   false   100.0%     16s
-ubuntu-22-04   Ready          false   100%       18s
+ubuntu-24-04   Provisioning   false              4s
+ubuntu-24-04   Provisioning   false   0.0%       4s
+ubuntu-24-04   Provisioning   false   28.2%      6s
+ubuntu-24-04   Provisioning   false   66.5%      8s
+ubuntu-24-04   Provisioning   false   100.0%     10s
+ubuntu-24-04   Provisioning   false   100.0%     16s
+ubuntu-24-04   Ready          false   100%       18s
 ```
 
 В описании ресурса `ClusterVirtualImage` можно получить дополнительную информацию о скачанном образе:
 
 ```shell
-d8 k describe cvi ubuntu-22-04
+d8 k describe cvi ubuntu-24-04
 ```
 
 Как создать образ с HTTP-сервера в веб-интерфейсе:
@@ -333,3 +333,49 @@ some-image   Ready   false   100%       1m
 - Выберите файл в открывшемся файловом менеджере.
 - Нажмите кнопку «Создать».
 - Дождитесь, пока образ перейдет в состояние `Готов`.
+
+### Очистка хранилища образов
+
+{% alert level="info" %}
+Доступно с [версии 1.2.0](/products/virtualization-platform/documentation/release-notes.html#v120) и выше.
+{% endalert %}
+
+Со временем создание и удаление ресурсов ClusterVirtualImage, VirtualImage, VirtualDisk приводит к накоплению
+неактуальных образов во внутрикластерном хранилище. Для поддержания хранилища в актуальном состоянии предусмотрена сборка мусора по расписанию.
+По умолчанию эта функция отключена. Для включения очистки нужно задать расписание в настройках модуля в ресурсе ModuleConfig/virtualization:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: virtualization
+spec:
+  # ...
+  settings:
+    dvcr:
+      gc:
+        schedule: "0 20 * * *"
+  # ...
+```
+
+На время работы сборки мусора хранилище переводится в режим «только чтение». Все создаваемые в это время ресурсы будут ожидать окончания очистки.
+
+Для проверки наличия неактуальных образов в хранилище можно выполнить такую команду:
+
+```bash
+d8 k -n d8-virtualization exec deploy/dvcr -- dvcr-cleaner gc check
+```
+
+На экран будут выведены сведения о состоянии хранилища и список неактуальных образов, которые могут быть удалены.
+
+```console
+Found 2 cvi, 5 vi, 1 vd manifests in registry
+Found 1 cvi, 5 vi, 11 vd resources in cluster
+  Total     Used    Avail     Use%
+36.3GiB  13.1GiB  22.4GiB      39%
+Images eligible for cleanup:
+KIND                   NAMESPACE            NAME
+ClusterVirtualImage                         debian-12
+VirtualDisk            default              debian-10-root
+VirtualImage           default              ubuntu-2204
+```

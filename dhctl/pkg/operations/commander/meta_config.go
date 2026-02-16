@@ -30,6 +30,9 @@ func ParseMetaConfig(ctx context.Context, stateCache state.Cache, params *Comman
 		return nil, fmt.Errorf("error loading cluster uuid from state cache: %w", err)
 	}
 	clusterUUID := string(clusterUUIDBytes)
+	if clusterUUID == "" {
+		return nil, fmt.Errorf("error loading cluster uuid from state cache: uuid is empty")
+	}
 
 	configData := fmt.Sprintf("%s\n---\n%s", params.ClusterConfigurationData, params.ProviderClusterConfigurationData)
 	metaConfig, err := config.ParseConfigFromData(

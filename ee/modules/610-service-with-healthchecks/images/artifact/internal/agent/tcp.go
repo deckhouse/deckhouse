@@ -7,6 +7,7 @@ package agent
 
 import (
 	"fmt"
+	"net"
 	"strings"
 	"time"
 )
@@ -60,13 +61,16 @@ func (t TCPProbeTarget) PerformCheck() error {
 	timeoutDuration := time.Duration(t.timeoutSeconds) * time.Second
 	d := ProbeDialer()
 	d.Timeout = timeoutDuration
-	conn, err := d.Dial("tcp", fmt.Sprintf("%s:%d", t.targetHost, t.targetPort))
+	conn, err := d.Dial("tcp", net.JoinHostPort(t.targetHost, fmt.Sprintf("%d", t.targetPort)))
 	if err != nil {
 		// Convert errors to failures to handle timeouts.
 		return err
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(timeoutDuration))
+	if err = conn.SetWriteDeadline(time.Now().Add(timeoutDuration)); err != nil {
+		_ = conn.Close()
+		return err
+	}
 	if _, err = conn.Write([]byte("test")); err != nil {
 		return err
 	}

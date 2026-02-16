@@ -21,8 +21,10 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	"github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -44,8 +46,22 @@ const (
 )
 
 type clusterConfig struct {
-	KubernetesVersion string `json:"kubernetesVersion"`
-	DefaultCRI        string `json:"defaultCRI"`
+	APIVersion              string       `json:"apiVersion"`
+	Kind                    string       `json:"kind"`
+	ClusterType             string       `json:"clusterType"`
+	KubernetesVersion       string       `json:"kubernetesVersion"`
+	DefaultCRI              string       `json:"defaultCRI"`
+	PodSubnetNodeCIDRPrefix string       `json:"podSubnetNodeCIDRPrefix"`
+	PodSubnetCIDR           string       `json:"podSubnetCIDR"`
+	ServiceSubnetCIDR       string       `json:"serviceSubnetCIDR"`
+	ClusterDomain           string       `json:"clusterDomain"`
+	EncryptionAlgorithm     string       `json:"encryptionAlgorithm"`
+	Cloud                   *cloudConfig `json:"cloud,omitempty"`
+}
+
+type cloudConfig struct {
+	Provider string `json:"provider"`
+	Prefix   string `json:"prefix,omitempty"`
 }
 
 func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating.ValidatorResult, error) {
@@ -115,16 +131,216 @@ func validateDefaultCRI(defaultCRI string, cli client.Client) (*kwhvalidating.Va
 	}
 }
 
-func validateClusterConfiguration(schemaStore *config.SchemaStore, clusterConfiguration []byte) (*kwhvalidating.ValidatorResult, error) {
-	_, err := schemaStore.Validate(&clusterConfiguration, config.ValidateOptionOmitDocInError(true))
+func getKubernetesEndpointsCount(ctx context.Context, cli client.Client) (int, error) {
+	endpoints := &v1.Endpoints{}
+	err := cli.Get(ctx, client.ObjectKey{
+		Namespace: "default",
+		Name:      "kubernetes",
+	}, endpoints)
 	if err != nil {
-		return rejectResult(err.Error())
+		return 0, fmt.Errorf("failed to get kubernetes endpoints: %w", err)
+	}
+
+	count := 0
+	for _, subset := range endpoints.Subsets {
+		count += len(subset.Addresses)
+	}
+	return count, nil
+}
+
+func parseVersion(version string) (*semver.Version, error) {
+	// Trim whitespace and newlines that might come from secret data
+	version = strings.TrimSpace(version)
+	if version == "" {
+		return nil, fmt.Errorf("version string is empty")
+	}
+	return semver.NewVersion(version)
+}
+
+// validateKubernetesVersionDowngrade validates that Kubernetes version downgrade
+// does not exceed 1 minor version. It handles "Automatic" version by resolving
+// it to actual version from secret data.
+//
+// Rules:
+//   - Upgrade is always allowed (no restrictions)
+//   - Downgrade is allowed only if it's within 1 minor version
+//   - When oldVersion is "Automatic", uses maxUsedControlPlaneKubernetesVersion from secret
+//     (maximum version that was ever used in the cluster)
+//   - When newVersion is "Automatic", uses deckhouseDefaultKubernetesVersion from secret
+//     (default version that Deckhouse will use for Automatic)
+//   - Also checks maxUsedControlPlaneKubernetesVersion to prevent downgrade below max used version
+func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v1.Secret) (*kwhvalidating.ValidatorResult, error) {
+	// oldVersion can be either "Automatic" or semver (e.g., "1.23.4")
+	// newVersion can be either "Automatic" or semver (e.g., "1.23.5")
+	if oldVersion == newVersion {
+		return allowResult(nil)
+	}
+
+	type versionChecker func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error)
+	var selectedChecker versionChecker
+
+	// minorSubCheck validates that downgrade does not exceed 1 minor version.
+	// It allows upgrade without restrictions and only checks downgrade scenarios.
+	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+		// Only check downgrade, allow upgrade without restrictions
+		if oldVersionSemver.LessThan(newVersionSemver) || oldVersionSemver.Equal(newVersionSemver) {
+			return allowResult(nil)
+		}
+
+		// Check if downgrading more than 1 minor version
+		if oldVersionSemver.Major() > newVersionSemver.Major() {
+			return rejectResult(
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+			)
+		}
+
+		if oldVersionSemver.Minor() > newVersionSemver.Minor()+1 {
+			return rejectResult(
+				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. oldKubernetesVersion=%s newKubernetesVersion=%s", oldVersionSemver, newVersionSemver),
+			)
+		}
+
+		return allowResult(nil)
+	}
+
+	// automaticOnlyGreaterCheck is used when newVersion is "Automatic".
+	// It only rejects if oldVersion is greater than Automatic version (downgrade scenario).
+	// Upgrade or same version is allowed.
+	// This is simpler than minorSubCheck because Automatic will use deckhouseDefaultKubernetesVersion
+	// which is always safe, so we only need to check if it's a downgrade.
+	var automaticOnlyGreaterCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+		if oldVersionSemver.GreaterThan(newVersionSemver) {
+			return rejectResult(
+				fmt.Sprintf(
+					"can not set Automatic because it will downgrade kubernetes version. "+
+						"Automatic=%s oldKubernetesVersion=%s", newVersionSemver, oldVersionSemver,
+				),
+			)
+		}
+
+		return allowResult(nil)
+	}
+
+	selectedChecker = minorSubCheck
+
+	// Resolve oldVersion: if it's "Automatic", get actual version from secret
+	var oldVersionSemver *semver.Version
+	if oldVersion == "Automatic" {
+		maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
+		// Corner case: If maxUsedControlPlaneKubernetesVersion is not set in secret,
+		// we cannot determine the actual version that was used, so we allow the change.
+		// This can happen during initial cluster setup or if secret is incomplete.
+		if !exists {
+			return allowResult(nil)
+		}
+
+		var err error
+		oldVersionSemver, err = parseVersion(string(maxUsedVersionB64))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse maxUsedControlPlaneKubernetesVersion: %w", err)
+		}
+	} else {
+		var err error
+		oldVersionSemver, err = parseVersion(oldVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse old version: %w", err)
+		}
+	}
+
+	// Resolve newVersion: if it's "Automatic", get actual version from secret
+	var newVersionSemver *semver.Version
+	if newVersion == "Automatic" {
+		automaticVersionB64, exists := secret.Data["deckhouseDefaultKubernetesVersion"]
+		// Corner case: If deckhouseDefaultKubernetesVersion is not set in secret,
+		// we cannot determine what Automatic will resolve to, so we allow the change.
+		// This can happen during initial cluster setup or if secret is incomplete.
+		if !exists {
+			return allowResult(nil)
+		}
+
+		var err error
+		newVersionSemver, err = parseVersion(string(automaticVersionB64))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse automatic version: %w", err)
+		}
+
+		// When newVersion is "Automatic", we use simpler checker that only checks
+		// if oldVersion > newVersion (downgrade). Upgrade or same version is allowed.
+		// We don't need to check minor version restriction because Automatic will use
+		// deckhouseDefaultKubernetesVersion which is always safe.
+		selectedChecker = automaticOnlyGreaterCheck
+	} else {
+		var err error
+		newVersionSemver, err = parseVersion(newVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse new version: %w", err)
+		}
+	}
+
+	// Run selected checker
+	result, err := selectedChecker(oldVersionSemver, newVersionSemver)
+	if err != nil {
+		return nil, err
+	}
+	if !result.Valid {
+		return result, nil
 	}
 
 	return allowResult(nil)
 }
 
-func clusterConfigurationHandler(mm moduleManager, cli client.Client, schemaStore *config.SchemaStore) http.Handler {
+func validateCRIChange(oldCRI, newCRI string, cli client.Client) (*kwhvalidating.ValidatorResult, error) {
+	if oldCRI == newCRI {
+		return allowResult(nil)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	endpointsCount, err := getKubernetesEndpointsCount(ctx, cli)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get endpoints count: %w", err)
+	}
+
+	if endpointsCount < 3 {
+		return allowResult([]string{"it is disruptive to change defaultCRI type for cluster with apiserver endpoints < 3"})
+	}
+
+	return allowResult(nil)
+}
+
+func validateUnsafeConfigChanges(oldConfig, newConfig *clusterConfig, unsafeMode bool) (*kwhvalidating.ValidatorResult, error) {
+	if unsafeMode {
+		return allowResult(nil)
+	}
+
+	if oldConfig.PodSubnetNodeCIDRPrefix != newConfig.PodSubnetNodeCIDRPrefix {
+		return rejectResult("it is forbidden to change podSubnetNodeCIDRPrefix in a running cluster")
+	}
+
+	if oldConfig.PodSubnetCIDR != newConfig.PodSubnetCIDR {
+		return rejectResult("it is forbidden to change podSubnetCIDR in a running cluster")
+	}
+
+	if oldConfig.ServiceSubnetCIDR != newConfig.ServiceSubnetCIDR {
+		return rejectResult("it is forbidden to change serviceSubnetCIDR in a running cluster")
+	}
+
+	return allowResult(nil)
+}
+
+func validateClusterConfiguration(ctx context.Context, clusterConfiguration []byte) (*kwhvalidating.ValidatorResult, error) {
+	_, err := config.ParseConfigFromData(ctx, string(clusterConfiguration), config.DummyPreparatorProvider(), config.ValidateOptionOmitDocInError(true))
+	if err != nil {
+		result, _ := rejectResult(err.Error())
+		return result, nil
+	}
+
+	result, _ := allowResult(nil)
+	return result, nil
+}
+
+func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		if ar.Operation == model.OperationDelete {
 			return rejectResult("It is forbidden to delete secret d8-cluster-configuration")
@@ -142,8 +358,8 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, schemaStor
 			return nil, fmt.Errorf("expected field 'cluster-configuration.yaml' not found in secret %s", secret.Name)
 		}
 
-		clusterConfigurationValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			return validateClusterConfiguration(schemaStore, clusterConfigurationRaw)
+		clusterConfigurationValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+			return validateClusterConfiguration(ctx, clusterConfigurationRaw)
 		})
 
 		clusterConf := new(clusterConfig)
@@ -153,6 +369,9 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, schemaStor
 		}
 
 		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+			if clusterConf.KubernetesVersion == "Automatic" {
+				return allowResult(nil)
+			}
 			return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
 		})
 
@@ -160,7 +379,48 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, schemaStor
 			return validateDefaultCRI(clusterConf.DefaultCRI, cli)
 		})
 
-		chain := kwhvalidating.NewChain(nil, clusterConfigurationValidator, k8sVersionValidator, criValidator)
+		validators := []kwhvalidating.Validator{clusterConfigurationValidator, k8sVersionValidator, criValidator}
+
+		if ar.Operation == model.OperationUpdate && ar.OldObjectRaw != nil {
+			oldSecret := &v1.Secret{}
+			if err := yaml.Unmarshal(ar.OldObjectRaw, oldSecret); err == nil {
+				if oldClusterConfigurationRaw, ok := oldSecret.Data["cluster-configuration.yaml"]; ok {
+					oldClusterConf := new(clusterConfig)
+					if err := yaml.Unmarshal(oldClusterConfigurationRaw, oldClusterConf); err == nil {
+						unsafeMode := false
+						if annotations := secret.GetAnnotations(); annotations != nil {
+							if annotations["deckhouse.io/allow-unsafe"] != "" && annotations["deckhouse.io/allow-unsafe"] != "null" {
+								unsafeMode = true
+							}
+						}
+
+						unsafeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							return validateUnsafeConfigChanges(oldClusterConf, clusterConf, unsafeMode)
+						})
+
+						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, secret)
+						})
+
+						criChangeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							oldCRI := oldClusterConf.DefaultCRI
+							if oldCRI == "" {
+								oldCRI = "Containerd"
+							}
+							newCRI := clusterConf.DefaultCRI
+							if newCRI == "" {
+								newCRI = "Containerd"
+							}
+							return validateCRIChange(oldCRI, newCRI, cli)
+						})
+
+						validators = append(validators, unsafeValidator, k8sDowngradeValidator, criChangeValidator)
+					}
+				}
+			}
+		}
+
+		chain := kwhvalidating.NewChain(nil, validators...)
 		return chain.Validate(ctx, ar, obj)
 	})
 

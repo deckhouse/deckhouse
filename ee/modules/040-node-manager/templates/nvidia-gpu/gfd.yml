@@ -1,3 +1,4 @@
+{{- if not (.Values.global.enabledModules | has "gpu") }}
 {{- range $index, $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- if ($ng).gpu -}}
     {{ $gfdName := printf "gpu-feature-discovery-%s" ( $ng.name | sha256sum | trunc 7 ) }}
@@ -16,7 +17,7 @@ spec:
     kind: DaemonSet
     name: {{ $gfdName }}
   updatePolicy:
-    updateMode: "Auto"
+    updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
     - containerName: gpu-feature-discovery-ctr
@@ -185,4 +186,5 @@ spec:
         - name: config
           emptyDir: {}
   {{- end }}
+{{- end }}
 {{- end }}

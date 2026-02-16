@@ -19,10 +19,10 @@ package client
 import (
 	"time"
 
-	"caps-controller-manager/internal/event"
-
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
+
+	"caps-controller-manager/internal/event"
 )
 
 // Client is a client that executes commands on hosts using the OpenSSH client.

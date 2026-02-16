@@ -27,20 +27,20 @@ import (
 type ClusterConnectionsOptions struct {
 	CommanderMode bool
 
-	ApiServerUrl     string
-	ApiServerOptions ApiServerOptions
+	APIServerURL     string
+	APIServerOptions APIServerOptions
 
 	SchemaStore         *config.SchemaStore
 	SSHConnectionConfig string
 }
 
 func InitializeClusterConnections(ctx context.Context, opts ClusterConnectionsOptions) (*client.KubernetesClient, node.SSHClient, func() error, error) {
-	if opts.CommanderMode && opts.ApiServerUrl != "" {
-		kubeCl, cleanup, err := CreateKubeClient(ctx, opts.ApiServerUrl, opts.ApiServerOptions)
+	if opts.CommanderMode && opts.APIServerURL != "" {
+		kubeCl, err := CreateKubeClient(ctx, opts.APIServerURL, opts.APIServerOptions)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("error creating kubernetes client: %w", err)
 		}
-		return kubeCl, nil, cleanup, nil
+		return kubeCl, nil, func() error { return nil }, nil
 	} else {
 		var sshClient node.SSHClient
 		var cleanup func() error

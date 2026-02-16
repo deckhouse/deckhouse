@@ -17,7 +17,6 @@ package template_tests
 import (
 	"encoding/base64"
 	"fmt"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -32,6 +31,7 @@ func Test(t *testing.T) {
 }
 
 const globalValues = `
+  clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler", "cloud-provider-vsphere"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -219,26 +219,46 @@ const moduleValuesD = `
             tcpAppProfileName: profile1
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-cloud-provider-vsphere"
+
 var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/se-plus/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/vsphere", "/deckhouse/ee/se-plus/modules/030-cloud-provider-vsphere/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -247,15 +267,15 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-vsphere")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "deckhouse-registry")
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
-			csiCongrollerPluginSS := f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller")
+			csiControllerPluginSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "csi.vsphere.vmware.com")
-			csiNodePluginDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vsphere", "csi-node")
-			csiSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "csi")
+			csiNodePluginDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			csiSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
 			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-provisioner")
 			csiAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-attacher")
@@ -263,15 +283,17 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			csiResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
 			csiResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:csi:controller:external-resizer")
 
-			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-vsphere:cloud-controller-manager")
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-vsphere:cloud-controller-manager")
-			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
+			ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vsphere:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-vsphere:cluster-admin")
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -306,8 +328,10 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiNodePluginDS.Exists()).To(BeTrue())
+			Expect(csiNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiSA.Exists()).To(BeTrue())
-			Expect(csiCongrollerPluginSS.Exists()).To(BeTrue())
+			Expect(csiControllerPluginSS.Exists()).To(BeTrue())
+			Expect(csiControllerPluginSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiAttacherCR.Exists()).To(BeTrue())
 			Expect(csiAttacherCRB.Exists()).To(BeTrue())
 			Expect(csiProvisionerCR.Exists()).To(BeTrue())
@@ -336,12 +360,16 @@ storageclass.deckhouse.io/volume-expansion-mode: offline
 storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(scMydsname2.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 	})
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.HelmRender()
@@ -375,7 +403,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
 
-			cloudConfig := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			cloudConfig := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 			Expect(cloudConfig.Exists()).To(BeTrue())
 			expectedCloudConfigYaml := `
 global:
@@ -404,7 +432,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -413,8 +441,8 @@ labels:
 
 			It("CCM and CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "cloud-controller-manager").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("Deployment", "d8-cloud-provider-vsphere", "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
 
 			})
 		})
@@ -422,7 +450,7 @@ labels:
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)
@@ -448,7 +476,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesC)
 			f.HelmRender()
@@ -457,7 +485,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 		It("Everything must render properly with proper secret", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
 			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
@@ -497,7 +525,7 @@ nodes:
 
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.30", "1.30"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.31", "1.31"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesD)
 			f.HelmRender()
@@ -506,7 +534,7 @@ nodes:
 		It("Everything must render properly with proper secret", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-vsphere", "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
 			cloudConfig, _ := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())

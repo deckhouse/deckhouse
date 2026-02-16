@@ -21,6 +21,8 @@ import (
 	"os/exec"
 	"syscall"
 
+	"github.com/name212/govalue"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	infraexec "github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/exec"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/plan"
@@ -36,6 +38,26 @@ type ExecutorParams struct {
 	VMChangeTester plan.VMChangeTester
 }
 
+func (p *ExecutorParams) validate() error {
+	if err := p.RunExecutorParams.validateRunParams(); err != nil {
+		return err
+	}
+
+	if p.PluginsDir == "" {
+		return fmt.Errorf("PluginsDir is required for tofu executor")
+	}
+
+	if p.WorkingDir == "" {
+		return fmt.Errorf("WorkingDir is required for tofu executor")
+	}
+
+	if p.Step == "" {
+		return fmt.Errorf("Step is required for tofu executor")
+	}
+
+	return nil
+}
+
 type Executor struct {
 	params ExecutorParams
 
@@ -43,14 +65,26 @@ type Executor struct {
 	cmd    *exec.Cmd
 }
 
-func NewExecutor(params ExecutorParams, logger log.Logger) *Executor {
+func NewExecutor(params ExecutorParams, logger log.Logger) (*Executor, error) {
+	if err := params.validate(); err != nil {
+		return nil, err
+	}
+
+	if govalue.IsNil(logger) {
+		logger = log.GetDefaultLogger()
+	}
+
 	return &Executor{
 		params: params,
 		logger: logger,
-	}
+	}, nil
 }
 
 func (e *Executor) IsVMChange(rc plan.ResourceChange) bool {
+	if e.params.VMChangeTester == nil {
+		return false
+	}
+
 	return e.params.VMChangeTester(rc)
 }
 
@@ -103,7 +137,7 @@ func (e *Executor) Apply(ctx context.Context, opts infrastructure.ApplyOpts) err
 	return err
 }
 
-func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exitCode int, err error) {
+func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (int, error) {
 	args := []string{
 		"plan",
 		"-input=false",
@@ -133,7 +167,7 @@ func (e *Executor) Plan(ctx context.Context, opts infrastructure.PlanOpts) (exit
 	return infraexec.Exec(ctx, e.cmd, e.logger)
 }
 
-func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) (result []byte, err error) {
+func (e *Executor) Output(ctx context.Context, statePath string, outFielda ...string) ([]byte, error) {
 	cmd, out, err := tofuOutputRun(ctx, e.params.RunExecutorParams, statePath, outFielda...)
 	e.cmd = cmd
 	return out, err
@@ -155,7 +189,7 @@ func (e *Executor) Destroy(ctx context.Context, opts infrastructure.DestroyOpts)
 	return err
 }
 
-func (e *Executor) Show(ctx context.Context, planPath string) (result []byte, err error) {
+func (e *Executor) Show(ctx context.Context, planPath string) ([]byte, error) {
 	args := []string{
 		"show",
 		"-json",
@@ -183,7 +217,7 @@ func (e *Executor) Stop() {
 	_ = syscall.Kill(-e.cmd.Process.Pid, syscall.SIGINT)
 }
 
-func (e *Executor) GetActions(ctx context.Context, planPath string) (actions []string, err error) {
+func (e *Executor) GetActions(ctx context.Context, planPath string) ([]string, error) {
 	args := []string{
 		"show",
 		"-json",

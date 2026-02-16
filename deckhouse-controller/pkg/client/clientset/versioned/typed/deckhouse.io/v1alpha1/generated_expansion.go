@@ -29,6 +29,10 @@ type ModuleConfigExpansion interface{}
 
 type ModuleDocumentationExpansion interface{}
 
+type ModulePackageExpansion interface{}
+
+type ModulePackageVersionExpansion interface{}
+
 type ModulePullOverrideExpansion interface{}
 
 type ModuleReleaseExpansion interface{}
@@ -38,6 +42,8 @@ type ModuleSettingsDefinitionExpansion interface{}
 type ModuleSourceExpansion interface{}
 
 type ModuleUpdatePolicyExpansion interface{}
+
+type ObjectKeeperExpansion interface{}
 
 type PackageRepositoryExpansion interface{}
 

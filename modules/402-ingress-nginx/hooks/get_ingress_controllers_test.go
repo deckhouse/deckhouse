@@ -22,6 +22,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -86,6 +87,7 @@ spec:
   "loadBalancer": {},
   "controllerLogLevel": "Info",
   "loadBalancerWithProxyProtocol": {},
+  "loadBalancerWithSSLPassthrough": {},
   "maxReplicas": 1,
   "minReplicas": 1,
   "resourcesRequests": {
@@ -193,6 +195,7 @@ spec:
 "inlet": "LoadBalancer",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "controllerLogLevel": "Info",
@@ -219,7 +222,10 @@ spec:
 "hostPort": {},
 "hostPortWithProxyProtocol": {
   "httpPort": 80,
-  "httpsPort": 443
+  "httpsPort": 443,
+  "acceptClientIPHeadersFrom": [
+    "0.0.0.0/0"
+  ]
 },
 "hostWithFailover": {},
 "hsts": false,
@@ -228,6 +234,7 @@ spec:
 "inlet": "HostPortWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -267,6 +274,7 @@ spec:
 "inlet": "LoadBalancerWithProxyProtocol",
 "loadBalancer": {},
 "loadBalancerWithProxyProtocol": {},
+"loadBalancerWithSSLPassthrough": {},
 "maxReplicas": 1,
 "minReplicas": 1,
 "resourcesRequests": {
@@ -337,6 +345,42 @@ spec:
 			fmt.Println(name, validationEnabled)
 
 			Expect(f.ValuesGet("ingressNginx.internal.ingressControllers.0.spec.validationEnabled").Bool()).To(BeFalse())
+		})
+
+		Context("MaxMind account ID metric", func() {
+			BeforeEach(func() {
+				f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: test-mm
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancer
+  geoIP2:
+    maxmindLicenseKey: abc12345
+`))
+				f.RunHook()
+			})
+
+			It("emits metric when licenseKey present and accountID missing", func() {
+				Expect(f).To(ExecuteSuccessfully())
+
+				metrics := f.MetricsCollector.CollectedMetrics()
+
+				var found bool
+				for _, m := range metrics {
+					if m.Name == "d8_ingress_nginx_controller_maxmind_account_id_not_set" &&
+						m.Action == operation.ActionGaugeSet &&
+						m.Labels["controller_name"] == "test-mm" &&
+						m.Value != nil && *m.Value == 1.0 {
+						found = true
+						break
+					}
+				}
+				Expect(found).To(BeTrue(), fmt.Sprintf("expected metric d8_ingress_nginx_controller_maxmind_account_id_not_set=1 for controller test-mm, got: %#v", metrics))
+			})
 		})
 	})
 })

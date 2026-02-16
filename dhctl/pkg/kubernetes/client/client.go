@@ -14,6 +14,7 @@
 
 package client
 
+//nolint:gci
 import (
 	"context"
 	"fmt"
@@ -28,6 +29,7 @@ import (
 
 	// oidc allows using oidc provider in kubeconfig
 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc"
+	"k8s.io/client-go/rest"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -58,6 +60,7 @@ type KubernetesInitParams struct {
 	KubeConfigContext string
 
 	KubeConfigInCluster bool
+	RestConfig          *rest.Config
 }
 
 func NewKubernetesClient() *KubernetesClient {
@@ -111,6 +114,8 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 	case params.KubeConfig != "":
 		kubeClient.WithContextName(params.KubeConfigContext)
 		kubeClient.WithConfigPath(params.KubeConfig)
+	case params.RestConfig != nil:
+		kubeClient.WithRestConfig(params.RestConfig)
 	case isLocalRun:
 		_, err := k.StartKubernetesProxy(ctx)
 		if err != nil {
@@ -124,6 +129,13 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 		kubeClient.WithServer("http://localhost:" + port)
 	}
 
+	// allow only accept json for prevent
+	// return protobuf from server
+	// because we log all requests/responses to log
+	// debug log is "broken" because protobuf response
+	// output as formatted byte array
+	kubeClient.WithAcceptOnlyJSONContentType(true)
+
 	// Initialize kube client for kube events hooks.
 	err := kubeClient.Init()
 	if err != nil {
@@ -135,9 +147,10 @@ func (k *KubernetesClient) initContext(ctx context.Context, params *KubernetesIn
 }
 
 // StartKubernetesProxy initializes kubectl-proxy on remote host and establishes ssh tunnel to it
-func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (port string, err error) {
+func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (string, error) {
 	if wrapper, ok := k.NodeInterface.(*ssh.NodeInterfaceWrapper); ok {
-		if port, err = k.startRemoteKubeProxy(ctx, wrapper.Client()); err != nil {
+		port, err := k.startRemoteKubeProxy(ctx, wrapper.Client())
+		if err != nil {
 			return "", fmt.Errorf("start kube proxy: %s", err)
 		}
 		return port, nil
@@ -146,7 +159,9 @@ func (k *KubernetesClient) StartKubernetesProxy(ctx context.Context) (port strin
 	return "6445", nil
 }
 
-func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.SSHClient) (port string, err error) {
+func (k *KubernetesClient) startRemoteKubeProxy(ctx context.Context, sshCl node.SSHClient) (string, error) {
+	var port string
+	var err error
 	err = retry.NewLoop("Starting kube proxy", sshCl.Session().CountHosts(), 1*time.Second).
 		RunContext(ctx, func() error {
 			log.InfoF("Using host %s\n", sshCl.Session().Host())

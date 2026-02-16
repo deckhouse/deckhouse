@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	clientpkg "sigs.k8s.io/controller-runtime/pkg/client"
 
 	infrav1 "caps-controller-manager/api/infrastructure/v1alpha1"
@@ -32,7 +31,7 @@ import (
 )
 
 // NewMachineScope creates a new machine scope.
-func NewMachineScope(ctx context.Context, client client.Client, config *rest.Config, staticMachine *infrav1.StaticMachine) (*scope.MachineScope, bool, error) {
+func NewMachineScope(ctx context.Context, client clientpkg.Client, config *rest.Config, staticMachine *infrav1.StaticMachine) (*scope.MachineScope, bool, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	// Fetch the Machine.
@@ -41,7 +40,7 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 		return nil, false, err
 	}
 	if machine == nil {
-		logger.Info("Machine Controller has not yet set OwnerRef")
+		logger.V(1).Info("Machine Controller has not yet set OwnerRef")
 
 		return nil, false, nil
 	}
@@ -59,16 +58,14 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 		if err != nil {
 			return nil, false, errors.Wrap(err, "failed to patch Machine with node-group label")
 		}
-	} else {
-		if nodeGroupLabel != staticMachine.Labels["node-group"] {
-			return nil, false, errors.New("'node-group' label in StaticMachine and Machine are different")
-		}
+	} else if nodeGroupLabel != staticMachine.Labels["node-group"] {
+		return nil, false, errors.New("'node-group' label in StaticMachine and Machine are different")
 	}
 
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, client, machine.ObjectMeta)
 	if err != nil {
-		logger.Info("Machine is missing cluster label or cluster does not exist")
+		logger.V(1).Info("Machine is missing cluster label or cluster does not exist")
 
 		return nil, false, nil
 	}
@@ -82,7 +79,7 @@ func NewMachineScope(ctx context.Context, client client.Client, config *rest.Con
 	// Fetch the StaticCluster.
 	err = client.Get(ctx, staticClusterNamespacedName, staticCluster)
 	if err != nil {
-		logger.Info("StaticCluster is not available yet")
+		logger.V(1).Info("StaticCluster is not available yet")
 
 		return nil, false, nil
 	}

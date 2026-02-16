@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	fastping "ping/pkg/fastping"
 	"time"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
+
+	fastping "ping/pkg/fastping"
 )
 
 // PingAll sends ICMP pings to all cluster and external targets in batch mode.
@@ -31,10 +32,10 @@ import (
 func PingAll(ctx context.Context, cluster []NodeTarget, external []ExternalTarget, countPings int, p *PrometheusExporterMetrics) {
 	// Prepare flat list of hosts and a map to distinguish internal/external
 	startPingTime := time.Now()
-	var allHosts []string
-	summuryCountHosts := len(cluster) + len(external)
-	hostTypes := make(map[string]string, summuryCountHosts) // host -> "internal" / "external"
-	nameMap := make(map[string]string, summuryCountHosts)   // host -> name
+	summaryCountHosts := len(cluster) + len(external)
+	allHosts := make([]string, 0, summaryCountHosts)
+	hostTypes := make(map[string]string, summaryCountHosts) // host -> "internal" / "external"
+	nameMap := make(map[string]string, summaryCountHosts)   // host -> name
 	log.Info(fmt.Sprintf("count internal nodes: %d", len(cluster)))
 	log.Info(fmt.Sprintf("count external hosts: %d", len(external)))
 

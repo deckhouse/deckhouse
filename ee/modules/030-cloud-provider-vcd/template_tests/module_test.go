@@ -7,7 +7,6 @@ package template_tests
 
 import (
 	"encoding/base64"
-	"os"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -24,6 +23,7 @@ func Test(t *testing.T) {
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
 const globalValues = `
+  clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-vcd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -34,7 +34,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -45,7 +45,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.30.0
+    kubernetesVersion: 1.31.0
     clusterUUID: cluster
 `
 
@@ -195,21 +195,40 @@ const moduleValuesC = `
             storageProfile: nvme
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
 var _ = Describe("Module :: cloud-provider-vcd :: helm template ::", func() {
 	f := SetupHelmConfig(``)
-	BeforeSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
-
-	AfterSuite(func() {
-		err := os.Remove("/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/candi/cloud-providers/vcd", "/deckhouse/ee/modules/030-cloud-provider-vcd/candi")
-		Expect(err).ShouldNot(HaveOccurred())
-	})
 
 	Context("VCD Suite A", func() {
 		BeforeEach(func() {
@@ -292,6 +311,24 @@ spec:
 - --bind-address=127.0.0.1
 - --secure-port=10471
 - --v=4`))
+
+			csiControllerDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "csi-controller")
+			Expect(csiControllerDeployment.Exists()).To(BeTrue())
+			Expect(csiControllerDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vcd", "csi-node")
+			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+
+			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-data-discoverer")
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			icmDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "infra-controller-manager")
+			Expect(icmDeployment.Exists()).To(BeTrue())
+			Expect(icmDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(icmDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 	})
 

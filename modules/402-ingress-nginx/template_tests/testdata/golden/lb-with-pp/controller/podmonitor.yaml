@@ -16,6 +16,7 @@ spec:
   - bearerTokenSecret:
       key: token
       name: prometheus-token
+    honorLabels: true
     metricRelabelings:
     - action: labeldrop
       regex: ingress_class
@@ -46,6 +47,7 @@ spec:
   - bearerTokenSecret:
       key: token
       name: prometheus-token
+    honorLabels: true
     path: /protobuf/metrics
     port: https-metrics
     relabelings:

@@ -123,7 +123,7 @@ In the case of using MetalLB, its speaker Pods must be run on the same Nodes as 
 
 The controller must receive real IP addresses of clients — therefore its Service is created with the parameter `externalTrafficPolicy: Local` (disabling cross–node SNAT), and to accept this parameter the MetalLB speaker announce this Service only from those Nodes where the target Pods are running.
 
-For this example [metallb module configuration](../metallb/configuration.html) should be like this:
+For this example, the [configuration](/modules/metallb/configuration.html) of the `metallb` module should be as follows:
 
 ```yaml
 metallb:
@@ -152,7 +152,9 @@ metallb:
      version: 2
    ```
 
-1. Deploy the _MetalLoadBalancerClass_ resource:
+1. Create a MetalLoadBalancerClass resource:
+
+   > Metallb balancers should be placed on the same nodes as ingress controllers. In [typical deployment scenarios](/products/kubernetes-platform/guides/hardware-requirements.html#deployment-scenarios), frontend nodes are used for this purpose (to deploy ingress controllers and Metallb load balancers on frontend nodes, use the annotation `node-role.deckhouse.io/frontend: ""` in their manifests).
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -164,11 +166,11 @@ metallb:
        - 192.168.2.100-192.168.2.150
      isDefault: false
      nodeSelector:
-       node-role.kubernetes.io/loadbalancer: "" # label on load-balancing nodes
+       node-role.deckhouse.io/frontend: ""
      type: L2
    ```
 
-1. Deploy the _IngressNginxController_ resource:
+1. Create a IngressNginxController resource:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -185,12 +187,15 @@ metallb:
        network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
      # Label selector and tolerations. Ingress-controller pods must be scheduled on same nodes as MetalLB speaker pods.
      nodeSelector:
-        node-role.kubernetes.io/loadbalancer: ""
+       node-role.deckhouse.io/frontend: ""
      tolerations:
-     - effect: NoSchedule
-       key: node-role/loadbalancer
-       operator: Exists
+     - effect: NoExecute
+       key: dedicated.deckhouse.io
+       value: frontend
+       operator: Equal
       ```
+
+   > When creating an ingress controller, you can also specify certain IP addresses from the pool that will be assigned to it. To specify the addresses that should be assigned to the service, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`). [Example of using annotations](/modules/metallb/examples.html#creating-a-service-and-assigning-it-specific-ip-addresses-from-the-pool) to assign specific addresses from the pool to the service.
 
 1. The platform will create a service with the type `LoadBalancer`, to which a specified number of addresses will be assigned:
 
@@ -199,3 +204,152 @@ metallb:
    NAME                   TYPE           CLUSTER-IP      EXTERNAL-IP                                 PORT(S)                      AGE
    main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.101,192.168.2.102   80:30689/TCP,443:30668/TCP   11s
    ```
+
+## Example of segregating access between public and administrative zones
+
+In many applications, the same backend serves both the public part and the administrative interface. For example:
+
+- `https://example.com` is the public zone;
+- `https://admin.example.com` is the administrative zone, access to which must be restricted (`ACL`, `mTLS`, `IP whitelist`, and so on).
+
+For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
+
+### Specifics of using a single Ingress controller
+
+Consider an example where a single Ingress controller is used to serve requests from both the public zone and the administrative interface.
+
+Example of Ingress resource configuration for this case:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "1.2.3.4/32"
+spec:
+  ingressClassName: nginx # The Ingress resource for administrative traffic is associated with the same Ingress controller as the Ingress resource for public traffic.
+  rules:
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: public-ingress
+spec:
+  ingressClassName: nginx # The Ingress resource for public traffic is associated with the same Ingress controller as the Ingress resource for administrative traffic.
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+```
+
+With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy), the backend can rely on the `x-forwarded-host` header when making authorization decisions. In the example above, it is possible to reach the administrative zone through the Ingress resource that serves public traffic by using `x-forwarded-host`. Therefore, when using this option you must be sure that requests to the Ingress controller come only from trusted sources.
+
+### Using separate Ingress controllers
+
+To avoid the situation described above (when, with [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) it is possible, for example, to reach the administrative zone via the Ingress resource that serves public traffic by using `x-forwarded-host`), we recommend that you:
+
+- configure access rules at the Ingress resource level,
+- use separate Ingress controllers,
+- restrict which source addresses are allowed to connect to the Ingress controllers.
+
+Example of Ingress resource configuration for this case:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: admin-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/whitelist-source-range: "1.2.3.4/32"
+spec:
+  ingressClassName: admin-nginx # The Ingress resource for administrative traffic is associated with a separate Ingress controller.
+  rules:
+    - host: admin.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: public-ingress
+spec:
+  ingressClassName: public-nginx # The Ingress resource for public traffic is associated with a separate Ingress controller.
+  rules:
+    - host: example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+```
+
+Example of an Ingress controller that serves administrative Ingress resources and accepts connections only from specified subnets:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: admin
+spec:
+  ingressClass: admin-nginx
+  inlet: HostPort
+  acceptRequestsFrom:
+    - 1.2.3.4/32
+    - 10.0.0.0/16
+  hostPort:
+    httpPort: 80
+    httpsPort: 443
+    behindL7Proxy: true
+```
+
+In this example:
+
+- The Ingress controller is exposed on node ports through the `HostPort` inlet.
+- The [`acceptRequestsFrom`](cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter allows connections to the controller only from the listed subnets.
+- Even if an external load balancer or client can set its own `X-Forwarded-*` header values, the decision whether to allow the connection to reach the controller is made based on the actual source address, not on headers.
+- Administrative Ingress resources (in this example `admin-ingress`) are served by this controller according to the configured Ingress class.
+
+Example of an Ingress controller that serves Ingress resources for public traffic:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: public
+spec:
+  ingressClass: public-nginx
+  inlet: HostPort
+  hostPort:
+    httpPort: 8080
+    httpsPort: 8443
+    behindL7Proxy: true
+```

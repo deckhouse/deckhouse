@@ -35,6 +35,10 @@ type Interface interface {
 	ModuleConfigs() ModuleConfigInformer
 	// ModuleDocumentations returns a ModuleDocumentationInformer.
 	ModuleDocumentations() ModuleDocumentationInformer
+	// ModulePackages returns a ModulePackageInformer.
+	ModulePackages() ModulePackageInformer
+	// ModulePackageVersions returns a ModulePackageVersionInformer.
+	ModulePackageVersions() ModulePackageVersionInformer
 	// ModulePullOverrides returns a ModulePullOverrideInformer.
 	ModulePullOverrides() ModulePullOverrideInformer
 	// ModuleReleases returns a ModuleReleaseInformer.
@@ -45,6 +49,8 @@ type Interface interface {
 	ModuleSources() ModuleSourceInformer
 	// ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 	ModuleUpdatePolicies() ModuleUpdatePolicyInformer
+	// ObjectKeepers returns a ObjectKeeperInformer.
+	ObjectKeepers() ObjectKeeperInformer
 	// PackageRepositories returns a PackageRepositoryInformer.
 	PackageRepositories() PackageRepositoryInformer
 	// PackageRepositoryOperations returns a PackageRepositoryOperationInformer.
@@ -97,6 +103,16 @@ func (v *version) ModuleDocumentations() ModuleDocumentationInformer {
 	return &moduleDocumentationInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
+// ModulePackages returns a ModulePackageInformer.
+func (v *version) ModulePackages() ModulePackageInformer {
+	return &modulePackageInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ModulePackageVersions returns a ModulePackageVersionInformer.
+func (v *version) ModulePackageVersions() ModulePackageVersionInformer {
+	return &modulePackageVersionInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
 // ModulePullOverrides returns a ModulePullOverrideInformer.
 func (v *version) ModulePullOverrides() ModulePullOverrideInformer {
 	return &modulePullOverrideInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
@@ -120,6 +136,11 @@ func (v *version) ModuleSources() ModuleSourceInformer {
 // ModuleUpdatePolicies returns a ModuleUpdatePolicyInformer.
 func (v *version) ModuleUpdatePolicies() ModuleUpdatePolicyInformer {
 	return &moduleUpdatePolicyInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+}
+
+// ObjectKeepers returns a ObjectKeeperInformer.
+func (v *version) ObjectKeepers() ObjectKeeperInformer {
+	return &objectKeeperInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
 }
 
 // PackageRepositories returns a PackageRepositoryInformer.

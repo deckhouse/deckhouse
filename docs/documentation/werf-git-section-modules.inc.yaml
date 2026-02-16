@@ -18,6 +18,7 @@
   - '040-node-manager/crds/staticcluster.yaml'
   - '040-node-manager/crds/staticcontrolplane.yaml'
   - '040-node-manager/crds/staticmachine*.yaml'
+  - '040-node-manager/crds/nfd-api-*.yaml'
   - '110-istio/crds/istio'
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
 {{- if or (eq .Edition "BE") (eq .Edition "SE-plus") (eq .Edition "SE") (eq .Edition "EE") (eq .Edition "FE") (eq .Mode "development") }}
@@ -57,84 +58,84 @@
     setup: ['**/*']
   includePaths: ['*/docs/','*/openapi/*.yaml','*/crds/', '*/oss.yaml']
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml', '*/docs/internal/', '160-multitenancy-manager/crds/projecttypes.yaml', '160-multitenancy-manager/crds/doc-ru-projecttypes.yaml']
-- add: /ee/candi/cloud-providers/openstack/openapi
+- add: /ee/modules/030-cloud-provider-openstack/candi/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/openstack/openapi
+- add: /ee/modules/030-cloud-provider-openstack/candi/openapi
   to: /src/ee/modules/030-cloud-provider-openstack/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/openapi
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/openapi
   to: /src/ee/modules/030-cloud-provider-huaweicloud/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/openapi
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/openapi
   to: /src/ee/modules/030-cloud-provider-huaweicloud/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-vsphere/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/openapi
+- add: /ee/modules/030-cloud-provider-dynamix/candi/openapi
   to: /src/ee/modules/030-cloud-provider-dynamix/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-vsphere/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/openapi
+- add: /ee/modules/030-cloud-provider-dynamix/candi/openapi
   to: /src/ee/modules/030-cloud-provider-dynamix/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vcd/openapi
+- add: /ee/modules/030-cloud-provider-vcd/candi/openapi
   to: /src/ee/modules/030-cloud-provider-vcd/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vcd/openapi
+- add: /ee/modules/030-cloud-provider-vcd/candi/openapi
   to: /src/ee/modules/030-cloud-provider-vcd/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/zvirt/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-zvirt/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/zvirt/openapi
+- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/openapi
   to: /src/se-plus/modules/030-cloud-provider-zvirt/openapi
   owner: jekyll
   group: jekyll
@@ -153,147 +154,147 @@
   excludePaths: ['*/openapi/values.yaml', '*/openapi/*-tests.yaml''*/docs/internal/']
 {{- end }}
 # CRDs
-- add: /candi/cloud-providers/aws/openapi
+- add: /modules/030-cloud-provider-aws/candi/openapi
   to: /src/modules/030-cloud-provider-aws/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/aws/openapi
+- add: /modules/030-cloud-provider-aws/candi/openapi
   to: /src/modules/030-cloud-provider-aws/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/aws/docs
+- add: /modules/030-cloud-provider-aws/candi/docs
   to: /src/modules/030-cloud-provider-aws/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/azure/docs
+- add: /modules/030-cloud-provider-azure/candi/docs
   to: /src/modules/030-cloud-provider-azure/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/gcp/docs
+- add: /modules/030-cloud-provider-gcp/candi/docs
   to: /src/modules/030-cloud-provider-gcp/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/docs
+- add: /modules/030-cloud-provider-yandex/candi/docs
   to: /src/modules/030-cloud-provider-yandex/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/openstack/docs
+- add: /ee/modules/030-cloud-provider-openstack/candi/docs
   to: /src/ee/modules/030-cloud-provider-openstack/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/huaweicloud/docs
+- add: /ee/modules/030-cloud-provider-huaweicloud/candi/docs
   to: /src/ee/modules/030-cloud-provider-huaweicloud/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/vsphere/docs
+- add: /ee/se-plus/modules/030-cloud-provider-vsphere/candi/docs
   to: /src/se-plus/modules/030-cloud-provider-vsphere/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/dynamix/docs
+- add: /ee/modules/030-cloud-provider-dynamix/candi/docs
   to: /src/ee/modules/030-cloud-provider-dynamix/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/candi/cloud-providers/vcd/docs
+- add: /ee/modules/030-cloud-provider-vcd/candi/docs
   to: /src/ee/modules/030-cloud-provider-vcd/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /ee/se-plus/candi/cloud-providers/zvirt/docs
+- add: /ee/se-plus/modules/030-cloud-provider-zvirt/candi/docs
   to: /src/se-plus/modules/030-cloud-provider-zvirt/docs
   owner: jekyll
   group: jekyll
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/azure/openapi
+- add: /modules/030-cloud-provider-azure/candi/openapi
   to: /src/modules/030-cloud-provider-azure/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/azure/openapi
+- add: /modules/030-cloud-provider-azure/candi/openapi
   to: /src/modules/030-cloud-provider-azure/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/gcp/openapi
+- add: /modules/030-cloud-provider-gcp/candi/openapi
   to: /src/modules/030-cloud-provider-gcp/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/gcp/openapi
+- add: /modules/030-cloud-provider-gcp/candi/openapi
   to: /src/modules/030-cloud-provider-gcp/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/openapi
+- add: /modules/030-cloud-provider-yandex/candi/openapi
   to: /src/modules/030-cloud-provider-yandex/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/yandex/openapi
+- add: /modules/030-cloud-provider-yandex/candi/openapi
   to: /src/modules/030-cloud-provider-yandex/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/dvp/openapi
+- add: /modules/030-cloud-provider-dvp/candi/openapi
   to: /src/modules/030-cloud-provider-dvp/crds
   owner: jekyll
   group: jekyll
   includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/dvp/openapi
+- add: /modules/030-cloud-provider-dvp/candi/openapi
   to: /src/modules/030-cloud-provider-dvp/openapi
   owner: jekyll
   group: jekyll
   includePaths: ['*cluster_configuration.yaml']
   stageDependencies:
     setup: ['**/*']
-- add: /candi/cloud-providers/dvp/docs
+- add: /modules/030-cloud-provider-dvp/candi/docs
   to: /src/modules/030-cloud-provider-dvp/docs
   owner: jekyll
   group: jekyll

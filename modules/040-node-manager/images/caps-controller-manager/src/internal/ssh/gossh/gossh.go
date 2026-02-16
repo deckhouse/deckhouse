@@ -18,13 +18,14 @@ package gossh
 
 import (
 	"bytes"
-	"caps-controller-manager/internal/scope"
 	"encoding/base64"
 	"fmt"
 	"io"
 	"strings"
 
 	"golang.org/x/crypto/ssh"
+
+	"caps-controller-manager/internal/scope"
 )
 
 type SSH struct {
@@ -70,7 +71,7 @@ func CreateSSHClient(instanceScope *scope.InstanceScope) (*SSH, error) {
 
 	sshClient, err := ssh.Dial("tcp", addr, config)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to SSH host %s", addr)
+		return nil, fmt.Errorf("cannot connect to SSH host %s : %w", addr, err)
 	}
 
 	return &SSH{sshClient: sshClient}, nil
@@ -95,7 +96,7 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 
 	session, err := s.sshClient.NewSession()
 	if err != nil {
-		return fmt.Errorf("cannot create session")
+		return fmt.Errorf("cannot create session: %w", err)
 	}
 	defer session.Close()
 
@@ -136,7 +137,6 @@ func (s *SSH) ExecSSHCommand(instanceScope *scope.InstanceScope, command string,
 						return fmt.Errorf("failed to write password to stdin: %w", err)
 					}
 				}
-
 			}
 		}
 		if len(stdoutBuf.Bytes()) > 0 {

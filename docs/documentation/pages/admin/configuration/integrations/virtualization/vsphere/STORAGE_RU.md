@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в VMware vSphere
 permalink: ru/admin/integrations/virtualization/vsphere/storage.html
 lang: ru
 ---

@@ -63,9 +63,10 @@ type StaticInstanceReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.15.0/pkg/reconcile
 func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+	logger := ctrl.LoggerFrom(ctx).WithValues("staticInstance", req.NamespacedName.String())
+	ctx = ctrl.LoggerInto(ctx, logger)
 
-	logger.Info("Reconciling StaticInstance")
+	logger.V(1).Info("Reconciling StaticInstance")
 
 	staticInstance := &deckhousev1.StaticInstance{}
 	err := r.Get(ctx, req.NamespacedName, staticInstance)
@@ -74,6 +75,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			return ctrl.Result{}, nil
 		}
 
+		logger.Error(err, "failed to get StaticInstance")
 		return ctrl.Result{}, err
 	}
 
@@ -96,6 +98,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	status := conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason)
 	err = instanceScope.LoadSSHCredentials(ctx, r.Recorder)
 	if err != nil {
+		logger.Error(err, "failed to load SSHCredentials")
 		if status == nil || status.Status != corev1.ConditionFalse || status.Reason != err.Error() {
 			conditions.MarkFalse(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason, err.Error(), clusterv1.ConditionSeverityError, "")
 		}
@@ -122,7 +125,7 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, errors.Wrap(err, "failed to get StaticMachine")
 	}
 
-	instanceScope.MachineScope = machineScope
+	instanceScope.AttachMachineScope(machineScope)
 
 	if machineScope != nil {
 		// Return early if the object or Cluster is paused
@@ -145,24 +148,28 @@ func (r *StaticInstanceReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, nil
 	}
 
-	return r.reconcileNormal(ctx, instanceScope)
+	reconcileErr := r.reconcileNormal(ctx, instanceScope)
+	if reconcileErr != nil {
+		instanceScope.Logger.Error(reconcileErr, "failed to reconcile StaticInstance")
+	}
+
+	return ctrl.Result{}, reconcileErr
 }
 
 func (r *StaticInstanceReconciler) reconcileNormal(
 	ctx context.Context,
 	instanceScope *scope.InstanceScope,
-) (ctrl.Result, error) {
+) error {
 	if (instanceScope.Instance.Status.CurrentStatus == nil ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == "" ||
 		instanceScope.Instance.Status.CurrentStatus.Phase == deckhousev1.StaticInstanceStatusCurrentStatusPhaseError) &&
 		conditions.Get(instanceScope.Instance, infrav1.StaticInstanceWaitingForCredentialsRefReason).Status == corev1.ConditionTrue {
-
 		conditions.MarkTrue(instanceScope.Instance, infrav1.StaticInstanceAddedToNodeGroupCondition)
 		instanceScope.SetPhase(deckhousev1.StaticInstanceStatusCurrentStatusPhasePending)
 
 		err := instanceScope.Patch(ctx)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to set StaticInstance phase to Pending")
+			return errors.Wrap(err, "failed to set StaticInstance phase to Pending")
 		}
 
 		instanceScope.Logger.Info("StaticInstance is pending")
@@ -173,7 +180,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 
 		labelSelector, err := instanceScope.MachineScope.LabelSelector()
 		if err != nil {
-			return ctrl.Result{}, errors.Wrap(err, "failed to get label selector")
+			return errors.Wrap(err, "failed to get label selector")
 		}
 
 		uidSelector := fields.OneTermEqualSelector("status.machineRef.uid", string(instanceScope.MachineScope.StaticMachine.UID))
@@ -185,7 +192,7 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 			client.MatchingFieldsSelector{Selector: uidSelector},
 		)
 		if err != nil {
-			return ctrl.Result{}, errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", instanceScope.MachineScope.StaticMachine.UID)
+			return errors.Wrapf(err, "failed to find StaticInstance by static machine uid '%s'", instanceScope.MachineScope.StaticMachine.UID)
 		}
 
 		if len(instances.Items) == 0 {
@@ -193,16 +200,16 @@ func (r *StaticInstanceReconciler) reconcileNormal(
 
 			err := r.Client.Delete(ctx, instanceScope.MachineScope.Machine)
 			if err != nil {
-				return ctrl.Result{}, errors.Wrap(err, "failed to delete Machine")
+				return errors.Wrap(err, "failed to delete Machine")
 			}
 
 			r.Recorder.SendNormalEvent(instanceScope.Instance, instanceScope.MachineScope.StaticMachine.Labels["node-group"], "StaticInstanceNodeGroupLeaved", fmt.Sprintf("StaticInstance has left the StaticMachine.spec.labelSelector in NodeGroup '%s'", instanceScope.MachineScope.StaticMachine.Labels["node-group"]))
 
-			return ctrl.Result{}, nil
+			return nil
 		}
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 func (r *StaticInstanceReconciler) getStaticMachine(

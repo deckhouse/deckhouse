@@ -116,10 +116,9 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	}
 
 	nodeGroupName := c.name
-	var nodeGroupSettingsFromConfig []byte
 
 	// Node group settings are only for the static node.
-	nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(c.name)
+	nodeGroupSettingsFromConfig := metaConfig.FindTerraNodeGroup(c.name)
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
 		NodeName:        nodeName,

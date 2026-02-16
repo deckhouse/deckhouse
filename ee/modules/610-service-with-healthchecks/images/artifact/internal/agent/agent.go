@@ -8,7 +8,6 @@ package agent
 import (
 	"context"
 	"reflect"
-	"service-with-healthchecks/internal/kubernetes"
 	"sort"
 	"strings"
 	"sync"
@@ -32,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	networkv1alpha1 "service-with-healthchecks/api/v1alpha1"
+	"service-with-healthchecks/internal/kubernetes"
 )
 
 const (
@@ -45,7 +45,6 @@ type ServiceWithHealthchecksReconciler struct {
 	workersCount int
 	nodeName     string
 	mu           sync.RWMutex
-	muInProcess  sync.RWMutex
 	client.Client
 	Scheme                                     *runtime.Scheme
 	logger                                     logr.Logger
@@ -120,7 +119,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 		r.servicesWithHealthchecks.Store(req.NamespacedName, serviceWithHC.Spec)
 	}
 
-	// sync internal probes targets with exsiting pods
+	// sync internal probes targets with existing pods
 	r.syncResultsMapWithPodList(serviceWithHC, podList)
 
 	// update endpointslices unless ClusterIP is None
@@ -199,7 +198,7 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpointStatuses(svc *networkv1
 
 		// there are always success if svc options set to PublishNotReadyAddresses, otherwise need to evaluate
 		if !svc.Spec.PublishNotReadyAddresses {
-			probesSuccessful = *areAllProbesSucceeed(result.probeResultDetails)
+			probesSuccessful = *areAllProbesSucceed(result.probeResultDetails)
 			failedProbes = result.FailedProbes()
 		}
 
@@ -334,7 +333,7 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskResultsAnalyzer(ctx context.C
 			if target.targetHost == result.host {
 				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].lastCheck = time.Now()
 				r.healthecksResultsByServiceWithHealthchecks[result.swhName][i].probeResultDetails = result.probeDetails
-				//generate event for watcher
+				// generate event for watcher
 				r.events <- event.GenericEvent{Object: &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: result.swhName.Name, Namespace: result.swhName.Namespace}}}
 			}
 		}
@@ -351,7 +350,6 @@ func (r *ServiceWithHealthchecksReconciler) RunTaskWorker(ctx context.Context) {
 		g, _ := errgroup.WithContext(ctx)
 		probesResultDetails := make([]ProbeResultDetail, len(task.probes))
 		for i, probe := range task.probes {
-			i, probe := i, probe
 			g.Go(func() error {
 				err := probe.PerformCheck()
 				var successful bool
@@ -472,7 +470,7 @@ func (r *ServiceWithHealthchecksReconciler) BuildEndpointSlice(desiredName strin
 }
 
 func (r *ServiceWithHealthchecksReconciler) buildPortsForEndpointslice(svc networkv1alpha1.ServiceWithHealthchecks) []discoveryv1.EndpointPort {
-	ports := []discoveryv1.EndpointPort{}
+	ports := make([]discoveryv1.EndpointPort, 0, len(svc.Spec.Ports))
 	for _, port := range svc.Spec.Ports {
 		portTarget := int32(port.TargetPort.IntValue())
 		ports = append(ports, discoveryv1.EndpointPort{
@@ -490,8 +488,8 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	defer r.mu.RUnlock()
 
 	for _, probeResult := range r.healthecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
-		if svc.Spec.PublishNotReadyAddresses || *areAllProbesSucceeed(probeResult.probeResultDetails) {
-			isReady := probeResult.podReady && *areAllProbesSucceeed(probeResult.probeResultDetails)
+		if svc.Spec.PublishNotReadyAddresses || *areAllProbesSucceed(probeResult.probeResultDetails) {
+			isReady := probeResult.podReady && *areAllProbesSucceed(probeResult.probeResultDetails)
 			endpoint := discoveryv1.Endpoint{
 				Addresses: []string{probeResult.targetHost},
 				NodeName:  &r.nodeName,
@@ -559,7 +557,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 		case "postgresql":
 			creds, err := r.getPostgreSQLCredentials(serviceProbe.PostgreSQL, namespace)
 			if err != nil {
-				r.logger.Error(err, "Failed to get PostgreSQL credentials")
+				r.logger.Error(err, "failed to get PostgreSQL credentials")
 				continue
 			}
 			probes = append(probes, PostgreSQLProbeTarget{
@@ -575,7 +573,7 @@ func (r *ServiceWithHealthchecksReconciler) getProbesFromServiceWithHealthchecks
 				clientCert:       creds.ClientCert,
 				clientKey:        creds.ClientKey,
 				caCert:           creds.CaCert,
-				tlsMode:          creds.TlsMode,
+				tlsMode:          creds.TLSMode,
 			})
 		}
 	}
@@ -676,14 +674,14 @@ func (r *ServiceWithHealthchecksReconciler) buildRenewedStatus(hc *networkv1alph
 	}
 }
 
-func areAllProbesSucceeed(probeResultDetail []ProbeResultDetail) *bool {
-	successfullCount := 0
+func areAllProbesSucceed(probeResultDetail []ProbeResultDetail) *bool {
+	successfulCount := 0
 	for _, probeResultDetail := range probeResultDetail {
 		if probeResultDetail.successful {
-			successfullCount++
+			successfulCount++
 		}
 	}
-	result := successfullCount > 0 && successfullCount == len(probeResultDetail)
+	result := successfulCount > 0 && successfulCount == len(probeResultDetail)
 	return &result
 }
 

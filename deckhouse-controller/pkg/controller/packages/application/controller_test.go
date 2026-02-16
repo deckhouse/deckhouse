@@ -25,6 +25,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync"
 	"testing"
 
 	crv1 "github.com/google/go-containerregistry/pkg/v1"
@@ -40,10 +41,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	applicationpackage "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/application-package"
-	packagestatusservice "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application/status-package-service"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -87,10 +89,6 @@ func (suite *ControllerTestSuite) TearDownSubTest() {
 	if suite.T().Skipped() {
 		return
 	}
-
-	ctx := context.Background()
-	err := suite.ctr.statusService.WaitForIdle(ctx)
-	require.NoError(suite.T(), err)
 
 	goldenFile := filepath.Join("./testdata", "golden", suite.testDataFileName)
 	gotB := suite.fetchResults()
@@ -140,6 +138,16 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 		result.Write(got)
 	}
 
+	var apList v1alpha1.ApplicationPackageList
+	err = suite.kubeClient.List(context.TODO(), &apList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range apList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
 	var apvList v1alpha1.ApplicationPackageVersionList
 	err = suite.kubeClient.List(context.TODO(), &apvList)
 	require.NoError(suite.T(), err)
@@ -183,32 +191,16 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 	kubeClient := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects().
-		WithStatusSubresource(&v1alpha1.Application{}).
+		WithStatusSubresource(&v1alpha1.Application{}, &v1alpha1.ApplicationPackage{}, &v1alpha1.ApplicationPackageVersion{}).
 		Build()
 
-	pm := applicationpackage.NewStubPackageOperator(kubeClient, log.NewNop())
-	eventChannel := make(chan packagestatusservice.PackageEvent)
-	pm.SetEventChannel(eventChannel)
-
-	statusService := &StatusService{
-		client:       kubeClient,
-		logger:       log.NewNop(),
-		pm:           pm,
-		dc:           dependency.NewMockedContainer(),
-		eventChannel: eventChannel,
-	}
-
-	// go statusService.Start(context.Background())
-
-	pm.SetStatusService(statusService)
-
 	ctr := &reconciler{
+		init:          new(sync.WaitGroup),
 		client:        kubeClient,
 		logger:        log.NewNop(),
-		pm:            pm,
+		operator:      &operatorStub{},
+		moduleManager: &moduleManagerStub{},
 		dc:            dependency.NewMockedContainer(),
-		statusService: statusService,
-		// exts:   extenders.NewExtendersStack(new(d8edition.Edition), nil, log.NewNop()),
 	}
 
 	// Load test data from file
@@ -234,6 +226,11 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				err := yaml.Unmarshal([]byte(manifest), &app)
 				require.NoError(t, err)
 				require.NoError(t, kubeClient.Create(context.TODO(), &app))
+			case "ApplicationPackage":
+				var ap v1alpha1.ApplicationPackage
+				err := yaml.Unmarshal([]byte(manifest), &ap)
+				require.NoError(t, err)
+				require.NoError(t, kubeClient.Create(context.TODO(), &ap))
 			case "ApplicationPackageVersion":
 				var apv v1alpha1.ApplicationPackageVersion
 				err := yaml.Unmarshal([]byte(manifest), &apv)
@@ -268,7 +265,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 	suite.Run("resource not found", func() {
 		suite.setupController("resource-not-found.yaml")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: "non-existent-app"},
+			NamespacedName: client.ObjectKey{Name: "non-existent-app"},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -290,7 +287,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -299,7 +296,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("version-not-found.yaml")
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 		app = suite.getApplication("test-app", "foobar")
@@ -311,7 +308,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		suite.setupController("version-is-draft.yaml")
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -333,7 +330,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
 	})
@@ -355,9 +352,71 @@ func (suite *ControllerTestSuite) TestReconcile() {
 
 		app := suite.getApplication("test-app", "foobar")
 		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
-			NamespacedName: types.NamespacedName{Name: app.Name, Namespace: app.Namespace},
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
 		})
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("version update cleans up old APV", func() {
+		requirements.RegisterCheck("k8s", func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+			v, _ := getter.Get("global.discovery.kubernetesVersion")
+			if v != requirementValue {
+				return false, errors.New("min k8s version failed")
+			}
+
+			return true, nil
+		})
+		requirements.SaveValue("global.discovery.kubernetesVersion", "1.19.0")
+
+		dc := dependency.NewMockedContainer()
+
+		suite.setupController("version-update.yaml", withDependencyContainer(dc))
+
+		app := suite.getApplication("test-app", "foobar")
+		_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+			NamespacedName: client.ObjectKey{Name: app.Name, Namespace: app.Namespace},
+		})
+		require.NoError(suite.T(), err)
+
+		// Verify old APV no longer has the app in usedBy
+		oldAPV := new(v1alpha1.ApplicationPackageVersion)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "deckhouse-test-v1.0.1"}, oldAPV)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 0, oldAPV.Status.UsedByCount, "Old APV should have usedByCount=0")
+		assert.Empty(suite.T(), oldAPV.Status.UsedBy, "Old APV should have empty usedBy list")
+
+		// Verify new APV has the app in usedBy
+		newAPV := new(v1alpha1.ApplicationPackageVersion)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "deckhouse-test-v1.0.2"}, newAPV)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 1, newAPV.Status.UsedByCount, "New APV should have usedByCount=1")
+		assert.Len(suite.T(), newAPV.Status.UsedBy, 1, "New APV should have 1 app in usedBy")
+		assert.Equal(suite.T(), "test-app", newAPV.Status.UsedBy[0].Name)
+		assert.Equal(suite.T(), "foobar", newAPV.Status.UsedBy[0].Namespace)
+
+		// Verify app owner references updated
+		updatedApp := suite.getApplication("test-app", "foobar")
+		ownerRefs := updatedApp.GetOwnerReferences()
+		apvRefCount := 0
+		var apvRefName string
+		for _, ref := range ownerRefs {
+			if ref.Kind == v1alpha1.ApplicationPackageVersionKind {
+				apvRefCount++
+				apvRefName = ref.Name
+			}
+		}
+		assert.Equal(suite.T(), 1, apvRefCount, "App should have exactly 1 APV owner reference")
+		assert.Equal(suite.T(), "deckhouse-test-v1.0.2", apvRefName, "App should reference new APV")
+
+		// Verify ApplicationPackage usedBy version is updated
+		ap := new(v1alpha1.ApplicationPackage)
+		err = suite.kubeClient.Get(ctx, client.ObjectKey{Name: "test"}, ap)
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), 1, ap.Status.UsedByCount, "AP should have usedByCount=1")
+		require.Len(suite.T(), ap.Status.UsedBy, 1, "AP should have 1 app in usedBy")
+		assert.Equal(suite.T(), "test-app", ap.Status.UsedBy[0].Name)
+		assert.Equal(suite.T(), "foobar", ap.Status.UsedBy[0].Namespace)
+		assert.Equal(suite.T(), "v1.0.2", ap.Status.UsedBy[0].Version, "AP usedBy version should be updated to new version")
 	})
 }
 
@@ -367,4 +426,26 @@ func (suite *ControllerTestSuite) getApplication(name string, namespace string) 
 	err := suite.kubeClient.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, &app)
 	require.NoError(suite.T(), err)
 	return &app
+}
+
+type moduleManagerStub struct {
+}
+
+func (m *moduleManagerStub) AreModulesInited() bool {
+	return true
+}
+
+type operatorStub struct {
+}
+
+func (o *operatorStub) UpdateApp(_ registry.Remote, _ packageoperator.App) {
+	return
+}
+
+func (o *operatorStub) RemoveApp(_, _ string) {
+	return
+}
+
+func (o *operatorStub) Status() *packagestatus.Service {
+	return packagestatus.NewService()
 }

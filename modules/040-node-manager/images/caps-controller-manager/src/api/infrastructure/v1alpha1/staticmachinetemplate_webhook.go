@@ -54,26 +54,76 @@ var _ webhook.Validator = &StaticMachineTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateCreate() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate create", "name", r.Name)
+	staticmachinetemplatelog.V(2).Info("validate create", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate update", "name", r.Name)
-
 	oldStaticMachineTemplate := old.(*StaticMachineTemplate)
-	if !reflect.DeepEqual(r.Spec, oldStaticMachineTemplate.Spec) {
-		return nil, field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable")
+
+	// Check if old labelSelector is nil or empty
+	oldLabelSelector := oldStaticMachineTemplate.Spec.Template.Spec.LabelSelector
+	newLabelSelector := r.Spec.Template.Spec.LabelSelector
+
+	isOldLabelSelectorEmpty := false
+	if oldLabelSelector == nil {
+		isOldLabelSelectorEmpty = true
+	} else {
+		// Check if both MatchLabels and MatchExpressions are empty
+		isOldLabelSelectorEmpty = len(oldLabelSelector.MatchLabels) == 0 && len(oldLabelSelector.MatchExpressions) == 0
 	}
+
+	// Check if new labelSelector is nil or empty
+	isNewLabelSelectorEmpty := false
+	if newLabelSelector == nil {
+		isNewLabelSelectorEmpty = true
+	} else {
+		// Check if both MatchLabels and MatchExpressions are empty
+		isNewLabelSelectorEmpty = len(newLabelSelector.MatchLabels) == 0 && len(newLabelSelector.MatchExpressions) == 0
+	}
+
+	// Allow changes to labelSelector only if old labelSelector is nil/empty (first set)
+	// Create copies to compare without labelSelector
+	newSpecCopy := r.Spec.DeepCopy()
+	oldSpecCopy := oldStaticMachineTemplate.Spec.DeepCopy()
+
+	// Clear labelSelector from both specs for comparison
+	newSpecCopy.Template.Spec.LabelSelector = nil
+	oldSpecCopy.Template.Spec.LabelSelector = nil
+
+	// Only reject if non-labelSelector fields have changed
+	if !reflect.DeepEqual(newSpecCopy, oldSpecCopy) {
+		err := field.Forbidden(field.NewPath("spec"), "StaticMachineTemplate.spec is immutable (except labelSelector)")
+		staticmachinetemplatelog.Error(err, "validate update rejected", "name", r.Name, "allowed", false)
+		return nil, err
+	}
+
+	// If old labelSelector is not empty, check if labelSelector has changed
+	if !isOldLabelSelectorEmpty {
+		// Disallow removal: old has values but new is nil or empty
+		if isNewLabelSelectorEmpty {
+			err := field.Forbidden(field.NewPath("spec.template.spec.labelSelector"), "labelSelector can be added but cannot be modified or removed once set")
+			staticmachinetemplatelog.Error(err, "validate update rejected", "name", r.Name, "allowed", false)
+			return nil, err
+		}
+		// Disallow modification: old has values and new has different values
+		if !reflect.DeepEqual(newLabelSelector, oldLabelSelector) {
+			err := field.Forbidden(field.NewPath("spec.template.spec.labelSelector"), "labelSelector can be added but cannot be modified once set")
+			staticmachinetemplatelog.Error(err, "validate update rejected", "name", r.Name, "allowed", false)
+			return nil, err
+		}
+	}
+
+	staticmachinetemplatelog.V(2).Info("validate update accepted", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *StaticMachineTemplate) ValidateDelete() (admission.Warnings, error) {
-	staticmachinetemplatelog.Info("validate delete", "name", r.Name)
+	staticmachinetemplatelog.V(2).Info("validate delete", "name", r.Name, "allowed", true)
 
 	return nil, nil
 }

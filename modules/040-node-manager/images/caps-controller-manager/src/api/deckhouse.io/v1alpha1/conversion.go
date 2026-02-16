@@ -17,12 +17,14 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"caps-controller-manager/api/deckhouse.io/v1alpha2"
 	"encoding/base64"
 
 	"k8s.io/apimachinery/pkg/conversion"
+
+	"caps-controller-manager/api/deckhouse.io/v1alpha2"
 )
 
+//nolint:revive
 func Convert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in *v1alpha2.SSHCredentialsSpec, out *SSHCredentialsSpec, s conversion.Scope) error {
 	staticinstancelog.Info("conversing from v1alpha2 to v1alpha1")
 	decodedPass, err := base64.StdEncoding.DecodeString(in.SudoPasswordEncoded)
@@ -33,6 +35,7 @@ func Convert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in *v1al
 	return autoConvert_v1alpha2_SSHCredentialsSpec_To_v1alpha1_SSHCredentialsSpec(in, out, s)
 }
 
+//nolint:revive
 func Convert_v1alpha1_SSHCredentialsSpec_To_v1alpha2_SSHCredentialsSpec(in *SSHCredentialsSpec, out *v1alpha2.SSHCredentialsSpec, s conversion.Scope) error {
 	encodedPass := base64.StdEncoding.EncodeToString([]byte(in.SudoPassword))
 	staticinstancelog.Info("conversing from v1alpha1 to v1alpha2")

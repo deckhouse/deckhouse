@@ -6,6 +6,12 @@ title: "Cloud provider — Yandex Cloud: configuration"
 
 {% include module-alerts.liquid %}
 
+{% include module-enable.liquid %}
+
+{% include module-configure.liquid %}
+
+{% include module-requirements.liquid %}
+
 {% include module-conversion.liquid %}
 
 ## Storage

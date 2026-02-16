@@ -27,13 +27,12 @@ import (
 	"sort"
 	"time"
 
-	"github.com/deckhouse/deckhouse/pkg/log"
 	"github.com/otiai10/copy"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
-)
 
-const kubeconfigPath = "/etc/kubernetes/admin.conf"
+	"github.com/deckhouse/deckhouse/pkg/log"
+)
 
 var defaultBackoff = wait.Backoff{
 	Duration: 1 * time.Second,
@@ -42,6 +41,7 @@ var defaultBackoff = wait.Backoff{
 	Steps:    50,
 }
 
+//nolint:unparam
 func installFileIfChanged(src, dst string, perm os.FileMode) error {
 	var srcBytes, dstBytes []byte
 
@@ -124,6 +124,10 @@ func writeFileAtomically(dst string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
+func cleanupEtcdFolder() error {
+	return os.RemoveAll("/var/lib/etcd/member")
+}
+
 func backupFile(src string) error {
 	log.Info("backup file", slog.String("path", src))
 
@@ -145,24 +149,6 @@ func removeFile(src string) error {
 		return err
 	}
 	return os.Remove(src)
-}
-
-func removeDirectory(dir string) error {
-	walkDirFunc := func(path string, d fs.DirEntry, err error) error {
-		if d == nil {
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		return removeFile(path)
-	}
-
-	err := filepath.WalkDir(dir, walkDirFunc)
-	if err != nil {
-		return err
-	}
-	return os.RemoveAll(dir)
 }
 
 func removeOrphanFiles() {
@@ -261,7 +247,7 @@ func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Con
 		if err == nil {
 			return true, nil
 		}
-		log.Err(err)
+		log.Error(err.Error())
 		if errors.Is(err, ErrNonRetryable) {
 			return false, err
 		}
@@ -269,7 +255,7 @@ func DoAction(ctx context.Context, backoff wait.Backoff, op func(ctx context.Con
 	}
 
 	err := wait.ExponentialBackoffWithContext(ctx, backoff, condition)
-	if errors.Is(err, wait.ErrWaitTimeout) {
+	if wait.Interrupted(err) {
 		return fmt.Errorf("retries exhausted for %s after %d attempts: %w", opName, attempts, err)
 	}
 	return err

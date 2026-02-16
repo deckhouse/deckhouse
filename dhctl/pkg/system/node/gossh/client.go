@@ -43,6 +43,7 @@ func NewClient(ctx context.Context, session *session.Session, privKeys []session
 		live:        false,
 		sessionList: make([]*ssh.Session, 5),
 		ctx:         ctx,
+		silent:      false,
 	}
 }
 
@@ -67,6 +68,8 @@ type Client struct {
 
 	ctx          context.Context
 	sessionMutex sync.Mutex
+
+	silent bool
 }
 
 func (s *Client) initSigners() error {
@@ -163,11 +166,17 @@ func (s *Client) Start() error {
 		bastionAddr := fmt.Sprintf("%s:%s", s.Settings.BastionHost, s.Settings.BastionPort)
 		var err error
 		fullHost := fmt.Sprintf("bastion host '%s' with user '%s'", bastionAddr, s.Settings.BastionUser)
-		err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
-			log.InfoF("Connect to %s\n", fullHost)
+		connectToBastion := func() error {
+			log.DebugF("Connect to %s\n", fullHost)
 			bastionClient, err = DialTimeout(s.ctx, "tcp", bastionAddr, bastionConfig)
 			return err
-		})
+		}
+		if s.silent {
+			err = retry.NewSilentLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, connectToBastion)
+		} else {
+			err = retry.NewLoop("Get bastion SSH client", 30, 5*time.Second).RunContext(s.ctx, connectToBastion)
+		}
+
 		if err != nil {
 			return fmt.Errorf("Could not connect to %s", fullHost)
 		}
@@ -218,16 +227,22 @@ func (s *Client) Start() error {
 		log.DebugLn("Try to direct connect host master host")
 
 		var err error
-		err = retry.NewLoop("Get SSH client", 30, 5*time.Second).RunContext(s.ctx, func() error {
+		connectToHost := func() error {
 			if len(s.kubeProxies) == 0 {
 				s.Settings.ChoiceNewHost()
 			}
 
 			addr := fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
-			log.InfoF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
+			log.DebugF("Connect to master host '%s' with user '%s'\n", addr, s.Settings.User)
 			client, err = DialTimeout(s.ctx, "tcp", addr, config)
 			return err
-		})
+		}
+		if s.silent {
+			err = retry.NewSilentLoop("Get SSH client", 30, 5*time.Second).RunContext(s.ctx, connectToHost)
+		} else {
+			err = retry.NewLoop("Get SSH client", 30, 5*time.Second).RunContext(s.ctx, connectToHost)
+		}
+
 		if err != nil {
 			lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
 			return fmt.Errorf("Failed to connect to master host (last %s): %w", lastHost, err)
@@ -254,12 +269,12 @@ func (s *Client) Start() error {
 		targetNewChan    <-chan ssh.NewChannel
 		targetReqChan    <-chan *ssh.Request
 	)
-	err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).RunContext(s.ctx, func() error {
+	connectToTarget := func() error {
 		if len(s.kubeProxies) == 0 {
 			s.Settings.ChoiceNewHost()
 		}
 		addr = fmt.Sprintf("%s:%s", s.Settings.Host(), s.Settings.Port)
-		log.InfoF("Connect to target host '%s' with user '%s' through bastion host\n", addr, s.Settings.User)
+		log.DebugF("Connect to target host '%s' with user '%s' through bastion host\n", addr, s.Settings.User)
 		targetConn, err = bastionClient.DialContext(s.ctx, "tcp", addr)
 		if err != nil {
 			return err
@@ -271,7 +286,13 @@ func (s *Client) Start() error {
 		}
 
 		return err
-	})
+	}
+	if s.silent {
+		err = retry.NewSilentLoop("Get SSH client and connect to target host", 50, 2*time.Second).RunContext(s.ctx, connectToTarget)
+	} else {
+		err = retry.NewLoop("Get SSH client and connect to target host", 50, 2*time.Second).RunContext(s.ctx, connectToTarget)
+	}
+
 	if err != nil {
 		lastHost := fmt.Sprintf("'%s:%s' with user '%s'", s.Settings.Host(), s.Settings.Port, s.Settings.User)
 		return fmt.Errorf("Failed to connect to target host through bastion host (last %s): %w", lastHost, err)
@@ -334,7 +355,6 @@ func (s *Client) keepAlive() {
 				} else {
 					s.UnregisterSession(sess)
 				}
-
 			}
 			time.Sleep(5 * time.Second)
 		}
@@ -344,7 +364,8 @@ func (s *Client) keepAlive() {
 func (s *Client) restart() {
 	s.live = false
 	s.stopChan = nil
-	s.Start()
+	s.silent = true
+	_ = s.Start()
 	s.sessionList = nil
 }
 
@@ -445,7 +466,6 @@ func (s *Client) Stop() {
 	log.DebugLn("SSH Client is stopping now")
 	log.DebugLn("stopping kube proxies")
 	for _, p := range s.kubeProxies {
-		// log.InfoF("found non-stoped kube-proxy: %-v\n", p)
 		p.StopAll()
 	}
 	s.kubeProxies = nil
@@ -453,8 +473,8 @@ func (s *Client) Stop() {
 	log.DebugLn("closing sessions")
 	for _, sess := range s.sessionList {
 		if sess != nil {
-			sess.Signal(ssh.SIGKILL)
-			sess.Close()
+			_ = sess.Signal(ssh.SIGKILL)
+			_ = sess.Close()
 		}
 	}
 	s.sessionList = nil
@@ -493,6 +513,11 @@ func (s *Client) Session() *session.Session {
 
 func (s *Client) PrivateKeys() []session.AgentPrivateKey {
 	return s.privateKeys
+}
+
+func (s *Client) RefreshPrivateKeys() error {
+	// new go ssh client already have all keys
+	return nil
 }
 
 // Loop Looping all available hosts
@@ -549,5 +574,5 @@ func (s *Client) UnregisterSession(sess *ssh.Session) {
 func (s *Client) stopKubeproxy() {
 	cmd := NewSSHCommand(s, "killall kubectl")
 	cmd.Sudo(context.Background())
-	cmd.Run(context.Background())
+	_ = cmd.Run(context.Background())
 }

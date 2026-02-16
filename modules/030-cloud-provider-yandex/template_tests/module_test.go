@@ -42,6 +42,7 @@ func Test(t *testing.T) {
 // fake *-crd modules are required for backward compatibility with lib_helm library
 // TODO: remove fake crd modules
 const globalValues = `
+  clusterIsBootstrapped: true
   enabledModules: ["vertical-pod-autoscaler", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
@@ -52,7 +53,7 @@ const globalValues = `
     clusterType: Cloud
     defaultCRI: Containerd
     kind: ClusterConfiguration
-    kubernetesVersion: "1.30"
+    kubernetesVersion: "1.31"
     podSubnetCIDR: 10.111.0.0/16
     podSubnetNodeCIDRPrefix: "24"
     serviceSubnetCIDR: 10.222.0.0/16
@@ -63,7 +64,7 @@ const globalValues = `
       worker: 1
       master: 3
     podSubnet: 10.0.1.0/16
-    kubernetesVersion: 1.30.0
+    kubernetesVersion: 1.31.0
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
@@ -113,6 +114,40 @@ const moduleValues = `
         test: test
 `
 
+const tolerationsAnyNodeWithUninitialized = `
+- key: node-role.kubernetes.io/master
+- key: node-role.kubernetes.io/control-plane
+- key: node.deckhouse.io/etcd-arbiter
+- key: dedicated.deckhouse.io
+  operator: "Exists"
+- key: dedicated
+  operator: "Exists"
+- key: DeletionCandidateOfClusterAutoscaler
+- key: ToBeDeletedByClusterAutoscaler
+- key: drbd.linbit.com/lost-quorum
+- key: drbd.linbit.com/force-io-error
+- key: drbd.linbit.com/ignore-fail-over
+- effect: NoSchedule
+  key: node.deckhouse.io/bashible-uninitialized
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/uninitialized
+  operator: Exists
+- key: ToBeDeletedTaint
+  operator: Exists
+- effect: NoSchedule
+  key: node.deckhouse.io/csi-not-bootstrapped
+  operator: Exists
+- key: node.kubernetes.io/not-ready
+- key: node.kubernetes.io/out-of-disk
+- key: node.kubernetes.io/memory-pressure
+- key: node.kubernetes.io/disk-pressure
+- key: node.kubernetes.io/pid-pressure
+- key: node.kubernetes.io/unreachable
+- key: node.kubernetes.io/network-unavailable`
+
+const moduleNamespace = "d8-cloud-provider-yandex"
+
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -124,10 +159,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 
 	Context("Yandex exporter", func() {
 		assertExporterDeploymentSecret := func(h *Config, exists bool) {
-			deployment := h.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-metrics-exporter")
+			deployment := h.KubernetesResource("Deployment", moduleNamespace, "cloud-metrics-exporter")
 			Expect(deployment.Exists()).To(Equal(exists))
 
-			secret := h.KubernetesResource("Secret", "d8-cloud-provider-yandex", "cloud-metrics-exporter-app-creds")
+			secret := h.KubernetesResource("Secret", moduleNamespace, "cloud-metrics-exporter-app-creds")
 			Expect(secret.Exists()).To(Equal(exists))
 			if exists {
 				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))
@@ -136,7 +171,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 		}
 
 		assertDeployNatInstanceMonitoring := func(h *Config, exists bool) {
-			prometheusRuleExists := h.KubernetesResource("PrometheusRule", "d8-cloud-provider-yandex", "cloud-provider-yandex-nat-instance").Exists()
+			prometheusRuleExists := h.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-yandex-nat-instance").Exists()
 			grafanaDashboardExists := h.KubernetesResource("GrafanaDashboardDefinition", "", "d8-cloud-provider-yandex-kubernetes-cluster-nat-instance").Exists()
 			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
 
@@ -240,35 +275,37 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 		It("Everything must render properly", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			namespace := f.KubernetesGlobalResource("Namespace", "d8-cloud-provider-yandex")
-			registrySecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "deckhouse-registry")
+			namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+			registrySecret := f.KubernetesResource("Secret", moduleNamespace, "deckhouse-registry")
 
 			providerRegistrationSecret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
 
 			csiDriver := f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com")
-			csiControllerSS := f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "csi-controller")
-			csiNodeDS := f.KubernetesResource("DaemonSet", "d8-cloud-provider-yandex", "csi-node")
-			csiControllerSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "csi")
+			csiControllerSS := f.KubernetesResource("Deployment", moduleNamespace, "csi-controller")
+			csiNodeDS := f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node")
+			csiControllerSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "csi")
 			csiProvisionerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-provisioner")
 			csiProvisionerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-provisioner")
 			csiExternalAttacherCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-attacher")
 			csiExternalAttacherCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-attacher")
 			csiExternalResizerCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:csi:controller:external-resizer")
 			csiExternalResizerCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:csi:controller:external-resizer")
-			csiCredentials := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "csi-credentials")
+			csiCredentials := f.KubernetesResource("Secret", moduleNamespace, "csi-credentials")
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
 			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
 
-			ccmSA := f.KubernetesResource("ServiceAccount", "d8-cloud-provider-yandex", "cloud-controller-manager")
+			ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:cloud-controller-manager")
 			ccmCRB := f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:cloud-controller-manager")
-			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", "d8-cloud-provider-yandex", "cloud-controller-manager")
-			ccmDeploy := f.KubernetesResource("Deployment", "d8-cloud-provider-yandex", "cloud-controller-manager")
-			ccmSecret := f.KubernetesResource("Secret", "d8-cloud-provider-yandex", "cloud-controller-manager")
+			ccmVPA := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-controller-manager")
+			ccmDeploy := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-yandex:user")
 			userAuthzClusterAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-yandex:cluster-admin")
+
+			cddDeployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
 
 			Expect(namespace.Exists()).To(BeTrue())
 			Expect(registrySecret.Exists()).To(BeTrue())
@@ -300,7 +337,9 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiControllerSS.Exists()).To(BeTrue())
+			Expect(csiControllerSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiNodeDS.Exists()).To(BeTrue())
+			Expect(csiNodeDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiControllerSA.Exists()).To(BeTrue())
 			Expect(csiProvisionerCR.Exists()).To(BeTrue())
 			Expect(csiProvisionerCRB.Exists()).To(BeTrue())
@@ -324,6 +363,10 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(ccmVPA.Exists()).To(BeTrue())
 			Expect(ccmDeploy.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
+
+			Expect(cddDeployment.Exists()).To(BeTrue())
+			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
 		})
 	})
 

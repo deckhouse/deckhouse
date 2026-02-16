@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
 ---
 
@@ -187,6 +187,10 @@ After configuring DNAT, configure the firewall. Start by setting up IP sets.
 The provider has been tested only with virtual machine templates based on "Ubuntu 22.04".
 {% endalert %}
 
+{% alert level="warning" %}
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+{% endalert %}
+
 {% include notice_envinronment.liquid %}
 
 In the example, an "OVA" file provided by Ubuntu is used, with two modifications.  
@@ -291,6 +295,14 @@ shutdown -P now
    * `guestinfo.hostname`
 
    ![Template setup, Guest Properties 2](../../../../images/cloud-provider-vcd/template/GuestProperties2.png)
+
+   For **each** field in the add/edit form, set the following:
+
+   * "Type": `Text` (text value)
+   * "User access": `Read/Write`
+   * "Value": A single space
+
+   > The VCD UI may not save metadata with an empty value. A single space is used as a placeholder and does not affect functionality. The actual values will be populated automatically when virtual machines are created.
 
    ![Template setup, Guest Properties 3](../../../../images/cloud-provider-vcd/template/GuestProperties3.png)
 

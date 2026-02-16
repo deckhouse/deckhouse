@@ -43,12 +43,73 @@ spec:
               package d8.security_policies
 
               violation contains {"msg": msg, "details": {}} if {
+                not input.review.operation == "DELETE"
                 container := input_containers[_]
                 not allowed_by_any(input.review.object, container)
-                msg := sprintf(
-                  "AppArmor profile is not allowed, pod: %v, container: %v. Allowed profiles: %v",
-                  [input.review.object.metadata.name, container.name, input.parameters.allowedProfiles],
-                )
+                allowed_by_policy := sprintf("Allowed profiles: %v", [input.parameters.allowedProfiles])
+                actual_value := get_actual_apparmor_profile(input.review.object, container)
+                exception_allowed := get_exception_allowed_apparmor(input.review.object, container)
+                msg := build_apparmor_message(input.review.object.metadata.name, container.name, allowed_by_policy, actual_value, exception_allowed)
+              }
+
+              get_actual_apparmor_profile(pod, container) := out if {
+                profile := get_apparmor_profile(pod, container)
+                out := sprintf("Actual AppArmor profile: %v", [profile])
+              }
+
+              get_exception_allowed_apparmor(pod, container) := out if {
+                label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := pod.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "appArmorProfile")
+                has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
+                allowed_profiles := exception.spec.securityContext.appArmorProfile.allowedValues
+                out := sprintf("SecurityPolicyException allowed profiles: %v", [allowed_profiles])
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                not input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                not data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                not has_field(exception.spec, "securityContext")
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                not has_field(exception.spec.securityContext, "appArmorProfile")
+              }
+
+              get_exception_allowed_apparmor(_, _) := "" if {
+                label := input.review.object.metadata.labels["security.deckhouse.io/security-policy-exception"]
+                namespace := input.review.object.metadata.namespace
+                exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "appArmorProfile")
+                not has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
+              }
+
+              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed != ""
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v.\n%v\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy, exception_allowed])
+              }
+
+              build_apparmor_message(pod_name, container_name, allowed_by_policy, actual_value, exception_allowed) := msg if {
+                exception_allowed == ""
+                msg := sprintf("AppArmor profile is not allowed, pod: %v, container: %v.\n%v\n%v", [pod_name, container_name, actual_value, allowed_by_policy])
               }
 
               allowed_by_any(pod, container) if {
@@ -63,6 +124,9 @@ spec:
                 label := pod.metadata.labels["security.deckhouse.io/security-policy-exception"]
                 namespace := pod.metadata.namespace
                 exception := data.inventory.namespace[namespace]["deckhouse.io/v1alpha1"].SecurityPolicyException[label]
+                has_field(exception.spec, "securityContext")
+                has_field(exception.spec.securityContext, "appArmorProfile")
+                has_field(exception.spec.securityContext.appArmorProfile, "allowedValues")
                 profile := canonicalize_apparmor_profile(container.securityContext.appArmorProfile)
                 profile in exception.spec.securityContext.appArmorProfile.allowedValues
               }
@@ -121,4 +185,13 @@ spec:
               canonicalize_apparmor_profile(profile) := out if {
                 profile == null
                 out := "runtime/default"
+              }
+
+              # has_field returns whether an object has a field
+              has_field(object, field) if {
+                object[field]
+              }
+
+              has_field(object, field) := false if {
+                not object[field]
               }
