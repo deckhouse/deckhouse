@@ -62,7 +62,7 @@ apiVersions:
                 type: object
                 additionalProperties: false
                 description: |
-                  Включает пользовательскую статическую настройку сети для узлов.
+                  Включает пользовательскую статическую настройку сети для группы узлов (NodeGroup).
                   
                   Если заполнено, необходимо задать `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` и `networkInterfaceNetmask`.
                 properties:
