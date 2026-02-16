@@ -46,6 +46,17 @@ metadata:
   namespace: kube-system
 spec:
   dnsPolicy: ClusterFirstWithHostNet
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+spec:
+  containers:
+    - name: kube-apiserver
+      args:
+        - --authentication-config=/etc/kubernetes/deckhouse/extra-files/authentication-config.yaml
 {{- if $.apiserver.oidcIssuerAddress }}
   {{- if $.apiserver.oidcIssuerURL }}
 ---
