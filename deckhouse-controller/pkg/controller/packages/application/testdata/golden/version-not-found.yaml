@@ -16,7 +16,7 @@ status:
     message: ApplicationPackageVersion '' not found
     reason: VersionNotFound
     status: "False"
-    type: Processed
+    type: Ready
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

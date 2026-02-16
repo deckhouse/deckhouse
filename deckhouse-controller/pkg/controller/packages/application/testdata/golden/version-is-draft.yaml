@@ -16,7 +16,7 @@ status:
     message: ApplicationPackageVersion deckhouse-test-v1.0.0 is in draft
     reason: VersionIsDraft
     status: "False"
-    type: Processed
+    type: Ready
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

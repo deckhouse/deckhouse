@@ -188,7 +188,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		r.setConditionFalse(
 			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionTypeReady,
 			v1alpha1.ApplicationConditionReasonApplicationPackageNotFound,
 			fmt.Sprintf("ApplicationPackage '%s' not found", app.Spec.PackageName),
 		)
@@ -210,7 +210,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		r.setConditionFalse(
 			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionTypeReady,
 			v1alpha1.ApplicationConditionReasonVersionNotFound,
 			fmt.Sprintf("ApplicationPackageVersion '%s' not found", apv.Name),
 		)
@@ -228,7 +228,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 
 		app = r.setConditionFalse(
 			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
+			v1alpha1.ApplicationConditionTypeReady,
 			v1alpha1.ApplicationConditionReasonVersionIsDraft,
 			"ApplicationPackageVersion "+apvName+" is in draft",
 		)
@@ -324,10 +324,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return err
 	}
 
-	app = r.setConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
-	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-	}
+	// TODO: Processed = "true"
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -469,17 +466,6 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	}
 
 	return nil
-}
-
-func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
-	meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
-		Type:               condType,
-		Status:             metav1.ConditionTrue,
-		Reason:             v1alpha1.ApplicationConditionReasonReconciled,
-		ObservedGeneration: app.Generation,
-		LastTransitionTime: metav1.NewTime(r.dc.GetClock().Now()),
-	})
-	return app
 }
 
 func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType, reason, message string) *v1alpha1.Application {
