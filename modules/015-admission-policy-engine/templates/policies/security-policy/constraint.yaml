@@ -9,16 +9,16 @@
   {{- if not $cr.spec.policies.allowPrivilegeEscalation }}
     {{- include "allow_privilege_escalation" (list $context $cr) }}
   {{- end }}
-  {{- if or (not $cr.spec.policies.allowHostPID) (not $cr.spec.policies.allowHostIPC) }}
+  {{- if or (and (hasKey $cr.spec.policies "allowHostPID") (not $cr.spec.policies.allowHostPID)) (and (hasKey $cr.spec.policies "allowHostIPC") (not $cr.spec.policies.allowHostIPC)) }}
     {{- include "allow_host_processes" (list $context $cr) }}
   {{- end }}
-  {{- if or (not $cr.spec.policies.allowHostNetwork) (hasKey $cr.spec.policies "allowedHostPorts") }}
+  {{- if or (and (hasKey $cr.spec.policies "allowHostNetwork") (not $cr.spec.policies.allowHostNetwork)) (hasKey $cr.spec.policies "allowedHostPorts") }}
     {{- include "allow_host_network" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "readOnlyRootFilesystem" }}
     {{- include "read_only_root_filesystem" (list $context $cr) }}
   {{- end }}
-  {{- if not $cr.spec.policies.automountServiceAccountToken }}
+  {{- if and (hasKey $cr.spec.policies "automountServiceAccountToken") (not $cr.spec.policies.automountServiceAccountToken) }}
     {{- include "automount_service_account_token" (list $context $cr) }}
   {{- end }}
   {{- if hasKey $cr.spec.policies "allowRbacWildcards" }}
@@ -135,8 +135,8 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    allowHostPID: {{ $cr.spec.policies.allowHostPID | default false }}
-    allowHostIPC: {{ $cr.spec.policies.allowHostIPC | default false }}
+    allowHostPID: {{- if hasKey $cr.spec.policies "allowHostPID" }} {{ $cr.spec.policies.allowHostPID }} {{- else }} true {{- end }}
+    allowHostIPC: {{- if hasKey $cr.spec.policies "allowHostIPC" }} {{ $cr.spec.policies.allowHostIPC }} {{- else }} true {{- end }}
 {{- end }}
 
 {{- define "allow_host_network" }}
@@ -157,7 +157,7 @@ spec:
     scope: Namespaced
     {{- include "constraint_selector" (list $cr) }}
   parameters:
-    allowHostNetwork: {{ $cr.spec.policies.allowHostNetwork | default false }}
+    allowHostNetwork: {{- if hasKey $cr.spec.policies "allowHostNetwork" }} {{ $cr.spec.policies.allowHostNetwork }} {{- else }} true {{- end }}
     {{- if hasKey $cr.spec.policies "allowedHostPorts" }}
     ranges:
       {{- $cr.spec.policies.allowedHostPorts | toYaml | nindent 6 }}
