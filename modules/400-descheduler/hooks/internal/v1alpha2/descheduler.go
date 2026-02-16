@@ -60,6 +60,18 @@ type Strategies struct {
 	RemovePodsViolatingInterPodAntiAffinity *RemovePodsViolatingInterPodAntiAffinity `json:"removePodsViolatingInterPodAntiAffinity,omitempty" yaml:"removePodsViolatingInterPodAntiAffinity,omitempty"`
 }
 
+// HasValidStrategies returns true if at least one strategy is defined.
+// Used to filter out Descheduler CRs that were converted from v1alpha1
+// with only deprecated strategies (e.g. removePodsViolatingNodeTaints),
+// which get stripped during conversion leaving an empty spec.
+func (s Strategies) HasValidStrategies() bool {
+	return s.LowNodeUtilization != nil ||
+		s.HighNodeUtilization != nil ||
+		s.RemoveDuplicates != nil ||
+		s.RemovePodsViolatingNodeAffinity != nil ||
+		s.RemovePodsViolatingInterPodAntiAffinity != nil
+}
+
 type LowNodeUtilization struct {
 	Enabled          bool                   `json:"enabled" yaml:"enabled"`
 	Thresholds       map[string]interface{} `json:"thresholds,omitempty" yaml:"thresholds,omitempty"`
