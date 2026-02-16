@@ -2,8 +2,6 @@ module sts-pods-hosts-appender-webhook
 
 go 1.25.7
 
-toolchain go1.24.6
-
 require (
 	github.com/sirupsen/logrus v1.8.3
 	github.com/slok/kubewebhook/v2 v2.0.0-beta.2
