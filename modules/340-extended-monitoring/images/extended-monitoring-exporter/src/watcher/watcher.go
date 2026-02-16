@@ -277,13 +277,20 @@ func (w *Watcher) updatePod(pod *v1.Pod, deleted bool) {
 	nsLabels := w.nsLabels[pod.Namespace]
 	w.mu.Unlock()
 
+	labelset := prometheus.Labels{"namespace": pod.Namespace, "pod": pod.Name}
+
+	if deleted {
+		w.deleteMetrics(labelset, w.metrics.PodEnabled, w.metrics.PodThreshold)
+		return
+	}
+
 	w.updateMetrics(
 		w.metrics.PodEnabled,
 		w.metrics.PodThreshold,
 		labels,
 		nsLabels,
 		podThresholdMap,
-		prometheus.Labels{"namespace": pod.Namespace, "pod": pod.Name},
+		labelset,
 	)
 }
 
@@ -306,13 +313,20 @@ func (w *Watcher) updateDaemonSet(ds *appsv1.DaemonSet, deleted bool) {
 	nsLabels := w.nsLabels[ds.Namespace]
 	w.mu.Unlock()
 
+	labelset := prometheus.Labels{"namespace": ds.Namespace, "daemonset": ds.Name}
+
+	if deleted {
+		w.deleteMetrics(labelset, w.metrics.DaemonSetEnabled, w.metrics.DaemonSetThreshold)
+		return
+	}
+
 	w.updateMetrics(
 		w.metrics.DaemonSetEnabled,
 		w.metrics.DaemonSetThreshold,
 		labels,
 		nsLabels,
 		daemonSetThresholdMap,
-		prometheus.Labels{"namespace": ds.Namespace, "daemonset": ds.Name},
+		labelset,
 	)
 }
 
@@ -335,13 +349,20 @@ func (w *Watcher) updateStatefulSet(sts *appsv1.StatefulSet, deleted bool) {
 	nsLabels := w.nsLabels[sts.Namespace]
 	w.mu.Unlock()
 
+	labelset := prometheus.Labels{"namespace": sts.Namespace, "statefulset": sts.Name}
+
+	if deleted {
+		w.deleteMetrics(labelset, w.metrics.StatefulSetEnabled, w.metrics.StatefulSetThreshold)
+		return
+	}
+
 	w.updateMetrics(
 		w.metrics.StatefulSetEnabled,
 		w.metrics.StatefulSetThreshold,
 		labels,
 		nsLabels,
 		statefulSetThresholdMap,
-		prometheus.Labels{"namespace": sts.Namespace, "statefulset": sts.Name},
+		labelset,
 	)
 }
 
@@ -363,6 +384,13 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
 	w.mu.Lock()
 	nsLabels := w.nsLabels[dep.Namespace]
 	w.mu.Unlock()
+
+	labelset := prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name}
+
+	if deleted {
+		w.deleteMetrics(labelset, w.metrics.DeploymentEnabled, w.metrics.DeploymentThreshold)
+		return
+	}
 
 	w.updateMetrics(
 		w.metrics.DeploymentEnabled,
@@ -393,6 +421,13 @@ func (w *Watcher) updateIngress(ing *networkingv1.Ingress, deleted bool) {
 	nsLabels := w.nsLabels[ing.Namespace]
 	w.mu.Unlock()
 
+	labelset := prometheus.Labels{"namespace": ing.Namespace, "ingress": ing.Name}
+
+	if deleted {
+		w.deleteMetrics(labelset, w.metrics.IngressEnabled, w.metrics.IngressThreshold)
+		return
+	}
+
 	w.updateMetrics(
 		w.metrics.IngressEnabled,
 		w.metrics.IngressThreshold,
@@ -418,14 +453,14 @@ func (w *Watcher) updateCronJob(job *batchv1.CronJob, deleted bool) {
 
 	log.Printf("[CRONJOB %s] %s", logLabel, job.Name)
 
-	metricLabels := prometheus.Labels{"namespace": job.Namespace, "cronjob": job.Name}
+	labelset := prometheus.Labels{"namespace": job.Namespace, "cronjob": job.Name}
 
 	if deleted {
-		w.metrics.CronJobEnabled.DeletePartialMatch(metricLabels)
+		w.metrics.CronJobEnabled.DeletePartialMatch(labelset)
 		met.UpdateLastObserved()
 		return
 	}
 
-	w.metrics.CronJobEnabled.With(metricLabels).Set(boolToFloat64(enabledLabel(labels)))
+	w.metrics.CronJobEnabled.With(labelset).Set(boolToFloat64(enabledLabel(labels)))
 	met.UpdateLastObserved()
 }
