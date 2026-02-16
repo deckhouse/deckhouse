@@ -69,21 +69,21 @@ apiVersions:
                   networkInterfaceName:
                     type: string
                     description: |
-                      Название сетевого интерфейса (для ручной конфигурации сети)
+                      Имя сетевого интерфейса, для которого будет применена статическая настройка.
                   networkInterfaceAddress:
                     type: array
                     items:
                       type: string
                     description: |
-                      Массив IP-адресов для нод (для ручной конфигурации сети)
+                      Список IP-адресов, которые нужно назначить интерфейсу.
                   networkInterfaceNetmask:
                     type: string
                     description: |
-                      Маска подсети (для ручной конфигурации сети)
+                      Маска подсети для интерфейса.
                   networkInterfaceGateway:
                     type: string
                     description: |
-                      Шлюз по умолчанию (для ручной конфигурации сети)
+                      Шлюз по умолчанию.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).

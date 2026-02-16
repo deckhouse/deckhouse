@@ -130,12 +130,12 @@ apiVersions:
                 description: |
                   Enables a custom static network configuration for nodes in this NodeGroup.
                   
-                  If defined, you must specify `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
+                  If specified, you must set `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
                 properties:
                   networkInterfaceName:
                     type: string
                     description: |
-                      Network interface name (for custom network configuration)
+                      Name of the network interface to apply the static configuration to.
                     example: enp1s0
                   networkInterfaceAddress:
                     type: array
@@ -143,17 +143,17 @@ apiVersions:
                       type: string
                     uniqueItems: true
                     description: | 
-                      A set of IP-addresses for each node (for custom network configuration)
+                      List of IP addresses to assign to the interface.
                     example:  ["192.168.1.10/24", "192.168.1.11/24"]
                   networkInterfaceNetmask:
                     type: string
                     description: |
-                      Network netmask (in dot notation, for custom network configuration)
+                      Subnet mask for the interface.
                     example:  255.255.255.0
                   networkInterfaceGateway:
                     type: string
                     description: |
-                      Network gateway (for custom network configuration)
+                      Default network gateway.
                     example: 192.168.1.1
       nodeGroups:
         type: array
