@@ -161,6 +161,9 @@ func (d *StreamDirector) Director() proxy.StreamDirector {
 
 		conn, err := createDHCTLServerConnRetried(ctx, log, address)
 		if err != nil {
+			// It is safe to send a single Interrupt signal here despite the tomb,
+			// because at this point no server handler has been started yet and
+			// no long-running procedures (like terraform) are running.
 			sigErr := cmd.Process.Signal(os.Interrupt)
 			if sigErr != nil && !errors.Is(sigErr, os.ErrProcessDone) {
 				log.Error("sending interrupt to dhctl instance", logger.Err(sigErr))
