@@ -268,8 +268,8 @@ func (d *DiskService) WaitDiskCreation(ctx context.Context, vmdName string) erro
 	})
 }
 
-func (c *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) error {
-	return c.Wait(ctx, vmdName, &v1alpha2.VirtualDisk{}, func(obj client.Object) (bool, error) {
+func (d *DiskService) WaitDiskDeletion(ctx context.Context, vmdName string) error {
+	return d.Wait(ctx, vmdName, &v1alpha2.VirtualDisk{}, func(obj client.Object) (bool, error) {
 		return obj == nil, nil
 	})
 }

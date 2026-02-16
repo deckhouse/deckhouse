@@ -37,8 +37,6 @@ import (
 const (
 	providerName = "dvp"
 
-	envDVPKubernetesConfigBase64 = "DVP_KUBERNETES_CONFIG_BASE64"
-
 	svcNameLabel = "kubernetes.io/service-name"
 )
 
@@ -85,7 +83,7 @@ func (c *Cloud) Initialize(
 	nodeInformer := informerFactory.Core().V1().Nodes()
 	esInformer := informerFactory.Discovery().V1().EndpointSlices()
 
-	esInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = esInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj any) {
 			c.onEndpointSliceEvent(obj, serviceInformer.Lister(), nodeInformer.Lister())
 		},

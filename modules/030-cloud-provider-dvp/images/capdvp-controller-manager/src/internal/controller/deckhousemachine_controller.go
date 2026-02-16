@@ -24,7 +24,6 @@ import (
 	"time"
 
 	dvpapi "dvp-common/api"
-
 	"github.com/go-logr/logr"
 	"github.com/hashicorp/go-multierror"
 	corev1 "k8s.io/api/core/v1"
@@ -37,7 +36,6 @@ import (
 	cloudprovider "k8s.io/cloud-provider"
 	"k8s.io/utils/ptr"
 	clusterv1b1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	capiutil "sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -75,7 +73,7 @@ type DeckhouseMachineReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
 	dvpMachine := &infrastructurev1a1.DeckhouseMachine{}
@@ -129,21 +127,27 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
-	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
-	defer func() {
-		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
-			result = ctrl.Result{}
-			reterr = err
-		}
-	}()
-
 	// Handle deleted machines
 	if !dvpMachine.DeletionTimestamp.IsZero() {
-		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
+		result, err := r.reconcileDeleteOperation(ctx, logger, dvpMachine)
+
+		// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
+		if patchErr := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); patchErr != nil {
+			return ctrl.Result{}, patchErr
+		}
+
+		return result, err
 	}
 
 	// Handle other kinds of changes
-	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
+	result, err := r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
+
+	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
+	if patchErr := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); patchErr != nil {
+		return ctrl.Result{}, patchErr
+	}
+
+	return result, err
 }
 
 func patchDeckhouseMachine(
@@ -283,7 +287,7 @@ func (r *DeckhouseMachineReconciler) reconcileUpdates(
 		if machine.Status.NodeRef == nil {
 			// VM never successfully started - likely a resource or configuration error
 			err = fmt.Errorf("VM state %q indicates failure, likely due to resource constraints or configuration error", vm.Status.Phase)
-			dvpMachine.Status.FailureReason = ptr.To(string(capierrors.CreateMachineError))
+			dvpMachine.Status.FailureReason = ptr.To("CreateError")
 			dvpMachine.Status.FailureMessage = ptr.To(fmt.Sprintf(
 				"VM failed to start (vmClass: %s, memory: %s, CPU: %d cores). Check parent DVP cluster for detailed error: %s",
 				dvpMachine.Spec.VMClassName,
@@ -330,7 +334,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	ctx context.Context,
 	logger logr.Logger,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-) (ctrl.Result, error) {
+) (ctrl.Result, error) { // nolint:unparam
 	logger.Info("Reconciling DeckhouseMachine delete operation")
 
 	vm, err := r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
@@ -362,9 +366,10 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 	// Try to delete VM with timeout
 	vmDeletionFailed := false
 	if err = r.DVP.ComputeService.DeleteVM(ctx, dvpMachine.Name); err != nil {
-		if errors.Is(err, cloudprovider.InstanceNotFound) {
+		switch {
+		case errors.Is(err, cloudprovider.InstanceNotFound):
 			logger.Info("VirtualMachine already deleted during DeleteVM call, continuing")
-		} else if errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") { // Check if it's a timeout error - in this case, proceed with cleanup
+		case errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout"): // Check if it's a timeout error - in this case, proceed with cleanup
 			logger.Error(err, "VM deletion timed out, VM may still be terminating in parent DVP cluster. Proceeding with cleanup to unblock DeckhouseMachine deletion.",
 				"vm_name", dvpMachine.Name,
 			)
@@ -378,7 +383,7 @@ func (r *DeckhouseMachineReconciler) reconcileDeleteOperation(
 			dvpMachine.Annotations[OrphanedVMTimestampAnnotation] = time.Now().Format(time.RFC3339)
 
 			// Continue with disk cleanup despite VM deletion timeout
-		} else {
+		default:
 			// For other errors, fail the reconciliation
 			return ctrl.Result{}, fmt.Errorf("delete VirtualMachine: %w", err)
 		}
@@ -413,11 +418,8 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 	ctx context.Context,
 	machine *clusterv1b1.Machine,
 	dvpMachine *infrastructurev1a1.DeckhouseMachine,
-) (
-	vm *v1alpha2.VirtualMachine,
-	err error,
-) {
-	vm, err = r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
+) (*v1alpha2.VirtualMachine, error) {
+	vm, err := r.DVP.ComputeService.GetVMByName(ctx, dvpMachine.Name)
 	if err != nil {
 		if errors.Is(err, cloudprovider.InstanceNotFound) {
 			vm, err = r.createVM(ctx, machine, dvpMachine)
@@ -432,7 +434,7 @@ func (r *DeckhouseMachineReconciler) getOrCreateVM(
 // cleanupVMResources removes resources created during VM provisioning
 func (r *DeckhouseMachineReconciler) cleanupVMResources(
 	ctx context.Context,
-	dvpMachine *infrastructurev1a1.DeckhouseMachine,
+	dvpMachine *infrastructurev1a1.DeckhouseMachine, // nolint:unparam
 	cloudInitSecretName string,
 	createdDiskNames []string,
 ) {
@@ -523,7 +525,7 @@ func (r *DeckhouseMachineReconciler) createVM(
 
 	cloudInitSecretName = "cloud-init-" + dvpMachine.Name
 	// CreateCloudInitProvisioningSecret is idempotent - it will update existing secret if it already exists
-	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, string(r.ClusterUUID), dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
+	if err := r.DVP.ComputeService.CreateCloudInitProvisioningSecret(ctx, r.ClusterUUID, dvpMachine.Name, cloudInitSecretName, cloudInitScript); err != nil {
 		logger.Info("Cloud-init secret creation failed, cleaning up created resources", "error", err.Error())
 		r.cleanupVMResources(ctx, dvpMachine, cloudInitSecretName, createdDiskNames)
 		return nil, fmt.Errorf("Cannot create cloud-init provisioning secret: %w", err)

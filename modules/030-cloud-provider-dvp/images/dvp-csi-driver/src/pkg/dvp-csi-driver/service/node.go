@@ -301,14 +301,17 @@ func (n *NodeService) NodeExpandVolume(_ context.Context, req *csi.NodeExpandVol
 		return nil, status.Error(codes.InvalidArgument, "volume capability must be provided")
 	}
 	var resizeCmd string
+
 	fsType := volumeCapability.GetMount().FsType
-	if strings.HasPrefix(fsType, "ext") {
+	switch {
+	case strings.HasPrefix(fsType, "ext"):
 		resizeCmd = "resize2fs"
-	} else if strings.HasPrefix(fsType, "xfs") {
+	case strings.HasPrefix(fsType, "xfs"):
 		resizeCmd = "xfs_growfs"
-	} else {
+	default:
 		return nil, status.Error(codes.InvalidArgument, "fsType is neither xfs or ext[234]")
 	}
+
 	klog.Infof("Resizing filesystem %s mounted on %s with %s", fsType, volumePath, resizeCmd)
 
 	device, err := utils.GetDeviceByMountPoint(volumePath)

@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	dvpapi "dvp-common/api"
-
 	"github.com/container-storage-interface/spec/lib/go/csi"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -250,7 +249,7 @@ func (c *ControllerService) getDiskAttachState(
 	ctx context.Context,
 	diskName string,
 	vmHostname string,
-) (exists bool, attached bool, err error) {
+) (bool, bool, error) {
 	vmbda, err := c.dvpCloudAPI.ComputeService.GetVMBDA(ctx, diskName, vmHostname)
 	if err != nil {
 		if errors.Is(err, dvpapi.ErrNotFound) {
@@ -259,17 +258,16 @@ func (c *ControllerService) getDiskAttachState(
 		return false, false, fmt.Errorf("failed to get vmBDA for disk=%s vm=%s: %w", diskName, vmHostname, err)
 	}
 
-	exists = true
-	attached = vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached
+	attached := vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseAttached
 
 	if vmbda.Status.Phase == v1alpha2.BlockDeviceAttachmentPhaseFailed {
-		return exists, attached, fmt.Errorf(
+		return true, attached, fmt.Errorf(
 			"vmBDA %s is Failed for disk=%s vm=%s",
 			vmbda.Name, diskName, vmHostname,
 		)
 	}
 
-	return exists, attached, nil
+	return true, attached, nil
 }
 
 func (c *ControllerService) ControllerUnpublishVolume(
@@ -384,7 +382,7 @@ func (c *ControllerService) ControllerExpandVolume(ctx context.Context, req *csi
 		klog.Infof("Volume %v of size %d is larger than requested size %s, no need to extend",
 			volumeName, diskSize, newSize)
 		return &csi.ControllerExpandVolumeResponse{
-			CapacityBytes:         int64(diskSize),
+			CapacityBytes:         diskSize,
 			NodeExpansionRequired: false,
 		}, nil
 	}

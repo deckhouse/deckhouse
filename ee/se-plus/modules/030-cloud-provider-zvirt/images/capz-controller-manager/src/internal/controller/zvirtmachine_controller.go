@@ -52,7 +52,7 @@ type ZvirtMachineReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.17.0/pkg/reconcile
-func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) {
+func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := ctrl.LoggerFrom(ctx)
 
 	zvMachine := &infrastructurev1.ZvirtMachine{}
@@ -104,21 +104,27 @@ func (r *ZvirtMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	// Always patch the zvMachine when exiting this function, so we can persist any ZvirtMachine changes.
-	defer func() {
-		if err := patchZvirtMachine(ctx, patchHelper, zvMachine); err != nil {
-			result = ctrl.Result{}
-			reterr = err
-		}
-	}()
-
 	// Handle deleted machines
 	if !zvMachine.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, logger, machine, zvMachine)
+		result, err := r.reconcileDelete(ctx, logger, machine, zvMachine)
+
+		// Always patch the zvMachine when exiting this function, so we can persist any ZvirtMachine changes.
+		if pathErr := patchZvirtMachine(ctx, patchHelper, zvMachine); pathErr != nil {
+			return ctrl.Result{}, pathErr
+		}
+
+		return result, err
 	}
 
 	// Handle non-deleted clusters
-	return r.reconcileNormal(ctx, logger, cluster, machine, zvMachine, zvCluster)
+	result, err := r.reconcileNormal(ctx, logger, cluster, machine, zvMachine, zvCluster)
+
+	// Always patch the zvMachine when exiting this function, so we can persist any ZvirtMachine changes.
+	if pathErr := patchZvirtMachine(ctx, patchHelper, zvMachine); pathErr != nil {
+		return ctrl.Result{}, pathErr
+	}
+
+	return result, err
 }
 
 func patchZvirtMachine(
@@ -518,7 +524,7 @@ func (r *ZvirtMachineReconciler) reconcileDelete(
 	logger logr.Logger,
 	machine *clusterv1.Machine,
 	zvMachine *infrastructurev1.ZvirtMachine,
-) (ctrl.Result, error) {
+) (ctrl.Result, error) { // nolint:unparam
 	logger.Info("Reconciling Machine delete")
 	zVirtClient := r.Zvirt.WithContext(ctx)
 

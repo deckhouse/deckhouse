@@ -18,7 +18,6 @@ package dvpcsidriver
 
 import (
 	"errors"
-	"sync"
 
 	dvpapi "dvp-common/api"
 	"github.com/container-storage-interface/spec/lib/go/csi"
@@ -31,7 +30,6 @@ type csiDriver struct {
 	csi.UnimplementedGroupControllerServer
 
 	config *config.CSIConfig
-	mutex  sync.Mutex
 	client *dvpapi.DVPCloudAPI
 }
 
