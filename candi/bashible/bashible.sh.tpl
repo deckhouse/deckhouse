@@ -318,7 +318,7 @@ function get_rpp_address() {
 
 function get_rpp_token() {
   local rpp_token="$(get_secret "registry-packages-proxy-token" | jq -r '.data.token' |base64 -d)"
-  echo "{rpp_token}"
+  echo "${rpp_token}"
 }
 
 function main() {
@@ -349,9 +349,9 @@ function main() {
   if [[ -n $rpp_addr ]]; then
     export PACKAGES_PROXY_ADDRESSES="${rpp_addr}"
   fi
-  rpp_token=="$(get_rpp_token)"
-  if [[ -n $rpp_addr ]]; then
-    export PACKAGES_PROXY_TOKEN="${get_rpp_token}"
+  rpp_token="$(get_rpp_token)"
+  if [[ -n $rpp_token ]]; then
+    export PACKAGES_PROXY_TOKEN="${rpp_token}"
   fi
   {{- end }}
 {{- end }}
