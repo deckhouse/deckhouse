@@ -19,3 +19,4 @@ linters-settings:
     exclude-rules:
       enum:
         - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.github.properties.teamNameField"
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.saml.properties.nameIDPolicyFormat"

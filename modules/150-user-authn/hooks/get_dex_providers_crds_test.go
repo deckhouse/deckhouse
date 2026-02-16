@@ -308,13 +308,15 @@ spec:
 "enabled": true,
 "id": "saml-test",
 "saml": {
-  "ssoURL": "https://idp.example.com/saml/sso",
-  "caData": "LS0tLS1CRUdJTi...",
-  "entityIssuer": "https://dex.example.com",
-  "usernameAttr": "name",
-  "emailAttr": "email",
-  "groupsAttr": "groups",
-  "nameIDPolicyFormat": "persistent"
+		"ssoURL": "https://idp.example.com/saml/sso",
+		"caData": "LS0tLS1CRUdJTi...",
+		"entityIssuer": "https://dex.example.com",
+		"usernameAttr": "name",
+		"emailAttr": "email",
+		"groupsAttr": "groups",
+		"filterGroups": false,
+		"insecureSkipSignatureValidation": false,
+		"nameIDPolicyFormat": "persistent"
 }
 }]`))
 		})
