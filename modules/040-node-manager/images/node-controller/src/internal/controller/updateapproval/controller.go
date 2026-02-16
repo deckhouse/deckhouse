@@ -19,6 +19,7 @@ package updateapproval
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -163,6 +164,7 @@ func (r *Reconciler) secretToAllNodeGroups(ctx context.Context, obj client.Objec
 	// When configuration checksums secret changes, reconcile all NodeGroups
 	ngList := &v1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngList); err != nil {
+		log.FromContext(ctx).Error(err, "failed to list nodegroups for secret event")
 		return nil
 	}
 
@@ -190,11 +192,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("failed to get nodegroup %s: %w", req.Name, err)
 	}
 
 	// Get configuration checksums
-	checksums := r.getConfigurationChecksums(ctx)
+	checksums, err := r.getConfigurationChecksums(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	if len(checksums) == 0 {
 		logger.V(1).Info("no configuration checksums secret found, skipping")
 		return ctrl.Result{}, nil
@@ -204,7 +209,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Get nodes for this NodeGroup
 	nodes, err := r.getNodesForNodeGroup(ctx, ng.Name)
 	if err != nil {
-		logger.Error(err, "failed to get nodes")
 		return ctrl.Result{}, err
 	}
 
@@ -406,7 +410,7 @@ func (r *Reconciler) approveDisruptions(ctx context.Context, ng *v1.NodeGroup, n
 				"Deleting instance "+node.Name+" for rolling update")
 			return true, nil
 
-		case !r.needDrainNode(&node, ng) || node.IsDrained:
+		case !r.needDrainNode(ctx, &node, ng) || node.IsDrained:
 			// Approve disruption
 			logger.Info("approving disruption", "node", node.Name, "nodegroup", ng.Name)
 			patch := map[string]interface{}{
@@ -557,16 +561,21 @@ func (r *Reconciler) approveUpdates(ctx context.Context, ng *v1.NodeGroup, nodes
 }
 
 // needDrainNode determines if a node needs to be drained before disruption.
-func (r *Reconciler) needDrainNode(node *nodeInfo, ng *v1.NodeGroup) bool {
+func (r *Reconciler) needDrainNode(ctx context.Context, node *nodeInfo, ng *v1.NodeGroup) bool {
+	logger := log.FromContext(ctx)
+
 	// Can't drain single control-plane node because deckhouse webhook will evict
 	// and deckhouse will malfunction; draining single node does not matter, we always
 	// reboot single control plane node without problem
 	if ng.Name == "master" && ng.Status.Nodes == 1 {
+		logger.Info("skip drain single control-plane node")
 		return false
 	}
 
 	// Can't drain node with deckhouse if it's the only ready node
 	if node.Name == r.deckhouseNodeName && ng.Status.Ready < 2 {
+		logger.Info("skip drain node with deckhouse pod because node-group contains single node and deckhouse will not run after drain",
+			"node", node.Name, "node_group", ng.Name)
 		return false
 	}
 
@@ -583,26 +592,29 @@ func (r *Reconciler) needDrainNode(node *nodeInfo, ng *v1.NodeGroup) bool {
 func (r *Reconciler) getNodesForNodeGroup(ctx context.Context, ngName string) ([]corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
 	if err := r.Client.List(ctx, nodeList, client.MatchingLabels{NodeGroupLabel: ngName}); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list nodes for nodegroup %s: %w", ngName, err)
 	}
 	return nodeList.Items, nil
 }
 
-func (r *Reconciler) getConfigurationChecksums(ctx context.Context) map[string]string {
+func (r *Reconciler) getConfigurationChecksums(ctx context.Context) (map[string]string, error) {
 	secret := &corev1.Secret{}
 	err := r.Client.Get(ctx, types.NamespacedName{
 		Namespace: MachineNamespace,
 		Name:      ConfigurationChecksumsSecretName,
 	}, secret)
 	if err != nil {
-		return make(map[string]string)
+		if errors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get secret %s/%s: %w", MachineNamespace, ConfigurationChecksumsSecretName, err)
 	}
 
 	checksums := make(map[string]string)
 	for k, v := range secret.Data {
 		checksums[k] = string(v)
 	}
-	return checksums
+	return checksums, nil
 }
 
 func (r *Reconciler) patchNode(ctx context.Context, nodeName string, patch map[string]interface{}) error {
@@ -613,20 +625,31 @@ func (r *Reconciler) patchNode(ctx context.Context, nodeName string, patch map[s
 	}
 	patchBytes, err := json.Marshal(patch)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal patch for node %s: %w", nodeName, err)
 	}
-	return r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, patchBytes))
+	if err := r.Client.Patch(ctx, node, client.RawPatch(types.MergePatchType, patchBytes)); err != nil {
+		return fmt.Errorf("failed to patch node %s: %w", nodeName, err)
+	}
+	return nil
 }
 
 func (r *Reconciler) deleteInstance(ctx context.Context, instanceName string) error {
 	// Delete Instance resource (deckhouse.io/v1alpha1)
 	// Using unstructured to avoid importing the Instance type
+	// PropagationPolicy=Background matches hook's DeleteInBackground behavior
 	instance := &unstructured.Unstructured{}
 	instance.SetAPIVersion("deckhouse.io/v1alpha1")
 	instance.SetKind("Instance")
 	instance.SetName(instanceName)
 
-	return client.IgnoreNotFound(r.Client.Delete(ctx, instance))
+	if err := r.Client.Delete(ctx, instance,
+		client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+		if errors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to delete instance %s: %w", instanceName, err)
+	}
+	return nil
 }
 
 func getApprovalMode(ng *v1.NodeGroup) string {
