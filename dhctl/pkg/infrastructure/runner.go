@@ -657,7 +657,7 @@ func (r *Runner) ResourcesQuantityInState() int {
 	}
 	err = json.Unmarshal(data, &st)
 	if err != nil {
-		r.logger.LogErrorLn(err)
+		r.logger.LogErrorF("ResourcesQuantityInState cannot parse state: %v\n", err)
 		return 0
 	}
 

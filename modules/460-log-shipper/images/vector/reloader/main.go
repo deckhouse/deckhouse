@@ -27,13 +27,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/shirou/gopsutil/v3/process"
 	"golang.org/x/sys/unix"
 
-	"vector/internal"
+	"vector/internal/diff"
+	"vector/internal/watcher"
 )
 
 const (
@@ -193,8 +193,8 @@ func compareConfigs(c1, c2 *Config) bool {
 	if res {
 		return true
 	}
-	diff := internal.Diff(c1.path, c1.content, c2.path, c2.content)
-	log.Println(string(diff))
+	d := diff.Diff(c1.path, c1.content, c2.path, c2.content)
+	log.Println(string(d))
 
 	return false
 }
@@ -213,51 +213,20 @@ func main() {
 			Handler:           mux,
 		}
 
-		server.ListenAndServe()
+		_ = server.ListenAndServe()
 	}()
 
 	cleanLocks()
 
 	if err := LoadConfig(sampleConfigPath).SaveTo(dynamicConfigPath); err != nil {
 		log.Fatal(err)
-		return
 	}
 	if err := sendReloadSignal(); err != nil {
 		log.Fatal(err)
-		return
 	}
 	log.Printf("initial Vector config has been applied")
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
+	if err := watcher.Run(sampleConfigPath, reloadOnce); err != nil {
 		log.Fatal(err)
-	}
-	defer watcher.Close()
-
-	err = watcher.Add(sampleConfigPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Printf("start watching Vector config changes")
-	for {
-		select {
-		case event := <-watcher.Events:
-			if event.Op == fsnotify.Remove {
-				// k8s configmaps use symlinks,
-				// old file is deleted and a new link with the same name is created
-				_ = watcher.Remove(event.Name)
-				if err := watcher.Add(event.Name); err != nil {
-					log.Fatal(err)
-				}
-				switch event.Name {
-				case sampleConfigPath:
-					reloadOnce()
-				}
-			}
-
-		case err := <-watcher.Errors:
-			log.Printf("watch files error: %s\n", err)
-		}
 	}
 }

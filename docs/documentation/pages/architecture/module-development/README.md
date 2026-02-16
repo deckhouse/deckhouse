@@ -11,7 +11,7 @@ This section is dedicated to the architecture of DKP modules. It will help you u
 Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
 
 * Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
-* Modules from [module source](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). The release cycle for these modules is not tied to the DKP release cycle.
+* Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
 
 Creating a module consists of the following stages:
 

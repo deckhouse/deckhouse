@@ -537,7 +537,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 
 	installParams := InstallDeckhouseParams{
 		BeforeDeckhouseTask: func() error {
-			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, metaConfig, nil, true)
+			return createResources(ctx, kubeCl, resourcesToCreateBeforeDeckhouseBootstrap, nil, true)
 		},
 		State: bootstrapState,
 	}
@@ -589,7 +589,7 @@ func (b *ClusterBootstrapper) Bootstrap(ctx context.Context) error {
 		return err
 	}
 
-	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, metaConfig, installDeckhouseResult, false)
+	err = createResources(ctx, kubeCl, resourcesToCreateAfterDeckhouseBootstrap, installDeckhouseResult, false)
 	if err != nil {
 		return err
 	}
@@ -747,7 +747,7 @@ func splitResourcesOnPreAndPostDeckhouseInstall(resourcesToCreate template.Resou
 	return before, after
 }
 
-func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, metaConfig *config.MetaConfig, result *InstallDeckhouseResult, skipChecks bool) error {
+func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resourcesToCreate template.Resources, result *InstallDeckhouseResult, skipChecks bool) error {
 	tasks := make([]actions.ModuleConfigTask, 0)
 	if result != nil {
 		log.WarnLn("\nThe installation has completed successfully.\nTo finalize bootstraping please add at least one non-master node or remove taints from your master node (if a single node installation).\n")
@@ -770,16 +770,29 @@ func createResources(ctx context.Context, kubeCl *client.KubernetesClient, resou
 	}
 
 	return log.Process("bootstrap", "Create Resources", func() error {
-		checkers := make([]resources.Checker, 0)
+		checkersFirst := make([]resources.Checker, 0)
+		checkersSecond := make([]resources.Checker, 0)
+		firstQueueResources, secondQueueResources := resourcesToCreate.GetCloudNGs()
+		var err error
 		if !skipChecks {
-			var err error
-			checkers, err = resources.GetCheckers(kubeCl, resourcesToCreate, metaConfig)
+			checkersFirst, err = resources.GetCheckers(kubeCl, firstQueueResources, nil)
+			if err != nil {
+				return err
+			}
+
+			checkersSecond, err = resources.GetCheckers(kubeCl, secondQueueResources, nil)
 			if err != nil {
 				return err
 			}
 		}
 
-		return resources.CreateResourcesLoop(ctx, kubeCl, resourcesToCreate, checkers, tasks)
+		if len(firstQueueResources) > 0 {
+			_ = log.Process("Create resources", "Waiting for NodeGroups", func() error {
+				return resources.CreateResourcesLoop(ctx, kubeCl, firstQueueResources, checkersFirst, nil)
+			})
+		}
+
+		return resources.CreateResourcesLoop(ctx, kubeCl, secondQueueResources, checkersSecond, tasks)
 	})
 }
 

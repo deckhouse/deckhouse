@@ -69,6 +69,24 @@ lang: ru
   - `d8:custom:project:*`
   - `d8:custom:project-capability:*`
 
+## Ограничения на выдачу прав
+
+- Создание `ClusterRoleBinding` на роли и привилегии `d8:namespace:*`, `d8:project:*`, `d8:namespace-capability:*`, `d8:project-capability:*` и их `d8:custom:*` варианты запрещено.
+- `RoleBinding` не должен позволять эскалацию: пользователь с ролью `d8:namespace:admin` не может создать роль/привилегию, позволяющую управлять `ProjectRoleBinding`.
+- Агрегации должны быть безопасны: нельзя добавлять права на `ProjectRoleBinding` в роли, которые выдаются через `RoleBinding` в пространстве имён (в том числе через агрегации).
+
+## Расширение ролей и привилегий
+
+Пользовательские роли и привилегии создаются как `ClusterRole` и агрегируются в базовые роли через лейблы. Для них действуют ограничения:
+
+- пользовательские роли `d8:custom:namespace:*` и `d8:custom:project:*` не должны содержать собственных правил (только агрегация);
+- пользовательские привилегии `d8:custom:namespace-capability:*` и `d8:custom:project-capability:*` могут расширять базовые роли только через агрегацию.
+
+Для агрегации используются лейблы вида:
+
+- `rbac.deckhouse.io/aggregate-to-<role>-as` — включение в соответствующую роль;
+- `rbac.deckhouse.io/kind` — тип агрегируемого объекта (role/capability).
+
 ## Расширение и отключение ролей
 
 Встроенные [роли](../concepts/glossary.html#ролевая-модель) можно расширять (добавляя права) или запрещать к прямой выдаче при помощи аннотации:
@@ -97,6 +115,7 @@ rbac.deckhouse.io/disabled-for-direct-use-in-projects: ""
 * `ru.meta.deckhouse.io/description`, `en.meta.deckhouse.io/description`, `custom.meta.deckhouse.io/description`
 
 По умолчанию платформа использует заполнение русскоязычных (`ru.meta`) и англоязычных (`en.meta`) аннотаций.
+Аннотации `custom.meta.deckhouse.io/title` и `custom.meta.deckhouse.io/description` позволяют переопределять названия и описания встроенных ролей и привилегий.
 
 ## Рекомендации по созданию ролей
 

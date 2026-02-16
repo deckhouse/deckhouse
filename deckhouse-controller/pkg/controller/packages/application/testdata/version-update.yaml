@@ -20,12 +20,6 @@ spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.2
-status:
-  conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
-    status: "True"
-    type: Processed
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage

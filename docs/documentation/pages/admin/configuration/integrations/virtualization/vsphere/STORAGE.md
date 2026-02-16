@@ -1,5 +1,5 @@
 ---
-title: Storage and load balancing
+title: Storage and load balancing in VMware vSphere
 permalink: en/admin/integrations/virtualization/vsphere/storage.html
 ---
 

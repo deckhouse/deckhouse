@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в OVH Cloud
 permalink: ru/admin/integrations/public/ovh/connection-and-authorization.html
 cloud_type: ovh
 lang: ru

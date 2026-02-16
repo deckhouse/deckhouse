@@ -98,7 +98,9 @@ This approach means:
      type: L2
    ```
 
-1. Create a Service resource with an annotation and the MetalLoadBalancerClass name:
+1. Create a Service resource with the annotation and name MetalLoadBalancerClass:
+
+   > When creating a Service resource, you can omit the annotations `network.deckhouse.io/l2-load-balancer-external-ips-count` and `network.deckhouse.io/load-balancer-ips` from the examples below. In this case, the service will automatically be assigned 1 random address from the pool.
 
    ```yaml
    apiVersion: v1
@@ -117,6 +119,33 @@ This approach means:
      selector:
        app: nginx
    ```
+
+{% offtopic title="If you need to assign specific IP addresses from the pool to the service..." %}
+
+> If the service needs to allocate specific IP addresses from the pool, use the annotation `network.deckhouse.io/load-balancer-ips`. If there is more than one desired address, there must also be an annotation `network.deckhouse.io/l2-load-balancer-external-ips-count`, which must specify the number of addresses allocated from the pool (it must not be less than the number of addresses listed in `network.deckhouse.io/load-balancer-ips`).
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-deployment
+  annotations:
+    # The number of addresses that will be allocated from the pool declared in MetalLoadBalancerClass.
+    network.deckhouse.io/l2-load-balancer-external-ips-count: "3"
+    # A list of addresses from the pool declared in MetalLoadBalancerClass that will be allocated to the service.
+    network.deckhouse.io/load-balancer-ips: "192.168.2.102,192.168.2.103,192.168.2.104"
+spec:
+  type: LoadBalancer
+  loadBalancerClass: ingress # MetalLoadBalancerClass name.
+  ports:
+  - port: 8000
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: nginx
+```
+
+{% endofftopic %}
 
 As a result, the LoadBalancer Service will be assigned the configured number of addresses:
 

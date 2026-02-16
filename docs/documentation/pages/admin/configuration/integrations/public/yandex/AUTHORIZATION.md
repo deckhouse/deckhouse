@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/authorization.html
 ---
 

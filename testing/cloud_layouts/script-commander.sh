@@ -984,6 +984,8 @@ function wait_alerts_resolve() {
   "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
   "LoadAverageHigh" # Pointless, as test servers have minimal resources
   "SecurityEventsDetected" # This is normal for e2e tests
+  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   )
 
   # Alerts
@@ -1443,7 +1445,7 @@ function run-test() {
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
-  testRunAttempts=80
+  testRunAttempts=120
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do

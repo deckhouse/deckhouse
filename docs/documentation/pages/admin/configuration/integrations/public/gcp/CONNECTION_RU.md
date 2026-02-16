@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Google Cloud Platform
 permalink: ru/admin/integrations/public/gcp/connection-and-authorization.html
 lang: ru
 ---

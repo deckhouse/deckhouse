@@ -1,5 +1,6 @@
 ---
 title: "Managing authorization and access to workload with Istio"
+description: "Managing authorization and access control to workloads in Deckhouse Kubernetes Platform using Istio. Configuring AuthorizationPolicy with ALLOW and DENY policies for traffic control."
 permalink: en/user/network/authorization-workload-istio.html
 ---
 

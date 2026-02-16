@@ -192,6 +192,10 @@ Once DNAT is configured, set up the firewall. Start by configuring the IP sets.
 The provider is confirmed to work with Ubuntu 22.04-based virtual machine templates only.
 {% endalert %}
 
+{% alert level="warning" %}
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
+{% endalert %}
+
 {% include notice_envinronment.liquid %}
 
 {% alert level="warning" %}

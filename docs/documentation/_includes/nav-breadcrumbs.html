@@ -31,15 +31,15 @@
     {%- if site.mode == 'module' %}
       {%- assign cachingTime = '180' %}
     {%- else -%}
-      {%- assign cachingTime = '120' %}
+      {%- assign cachingTime = '1440' %}
     {%- endif -%}
     <div class="searchV3">
       <div class="container">
         <div class="input-wrapper">
           <input type="text" id="search-input" placeholder="{{ site.data.i18n.common.search_placeholder_text[page.lang] }}" class="input"
           {%- if page.sidebar == 'embedded-modules' %}
-          data-search-index-path="/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-external-modules-index.json:1.0:{{ cachingTime }}"
-          data-search-context="{{ site.data.i18n.common.search_context_modules[page.lang] }}"
+          data-search-index-path="{{ site.canonical_url_prefix_documentation | append: '/search.json' }}:2.0:{{ cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-external-modules-index.json:1.0:{{ cachingTime }}"
+          data-search-context="{{ site.data.i18n.common.search_context_dkpdocs_and_modules[page.lang] }}"
           {%- else %}
           data-search-index-path="{{ '/search.json' | true_relative_url }}:2.0:{{ cachingTime }},/modules/search-embedded-modules-index.json:1.0:{{ cachingTime }},/modules/search-external-modules-index.json:1.0:{{ cachingTime }}"
           data-search-context="{{ site.data.i18n.common.search_context_dkpdocs_and_modules[page.lang] }}"
@@ -51,7 +51,7 @@
     </div>
     <!--end search-->
     <!--loading search JS-->
-    {%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+    {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
     <script type="text/javascript" src="/assets/js/fuse.min.js?v={{ assetHash }}"></script>
     <script type="text/javascript" src="/assets/js/search-v3.js?v={{ assetHash }}"></script>
     <!--end loading search JS-->

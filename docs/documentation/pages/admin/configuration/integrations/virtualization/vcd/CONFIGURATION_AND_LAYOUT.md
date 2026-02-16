@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/configuration-and-layout-scheme.html
 ---
 

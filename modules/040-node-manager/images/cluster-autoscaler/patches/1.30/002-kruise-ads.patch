@@ -2,12 +2,16 @@ diff --git a/cluster-autoscaler/simulator/cluster.go b/cluster-autoscaler/simula
 index d568becef..d8b3ff8c0 100644
 --- a/cluster-autoscaler/simulator/cluster.go
 +++ b/cluster-autoscaler/simulator/cluster.go
-@@ -230,6 +230,10 @@ func (r *RemovalSimulator) findPlaceFor(removedNode string, pods []*apiv1.Pod, n
+@@ -230,6 +230,14 @@ func (r *RemovalSimulator) findPlaceFor(removedNode string, pods []*apiv1.Pod, n
  
  	newpods := make([]*apiv1.Pod, 0, len(pods))
  	for _, podptr := range pods {
++		if podptr == nil {
++			klog.Warningf("findPlaceFor: skipping nil pod in list for node %s", removedNode)
++			continue
++		}
 +		controllerRef := drain.ControllerRef(podptr)
-+		if controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
++		if controllerRef != nil && controllerRef.Kind == "DaemonSet" && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" {
 +			continue
 +		}
  		newpod := *podptr
@@ -23,7 +27,7 @@ index 9c9e89cf8..9efbb30d3 100644
  func (Rule) Drainable(drainCtx *drainability.DrainContext, pod *apiv1.Pod) drainability.Status {
 +	kruiseAds := false
 +	controllerRef := drain.ControllerRef(pod)
-+	if controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
++	if controllerRef != nil && controllerRef.APIVersion == "apps.kruise.io/v1alpha1" && controllerRef.Kind == "DaemonSet" {
 +		kruiseAds = true
 +	}
  	for _, pdb := range drainCtx.RemainingPdbTracker.MatchingPdbs(pod) {

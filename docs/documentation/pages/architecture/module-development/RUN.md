@@ -15,6 +15,11 @@ Follow these steps to run the module in a cluster:
   
 ### Module source
 
+Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
+
+- Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
+- Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
+
 Create a [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource) resource to set the source to fetch module information from. This resource will contain the address of the container registry to pull modules from, authentication parameters, and other settings.
 
 An example of a ModuleSource resource:

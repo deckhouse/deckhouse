@@ -213,16 +213,6 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 		return err
 	}
 
-	gvks := make(map[string]struct{})
-	resourcesToCreate := make([]string, 0, len(c.resources))
-	for _, resource := range c.resources {
-		key := resource.GVK.String()
-		if _, ok := gvks[key]; !ok {
-			gvks[key] = struct{}{}
-			resourcesToCreate = append(resourcesToCreate, key)
-		}
-	}
-
 	for _, task := range c.mcTasks {
 		err := c.runSingleMCTask(ctx, task)
 		if err != nil {
@@ -238,7 +228,6 @@ func (c *Creator) TryToCreate(ctx context.Context) error {
 	}
 
 	if len(c.resources) > 0 {
-		log.InfoF("\rResources to create: \n\t%s\n\n", strings.Join(resourcesToCreate, "\n\t"))
 		return ErrNotAllResourcesCreated
 	}
 
@@ -320,6 +309,22 @@ func CreateResourcesLoop(ctx context.Context, kubeCl *client.KubernetesClient, r
 	resourceCreator := NewCreator(kubeCl, resources, tasks)
 
 	waiter := NewWaiter(checkers)
+
+	gvks := make(map[string]struct{})
+	resourcesToCreate := make([]string, 0, len(resourceCreator.resources))
+	for _, resource := range resourceCreator.resources {
+		key := resource.DetailedGVKString()
+		if _, ok := gvks[key]; !ok {
+			gvks[key] = struct{}{}
+			resourcesToCreate = append(resourcesToCreate, key)
+		}
+	}
+
+	_ = log.Process("Create Resources", "Resources to create", func() error {
+		log.InfoF("%s\n", strings.Join(resourcesToCreate, "\n"))
+		return nil
+	})
+
 	for {
 		err := resourceCreator.TryToCreate(ctx)
 		if err != nil && !errors.Is(err, ErrNotAllResourcesCreated) {

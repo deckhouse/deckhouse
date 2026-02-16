@@ -1,5 +1,5 @@
 ---
-title: Хранилище и балансировка
+title: Хранилище и балансировка нагрузки в Yandex Cloud
 permalink: ru/admin/integrations/public/yandex/storage.html
 lang: ru
 ---
