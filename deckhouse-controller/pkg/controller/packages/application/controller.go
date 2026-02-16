@@ -35,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -72,8 +72,8 @@ type moduleManager interface {
 }
 
 type packageOperator interface {
-	Update(repo registry.Remote, inst packageoperator.Instance)
-	Remove(namespace, name string)
+	UpdateApp(repo registry.Remote, inst packageoperator.App)
+	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
 }
 
@@ -392,7 +392,7 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		}
 	}
 
-	r.operator.Update(registry.BuildRemote(repo), packageoperator.Instance{
+	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -454,7 +454,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("delete application")
 
 	// call PackageOperator method (PackageRemover interface)
-	r.operator.Remove(app.Namespace, app.Name)
+	r.operator.RemoveApp(app.Namespace, app.Name)
 
 	patch := client.MergeFrom(app.DeepCopy())
 
