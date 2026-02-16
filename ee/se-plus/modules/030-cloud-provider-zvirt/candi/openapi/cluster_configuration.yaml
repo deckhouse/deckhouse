@@ -125,35 +125,34 @@ apiVersions:
                 pattern: ^[\da-fA-F]{8}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{4}\-[\da-fA-F]{12}$
                 example: "49bb4594-0cd4-4eb7-8288-8594eafd5a86"
               customNetworkConfig:
-                type: boolean
+                type: object
+                additionalProperties: false
                 description: |
                   Use custom static network configuration for nodes.
-              networkInterfaceName:
-                type: string
-                description: |
-                  Network interface name (for custom network configuration)
-                example: enp1s0
-              networkInterfaceAddress:
-                type: array
-                items:
-                  type: string
-                uniqueItems: true
-                description: | 
-                  A set of IP-addresses for each node (for custom network configuration)
-                example:  ["192.168.1.10/24", "192.168.1.11/24"]
-              networkInterfaceNetmask:
-                type: array
-                items:
-                  type: string
-                uniqueItems: true
-                description: |
-                  A set of netmasks for each node (in dot notation, for custom network configuration)
-                example:  ["192.168.1.10/24", "192.168.1.11/24"]
-              networkInterfaceGateway:
-                type: string
-                description: |
-                  Network interface gateway (for custom network configuration)
-                example: 192.168.1.1
+                properties:
+                  networkInterfaceName:
+                    type: string
+                    description: |
+                      Network interface name (for custom network configuration)
+                    example: enp1s0
+                  networkInterfaceAddress:
+                    type: array
+                    items:
+                      type: string
+                    uniqueItems: true
+                    description: | 
+                      A set of IP-addresses for each node (for custom network configuration)
+                    example:  ["192.168.1.10/24", "192.168.1.11/24"]
+                  networkInterfaceNetmask:
+                    type: string
+                    description: |
+                      Network netmask (in dot notation, for custom network configuration)
+                    example:  255.255.255.0
+                  networkInterfaceGateway:
+                    type: string
+                    description: |
+                      Network gateway (for custom network configuration)
+                    example: 192.168.1.1
       nodeGroups:
         type: array
         description: |

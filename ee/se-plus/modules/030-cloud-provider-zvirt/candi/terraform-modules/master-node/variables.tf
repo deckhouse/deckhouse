@@ -39,7 +39,11 @@ locals {
   master_root_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "rootDiskSizeGb", 50)*1024*1024*1024
   master_etcd_disk_size = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "etcdDiskSizeGb", 10)*1024*1024*1024
 
-  use_cloud_config_network = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "customNetworkConfig", false)
+  custom_network_config = var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig ? [1] : []
+  custom_network_name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig, "networkInterfaceGateway", "")
+  custom_network_address = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.networkInterfaceAddress[var.nodeIndex], "")
+  custom_network_netmask = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig, "networkInterfaceGateway", "")
+  custom_network_gateway = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig, "networkInterfaceGateway", "")
 
   master_cloud_init_script = yamlencode(merge({
     "hostname": local.master_node_name,
