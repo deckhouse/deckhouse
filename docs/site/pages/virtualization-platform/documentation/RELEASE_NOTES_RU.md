@@ -4,6 +4,12 @@ permalink: ru/virtualization-platform/documentation/release-notes.html
 lang: ru
 ---
 
+## v1.5.1
+
+### Исправления
+
+- [vd] Исправлена проблема при создании виртуального диска из виртуального образа, хранящегося на `PersistentVolumeClaim` (при значении `.spec.storage=PersistentVolumeClaim`).
+
 ## v1.5.0
 
 ### Новые возможности
@@ -25,6 +31,8 @@ lang: ru
 ### Прочее
 
 - [vd] При просмотре дисков теперь отображается имя виртуальной машины, к которой они подключены (`d8 k get vd`).
+
+## v1.4.1
 
 ### Безопасность
 

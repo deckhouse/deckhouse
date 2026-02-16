@@ -3,6 +3,12 @@ title: "Release notes"
 permalink: en/virtualization-platform/documentation/release-notes.html
 ---
 
+## v1.5.1
+
+### Fixes
+
+- [vd] Fixed an issue with creating a virtual disk from a virtual image stored on a `PersistentVolumeClaim` (with `.spec.storage` set to `PersistentVolumeClaim`).
+
 ## v1.5.0
 
 ### New features
@@ -24,6 +30,8 @@ permalink: en/virtualization-platform/documentation/release-notes.html
 ### Other
 
 - [vd] When viewing disks, the name of the virtual machine they are attached to is now displayed (`d8 k get vd`).
+
+## v1.4.1
 
 ### Security
 
