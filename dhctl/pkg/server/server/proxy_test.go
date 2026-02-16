@@ -37,7 +37,7 @@ func TestStreamDirectorParams_Validate(t *testing.T) {
 		{
 			name: "valid params",
 			params: StreamDirectorParams{
-				MethodsPrefix: "/dhctl.DHCTL",
+				MethodsPrefix: SinglethreadedMethodsPrefix,
 				TmpDir:        "/tmp/dhctl",
 			},
 			expectError: false,
@@ -53,7 +53,7 @@ func TestStreamDirectorParams_Validate(t *testing.T) {
 		{
 			name: "invalid tmp dir - empty",
 			params: StreamDirectorParams{
-				MethodsPrefix: "/dhctl.DHCTL",
+				MethodsPrefix: SinglethreadedMethodsPrefix,
 				TmpDir:        "",
 			},
 			expectError: true,
@@ -62,7 +62,7 @@ func TestStreamDirectorParams_Validate(t *testing.T) {
 		{
 			name: "invalid tmp dir - root",
 			params: StreamDirectorParams{
-				MethodsPrefix: "/dhctl.DHCTL",
+				MethodsPrefix: SinglethreadedMethodsPrefix,
 				TmpDir:        "/",
 			},
 			expectError: true,
@@ -94,7 +94,7 @@ func TestNewStreamDirector(t *testing.T) {
 		{
 			name: "valid params",
 			params: StreamDirectorParams{
-				MethodsPrefix: "/dhctl.DHCTL",
+				MethodsPrefix: SinglethreadedMethodsPrefix,
 				TmpDir:        "/tmp/dhctl",
 			},
 			expectError: false,
@@ -102,7 +102,7 @@ func TestNewStreamDirector(t *testing.T) {
 		{
 			name: "invalid params",
 			params: StreamDirectorParams{
-				MethodsPrefix: "/dhctl.DHCTL",
+				MethodsPrefix: SinglethreadedMethodsPrefix,
 				TmpDir:        "",
 			},
 			expectError: true,
@@ -134,10 +134,12 @@ func TestNewStreamDirector(t *testing.T) {
 func TestStreamDirector_SocketPath(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	params := StreamDirectorParams{
-		MethodsPrefix: "/dhctl.DHCTL",
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        tmpDir,
 	}
 
@@ -182,10 +184,12 @@ func TestStreamDirector_SocketPath(t *testing.T) {
 func TestStreamDirector_TmpDirPath(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	params := StreamDirectorParams{
-		MethodsPrefix: "/dhctl.DHCTL",
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        tmpDir,
 	}
 
@@ -242,10 +246,12 @@ func TestStreamDirector_TmpDirPath(t *testing.T) {
 func TestStreamDirector_TmpDirPathConsistency(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	params := StreamDirectorParams{
-		MethodsPrefix: "/dhctl.DHCTL",
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        tmpDir,
 	}
 
@@ -266,10 +272,12 @@ func TestStreamDirector_TmpDirPathConsistency(t *testing.T) {
 func TestStreamDirector_TmpDirPathUniqueness(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	params := StreamDirectorParams{
-		MethodsPrefix: "/dhctl.DHCTL",
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        tmpDir,
 	}
 
@@ -298,10 +306,12 @@ func TestStreamDirector_TmpDirPathUniqueness(t *testing.T) {
 func TestStreamDirector_Wait(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "dhctl-proxy-test-*")
 	require.NoError(t, err)
-	defer os.RemoveAll(tmpDir)
+	defer func() {
+		_ = os.RemoveAll(tmpDir)
+	}()
 
 	params := StreamDirectorParams{
-		MethodsPrefix: "/dhctl.DHCTL",
+		MethodsPrefix: SinglethreadedMethodsPrefix,
 		TmpDir:        tmpDir,
 	}
 

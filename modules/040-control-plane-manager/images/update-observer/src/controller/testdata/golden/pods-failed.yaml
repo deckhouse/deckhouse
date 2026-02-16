@@ -6,7 +6,7 @@ data:
   status: |
     currentVersion: v1.35
     phase: ControlPlaneUpdating
-    progress: 88%
+    progress: 77%
     controlPlane:
     - name: master-1
       phase: UpToDate
@@ -16,6 +16,8 @@ data:
         kube-scheduler: v1.35
     - name: master-2
       phase: Failed
+      description: 'kube-controller-manager: Pod is not Running - Failed, kube-scheduler:
+        Pod is not Running - Failed'
       components:
         kube-apiserver: v1.35
         kube-controller-manager: v1.35

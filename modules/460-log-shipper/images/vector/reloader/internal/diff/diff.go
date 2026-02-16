@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package internal
+package diff
 
 import (
 	"bytes"
@@ -16,7 +16,7 @@ import (
 type pair struct{ x, y int }
 
 // Diff returns an anchored diff of the two texts old and new
-// in the “unified diff” format. If old and new are identical,
+// in the "unified diff" format. If old and new are identical,
 // Diff returns a nil slice (no output).
 //
 // Unix diff implementations typically look for a diff with
@@ -27,17 +27,17 @@ type pair struct{ x, y int }
 // after a predetermined amount of work.
 //
 // In contrast, this implementation looks for a diff with the
-// smallest number of “unique” lines inserted and removed,
+// smallest number of "unique" lines inserted and removed,
 // where unique means a line that appears just once in both old and new.
-// We call this an “anchored diff” because the unique lines anchor
+// We call this an "anchored diff" because the unique lines anchor
 // the chosen matching regions. An anchored diff is usually clearer
 // than a standard diff, because the algorithm does not try to
 // reuse unrelated blank lines or closing braces.
 // The algorithm also guarantees to run in O(n log n) time
 // instead of the standard O(n²) time.
 //
-// Some systems call this approach a “patience diff,” named for
-// the “patience sorting” algorithm, itself named for a solitaire card game.
+// Some systems call this approach a "patience diff," named for
+// the "patience sorting" algorithm, itself named for a solitaire card game.
 // We avoid that name for two reasons. First, the name has been used
 // for a few different variants of the algorithm, so it is imprecise.
 // Second, the name is frequently interpreted as meaning that you have
@@ -183,8 +183,8 @@ func lines(x []byte) []string {
 // once in x and once in y.
 //
 // The longest common subsequence algorithm is as described in
-// Thomas G. Szymanski, “A Special Case of the Maximal Common
-// Subsequence Problem,” Princeton TR #170 (January 1975),
+// Thomas G. Szymanski, "A Special Case of the Maximal Common
+// Subsequence Problem," Princeton TR #170 (January 1975),
 // available at https://research.swtch.com/tgs170.pdf.
 func tgs(x, y []string) []pair {
 	// Count the number of times each string appears in a and b.
