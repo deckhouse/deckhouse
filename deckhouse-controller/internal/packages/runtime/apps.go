@@ -205,6 +205,9 @@ func (r *Runtime) RemoveApp(namespace, instance string) {
 	r.apps.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *apps.Application) {
 		cleanup := queue.WithOnDone(func() {
 			go func() {
+				r.mu.Lock()
+				defer r.mu.Unlock()
+
 				if r.apps.Delete(name) {
 					r.queueService.Remove(name)
 					r.status.Delete(name)

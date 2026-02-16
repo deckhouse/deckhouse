@@ -82,7 +82,7 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 			tasks = []queue.Task{
 				taskdownload.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
 				taskinstall.NewModuleTask(name, version, repo, r.installer, r.status, r.logger),
-				taskload.NewModuleTask(name, repo, module.Settings, r.loadApp, r.status, r.logger),
+				taskload.NewModuleTask(name, repo, module.Settings, r.loadModule, r.status, r.logger),
 			}
 
 			// If there's an existing module, disable it first
@@ -162,6 +162,9 @@ func (r *Runtime) RemoveModule(name string) {
 	r.modules.HandleEvent(lifecycle.EventRemove, name, func(ctx context.Context, _ int, pkg *modules.Module) {
 		cleanup := queue.WithOnDone(func() {
 			go func() {
+				r.mu.Lock()
+				defer r.mu.Unlock()
+
 				if r.modules.Delete(name) {
 					r.queueService.Remove(name)
 					r.status.Delete(name)
