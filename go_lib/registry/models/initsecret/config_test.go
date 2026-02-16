@@ -35,11 +35,31 @@ func TestContextToMap(t *testing.T) {
 					Cert: "cert",
 					Key:  "key",
 				},
+				ROUser: &User{
+					Name:         "ro_name",
+					Password:     "ro_password",
+					PasswordHash: "ro_password_hash",
+				},
+				RWUser: &User{
+					Name:         "rw_name",
+					Password:     "rw_password",
+					PasswordHash: "rw_password_hash",
+				},
 			},
 			result: map[string]any{
 				"ca": map[string]any{
 					"cert": "cert",
 					"key":  "key",
+				},
+				"ro_user": map[string]any{
+					"name":          "ro_name",
+					"password":      "ro_password",
+					"password_hash": "ro_password_hash",
+				},
+				"rw_user": map[string]any{
+					"name":          "rw_name",
+					"password":      "rw_password",
+					"password_hash": "rw_password_hash",
 				},
 			},
 		},
