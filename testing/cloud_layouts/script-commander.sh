@@ -575,20 +575,42 @@ function bootstrap_static() {
       echo "Release branch ${DEV_BRANCH} on ${PROVIDER} provider detected"
       DECKHOUSE_DOCKERCFG=${STAGE_DECKHOUSE_DOCKERCFG}
     fi
-    D8_MIRROR_USER="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    D8_MIRROR_PASSWORD="$(echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
 
-    D8_MODULES_USER="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    D8_MODULES_PASSWORD="$(echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+    D8_MIRROR_HOST=$(echo -n "${DECKHOUSE_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r D8_MIRROR_USER D8_MIRROR_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_DOCKERCFG} | base64 -d | jq -r --arg reg "$D8_MIRROR_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
 
-    E2E_REGISTRY_USER="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f1)"
-    E2E_REGISTRY_PASSWORD="$(echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | awk -F'\"' '{ print $8 }' | base64 -d | cut -d':' -f2)"
-    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | awk -F'\"' '{print $4}')
+    D8_MODULES_HOST=$(echo -n "${DECKHOUSE_E2E_MODULES_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r D8_MODULES_USER D8_MODULES_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_E2E_MODULES_DOCKERCFG} | base64 -d | jq -r --arg reg "$D8_MODULES_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
+
+    E2E_REGISTRY_HOST=$(echo -n "${DECKHOUSE_E2E_DOCKERCFG}" | base64 -d | jq -r '.auths | keys[0]')
+    read -r E2E_REGISTRY_USER E2E_REGISTRY_PASSWORD <<<"$(
+      echo -n ${DECKHOUSE_E2E_DOCKERCFG} | base64 -d | jq -r --arg reg "$E2E_REGISTRY_HOST" '.auths[$reg].auth' | base64 -d | tr ':' ' '
+    )"
 
     IMAGES_REPO="${E2E_REGISTRY_HOST}/sys/deckhouse-oss"
     D8_MODULES_URL="${D8_MODULES_HOST}/deckhouse/ee"
+
+    ssh_check_max_attempts=100
+    ssh_check_sleep_sec=10
+    for ((i=1; i<=ssh_check_max_attempts; i++)); do
+      if $ssh_command "$ssh_user@$bastion_ip" "true" >/dev/null 2>&1; then
+        echo "Bastion SSH is reachable (attempt $i/$ssh_check_max_attempts)"
+        break
+      fi
+
+      if [ "$i" -eq "$ssh_check_max_attempts" ]; then
+          echo "ERROR: bastion SSH not reachable after $ssh_check_max_attempts attempts (sleep ${ssh_check_sleep_sec}s)"
+          exit 1
+      fi
+
+      echo "Waiting for bastion SSH... ($i/$ssh_check_max_attempts). Sleeping ${ssh_check_sleep_sec}s"
+      sleep "$ssh_check_sleep_sec"
+    done
+
     testRunAttempts=20
     for ((i=1; i<=$testRunAttempts; i++)); do
       # Install http/https proxy on bastion node
@@ -962,6 +984,8 @@ function wait_alerts_resolve() {
   "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
   "LoadAverageHigh" # Pointless, as test servers have minimal resources
   "SecurityEventsDetected" # This is normal for e2e tests
+  "D8NodeContainerdV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
+  "D8NodeCgroupV2NotSupported" # This is normal for e2e tests for <1.36 clusters 
   )
 
   # Alerts
@@ -1290,6 +1314,24 @@ function update_comment() {
     fi
 }
 
+function get_bootstrap_logs() {
+  echo "Getting cluster bootstrap logs..."
+  local cluster_tasks
+  local bootstrap_job_id
+  local cluster_bootstrap_logs
+  cluster_tasks=$(curl -s -X 'GET' \
+    "https://${COMMANDER_HOST}/api/v1/cluster_tasks?cluster_id=${cluster_id}" \
+    -H 'accept: application/json' \
+    -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  bootstrap_job_id=$(jq -r '.[] | select(.action == "bootstrap") | .id' <<< "$cluster_tasks")
+  echo "Bootstrap job id: ${bootstrap_job_id}"
+  cluster_bootstrap_logs=$(curl -s -X 'GET' \
+   "https://${COMMANDER_HOST}/api/v1/cluster_task_logs?cluster_task_id=${bootstrap_job_id}" \
+   -H 'accept: application/json' \
+   -H "X-Auth-Token: ${COMMANDER_TOKEN}")
+  jq -r 'reverse | .[] | .data | .[] | .msg' <<< "$cluster_bootstrap_logs"
+}
+
 function run-test() {
   local payload
   local response
@@ -1403,7 +1445,7 @@ function run-test() {
   echo "Cluster ID: ${cluster_id}"
 
   # Waiting to cluster ready
-  testRunAttempts=80
+  testRunAttempts=120
   sleep=30
   master_ip_find=false
   for ((i=1; i<=testRunAttempts; i++)); do
@@ -1433,6 +1475,7 @@ function run-test() {
       break
     elif [ "creation_failed" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"
+      get_bootstrap_logs
       return 1
     elif [ "configuration_error" = "$cluster_status" ]; then
       echo "  Cluster status: $cluster_status"

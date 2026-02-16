@@ -1,5 +1,5 @@
 diff --git a/pkg/provider/azure.go b/pkg/provider/azure.go
-index 1e82cf3543..3506809565 100644
+index 1e82cf354..350680956 100644
 --- a/pkg/provider/azure.go
 +++ b/pkg/provider/azure.go
 @@ -397,7 +397,7 @@ func (az *Cloud) InitializeCloudFromConfig(ctx context.Context, config *azurecon
@@ -12,7 +12,7 @@ index 1e82cf3543..3506809565 100644
  		return err
  	}
 diff --git a/pkg/provider/azure_instance_metadata.go b/pkg/provider/azure_instance_metadata.go
-index ad198e6740..a4f94e941b 100644
+index ad198e674..a4f94e941 100644
 --- a/pkg/provider/azure_instance_metadata.go
 +++ b/pkg/provider/azure_instance_metadata.go
 @@ -109,12 +109,12 @@ type InstanceMetadataService struct {
@@ -31,30 +31,27 @@ index ad198e6740..a4f94e941b 100644
  		return nil, err
  	}
 diff --git a/pkg/provider/azure_vmss.go b/pkg/provider/azure_vmss.go
-index 2fca5898ce..1ecb620653 100644
+index 2fca5898c..5f87ecbd4 100644
 --- a/pkg/provider/azure_vmss.go
 +++ b/pkg/provider/azure_vmss.go
-@@ -444,6 +444,28 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
+@@ -444,6 +444,25 @@ func (ss *ScaleSet) GetNodeNameByProviderID(ctx context.Context, providerID stri
  	vmManagementType, err := ss.getVMManagementTypeByProviderID(ctx, providerID, azcache.CacheReadTypeUnsafe)
  	if err != nil {
  		klog.Errorf("Failed to check VM management type: %v", err)
 +
 +		if vmManagementType == ManagedByUnknownVMSet {
-+			klog.V(2).Infof(
-+				"Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex",
-+				providerID,
-+			)
++			klog.V(2).Infof("Failed to get VM management type for provider ID %q, trying to get node name from availability set or vmss flex", providerID)
 +
-+			nodeName, err := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			nodeName, err2 := ss.availabilitySet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from availability set: %v", providerID, err2)
 +			} else {
 +				return nodeName, nil
 +			}
 +
-+			nodeName, err = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
-+			if err != nil {
-+				klog.Warningf("Failed to get node name for provider ID %q: %v", providerID, err)
++			nodeName, err2 = ss.flexScaleSet.GetNodeNameByProviderID(ctx, providerID)
++			if err2 != nil {
++				klog.Warningf("Failed to get node name for provider ID %q from vmss flex: %v", providerID, err2)
 +			} else {
 +				return nodeName, nil
 +			}
@@ -63,3 +60,17 @@ index 2fca5898ce..1ecb620653 100644
  		return "", err
  	}
  
+diff --git a/pkg/provider/config/azure.go b/pkg/provider/config/azure.go
+index a956badb9..8471beab0 100644
+--- a/pkg/provider/config/azure.go
++++ b/pkg/provider/config/azure.go
+@@ -165,6 +165,9 @@ type Config struct {
+ 	ClusterServiceSharedLoadBalancerHealthProbePort int32 `json:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty"`
+ 	// ClusterServiceSharedLoadBalancerHealthProbePath defines the target path of the shared health probe. Default to `/healthz`.
+ 	ClusterServiceSharedLoadBalancerHealthProbePath string `json:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty"`
++
++	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
++	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
+ }
+ 
+ // HasExtendedLocation returns true if extendedlocation prop are specified.

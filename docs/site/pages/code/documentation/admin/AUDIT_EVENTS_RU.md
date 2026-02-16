@@ -829,5 +829,127 @@ curl --request POST "https://example.com/api/v4/admin/audit_events/search" \
 <td>Пакет удалён из реестра пакетов.</td>
 <td></td>
 </tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_access_token_destroyed</code></td>
+<td>Group access token destroyed</td>
+<td>Токен доступа группы был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_access_token_revoked</code></td>
+<td>Group access token revoked</td>
+<td>Токен доступа группы был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">personal_access_token_destroyed</code></td>
+<td>Personal access token destroyed</td>
+<td>Персональный токен доступа был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">project_access_token_destroyed</code></td>
+<td>Project access token destroyed</td>
+<td>Токен доступа проекта был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">project_access_token_revoked</code></td>
+<td>Project access token revoked</td>
+<td>Токен доступа проекта был отозван.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_created</code></td>
+<td>Merge request\Project\Group approval rule created</td>
+<td>Правило апрува для запроса на слияние, проекта или группы было создано.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_updated</code></td>
+<td>Merge request\Project\Group approval rule updated</td>
+<td>Правило апрува для запроса на слияние, проекта или группы было обновлено.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_deleted</code></td>
+<td>Merge request\Project\Group approval rule deleted</td>
+<td>Правило апрува для запроса на слияние, проекта или группы было удалено.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">approval_rule_propagated</code></td>
+<td>Approval rules <code>#{rule_names}</code> propagated to <code>#{project_and_group_names}</code></td>
+<td>Правила апрува были распространены в эти проекты и группы.</td>
+<td></td>
+</tr>
+
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">variable_viewed_api</code></td>
+<td>User viewed all CI/CD variables via API for this scope or User viewed CI/CD variable <code>#{variable.key}</code> via API</td>
+<td>Все CI/CD переменные были просмотрены через API для данной области или CI/CD переменная <code>#{variable.key}</code> была просмотрена через API.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_unarchived</code></td>
+<td>User unarchived group</td>
+<td>Группа была разархивирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">group_archived</code></td>
+<td>User archived group</td>
+<td>Группа была архивирована.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_deleted</code></td>
+<td>Comment deleted</td>
+<td>Комментарий был удалён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_created</code></td>
+<td>Comment created</td>
+<td>Комментарий был создан.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">comment_updated</code></td>
+<td>Comment updated</td>
+<td>Комментарий был обновлён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_records_migrated_to_ghost</code></td>
+<td>User records migrated to ghost</td>
+<td>Записи пользователя были перенесены ghost-пользователю.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_enable_passkey</code></td>
+<td>User enable new passkey</td>
+<td>Новый passkey был включён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">user_disable_passkey</code></td>
+<td>User disable passkey</td>
+<td>Passkey был отключён.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">push_rule_propagated</code></td>
+<td>Push rule propagated</td>
+<td>Push-правило было распространено.</td>
+<td></td>
+</tr>
+<tr>
+<td><code style="word-break: break-all; white-space: normal;">push_rule_updated</code></td>
+<td>Push rule updated</td>
+<td>Существующее push-правило было обновлено.</td>
+<td></td>
+</tr>
+
 </tbody>
 </table>

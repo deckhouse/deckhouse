@@ -85,6 +85,39 @@ spec:
     - profile
     - email
 `
+		// Use quoted filter values with explicit trailing newline to simulate
+		// what Kubernetes stores when users use YAML literal block scalars (|).
+		ldapWithTrailingNewlineCR = `
+---
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: openldap-demo
+spec:
+  type: LDAP
+  displayName: OpenLDAP Demo
+  ldap:
+    host: ldap-service.openldap-demo:389
+    insecureNoSSL: true
+    insecureSkipVerify: true
+    bindDN: cn=admin,dc=example,dc=org
+    bindPW: admin
+    usernamePrompt: Email Address
+    userSearch:
+      baseDN: ou=People,dc=example,dc=org
+      filter: "(objectClass=person)\n"
+      username: mail
+      idAttr: DN
+      emailAttr: mail
+      nameAttr: cn
+    groupSearch:
+      baseDN: ou=Groups,dc=example,dc=org
+      filter: "(objectClass=groupOfNames)\n"
+      nameAttr: cn
+      userMatchers:
+      - userAttr: DN
+        groupAttr: member
+`
 	)
 
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -191,6 +224,26 @@ spec:
 }]`))
 				})
 			})
+		})
+	})
+
+	Context("LDAP provider with trailing newline in filter", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ldapWithTrailingNewlineCR))
+			f.RunHook()
+		})
+		It("Should trim trailing newline from filter fields", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			providers := f.ValuesGet("userAuthn.internal.providers").Array()
+			Expect(providers).To(HaveLen(1))
+
+			provider := providers[0]
+			userFilter := provider.Get("ldap.userSearch.filter").String()
+			groupFilter := provider.Get("ldap.groupSearch.filter").String()
+
+			Expect(userFilter).To(Equal("(objectClass=person)"))
+			Expect(groupFilter).To(Equal("(objectClass=groupOfNames)"))
 		})
 	})
 

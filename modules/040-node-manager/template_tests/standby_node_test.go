@@ -31,6 +31,7 @@ var _ = Describe("Module :: node-manager :: helm template :: standby node", func
 			f.ValuesSetFromYaml("nodeManager.internal.standbyNodeGroups", `[{name: standby-absolute, standby: 2, reserveCPU: "5500m", reserveMemory: "983Mi", taints: [{effect: NoExecute, key: ship-class, value: frigate}]}, {name: standby-percent, standby: 12, reserveCPU: "3400m", reserveMemory: 10Mi, taints: [{effect: NoExecute, key: ship-class, value: frigate}]}]`)
 			f.ValuesSetFromYaml("nodeManager.internal.capiControllerManagerWebhookCert", `{ca: string, crt: string, key: string}`)
 			f.ValuesSetFromYaml("nodeManager.internal.capsControllerManagerWebhookCert", `{ca: string, crt: string, key: string}`)
+			f.ValuesSetFromYaml("nodeManager.internal.nodeControllerWebhookCert", `{ca: string, crt: string, key: string}`)
 			f.ValuesSetFromYaml("global.discovery.d8SpecificNodeCountByRole", `{"master":1}`)
 			f.ValuesSetFromYaml("global.clusterConfiguration", `apiVersion: deckhouse.io/v1
 cloud:
@@ -40,7 +41,7 @@ clusterDomain: cluster.local
 clusterType: Cloud
 defaultCRI: Containerd
 kind: ClusterConfiguration
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16

@@ -31,7 +31,7 @@ lang: ru
 
   Примеры:
   - [настройка метрик](./containerd.html#дополнительные-настройки-containerd).
-  - [добавление приватного registry](./containerd.html#добавление-приватного-registry-с-авторизацией).
+  - [добавление приватного хранилища образов контейнеров](./containerd.html#добавление-конфигурации-для-дополнительного-хранилища-образов-контейнеров).
 
 ## Настройки NodeGroupConfiguration
 
@@ -58,7 +58,7 @@ cloudProvider:
     externalNetworkNames:
     - public
     instances:
-      imageName: ubuntu-22-04-cloud-amd64
+      imageName: ubuntu-24-04-cloud-amd64
       mainNetwork: kube
       securityGroups:
       - kube

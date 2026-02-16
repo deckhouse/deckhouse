@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Node configuration for software-defined storage"
 permalink: en/virtualization-platform/documentation/admin/platform-management/storage/sds/node-configurator/about.html
 ---
 

@@ -1,5 +1,6 @@
 ---
 title: "Managing request balancing between service endpoints with Istio"
+description: "Managing request load balancing between endpoints in Deckhouse Kubernetes Platform using Istio. Configuring DestinationRule with TCP limits, load balancing algorithms, and outlier detection rules."
 permalink: en/user/network/managing_request_between_service_istio.html
 ---
 

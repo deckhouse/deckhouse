@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in OVH Cloud
 permalink: en/admin/integrations/public/ovh/connection-and-authorization.html
 cloud_type: ovh
 ---

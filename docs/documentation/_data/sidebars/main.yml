@@ -590,8 +590,8 @@ entries:
                         ru: Egress Gateway
                       url: /admin/configuration/network/egress/gateway.html
                 - title:
-                    en: Inter-cluster cooperation (alliance)
-                    ru: Межкластерное взаимодействие (альянс)
+                    en: Inter-cluster cooperation
+                    ru: Межкластерное взаимодействие
                   folders:
                     - title:
                         en: Overview
@@ -623,7 +623,7 @@ entries:
                       url: /admin/configuration/network/other/dns.html
                     - title:
                         en: Caching DNS requests on cluster nodes
-                        ru: Кэширование DNS-запросов на узлах кластера
+                        ru: Кеширование DNS-запросов на узлах кластера
                       url: /admin/configuration/network/other/dns-caching.html
                     - title:
                         en: BpfLB operation modes for external traffic processing
@@ -847,8 +847,16 @@ entries:
                   url: /admin/configuration/logging/storage.html
             - title:
                 en: Multitenancy
-                ru: Мультенантность
-              url: /admin/multitenancy.html
+                ru: Мультитенантность
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/multitenancy.html
+                - title:
+                    en: Project management
+                    ru: Управление проектами
+                  url: /admin/multitenancy/project-management.html
             - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
@@ -872,8 +880,8 @@ entries:
           draft: true
           url: /user/using-overview.html
         - title:
-            en: Access
-            ru: Доступ
+            en: IAM
+            ru: IAM
           folders:
           - title:
               en: Authentication
@@ -930,7 +938,7 @@ entries:
               url: /user/network/app_istio_activation.html
             - title:
                 en: Managing request balancing between service endpoints with Istio
-                ru: Управление балансировкой запросов между эндпойнтами сервиса с Istio
+                ru: Управление балансировкой запросов между эндпоинтами сервиса с Istio
               url: /user/network/managing_request_between_service_istio.html
             - title:
                 en: Locality failover with Istio
@@ -1193,7 +1201,7 @@ entries:
             url: /architecture/network/service-with-istio.html
           - title:
               en: Caching DNS server in a cluster
-              ru: Кэширующий DNS-сервер в кластере
+              ru: Кеширующий DNS-сервер в кластере
             url: /architecture/network/dns-caching.html
         - title:
             en: Multitenancy

@@ -36,7 +36,7 @@ spec:
     kind: Deployment
     name: registry-incluster-proxy
   updatePolicy:
-    updateMode: "InPlaceOrRecreate"
+    updateMode: "Recreate"
   resourcePolicy:
     containerPolicies:
     - containerName: "distribution"

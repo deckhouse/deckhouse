@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Deckhouse Stronghold documentation"
 permalink: en/stronghold/documentation/
 ---
 

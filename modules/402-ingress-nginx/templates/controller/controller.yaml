@@ -206,11 +206,6 @@ spec:
             /chroot/tmp/nginx
           /usr/bin/touch /chroot/var/log/nginx/access.log
           echo -e 'pid /tmp/nginx/nginx.pid;\nerror_log stderr;\nevents {}\nhttp {}\ndaemon off;' > /chroot/etc/ingress-controller/nginx/nginx.conf
-          {{- if eq $controllerVersion "1.9" }}
-          ln -sf /var/lib/geoip/GeoIPASNum.dat /chroot/etc/ingress-controller/geoip/GeoIPASNum.dat
-          ln -sf /var/lib/geoip/GeoIP.dat /chroot/etc/ingress-controller/geoip/GeoIP.dat
-          ln -sf /var/lib/geoip/GeoLiteCity.dat /chroot/etc/ingress-controller/geoip/GeoLiteCity.dat
-          {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -292,7 +287,7 @@ spec:
         - --http-port=80
         - --https-port=443
         - --update-status=true
-        {{- if eq $controllerVersion "1.12" }}
+        {{- if or (eq $controllerVersion "1.12") (eq $controllerVersion "1.14") }}
         - --enable-metrics=true
         {{- end }}
         {{- if $loadBalancer }}
@@ -307,9 +302,7 @@ spec:
         {{- if eq "nginx" $crd.spec.ingressClass }}
         - --watch-ingress-without-class=true
         {{- end }}
-        {{- if $crd.spec.annotationValidationEnabled }}
-        - --enable-annotation-validation=true
-        {{- end }}
+        - --enable-annotation-validation={{ $crd.spec.annotationValidationEnabled | default false }}
   {{- if $crd.spec.customErrors }}
         - --default-backend-service={{ $crd.spec.customErrors.namespace }}/{{ $crd.spec.customErrors.serviceName }}
   {{- end }}

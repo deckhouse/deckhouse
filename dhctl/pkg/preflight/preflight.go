@@ -94,6 +94,11 @@ func (pc *Checker) Static(ctx context.Context) error {
 		},
 		pc.getCheckSSHTunnelStep(),
 		{
+			fun:            pc.CheckStaticInstancesSSH,
+			successMessage: "SSHCredentials for StaticInstances are correct.",
+			skipFlag:       app.StaticInstancesWithSSHCredentials,
+		},
+		{
 			fun:            pc.CheckDeckhouseUser,
 			successMessage: "deckhouse user and group aren't present on node",
 			skipFlag:       app.DeckhouseUserCheckName,

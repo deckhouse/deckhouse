@@ -126,7 +126,7 @@ clusterBootstrap:
   clusterDNSAddress: 10.222.0.10
   clusterDomain: cluster.local
   nodeIP: 192.168.199.23
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 cri: "Containerd"
 nodeGroup:
   cloudInstances:
@@ -175,7 +175,10 @@ dockerExit=0
 docker pull ${REGISTRY}/deckhouse/ee/install:stable
 cat <<'SCRIPT_END' | docker run -i --rm \
   -v ${volumesRoot}/candi/bashible:/deckhouse/candi/bashible \
-  -v ${volumesRoot}/candi/cloud-providers:/deckhouse/candi/cloud-providers \
+  -v ${volumesRoot}/modules/030-cloud-provider-aws/candi:/deckhouse/candi/cloud-providers/aws \
+  -v ${volumesRoot}/modules/030-cloud-provider-yandex/candi:/deckhouse/candi/cloud-providers/yandex \
+  -v ${volumesRoot}/modules/030-cloud-provider-gcp/candi:/deckhouse/candi/cloud-providers/gcp \
+  -v ${volumesRoot}/modules/030-cloud-provider-azure/candi:/deckhouse/candi/cloud-providers/azure \
   -v ${volumesRoot}/${config}:/${config} \
   -e config=config.yaml \
   --entrypoint=bash \

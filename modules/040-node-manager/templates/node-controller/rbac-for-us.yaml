@@ -1,0 +1,155 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+automountServiceAccountToken: false
+---
+# ClusterRole for node-controller
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:node-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+rules:
+# NodeGroups - full access for status updates
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodegroups/status
+  verbs:
+  - get
+  - update
+  - patch
+# Nodes - read and update for labels/taints
+- apiGroups:
+  - ""
+  resources:
+  - nodes
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+# Secrets - read for configuration checksums and cloud provider data
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+# Events - create for NodeGroup events
+- apiGroups:
+  - ""
+  - events.k8s.io
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+# MCM Machine and MachineDeployment - read for status calculation
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines
+  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+# CAPI Machine and MachineDeployment - read for status calculation
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines
+  - machinedeployments
+  verbs:
+  - get
+  - list
+  - watch
+# ModuleConfig - read for validation (customTolerationKeys)
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - moduleconfigs
+  verbs:
+  - get
+  - list
+  - watch
+# ConfigMaps - read for cluster configuration
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+# Endpoints - read for master node count validation
+- apiGroups:
+  - ""
+  resources:
+  - endpoints
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-controller
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:node-controller
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:node-manager:deckhouse-hooks
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+  - apiGroups:
+      - apiextensions.k8s.io
+    resources:
+      - customresourcedefinitions
+    verbs:
+      - get
+      - list
+      - watch
+      - patch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:deckhouse-hooks
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:node-manager:deckhouse-hooks
+subjects:
+  - kind: ServiceAccount
+    name: deckhouse
+    namespace: d8-system

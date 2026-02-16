@@ -1,5 +1,6 @@
 ---
 title: "Управление балансировкой запросов между эндпоинтами сервиса с Istio"
+description: "Управление балансировкой запросов между эндпоинтами в Deckhouse Kubernetes Platform с использованием Istio. Настройка DestinationRule с лимитами TCP, алгоритмами балансировки и правилами outlier detection."
 permalink: ru/user/network/managing_request_between_service_istio.html
 lang: ru
 ---

@@ -147,15 +147,16 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 
 	loadConfigValuesSchema := func(path string, moduleName string) error {
 		content, err := os.ReadFile(path)
-		if err == nil {
-			schema := new(spec.Schema)
+		var schema *spec.Schema
 
+		switch {
+		case err == nil:
+			schema = new(spec.Schema)
 			if err := yaml.Unmarshal(content, schema); err != nil {
 				return err
 			}
 
-			err = spec.ExpandSchema(schema, schema, nil)
-			if err != nil {
+			if err := spec.ExpandSchema(schema, schema, nil); err != nil {
 				return err
 			}
 
@@ -165,9 +166,10 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			)
 
 			st.moduleConfigsCache[moduleName] = schema
-		} else if errors.Is(err, os.ErrNotExist) {
+
+		case errors.Is(err, os.ErrNotExist):
 			log.DebugF("Openapi spec not found for module %s\n", moduleName)
-		} else {
+		default:
 			return err
 		}
 
@@ -179,7 +181,7 @@ func newSchemaStore(schemasDir []string) *SchemaStore {
 			continue
 		}
 		name := e.Name()
-		moduleName := strings.TrimLeft(name, "01234567890-")
+		moduleName := strings.TrimLeft(name, "0123456789-")
 		st.modulesCache[moduleName] = struct{}{}
 		p := path.Join(modulesDir, name, "openapi", "config-values.yaml")
 		if err := loadConfigValuesSchema(p, moduleName); err != nil {
@@ -375,7 +377,7 @@ func (s *SchemaStore) upload(fileContent []byte) error {
 	return nil
 }
 
-func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (isValid bool, multiErr error) {
+func openAPIValidate(dataObj *[]byte, schema *spec.Schema, options validateOptions) (bool, error) {
 	validator := validate.NewSchemaValidator(schema, nil, "", strfmt.Default)
 
 	var blank map[string]interface{}

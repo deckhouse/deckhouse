@@ -29,10 +29,10 @@ const (
 	StaticInstanceWaitingForCredentialsRefReason = "WaitingForCredentialsRefToBeAssigned"
 
 	// Checking tcp connection
-	StaticInstanceCheckTcpConnection = "CheckTcpConnection"
+	StaticInstanceCheckTCPConnection = "CheckTcpConnection"
 
 	// Checking ssh connection
-	StaticInstanceCheckSshCondition = "CheckSshCondition"
+	StaticInstanceCheckSSHCondition = "CheckSshCondition"
 
 	StaticInstanceBootstrapSucceededCondition clusterv1.ConditionType = "BootstrapSucceeded"
 

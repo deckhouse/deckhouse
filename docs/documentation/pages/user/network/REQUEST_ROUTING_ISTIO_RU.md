@@ -1,5 +1,6 @@
 ---
-title: "Маршрутизация запросов с Istio"
+title: "Настройка маршрутизации запросов с Istio"
+description: "Настройка маршрутизации HTTP и TCP запросов в Deckhouse Kubernetes Platform с использованием Istio. Работа с VirtualService для управления трафиком на основе host, uri, weight."
 permalink: ru/user/network/request_routing_istio.html
 lang: ru
 ---

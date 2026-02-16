@@ -1,5 +1,5 @@
 ---
-title: "Руководство администратора"
+title: "Руководство администратора Deckhouse Virtualization Platform"
 permalink: ru/virtualization-platform/documentation/admin/overview.html
 lang: ru
 ---

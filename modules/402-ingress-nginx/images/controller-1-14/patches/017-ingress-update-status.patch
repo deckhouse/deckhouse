@@ -1,0 +1,228 @@
+diff --git a/internal/ingress/controller/controller.go b/internal/ingress/controller/controller.go
+index 9b7d37e3b..45da5db23 100644
+--- a/internal/ingress/controller/controller.go
++++ b/internal/ingress/controller/controller.go
+@@ -90,6 +90,7 @@ type Configuration struct {
+ 	// +optional
+ 	PublishService       string
+ 	PublishStatusAddress string
++	StatusServiceLabel   string
+ 
+ 	UpdateStatus           bool
+ 	UseNodeInternalIP      bool
+diff --git a/internal/ingress/controller/nginx.go b/internal/ingress/controller/nginx.go
+index b1f89d969..a13f99db7 100644
+--- a/internal/ingress/controller/nginx.go
++++ b/internal/ingress/controller/nginx.go
+@@ -151,6 +151,7 @@ func NewNGINXController(config *Configuration, mc metric.Collector) *NGINXContro
+ 			Client:                 config.Client,
+ 			PublishService:         config.PublishService,
+ 			PublishStatusAddress:   config.PublishStatusAddress,
++			StatusServiceLabel:     config.StatusServiceLabel,
+ 			IngressLister:          n.store,
+ 			UpdateStatusOnShutdown: config.UpdateStatusOnShutdown,
+ 			UseNodeInternalIP:      config.UseNodeInternalIP,
+diff --git a/internal/ingress/status/status.go b/internal/ingress/status/status.go
+index 8eee7dd74..5074a5ee3 100644
+--- a/internal/ingress/status/status.go
++++ b/internal/ingress/status/status.go
+@@ -64,6 +64,8 @@ type Config struct {
+ 
+ 	PublishStatusAddress string
+ 
++	StatusServiceLabel string
++
+ 	UpdateStatusOnShutdown bool
+ 
+ 	UseNodeInternalIP bool
+@@ -191,46 +193,39 @@ func (s *statusSync) runningAddresses() ([]v1.IngressLoadBalancerIngress, error)
+ 		return addrs, nil
+ 	}
+ 
+-	if s.PublishService != "" {
+-		return statusAddressFromService(s.PublishService, s.Client)
+-	}
++	if s.StatusServiceLabel != "" {
++		addresses := make([]v1.IngressLoadBalancerIngress, 0)
+ 
+-	// get information about all the pods running the ingress controller
+-	pods, err := s.Client.CoreV1().Pods(k8s.IngressPodDetails.Namespace).List(context.TODO(), metav1.ListOptions{
+-		LabelSelector: labels.SelectorFromSet(k8s.IngressPodDetails.Labels).String(),
+-	})
+-	if err != nil {
+-		return nil, err
+-	}
+-
+-	addrs := make([]v1.IngressLoadBalancerIngress, 0)
+-	for i := range pods.Items {
+-		pod := pods.Items[i]
+-		// only Running pods are valid
+-		if pod.Status.Phase != apiv1.PodRunning {
+-			continue
++		svcAddrs, err := s.getStatusAddressFromServiceByLabel(s.StatusServiceLabel)
++		if err != nil {
++			klog.Warningf("error getting addresses from services with selector %q: %v", s.StatusServiceLabel, err)
++		} else {
++			addresses = append(addresses, svcAddrs...)
+ 		}
+ 
+-		// only Ready pods are valid
+-		isPodReady := false
+-		for _, cond := range pod.Status.Conditions {
+-			if cond.Type == apiv1.PodReady && cond.Status == apiv1.ConditionTrue {
+-				isPodReady = true
+-				break
+-			}
++		podAddrs, err := s.getStatusAddressFromPodByLabel(s.StatusServiceLabel)
++		if err != nil {
++			klog.Warningf("error getting addresses from pods with selector %q: %v", s.StatusServiceLabel, err)
++		} else {
++			addresses = appendUniqueIngresses(addresses, podAddrs)
+ 		}
+ 
+-		if !isPodReady {
+-			klog.InfoS("POD is not ready", "pod", klog.KObj(&pod), "node", pod.Spec.NodeName)
+-			continue
++		if len(addresses) > 0 {
++			return addresses, nil
+ 		}
+ 
+-		theseAddresses := k8s.GetNodeIPs(s.Client, pod.Spec.NodeName, s.UseNodeInternalIP)
+-		for _, thisAddress := range theseAddresses {
+-			if !stringInIngresses(thisAddress, addrs) {
+-				addrs = append(addrs, nameOrIPToLoadBalancerIngress(thisAddress))
+-			}
+-		}
++		klog.V(2).Infof("no addresses found for selector %q, falling back", s.StatusServiceLabel)
++	}
++
++	if s.PublishService != "" {
++		return statusAddressFromService(s.PublishService, s.Client)
++	}
++
++	// get information about all the pods running the ingress controller
++	podSelector := labels.SelectorFromSet(k8s.IngressPodDetails.Labels).String()
++	addrs, err := s.getStatusAddressFromPods(k8s.IngressPodDetails.Namespace, podSelector)
++	if err != nil {
++		return nil, err
+ 	}
+ 
+ 	return addrs, nil
+@@ -410,3 +405,96 @@ func stringInIngresses(s string, list []v1.IngressLoadBalancerIngress) bool {
+ 
+ 	return false
+ }
++
++// appendUniqueIngresses appends only unique, non-empty addresses from src into dst.
++func appendUniqueIngresses(dst []v1.IngressLoadBalancerIngress, src []v1.IngressLoadBalancerIngress) []v1.IngressLoadBalancerIngress {
++	for _, addr := range src {
++		key := addr.IP
++		if key == "" {
++			key = addr.Hostname
++		}
++		if key == "" {
++			continue
++		}
++
++		if !stringInIngresses(key, dst) {
++			dst = append(dst, addr)
++		}
++	}
++
++	return dst
++}
++
++func (s *statusSync) getStatusAddressFromServiceByLabel(label string) ([]v1.IngressLoadBalancerIngress, error) {
++	services, err := s.Client.CoreV1().Services("").List(context.TODO(), metav1.ListOptions{
++		LabelSelector: label,
++	})
++	if err != nil {
++		return nil, err
++	}
++
++	addresses := make([]v1.IngressLoadBalancerIngress, 0)
++
++	for i := range services.Items {
++		svc := &services.Items[i]
++		svcAddrs, err := statusAddressFromService(k8s.MetaNamespaceKey(svc), s.Client)
++		if err != nil {
++			klog.Warningf("error extracting addresses from service %s/%s: %v", svc.Namespace, svc.Name, err)
++			continue
++		}
++
++		addresses = appendUniqueIngresses(addresses, svcAddrs)
++	}
++
++	return addresses, nil
++}
++
++func (s *statusSync) getStatusAddressFromPodByLabel(label string) ([]v1.IngressLoadBalancerIngress, error) {
++	return s.getStatusAddressFromPods("", label)
++}
++
++func (s *statusSync) getStatusAddressFromPods(namespace, labelSelector string) ([]v1.IngressLoadBalancerIngress, error) {
++	pods, err := s.Client.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{
++		LabelSelector: labelSelector,
++	})
++	if err != nil {
++		return nil, err
++	}
++
++	addresses := make([]v1.IngressLoadBalancerIngress, 0)
++
++	for i := range pods.Items {
++		pod := pods.Items[i]
++
++		// only Running pods are valid
++		if pod.Status.Phase != apiv1.PodRunning {
++			continue
++		}
++
++		// only Ready pods are valid
++		isPodReady := false
++		for _, cond := range pod.Status.Conditions {
++			if cond.Type == apiv1.PodReady && cond.Status == apiv1.ConditionTrue {
++				isPodReady = true
++				break
++			}
++		}
++
++		if !isPodReady {
++			klog.InfoS("POD is not ready", "pod", klog.KObj(&pod), "node", pod.Spec.NodeName)
++			continue
++		}
++
++		nodeIPs := k8s.GetNodeIPs(s.Client, pod.Spec.NodeName, s.UseNodeInternalIP)
++		for _, nodeIP := range nodeIPs {
++			if nodeIP == "" {
++				continue
++			}
++			if !stringInIngresses(nodeIP, addresses) {
++				addresses = append(addresses, nameOrIPToLoadBalancerIngress(nodeIP))
++			}
++		}
++	}
++
++	return addresses, nil
++}
+diff --git a/pkg/flags/flags.go b/pkg/flags/flags.go
+index 4946b6fa8..e8d7d7c1b 100644
+--- a/pkg/flags/flags.go
++++ b/pkg/flags/flags.go
+@@ -174,6 +174,8 @@ extension for this to succeed.`)
+ 			`Customized address (or addresses, separated by comma) to set as the load-balancer status of Ingress objects this controller satisfies.
+ Requires the update-status parameter.`)
+ 
++		statusServiceLabel = flags.String("status-service-label", "", "Label selector to aggregate Services for Ingress status, e.g. 'ingress-nginx/status=my-class'.")
++
+ 		enableMetrics = flags.Bool("enable-metrics", false,
+ 			`Enables the collection of NGINX metrics.`)
+ 		metricsPerHost = flags.Bool("metrics-per-host", true,
+@@ -370,6 +372,7 @@ https://blog.maxmind.com/2019/12/significant-changes-to-accessing-and-using-geol
+ 		DeepInspector:               *deepInspector,
+ 		PublishService:              *publishSvc,
+ 		PublishStatusAddress:        *publishStatusAddress,
++		StatusServiceLabel:          *statusServiceLabel,
+ 		UpdateStatusOnShutdown:      *updateStatusOnShutdown,
+ 		ShutdownGracePeriod:         *shutdownGracePeriod,
+ 		PostShutdownGracePeriod:     *postShutdownGracePeriod,

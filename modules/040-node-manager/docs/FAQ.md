@@ -644,12 +644,12 @@ node updates or requires manual confirmation.
 
 When attempting to switch the CRI, the changes may not take effect. The most common reason is the presence of special node labels: `node.deckhouse.io/containerd-v2-unsupported` and `node.deckhouse.io/containerd-config=custom`.
 
-The `node.deckhouse.io/containerd-v2-unsupported` label is set if the node does not meet at least one of the following requirements:
+The `node.deckhouse.io/containerd-v2-unsupported` label is set to a node if at least one of the following conditions is true:
 
-- Kernel version is at least 5.8;
-- systemd version is at least 244;
-- cgroup v2 is enabled;
-- The EROFS filesystem is available.
+- Kernel version lower than 5.8;
+- systemd version lower than 244
+- cgroup v2 is disabled
+- EROFS file system is unavailable.
 
 The `node.deckhouse.io/containerd-config=custom` label is set if the node contains `.toml` files in the `conf.d` or `conf2.d` directories. In this case, you should remove such files (provided this will not have critical impact on running containers) and delete the corresponding NGCs through which they may have been added.
 
@@ -1970,6 +1970,37 @@ d8 k -n d8-nvidia-gpu get cm mig-parted-config -o json | jq -r '.data["config.ya
 
 The `mig-configs:` section lists the **GPU models (by PCI ID) and the MIG profiles each card supports**—for example `all-1g.5gb`, `all-2g.10gb`, `all-balanced`.
 Select the profile that matches your accelerator and set its name in `spec.gpu.mig.partedConfig` of the NodeGroup.
+
+## How to set a custom per-GPU MIG layout on a node?
+
+Set the [`partedConfig`](/modules/node-manager/cr.html#nodegroup-v1-spec-gpu-mig-partedconfig) parameter in NodeGroup to `custom` and define MIG partitioning per GPU index:
+
+```yaml
+spec:
+  gpu:
+    sharing: MIG
+    mig:
+      partedConfig: custom
+      customConfigs:
+        - index: 0
+          slices:
+            - profile: 7g.80gb
+              count: 1    # Can be in the range from 1 to 7.
+        - index: 1
+          slices:
+            - profile: 3g.40gb
+              count: 2
+            - profile: 1g.10gb
+              count: 1
+        # Add more indexes as needed.
+```
+
+As a result, the `node-manager` module automatically:
+
+- Adds a configuration named `custom-<node-group-name>-<hash>` into the `mig-parted-config` ConfigMap, where `<hash>` is calculated based on the partitioning scheme (long NodeGroup names are truncated with a hash suffix to fit into a label).
+- Sets the label `nvidia.com/mig.config=custom-<node-group-name>-<hash>` to the nodes in the corresponding group.
+
+A separate `custom-<ng>-<hash>` configuration is created for each group of nodes, and configuration names do not overlap.
 
 ## MIG profile does not activate — what to check?
 

@@ -1,10 +1,10 @@
 {{/* Renders a module configuration.
-
-  Context:
-  .name — module name
-  .channel — module channel
-  .data — a map, containing the JSON schema.
-  .langData — map, containing the preferable language data. Can be empty.
+Context:
+.name — module name
+.channel — module channel
+.data — a map, containing the JSON schema.
+.langData — map, containing the preferable language data. Can be empty.
+.pageParams — the page parameters (.Page.Params)
 */}}
 
 {{- $moduleName := .name }}
@@ -12,6 +12,7 @@
 {{- $data := .data }}
 {{- $conversions := .conversions }}
 {{- $langData := .langData }}
+{{- $pageParams := .pageParams }}
 
 {{- $configVersion := 1 }}
 {{- if index $data "x-config-version" }}
@@ -20,8 +21,9 @@
 
 {{/*  Rendering info about module enabling and setting up */}}
 
-{{- partial "openapi/module-enable" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
-{{- partial "openapi/module-settings" (dict "Page" . "ModuleName" $moduleName "configVersion" $configVersion) }}
+{{- partial "openapi/module-enable" (dict "pageParams" $pageParams "ModuleName" $moduleName "configVersion" $configVersion) }}
+{{- partial "openapi/module-settings" (dict "ModuleName" $moduleName "configVersion" $configVersion) }}
+{{- partial "openapi/module-release-channel" (dict "ModuleName" $moduleName "configVersion" $configVersion) }}
 
 {{/* Show module requirements */}}
 {{- template "module-requirements" (dict "module" $moduleName "channel" $moduleChannel) }}

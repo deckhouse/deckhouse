@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в VMware vSphere
 permalink: ru/admin/integrations/virtualization/vsphere/authorization.html
 lang: ru
 ---
@@ -55,7 +55,13 @@ lang: ru
 
 ### Подготовка образа виртуальной машины
 
-DKP использует `cloud-init` для настройки виртуальной машины после запуска. Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
+DKP использует `cloud-init` для настройки виртуальной машины после запуска.
+
+{% alert level="warning" %}
+Отключите VMware Guest OS Customization (а также любые механизмы vApp/OS customization, если они применимы в вашей схеме) для шаблона и виртуальных машин кластера в vSphere. DKP выполняет первичную настройку узлов через `cloud-init` (datasource VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+{% endalert %}
+
+Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
 
 1. Установите необходимые пакеты:
 
@@ -85,10 +91,12 @@ DKP использует `cloud-init` для настройки виртуаль
        vmware_cust_file_max_wait: 10
    ```
 
-1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`:
+1. Перед созданием шаблона ВМ сбросьте идентификаторы и состояние `cloud-init`, используя следующие команды:
 
    ```shell
-   truncate -s 0 /etc/machine-id rm /var/lib/dbus/machine-id ln -s /etc/machine-id /var/lib/dbus/machine-id
+   truncate -s 0 /etc/machine-id &&
+   rm /var/lib/dbus/machine-id &&
+   ln -s /etc/machine-id /var/lib/dbus/machine-id
    ```
 
 1. Очистите логи событий `cloud-init`:

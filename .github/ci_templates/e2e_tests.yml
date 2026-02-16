@@ -21,7 +21,7 @@
 {!{ end -}!}
 
 {!{- define "e2e_kubernetes_default_version" -}!}
-1.32
+1.33
 {!{- end -}!}
 
 # job for set e2e requirement status
@@ -448,7 +448,7 @@ check_e2e_labels:
 {!{- define "e2e_run_job_template" -}!}
 {!{- $ctx := . -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
@@ -886,7 +886,7 @@ check_e2e_labels:
 {!{- $ctx := . -}!}
 {!{- $runsOnLabel := "e2e-common" -}!}
 {!{- $provider := $ctx.provider -}!}
-{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" -}!}
+{!{- $commanderProviders := slice "yandex-cloud" "aws" "azure" "gcp" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- $newCommanderProviders := slice "yandex-cloud" "openstack" "static" "vsphere" "vcd" "dvp" "zvirt" -}!}
 {!{- if has $newCommanderProviders $ctx.provider }!}
 {!{-   $runsOnLabel = "regular" -}!}

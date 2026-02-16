@@ -1,4 +1,4 @@
-{%- assign assetHash = 'now' | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
+{%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <!-- favicon -->
 <link rel="apple-touch-icon" href="{{ site.urls[page.lang] }}/images/favicon/logo-180.png">
 <link rel="icon" type="image/svg+xml" href="{{ site.urls[page.lang] }}/images/favicon/logo.svg">

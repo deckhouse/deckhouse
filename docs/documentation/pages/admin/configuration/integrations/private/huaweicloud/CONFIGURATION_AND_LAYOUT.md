@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Huawei Cloud
 permalink: en/admin/integrations/private/huaweicloud/layout.html
 ---
 

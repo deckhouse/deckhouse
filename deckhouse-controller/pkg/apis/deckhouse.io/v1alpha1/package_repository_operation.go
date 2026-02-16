@@ -74,6 +74,7 @@ var _ runtime.Object = (*PackageRepositoryOperation)(nil)
 // +kubebuilder:resource:scope=Cluster
 // +kubebuilder:printcolumn:name=Count,type=integer,JSONPath=.status.packages.total
 // +kubebuilder:printcolumn:name=Processed,type=string,JSONPath=.status.conditions[?(@.type=='Processed')].status
+// +kubebuilder:printcolumn:name=MSG,type=string,JSONPath=.status.conditions[?(@.type=='Processed')].message
 
 // PackageRepositoryOperation represents an operation to scan/update a package repository.
 type PackageRepositoryOperation struct {
@@ -172,8 +173,8 @@ type PackageRepositoryOperationStatusFailedPackage struct {
 }
 
 type PackageRepositoryOperationStatusFailedPackageError struct {
-	// Name of the error.
-	Name string `json:"name"`
+	// Version of the package that failed.
+	Version string `json:"version"`
 
 	// Error message.
 	Error string `json:"error"`

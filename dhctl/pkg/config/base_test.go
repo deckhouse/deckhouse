@@ -39,7 +39,7 @@ func TestParseConfigFromData(t *testing.T) {
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
 clusterType: Static
-kubernetesVersion: "1.30"
+kubernetesVersion: "1.31"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 `
@@ -809,6 +809,100 @@ func createTestParseConfigFromCluster(t *testing.T, p testParseConfigFromCluster
 		kubeCl:             kubeCl,
 		preparatorProvider: DummyPreparatorProvider(),
 	}
+}
+
+func TestParseConfigFromData_MergedDocuments(t *testing.T) {
+	t.Run("Should detect missing separator between InitConfiguration and ModuleConfig", func(t *testing.T) {
+		// This reproduces the issue from https://github.com/deckhouse/deckhouse/issues/14009
+		// When --- separator is commented out, documents get merged
+		configWithCommentedSeparator := `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: test:EE
+  registryDockerCfg: test
+# ---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+  settings:
+    bundle: Default
+    releaseChannel: Alpha
+    logLevel: Info
+    update:
+      mode: Manual
+---
+`
+
+		_, err := ParseConfigFromData(context.TODO(), configWithCommentedSeparator, DummyPreparatorProvider())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "missing '---' separator")
+		require.Contains(t, err.Error(), "InitConfiguration")
+		require.Contains(t, err.Error(), "ModuleConfig")
+	})
+
+	t.Run("Should detect missing separator with multiple apiVersion fields", func(t *testing.T) {
+		configWithoutSeparator := `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: test:EE
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+---
+`
+
+		_, err := ParseConfigFromData(context.TODO(), configWithoutSeparator, DummyPreparatorProvider())
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "missing '---' separator")
+	})
+
+	t.Run("Should allow valid config with proper separators", func(t *testing.T) {
+		validConfig := `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ee
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  version: 1
+  enabled: true
+---
+`
+
+		metaConfig, err := ParseConfigFromData(context.TODO(), validConfig, DummyPreparatorProvider())
+		require.NoError(t, err)
+		require.NotNil(t, metaConfig)
+		require.NotEmpty(t, metaConfig.InitClusterConfig)
+	})
+
+	t.Run("Should allow comments with kind in them", func(t *testing.T) {
+		configWithComment := `
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: registry.deckhouse.io/deckhouse/ee
+  # This is a comment with kind: something
+---
+`
+
+		metaConfig, err := ParseConfigFromData(context.TODO(), configWithComment, DummyPreparatorProvider())
+		require.NoError(t, err)
+		require.NotNil(t, metaConfig)
+	})
 }
 
 func testCreateKubeSystemSecret(t *testing.T, kubeCl *client.KubernetesClient, name string, data map[string][]byte) {

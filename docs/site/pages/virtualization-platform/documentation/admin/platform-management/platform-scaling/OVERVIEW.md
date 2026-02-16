@@ -1,5 +1,5 @@
 ---
-title: "Overview"
+title: "Platform scaling and node management"
 permalink: en/virtualization-platform/documentation/admin/platform-management/platform-scaling/overview.html
 ---
 

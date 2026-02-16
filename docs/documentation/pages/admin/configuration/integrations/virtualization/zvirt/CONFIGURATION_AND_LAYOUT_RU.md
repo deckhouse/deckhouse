@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка zVirt
 permalink: ru/admin/integrations/virtualization/zvirt/layout.html
 lang: ru
 ---

@@ -1,8 +1,8 @@
 ---
-title: "Аутентификация"
+title: "Настройка аутентификации для приложений"
+description: "Настройка аутентификации для пользовательских приложений в Deckhouse Kubernetes Platform. Интеграция с внешними провайдерами аутентификации LDAP, GitLab, GitHub..."
 permalink: ru/user/access/authentication.html
 lang: ru
-description: "Deckhouse Kubernetes Platform. Использование аутентификации."
 search: user authentication, authentication methods, user access control, user management, login methods, аутентификация пользователей, методы аутентификации пользователей, контроль доступа, управление пользователями, методы входа
 ---
 
@@ -47,7 +47,7 @@ DKP позволяет настраивать аутентификацию ка�
 
 Чтобы включить аутентификацию для приложения, развернутого в DKP выполните следующие шаги:
 
-1. Создайте объект DexAuthenticator в пространстве имен приложения.
+1. Создайте объект [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator) в пространстве имен приложения.
 
    После появления объекта DexAuthenticator, в пространстве имен будет создан набор компонентов, необходимых для работы аутентификации:
    * Deployment, содержащий контейнеры с прокси-сервером аутентификации/авторизации и хранилищем данных Redis;
@@ -91,16 +91,16 @@ DKP позволяет настраивать аутентификацию ка�
    * В параметре `applicationDomain` DexAuthenticator указывается основной домен приложения. Дополнительные домены можно указать в параметре `additionalApplications.domain`;
    * Параметры `whitelistSourceRanges` и `additionalApplications.whitelistSourceRanges` позволяют открыть возможность аутентификации в приложении только для указанного списка IP-адресов;
 
-     О настройке авторизации читайте в разделе [Авторизация](../../admin/configuration/access/authorization/) документации. Все параметры `DexAuthenticator` описаны в разделе [Справка](/modules/user-authn/configuration.html).
+     О настройке авторизации читайте в разделе [Авторизация](../../admin/configuration/access/authorization/) документации.
 
 1. Добавьте в Ingress-ресурс приложения следующие аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, где:
-      - `NAME` — значение параметра `metadata.name` ресурса `DexAuthenticator`;
-      - `NS` — значение параметра `metadata.namespace` ресурса `DexAuthenticator`;
-      - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса `ClusterConfiguration`).
+   - `nginx.ingress.kubernetes.io/auth-url: https://<NAME>-dex-authenticator.<NS>.svc.<CLUSTER_DOMAIN>/dex-authenticator/auth`, где:
+      - `<NAME>` — значение параметра `metadata.name` DexAuthenticator;
+      - `<NS>` — значение параметра `metadata.namespace` DexAuthenticator;
+      - `<C_DOMAIN>` — домен кластера (параметр [clusterDomain](../../reference/api/cr.html#clusterconfiguration-clusterdomain) ClusterConfiguration, по умолчанию — `cluster.local`).
 
    Пример (для DexAuthenticator с именем `app-name`, в пространстве имен `app-ns`):
 
