@@ -25,13 +25,13 @@ resource "ovirt_vm" "master_vm" {
   initialization_custom_script = local.master_cloud_init_script
 
   dynamic "initialization_nic" {
-    for_each = local.use_cloud_config_network ? [1] : []
+    for_each = local.custom_network_config
     content {
-      name = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "networkInterfaceName", "")
+      name = local.custom_network_name
       ipv4 {
-        address = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.networkInterfaceAddress[var.nodeIndex], "")
-        netmask = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.networkInterfaceNetmask[var.nodeIndex], "")
-        gateway = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "networkInterfaceGateway", "")
+        address = local.custom_network_address
+        netmask = local.custom_network_netmask
+        gateway = local.custom_network_gateway
       }
     }
   }
