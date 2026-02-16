@@ -20,7 +20,7 @@ A problematic pod will have a status other than `Running`.
 To view information about a pod, use the command:
 
 ```shell
-d8 k -n d8-<module-name> describe pod <module-name>
+d8 k -n d8-<module-name> describe pod <pod-name>
 ```
 
 Example of an error message in the pod when there is a problem with downloading the image and reinstalling the module:

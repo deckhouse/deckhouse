@@ -20,7 +20,7 @@ d8 k -n d8-<module-name> get pods
 Для просмотра информации о поде используйте команду:
 
 ```shell
-d8 k -n d8-<module-name> describe pod <module-name>
+d8 k -n d8-<module-name> describe pod <pod-name>
 ```
 
 Пример сообщения об ошибке в поде при проблеме со скачиванием образа и переустановкой модуля:
