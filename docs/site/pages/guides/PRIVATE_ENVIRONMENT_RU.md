@@ -23,6 +23,10 @@ layout: sidebar-guides
 
 Взаимодействие с внешними ресурсами выполняется через отдельный физический сервер или виртуальную машину Bastion (bastion-хост). На bastion-хосте разворачиваются container registry и прокси-сервер, а также выполняются все операции по управлению кластером.
 
+{% alert level="info" %}
+В зависимости от политик безопасности в компании доступа к внещним ресурсам может не быть вообще. В таком случае проекси-сервер на bastion-хосте не разворачивается, а все необходимые внешние зависимотсти, такие как архив с образами контейнеров DKP, могут быть доставлены на машину любым разрешённым в компании способом (например, на флеш-накопителе).
+{% endalert %}
+
 Общая схема закрытого окружения:
 
 <img src="/images/gs/private-env-schema-RU.png" alt="Схема развертывания Deckhouse Kubernetes Platform в закрытом окружении">
@@ -50,9 +54,11 @@ layout: sidebar-guides
 
 {% alert level="warning" %}
 DKP поддерживает только Bearer token-схему авторизации в container registry.
-
-Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 {% endalert %}
+
+В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
+
+В рамках этого руководства будет для примера использован Harbor.
 
 ### Установка Harbor
 
@@ -109,7 +115,7 @@ cd harbor/
 mkdir certs
 ```
 
-Сгенерируйте сертификаты для внешнего доступа следующими командами:
+Перейдите в созданную директорию и сгенерируйте сертификаты для внешнего доступа следующими командами:
 
 ```bash
 openssl genrsa -out ca.key 4096
@@ -232,8 +238,8 @@ https:
   # https port for harbor, default is 443
   port: 443
   # The path of cert and key files for nginx
-  certificate: /home.ubuntu/harbor/certs/harbor.local.crt
-  private_key: /home.ubuntu/harbor/certs/harbor.local.key
+  certificate: /home/ubuntu/harbor/certs/harbor.local.crt
+  private_key: /home/ubuntu/harbor/certs/harbor.local.key
   # enable strong ssl ciphers (default: false)
   # strong_ssl_ciphers: false
 
@@ -654,28 +660,30 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 <img src="/images/guides/install_to_private_environment/harbor_new_project_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Создайте нового пользователя для этого проекта. Перейдите на вкладку «Пользователи» в левом меню и нажмите «Новый пользователь»:
+Создайте [robot-account](https://goharbor.io/docs/1.10/working-with-projects/project-configuration/create-robot-accounts/) для этого проекта. Это специальный типа аккаунта, привязанного к проекту, для выполнения автоматических операций. Он не имеет доступа в веб-интерфейс и может быть использован только с Helm CLI или Docker.
+
+Перейдите в созданный проект и откройте вкладку «Аккаунты роботов». Нажмите кнопку «Создать новый аккаунт робота»:
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_create_new_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Укажите имя пользователя, адрес электронной почты и пароль:
+Укажите имя аккаунта, краткое описание (если нужно) и срок жизни (можно выбрать в днях или поставить бесспрочный):
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_creating_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_create_robot_account_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Добавьте созданного пользователя в проект `deckhouse`: перейдите в «Проекты», откройте проект `deckhouse`, затем вкладку «Участники» и нажмите «Пользователь», чтобы добавить участника.
+Укажите необходимые разрешения. Обязательно укажите полный доступ в строке «Repository», чтобы были доступ все операции с образами контейнеров.
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_adding_user_to_project_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_permissions_ru.png" alt="Главная страница Harbor...">
 </div>
 
-Оставьте роль по умолчанию: «Администратор проекта».
+После создания аккаунта будет отображён секрет доступа. Сохраните его, т.к. больше Harbor его показывать не будет!
 
 <div style="text-align: center;">
-<img src="/images/guides/install_to_private_environment/harbor_new_project_user_ru.png" alt="Главная страница Harbor...">
+<img src="/images/guides/install_to_private_environment/harbor_robot_created_ru.png" alt="Главная страница Harbor...">
 </div>
 
 На этом настройка Harbor завершена! 🎉
@@ -762,8 +770,13 @@ drwxr-xr-x 2 ubuntu ubuntu 4.0K Dec 11 15:08 d8.tar
 Загрузите скачанные образы в приватный registry (укажите редакцию DKP и учётные данные пользователя, созданного в Harbor):
 
 ```bash
-d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='deckhouse' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8.tar 'harbor.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
+
+Здесь:
+
+* `<ROBOT_ACCOUNT_NAME>` — имя robot-аккаунта;
+* `<PASSWORD>` — токен, полученный по завершении создания robot-аккаунта.
 
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
 
