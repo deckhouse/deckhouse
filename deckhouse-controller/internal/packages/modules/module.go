@@ -38,6 +38,7 @@ import (
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/objectprefix"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -382,6 +383,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	if err != nil {
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
+			objectprefix.NormalizeManagedServicesPrefix(hookResult.ObjectPatcherOperations)
 			patchErr := m.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
 				return fmt.Errorf("exec hook: %w, and exec operations: %w", err, patchErr)
@@ -392,6 +394,7 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	}
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
+		objectprefix.NormalizeManagedServicesPrefix(hookResult.ObjectPatcherOperations)
 		if err = m.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)
 		}
