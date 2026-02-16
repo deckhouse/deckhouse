@@ -45,6 +45,10 @@ type StaticMachineTemplateSpecTemplateSpec struct {
 }
 
 //+kubebuilder:object:root=true
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
 
 // StaticMachineTemplate is the Schema for the staticmachinetemplates API
 type StaticMachineTemplate struct {

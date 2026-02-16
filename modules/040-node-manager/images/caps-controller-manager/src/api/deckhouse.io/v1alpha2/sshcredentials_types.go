@@ -43,6 +43,9 @@ type SSHCredentialsSpec struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:resource:scope=Cluster
+//+kubebuilder:storageversion
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
 
 // SSHCredentials is the Schema for the sshcredentials API
 type SSHCredentials struct {

@@ -50,6 +50,10 @@ type StaticClusterStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:metadata:labels="heritage=deckhouse"
+//+kubebuilder:metadata:labels="module=node-manager"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
+//+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
 
 // StaticCluster is the Schema for the staticclusters API
 type StaticCluster struct {
