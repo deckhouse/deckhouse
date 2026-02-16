@@ -27,59 +27,95 @@ var _ = Describe("Modules :: node-manager :: hooks :: discover_apiserver_endpoin
 	const (
 		stateSingleAddress = `
 ---
-apiVersion: v1
-kind: Endpoints
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
+- addresses:
+  - 10.0.3.192
+  conditions:
+    ready: true
+kind: EndpointSlice
 metadata:
+  labels:
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
-- addresses:
-  - ip: 10.0.3.192
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `
 
 		stateMultipleAddresses = `
 ---
-apiVersion: v1
-kind: Endpoints
+addressType: IPv4
+apiVersion: discovery.k8s.io/v1
+endpoints:
+- addresses:
+  - 10.0.3.192
+  conditions:
+    ready: true
+- addresses:
+  - 10.0.3.193
+  conditions:
+    ready: true
+- addresses:
+  - 10.0.3.194
+  conditions:
+    ready: true
+kind: EndpointSlice
 metadata:
+  labels:
+    kubernetes.io/service-name: kubernetes
   name: kubernetes
   namespace: default
-subsets:
-- addresses:
-  - ip: 10.0.3.192
-  - ip: 10.0.3.193
-  - ip: 10.0.3.194
-  ports:
-  - name: https
-    port: 6443
-    protocol: TCP
+ports:
+- name: https
+  port: 6443
+  protocol: TCP
 `
 
 		stateMultupleAddressesWithDifferentPorts = `
 ---
-apiVersion: v1
-kind: Endpoints
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
 metadata:
-  name: kubernetes
+  name: kubernetes-ipv4-1
   namespace: default
-subsets:
-- addresses:
-  - ip: 10.0.3.192
-  - ip: 10.0.3.193
-  ports:
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+ports:
   - name: https
     port: 6443
     protocol: TCP
-- addresses:
-  - ip: 10.0.3.194
-  ports:
+endpoints:
+  - addresses:
+      - 10.0.3.192
+    conditions:
+      ready: true
+  - addresses:
+      - 10.0.3.193
+    conditions:
+      ready: true
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: kubernetes-ipv4-2
+  namespace: default
+  labels:
+    kubernetes.io/service-name: kubernetes
+addressType: IPv4
+ports:
   - name: https
     port: 6444
     protocol: TCP
+endpoints:
+  - addresses:
+      - 10.0.3.194
+    conditions:
+      ready: true
 `
 
 		stateDeckhouseAPIServerPod = `

@@ -60,7 +60,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		},
 		{
 			Name:       "apiserver_endpointSlice",
-			ApiVersion: "discovery/v1",
+			ApiVersion: "discovery.k8s.io/v1",
 			Kind:       "EndpointSlice",
 			NamespaceSelector: &types.NamespaceSelector{
 				NameSelector: &types.NameSelector{
@@ -126,9 +126,9 @@ func apiEndpointsFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 func handleAPIEndpoints(_ context.Context, input *go_hook.HookInput) error {
 	endpointsSet := set.NewFromSnapshot(input.Snapshots.Get("kube_apiserver"))
 
-	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpoints")) {
+	for ep, err := range sdkobjectpatch.SnapshotIter[[]string](input.Snapshots.Get("apiserver_endpointSlice")) {
 		if err != nil {
-			return fmt.Errorf("cannot iterate over 'apiserver_endpoints' snapshot: %w", err)
+			return fmt.Errorf("cannot iterate over 'apiserver_endpointSlice' snapshot: %w", err)
 		}
 		endpointsSet.Add(ep...)
 	}
