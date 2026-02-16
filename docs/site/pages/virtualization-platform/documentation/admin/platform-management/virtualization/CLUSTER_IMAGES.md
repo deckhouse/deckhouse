@@ -50,8 +50,8 @@ Once a share is created, the image type and size are automatically determined, a
 
 The image status shows two sizes:
 
-- `STOREDSIZE` (storage size) — the amount of space the image actually occupies in storage (DVCR or PVC). For images uploaded in a compressed format (for example, `.gz` or `.xz`), this value is smaller than the unpacked size.
-- `UNPACKEDSIZE` (unpacked size) — the image size after unpacking. It is used when creating a disk from the image and defines the minimum disk size that can be created.
+- `STOREDSIZE` (storage size): The amount of space the image actually occupies in storage (DVCR or PVC). For images uploaded in a compressed format (for example, `.gz` or `.xz`), this value is smaller than the unpacked size.
+- `UNPACKEDSIZE` (unpacked size): The image size after unpacking. It is used when creating a disk from the image and defines the minimum disk size that can be created.
 
 {% alert level="info" %}
 When creating a disk from an image, set the disk size to `UNPACKEDSIZE` or larger .  
@@ -64,8 +64,8 @@ Images can be created from other images and virtual machine disks.
 
 Project image two storage options are supported:
 
-- `ContainerRegistry` - the default type in which the image is stored in `DVCR`.
-- `PersistentVolumeClaim` - the type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
+- `ContainerRegistry`: the default type in which the image is stored in `DVCR`.
+- `PersistentVolumeClaim`: the type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
 
 {% alert level="warning" %}
 Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
@@ -133,18 +133,18 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Install and configure qemu-guest-agent (recommended):
 
-- For RHEL/CentOS:
+   - For RHEL/CentOS:
 
-    ```bash
-    yum install -y qemu-guest-agent
-    ```
+   ```bash
+   yum install -y qemu-guest-agent
+   ```
 
-- For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-    ```bash
-    apt-get update
-    apt-get install -y qemu-guest-agent
-    ```
+   ```bash
+   apt-get update
+   apt-get install -y qemu-guest-agent
+   ```
 
 1. Enable and start the service:
 
@@ -164,18 +164,18 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean network settings:
 
-- For RHEL:
+   - For RHEL:
 
-    ```bash
-    nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
-    rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
-    ```
+   ```bash
+   nmcli con delete $(nmcli -t -f NAME,DEVICE con show | grep -v ^lo: | cut -d: -f1)
+   rm -f /etc/sysconfig/network-scripts/ifcfg-eth*
+   ```
 
-- For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-    ```bash
-    rm -f /etc/network/interfaces.d/*
-    ```
+   ```bash
+   rm -f /etc/network/interfaces.d/*
+   ```
 
 1. Clean system identifiers:
 
@@ -199,17 +199,17 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
 1. Clean package manager cache:
 
-- For RHEL:
+   - For RHEL:
 
-    ```bash
-    yum clean all
-    ```
+   ```bash
+   yum clean all
+   ```
 
-- For Debian/Ubuntu:
+   - For Debian/Ubuntu:
 
-    ```bash
-    apt-get clean
-    ```
+   ```bash
+   apt-get clean
+   ```
 
 1. Clean temporary files:
 
@@ -232,17 +232,17 @@ A golden image is a pre-configured virtual machine image that can be used to qui
 
    For RHEL: reset and restore SELinux contexts (choose one of the following):
 
-- Option 1: Check and restore contexts immediately:
+   - Option 1: Check and restore contexts immediately:
 
-    ```bash
-    restorecon -R /
-    ```
+     ```bash
+     restorecon -R /
+     ```
 
-- Option 2: Schedule relabel on next boot:
+   - Option 2: Schedule relabel on next boot:
 
-    ```bash
-    touch /.autorelabel
-    ```
+     ```bash
+     touch /.autorelabel
+     ```
 
 1. Verify that `/etc/fstab` uses UUID or LABEL instead of device names (e.g., `/dev/sdX`). To check, run:
 

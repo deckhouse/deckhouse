@@ -327,7 +327,7 @@ VM cloning is performed using the VirtualMachineOperation resource with the `Clo
 
 Cloning is supported for both powered-off and running virtual machines. When cloning a running VM, a consistent snapshot is automatically created, from which the clone is then formed.
 
-{% alert level="infp" %}
+{% alert level="info" %}
 It is recommended to set the `.spec.runPolicy: AlwaysOff` parameter in the configuration of the VM being cloned if you want to prevent the VM clone from starting automatically. This is because the clone inherits the behaviour of the parent VM.
 {% endalert %}
 

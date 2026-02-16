@@ -1255,7 +1255,7 @@ spec:
 
 In this example, the virtual machine will be placed, if possible (since preferred is used) only on hosts that have a virtual machine with the server label and database value.
 
-To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-vms-by-availability-zones)).
+To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placing-vms-by-availability-zones)).
 
 How to set "preferences" and "mandatories" for placing virtual machines in the web interface in the [Placement section](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-of-vms-by-nodes):
 
@@ -1296,7 +1296,7 @@ spec:
 
 In this example, the virtual machine being created will not be placed on the same host as the virtual machine labeled server: database.
 
-To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-vms-by-availability-zones)).
+To place VMs across availability zones instead of specific nodes, set `topologyKey` to `topology.kubernetes.io/zone` (see [Placing VMs by availability zones](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placing-vms-by-availability-zones)).
 
 How to configure VM AntiAffinity on nodes in the web interface in the [Placement section](/products/virtualization-platform/documentation/user/resource-management/virtual-machines.html#placement-of-vms-by-nodes):
 
