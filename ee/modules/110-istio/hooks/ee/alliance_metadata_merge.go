@@ -68,10 +68,15 @@ type Kubeconfig struct {
 
 // TokenValidationResult represents the result of token validation
 type TokenValidationResult struct {
-	IsExpired bool      `json:"isExpired"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	Error     string    `json:"error,omitempty"`
+	IsExpired   bool      `json:"isExpired"`
+	ExpiresSoon bool      `json:"expiresSoon"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	Error       string    `json:"error,omitempty"`
 }
+
+// minTokenValidity defines the minimum time until token expiration to consider it valid.
+// If token expires sooner, it will be proactively regenerated (hook runs once a month).
+const minTokenValidity = 30 * 24 * time.Hour
 
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
@@ -183,17 +188,23 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 
 	expTime := int64(claims["exp"].(float64))
 
+	expiresAt := time.Unix(expTime, 0)
 	if expTime < time.Now().UTC().Unix() {
 		return TokenValidationResult{
 			IsExpired: true,
 			Error:     "JWT token expired",
-			ExpiresAt: time.Unix(expTime, 0),
+			ExpiresAt: expiresAt,
 		}
 	}
 
+	// Proactively regenerate if token expires in less than minTokenValidity.
+	// Hook runs once a month, so we need at least ~30 days buffer to avoid gaps.
+	expiresSoon := time.Until(expiresAt) < minTokenValidity
+
 	return TokenValidationResult{
-		IsExpired: false,
-		ExpiresAt: time.Unix(expTime, 0),
+		IsExpired:   false,
+		ExpiresSoon: expiresSoon,
+		ExpiresAt:   expiresAt,
 	}
 }
 
@@ -388,18 +399,24 @@ multiclustersLoop:
 		input.Logger.Info("token validation result",
 			slog.String("name", multiclusterInfo.Name),
 			slog.Bool("isExpired", validationResult.IsExpired),
+			slog.Bool("expiresSoon", validationResult.ExpiresSoon),
 			slog.String("error", validationResult.Error),
 			slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 
-		if !validationResult.IsExpired {
-			// Token is still valid, reuse it
+		needsRegeneration := validationResult.IsExpired || validationResult.ExpiresSoon
+		if !needsRegeneration {
 			multiclusterInfo.APIJWT = existingToken
 			input.Logger.Info("reusing existing valid token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
 				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 		} else {
-			input.Logger.Info("existing token is invalid or expired, generating new token",
+			reason := "expired or invalid"
+			if validationResult.ExpiresSoon && !validationResult.IsExpired {
+				reason = "expires in less than 30 days (proactive refresh)"
+			}
+			input.Logger.Info("regenerating token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
+				slog.String("reason", reason),
 				slog.String("error", validationResult.Error),
 				slog.Bool("isExpired", validationResult.IsExpired))
 
