@@ -3,6 +3,5 @@
 package main
 
 import (
-	_ "github.com/deckhouse/node-controller/internal/controller/nodegroupstatus"
 	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 )
