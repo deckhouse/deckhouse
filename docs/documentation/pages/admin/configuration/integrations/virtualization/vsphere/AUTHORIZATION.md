@@ -50,6 +50,10 @@ The provider supports working with only one disk in the virtual machine template
 
 ### Preparing the virtual machine image
 
+{% alert level="warning" %}
+Disable VMware Guest OS Customization (and any vApp/OS customization mechanisms, if applicable in your setup) for the template and the cluster virtual machines. DKP performs the initial node configuration via `cloud-init` (VMware GuestInfo datasource). Enabled customization can conflict with `cloud-init` and lead to incorrect node initialization.
+{% endalert %}
+
 1. Install the required packages:
 
    If you use `cloud-init` version lower than 21.3 (VMware GuestInfo support is required):
