@@ -38,6 +38,7 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/node-controller/internal/controller"
+	_ "github.com/deckhouse/node-controller/internal/controller/updateapproval"
 	"github.com/deckhouse/node-controller/internal/webhook"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 )
