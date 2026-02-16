@@ -118,10 +118,7 @@ func validateRegistryDockerCfg(cfg string, repo string) error {
 	// and moreover '.' or ':' symbols can't be doubled or goes next to each other
 	// ([a-z]|\d+|([a-z]|\d)\:\d+)$ - string might be ended by [a-z] letter or number (if we have single host) or
 	// [a-z] letter or number with ':' symbol, and moreover there might be only numbers after ':' symbol
-	regx, err := regexp.Compile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
-	if err != nil {
-		return fmt.Errorf("unable to compile regexp by pattern: %w", err)
-	}
+	regx := regexp.MustCompile(`^([a-z]|\d)+(\.?|\-?)(([a-z]|\d)+(\.|\-|))*([a-z]|\d+|([a-z]|\d)\:\d+)$`)
 
 	for k := range creds.Auths {
 		if !regx.MatchString(k) {

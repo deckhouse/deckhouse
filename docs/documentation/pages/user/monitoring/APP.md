@@ -1,5 +1,6 @@
 ---
-title: "Configuring application monitoring"
+title: "Configuring Application Monitoring"
+description: "Configuring application monitoring in Deckhouse Kubernetes Platform. Integration via labels, ServiceMonitor, PodMonitor, ScrapeConfig. Integration with Prometheus and blackbox-exporter for availability checks."
 permalink: en/user/monitoring/app.html
 ---
 

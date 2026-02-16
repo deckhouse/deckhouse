@@ -27,12 +27,14 @@ import (
 )
 
 const (
-	minUbuntuVersionValuesKey           = "nodeManager:nodesMinimalOSVersionUbuntu"
-	minDebianVersionValuesKey           = "nodeManager:nodesMinimalOSVersionDebian"
-	requirementsUbuntuKey               = "nodesMinimalOSVersionUbuntu"
-	requirementsDebianKey               = "nodesMinimalOSVersionDebian"
-	unmetCloudConditionsKey             = "nodeManager:unmetCloudConditions"
-	unmetCloudConditionsRequirementsKey = "unmetCloudConditions"
+	minUbuntuVersionValuesKey              = "nodeManager:nodesMinimalOSVersionUbuntu"
+	minDebianVersionValuesKey              = "nodeManager:nodesMinimalOSVersionDebian"
+	requirementsUbuntuKey                  = "nodesMinimalOSVersionUbuntu"
+	requirementsDebianKey                  = "nodesMinimalOSVersionDebian"
+	unmetCloudConditionsKey                = "nodeManager:unmetCloudConditions"
+	unmetCloudConditionsRequirementsKey    = "unmetCloudConditions"
+	unsupportedContainerdV1ValuesKey       = "nodeManager:unsupportedContainerdV1"
+	unsupportedContainerdV1RequirementsKey = "checkUnsupportedContainerdV1"
 )
 
 // normalizeUbuntuVersionForSemver converts Ubuntu version format to semver format: 20.04.3 -> 20.4.3, 20.04 -> 20.4.0
@@ -93,9 +95,33 @@ func init() {
 		return true, nil
 	}
 
+	checkUnsupportedContainerdV1 := func(requirementValue string, getter requirements.ValueGetter) (bool, error) {
+		requirementValue = strings.TrimSpace(requirementValue)
+		if requirementValue == "false" || requirementValue == "" {
+			return true, nil
+		}
+
+		unsupportedContainerdV1, exists := getter.Get(unsupportedContainerdV1ValuesKey)
+		if !exists {
+			return true, nil
+		}
+
+		hasUnsupportedContainerdV1, ok := unsupportedContainerdV1.(bool)
+		if !ok {
+			return false, fmt.Errorf("invalid unsupportedContainerdV1 value type")
+		}
+
+		if requirementValue == "true" && hasUnsupportedContainerdV1 {
+			return false, errors.New("has nodes with unsupported containerd version (v1.x), see clusteralerts for details")
+		}
+
+		return true, nil
+	}
+
 	requirements.RegisterCheck(unmetCloudConditionsRequirementsKey, checkUnmetCloudConditionsFunc)
 	requirements.RegisterCheck(requirementsUbuntuKey, checkRequirementUbuntuFunc)
 	requirements.RegisterCheck(requirementsDebianKey, checkRequirementDebianFunc)
+	requirements.RegisterCheck(unsupportedContainerdV1RequirementsKey, checkUnsupportedContainerdV1)
 }
 
 func baseFuncMinVerOS(requirementValue string, getter requirements.ValueGetter, osImage string) (bool, error) {

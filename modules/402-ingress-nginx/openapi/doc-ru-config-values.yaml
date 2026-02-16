@@ -2,6 +2,7 @@ properties:
   defaultControllerVersion:
     description: |
       Версия контроллера ingress-nginx, которая будет использоваться для всех контроллеров по умолчанию, если не был задан параметр `controllerVersion` в IngressNginxController CR.
+      Поддерживаемые версии: `1.10`, `1.12`, `1.14`.
   highAvailability:
     description: |
       Ручное управление режимом отказоустойчивости.

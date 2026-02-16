@@ -25,6 +25,7 @@ import (
 	pb "github.com/deckhouse/deckhouse/dhctl/pkg/server/pb/dhctl"
 )
 
+//nolint:musttag
 func (s *Service) ValidateClusterConfig(
 	_ context.Context,
 	request *pb.ValidateClusterConfigRequest,
@@ -51,6 +52,7 @@ func (s *Service) ValidateClusterConfig(
 	}, nil
 }
 
+//nolint:musttag
 func (s *Service) ValidateProviderSpecificClusterConfig(
 	_ context.Context,
 	request *pb.ValidateProviderSpecificClusterConfigRequest,

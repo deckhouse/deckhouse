@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -50,6 +51,12 @@ func GetDrainConfirmation(commanderMode bool) func(string) bool {
 }
 
 func TryToDrainNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string, confirm func(string) bool, opts DrainOptions) error {
+	// todo it is deeper for pass from command root, use app package directly
+	if app.SkipDrainingNodes() {
+		log.InfoF("Skipping draining node %s because draining disabled by env\n", nodeName)
+		return nil
+	}
+
 	err := retry.NewLoop(fmt.Sprintf("Drain node '%s'", nodeName), 5, 10*time.Second).
 		RunContext(ctx, func() error {
 			return drainNode(ctx, kubeCl, nodeName, opts)
@@ -138,7 +145,7 @@ type writer struct {
 	logFunc func(elems ...interface{})
 }
 
-func (w writer) Write(p []byte) (n int, err error) {
+func (w writer) Write(p []byte) (int, error) {
 	w.logFunc(string(p))
 
 	return len(p), nil

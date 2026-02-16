@@ -46,9 +46,10 @@ type KubeClientSwitcher struct {
 }
 
 type KubeClientSwitcherParams struct {
-	TmpDir  string
-	IsDebug bool
-	Logger  log.Logger
+	TmpDir        string
+	IsDebug       bool
+	Logger        log.Logger
+	DisableSwitch bool
 }
 
 func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params KubeClientSwitcherParams) *KubeClientSwitcher {
@@ -66,6 +67,11 @@ func NewKubeClientSwitcher(ctx *Context, lockRunner *lock.InLockRunner, params K
 }
 
 func (s *KubeClientSwitcher) SwitchToNodeUser(ctx context.Context, nodesState map[string][]byte) error {
+	if s.params.DisableSwitch {
+		s.logger.LogWarnLn("Switch to node user skipped. Switch disabled")
+		return nil
+	}
+
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Switch to node user skipped. In commander mode")
 		return nil
@@ -116,12 +122,12 @@ func (s *KubeClientSwitcher) tmpDirForConverger() string {
 	return filepath.Join(s.params.TmpDir, "converger")
 }
 
-func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) (err error) {
+func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeState *State, state map[string][]byte) error {
 	s.logger.LogDebugLn("Starting replacing kube client")
 
 	tmpDir := s.tmpDirForConverger()
 
-	err = os.MkdirAll(tmpDir, 0o755)
+	err := os.MkdirAll(tmpDir, 0o755)
 	if err != nil {
 		return fmt.Errorf("failed to create cache directory for NodeUser: %w", err)
 	}
@@ -158,7 +164,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 		}
 		statePath := filepath.Join(tmpDir, fmt.Sprintf("%s.tfstate", nodeName))
 
-		s.logger.LogDebugLn("for extracting statePath: %s", statePath)
+		s.logger.LogDebugF("for extracting statePath: %s", statePath)
 
 		err = os.WriteFile(statePath, stateBytes, 0o644)
 		if err != nil {
@@ -178,7 +184,7 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 			return fmt.Errorf("failed to create executor for node %s: %w", nodeName, err)
 		}
 
-		executor, err := provider.OutputExecutor(s.ctx.Ctx(), s.logger)
+		executor, _ := provider.OutputExecutor(s.ctx.Ctx(), s.logger)
 
 		// do not cleanup provider after getting output executor!
 
@@ -263,6 +269,11 @@ func (s *KubeClientSwitcher) replaceKubeClient(ctx context.Context, convergeStat
 }
 
 func (s *KubeClientSwitcher) CleanupNodeUser() error {
+	if s.params.DisableSwitch {
+		s.logger.LogDebugLn("Cleanup node user skipped. Switch disabled")
+		return nil
+	}
+
 	if s.ctx.CommanderMode() {
 		s.logger.LogDebugLn("Cleanup node user skipped. In commander mode")
 		return nil

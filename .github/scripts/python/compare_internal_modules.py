@@ -21,6 +21,7 @@ import re
 
 whitelist = [
     ".*-vex-artifact",
+    ".*-trivy-ignore-artifact",
     "base-for-go",
     "common-base",
     "common/shell-operator",

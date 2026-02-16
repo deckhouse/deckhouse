@@ -67,7 +67,10 @@ func (t TCPProbeTarget) PerformCheck() error {
 		return err
 	}
 
-	conn.SetWriteDeadline(time.Now().Add(timeoutDuration))
+	if err = conn.SetWriteDeadline(time.Now().Add(timeoutDuration)); err != nil {
+		_ = conn.Close()
+		return err
+	}
 	if _, err = conn.Write([]byte("test")); err != nil {
 		return err
 	}

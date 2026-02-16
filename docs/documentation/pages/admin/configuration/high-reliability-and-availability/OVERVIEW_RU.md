@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Высокая надежность и доступность"
 permalink: ru/admin/configuration/high-reliability-and-availability/
 description: Высокая надежность и доступность
 lang: ru

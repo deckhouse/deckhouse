@@ -1,9 +1,12 @@
 weight:
-  configuration.html: 2
-  cr.html: 3
-  usage.html: 4
-  examples.html: 5
-  faq.html: 6
+  configuration.html: 10
+  cr.html: 20
+  gatekeeper-cr.html: 25
+  istio-cr.html: 25
+  usage.html: 30
+  examples.html: 35
+  faq.html: 40
+  oss.html: 50
 
 titles:
   overview:
@@ -15,6 +18,9 @@ titles:
   cr.html:
     en: Custom Resources
     ru: Ресурсы (CRD)
+  oss.html:
+    en: Third-party components
+    ru: Внешние компоненты
   usage.html:
     en: Usage
     ru: Использование

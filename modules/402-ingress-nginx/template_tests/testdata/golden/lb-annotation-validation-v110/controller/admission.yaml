@@ -1,0 +1,75 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  labels:
+    heritage: deckhouse
+    module: ingress-nginx
+  name: d8-ingress-nginx-admission
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: dGVzdA==
+      service:
+        name: test-admission
+        namespace: d8-ingress-nginx
+        path: /networking/v1/ingresses
+    failurePolicy: Fail
+    matchConditions:
+      - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == 'nginx')
+        name: exclude-ingress-class-name
+    matchPolicy: Equivalent
+    name: test.validate.d8-ingress-nginx
+    namespaceSelector:
+      matchExpressions:
+        - key: heritage
+          operator: NotIn
+          values:
+            - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 28
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      caBundle: dGVzdA==
+      service:
+        name: test-admission
+        namespace: d8-ingress-nginx
+        path: /networking/v1/ingresses
+    failurePolicy: Ignore
+    matchConditions:
+      - expression: (has(object.spec.ingressClassName) && object.spec.ingressClassName == 'nginx') || (has(object.metadata.annotations) && ('kubernetes.io/ingress.class' in object.metadata.annotations) && object.metadata.annotations['kubernetes.io/ingress.class'] == 'nginx')
+        name: exclude-ingress-class-name
+    matchPolicy: Equivalent
+    name: test.validate.d8-ingress-nginx-deckhouse
+    namespaceSelector:
+      matchExpressions:
+        - key: heritage
+          operator: In
+          values:
+            - deckhouse
+    rules:
+      - apiGroups:
+          - networking.k8s.io
+        apiVersions:
+          - v1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - ingresses
+        scope: Namespaced
+    sideEffects: None
+    timeoutSeconds: 5

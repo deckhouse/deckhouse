@@ -33,10 +33,10 @@ status:
     - errors:
       - error: 'ensure application package version: create application package version:
           simulated create error for v1.1.0'
-        name: v1.1.0
+        version: v1.1.0
       - error: 'ensure application package version: create application package version:
           simulated create error for v1.2.0'
-        name: v1.2.0
+        version: v1.2.0
       name: test-package
     processed:
     - name: test-package
@@ -74,11 +74,17 @@ kind: PackageRepository
 metadata:
   creationTimestamp: null
   name: deckhouse
-  resourceVersion: "2"
+  resourceVersion: "3"
 spec:
   registry:
     repo: registry.example.com/test
 status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: Successfully scanned repository, found 1 package(s)
+    reason: ""
+    status: "True"
+    type: LastOperationScanFinished
   packages:
   - name: test-package
     type: Application

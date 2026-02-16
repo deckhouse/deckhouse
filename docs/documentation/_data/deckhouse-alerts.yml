@@ -367,6 +367,27 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: CronJobImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The CronJob `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
+
+        ```bash
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
+      summary: |
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
     - name: CronJobPodsNotCreated
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/extended-monitoring/propagated-cronjob.yaml
       moduleUrl: 340-extended-monitoring
@@ -429,27 +450,6 @@ alerts:
       summary: |
         CronJob {{$labels.namespace}}/{{$labels.cronjob}} failed to schedule on time.
       severity: "6"
-      markupFormat: markdown
-    - name: CronJobUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The CronJob `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-
-        To resolve this issue, review the exporter logs:
-
-        ```bash
-        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
-        ```
-      summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
-      severity: "7"
       markupFormat: markdown
     - name: CustomPodMonitorFoundInCluster
       sourceFile: modules/340-monitoring-custom/monitoring/prometheus-rules/warnings/warnings.yaml
@@ -1878,7 +1878,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.31)
+        Please migrate to the next kubernetes version (at least 1.32)
 
         Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
@@ -2365,6 +2365,32 @@ alerts:
            ```
       summary: |
         Too many Kruise controller restarts detected.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeCgroupV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support cgroup v2.
+        Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+      summary: |
+        Node {{ $labels.node }} is using deprecated cgroup v1 – migration to v2 required.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeContainerdV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
+        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Please check the requirements for containerd v2 and schedule your migration plan.
+      summary: |
+        Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
       severity: "8"
       markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating
@@ -3665,6 +3691,27 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: DaemonSetImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The DaemonSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
+
+        ```bash
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
+      summary: |
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
     - name: DaemonSetRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -3680,27 +3727,6 @@ alerts:
         - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
-    - name: DaemonSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The DaemonSet `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-
-        To resolve this issue, review the exporter logs:
-
-        ```bash
-        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
-        ```
-      summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: DeadMansSwitch
@@ -4056,6 +4082,27 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: DeploymentImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The Deployment `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
+
+        ```bash
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
+      summary: |
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
     - name: DeploymentRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -4072,52 +4119,6 @@ alerts:
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
       severity: "7"
-      markupFormat: markdown
-    - name: DeploymentUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The Deployment `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-
-        To resolve this issue, review the exporter logs:
-
-        ```bash
-        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
-        ```
-      summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
-    - name: DeprecatedGeoIPVersion
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/deprecated-geoip-version.tpl
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        An IngressNginxController and/or Ingress object in the cluster is using variables from the deprecated NGINX GeoIPv1 module. Support for this module has been discontinued in Ingress NGINX Controller version 1.10 and higher.
-
-        It's recommended that you update your configuration to use the [GeoIPv2 module](https://deckhouse.io/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-geoip2).
-
-        To get a list of the IngressNginxControllers using GeoIPv1 variables, run the following command:
-
-        ```shell
-        d8 k get ingressnginxcontrollers.deckhouse.io -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | .metadata.name'
-        ```
-
-        To get a list of the Ingress objects using GeoIPv1 variables, run the following command:
-
-        ```shell
-        d8 k get ingress -A -o json | jq '.items[] | select(..|strings | test("\\$geoip_(country_(code3|code|name)|area_code|city_continent_code|city_country_(code3|code|name)|dma_code|latitude|longitude|region|region_name|city|postal_code|org)([^_a-zA-Z0-9]|$)+")) | "\(.metadata.namespace)/\(.metadata.name)"' | sort | uniq
-        ```
-      summary: |
-        Deprecated GeoIP version 1 is used in the cluster.
-      severity: "9"
       markupFormat: markdown
     - name: EarlyOOMPodIsNotReady
       sourceFile: modules/040-node-manager/monitoring/prometheus-rules/early-oom.tpl
@@ -4233,35 +4234,17 @@ alerts:
         File descriptors for {{ $labels.job }}: {{ $labels.namespace }}/{{ $labels.pod }} are exhausting soon.
       severity: "4"
       markupFormat: default
-    - name: GeoIPDownloadErrorDetected
-      sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
-      moduleUrl: 402-ingress-nginx
-      module: ingress-nginx
-      edition: ce
-      description: |-
-        The controller `{{ $labels.controller }}` failed to download the GeoIP database.
-
-        **Reason:** `{{ $labels.reason }}`
-
-        **Type:** `{{ $labels.type }}`
-
-        If this issue persists, investigate network connectivity or database availability.
-      summary: |
-        GeoIP DB download error in controller {{ $labels.controller }}.
-      severity: "4"
-      markupFormat: markdown
     - name: GeoIPDownloadErrorDetectedFromMaxMind
       sourceFile: modules/402-ingress-nginx/monitoring/prometheus-rules/ingress-nginx.yaml
       moduleUrl: 402-ingress-nginx
       module: ingress-nginx
       edition: ce
       description: |-
-        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database from MaxMind.
-        **Reason:** `{{ $labels.reason }}`
-        **Type:** `{{ $labels.type }}`
+        The component `{{ $labels.job }}` (pod `{{ $labels.pod }}`) failed to download the GeoIP database
+        from MaxMind for edition `{{ $labels.edition }}`.
         If this issue persists, investigate network connectivity or database availability.
       summary: |
-        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}).
+        GeoIP DB download error in {{ $labels.job }} (pod {{ $labels.pod }}), edition {{ $labels.edition }}.
       severity: "4"
       markupFormat: markdown
     - name: GrafanaDashboardAlertRulesDeprecated
@@ -6627,6 +6610,33 @@ alerts:
         Prometheus-main data is rotating earlier than the configured retention period.
       severity: "4"
       markupFormat: markdown
+    - name: PrometheusRemoteWriteEndpointUnavailable
+      sourceFile: modules/300-prometheus/monitoring/prometheus-rules/prometheus-remote-write.yaml
+      moduleUrl: 300-prometheus
+      module: prometheus
+      edition: ce
+      description: |
+        Prometheus cannot send metrics to the remote write endpoint `{{ $labels.url }}`.
+
+        To troubleshoot you can:
+         1. Get list of all Prometheus pods:
+            ```shell
+            d8 k -n d8-monitoring get pods -l "app.kubernetes.io/name=prometheus"
+            ```
+
+            Review logs of each prometheus pod to find the detailed error information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs `<pod-name>` -f
+            ```
+
+         2. Get logs from all Prometheus pods to find detailed information:
+            ```shell
+            d8 k -n {{ $labels.namespace }} logs -l "app.kubernetes.io/name=prometheus"
+            ```
+      summary: |
+        Prometheus remote write endpoint is unavailable.
+      severity: "7"
+      markupFormat: markdown
     - name: PrometheusScapeConfigDeclarationDeprecated
       sourceFile: modules/300-prometheus/monitoring/prometheus-rules/propagated-deprecation.yaml
       moduleUrl: 300-prometheus
@@ -6777,6 +6787,27 @@ alerts:
         The {{ $labels.image }} image is missing from the registry.
       severity: "7"
       markupFormat: markdown
+    - name: StatefulSetImageAvailabilityUnknownError
+      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
+      moduleUrl: 340-extended-monitoring
+      module: extended-monitoring
+      edition: ce
+      description: |
+        Deckhouse has detected an unknown error while checking `{{ $labels.image }}` image availability in the following sources:
+
+        - The `{{ $labels.namespace }}` namespace.
+        - The StatefulSet `{{ $labels.name }}`.
+        - The `{{ $labels.container }}` container in the registry.
+
+        Review the image-availability-exporter logs to see the detailed error information:
+
+        ```bash
+        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
+        ```
+      summary: |
+        An unknown error occurred with the {{ $labels.image }} image availability check.
+      severity: "7"
+      markupFormat: markdown
     - name: StatefulSetRegistryUnavailable
       sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
       moduleUrl: 340-extended-monitoring
@@ -6792,27 +6823,6 @@ alerts:
         - The `{{ $labels.container }}` container in the registry.
       summary: |
         The container registry is not available for the {{ $labels.image }} image.
-      severity: "7"
-      markupFormat: markdown
-    - name: StatefulSetUnknownError
-      sourceFile: modules/340-extended-monitoring/monitoring/prometheus-rules/image-availability/propagated-image-checks.tpl
-      moduleUrl: 340-extended-monitoring
-      module: extended-monitoring
-      edition: ce
-      description: |
-        Deckhouse has detected an unknown error with the `{{ $labels.image }}` image in the following sources:
-
-        - The `{{ $labels.namespace }}` namespace.
-        - The StatefulSet `{{ $labels.name }}`.
-        - The `{{ $labels.container }}` container in the registry.
-
-        To resolve this issue, review the exporter logs:
-
-        ```bash
-        d8 k -n d8-monitoring logs -l app=image-availability-exporter -c image-availability-exporter
-        ```
-      summary: |
-        An unknown error occurred with the {{ $labels.image }} image.
       severity: "7"
       markupFormat: markdown
     - name: StorageClassCloudManual

@@ -1,5 +1,6 @@
 ---
-title: "Container image vulnerability scanning"
+title: "Configuration of container image vulnerability scanning"
+description: "Container image vulnerability scanning in Deckhouse Kubernetes Platform using Trivy. CIS Kubernetes Benchmark checks, viewing reports in Grafana, vulnerability filtering."
 permalink: en/user/security/scanning.html
 ---
 

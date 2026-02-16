@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in VK Cloud
 permalink: en/admin/integrations/private/vk/connection-and-authorization.html
 cloud_type: vk-private
 ---

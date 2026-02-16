@@ -1,5 +1,6 @@
 ---
-title: "ALB"
+title: "Utilizing Application Load Balancer (ALB)"
+description: "Configuring Application Load Balancer for HTTP/HTTPS/gRPC traffic in Deckhouse Kubernetes Platform. Using ingress-nginx and istio for request routing, SSL/TLS termination, and application publishing."
 permalink: en/user/network/ingress/alb.html
 ---
 

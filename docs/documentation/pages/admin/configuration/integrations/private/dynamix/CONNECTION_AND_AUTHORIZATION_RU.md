@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в Dynamix
 permalink: ru/admin/integrations/private/dynamix/authorization.html
 lang: ru
 ---

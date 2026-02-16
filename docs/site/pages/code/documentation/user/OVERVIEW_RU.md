@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Руководство пользователя Deckhouse Code"
 permalink: ru/code/documentation/user/
 lang: ru
 ---

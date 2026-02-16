@@ -1,0 +1,337 @@
+diff --git a/connector/gitlab/gitlab.go b/connector/gitlab/gitlab.go
+index 43294fb1..0c5d5a95 100644
+--- a/connector/gitlab/gitlab.go
++++ b/connector/gitlab/gitlab.go
+@@ -10,12 +10,14 @@ import (
+ 	"log/slog"
+ 	"net/http"
+ 	"strconv"
++	"strings"
+ 	"time"
+ 
+ 	"golang.org/x/oauth2"
+ 
+ 	"github.com/dexidp/dex/connector"
+ 	"github.com/dexidp/dex/pkg/groups"
++	"github.com/dexidp/dex/pkg/httpclient"
+ )
+ 
+ const (
+@@ -35,6 +37,7 @@ type Config struct {
+ 	Groups              []string `json:"groups"`
+ 	UseLoginAsID        bool     `json:"useLoginAsID"`
+ 	GetGroupsPermission bool     `json:"getGroupsPermission"`
++	RootCAData          []byte   `json:"rootCAData,omitempty"`
+ }
+ 
+ type gitlabUser struct {
+@@ -51,6 +54,19 @@ func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, erro
+ 	if c.BaseURL == "" {
+ 		c.BaseURL = "https://gitlab.com"
+ 	}
++	var httpClient *http.Client
++	if len(c.RootCAData) > 0 {
++		var err error
++		httpClient, err = httpclient.NewHTTPClient([]string{string(c.RootCAData)}, false)
++		if err != nil {
++			// Keep backward-compatible error semantics for invalid PEM input.
++			if strings.Contains(err.Error(), "not in PEM format") {
++				return nil, fmt.Errorf("gitlab: invalid rootCAData")
++			}
++			return nil, fmt.Errorf("gitlab: failed to create HTTP client: %v", err)
++		}
++		httpClient.Timeout = 30 * time.Second
++	}
+ 	return &gitlabConnector{
+ 		baseURL:             c.BaseURL,
+ 		redirectURI:         c.RedirectURI,
+@@ -60,6 +76,7 @@ func (c *Config) Open(id string, logger *slog.Logger) (connector.Connector, erro
+ 		groups:              c.Groups,
+ 		useLoginAsID:        c.UseLoginAsID,
+ 		getGroupsPermission: c.GetGroupsPermission,
++		httpClient:          httpClient,
+ 	}, nil
+ }
+ 
+diff --git a/connector/gitlab/gitlab_test.go b/connector/gitlab/gitlab_test.go
+index b67b30c0..2ecede1f 100644
+--- a/connector/gitlab/gitlab_test.go
++++ b/connector/gitlab/gitlab_test.go
+@@ -4,15 +4,178 @@ import (
+ 	"context"
+ 	"crypto/tls"
+ 	"encoding/json"
++	"fmt"
++	"io"
++	"log/slog"
+ 	"net/http"
+ 	"net/http/httptest"
+ 	"net/url"
++	"os"
+ 	"reflect"
++	"strings"
+ 	"testing"
++	"time"
+ 
+ 	"github.com/dexidp/dex/connector"
+ )
+ 
++func readValidRootCAData(t *testing.T) []byte {
++	t.Helper()
++	b, err := os.ReadFile("testdata/rootCA.pem")
++	if err != nil {
++		t.Fatalf("failed to read rootCA.pem testdata: %v", err)
++	}
++	return b
++}
++
++func newLocalHTTPSTestServer(t *testing.T, handler http.Handler) *httptest.Server {
++	t.Helper()
++
++	ts := httptest.NewUnstartedServer(handler)
++	cert, err := tls.LoadX509KeyPair("testdata/server.crt", "testdata/server.key")
++	if err != nil {
++		t.Fatalf("failed to load TLS test cert/key: %v", err)
++	}
++	ts.TLS = &tls.Config{Certificates: []tls.Certificate{cert}}
++	ts.StartTLS()
++	return ts
++}
++
++func TestOpenWithRootCADataCreatesHTTPClient(t *testing.T) {
++	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
++
++	cfg := &Config{
++		RootCAData: readValidRootCAData(t),
++	}
++
++	conn, err := cfg.Open("test", logger)
++	if err != nil {
++		t.Fatalf("expected nil error, got %v", err)
++	}
++
++	gc, ok := conn.(*gitlabConnector)
++	if !ok {
++		t.Fatalf("expected *gitlabConnector, got %T", conn)
++	}
++	if gc.httpClient == nil {
++		t.Fatalf("expected httpClient to be non-nil")
++	}
++	if gc.httpClient.Timeout != 30*time.Second {
++		t.Fatalf("expected httpClient timeout %v, got %v", 30*time.Second, gc.httpClient.Timeout)
++	}
++	tr, ok := gc.httpClient.Transport.(*http.Transport)
++	if !ok {
++		t.Fatalf("expected transport to be *http.Transport, got %T", gc.httpClient.Transport)
++	}
++	// ProxyFromEnvironment is expected to be enabled (non-nil proxy func).
++	if tr.Proxy == nil {
++		t.Fatalf("expected transport.Proxy to be set (ProxyFromEnvironment)")
++	}
++	if tr.TLSClientConfig == nil || tr.TLSClientConfig.RootCAs == nil {
++		t.Fatalf("expected transport TLS root CAs to be configured")
++	}
++}
++
++func TestOpenWithInvalidRootCADataReturnsError(t *testing.T) {
++	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
++
++	cfg := &Config{
++		RootCAData: []byte("not a pem"),
++	}
++
++	_, err := cfg.Open("test", logger)
++	if err == nil {
++		t.Fatalf("expected error, got nil")
++	}
++	if !strings.Contains(err.Error(), "invalid rootCAData") {
++		t.Fatalf("expected error to contain %q, got %q", "invalid rootCAData", err.Error())
++	}
++}
++
++func TestHandleCallbackCustomRootCADataEnablesTLSRequests(t *testing.T) {
++	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
++
++	ts := newLocalHTTPSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Add("Content-Type", "application/json")
++		switch r.URL.Path {
++		case "/oauth/token":
++			// oauth2.Exchange expects an access token in response.
++			fmt.Fprint(w, `{"access_token":"abc","token_type":"bearer","expires_in":30}`)
++		case "/api/v4/user":
++			json.NewEncoder(w).Encode(gitlabUser{Email: "some@email.com", ID: 12345678})
++		default:
++			http.NotFound(w, r)
++		}
++	}))
++	defer ts.Close()
++
++	cfg := &Config{
++		BaseURL:      ts.URL,
++		ClientID:     "client-id",
++		ClientSecret: "client-secret",
++		RedirectURI:  "https://example.invalid/callback",
++		RootCAData:   readValidRootCAData(t),
++	}
++
++	conn, err := cfg.Open("test", logger)
++	if err != nil {
++		t.Fatalf("Open() error: %v", err)
++	}
++
++	hostURL, err := url.Parse(ts.URL)
++	expectNil(t, err)
++	req, err := http.NewRequest("GET", hostURL.String()+"?code=testcode", nil)
++	expectNil(t, err)
++
++	identity, err := conn.(connector.CallbackConnector).HandleCallback(connector.Scopes{Groups: false}, req)
++	if err != nil {
++		t.Fatalf("HandleCallback() error: %v", err)
++	}
++	if identity.Email != "some@email.com" || identity.UserID != "12345678" {
++		t.Fatalf("unexpected identity: %#v", identity)
++	}
++}
++
++func TestHandleCallbackWithoutRootCADataFailsTLS(t *testing.T) {
++	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
++
++	ts := newLocalHTTPSTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		w.Header().Add("Content-Type", "application/json")
++		switch r.URL.Path {
++		case "/oauth/token":
++			fmt.Fprint(w, `{"access_token":"abc","token_type":"bearer","expires_in":30}`)
++		case "/api/v4/user":
++			json.NewEncoder(w).Encode(gitlabUser{Email: "some@email.com", ID: 12345678})
++		default:
++			http.NotFound(w, r)
++		}
++	}))
++	defer ts.Close()
++
++	cfg := &Config{
++		BaseURL:      ts.URL,
++		ClientID:     "client-id",
++		ClientSecret: "client-secret",
++		RedirectURI:  "https://example.invalid/callback",
++		// RootCAData intentionally omitted: should fail TLS verification against our custom server cert.
++	}
++
++	conn, err := cfg.Open("test", logger)
++	if err != nil {
++		t.Fatalf("Open() error: %v", err)
++	}
++
++	hostURL, err := url.Parse(ts.URL)
++	expectNil(t, err)
++	req, err := http.NewRequest("GET", hostURL.String()+"?code=testcode", nil)
++	expectNil(t, err)
++
++	_, err = conn.(connector.CallbackConnector).HandleCallback(connector.Scopes{Groups: false}, req)
++	if err == nil {
++		t.Fatalf("expected TLS error, got nil")
++	}
++}
++
+ func TestUserGroups(t *testing.T) {
+ 	s := newTestServer(map[string]interface{}{
+ 		"/oauth/userinfo": userInfo{
+diff --git a/connector/gitlab/testdata/rootCA.pem b/connector/gitlab/testdata/rootCA.pem
+new file mode 100644
+index 00000000..c03bdac0
+--- /dev/null
++++ b/connector/gitlab/testdata/rootCA.pem
+@@ -0,0 +1,23 @@
++-----BEGIN CERTIFICATE-----
++MIID1jCCAr4CCQCG4JBeSi6cDjANBgkqhkiG9w0BAQsFADCBrDELMAkGA1UEBhMC
++VVMxFDASBgNVBAgMC1JhbmRvbVN0YXRlMRMwEQYDVQQHDApSYW5kb21DaXR5MRsw
++GQYDVQQKDBJSYW5kb21Pcmdhbml6YXRpb24xHzAdBgNVBAsMFlJhbmRvbU9yZ2Fu
++aXphdGlvblVuaXQxIDAeBgkqhkiG9w0BCQEWEWhlbGxvQGV4YW1wbGUuY29tMRIw
++EAYDVQQDDAlsb2NhbGhvc3QwHhcNMjIxMDA3MjIwNjQwWhcNMzIxMDA0MjIwNjQw
++WjCBrDELMAkGA1UEBhMCVVMxFDASBgNVBAgMC1JhbmRvbVN0YXRlMRMwEQYDVQQH
++DApSYW5kb21DaXR5MRswGQYDVQQKDBJSYW5kb21Pcmdhbml6YXRpb24xHzAdBgNV
++BAsMFlJhbmRvbU9yZ2FuaXphdGlvblVuaXQxIDAeBgkqhkiG9w0BCQEWEWhlbGxv
++QGV4YW1wbGUuY29tMRIwEAYDVQQDDAlsb2NhbGhvc3QwggEiMA0GCSqGSIb3DQEB
++AQUAA4IBDwAwggEKAoIBAQDh0HlpAKMKYyxbvW70XRY2bVNiNdAFninug1P4FDAJ
++z8xnbFzk17FLY7zqdtGTDmPDJ8AAxIwpGv2zYWW5VMeqKWfvyuD5dSCauY1Pdmug
++uZbpAvoJrx1sw+TL61ByVmy8x3ccB4LLKuzil/vAzUDJQkPsfTECVUPV+yiGSDuO
++EEVR9X6rZUwx2expXm8Wtb/a88FbPVI09b9eb4iWfLvGD2eNAtw8w21W0X7sQ8Hq
++zEPqquMEL4qPnNDdtk592uHvLLrd1uH8qH7c1JyA76T7H3YeUCNEi+PnLgqtsZmX
++sKY62HnLt8/LAClVsN9lFYkKEjU9V+U7IN2cL6+EwtsdAgMBAAEwDQYJKoZIhvcN
++AQELBQADggEBAN6g0qit/3R2X+KdR0LgRXF/h4qQFgcV6cxnhRAmLIDNJlxKSHqN
++IE5+bxzCbkblzGfr/jNPqW0s+yaN4CyMgKNYSzkLBPE4FF+19Uv+dyYfFms3mDJ7
++0rGjS5bCscThWhpaSw20LcwQcr/+X+/fGzJ01dVFK1UOjBKg4d4dMwxklbIkZqIq
++siRW0GMy26mgVZ/BSjeh5kEjs6h6H3cJsGl7xYT+BI7wnxHwGeT9tkBgiyT5FwaS
++vtdZkBpQ9q8f7FwsEm3woLHdWuOnrtUtVpY/oc6WFGdROQdGzjSk0D3kHs9YhueC
++GSzZKrqX+TSIgpPrLYNHX4uxlo5TAwP/5GM=
++-----END CERTIFICATE-----
+diff --git a/connector/gitlab/testdata/server.crt b/connector/gitlab/testdata/server.crt
+new file mode 100644
+index 00000000..9b0f12ec
+--- /dev/null
++++ b/connector/gitlab/testdata/server.crt
+@@ -0,0 +1,29 @@
++-----BEGIN CERTIFICATE-----
++MIIE5TCCA82gAwIBAgIJAMGzXwBRpkG7MA0GCSqGSIb3DQEBCwUAMIGsMQswCQYD
++VQQGEwJVUzEUMBIGA1UECAwLUmFuZG9tU3RhdGUxEzARBgNVBAcMClJhbmRvbUNp
++dHkxGzAZBgNVBAoMElJhbmRvbU9yZ2FuaXphdGlvbjEfMB0GA1UECwwWUmFuZG9t
++T3JnYW5pemF0aW9uVW5pdDEgMB4GCSqGSIb3DQEJARYRaGVsbG9AZXhhbXBsZS5j
++b20xEjAQBgNVBAMMCWxvY2FsaG9zdDAeFw0yMjEwMDcyMjA3MDhaFw0zMjEwMDQy
++MjA3MDhaMIGsMQswCQYDVQQGEwJVUzEUMBIGA1UECAwLUmFuZG9tU3RhdGUxEzAR
++BgNVBAcMClJhbmRvbUNpdHkxGzAZBgNVBAoMElJhbmRvbU9yZ2FuaXphdGlvbjEf
++MB0GA1UECwwWUmFuZG9tT3JnYW5pemF0aW9uVW5pdDEgMB4GCSqGSIb3DQEJARYR
++aGVsbG9AZXhhbXBsZS5jb20xEjAQBgNVBAMMCWxvY2FsaG9zdDCCASIwDQYJKoZI
++hvcNAQEBBQADggEPADCCAQoCggEBAMuKdpXP87Q7Kg3iafXzvBuVIyV1K5UmMYiN
++koztkC5XrCzHaQRS/CoIb7/nUqmtAxx7RL0jzhZ93zBN4HY/Zcnrd9tXoPPxi0mG
++ZZWfFU6nN8nOkMHWzEbHVBmhxpfGtwmLcajQ4HrK1TZwJUn6GqclHQRy/gjxkiw5
++KPqzfVOVlA6ht4KdKstKazQkWZ5gdWT4d8yrEy/IT4oaW05xALBMQ7YGjkzWKsSF
++6ygXI7xqF9rg9jCnUsPYg4f8ut3N0c00KjsfKOOj2dF/ZyjedQ5c0u4hHmxSo3Ka
++0ZTmIrMfbVXgGjxRG2HZXLpPvQKoCf/fOX8Irdr+lahFVKASxN0CAwEAAaOCAQYw
++ggECMIHLBgNVHSMEgcMwgcChgbKkga8wgawxCzAJBgNVBAYTAlVTMRQwEgYDVQQI
++DAtSYW5kb21TdGF0ZTETMBEGA1UEBwwKUmFuZG9tQ2l0eTEbMBkGA1UECgwSUmFu
++ZG9tT3JnYW5pemF0aW9uMR8wHQYDVQQLDBZSYW5kb21Pcmdhbml6YXRpb25Vbml0
++MSAwHgYJKoZIhvcNAQkBFhFoZWxsb0BleGFtcGxlLmNvbTESMBAGA1UEAwwJbG9j
++YWxob3N0ggkAhuCQXkounA4wCQYDVR0TBAIwADALBgNVHQ8EBAMCBPAwGgYDVR0R
++BBMwEYIJbG9jYWxob3N0hwR/AAABMA0GCSqGSIb3DQEBCwUAA4IBAQCWmh5ebpkm
++v2B1yQgarSCSSkLZ5DZSAJjrPgW2IJqCW2q2D1HworbW1Yn5jqrM9FKGnJfjCyve
++zBB5AOlGp+0bsZGgMRMCavgv4QhTThXUoJqqHcfEu4wHndcgrqSadxmV5aisSR4u
++gXnjW43o3akby+h1K40RR3vVkpzPaoC3/bgk7WVpfpPiP32E24a01gETozRb/of/
++ATN3JBe0xh+e63CrPX1sago5+u3UETIoOr0fW8M/gU9GApmJiFAXwHag6j54hLCG
++23EtVDwmlarG8Pj+i0yru8s22QqzAJi5E0OwR4aB8tqicLKYBVfzyLCOielIBUrK
++OkuFKp+VjxQX
++-----END CERTIFICATE-----
+diff --git a/connector/gitlab/testdata/server.key b/connector/gitlab/testdata/server.key
+new file mode 100644
+index 00000000..9708e1e6
+--- /dev/null
++++ b/connector/gitlab/testdata/server.key
+@@ -0,0 +1,28 @@
++-----BEGIN PRIVATE KEY-----
++MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDLinaVz/O0OyoN
++4mn187wblSMldSuVJjGIjZKM7ZAuV6wsx2kEUvwqCG+/51KprQMce0S9I84Wfd8w
++TeB2P2XJ63fbV6Dz8YtJhmWVnxVOpzfJzpDB1sxGx1QZocaXxrcJi3Go0OB6ytU2
++cCVJ+hqnJR0Ecv4I8ZIsOSj6s31TlZQOobeCnSrLSms0JFmeYHVk+HfMqxMvyE+K
++GltOcQCwTEO2Bo5M1irEhesoFyO8ahfa4PYwp1LD2IOH/LrdzdHNNCo7Hyjjo9nR
++f2co3nUOXNLuIR5sUqNymtGU5iKzH21V4Bo8URth2Vy6T70CqAn/3zl/CK3a/pWo
++RVSgEsTdAgMBAAECggEAU6cxu7q+54kVbKVsdThaTF/MFR4F7oPHAd9lpuQQSOuh
++iLngMHXGy6OyAgYZlEDWMYN8KdwoXFgZPaoUIaVGuWk8Vnq6XOgeHfbNk2PRhwT0
++yc1K80/Lnx9XMj2p+EEkgxi7eu12BSGN5ZTLzo6rG50GQwjb3WMjd2d6rybL0GjC
++wg2arcBk3sSMYmvZOqlAsaQmtgwkJhvhVkVfEQSD3VKF7g0dh/h3LIPyM0Ff4M67
++KpLMPPwzUJ/0Z4ewAP06mMKUA86R93M+dWs2eh1oBGnRkVQdhCJLXJpuGHZ6BTiB
++Ry0AeorHfnVXPbtpUeAq6m5/BBl6qX0ooB08BIFwAQKBgQDqJpTZS/ZzqL6Kcs14
++MyFu+7DungSxQ5oK9ju7EFSosanSk4UEa/lw992kM6nsIMwgSVQgba5zKcVMeSmk
++AVbpznegQD1BYCwOGwbGvkJ8jbhPy+WLbbRjWT/E6AItZgUK+fyTIcNvSehcQqsT
++fhgWsK7ueZCmLQfVhK1AxtvY3QKBgQDeiKuo8plsH/7IxDn7KVHBOHKPC2ZPzg03
++i7La6zomiRckwwPnhicRSYsjtfCCW6Ms+uzjTEItgFM+5PdrXheeku+z/sExRtZu
++emqPqDomixlXDRQ6RN3gnBSk4RU+ROB1u1uBLWXqRz8Gp2zJGRxhHfYt2zefBv4w
++/cIuPC3cAQKBgD2UsAkGJWb9tj8LOmama+CYaUwYWvuT3+uKHuNvxBQpxZQQICet
++jgjb53rL66Cib4z+PBXbQsoe7jjSlNUBVS5gkq2et31+IZgEG6AhYbMIQrUZ1uD4
++lTybuF289vWhoynj3T2E37VhJq89CWky/HrbNOabKiPKLAlHv5kNs7wxAoGBANEJ
++XQbU7J2O6Iy7FyQBSlTQq3wHX1Iz4mJ9DcNrFzK/sEfOEMrZT7WDefpPm984KW3F
++P+S766ZGVuxLtMbcmh9RM23HLr8VJbSdtZ/AjO9L1r/Y/1lE+49TzmibLpNRq++r
++0WbkuEl8J44ek6fLuMbZmDi3JeZycTCgDlnUGdgBAoGAYdliovtURZCm46t1uE3F
++idCLCXCccjkt1hcNGNjck/b0trHA7wOEqICIguoWDlEBTc0PDvHEq6PfKyqptGkj
++AgaZTMF/aZiGqlT7VRpBuzxM/uV5xzCg+i2ViaW/p3xq0z2PRljVZiEfe5aWcjiM
++ouTtnC3TgmcjhTgGmb48QQE=
++-----END PRIVATE KEY-----
+

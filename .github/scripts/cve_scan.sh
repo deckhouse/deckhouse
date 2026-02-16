@@ -44,7 +44,57 @@ login_dev_registry() {
 }
 
 trivy_scan() {
-  ${WORKDIR}/bin/trivy i --vex oci --show-suppressed --config-check "${TRIVY_POLICY_URL}" --cache-dir "${WORKDIR}/bin/trivy_cache" --skip-db-update --skip-java-db-update --exit-code 0 --severity "${SEVERITY}" --format json ${1} --output ${2} --quiet ${3} --username "${trivy_registry_user}" --password "${trivy_registry_pass}" --image-src remote
+  local trivy_opts="$1"
+  local report_file="$2"
+  local image_ref="$3"
+
+  local tmp_ignore=""
+  local ignore_arg=""
+
+  tmp_ignore="$(mktemp /tmp/tmp_ignore.XXXXXX.yaml)"
+
+  if trivy_prepare_ignore_from_cosign "${image_ref}" "${tmp_ignore}"; then
+    ignore_arg="--ignorefile ${tmp_ignore}"
+  fi
+
+  ${WORKDIR}/bin/trivy i \
+    --vex oci \
+    --config-check "${TRIVY_POLICY_URL}" \
+    --cache-dir "${WORKDIR}/bin/trivy_cache" \
+    --skip-db-update \
+    --skip-java-db-update \
+    --exit-code 0 \
+    --severity "${SEVERITY}" \
+    --format json \
+    ${trivy_opts} \
+    --output "${report_file}" \
+    --quiet \
+    --username "${trivy_registry_user}" \
+    --password "${trivy_registry_pass}" \
+    --image-src remote \
+    ${ignore_arg} \
+    "${image_ref}"
+
+  rm -f "${tmp_ignore}"
+}
+
+
+trivy_prepare_ignore_from_cosign() {
+  local image_ref="$1"
+  local ignore_file="$2"
+
+  cosign download attestation "${image_ref}" 2>/dev/null \
+  | jq -r '
+      select(.payloadType=="application/vnd.in-toto+json")
+      | .payload
+      | @base64d
+      | fromjson
+      | select(.predicateType=="https://cosign.sigstore.dev/attestation/v1")
+      | .predicate.Data
+    ' > "${ignore_file}"
+
+  [[ -s "${ignore_file}" ]] || return 1
+  return 0
 }
 
 function send_report() {
@@ -245,7 +295,8 @@ for d8_tag in "${d8_tags[@]}"; do
     echo "👾 Scaning Deckhouse image \"${a_image_name}\" of module \"${a_module_name}\" for tag \"${d8_tag}\""
     echo ""
     # CVE Scan
-    trivy_scan "--scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
+    # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
+    trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${additional_image}:${d8_tag}"
     # License scan
     trivy_scan "--scanners license --license-full" "${module_reports}/d8_${a_module_name}_${a_image_name}_report_license.json" "${additional_image}:${d8_tag}"
     send_report "CVE" "${module_reports}/d8_${a_module_name}_${a_image_name}_report.json" "${a_module_name}" "${a_image_name}"
@@ -310,7 +361,8 @@ for d8_tag in "${d8_tags[@]}"; do
       echo "👾 Scaning Deckhouse image \"${IMAGE_NAME}\" of module \"${MODULE_NAME}\" for tag \"${d8_tag}\""
       echo ""
       # CVE Scan
-      trivy_scan "--scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
+      # Using the --show-suppressed keys makes it impossible to use the .trivyignore file.
+      trivy_scan "--show-suppressed --scanners vuln" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${d8_image}@${IMAGE_HASH}"
       # License scan
       trivy_scan "--scanners license --license-full" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report_license.json" "${d8_image}@${IMAGE_HASH}"
       send_report "CVE" "${module_reports}/d8_${MODULE_NAME}_${IMAGE_NAME}_report.json" "${MODULE_NAME}" "${IMAGE_NAME}"

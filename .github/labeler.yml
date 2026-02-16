@@ -16,9 +16,7 @@ area/cicd:
 area/cloud-provider:
   - modules/030-cloud-provider-*/**
   - ee/modules/030-cloud-provider-*/**
-  - candi/cloud-providers/**
-  - ee/candi/cloud-providers/**
-
+  - ee/se-plus/modules/030-cloud-provider-*/**
 area/cluster-and-infrastructure:
   - candi/**
   - ee/candi/**

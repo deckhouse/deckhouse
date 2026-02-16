@@ -29,6 +29,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/destroy"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
@@ -39,11 +40,8 @@ import (
 )
 
 func (b *ClusterBootstrapper) Abort(ctx context.Context, forceAbortFromCache bool) error {
-	if restore, err := b.applyParams(); err != nil {
-		return err
-	} else {
-		defer restore()
-	}
+	restore := b.applyParams()
+	defer restore()
 
 	if !app.SanityCheck {
 		log.WarnLn(bootstrapAbortCheckMessage)
@@ -103,6 +101,10 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return err
 	}
 
+	b.PhasedExecutionContext = phases.NewDefaultPhasedExecutionContext(
+		phases.OperationDestroy, b.Params.OnPhaseFunc, b.Params.OnProgressFunc,
+	)
+
 	providerGetter := infrastructureprovider.CloudProviderGetter(infrastructureprovider.CloudProviderGetterParams{
 		TmpDir:           b.TmpDir,
 		AdditionalParams: cloud.ProviderAdditionalParams{},
@@ -118,6 +120,13 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 		return fmt.Errorf(bootstrapAbortInvalidCacheMessage, cachePath, err)
 	}
 	stateCache := cache.Global()
+
+	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
+		return err
+	}
+	defer func() {
+		_ = b.PhasedExecutionContext.Finalize(stateCache)
+	}()
 
 	hasUUID, err := stateCache.InCache("uuid")
 	if err != nil {
@@ -274,11 +283,6 @@ func (b *ClusterBootstrapper) doRunBootstrapAbort(ctx context.Context, forceAbor
 	if govalue.IsNil(destroyer) {
 		return fmt.Errorf("Destroyer not initialized")
 	}
-
-	if err := b.PhasedExecutionContext.InitPipeline(stateCache); err != nil {
-		return err
-	}
-	defer b.PhasedExecutionContext.Finalize(stateCache)
 
 	// destroy cluster cleanup provider
 	if err := destroyer.DestroyCluster(ctx, app.SanityCheck); err != nil {

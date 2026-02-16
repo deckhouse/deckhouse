@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Google Cloud Platform
 permalink: en/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 ---
 
@@ -52,7 +52,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Required.
     diskSizeGb: 20                  # Optional. A local disk is used if not set.
     disableExternalIP: false        # Optional. The master node has externalIP by default.
     additionalNetworkTags:          # Optional.
@@ -66,7 +66,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Required.
     diskSizeGb: 20                  # Optional. A local disk is used if not set.
     disableExternalIP: true         # Optional. The nodes don't have externalIP by default.
     additionalNetworkTags:          # Optional.
@@ -117,7 +117,7 @@ masterNodeGroup:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Required.
     diskSizeGb: 20                  # Optional. A local disk is used if not set.
     additionalNetworkTags:          # Optional.
     - tag1
@@ -130,7 +130,7 @@ nodeGroups:
   - europe-west4-b
   instanceClass:
     machineType: n1-standard-4      # Required.
-    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20250313  # Required.
+    image: projects/ubuntu-os-cloud/global/images/ubuntu-2404-noble-amd64-v20260128  # Required.
     diskSizeGb: 20                  # Optional. A local disk is used if not set.
     additionalNetworkTags:          # Optional.
     - tag1
