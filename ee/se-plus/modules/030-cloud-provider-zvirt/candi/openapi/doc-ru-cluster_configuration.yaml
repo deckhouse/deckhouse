@@ -62,7 +62,9 @@ apiVersions:
                 type: object
                 additionalProperties: false
                 description: |
-                  Использовать ручную конфиграцию сетевых интерфейсов для узлов
+                  Включает пользовательскую статическую настройку сети для узлов.
+                  
+                  Если заполнено, необходимо задать `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` и `networkInterfaceNetmask`.
                 properties:
                   networkInterfaceName:
                     type: string

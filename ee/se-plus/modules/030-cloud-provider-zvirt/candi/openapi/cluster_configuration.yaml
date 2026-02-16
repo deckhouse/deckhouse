@@ -128,7 +128,9 @@ apiVersions:
                 type: object
                 additionalProperties: false
                 description: |
-                  Use custom static network configuration for nodes.
+                  Enables a custom static network configuration for nodes in this NodeGroup.
+                  
+                  If defined, you must specify `networkInterfaceName`, `networkInterfaceAddress`, `networkInterfaceGateway` and `networkInterfaceNetmask`.
                 properties:
                   networkInterfaceName:
                     type: string
