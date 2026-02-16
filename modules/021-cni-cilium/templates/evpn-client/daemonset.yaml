@@ -1,0 +1,331 @@
+{{- define "evpn_client_resources" }}
+cpu: 100m
+memory: 128Mi
+{{- end }}
+
+{{- if and (.Values.cniCilium.evpn) (.Values.cniCilium.evpn.enabled) }}
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: evpn-client
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "evpn-client")) | nindent 2 }}
+spec:
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: evpn-client
+  template:
+    metadata:
+      annotations:
+        configmap-checksum: {{ include (print $.Template.BasePath "/evpn-client/configmap.yaml") . | sha256sum | quote }}
+      labels:
+        app: evpn-client
+    spec:
+      {{- include "helm_lib_priority_class" (tuple . "system-node-critical") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "with-cloud-provider-uninitialized") | nindent 6 }}
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      imagePullSecrets:
+      - name: deckhouse-registry
+      initContainers:
+      - name: config-renderer
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
+          SERVICE_NAME="evpn-rr"
+          SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+          NODE_NAME=${NODE_NAME:-$(hostname)}
+
+          # Copy daemons, vtysh.conf and initial frr.conf from ConfigMap to /etc/frr
+          cp -rLf /etc/frr-template/* /etc/frr/
+
+          # Replace placeholders in config template and overwrite /etc/frr/frr.conf (will be updated by sidecar)
+          sed -e "s/NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
+              -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
+              -e "s|RR_SERVERS_PLACEHOLDER||g" \
+              /etc/frr/frr.conf.template > /etc/frr/frr.conf
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-config-template
+          mountPath: /etc/frr-template
+          readOnly: true
+        - name: frr-conf
+          mountPath: /etc/frr
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      shareProcessNamespace: true
+      containers:
+      - name: frr
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            add:
+            - NET_ADMIN
+            - NET_RAW
+            - SYS_ADMIN
+            - NET_BIND_SERVICE
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        # The command is FRR's default entrypoint & waiting for the log file to appear and tailing it.
+        # If the log file isn't created in 60 seconds the tail fails and the container is restarted.
+        # This workaround is needed to have the frr logs as part of kubectl logs -c frr < frr-podname >.
+        command:
+        - /bin/sh
+        - -c
+        - |
+          ulimit -Sn 100000
+          /sbin/tini -- /usr/lib/frr/docker-start &
+          attempts=0
+          until [[ -f /var/log/frr/frr.log || $attempts -eq 60 ]]; do
+            sleep 1
+            attempts=$(( $attempts + 1 ))
+          done
+          tail -f /var/log/frr/frr.log
+        env:
+        - name: TINI_SUBREAPER
+          value: "true"
+        - name: FRR_CONF
+          value: /etc/frr/frr.conf
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-conf
+          mountPath: /etc/frr
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        - name: frr-run
+          mountPath: /var/run/frr
+        - name: frr-logs
+          mountPath: /var/log/frr
+        - name: frr-tmp
+          mountPath: /var/tmp/frr
+        - name: frr-lib
+          mountPath: /var/lib/frr
+        - name: lib-modules
+          mountPath: /lib/modules
+          readOnly: true
+        - name: sys
+          mountPath: /sys
+        ports:
+        - containerPort: 179
+          name: bgp
+          protocol: TCP
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "evpn_client_resources" . | nindent 12 }}
+{{- end }}
+      - name: config-updater
+        image: {{ include "helm_lib_module_image" (list . "alpine") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          CLUSTER_DOMAIN="{{ .Values.global.discovery.clusterDomain }}"
+          SERVICE_NAME="evpn-rr"
+          SERVICE_FQDN="${SERVICE_NAME}.d8-{{ .Chart.Name }}.svc.${CLUSTER_DOMAIN}"
+          CONFIG_FILE="/etc/frr/frr.conf"
+          CONFIG_TEMPLATE="/etc/frr-template/frr.conf.template"
+
+          generate_config() {
+            # Resolve DNS names to IP addresses for StatefulSet pods (evpn-rr-0, evpn-rr-1)
+            # FRR requires IP addresses for neighbors, not DNS names
+            RR_NEIGHBORS=""
+            REPLICAS={{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+            for i in $(seq 0 $((REPLICAS - 1))); do
+              RR_HOSTNAME="${SERVICE_NAME}-${i}.${SERVICE_FQDN}"
+              # Resolve DNS name to IP address
+              RR_IP=$(getent hosts ${RR_HOSTNAME} 2>/dev/null | awk '{print $1}' | head -n1)
+              if [ -n "$RR_IP" ]; then
+                RR_NEIGHBORS="${RR_NEIGHBORS}neighbor ${RR_IP} peer-group EVPN_RR
+                "
+              else
+                echo "Warning: Could not resolve ${RR_HOSTNAME}"
+              fi
+            done
+
+            # Replace placeholders in config template
+            sed -e "s/NODE_NAME_PLACEHOLDER/${NODE_NAME}/g" \
+                -e "s/NODE_IP_PLACEHOLDER/${NODE_IP}/g" \
+                -e "s|RR_SERVERS_PLACEHOLDER|${RR_NEIGHBORS}|g" \
+                ${CONFIG_TEMPLATE}
+          }
+
+          reload_frr() {
+            # Signal FRR reloader sidecar to reload configuration
+            # We create a trigger file that the FRR reloader sidecar watches
+            touch /etc/frr/.reload-trigger 2>/dev/null || true
+            echo "Configuration file updated, trigger file created for FRR reloader"
+          }
+
+          # Wait for config file to exist (created by init container)
+          echo "Waiting for initial configuration..."
+          for i in $(seq 1 30); do
+            if [ -f ${CONFIG_FILE} ]; then
+              echo "Initial configuration found"
+              LAST_CONFIG_HASH=$(md5sum ${CONFIG_FILE} | awk '{print $1}')
+              break
+            fi
+            sleep 1
+          done
+
+          while true; do
+            # Generate current configuration
+            NEW_CONFIG=$(generate_config)
+            NEW_CONFIG_HASH=$(echo "$NEW_CONFIG" | md5sum | awk '{print $1}')
+
+            # Compare with current configuration file
+            CURRENT_CONFIG_HASH=$(md5sum ${CONFIG_FILE} 2>/dev/null | awk '{print $1}' || echo "")
+
+            if [ "$NEW_CONFIG_HASH" != "$CURRENT_CONFIG_HASH" ] && [ -n "$NEW_CONFIG" ]; then
+              echo "Configuration changed, updating..."
+              echo "$NEW_CONFIG" > ${CONFIG_FILE}.new
+
+              # Validate configuration (basic check)
+              if [ -s ${CONFIG_FILE}.new ]; then
+                # Atomically replace config file
+                mv ${CONFIG_FILE}.new ${CONFIG_FILE}
+                LAST_CONFIG_HASH=$NEW_CONFIG_HASH
+                reload_frr
+              else
+                echo "Error: Generated configuration is empty"
+                rm -f ${CONFIG_FILE}.new
+              fi
+            fi
+
+            sleep 10
+          done
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        volumeMounts:
+        - name: frr-config-template
+          mountPath: /etc/frr-template
+          readOnly: true
+        - name: frr-conf
+          mountPath: /etc/frr
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      - name: frr-reloader
+        image: {{ include "helm_lib_module_image" (list . "frr") }}
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          CONFIG_FILE="/etc/frr/frr.conf"
+          TRIGGER_FILE="/etc/frr/.reload-trigger"
+          LAST_RELOAD_TIME=0
+
+          reload_frr() {
+            # Use frr-reload.py script to reload FRR configuration
+            # This script is included with FRR and can reload configuration without restart
+            if command -v /usr/lib/frr/frr-reload.py > /dev/null 2>&1; then
+              /usr/lib/frr/frr-reload.py --reload 2>&1 || echo "Warning: frr-reload.py failed"
+            elif command -v /usr/bin/frr-reload.py > /dev/null 2>&1; then
+              /usr/bin/frr-reload.py --reload 2>&1 || echo "Warning: frr-reload.py failed"
+            else
+              echo "Warning: frr-reload.py not found"
+            fi
+          }
+
+          # Wait for config file to exist
+          echo "Waiting for initial configuration..."
+          for i in $(seq 1 30); do
+            if [ -f ${CONFIG_FILE} ]; then
+              echo "Initial configuration found"
+              break
+            fi
+            sleep 1
+          done
+
+          # Watch for trigger file changes and reload FRR
+          while true; do
+            if [ -f ${TRIGGER_FILE} ]; then
+              CURRENT_TIME=$(stat -c %Y ${TRIGGER_FILE} 2>/dev/null || echo "0")
+              if [ "$CURRENT_TIME" != "$LAST_RELOAD_TIME" ]; then
+                echo "Trigger file changed, reloading FRR configuration..."
+                LAST_RELOAD_TIME=$CURRENT_TIME
+                reload_frr
+                # Remove trigger file after processing
+                rm -f ${TRIGGER_FILE}
+              fi
+            fi
+            sleep 2
+          done
+        volumeMounts:
+        - name: frr-conf
+          mountPath: /etc/frr
+          readOnly: true
+        - name: frr-run
+          mountPath: /var/run/frr
+          readOnly: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 32Mi
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: frr-config-template
+        configMap:
+          name: evpn-client-config
+      - name: frr-conf
+        emptyDir: {}
+      - name: frr-run
+        emptyDir: {}
+      - name: frr-lib
+        emptyDir: {}
+      - name: frr-tmp
+        emptyDir: {}
+      - name: frr-logs
+        emptyDir: {}
+      - name: tmp
+        emptyDir: {}
+      - name: lib-modules
+        hostPath:
+          path: /lib/modules
+      - name: sys
+        hostPath:
+          path: /sys
+{{- end }}
