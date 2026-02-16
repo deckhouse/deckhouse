@@ -34,7 +34,6 @@ import (
 	taskinstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/install"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskrun "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/run"
-	taskstartup "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/startup"
 	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
@@ -174,54 +173,5 @@ func (r *Runtime) RemoveModule(name string) {
 
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.status, r.logger))
 		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
-	})
-}
-
-// enableModule is called by the scheduler when a module becomes enabled.
-func (r *Runtime) enableModule(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
-		tasks := []queue.Task{
-			taskstartup.NewTask(pkg, r.nelmService, r.queueService, r.status, r.logger),
-			taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
-}
-
-// disableModule is called by the scheduler when a module becomes disabled.
-func (r *Runtime) disableModule(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.modules.HandleEvent(lifecycle.EventSchedule, name, func(ctx context.Context, _ int, pkg *modules.Module) {
-		tasks := []queue.Task{
-			taskdisable.NewTask(pkg, modulesNamespace, true, r.nelmService, r.queueService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
-	})
-}
-
-// runModule is called by NELM monitor when a module needs to re-run.
-func (r *Runtime) runModule(name string) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	r.modules.HandleEvent(lifecycle.EventRun, name, func(ctx context.Context, _ int, pkg *modules.Module) {
-		tasks := []queue.Task{
-			taskrun.NewTask(pkg, modulesNamespace, r.nelmService, r.status, r.logger),
-		}
-
-		for _, task := range tasks {
-			r.queueService.Enqueue(ctx, name, task)
-		}
 	})
 }
