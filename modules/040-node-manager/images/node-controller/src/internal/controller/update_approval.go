@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package updateapproval
+package controller
 
 import (
 	"context"
@@ -44,7 +44,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/controller"
 )
 
 var (
@@ -65,7 +64,7 @@ var (
 
 func init() {
 	ctrlmetrics.Registry.MustRegister(nodeGroupNodeStatus)
-	controller.Register("UpdateApproval", Setup)
+	Register("UpdateApproval", Setup)
 }
 
 const (
