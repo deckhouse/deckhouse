@@ -61,6 +61,64 @@ spec:
 		})
 	})
 
+	Context("Multiple CNIMigration resources exist", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: CNIMigration
+metadata:
+  name: migration-newer
+  creationTimestamp: "2024-01-02T00:00:00Z"
+spec:
+  targetCNI: cilium
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: CNIMigration
+metadata:
+  name: migration-older
+  creationTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  targetCNI: flannel
+`))
+			f.RunHook()
+		})
+
+		It("should select the oldest migration", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.internal.cniMigrationName").String()).To(Equal("migration-older"))
+		})
+	})
+
+	Context("Multiple CNIMigration resources with same timestamp", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: CNIMigration
+metadata:
+  name: migration-b
+  creationTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  targetCNI: cilium
+---
+apiVersion: network.deckhouse.io/v1alpha1
+kind: CNIMigration
+metadata:
+  name: migration-a
+  creationTimestamp: "2024-01-01T00:00:00Z"
+spec:
+  targetCNI: flannel
+`))
+			f.RunHook()
+		})
+
+		It("should select migration with lexicographically smaller name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.internal.cniMigrationName").String()).To(Equal("migration-a"))
+		})
+	})
+
 	Context("CNIMigration resource succeeded", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
