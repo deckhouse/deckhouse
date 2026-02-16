@@ -35,6 +35,12 @@ func TestModeNoError(t *testing.T) {
 			).DeckhouseSettings,
 		},
 		{
+			name: "mode proxy",
+			input: ConfigBuilder(
+				WithModeProxy(),
+			).DeckhouseSettings,
+		},
+		{
 			name: "mode unmanaged",
 			input: ConfigBuilder(
 				WithModeUnmanaged(),
@@ -187,6 +193,121 @@ func TestModeDirect(t *testing.T) {
 	})
 }
 
+func TestModeProxy(t *testing.T) {
+	pki, err := GeneratePKI()
+	require.NoError(t, err)
+
+	getPKI := func() (PKI, error) {
+		return pki, nil
+	}
+
+	t.Run("Proxy mode", func(t *testing.T) {
+		config := ConfigBuilder(
+			WithModeProxy(),
+			WithImagesRepo("r.example.com/test"),
+			WithCredentials("test-user", "test-password"),
+			WithSchemeHTTPS(),
+			WithCA("-----BEGIN CERTIFICATE-----"),
+			WithTTL("5m"),
+		)
+
+		t.Run("modeSettings", func(t *testing.T) {
+			expect := ModeSettings{
+				Mode: constant.ModeProxy,
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, config.Settings)
+		})
+
+		t.Run("modeModel", func(t *testing.T) {
+			actual := config.
+				Settings.
+				ToModel()
+
+			expect := ModeModel{
+				Mode:                constant.ModeProxy,
+				InClusterImagesRepo: constant.HostWithPath,
+				RemoteImagesRepo:    "r.example.com/test",
+				RemoteData: Data{
+					ImagesRepo: "r.example.com/test",
+					Scheme:     "HTTPS",
+					CA:         "-----BEGIN CERTIFICATE-----",
+					Username:   "test-user",
+					Password:   "test-password",
+				},
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("InclusterData", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				InClusterData(getPKI)
+
+			require.NoError(t, err)
+
+			expect := Data{
+				ImagesRepo: constant.HostWithPath,
+				Scheme:     constant.SchemeHTTPS,
+				CA:         pki.CA.Cert,
+				Username:   pki.ROUser.Name,
+				Password:   pki.ROUser.Password,
+			}
+
+			require.EqualValues(t, expect, actual)
+		})
+
+		t.Run("BashibleConfig", func(t *testing.T) {
+			actual, err := config.
+				Settings.
+				ToModel().
+				BashibleConfig()
+
+			require.NoError(t, err)
+
+			expect := bashible.Config{
+				Mode:           string(constant.ModeProxy),
+				Version:        actual.Version,
+				ImagesBase:     constant.HostWithPath,
+				ProxyEndpoints: nil,
+				Hosts: map[string]bashible.ConfigHosts{
+					constant.Host: {
+						Mirrors: []bashible.ConfigMirrorHost{
+							{
+								Host:   "r.example.com",
+								Scheme: "https",
+								CA:     "-----BEGIN CERTIFICATE-----",
+								Auth: bashible.ConfigAuth{
+									Username: "test-user",
+									Password: "test-password",
+								},
+								Rewrites: []bashible.ConfigRewrite{
+									{
+										From: constant.PathRegexp,
+										To:   "test",
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			require.NotEmpty(t, actual.Version)
+			require.EqualValues(t, expect, actual)
+		})
+	})
+}
+
 func TestModeUnmanaged(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
@@ -293,21 +414,43 @@ func TestModeUnmanaged(t *testing.T) {
 
 func TestModeSettings_DeepCopy(t *testing.T) {
 	t.Run("should create a deep copy of ModeSettings", func(t *testing.T) {
-		original := &ModeSettings{
-			Mode: "test-mode",
-			RemoteData: Data{
-				ImagesRepo: "test-repo",
-				Scheme:     "https",
-				CA:         "test-ca",
-				Username:   "test-user",
-				Password:   "test-pass",
+		tests := []struct {
+			name     string
+			settings *ModeSettings
+		}{
+			{
+				name: "Direct ModeSettings",
+				settings: func() *ModeSettings {
+					cfg := ConfigBuilder(WithModeDirect())
+					return &cfg.Settings
+				}(),
+			},
+			{
+				name: "Proxy ModeSettings",
+				settings: func() *ModeSettings {
+					cfg := ConfigBuilder(WithModeProxy())
+					return &cfg.Settings
+				}(),
+			},
+			{
+				name: "Unmanaged ModeSettings",
+				settings: func() *ModeSettings {
+					cfg := ConfigBuilder(WithModeUnmanaged())
+					return &cfg.Settings
+				}(),
 			},
 		}
 
-		copied := original.DeepCopy()
-		require.NotNil(t, copied)
-		require.NotSame(t, original, copied)
-		require.EqualValues(t, original, copied)
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				original := tt.settings
+				copied := original.DeepCopy()
+
+				require.NotNil(t, copied)
+				require.NotSame(t, original, copied)
+				require.EqualValues(t, original, copied)
+			})
+		}
 	})
 
 	t.Run("should handle nil receiver", func(t *testing.T) {

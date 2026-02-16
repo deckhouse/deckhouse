@@ -39,6 +39,15 @@ func newModeSettings(settings module_config.DeckhouseSettings) (ModeSettings, er
 			RemoteData: remote,
 		}, nil
 
+	case settings.Proxy != nil:
+		var remote Data
+		remote.fromRegistrySettings(settings.Proxy.RegistrySettings)
+
+		return ModeSettings{
+			Mode:       constant.ModeProxy,
+			RemoteData: remote,
+		}, nil
+
 	case settings.Unmanaged != nil:
 		var remote Data
 		remote.fromRegistrySettings(*settings.Unmanaged)
@@ -58,6 +67,9 @@ func (s ModeSettings) ToModel() ModeModel {
 	case constant.ModeDirect:
 		return s.toDirectModel()
 
+	case constant.ModeProxy:
+		return s.toProxyModel()
+
 	case constant.ModeUnmanaged:
 		return s.toUnmanagedModel()
 
@@ -69,6 +81,15 @@ func (s ModeSettings) ToModel() ModeModel {
 func (s ModeSettings) toDirectModel() ModeModel {
 	return ModeModel{
 		Mode:                constant.ModeDirect,
+		InClusterImagesRepo: constant.HostWithPath,
+		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
+		RemoteData:          s.RemoteData,
+	}
+}
+
+func (s ModeSettings) toProxyModel() ModeModel {
+	return ModeModel{
+		Mode:                constant.ModeProxy,
 		InClusterImagesRepo: constant.HostWithPath,
 		RemoteImagesRepo:    s.RemoteData.ImagesRepo,
 		RemoteData:          s.RemoteData,
@@ -110,6 +131,9 @@ func (m ModeModel) InClusterData(pkiProvider PKIProvider) (Data, error) {
 	case constant.ModeDirect:
 		return m.toDirectInClusterData(pkiProvider)
 
+	case constant.ModeProxy:
+		return m.toProxyInClusterData(pkiProvider)
+
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
 
@@ -127,6 +151,9 @@ func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
 
 	case constant.ModeUnmanaged:
 		mirrors = m.toUnmanagedBashibleHosts()
+
+	case constant.ModeProxy:
+		mirrors = m.toProxyBashibleHosts()
 
 	default:
 		return BashibleConfig{}, ErrUnknownMode
@@ -158,6 +185,21 @@ func (m ModeModel) toDirectInClusterData(pkiProvider PKIProvider) (Data, error) 
 		Scheme:     constant.SchemeHTTPS,
 		Username:   m.RemoteData.Username,
 		Password:   m.RemoteData.Password,
+		CA:         pki.CA.Cert,
+	}, nil
+}
+
+func (m ModeModel) toProxyInClusterData(pkiProvider PKIProvider) (Data, error) {
+	pki, err := pkiProvider()
+	if err != nil {
+		return Data{}, fmt.Errorf("get PKI: %w", err)
+	}
+
+	return Data{
+		ImagesRepo: constant.HostWithPath,
+		Scheme:     constant.SchemeHTTPS,
+		Username:   pki.ROUser.Name,
+		Password:   pki.ROUser.Password,
 		CA:         pki.CA.Cert,
 	}, nil
 }
@@ -207,6 +249,40 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 					Auth: bashible.ConfigAuth{
 						Username: m.RemoteData.Username,
 						Password: m.RemoteData.Password,
+					},
+				},
+			},
+		},
+	}
+
+	return ret
+}
+
+func (m ModeModel) toProxyBashibleHosts() map[string]bashible.ConfigHosts {
+	// TODO:
+	// Need to implement logic for Proxy mode.
+	// Now implement logic as in Direct mode
+	host, path := m.RemoteData.AddressAndPath()
+	scheme := strings.ToLower(string(m.RemoteData.Scheme))
+	from := constant.PathRegexp
+	to := strings.TrimLeft(path, "/")
+
+	ret := map[string]bashible.ConfigHosts{
+		constant.Host: {
+			Mirrors: []bashible.ConfigMirrorHost{
+				{
+					Host:   host,
+					Scheme: scheme,
+					CA:     m.RemoteData.CA,
+					Auth: bashible.ConfigAuth{
+						Username: m.RemoteData.Username,
+						Password: m.RemoteData.Password,
+					},
+					Rewrites: []bashible.ConfigRewrite{
+						{
+							From: from,
+							To:   to,
+						},
 					},
 				},
 			},

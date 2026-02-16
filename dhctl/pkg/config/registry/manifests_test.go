@@ -31,6 +31,12 @@ func TestManifestsNoError(t *testing.T) {
 			),
 		},
 		{
+			name: "mode proxy",
+			input: ConfigBuilder(
+				WithModeProxy(),
+			),
+		},
+		{
 			name: "mode unmanaged",
 			input: ConfigBuilder(
 				WithModeUnmanaged(),
@@ -90,6 +96,13 @@ func TestManifestsLegacyMode(t *testing.T) {
 			name: "mode direct",
 			input: ConfigBuilder(
 				WithModeDirect(),
+			),
+			legacyMode: false,
+		},
+		{
+			name: "mode proxy",
+			input: ConfigBuilder(
+				WithModeProxy(),
 			),
 			legacyMode: false,
 		},
