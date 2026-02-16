@@ -16,21 +16,21 @@
       <span>{{ productName }}</span>
     </div>
     <div class="nav__trigger"></div>
-    <ul id="bottom-header-nav" class="nav header__nav hidden">
+    <ul id="bottom-header-nav" class="nav header__nav">
       {%- if productMenuData.items %}
         {%- for item in productMenuData.items %}
           {%- if item.rel == "doc" %}{% assign itemClass='class="header__navigation-item active"' %}{% elsif item.items %}{% assign itemClass='class="header__navigation-item menu-item-has-children"' %}{%- else %}{% assign itemClass='class="header__navigation-item"' %}{% endif %}
           <li {{ itemClass }} {%- if item.items %} data-proofer-ignore{% endif %}>
             <a href="{{ item.url }}"{% if item.target.size > 0 %} target="{{ item.target }}"{% endif %}>{{ item.title }}</a>
-              {% if item.items %}
-                <div class="sub-menu-container">
-                  <ul class="sub-menu">
-                    {% for item in item.items %}
-                      <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
-                    {% endfor %}
-                  </ul>
-                </div>
-            {% endif %}
+            {% if item.items %}
+              <div class="sub-menu-container">
+                <ul class="sub-menu">
+                  {% for item in item.items %}
+                    <li data-proofer-ignore><a href="{{ item.url }}">{{ item.title }}</a></li>
+                  {% endfor %}
+                </ul>
+              </div>
+              {% endif %}
           </li>
         {%- endfor %}
       {%- else %}

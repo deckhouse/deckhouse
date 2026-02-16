@@ -1,0 +1,101 @@
+@use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
+
+.docs img {
+  height: auto;
+  position: relative;
+  transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.carousel {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    margin-bottom: 20px;
+
+    &__images {
+        display: flex;
+        transition: transform 0.3s ease-in-out;
+
+        img {
+            flex-shrink: 0;
+            width: 100%;
+            height: auto;
+        }
+    }
+
+    &__control {
+        display: flex;
+        justify-content: center;
+        text-align: center;
+        align-items: center;
+        margin-top: 10px;
+
+        span {
+            font-weight: 700;
+            font-size: 12px;
+            line-height: 18px;
+            color: #00003C;
+        }
+
+        &--previous {
+            padding: 5px 10px;
+            margin: 0 5px;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            background: url(/images/previous.svg) center/contain no-repeat;
+            background-size: cover;
+        }
+
+        &--next {
+            padding: 5px 10px;
+            margin: 0 5px;
+            cursor: pointer;
+            width: 24px;
+            height: 24px;
+            background: url(/images/next.svg) center/contain no-repeat;
+            background-size: cover;
+        }
+    }
+}
+
+.img__container {
+    position: relative;
+    display: inline-block;
+
+    &--zoom {
+        position: absolute;
+        bottom: 12px;
+        right: 12px;
+        width: 26px;
+        height: 26px;
+        background: url(/images/maximize.svg) center/contain no-repeat;
+        background-size: cover;
+        cursor: pointer;
+        z-index: 10;
+        transition: transform 0.3s ease-in-out, bottom 0.3s ease-in-out, right 0.3s ease-in-out;
+    }
+
+    .zoom {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.9);
+        z-index: 999;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+
+        & + .img__container--zoom {
+            position: fixed;
+            top: auto;
+            left: auto;
+            bottom: calc(50vh - (var(--img-height) / 2) + 80px);
+            right: calc(50vw - (var(--img-width) / 2) + 90px);
+            transform: translate(50%, 50%) scale(calc(1 / 0.9));
+            z-index: 999;
+            transition: transform 0.3s ease-in-out, bottom 0.3s ease-in-out, right 0.3s ease-in-out;
+        }
+    }
+}
