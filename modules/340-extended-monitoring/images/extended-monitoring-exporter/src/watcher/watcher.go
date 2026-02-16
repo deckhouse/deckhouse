@@ -398,7 +398,7 @@ func (w *Watcher) updateDeployment(dep *appsv1.Deployment, deleted bool) {
 		labels,
 		nsLabels,
 		deploymentThresholdMap,
-		prometheus.Labels{"namespace": dep.Namespace, "deployment": dep.Name},
+		labelset,
 	)
 }
 
@@ -434,7 +434,7 @@ func (w *Watcher) updateIngress(ing *networkingv1.Ingress, deleted bool) {
 		labels,
 		nsLabels,
 		ingressThresholdMap,
-		prometheus.Labels{"namespace": ing.Namespace, "ingress": ing.Name},
+		labelset,
 	)
 }
 
