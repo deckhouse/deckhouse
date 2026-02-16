@@ -21,7 +21,11 @@ import (
 	"os"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 var _ = Describe("Modules :: node-manager :: hooks :: update_node_group_status ::", func() {
@@ -348,7 +352,7 @@ status:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.30.1"}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global": {"discovery": {"kubernetesVersion": "1.31.1"}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "Machine", true)
