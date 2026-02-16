@@ -105,6 +105,7 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
+		// Reason is required by metav1.Condition contract
 		reason := cond.Reason
 		if reason == "" {
 			reason = cond.Type
@@ -112,22 +113,6 @@ func (s *Service) computeAndApplyConditions(ev string, app *v1alpha1.Application
 
 		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
 			Type:               cond.Type,
-			Status:             cond.Status,
-			Reason:             reason,
-			Message:            cond.Message,
-			ObservedGeneration: app.Generation,
-		})
-	}
-
-	// Apply internal conditions from the operator
-	for _, cond := range packageStatus.Conditions {
-		reason := string(cond.Reason)
-		if reason == "" {
-			reason = string(cond.Type)
-		}
-
-		meta.SetStatusCondition(&app.Status.Conditions, metav1.Condition{
-			Type:               string(cond.Type),
 			Status:             cond.Status,
 			Reason:             reason,
 			Message:            cond.Message,
