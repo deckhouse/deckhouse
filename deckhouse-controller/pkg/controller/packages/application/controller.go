@@ -186,16 +186,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeReady,
-			v1alpha1.ApplicationConditionReasonApplicationPackageNotFound,
-			fmt.Sprintf("ApplicationPackage '%s' not found", app.Spec.PackageName),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status application %s: %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
@@ -208,16 +199,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeReady,
-			v1alpha1.ApplicationConditionReasonVersionNotFound,
-			fmt.Sprintf("ApplicationPackageVersion '%s' not found", apv.Name),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("get application package version '%s': %w", apv.Name, err)
 	}
@@ -226,16 +208,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if apv.IsDraft() {
 		logger.Debug("application package version is in draft", slog.String("apv", apvName))
 
-		app = r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeReady,
-			v1alpha1.ApplicationConditionReasonVersionIsDraft,
-			"ApplicationPackageVersion "+apvName+" is in draft",
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
