@@ -18,11 +18,11 @@ package geodownloader
 
 import "github.com/prometheus/client_golang/prometheus"
 
-// GeoIPErrors number of errors when loading Geo DB
-var GeoIPErrors = prometheus.NewCounterVec(
-	prometheus.CounterOpts{
-		Name: "geoip_errors_download_total",
-		Help: "Number of errors related to GeoIP from MaxMind service",
+// GeoIPDownloadError indicates whether the last download attempt for a GeoIP edition failed.
+var GeoIPDownloadError = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "geoip_download_error",
+		Help: "Whether the last GeoIP database download attempt failed (1) or succeeded (0).",
 	},
-	[]string{"reason", "type"},
+	[]string{"edition"},
 )
