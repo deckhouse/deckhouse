@@ -330,6 +330,11 @@ featureGates:
 {{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
   DynamicResourceAllocation: true
 {{- end }}
+{{- if semverCompare ">=1.34" .kubernetesVersion }}
+  DRADeviceBindingConditions: true
+  DRAResourceClaimDeviceStatus: true
+  DRAConsumableCapacity: true
+{{- end }}
 {{- range .allowedKubeletFeatureGates }}
   {{ . }}: true
 {{- end }}
