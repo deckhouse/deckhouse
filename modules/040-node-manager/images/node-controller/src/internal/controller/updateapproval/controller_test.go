@@ -19,6 +19,7 @@ package updateapproval
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,8 +55,6 @@ func setupTestReconciler(objs ...client.Object) (*Reconciler, client.Client) {
 
 	return r, fakeClient
 }
-
-// Helper functions to create test objects
 
 func newNodeGroup(name string, nodeType v1.NodeType, opts ...func(*v1.NodeGroup)) *v1.NodeGroup {
 	ng := &v1.NodeGroup{
@@ -183,6 +182,36 @@ func newChecksumSecret(checksums map[string]string) *corev1.Secret {
 	}
 }
 
+func intStrPtr(v intstr.IntOrString) *intstr.IntOrString {
+	return &v
+}
+
+func reconcileNG(t *testing.T, r *Reconciler, ngName string) {
+	t.Helper()
+	_, err := r.Reconcile(context.Background(), ctrl.Request{
+		NamespacedName: types.NamespacedName{Name: ngName},
+	})
+	require.NoError(t, err)
+}
+
+func getNode(t *testing.T, c client.Client, name string) corev1.Node {
+	t.Helper()
+	var node corev1.Node
+	err := c.Get(context.Background(), types.NamespacedName{Name: name}, &node)
+	require.NoError(t, err)
+	return node
+}
+
+func hasAnnotation(node corev1.Node, key string) bool {
+	_, ok := node.Annotations[key]
+	return ok
+}
+
+// fixedTime returns a deterministic time for window tests: Wed Jan 13 13:30:00 UTC 2021
+func fixedTime() time.Time {
+	return time.Date(2021, 1, 13, 13, 30, 0, 0, time.UTC)
+}
+
 // =============================================================================
 // Tests for calculateConcurrency
 // =============================================================================
@@ -246,17 +275,11 @@ func TestCalculateConcurrency(t *testing.T) {
 	}
 }
 
-func intStrPtr(v intstr.IntOrString) *intstr.IntOrString {
-	return &v
-}
-
 // =============================================================================
 // Tests for processUpdatedNodes
 // =============================================================================
 
 func TestProcessUpdatedNodes(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("node becomes UpToDate when checksum matches and ready", func(t *testing.T) {
 		ng := newNodeGroup("worker", v1.NodeTypeStatic)
 		node := newNode("worker-1", "worker",
@@ -267,17 +290,13 @@ func TestProcessUpdatedNodes(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "updated"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		// Check that approved annotation was removed
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode.Annotations[ApprovedAnnotation]
-		assert.False(t, hasApproved, "approved annotation should be removed")
+		updated := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(updated, ApprovedAnnotation), "approved annotation should be removed")
+		assert.False(t, hasAnnotation(updated, DisruptionRequiredAnnotation), "disruption-required should be removed")
+		assert.False(t, hasAnnotation(updated, DisruptionApprovedAnnotation), "disruption-approved should be removed")
+		assert.False(t, hasAnnotation(updated, DrainedAnnotation), "drained should be removed")
 	})
 
 	t.Run("node stays approved when checksum differs", func(t *testing.T) {
@@ -290,16 +309,10 @@ func TestProcessUpdatedNodes(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "new-checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode.Annotations[ApprovedAnnotation]
-		assert.True(t, hasApproved, "approved annotation should remain")
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, ApprovedAnnotation), "approved annotation should remain")
 	})
 
 	t.Run("node stays approved when not ready", func(t *testing.T) {
@@ -312,16 +325,10 @@ func TestProcessUpdatedNodes(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "updated"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode.Annotations[ApprovedAnnotation]
-		assert.True(t, hasApproved, "approved annotation should remain when not ready")
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, ApprovedAnnotation), "approved annotation should remain when not ready")
 	})
 
 	t.Run("drained node becomes schedulable when UpToDate", func(t *testing.T) {
@@ -336,15 +343,120 @@ func TestProcessUpdatedNodes(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "updated"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		updated := getNode(t, c, "worker-1")
+		assert.False(t, updated.Spec.Unschedulable, "node should become schedulable")
+		assert.False(t, hasAnnotation(updated, DrainedAnnotation), "drained annotation should be removed")
+	})
 
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
+	t.Run("node stays approved when node checksum is empty", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic)
+		node := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "updated"})
 
-		assert.False(t, updatedNode.Spec.Unschedulable, "node should become schedulable")
+		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
+
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, ApprovedAnnotation), "approved should remain when node has no checksum")
+	})
+}
+
+// =============================================================================
+// Tests for finished behavior (one mutation per reconcile)
+// =============================================================================
+
+func TestFinishedBehavior(t *testing.T) {
+	t.Run("processUpdatedNodes stops after first node", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic)
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withChecksum("current"),
+			withReady(true),
+		)
+		node2 := newNode("worker-2", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withChecksum("current"),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "current"})
+
+		r, c := setupTestReconciler(ng, node1, node2, secret)
+		reconcileNG(t, r, "worker")
+
+		n1 := getNode(t, c, "worker-1")
+		n2 := getNode(t, c, "worker-2")
+
+		n1Cleared := !hasAnnotation(n1, ApprovedAnnotation)
+		n2Cleared := !hasAnnotation(n2, ApprovedAnnotation)
+
+		assert.True(t, n1Cleared || n2Cleared, "at least one node should be processed")
+		assert.False(t, n1Cleared && n2Cleared, "only one node should be processed per reconcile")
+	})
+
+	t.Run("processUpdatedNodes blocks approveDisruptions", func(t *testing.T) {
+		drainBefore := false
+		ng := newNodeGroup("worker", v1.NodeTypeStatic,
+			withDisruptions("Automatic", &drainBefore),
+		)
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withChecksum("current"),
+			withReady(true),
+		)
+		node2 := newNode("worker-2", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withAnnotation(DisruptionRequiredAnnotation, ""),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "current"})
+
+		r, c := setupTestReconciler(ng, node1, node2, secret)
+		reconcileNG(t, r, "worker")
+
+		n1 := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(n1, ApprovedAnnotation), "node1 should be cleared")
+
+		n2 := getNode(t, c, "worker-2")
+		assert.False(t, hasAnnotation(n2, DisruptionApprovedAnnotation),
+			"disruption should not be approved in same reconcile as processUpdatedNodes")
+	})
+
+	t.Run("approveDisruptions blocks approveUpdates", func(t *testing.T) {
+		drainBefore := false
+		ng := newNodeGroup("worker", v1.NodeTypeStatic,
+			withDisruptions("Automatic", &drainBefore),
+			withMaxConcurrent(intstr.FromInt(2)),
+		)
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withAnnotation(DisruptionRequiredAnnotation, ""),
+			withChecksum("old"),
+			withReady(true),
+		)
+		node2 := newNode("worker-2", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withChecksum("old"),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "current"})
+
+		r, c := setupTestReconciler(ng, node1, node2, secret)
+		reconcileNG(t, r, "worker")
+
+		n1 := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(n1, DisruptionApprovedAnnotation),
+			"disruption should be approved for node1")
+
+		n2 := getNode(t, c, "worker-2")
+		assert.True(t, hasAnnotation(n2, WaitingForApprovalAnnotation),
+			"node2 should still be waiting, blocked by finished")
+		assert.False(t, hasAnnotation(n2, ApprovedAnnotation),
+			"node2 should not be approved yet")
 	})
 }
 
@@ -353,8 +465,6 @@ func TestProcessUpdatedNodes(t *testing.T) {
 // =============================================================================
 
 func TestApproveUpdates(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("approves waiting node when all nodes ready", func(t *testing.T) {
 		ng := newNodeGroup("worker", v1.NodeTypeStatic, withStatus(3, 3, 3))
 		node1 := newNode("worker-1", "worker",
@@ -366,18 +476,11 @@ func TestApproveUpdates(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode.Annotations[ApprovedAnnotation]
-		_, hasWaiting := updatedNode.Annotations[WaitingForApprovalAnnotation]
-		assert.True(t, hasApproved, "should have approved annotation")
-		assert.False(t, hasWaiting, "should not have waiting annotation")
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, ApprovedAnnotation), "should have approved annotation")
+		assert.False(t, hasAnnotation(updated, WaitingForApprovalAnnotation), "should not have waiting annotation")
 	})
 
 	t.Run("respects maxConcurrent limit", func(t *testing.T) {
@@ -385,12 +488,10 @@ func TestApproveUpdates(t *testing.T) {
 			withStatus(3, 3, 3),
 			withMaxConcurrent(intstr.FromInt(1)),
 		)
-		// One node already approved
 		node1 := newNode("worker-1", "worker",
 			withAnnotation(ApprovedAnnotation, ""),
 			withReady(true),
 		)
-		// Two nodes waiting
 		node2 := newNode("worker-2", "worker",
 			withAnnotation(WaitingForApprovalAnnotation, ""),
 			withReady(true),
@@ -402,17 +503,10 @@ func TestApproveUpdates(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		// node2 and node3 should still be waiting (maxConcurrent=1, already 1 approved)
-		var updatedNode2 corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-2"}, &updatedNode2)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode2.Annotations[ApprovedAnnotation]
-		assert.False(t, hasApproved, "should not be approved due to concurrency limit")
+		n2 := getNode(t, c, "worker-2")
+		assert.False(t, hasAnnotation(n2, ApprovedAnnotation), "should not be approved due to concurrency limit")
 	})
 
 	t.Run("approves not-ready node when some nodes are not ready", func(t *testing.T) {
@@ -423,23 +517,16 @@ func TestApproveUpdates(t *testing.T) {
 		)
 		node2 := newNode("worker-2", "worker",
 			withAnnotation(WaitingForApprovalAnnotation, ""),
-			withReady(false), // Not ready
+			withReady(false),
 		)
 		node3 := newNode("worker-3", "worker", withReady(true))
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		// Not-ready node should be approved first
-		var updatedNode2 corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-2"}, &updatedNode2)
-		require.NoError(t, err)
-
-		_, hasApproved := updatedNode2.Annotations[ApprovedAnnotation]
-		assert.True(t, hasApproved, "not-ready node should be approved first")
+		n2 := getNode(t, c, "worker-2")
+		assert.True(t, hasAnnotation(n2, ApprovedAnnotation), "not-ready node should be approved")
 	})
 
 	t.Run("CloudEphemeral does not approve when desired > ready", func(t *testing.T) {
@@ -452,16 +539,74 @@ func TestApproveUpdates(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node1, node2, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		n1 := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(n1, ApprovedAnnotation),
+			"should not approve when desired > ready for CloudEphemeral")
+	})
 
-		var updatedNode1 corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode1)
-		require.NoError(t, err)
+	t.Run("CloudEphemeral approves when desired <= ready and all ready", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeCloudEphemeral, withStatus(2, 3, 3))
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withReady(true),
+		)
+		node2 := newNode("worker-2", "worker", withReady(true))
+		node3 := newNode("worker-3", "worker", withReady(true))
+		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
-		_, hasApproved := updatedNode1.Annotations[ApprovedAnnotation]
-		assert.False(t, hasApproved, "should not approve when desired > ready for CloudEphemeral")
+		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
+		reconcileNG(t, r, "worker")
+
+		n1 := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(n1, ApprovedAnnotation),
+			"should approve when desired <= ready for CloudEphemeral")
+	})
+
+	t.Run("does not approve when no nodes waiting", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic, withStatus(3, 3, 3))
+		node1 := newNode("worker-1", "worker", withReady(true))
+		node2 := newNode("worker-2", "worker", withReady(true))
+		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
+
+		r, c := setupTestReconciler(ng, node1, node2, secret)
+		reconcileNG(t, r, "worker")
+
+		n1 := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(n1, ApprovedAnnotation), "no nodes should be approved")
+	})
+
+	t.Run("approves multiple nodes up to concurrency", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic,
+			withStatus(3, 3, 3),
+			withMaxConcurrent(intstr.FromInt(2)),
+		)
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withReady(true),
+		)
+		node2 := newNode("worker-2", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withReady(true),
+		)
+		node3 := newNode("worker-3", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
+
+		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
+		reconcileNG(t, r, "worker")
+
+		approved := 0
+		for _, name := range []string{"worker-1", "worker-2", "worker-3"} {
+			n := getNode(t, c, name)
+			if hasAnnotation(n, ApprovedAnnotation) {
+				approved++
+			}
+		}
+		assert.Equal(t, 2, approved, "should approve exactly 2 nodes")
 	})
 }
 
@@ -470,8 +615,6 @@ func TestApproveUpdates(t *testing.T) {
 // =============================================================================
 
 func TestApproveDisruptions(t *testing.T) {
-	ctx := context.Background()
-
 	t.Run("approves disruption in Automatic mode without drain", func(t *testing.T) {
 		drainBefore := false
 		ng := newNodeGroup("worker", v1.NodeTypeStatic,
@@ -485,18 +628,11 @@ func TestApproveDisruptions(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasDisruptionApproved := updatedNode.Annotations[DisruptionApprovedAnnotation]
-		_, hasDisruptionRequired := updatedNode.Annotations[DisruptionRequiredAnnotation]
-		assert.True(t, hasDisruptionApproved, "should have disruption-approved")
-		assert.False(t, hasDisruptionRequired, "should not have disruption-required")
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, DisruptionApprovedAnnotation), "should have disruption-approved")
+		assert.False(t, hasAnnotation(updated, DisruptionRequiredAnnotation), "should not have disruption-required")
 	})
 
 	t.Run("starts draining in Automatic mode with drain enabled", func(t *testing.T) {
@@ -514,16 +650,10 @@ func TestApproveDisruptions(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		draining := updatedNode.Annotations[DrainingAnnotation]
-		assert.Equal(t, "bashible", draining, "should have draining annotation")
+		updated := getNode(t, c, "worker-1")
+		assert.Equal(t, "bashible", updated.Annotations[DrainingAnnotation], "should have draining annotation")
 	})
 
 	t.Run("approves disruption when already drained", func(t *testing.T) {
@@ -541,16 +671,11 @@ func TestApproveDisruptions(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasDisruptionApproved := updatedNode.Annotations[DisruptionApprovedAnnotation]
-		assert.True(t, hasDisruptionApproved, "should have disruption-approved when already drained")
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, DisruptionApprovedAnnotation),
+			"should have disruption-approved when already drained")
 	})
 
 	t.Run("does not approve disruption in Manual mode", func(t *testing.T) {
@@ -565,18 +690,13 @@ func TestApproveDisruptions(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
-
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
-
-		_, hasDisruptionApproved := updatedNode.Annotations[DisruptionApprovedAnnotation]
-		_, hasDisruptionRequired := updatedNode.Annotations[DisruptionRequiredAnnotation]
-		assert.False(t, hasDisruptionApproved, "should not have disruption-approved in Manual mode")
-		assert.True(t, hasDisruptionRequired, "should still have disruption-required in Manual mode")
+		updated := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(updated, DisruptionApprovedAnnotation),
+			"should not have disruption-approved in Manual mode")
+		assert.True(t, hasAnnotation(updated, DisruptionRequiredAnnotation),
+			"should still have disruption-required in Manual mode")
 	})
 
 	t.Run("skips node already being drained", func(t *testing.T) {
@@ -593,17 +713,47 @@ func TestApproveDisruptions(t *testing.T) {
 		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
 		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
 
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		updated := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(updated, DisruptionApprovedAnnotation),
+			"should not approve while draining")
+	})
 
-		var updatedNode corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode)
-		require.NoError(t, err)
+	t.Run("skips node without approved annotation", func(t *testing.T) {
+		drainBefore := false
+		ng := newNodeGroup("worker", v1.NodeTypeStatic,
+			withDisruptions("Automatic", &drainBefore),
+		)
+		node := newNode("worker-1", "worker",
+			withAnnotation(DisruptionRequiredAnnotation, ""),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
 
-		// Should not have changed
-		_, hasDisruptionApproved := updatedNode.Annotations[DisruptionApprovedAnnotation]
-		assert.False(t, hasDisruptionApproved, "should not approve while draining")
+		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
+
+		updated := getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(updated, DisruptionApprovedAnnotation),
+			"should not approve disruption without approved annotation")
+	})
+
+	t.Run("default approval mode is Automatic", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic)
+		node := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withAnnotation(DisruptionRequiredAnnotation, ""),
+			withReady(true),
+		)
+		secret := newChecksumSecret(map[string]string{"worker": "checksum"})
+
+		r, c := setupTestReconciler(ng, node, secret)
+		reconcileNG(t, r, "worker")
+
+		updated := getNode(t, c, "worker-1")
+		assert.Equal(t, "bashible", updated.Annotations[DrainingAnnotation],
+			"default mode Automatic should start draining")
 	})
 }
 
@@ -612,13 +762,14 @@ func TestApproveDisruptions(t *testing.T) {
 // =============================================================================
 
 func TestNeedDrainNode(t *testing.T) {
+	ctx := context.Background()
+
 	t.Run("single master node should not be drained", func(t *testing.T) {
 		r := &Reconciler{}
 		ng := newNodeGroup("master", v1.NodeTypeStatic, withStatus(1, 1, 1))
 		node := &nodeInfo{Name: "master-0", NodeGroup: "master"}
 
-		result := r.needDrainNode(node, ng)
-		assert.False(t, result, "single master should not be drained")
+		assert.False(t, r.needDrainNode(ctx, node, ng), "single master should not be drained")
 	})
 
 	t.Run("deckhouse node should not be drained when only ready node", func(t *testing.T) {
@@ -626,8 +777,7 @@ func TestNeedDrainNode(t *testing.T) {
 		ng := newNodeGroup("worker", v1.NodeTypeStatic, withStatus(2, 1, 2))
 		node := &nodeInfo{Name: "worker-1", NodeGroup: "worker"}
 
-		result := r.needDrainNode(node, ng)
-		assert.False(t, result, "deckhouse node should not be drained when only ready node")
+		assert.False(t, r.needDrainNode(ctx, node, ng), "deckhouse node should not be drained when only ready node")
 	})
 
 	t.Run("deckhouse node can be drained when multiple ready nodes", func(t *testing.T) {
@@ -639,8 +789,7 @@ func TestNeedDrainNode(t *testing.T) {
 		)
 		node := &nodeInfo{Name: "worker-1", NodeGroup: "worker"}
 
-		result := r.needDrainNode(node, ng)
-		assert.True(t, result, "deckhouse node can be drained when multiple ready nodes")
+		assert.True(t, r.needDrainNode(ctx, node, ng), "deckhouse node can be drained when multiple ready nodes")
 	})
 
 	t.Run("respects DrainBeforeApproval=false", func(t *testing.T) {
@@ -651,8 +800,27 @@ func TestNeedDrainNode(t *testing.T) {
 		)
 		node := &nodeInfo{Name: "worker-1", NodeGroup: "worker"}
 
-		result := r.needDrainNode(node, ng)
-		assert.False(t, result, "should not drain when DrainBeforeApproval=false")
+		assert.False(t, r.needDrainNode(ctx, node, ng), "should not drain when DrainBeforeApproval=false")
+	})
+
+	t.Run("defaults to true when no disruptions spec", func(t *testing.T) {
+		r := &Reconciler{}
+		ng := newNodeGroup("worker", v1.NodeTypeStatic, withStatus(3, 3, 3))
+		node := &nodeInfo{Name: "worker-1", NodeGroup: "worker"}
+
+		assert.True(t, r.needDrainNode(ctx, node, ng), "should default to drain=true")
+	})
+
+	t.Run("multi-master can be drained", func(t *testing.T) {
+		r := &Reconciler{}
+		drainBefore := true
+		ng := newNodeGroup("master", v1.NodeTypeStatic,
+			withStatus(3, 3, 3),
+			withDisruptions("Automatic", &drainBefore),
+		)
+		node := &nodeInfo{Name: "master-0", NodeGroup: "master"}
+
+		assert.True(t, r.needDrainNode(ctx, node, ng), "multi-master nodes can be drained")
 	})
 }
 
@@ -665,10 +833,8 @@ func TestBuildNodeInfo(t *testing.T) {
 		r := &Reconciler{}
 		node := &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "worker-1",
-				Labels: map[string]string{
-					NodeGroupLabel: "worker",
-				},
+				Name:   "worker-1",
+				Labels: map[string]string{NodeGroupLabel: "worker"},
 				Annotations: map[string]string{
 					ConfigurationChecksumAnnotation: "abc123",
 					ApprovedAnnotation:              "",
@@ -680,14 +846,8 @@ func TestBuildNodeInfo(t *testing.T) {
 					DrainedAnnotation:               "bashible",
 				},
 			},
-			Spec: corev1.NodeSpec{
-				Unschedulable: true,
-			},
-			Status: corev1.NodeStatus{
-				Conditions: []corev1.NodeCondition{
-					{Type: corev1.NodeReady, Status: corev1.ConditionTrue},
-				},
-			},
+			Spec:   corev1.NodeSpec{Unschedulable: true},
+			Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionTrue}}},
 		}
 
 		info := r.buildNodeInfo(node)
@@ -710,37 +870,183 @@ func TestBuildNodeInfo(t *testing.T) {
 		r := &Reconciler{}
 		node := &corev1.Node{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "worker-1",
-				Labels: map[string]string{
-					NodeGroupLabel: "worker",
-				},
+				Name:   "worker-1",
+				Labels: map[string]string{NodeGroupLabel: "worker"},
 			},
-			Status: corev1.NodeStatus{
-				Conditions: []corev1.NodeCondition{
-					{Type: corev1.NodeReady, Status: corev1.ConditionFalse},
-				},
-			},
+			Status: corev1.NodeStatus{Conditions: []corev1.NodeCondition{{Type: corev1.NodeReady, Status: corev1.ConditionFalse}}},
 		}
 
 		info := r.buildNodeInfo(node)
 
-		assert.Equal(t, "worker-1", info.Name)
-		assert.Equal(t, "worker", info.NodeGroup)
-		assert.Empty(t, info.ConfigurationChecksum)
 		assert.False(t, info.IsApproved)
 		assert.False(t, info.IsWaitingForApproval)
-		assert.False(t, info.IsDisruptionRequired)
-		assert.False(t, info.IsDisruptionApproved)
-		assert.False(t, info.IsRollingUpdate)
 		assert.False(t, info.IsDraining)
 		assert.False(t, info.IsDrained)
-		assert.False(t, info.IsUnschedulable)
 		assert.False(t, info.IsReady)
+	})
+
+	t.Run("ignores non-bashible draining annotation", func(t *testing.T) {
+		r := &Reconciler{}
+		node := &corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "worker-1",
+				Labels:      map[string]string{NodeGroupLabel: "worker"},
+				Annotations: map[string]string{DrainingAnnotation: "other", DrainedAnnotation: "other"},
+			},
+		}
+
+		info := r.buildNodeInfo(node)
+		assert.False(t, info.IsDraining)
+		assert.False(t, info.IsDrained)
 	})
 }
 
 // =============================================================================
-// Integration test
+// Tests for calculateNodeStatus (metrics)
+// =============================================================================
+
+func TestCalculateNodeStatus(t *testing.T) {
+	ng := newNodeGroup("worker", v1.NodeTypeStatic)
+	ngManual := newNodeGroup("worker", v1.NodeTypeStatic, withDisruptions("Manual", nil))
+
+	tests := []struct {
+		name     string
+		node     nodeInfo
+		ng       *v1.NodeGroup
+		checksum string
+		expected string
+	}{
+		{"WaitingForApproval", nodeInfo{IsWaitingForApproval: true}, ng, "abc", "WaitingForApproval"},
+		{"DrainingForDisruption", nodeInfo{IsApproved: true, IsDisruptionRequired: true, IsDraining: true}, ng, "abc", "DrainingForDisruption"},
+		{"Draining", nodeInfo{IsDraining: true}, ng, "abc", "Draining"},
+		{"Drained", nodeInfo{IsDrained: true}, ng, "abc", "Drained"},
+		{"WaitingForDisruptionApproval", nodeInfo{IsApproved: true, IsDisruptionRequired: true}, ng, "abc", "WaitingForDisruptionApproval"},
+		{"WaitingForManualDisruptionApproval", nodeInfo{IsApproved: true, IsDisruptionRequired: true}, ngManual, "abc", "WaitingForManualDisruptionApproval"},
+		{"DisruptionApproved", nodeInfo{IsApproved: true, IsDisruptionApproved: true}, ng, "abc", "DisruptionApproved"},
+		{"Approved", nodeInfo{IsApproved: true}, ng, "abc", "Approved"},
+		{"UpdateFailedNoConfigChecksum", nodeInfo{ConfigurationChecksum: ""}, ng, "abc", "UpdateFailedNoConfigChecksum"},
+		{"ToBeUpdated", nodeInfo{ConfigurationChecksum: "old"}, ng, "new", "ToBeUpdated"},
+		{"UpToDate", nodeInfo{ConfigurationChecksum: "abc"}, ng, "abc", "UpToDate"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, calculateNodeStatus(tt.node, tt.ng, tt.checksum))
+		})
+	}
+}
+
+// =============================================================================
+// Tests for getConfigurationChecksums
+// =============================================================================
+
+func TestGetConfigurationChecksums(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns checksums from secret", func(t *testing.T) {
+		secret := newChecksumSecret(map[string]string{"worker": "cs1", "master": "cs2"})
+		r, _ := setupTestReconciler(secret)
+
+		checksums, err := r.getConfigurationChecksums(ctx)
+		require.NoError(t, err)
+		assert.Equal(t, "cs1", checksums["worker"])
+		assert.Equal(t, "cs2", checksums["master"])
+	})
+
+	t.Run("returns nil when secret not found", func(t *testing.T) {
+		r, _ := setupTestReconciler()
+
+		checksums, err := r.getConfigurationChecksums(ctx)
+		require.NoError(t, err)
+		assert.Nil(t, checksums)
+	})
+}
+
+// =============================================================================
+// Tests for Reconcile edge cases
+// =============================================================================
+
+func TestReconcileEdgeCases(t *testing.T) {
+	t.Run("skips when nodegroup not found", func(t *testing.T) {
+		r, _ := setupTestReconciler()
+		_, err := r.Reconcile(context.Background(), ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: "nonexistent"},
+		})
+		require.NoError(t, err)
+	})
+
+	t.Run("skips when no checksums secret", func(t *testing.T) {
+		ng := newNodeGroup("worker", v1.NodeTypeStatic)
+		node := newNode("worker-1", "worker",
+			withAnnotation(WaitingForApprovalAnnotation, ""),
+			withReady(true),
+		)
+
+		r, c := setupTestReconciler(ng, node)
+		reconcileNG(t, r, "worker")
+
+		updated := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(updated, WaitingForApprovalAnnotation),
+			"node should be unchanged when no checksums secret")
+	})
+
+	t.Run("handles nodegroup with no nodes", func(t *testing.T) {
+		ng := newNodeGroup("empty", v1.NodeTypeStatic)
+		secret := newChecksumSecret(map[string]string{"empty": "checksum"})
+
+		r, _ := setupTestReconciler(ng, secret)
+		_, err := r.Reconcile(context.Background(), ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: "empty"},
+		})
+		require.NoError(t, err)
+	})
+}
+
+// =============================================================================
+// Tests for isInAllowedWindow
+// =============================================================================
+
+func TestIsInAllowedWindow(t *testing.T) {
+	t.Run("empty windows always allowed", func(t *testing.T) {
+		assert.True(t, isInAllowedWindow(nil, fixedTime()))
+		assert.True(t, isInAllowedWindow([]v1.DisruptionWindow{}, fixedTime()))
+	})
+
+	t.Run("within window", func(t *testing.T) {
+		windows := []v1.DisruptionWindow{{From: "13:00", To: "14:00"}}
+		assert.True(t, isInAllowedWindow(windows, fixedTime()))
+	})
+
+	t.Run("outside window", func(t *testing.T) {
+		windows := []v1.DisruptionWindow{{From: "14:00", To: "15:00"}}
+		assert.False(t, isInAllowedWindow(windows, fixedTime()))
+	})
+
+	t.Run("midnight crossing window", func(t *testing.T) {
+		windows := []v1.DisruptionWindow{{From: "23:00", To: "02:00"}}
+		midnight := time.Date(2021, 1, 13, 0, 30, 0, 0, time.UTC)
+		assert.True(t, isInAllowedWindow(windows, midnight))
+	})
+
+	t.Run("invalid time format returns false", func(t *testing.T) {
+		windows := []v1.DisruptionWindow{{From: "invalid", To: "15:00"}}
+		assert.False(t, isInAllowedWindow(windows, fixedTime()))
+	})
+
+	t.Run("day of week match", func(t *testing.T) {
+		// fixedTime is Wednesday
+		windows := []v1.DisruptionWindow{{From: "13:00", To: "14:00", Days: []string{"Wednesday"}}}
+		assert.True(t, isInAllowedWindow(windows, fixedTime()))
+	})
+
+	t.Run("day of week mismatch", func(t *testing.T) {
+		windows := []v1.DisruptionWindow{{From: "13:00", To: "14:00", Days: []string{"Monday"}}}
+		assert.False(t, isInAllowedWindow(windows, fixedTime()))
+	})
+}
+
+// =============================================================================
+// Integration tests
 // =============================================================================
 
 func TestFullWorkflow(t *testing.T) {
@@ -753,64 +1059,87 @@ func TestFullWorkflow(t *testing.T) {
 			withDisruptions("Automatic", &drainBefore),
 			withMaxConcurrent(intstr.FromInt(1)),
 		)
-
-		// Node waiting for approval
 		node1 := newNode("worker-1", "worker",
 			withAnnotation(WaitingForApprovalAnnotation, ""),
 			withChecksum("old"),
 			withReady(true),
 		)
-		node2 := newNode("worker-2", "worker",
-			withChecksum("current"),
-			withReady(true),
-		)
-		node3 := newNode("worker-3", "worker",
-			withChecksum("current"),
-			withReady(true),
-		)
+		node2 := newNode("worker-2", "worker", withChecksum("current"), withReady(true))
+		node3 := newNode("worker-3", "worker", withChecksum("current"), withReady(true))
 		secret := newChecksumSecret(map[string]string{"worker": "current"})
 
 		r, c := setupTestReconciler(ng, node1, node2, node3, secret)
 
-		// First reconcile: should approve node1
-		_, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		// Step 1: approve node1
+		reconcileNG(t, r, "worker")
+		n1 := getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(n1, ApprovedAnnotation), "node should be approved")
+		assert.False(t, hasAnnotation(n1, WaitingForApprovalAnnotation), "waiting should be removed")
 
-		var updatedNode1 corev1.Node
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode1)
-		require.NoError(t, err)
+		// Simulate: bashible sets disruption-required
+		n1.Annotations[DisruptionRequiredAnnotation] = ""
+		require.NoError(t, c.Update(ctx, &n1))
 
-		_, hasApproved := updatedNode1.Annotations[ApprovedAnnotation]
-		assert.True(t, hasApproved, "node should be approved")
+		// Step 2: approve disruption
+		reconcileNG(t, r, "worker")
+		n1 = getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(n1, DisruptionApprovedAnnotation), "disruption should be approved")
 
-		// Simulate node update: add disruption-required
-		updatedNode1.Annotations[DisruptionRequiredAnnotation] = ""
-		err = c.Update(ctx, &updatedNode1)
-		require.NoError(t, err)
+		// Simulate: node update completes, checksum matches
+		n1.Annotations[ConfigurationChecksumAnnotation] = "current"
+		require.NoError(t, c.Update(ctx, &n1))
 
-		// Second reconcile: should approve disruption
-		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		// Step 3: mark UpToDate
+		reconcileNG(t, r, "worker")
+		n1 = getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(n1, ApprovedAnnotation), "approved should be removed")
+		assert.False(t, hasAnnotation(n1, DisruptionApprovedAnnotation), "disruption-approved should be removed")
+	})
 
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode1)
-		require.NoError(t, err)
+	t.Run("complete drain workflow", func(t *testing.T) {
+		drainBefore := true
+		ng := newNodeGroup("worker", v1.NodeTypeStatic,
+			withStatus(3, 3, 3),
+			withDisruptions("Automatic", &drainBefore),
+			withMaxConcurrent(intstr.FromInt(1)),
+		)
+		node1 := newNode("worker-1", "worker",
+			withAnnotation(ApprovedAnnotation, ""),
+			withAnnotation(DisruptionRequiredAnnotation, ""),
+			withChecksum("old"),
+			withReady(true),
+			withUnschedulable(false),
+		)
+		node2 := newNode("worker-2", "worker", withChecksum("current"), withReady(true))
+		secret := newChecksumSecret(map[string]string{"worker": "current"})
 
-		_, hasDisruptionApproved := updatedNode1.Annotations[DisruptionApprovedAnnotation]
-		assert.True(t, hasDisruptionApproved, "disruption should be approved")
+		r, c := setupTestReconciler(ng, node1, node2, secret)
 
-		// Simulate node becoming up to date
-		updatedNode1.Annotations[ConfigurationChecksumAnnotation] = "current"
-		err = c.Update(ctx, &updatedNode1)
-		require.NoError(t, err)
+		// Step 1: start draining
+		reconcileNG(t, r, "worker")
+		n1 := getNode(t, c, "worker-1")
+		assert.Equal(t, "bashible", n1.Annotations[DrainingAnnotation], "should start draining")
 
-		// Third reconcile: should mark as UpToDate
-		_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: types.NamespacedName{Name: "worker"}})
-		require.NoError(t, err)
+		// Simulate: bashible completes drain
+		delete(n1.Annotations, DrainingAnnotation)
+		n1.Annotations[DrainedAnnotation] = "bashible"
+		n1.Spec.Unschedulable = true
+		require.NoError(t, c.Update(ctx, &n1))
 
-		err = c.Get(ctx, types.NamespacedName{Name: "worker-1"}, &updatedNode1)
-		require.NoError(t, err)
+		// Step 2: approve disruption
+		reconcileNG(t, r, "worker")
+		n1 = getNode(t, c, "worker-1")
+		assert.True(t, hasAnnotation(n1, DisruptionApprovedAnnotation), "disruption should be approved after drain")
 
-		_, hasApproved = updatedNode1.Annotations[ApprovedAnnotation]
-		assert.False(t, hasApproved, "approved should be removed when up to date")
+		// Simulate: node update completes
+		n1.Annotations[ConfigurationChecksumAnnotation] = "current"
+		require.NoError(t, c.Update(ctx, &n1))
+
+		// Step 3: mark UpToDate, uncordon
+		reconcileNG(t, r, "worker")
+		n1 = getNode(t, c, "worker-1")
+		assert.False(t, hasAnnotation(n1, ApprovedAnnotation), "approved should be removed")
+		assert.False(t, n1.Spec.Unschedulable, "node should be uncordoned")
+		assert.False(t, hasAnnotation(n1, DrainedAnnotation), "drained should be removed")
 	})
 }
