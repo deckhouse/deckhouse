@@ -619,52 +619,86 @@ DKP поддерживает проверку подписей образов к
 
 Чтобы подписать образ с помощью Cosign, выполните следующее:
 
-1. Сгенерируйте пару ключей:
+1. Сгенерируйте пару ключей (публичный и приватный):
 
    ```shell
    cosign generate-key-pair
    ```
 
-1. Подпишите образ:
+1. Подпишите образ в хранилище образов контейнеров с помощью сгенерированного приватного ключа:
 
    ```shell
-   cosign sign --key <KEY> <IMAGE>
+   cosign sign --key <KEY> <REGISTRY_IMAGE_PATH>
    ```
 
-Чтобы включить проверку подписи образов контейнеров в кластере DKP,
-используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+   Здесь:
+   - <REGISTRY_IMAGE_PATH> — путь к образу, который нужно указать при запуске, например: registry.private.ru/labs/application/image:latest.
 
-Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров:
+1. Чтобы включить проверку подписи образов контейнеров в кластере DKP,
+используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy, указав публичный ключ, сгенерированный на шаге 1.
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: verify-image-signatures
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: default
-  policies:
-    verifyImageSignatures:
-      - reference: docker.io/myrepo/*
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-      - reference: company.registry.com/*
-        dockerCfg: zxc==
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-```
+    Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров в хранилище registry.private.ru, размещенные по пути /labs/application/:
+    
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: verify-image-test
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: test-namespace
+      policies:
+        allowHostIPC: true
+        allowHostNetwork: true
+        allowHostPID: false
+        allowPrivilegeEscalation: true
+        allowPrivileged: false
+        allowRbacWildcards: true
+        verifyImageSignatures:
+          - publicKeys:
+              - |-
+                -----BEGIN PUBLIC KEY-----
+                MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhpqaufY9JSY+g4JZmmEWCxYp4BSj
+                YAzTW+LBJa6GwiJ+iWHMEw2w8aiVk7NSayEp5ZDZaBTmspT/dyuWSpazPQ==
+                -----END PUBLIC KEY-----
+            reference: registry.private.ru/labs/application/*
+    ```
+
+1. Создайте ресурс OperationPolicy, ограничивающий запуск подов со сторонних registry:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: test-operation-policy
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              operation-policy.deckhouse.io/enabled: "true"
+    policies:
+      allowedRepos:
+      - registry.private.ru
+    ```
+
+1. Добавьте метку на пространство имен, где необходимо включить проверку подписи командой (укажите нужное пространство имён):
+
+    ```shell
+    kubectl label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+    ```
+
+1. Для проверки работы механизма подписи образов разверните поды в пространстве имён, с подписанным и неподписанным образами (укажите нужное пространство имен и ):
+
+    ```shell
+    kubectl  -n <NAMESPACE> run signed-pod --image=<ПОДПИСАННЫЙ_ОБРАЗ>
+    kubectl  -n <NAMESPACE> run unsigned-pod --image=<НЕПОДПИСАННЫЙ_ОБРАЗ>
+    ```
 
 Согласно данной политике, если адрес какого-либо образа контейнера совпадает со значением параметра `reference`
 и образ не подписан или подпись не соответствует указанным ключам, создание пода будет запрещено.

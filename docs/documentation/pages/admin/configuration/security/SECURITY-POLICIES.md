@@ -612,54 +612,87 @@ Verification ensures image integrity and authenticity.
 
 To sign an image with Cosign, do the following:
 
-1. Generate a key pair:
+1. Generate a key pair (public and private):
 
    ```shell
    cosign generate-key-pair
    ```
 
-1. Sign the image:
+1. Sign the image in the container image store using the generated private key:
 
    ```shell
-   cosign sign --key <KEY> <IMAGE>
+   cosign sign --key <KEY> <REGISTRY_IMAGE_PATH>
    ```
+    Here:
+    - <REGISTRY_IMAGE_PATH> is the path to the image that needs to be specified at startup, for example: registry.private.ru/labs/application/image:latest.
 
-To enable container image signature verification in a DKP cluster,
-use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
-of the SecurityPolicy resource.
+  1. To enable container image signature verification in a DKP cluster,
+  use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
+  of the SecurityPolicy resource, specifying the public key generated in step 1.
 
-Example SecurityPolicy configuration for verifying container image signatures:
+   Example SecurityPolicy configuration for verifying container image signatures:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: verify-image-signatures
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: default
-  policies:
-    verifyImageSignatures:
-      - reference: docker.io/myrepo/*
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-      - reference: company.registry.com/*
-        dockerCfg: zxc==
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-```
+   ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: verify-image-test
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: test-namespace
+      policies:
+        allowHostIPC: true
+        allowHostNetwork: true
+        allowHostPID: false
+        allowPrivilegeEscalation: true
+        allowPrivileged: false
+        allowRbacWildcards: true
+        verifyImageSignatures:
+          - publicKeys:
+              - |-
+                -----BEGIN PUBLIC KEY-----
+                MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhpqaufY9JSY+g4JZmmEWCxYp4BSj
+                YAzTW+LBJa6GwiJ+iWHMEw2w8aiVk7NSayEp5ZDZaBTmspT/dyuWSpazPQ==
+                -----END PUBLIC KEY-----
+            reference: registry.private.ru/labs/application/*
+     ```
 
+1. Create an OperationPolicy resource that restricts pod launches from third-party registries:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: OperationPolicy
+    metadata:
+      name: test-operation-policy
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              operation-policy.deckhouse.io/enabled: "true"
+    policies:
+      allowedRepos:
+      - registry.private.ru
+    ```
+
+1. Add a label to the namespace where you want to enable signature verification with the command (specify the desired namespace):
+
+    ```shell
+    kubectl label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+    ```
+
+1. To test the image signing mechanism, deploy pods in a namespace with signed and unsigned images (specify the desired namespace):
+
+    ```shell
+    kubectl  -n <NAMESPACE> run signed-pod --image=<SIGNED_IMAGE>
+    kubectl  -n <NAMESPACE> run unsigned-pod --image=<UNSIGNED_IMAGE>
+    ```
+   
 With this policy, if a container image address matches the value of the `reference` parameter
 and the image is unsigned or the signature does not match the specified keys, Pod creation will be denied.
 
