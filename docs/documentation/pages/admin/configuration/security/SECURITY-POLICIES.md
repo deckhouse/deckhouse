@@ -623,12 +623,13 @@ To sign an image with Cosign, do the following:
    ```shell
    cosign sign --key <KEY> <REGISTRY_IMAGE_PATH>
    ```
+
     Here:
     - <REGISTRY_IMAGE_PATH> is the path to the image that needs to be specified at startup, for example: registry.private.ru/labs/application/image:latest.
 
-  1. To enable container image signature verification in a DKP cluster,
-  use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
-  of the SecurityPolicy resource, specifying the public key generated in step 1.
+1. To enable container image signature verification in a DKP cluster,
+use the [`policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter
+of the SecurityPolicy resource, specifying the public key generated in step 1.
 
    Example SecurityPolicy configuration for verifying container image signatures:
 

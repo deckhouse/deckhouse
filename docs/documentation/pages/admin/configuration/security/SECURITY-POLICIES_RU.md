@@ -638,7 +638,7 @@ DKP поддерживает проверку подписей образов к
 используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy, указав публичный ключ, сгенерированный на шаге 1.
 
     Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров в хранилище registry.private.ru, размещенные по пути /labs/application/:
-    
+
     ```yaml
     apiVersion: deckhouse.io/v1alpha1
     kind: SecurityPolicy
