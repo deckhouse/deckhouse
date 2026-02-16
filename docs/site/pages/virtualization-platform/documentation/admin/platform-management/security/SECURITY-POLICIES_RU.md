@@ -440,57 +440,109 @@ Gatekeeper предоставляет расширенные возможнос�
 Доступно только в DVP Enterprise edition.
 {% endalert %}
 
-DVP поддерживает проверку подписей образов контейнеров с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
-Проверка позволяет убедиться в целостности и подлинности образов.
+DVP поддерживает проверку подписей образов контейнеров с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).  
+Проверка позволяет убедиться в целостности и подлинности образов.  
+
+Подпись образов осуществляется путем создания специального тега в хранилище образов контейнеров, который содержит подпись образа.  
+Подпись формируется для digest'а (хэш-суммы) вашего образа.
+Если ваш образ: `my-repo/app:latest` с хэшем `sha256:abc123EXAMPLE`, то в хранилище образов появится тег: `my-repo/app:sha256-abc123EXAMPLE.sig`
+
+Таким образом, процесс подписи образа заключается в расчете и публикации дополнительного тэга в хранилище образов контейнеров, без изменения существующего образа.  
+После подписания образа повторная отправка (push) в хранилище образов не требуется. Необходимо только авторизоваться в хранилище образов контейнеров с правами записи.
+
+{% alert level="warning" %}
+Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
+{% endalert %}
 
 Чтобы подписать образ с помощью Cosign, выполните следующее:
 
-1. Сгенерируйте пару ключей:
+1. Убедитесь что версия cosign находится среди поддерживаемых:
+
+   ```shell
+   cosign version
+   ```
+
+1. Сгенерируйте пару ключей (публичный и приватный):
 
    ```shell
    cosign generate-key-pair
    ```
 
-1. Подпишите образ:
+1. Подпишите образ в хранилище образов контейнеров с помощью сгенерированного приватного ключа:
 
    ```shell
-   cosign sign --key <KEY> <IMAGE>
+   cosign sign --key <KEY> <REGISTRY_IMAGE_PATH>
    ```
 
-Чтобы включить проверку подписи образов контейнеров в кластере DVP,
-используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy.
+   Здесь:
+   - <REGISTRY_IMAGE_PATH> — путь к образу, который нужно указать при запуске, например: registry.private.ru/labs/application/image:latest.
 
-Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров:
+Чтобы включить проверку подписи образов контейнеров в кластере DVP:
 
-```yaml
-apiVersion: deckhouse.io/v1alpha1
-kind: SecurityPolicy
-metadata:
-  name: verify-image-signatures
-spec:
-  match:
-    namespaceSelector:
-      labelSelector:
-        matchLabels:
-          kubernetes.io/metadata.name: default
-  policies:
-    verifyImageSignatures:
-      - reference: docker.io/myrepo/*
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-      - reference: company.registry.com/*
-        dockerCfg: zxc==
-        publicKeys:
-        - |-
-          -----BEGIN PUBLIC KEY-----
-          MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE8nXRh950IZbRj8Ra/N9sbqOPZrfM
-          5/KAQN0/KjHcorm/J5yctVd7iEcnessRQjU917hmKO6JWVGHpDguIyakZA==
-          -----END PUBLIC KEY-----
-```
+1. Используйте [параметр `policies.verifyImageSignatures`](/modules/admission-policy-engine/cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) ресурса SecurityPolicy, указав сгенерированный публичный ключ.
+
+   Пример конфигурации SecurityPolicy для проверки подписи образов контейнеров в хранилище registry.private.ru, размещенные по пути /labs/application/:
+
+    ```yaml
+    apiVersion: deckhouse.io/v1alpha1
+    kind: SecurityPolicy
+    metadata:
+      name: verify-image-test
+    spec:
+      enforcementAction: Deny
+      match:
+        namespaceSelector:
+          labelSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: test-namespace
+      policies:
+        allowHostIPC: true
+        allowHostNetwork: true
+        allowHostPID: false
+        allowPrivilegeEscalation: true
+        allowPrivileged: false
+        allowRbacWildcards: true
+        verifyImageSignatures:
+          - publicKeys:
+              - |-
+                -----BEGIN PUBLIC KEY-----
+                MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhpqaufY9JSY+g4JZmmEWCxYp4BSj
+                YAzTW+LBJa6GwiJ+iWHMEw2w8aiVk7NSayEp5ZDZaBTmspT/dyuWSpazPQ==
+                -----END PUBLIC KEY-----
+            reference: registry.private.ru/labs/application/*
+    ```
+
+1. Создайте ресурс OperationPolicy, ограничивающий запуск подов со сторонних registry:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: OperationPolicy
+   metadata:
+     name: test-operation-policy
+   spec:
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+           operation-policy.deckhouse.io/enabled: "true"
+     policies:
+       allowedRepos:
+       - registry.private.ru
+   ```
+
+1. Добавьте метку на пространство имен, где необходимо включить проверку подписи командой (укажите нужное пространство имён):
+
+   ```shell
+   kubectl label ns <NAMESPACE> security.deckhouse.io/verify-image-test=
+   ```
+
+1. Для проверки работы механизма подписи образов разверните поды в пространстве имён, с подписанным и неподписанным образами (укажите нужное пространство имён):
+
+    ```shell
+    kubectl  -n <NAMESPACE> run signed-pod --image=<ПОДПИСАННЫЙ_ОБРАЗ>
+    kubectl  -n <NAMESPACE> run unsigned-pod --image=<НЕПОДПИСАННЫЙ_ОБРАЗ>
+    ```
 
 Согласно данной политике, если адрес какого-либо образа контейнера совпадает со значением параметра `reference`
 и образ не подписан или подпись не соответствует указанным ключам, создание пода будет запрещено.

@@ -283,12 +283,26 @@ Then, in order to fulfill the requirements of the above security policies, the f
 
 The module implements a function for checking the signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Checking the signatures of container images allows you to ensure their integrity (that the image has not been modified since its creation) and authenticity (that the image was created by a trusted source). You can enable container image signature verification in the cluster using the [policies.verifyImageSignatures](cr.html#securitypolicy-v1alpha1-spec-policies-verifyimagesignatures) parameter of the SecurityPolicy resource.
 
+DKP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
+Verification ensures the integrity and authenticity of images.  
+
+Images are signed by creating a special tag in the container registry that contains the image signature.  
+The signature is generated for the digest (hash) of your image.  
+If your image is `my-repo/app:latest` with the hash `sha256:abc123EXAMPLE`, the tag `my-repo/app:sha256-abc123EXAMPLE.sig` will appear in the image store.
+
+Therefore, the image signing process consists of calculating and publishing an additional tag to the container registry, without modifying the existing image.  
+After signing the image, there is no need to push it to the image store again. You only need to log in to the container registry with write access.
+
 {% offtopic title="How to sign an image..." %}
 Steps to sign an image:
+- Make sure the cosign version is among the supported ones: `cosign generate-key-pair`
 - Generate keys: `cosign generate-key-pair`
 - Sign the image: `cosign sign --key <key> <image>`
 
 For more information on working with Cosign, you can check the [documentation](https://docs.sigstore.dev/cosign/key_management).
+
+> **Warning.** Cosign versions up to v2 are supported. Versions v3 and above are not supported.
+
 {% endofftopic %}
 
 Example of SecurityPolicy for configuring the signature verification of container images:
