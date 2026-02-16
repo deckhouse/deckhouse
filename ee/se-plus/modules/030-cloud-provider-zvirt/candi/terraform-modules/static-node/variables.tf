@@ -45,13 +45,11 @@ locals {
   ssh_pubkey = lookup(var.providerClusterConfiguration, "sshPublicKey", null)
   root_disk_size = lookup(local.instance_class, "rootDiskSizeGb", 50)*1024*1024*1024
 
-  use_cloud_config_network = lookup(local.instance_class, "customNetworkConfig", false)
-  custom_network_config = local.instance_class.customNetworkConfig ? [1] : []
-  custom_network_name = lookup(local.instance_class.customNetworkConfig, "networkInterfaceName", "")
+  custom_network_config  = can(local.instance_class.customNetworkConfig) ? [1] : []
+  custom_network_name    = try(local.instance_class.customNetworkConfig.networkInterfaceName, "")
   custom_network_address = try(local.instance_class.customNetworkConfig.networkInterfaceAddress[var.nodeIndex], "")
-  custom_network_netmask = lookup(local.instance_class.customNetworkConfig, "networkInterfaceNetmask", "")
-  custom_network_gateway = lookup(local.instance_class.customNetworkConfig, "networkInterfaceGateway", "")
-
+  custom_network_netmask = try(local.instance_class.customNetworkConfig.networkInterfaceNetmask, "")
+  custom_network_gateway = try(local.instance_class.customNetworkConfig.networkInterfaceGateway, "")
 
   cloud_init_script = yamlencode(merge({
     "hostname": local.node_name,
