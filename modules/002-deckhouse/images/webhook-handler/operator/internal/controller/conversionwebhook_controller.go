@@ -22,8 +22,10 @@ import (
 	"path/filepath"
 	"sync/atomic"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -155,16 +157,24 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 
 	r.isReloadShellNeed.Store(true)
 
-	// add finalizer
+	// add finalizers
+	needsUpdate := false
+	if !controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer) {
+		controllerutil.AddFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer)
+		needsUpdate = true
+	}
 	if !controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
-		r.logger.Debug("add finalizer")
 		controllerutil.AddFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
+		needsUpdate = true
+	}
 
+	if needsUpdate {
+		r.logger.Debug("add finalizers")
 		if err := r.client.Update(ctx, cwh); err != nil {
 			if removeErr := os.Remove(webhookFile); removeErr != nil {
 				r.logger.Warn("failed to cleanup webhook file", log.Err(removeErr))
 			}
-			return res, fmt.Errorf("add finalizer: %w", err)
+			return res, fmt.Errorf("add finalizers: %w", err)
 		}
 	}
 
@@ -174,6 +184,24 @@ func (r *ConversionWebhookReconciler) handleProcessConversionWebhook(ctx context
 func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.Context, cwh *deckhouseiov1alpha1.ConversionWebhook) (ctrl.Result, error) {
 	var res ctrl.Result
 
+	// Clean up the target CRD's conversion config before removing FS files.
+	// So it won't try to route conversion requests to a non-existent webhook.
+	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer) {
+		if err := r.cleanupCRDConversion(ctx, cwh.Name); err != nil {
+			return res, fmt.Errorf("cleanup CRD conversion for %s: %w", cwh.Name, err)
+		}
+
+		r.logger.Debug("remove crd-cleanup finalizer")
+		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookCRDCleanupFinalizer)
+		if err := r.client.Update(ctx, cwh); err != nil {
+			return res, fmt.Errorf("remove crd-cleanup finalizer for %s: %w", cwh.Name, err)
+		}
+
+		// Return so the next reconcile handles FS cleanup
+		return res, nil
+	}
+
+	// Clean up the filesystem.
 	webhookFile := r.webhookFilePath(cwh.Name)
 	if err := os.Remove(webhookFile); err != nil && !os.IsNotExist(err) {
 		return res, fmt.Errorf("delete webhook file %s: %w", webhookFile, err)
@@ -181,9 +209,9 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 
 	r.isReloadShellNeed.Store(true)
 
-	// remove finalizer
+	// remove exist-on-fs finalizer.
 	if controllerutil.ContainsFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer) {
-		r.logger.Debug("remove finalizer")
+		r.logger.Debug("remove exist-on-fs finalizer")
 		controllerutil.RemoveFinalizer(cwh, deckhouseiov1alpha1.ConversionWebhookFinalizer)
 
 		if err := r.client.Update(ctx, cwh); err != nil {
@@ -192,6 +220,36 @@ func (r *ConversionWebhookReconciler) handleDeleteConversionWebhook(ctx context.
 	}
 
 	return res, nil
+}
+
+// cleanupCRDConversion resets the target CRD's conversion strategy to None,
+// removing the webhook configuration that shell-operator had injected.
+func (r *ConversionWebhookReconciler) cleanupCRDConversion(ctx context.Context, crdName string) error {
+	crd := new(apiextensionsv1.CustomResourceDefinition)
+	err := r.client.Get(ctx, types.NamespacedName{Name: crdName}, crd)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Info("target CRD not found, skipping conversion cleanup", slog.String("crd_name", crdName))
+			return nil
+		}
+		return fmt.Errorf("get CRD %s: %w", crdName, err)
+	}
+
+	if crd.Spec.Conversion == nil || crd.Spec.Conversion.Strategy != apiextensionsv1.WebhookConverter {
+		r.logger.Debug("CRD has no webhook conversion, skipping cleanup", slog.String("crd_name", crdName))
+		return nil
+	}
+
+	r.logger.Info("resetting CRD conversion strategy to None", slog.String("crd_name", crdName))
+	crd.Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
+		Strategy: apiextensionsv1.NoneConverter,
+	}
+
+	if err := r.client.Update(ctx, crd); err != nil {
+		return fmt.Errorf("update CRD %s: %w", crdName, err)
+	}
+
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
