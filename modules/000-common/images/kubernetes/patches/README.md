@@ -52,10 +52,6 @@ The storage queries the aggregated extension API `authorization.deckhouse.io/v1a
 
 If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
 
-### set-usage-GOPROXY.patch
-
-Removes GOPROXY=off from the build so that our value is used when building the image.
-
 ### kubelet-inappropriate-manifest-name.patch
 
 This patch ensures that files like `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, or any other non-YAML files are not processed as static pod manifests,
@@ -63,3 +59,7 @@ this prevents kubelet from accidentally processing backup files or other non-man
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/55596
 - https://github.com/kubernetes/kubernetes/issues/129364 -> https://github.com/kubernetes/kubernetes/pull/105695
+
+### set-usage-GOPROXY.patch
+
+Removes GOPROXY=off from the build so that our value is used when building the image.
