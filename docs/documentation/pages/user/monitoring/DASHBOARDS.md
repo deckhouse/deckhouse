@@ -294,7 +294,7 @@ spec:
 
 When using this method, consider the following limitations:
 
-- System dashboards and dashboards added via GrafanaDashboardDefinition cannot be modified through the Grafana UI.
+- Dashboards added via GrafanaDashboardDefinition cannot be modified through the Grafana UI.
 
 - Alerts configured in the Dashboard panel do not work with datasource templates — such dashboards are considered invalid and are not imported.
   Starting with Grafana 9.0, legacy alerting has been deprecated and replaced with Grafana Alerting.
