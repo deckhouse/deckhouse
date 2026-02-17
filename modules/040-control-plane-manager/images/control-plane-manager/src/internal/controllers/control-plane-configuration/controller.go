@@ -283,8 +283,9 @@ func (r *Reconciler) applyControlPlaneNode(ctx context.Context, desired *control
 	}
 	if !equality.Semantic.DeepEqual(desired.Spec, current.Spec) {
 		klog.Info("ControlPlaneNode spec differs from desired, updating", "node", desired.Name)
+		patch := client.MergeFrom(current.DeepCopy())
 		current.Spec = desired.Spec
-		return r.client.Update(ctx, current)
+		return r.client.Patch(ctx, current, patch)
 	}
 	return nil
 }
@@ -310,8 +311,8 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
 			PKIChecksum:             pkiChecksum,
-			ConfigurationGeneration: time.Now().Unix(),
-			HotReloadChecksum:       "", // TODO: implement hot reload
+			ConfigurationGeneration: 1,     // TODO: implement generation
+			HotReloadChecksum:       "123", // TODO: implement hot reload
 			Components: controlplanev1alpha1.ComponentChecksums{
 				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
 				KubeAPIServer:         &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
