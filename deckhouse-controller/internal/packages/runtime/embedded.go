@@ -112,6 +112,10 @@ func (r *Runtime) initEmbedded() error {
 
 		def, err := loadModuleDefinition(path)
 		if err != nil {
+			if os.IsNotExist(err) {
+				return nil
+			}
+
 			return fmt.Errorf("read definition for %s: %w", info.Name(), err)
 		}
 
