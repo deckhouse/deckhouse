@@ -55,13 +55,9 @@ func (r *Runtime) UpdateEmbedded(module *Module) {
 	r.modules.Update(name, version, settingsChecksum, func(ctx context.Context, event int, pkg *modules.Module) {
 		var tasks []queue.Task
 		if event == lifecycle.EventVersionChanged {
-			// Fail fast if cluster requirements (k8s version, dependencies, etc.) are not met.
-			if err := r.scheduler.Check(module.Definition.Requirements.Checks()); err != nil {
-				r.status.HandleError(name, err)
-				return
-			}
-
-			// Reset runtime conditions before starting a fresh load pipeline.
+			// Skip scheduler.Check here — embedded modules are bundled with the deckhouse
+			// image and are always compatible. Global values (k8s version, bootstrap state)
+			// aren't available yet during init. The scheduler re-evaluates on resume.
 			r.status.ClearRuntimeConditions(name)
 			r.status.SetConditionTrue(name, status.ConditionRequirementsMet)
 
