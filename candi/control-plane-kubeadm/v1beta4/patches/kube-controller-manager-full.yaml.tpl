@@ -29,24 +29,41 @@ kind: Pod
 metadata:
   name: kube-controller-manager
   namespace: kube-system
+  labels:
+    component: kube-controller-manager
+    tier: control-plane
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ .clusterConfiguration.kubernetesVersion | quote }}
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
+  priority: 2000001000
+  priorityClassName: system-node-critical
   volumes:
-  - name: kubeconfig
-    hostPath:
-      path: /etc/kubernetes/controller-manager.conf
-      type: FileOrCreate
-  - name: k8s-certs
-    hostPath:
-      path: /etc/kubernetes/pki
+  - hostPath:
+      path: /etc/ssl/certs
       type: DirectoryOrCreate
-  - name: deckhouse-extra-files
-    hostPath:
+    name: ca-certs
+  - hostPath:
       path: /etc/kubernetes/deckhouse/extra-files
       type: DirectoryOrCreate
+    name: deckhouse-extra-files
+  - hostPath:
+      path: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+      type: DirectoryOrCreate
+    name: flexvolume-dir
+  - hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+    name: k8s-certs
+  - hostPath:
+      path: /etc/kubernetes/controller-manager.conf
+      type: FileOrCreate
+    name: kubeconfig
+  - hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-share-ca-certificates
   containers:
   - name: kube-controller-manager
 {{- if hasKey . "images" }}
@@ -54,12 +71,12 @@ spec:
 {{- $imageWithVersion := printf "kubeControllerManager%s" (.clusterConfiguration.kubernetesVersion | replace "." "") }}
 {{- if hasKey .images.controlPlaneManager $imageWithVersion }}
     image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager $imageWithVersion) }}
+    imagePullPolicy: IfNotPresent
 {{- end }}
 {{- end }}
 {{- end }}
     command:
     - kube-controller-manager
-    args:
     - --bind-address=127.0.0.1
     - --leader-elect=true
     - --kubeconfig=/etc/kubernetes/controller-manager.conf
@@ -75,6 +92,7 @@ spec:
     - --controllers=*,bootstrapsigner,tokencleaner
     - --allocate-node-cidrs=true
     - --cluster-cidr={{ .clusterConfiguration.podSubnetCIDR | quote }}
+    - --cluster-name=kubernetes
     - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR | quote }}
     - --profiling=false
     - --terminated-pod-gc-threshold={{ $gcThresholdCount | quote }}
@@ -90,14 +108,22 @@ spec:
 {{- end }}
 {{- end }}
     volumeMounts:
-    - name: kubeconfig
-      mountPath: /etc/kubernetes/controller-manager.conf
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
       readOnly: true
-    - name: k8s-certs
-      mountPath: /etc/kubernetes/pki
+    - mountPath: /etc/kubernetes/deckhouse/extra-files
+      name: deckhouse-extra-files
       readOnly: true
-    - name: deckhouse-extra-files
-      mountPath: /etc/kubernetes/deckhouse/extra-files
+    - mountPath: /usr/libexec/kubernetes/kubelet-plugins/volume/exec
+      name: flexvolume-dir
+    - mountPath: /etc/kubernetes/pki
+      name: k8s-certs
+      readOnly: true
+    - mountPath: /etc/kubernetes/controller-manager.conf
+      name: kubeconfig
+      readOnly: true
+    - mountPath: /usr/share/ca-certificates
+      name: usr-share-ca-certificates
       readOnly: true
     resources:
       requests:
@@ -123,8 +149,22 @@ spec:
         port: 10257
         scheme: HTTPS
     livenessProbe:
+      failureThreshold: 8
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10257
         scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: 127.0.0.1
+        path: /healthz
+        port: probe-port
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
