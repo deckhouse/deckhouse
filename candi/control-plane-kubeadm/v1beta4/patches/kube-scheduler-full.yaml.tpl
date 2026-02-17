@@ -46,6 +46,7 @@ spec:
 {{- $imageWithVersion := printf "kubeScheduler%s" (.clusterConfiguration.kubernetesVersion | replace "." "") }}
 {{- if hasKey .images.controlPlaneManager $imageWithVersion }}
     image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager $imageWithVersion) }}
+    imagePullPolicy: IfNotPresent
 {{- end }}
 {{- end }}
 {{- end }}
@@ -85,6 +86,10 @@ spec:
     env:
     - name: GOGC
       value: "50"
+    ports:
+    - containerPort: 10259
+      name: probe-port
+      protocol: TCP
     readinessProbe:
       failureThreshold: 3
       httpGet:

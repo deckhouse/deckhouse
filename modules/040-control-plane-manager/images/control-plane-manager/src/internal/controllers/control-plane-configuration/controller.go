@@ -20,6 +20,7 @@ import (
 	"context"
 	"control-plane-manager/internal/checksum"
 	"control-plane-manager/internal/constants"
+	"control-plane-manager/internal/operations"
 	"fmt"
 	"time"
 
@@ -208,7 +209,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 	err := r.client.Get(ctx, client.ObjectKey{Name: nodeName}, node)
 	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// Node gone — remove ControlPlaneNode if it exists (orphan)
+			// Node gone — remove ControlPlaneNode if it exists
 			if err := r.deleteControlPlaneNodeIfExists(ctx, nodeName); err != nil {
 				return reconcile.Result{}, err
 			}
@@ -305,14 +306,24 @@ func buildDesiredControlPlaneNode(nodeName string, cmpSecret *corev1.Secret, pki
 		}
 		checksums[component] = componentChecksum
 	}
+	hotReloadChecksum, err := checksum.BuildHotReloadChecksum(cmpSecret.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build hot reload manifest: %w", err)
+	}
+	// temporary for testing
+	err = operations.SyncSecretToTmp(cmpSecret, "/tmp/control-plane-manager-config")
+	if err != nil {
+		return nil, fmt.Errorf("failed to sync secret to tmp: %w", err)
+	}
+
 	return &controlplanev1alpha1.ControlPlaneNode{
 		ObjectMeta: ctrl.ObjectMeta{
 			Name: nodeName,
 		},
 		Spec: controlplanev1alpha1.ControlPlaneNodeSpec{
 			PKIChecksum:             pkiChecksum,
-			ConfigurationGeneration: 1,     // TODO: implement generation
-			HotReloadChecksum:       "123", // TODO: implement hot reload
+			ConfigurationGeneration: 1, // TODO: implement generation
+			HotReloadChecksum:       hotReloadChecksum,
 			Components: controlplanev1alpha1.ComponentChecksums{
 				Etcd:                  &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["etcd"]},
 				KubeAPIServer:         &controlplanev1alpha1.ComponentChecksum{Checksum: checksums["kube-apiserver"]},
