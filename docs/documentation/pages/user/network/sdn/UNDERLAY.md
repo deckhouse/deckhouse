@@ -1,6 +1,6 @@
 ---
 title: "Connecting physical network interfaces to DPDK application pods"
-permalink: en/user/network/sdn/underlay-network-dpdk.html
+permalink: en/user/network/sdn/underlay.html
 description: |
   Connecting physical network interfaces to pods via DRA for DPDK applications: Shared and Dedicated modes.
 search: DPDK applications, UnderlayNetwork, physical interfaces, SR-IOV, VF PF

@@ -1,6 +1,6 @@
 ---
 title: "Дополнительные сети для использования в прикладных подах"
-permalink: ru/user/network/sdn/dedicated-networks.html
+permalink: ru/user/network/sdn/dedicated.html
 description: |
   Создание и подключение дополнительных программно-определяемых сетей для подов: кластерные сети и сети проекта.
 search: дополнительные сети, сеть проекта, кластерная сеть, Network, NetworkClass

@@ -1,6 +1,6 @@
 ---
 title: "Настройка SDN в кластере"
-permalink: ru/admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html
+permalink: ru/admin/configuration/network/sdn/configure.html
 description: |
   Подготовка кластера к настройке программно-определяемых сетей.
 search: программно-определяемые сети, VLAN интерфейсы, дополнительные сети, underlay сети

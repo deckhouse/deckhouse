@@ -620,7 +620,7 @@ entries:
                     - title:
                         en: Configuring SDN in a DKP cluster
                         ru: Настройка SDN в кластере DKP
-                      url: /admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html
+                      url: /admin/configuration/network/sdn/configure.html
                 - title:
                     en: Other network configuration options
                     ru: Другие возможности настройки сети
@@ -931,11 +931,11 @@ entries:
                 - title:
                     en: Additional networks for application pods
                     ru: Дополнительные сети для прикладных подов
-                  url: /user/network/sdn/dedicated-networks.html
+                  url: /user/network/sdn/dedicated.html
                 - title:
                     en: Connecting physical network interfaces to DPDK application pods
                     ru: Подключение физических сетевых интерфейсов к подам DPDK-приложений
-                  url: /user/network/sdn/underlay-network-dpdk.html
+                  url: /user/network/sdn/underlay.html
             - title:
                 en: Intra-cluster communication
                 ru: Внутрикластерное взаимодействие

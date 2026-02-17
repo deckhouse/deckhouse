@@ -1,6 +1,6 @@
 ---
 title: "Configuring SDN in a cluster"
-permalink: en/admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html
+permalink: en/admin/configuration/network/sdn/configure.html
 description: |
   Preparing the cluster for use with software defined networking.
 search: software-defined networks, VLAN interfaces, additional networks, underlay networks

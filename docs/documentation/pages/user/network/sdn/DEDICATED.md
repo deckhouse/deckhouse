@@ -1,6 +1,6 @@
 ---
 title: "Additional networks for use in application pods"
-permalink: en/user/network/sdn/dedicated-networks.html
+permalink: en/user/network/sdn/dedicated.html
 description: |
   Creating and connecting additional software-defined networks for pods: cluster networks and project networks.
 search: additional networks, project network, cluster network, Network, NetworkClass
