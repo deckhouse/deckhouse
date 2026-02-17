@@ -22,6 +22,5 @@ import (
 var imagesDigestsEmbeddedJSON embed.FS
 
 func ImagesDigestsBytes() ([]byte, error) {
-	bytes, err := imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
-	return bytes, err
+	return imagesDigestsEmbeddedJSON.ReadFile("images_digests.json")
 }
