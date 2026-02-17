@@ -33,7 +33,7 @@ const (
 	MachineFinalizer = "staticmachine.infrastructure.cluster.x-k8s.io"
 )
 
-// StaticMachineSpec defines the desired state of StaticMachine
+// StaticMachineSpec defines the desired state of StaticMachine.
 type StaticMachineSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -45,7 +45,7 @@ type StaticMachineSpec struct {
 	LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
 }
 
-// StaticMachineStatus defines the observed state of StaticMachine
+// StaticMachineStatus defines the observed state of StaticMachine.
 type StaticMachineStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -57,9 +57,15 @@ type StaticMachineStatus struct {
 	Addresses clusterv1.MachineAddresses `json:"addresses,omitempty"`
 
 	// +optional
+	// FailureReason will be set in the event that there is a terminal problem
+  // reconciling the StaticMachine and will contain a succinct value suitable
+  // for machine interpretation.
 	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
 
 	// +optional
+	// FailureMessage will be set in the event that there is a terminal problem
+	// reconciling the StaticMachine and will contain a more verbose string suitable
+  // for logging and human consumption.
 	FailureMessage *string `json:"failureMessage,omitempty"`
 
 	// Conditions defines current service state of the StaticMachine.
@@ -77,7 +83,7 @@ type StaticMachineStatus struct {
 //+kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="Static instance ID"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this StaticMachine"
 
-// StaticMachine is the Schema for the staticmachines API
+// StaticMachine is the Schema for the Cluster API Provider Static.
 type StaticMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -88,7 +94,7 @@ type StaticMachine struct {
 
 //+kubebuilder:object:root=true
 
-// StaticMachineList contains a list of StaticMachine
+// StaticMachineList contains a list of StaticMachine.
 type StaticMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
