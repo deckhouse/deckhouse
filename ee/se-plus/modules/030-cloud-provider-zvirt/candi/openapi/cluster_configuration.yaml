@@ -155,6 +155,11 @@ apiVersions:
                     description: |
                       Default network gateway.
                     example: 192.168.1.1
+                  dnsServers:
+                    type: string
+                    description: |
+                      List of DNS servers.
+                    example: 8.8.8.8,8.8.4.4
       nodeGroups:
         type: array
         description: |
