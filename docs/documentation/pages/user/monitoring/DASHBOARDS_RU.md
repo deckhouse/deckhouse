@@ -1,5 +1,5 @@
 ---
-title: "Дашборды"
+title: "Дашборды мониторинга"
 permalink: ru/user/monitoring/dashboards.html
 lang: ru
 ---

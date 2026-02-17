@@ -1,5 +1,5 @@
 ---
-title: "Dashboards"
+title: "Monitoring dashboards"
 permalink: en/user/monitoring/dashboards.html
 ---
 
