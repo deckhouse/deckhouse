@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -45,8 +47,17 @@ import (
 )
 
 func init() {
+	ctrlmetrics.Registry.MustRegister(machineDeploymentNodeGroupInfo)
 	Register("NodeGroupStatus", SetupNodeGroupStatus)
 }
+
+var machineDeploymentNodeGroupInfo = prometheus.NewGaugeVec(
+	prometheus.GaugeOpts{
+		Name: "machine_deployment_node_group_info",
+		Help: "Info about machine deployments by node group",
+	},
+	[]string{"node_group", "name"},
+)
 
 var (
 	MCMMachineGVK = schema.GroupVersionKind{
@@ -212,24 +223,32 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		desired = nodesCount
 	}
 
+	// Build real error messages for conditions (matches original "|" separator)
+	var conditionErrors []string
 	if ng.Status.Error != "" {
-		if errorMsg != "" {
-			errorMsg = ng.Status.Error + " " + errorMsg
-		} else {
-			errorMsg = ng.Status.Error
-		}
+		conditionErrors = append(conditionErrors, ng.Status.Error)
 	}
-	if len(errorMsg) > 1024 {
-		errorMsg = errorMsg[:1024]
-	}
-
 	if errorMsg != "" {
-		r.createEventIfChanged(ng, errorMsg)
-		errorMsg = "Machine creation failed. Check events for details."
+		conditionErrors = append(conditionErrors, errorMsg)
+	}
+	conditionErrorMsg := strings.Join(conditionErrors, "|")
+
+	// Build combined message for event
+	eventMsg := fmt.Sprintf("%s %s", ng.Status.Error, errorMsg)
+	eventMsg = strings.TrimSpace(eventMsg)
+	if len(eventMsg) > 1024 {
+		eventMsg = eventMsg[:1024]
 	}
 
-	conditions := r.calculateConditions(ng, nodes, readyCount, desired, instancesCount, isFrozen, errorMsg, updatingNodes, waitingForApprovalNodes)
-	conditionSummary := r.calculateConditionSummary(conditions)
+	// statusMsg is the rewritten message for conditionSummary and status.Error
+	var statusMsg string
+	if eventMsg != "" {
+		r.createEventIfChanged(ng, eventMsg)
+		statusMsg = "Machine creation failed. Check events for details."
+	}
+
+	conditions := r.calculateConditions(ng, nodes, readyCount, desired, instancesCount, isFrozen, conditionErrorMsg, updatingNodes, waitingForApprovalNodes)
+	conditionSummary := r.calculateConditionSummary(conditions, statusMsg)
 
 	patch := client.MergeFrom(ng.DeepCopy())
 	ng.Status.Nodes = nodesCount
@@ -237,12 +256,25 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	ng.Status.UpToDate = upToDateCount
 	ng.Status.Conditions = conditions
 	ng.Status.ConditionSummary = conditionSummary
+	ng.Status.Error = statusMsg
 
 	if ng.Spec.NodeType == v1.NodeTypeCloudEphemeral {
 		ng.Status.Desired = desired
 		ng.Status.Min = minCount
 		ng.Status.Max = maxCount
 		ng.Status.Instances = instancesCount
+		machineFailures := convertMachineFailures(lastMachineFailures)
+		if machineFailures == nil {
+			machineFailures = []v1.MachineFailure{} // empty array, not nil — matches original
+		}
+		ng.Status.LastMachineFailures = machineFailures
+	} else {
+		// Clear cloud-specific fields for non-cloud NodeGroups (matches original nil patch)
+		ng.Status.Desired = 0
+		ng.Status.Min = 0
+		ng.Status.Max = 0
+		ng.Status.Instances = 0
+		ng.Status.LastMachineFailures = nil
 	}
 
 	if err := r.Client.Status().Patch(ctx, ng, patch); err != nil {
@@ -296,8 +328,34 @@ func (r *NodeGroupStatusReconciler) getZonesCount(ctx context.Context, ng *v1.No
 
 type MachineFailure struct {
 	MachineName string
+	ProviderID  string
+	OwnerRef    string
 	Message     string
 	Time        time.Time
+}
+
+func convertMachineFailures(failures []MachineFailure) []v1.MachineFailure {
+	if len(failures) == 0 {
+		return nil
+	}
+	result := make([]v1.MachineFailure, 0, len(failures))
+	for _, f := range failures {
+		mf := v1.MachineFailure{
+			Name:       f.MachineName,
+			ProviderID: f.ProviderID,
+			OwnerRef:   f.OwnerRef,
+		}
+		if f.Message != "" {
+			mf.LastOperation = &v1.MachineLastOperation{
+				Description:    f.Message,
+				LastUpdateTime: f.Time.Format(time.RFC3339),
+				State:          "Failed",
+				Type:           "Create",
+			}
+		}
+		result = append(result, mf)
+	}
+	return result
 }
 
 func (r *NodeGroupStatusReconciler) getMachineDeploymentInfo(ctx context.Context, ngName string) (int32, []MachineFailure, bool) {
@@ -312,6 +370,9 @@ func (r *NodeGroupStatusReconciler) getMachineDeploymentInfo(ctx context.Context
 			continue
 		}
 		for _, md := range mdList.Items {
+			mdName := md.GetName()
+			machineDeploymentNodeGroupInfo.WithLabelValues(ngName, mdName).Set(1)
+
 			if replicas, found, _ := unstructured.NestedInt64(md.Object, "spec", "replicas"); found {
 				desired += int32(replicas)
 			}
@@ -325,10 +386,28 @@ func (r *NodeGroupStatusReconciler) getMachineDeploymentInfo(ctx context.Context
 			if failedMachines, found, _ := unstructured.NestedSlice(md.Object, "status", "failedMachines"); found {
 				for _, fm := range failedMachines {
 					if fmMap, ok := fm.(map[string]interface{}); ok {
+						mf := MachineFailure{Time: time.Now()}
+						if name, _, _ := unstructured.NestedString(fmMap, "name"); name != "" {
+							mf.MachineName = name
+						}
+						if providerID, _, _ := unstructured.NestedString(fmMap, "providerID"); providerID != "" {
+							mf.ProviderID = providerID
+						}
+						if ownerRef, _, _ := unstructured.NestedString(fmMap, "ownerRef"); ownerRef != "" {
+							mf.OwnerRef = ownerRef
+						}
 						if lastOp, _, _ := unstructured.NestedMap(fmMap, "lastOperation"); lastOp != nil {
 							if msg, _, _ := unstructured.NestedString(lastOp, "description"); msg != "" {
-								failures = append(failures, MachineFailure{Message: msg, Time: time.Now()})
+								mf.Message = msg
 							}
+							if ts, _, _ := unstructured.NestedString(lastOp, "lastUpdateTime"); ts != "" {
+								if t, err := time.Parse(time.RFC3339, ts); err == nil {
+									mf.Time = t
+								}
+							}
+						}
+						if mf.Message != "" {
+							failures = append(failures, mf)
 						}
 					}
 				}
@@ -455,19 +534,14 @@ func setConditionTime(cond *metav1.Condition, existing []metav1.Condition, now m
 	cond.LastTransitionTime = now
 }
 
-func (r *NodeGroupStatusReconciler) calculateConditionSummary(conditions []metav1.Condition) *v1.ConditionSummary {
-	summary := &v1.ConditionSummary{Ready: "False"}
-	var messages []string
-	for _, cond := range conditions {
-		if cond.Type == ConditionTypeReady && cond.Status == metav1.ConditionTrue {
-			summary.Ready = "True"
-		}
-		if cond.Status == metav1.ConditionTrue && cond.Message != "" && (cond.Type == ConditionTypeError || cond.Type == ConditionTypeUpdating || cond.Type == ConditionTypeWaitingForDisruptiveApproval) {
-			messages = append(messages, cond.Message)
-		}
+func (r *NodeGroupStatusReconciler) calculateConditionSummary(conditions []metav1.Condition, statusMsg string) *v1.ConditionSummary {
+	ready := "True"
+	if len(statusMsg) > 0 {
+		ready = "False"
 	}
-	if len(messages) > 0 {
-		summary.StatusMessage = strings.Join(messages, "; ")
+
+	return &v1.ConditionSummary{
+		Ready:         ready,
+		StatusMessage: statusMsg,
 	}
-	return summary
 }

@@ -27,7 +27,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
@@ -118,50 +117,3 @@ const (
 	instancesStatusField           = "instances"
 	lastMachineFailuresStatusField = "lastMachineFailures"
 )
-
-func buildUpdateStatusPatch(
-	nodesNum, readyNodesNum, uptodateNodesCount, minPerZone, maxPerZone, desiredMax, instancesNum int32,
-	nodeType ngv1.NodeType, statusMsg string,
-	lastMachineFailures []*v1alpha1.MachineSummary,
-	newConditions []ngv1.NodeGroupCondition,
-) interface{} {
-	ready := "True"
-	if len(statusMsg) > 0 {
-		ready = "False"
-	}
-
-	patch := map[string]interface{}{
-		"nodes":                        nodesNum,
-		"ready":                        readyNodesNum,
-		"upToDate":                     uptodateNodesCount,
-		minStatusField:                 nil,
-		maxStatusField:                 nil,
-		desiredStatusField:             nil,
-		instancesStatusField:           nil,
-		lastMachineFailuresStatusField: nil,
-	}
-	if nodeType == ngv1.NodeTypeCloudEphemeral {
-		patch[minStatusField] = minPerZone
-		patch[maxStatusField] = maxPerZone
-		patch[desiredStatusField] = desiredMax
-		patch[instancesStatusField] = instancesNum
-		patch[lastMachineFailuresStatusField] = lastMachineFailures
-
-		if len(lastMachineFailures) == 0 {
-			patch[lastMachineFailuresStatusField] = make([]interface{}, 0) // to make [] array in json result
-		}
-	}
-
-	patch["conditionSummary"] = map[string]interface{}{
-		"ready":         ready,
-		"statusMessage": statusMsg,
-	}
-
-	patch["conditions"] = conditionsToPatch(newConditions)
-
-	statusPatch := map[string]interface{}{
-		"status": patch,
-	}
-
-	return statusPatch
-}
