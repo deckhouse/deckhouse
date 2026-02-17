@@ -2,12 +2,12 @@
 title: "Configuring SDN in a cluster"
 permalink: en/admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html
 description: |
-  Preparing the cluster for use with software defined networking
+  Preparing the cluster for use with software defined networking.
 ---
 
 To use SDN in a DKP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
 
-## Preparing the infrastructure for enabling the sdn module
+## Preparing the infrastructure for enabling the `sdn` module
 
 Before using additional software-defined networks (hereinafter referred to as additional networks) in a cluster, preliminary infrastructure preparation is required:
 
@@ -18,9 +18,9 @@ Before using additional software-defined networks (hereinafter referred to as ad
 * **For creating additional networks based on direct, untagged access to a network interface:**
   * Reserve separate physical interfaces on the nodes and connect them into a single local network at the data center level.
 
-## Enabling the sdn module
+## Enabling the `sdn` module
 
-Enable the `sdn` module according to the [instructions](/modules/sdn/configuration.html).
+Enable the `sdn` module according [to the instructions](/modules/sdn/configuration.html).
 
 ## Actions after enabling the sdn module
 
@@ -76,7 +76,7 @@ A Bond interface can only be created between NIC interfaces that are located on 
 
 Example configuring Bond interface:
 
-1. Set custom labels for interfaces that can be combined to create a Bond interface.
+1. Set custom labels for interfaces that can be combined to create a Bond interface:
 
    ```shell
    d8 k label nni node-0-nic-fa163efbde48 nni.example.com/bond-group=bond0
@@ -176,7 +176,7 @@ The Deckhouse Kubernetes Platform provides the ability to declaratively manage a
 Custom resources [ClusterNetwork](/modules/sdn/cr.html#clusternetwork), [Network](/modules/sdn/cr.html#network), and [NetworkClass](/modules/sdn/cr.html#networkclass) are used to configure and connect additional networks for application pods.
 
 {% alert level="info" %}
-If the VLAN type was specified in the Network or ClusterNetwork resources, NodeNetworkInterface will also be created for VLAN and Bridge.
+If the VLAN type was specified in the [Network](/modules/sdn/cr.html#network) or [ClusterNetwork](/modules/sdn/cr.html#clusternetwork) resources, [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface) will also be created for VLAN and Bridge.
 {% endalert %}
 
 {% alert level="warning" %}
@@ -296,7 +296,7 @@ An example of creating a custom network using the NetworkClass resource administ
 
 ### Checking the connection of an additional network to interfaces on nodes
 
-After creating ClusterNetwork or Network, the controller will create a NodeNetworkInterfaceAttachment tracking resource to link it to a NodeNetworkInterface.
+After creating ClusterNetwork or Network, the controller will create a NodeNetworkInterfaceAttachment tracking resource to link it to a [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface).
 
 To obtain a list of NodeNetworkInterfaceAttachment resources and information about a specific resource, use the following commands:
 
@@ -400,7 +400,7 @@ Before configuring UnderlayNetwork resources, you must prepare the cluster's wor
 
 ##### Configuring hugepages
 
-DPDK applications require hugepages for efficient memory management. Configure hugepages on all worker nodes using NodeGroupConfiguration:
+DPDK applications require hugepages for efficient memory management. Configure hugepages on all worker nodes using [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -524,7 +524,7 @@ To create an Underlay network in Dedicated mode, follow these steps:
    d8 k get underlaynetwork dpdk-dedicated-network -o yaml
    ```
 
-   Example status of UnderlayNetwork in Dedicated mode:
+   Example status of UnderlayNetwork in `Dedicated` mode:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -544,9 +544,9 @@ To create an Underlay network in Dedicated mode, follow these steps:
 
 #### Creating UnderlayNetwork in Shared mode
 
-In Shared mode, Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, allowing multiple pods to share the same hardware. This mode requires SR-IOV support on the NICs.
+In `Shared` mode, Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, allowing multiple pods to share the same hardware. This mode requires SR-IOV support on the NICs.
 
-To create an Underlay network in Shared mode, follow these steps:
+To create an Underlay network in `Shared` mode, follow these steps:
 
 1. Create and apply the UnderlayNetwork resource. In the `spec.mode` field, specify the value `Shared`.
 
@@ -585,7 +585,7 @@ To create an Underlay network in Shared mode, follow these steps:
    d8 k get underlaynetwork dpdk-shared-network -o yaml
    ```
 
-   Example status of UnderlayNetwork in Shared mode:
+   Example status of UnderlayNetwork in `Shared` mode:
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
