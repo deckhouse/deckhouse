@@ -84,6 +84,10 @@ apiVersions:
                     type: string
                     description: |
                       Шлюз по умолчанию.
+                  dnsServers:
+                    type: string
+                    description: |
+                      Список DNS-серверов.
       nodeGroups:
         description: |
           Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).

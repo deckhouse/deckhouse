@@ -44,6 +44,7 @@ locals {
   custom_network_address = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.networkInterfaceAddress[var.nodeIndex], "")
   custom_network_netmask = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.networkInterfaceNetmask, "")
   custom_network_gateway = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.networkInterfaceGateway, "")
+  custom_network_dns     = try(var.providerClusterConfiguration.masterNodeGroup.instanceClass.customNetworkConfig.dnsServers, "")
 
   master_cloud_init_script = yamlencode(merge({
     "hostname": local.master_node_name,
