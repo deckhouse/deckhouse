@@ -155,6 +155,10 @@ func New(moduleManager moduleManagerI, dc dependency.Container, logger *log.Logg
 		return nil, fmt.Errorf("register debug server: %w", err)
 	}
 
+	if err := r.initEmbedded(); err != nil {
+		return nil, fmt.Errorf("initialize embedded modules: %w", err)
+	}
+
 	return r, nil
 }
 

@@ -144,7 +144,7 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, settings
 	r.modules.SetPackage(module.GetName(), module)
 	r.mu.Unlock()
 
-	r.scheduler.Register(module)
+	// r.scheduler.Register(module)
 
 	return module.GetVersion(), nil
 }
