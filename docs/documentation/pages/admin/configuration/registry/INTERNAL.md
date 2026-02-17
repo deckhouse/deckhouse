@@ -12,13 +12,19 @@ The internal registry allows for optimizing the downloading and storage of image
 
 The [`registry`](/modules/registry/) module, which implements internal storage, operates in the following modes:
 
-- `Direct`: Enables the internal container image registry. Access to the internal registry is performed via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address allows Deckhouse images to avoid being re-downloaded and components to avoid being restarted when registry parameters change. Switching between modes and registries is done through the `deckhouse` ModuleConfig. The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct Mode Architecture](../../../architecture/registry-direct-mode.html).
+- `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents Deckhouse images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct mode Architecture](../../../architecture/registry-modes.html#direct-mode-architecture).
+
+- `Proxy`: Using an internal caching proxy registry that accesses an external registry, with the caching proxy registry running on control-plane (master) nodes. This mode reduces the number of requests to the external registry by caching images. Cached data is stored on the control-plane (master) nodes. Access to the internal registry is via the fixed address `registry.d8-system.svc:5001/system/deckhouse`, similar to the `Direct` mode. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Proxy mode Architecture](../../../architecture/registry-modes.html#proxy-mode-architecture).
+
+- `Local`: Using a local internal registry, with the registry running on control-plane (master) nodes. This mode allows the cluster to operate in an isolated environment. All data is stored on the control-plane (master) nodes. Access to the internal registry is via the fixed address `registry.d8-system.svc:5001/system/deckhouse`, similar to the `Direct` and `Proxy` modes. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Local mode Architecture](../../../architecture/registry-modes.html#local-mode-architecture).
+
 - `Unmanaged`: Operation without using the internal registry. Access within the cluster is performed directly to the external registry.
   There are two types of the `Unmanaged` mode:
-  - Configurable: A mode managed via the `registry` module. Switching between modes and registries is handled through the ModuleConfig of `deckhouse`. The switch is performed automatically (for more details, see the switching examples below).
+  - Configurable: A mode managed via the `registry` module. Switching between modes and registries is handled through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switch is performed automatically (for more details, see the switching examples below).
   - Non-configurable (deprecated): The default mode. Configuration parameters are set during [cluster installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo) or [changed in a running cluster](/products/kubernetes-platform/documentation/v1/admin/configuration/registry/third-party.html) using the (deprecated) `helper change registry` command.
 
 {% alert level="info" %}
+
 - The `Direct` mode requires using the `Containerd` or `Containerd V2` CRI on all cluster nodes. For CRI setup, refer to the [`ClusterConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration).
 {% endalert %}
 
@@ -28,19 +34,29 @@ Working with the internal registry using the [`registry`](/modules/registry/) mo
 
 Registry configuration via the `deckhouse` moduleConfig during DKP cluster bootstrap is not supported.
 
+### Cluster installation limitations
+
+The following restrictions apply when installing a cluster:
+
+- DKP cluster bootstrap is only supported in the `Direct` and `Unmanaged` modes (`Local` and `Proxy` modes are not supported). Registry settings during cluster installation are configured via the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry).
+- To launch a cluster in the non-configurable `Unmanaged` mode (Legacy), registry parameters must be specified in [`initConfiguration`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
+
 ### Operating conditions restrictions
 
 The [`registry`](/modules/registry/) module works under the following conditions:
 
 - If CRI containerd or containerd v2 is used on the cluster nodes. To configure CRI, refer to the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri) configuration.
 - The cluster is fully managed by DKP. The module will not work in Managed Kubernetes clusters.
+- The `Local` and `Proxy` modes are only supported on static clusters.
 
 ### Mode switching restrictions
 
 Mode switching restrictions are as follows:
 
+- Changing registry parameters and switching modes is only available after the bootstrap phase is fully complete.
 - For the first switch, migration of user registry configurations must be performed. For more details, see the [Registry Module: FAQ](/modules/registry/faq.html) section.
 - Switching to the non-configurable `Unmanaged` mode is only available from the `Unmanaged` mode. For more details, see the [Registry Module: FAQ](/modules/registry/faq.html) section.
+- Switching between `Local` and `Proxy` modes is only possible via the intermediate `Direct` or `Unmanaged` modes. Example switching sequence: `Local`/`Proxy` → `Direct` → `Proxy`/`Local`.
 
 ## Examples of switching
 
@@ -53,7 +69,7 @@ If, during the switching process, the image of a module did not reload and the m
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-When changing the registry mode or registry parameters, Deckhouse will be restarted.
+The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
@@ -110,7 +126,7 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    - no tasks to handle.
    ```
 
-1. Set the `Direct` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Direct` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-direct). If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -148,12 +164,303 @@ When changing the registry mode or registry parameters, Deckhouse will be restar
    target_mode: Direct
    ```
 
+### Switching to the `Proxy` Mode
+
+To switch an already running cluster to `Proxy` mode, follow these steps:
+
+{% alert level="danger" %}
+
+- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
+- Switching from `Local` mode to `Proxy` mode is not available. To switch from `Local` mode, you must switch the registry to another available mode (for example: `Direct`).
+{% endalert %}
+
+1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+
+1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
+
+   ```bash
+   d8 k get module registry -o wide
+   ```
+
+   Example output:
+
+   ```console
+   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
+   registry   38     ...  Ready   True                         True
+   ```
+
+1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
+
+   ```bash
+   d8 k get nodes
+   ```
+
+   Example output:
+
+   ```console
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+   ```
+
+   Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
+
+   ```console
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
+
+1. Ensure the Deckhouse job queue is empty and contains no errors:
+
+   ```shell
+   d8 system queue list
+   ```
+
+   Example output:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Set the `Proxy` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-proxy). If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+
+   Configuration example:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Proxy
+         proxy:
+           imagesRepo: registry.deckhouse.io/deckhouse/ee
+           scheme: HTTPS
+           license: <LICENSE_KEY> # Replace with your license key
+   ```
+
+1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status).
+
+   Example output:
+
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Proxy
+   target_mode: Proxy
+   ```
+
+### Switching to the `Local` Mode
+
+To switch an already running cluster to `Local` mode, follow these steps:
+
+{% alert level="danger" %}
+
+- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
+- Switching from `Proxy` mode to `Local` mode is not available. To switch from `Proxy` mode, you must switch the registry to another available mode (for example: `Direct`).
+{% endalert %}
+
+1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
+
+1. Make sure the `registry` module is enabled and running. To do this, execute the following command:
+
+   ```bash
+   d8 k get module registry -o wide
+   ```
+
+   Example output:
+
+   ```console
+   NAME       WEIGHT ...  PHASE   ENABLED   DISABLED MESSAGE   READY
+   registry   38     ...  Ready   True                         True
+   ```
+
+1. Make sure all master nodes are in the `Ready` state and do not have the `SchedulingDisabled` status, using the following command:
+
+   ```bash
+   d8 k get nodes
+   ```
+
+   Example output:
+
+   ```console
+   NAME       STATUS   ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready    control-plane,master  ...
+   ```
+
+   Example of output when the master node (`master-2` in the example) is in the `SchedulingDisabled` status:
+
+   ```console
+   NAME       STATUS                      ROLES                 ...
+   master-0   Ready    control-plane,master  ...
+   master-1   Ready    control-plane,master  ...
+   master-2   Ready,SchedulingDisabled    control-plane,master  ...
+   ```
+
+1. Ensure the Deckhouse job queue is empty and contains no errors:
+
+   ```shell
+   d8 system queue list
+   ```
+
+   Example output:
+
+   ```console
+   Summary:
+   - 'main' queue: empty.
+   - 107 other queues (0 active, 107 empty): 0 tasks.
+   - no tasks to handle.
+   ```
+
+1. Prepare archives with DKP images of the current version. To do this, use the `d8 mirror` command.
+
+   Example:
+
+   ```bash
+   TAG=$(
+    d8 k -n d8-system get deployment/deckhouse -o yaml \
+    | yq -r '.spec.template.spec.containers[] | select(.name == "deckhouse").image | split(":")[-1]'
+   ) && echo "TAG: $TAG"
+
+   EDITION=$(
+    d8 k -n d8-system exec -it svc/deckhouse-leader -- deckhouse-controller global values -o yaml \
+    | yq .deckhouseEdition
+   ) && echo "EDITION: $EDITION"
+   ```
+
+   ```bash
+   d8 mirror pull \
+   --license="<LICENSE_KEY>" \
+   --source="registry.deckhouse.io/deckhouse/$EDITION" \
+   --deckhouse-tag="$TAG" \
+   /home/user/d8-bundle
+   ```
+
+1. Set the `Local` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-mode).
+
+   Configuration example:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: deckhouse
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       registry:
+         mode: Local
+   ```
+
+1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status). In the status, you need to wait for the `RegistryContainsRequiredImages` check to start. The condition will show the absence or presence of images in the running local registry.
+
+   Example output:
+
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: |-
+       Mode: Default
+       master-1: 0 of 166 items processed, 166 items with errors:
+       - source: module/control-plane-manager/control-plane-manager133
+         image: 10.128.0.5:5001/system/deckhouse@sha256:00202db19b40930f764edab5695f450cf709d50736e012055393447b3379414a
+         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:00202db19b40930f764edab5695f450cf709d50736e012055393447b3379414a: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
+       - source: module/cloud-provider-yandex/cloud-metrics-exporter
+         image: 10.128.0.5:5001/system/deckhouse@sha256:05517a86fcf0ec4a62d14ed7dc4f9ffd91c05716b8b0e28263da59edf11f0fad
+         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:05517a86fcf0ec4a62d14ed7dc4f9ffd91c05716b8b0ed86d6a1f465f4556fb8: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
+       - source: module/control-plane-manager/kube-controller-manager132
+         image: 10.128.0.5:5001/system/deckhouse@sha256:13f24cc717698682267ed2b428e7399b145a4d8ffe96ad1b7a0b3269b17c7e61
+         error: HEAD https://10.128.0.5:5001/v2/system/deckhouse/manifests/sha256:13f24cc717698682267ed2b428e7399b145a4d8ffe96ad1b7a0b3269b17c7e61: unexpected status code 404 Not Found (HEAD responses have no body, use GET for details)
+
+         ...and more
+     reason: Processing
+     status: "False"
+     type: RegistryContainsRequiredImages
+   ```
+
+1. Upload the images to the local registry using the `d8 mirror` command. Image upload to the local registry is performed via Ingress at `registry.${PUBLIC_DOMAIN}`.
+
+   Get the password for the read-write user of the local registry:
+
+   ```bash
+   $ d8 k -n d8-system get secret/registry-user-rw -o json | jq -r '.data | to_entries[] | "\(.key): \(.value | @base64d)"'
+   name: rw
+   password: KFVxXZGuqKkkumPz
+   passwordHash: $2a$10$Phjbr6iinLf00ZZDD2Y7O.p9H3nDOgYzFmpYKW5eydGvIsdaHQY0a
+   ```
+
+   Upload images to the local registry:
+
+   ```bash
+   d8 mirror push \
+   --registry-login="rw" \
+   --registry-password="KFVxXZGuqKkkumPz" \
+   /home/user/d8-bundle \
+   registry.${PUBLIC_DOMAIN}/system/deckhouse
+   ```
+
+1. Check the registry switch status in the `registry-state` secret using [this guide](#check-registry-mode-switch-status). After uploading the images, the `RegistryContainsRequiredImages` status should be in the `Ready` state.
+
+   Example output:
+
+   ```yaml
+   conditions:
+   # ...
+   - lastTransitionTime: "..."
+     message: |-
+       Mode: Default
+       master-1: all 166 items are checked
+     reason: Ready
+     status: "True"
+     type: RegistryContainsRequiredImages
+   hash: ..
+   mode: Direct
+   target_mode: Local
+   ```
+
+1. Wait for the switch to complete. To check the switch status, use [this guide](#check-registry-mode-switch-status).
+
+   Example output:
+
+   ```yaml
+   conditions:
+   # ...
+     - lastTransitionTime: "..."
+       message: ""
+       reason: ""
+       status: "True"
+       type: Ready
+   hash: ..
+   mode: Local
+   target_mode: Local
+   ```
+
 ### Switching to Unmanaged Mode
 
 To switch an already running cluster to `Unmanaged` mode, follow these steps:
 
 {% alert level="danger" %}
-Changing the registry mode or its parameters will cause Deckhouse to restart.
+Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](#migration-to-the-registry-module).
@@ -186,7 +493,7 @@ Changing the registry mode or its parameters will cause Deckhouse to restart.
    - no tasks to handle.
    ```
 
-1. Set the `Unmanaged` mode configuration in the ModuleConfig `deckhouse`. If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
+1. Set the `Unmanaged` mode configuration in the [ModuleConfig `deckhouse`](/modules/deckhouse/configuration.html#parameters-registry-unmanaged). If you're using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/) module documentation for correct configuration.
 
    Configuration example:
 
@@ -679,12 +986,15 @@ The output displays the status of the switch process. Each condition can have a 
 
 Description of conditions:
 
-| Condition                         | Description                                                                                                                                                                      |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ContainerdConfigPreflightReady`  | State of the containerd configuration preflight check. Verifies there are no custom containerd auth configurations on the nodes.                                             |
-| `TransitionContainerdConfigReady` | State of preparing the containerd configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                 |
-| `FinalContainerdConfigReady`      | State of finalizing the switch to the new containerd mode. Verifies that the containerd configuration has been successfully applied and contains only the new mode settings. |
-| `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                   |
-| `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                   |
-| `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                       |
-| `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the module is ready to operate.                                        |
+| Condition                         | Description                                                                                                                                                                                                                |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContainerdConfigPreflightReady`  | State of the containerd configuration preflight check. Verifies there are no custom containerd auth configurations on the nodes.                                                                                           |
+| `TransitionContainerdConfigReady` | State of preparing the containerd configuration for the new mode. Verifies that the configuration contains both the old and new mode settings.                                                                             |
+| `FinalContainerdConfigReady`      | State of finalizing the switch to the new containerd mode. Verifies that the containerd configuration has been successfully applied and contains only the new mode settings.                                               |
+| `DeckhouseRegistrySwitchReady`    | State of switching Deckhouse and its components to use the new registry. `True` means Deckhouse successfully switched and is ready to operate.                                                                             |
+| `InClusterProxyReady`             | State of In-Cluster Proxy readiness. Checks that the In-Cluster Proxy has started successfully and is running.                                                                                                             |
+| `CleanupInClusterProxy`           | State of cleaning up the In-Cluster Proxy if it is not needed in the selected mode. Verifies that all related resources have been removed.                                                                                 |
+| `NodeServicesReady`               | State of Node Services Manager and Static-Pod registry readiness. Verifies that the Node Services Manager is successfully launched and operational, and that the Static-Pod registry has been successfully deployed by it. |
+| `CleanupNodeServices`             | State of cleaning up the Node Services Manager and Static-Pod registry if they are not needed in the selected mode. Verifies that all related resources have been removed.                                                 |
+| `RegistryContainsRequiredImages`  | State of checking the registry for the presence of required images.                                                                                                                                                        |
+| `Ready`                           | Overall state of registry readiness in the selected mode. Indicates that all other conditions are met and the `modul`e is ready to operate.                                                                                |
