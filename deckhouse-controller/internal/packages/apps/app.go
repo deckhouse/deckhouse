@@ -34,6 +34,7 @@ import (
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
+	shkubetypes "github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -296,9 +297,18 @@ func (a *Application) GetChecks() schedule.Checks {
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
 func (a *Application) InitializeHooks() {
+	namespace := a.GetNamespace()
 	for _, hook := range a.hooks.GetHooks() {
+		kubeSubs := make([]shtypes.OnKubernetesEventConfig, 0, len(hook.GetHookConfig().OnKubernetesEvents))
+		for _, sub := range hook.GetHookConfig().OnKubernetesEvents {
+			sub.Monitor.NamespaceSelector = &shkubetypes.NamespaceSelector{
+				NameSelector: &shkubetypes.NameSelector{MatchNames: []string{namespace}},
+			}
+
+			kubeSubs = append(kubeSubs, sub)
+		}
 		hookCtrl := hookcontroller.NewHookController()
-		hookCtrl.InitKubernetesBindings(hook.GetHookConfig().OnKubernetesEvents, a.kubeEventsManager, a.logger)
+		hookCtrl.InitKubernetesBindings(kubeSubs, a.kubeEventsManager, a.logger)
 		hookCtrl.InitScheduleBindings(hook.GetHookConfig().Schedules, a.scheduleManager)
 
 		hook.WithHookController(hookCtrl)
