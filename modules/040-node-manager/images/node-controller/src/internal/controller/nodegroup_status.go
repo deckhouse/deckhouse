@@ -48,16 +48,6 @@ func init() {
 	Register("NodeGroupStatus", SetupNodeGroupStatus)
 }
 
-const (
-	NodeGroupLabel                   = "node.deckhouse.io/group"
-	ConfigurationChecksumAnnotation  = "node.deckhouse.io/configuration-checksum"
-	MachineNamespace                 = "d8-cloud-instance-manager"
-	ConfigurationChecksumsSecretName = "configuration-checksums"
-	CloudProviderSecretName          = "d8-node-manager-cloud-provider"
-	DisruptionRequiredAnnotation     = "update.node.deckhouse.io/disruption-required"
-	ApprovedAnnotation               = "update.node.deckhouse.io/approved"
-)
-
 var (
 	MCMMachineGVK = schema.GroupVersionKind{
 		Group: "machine.sapcloud.io", Version: "v1alpha1", Kind: "Machine",
