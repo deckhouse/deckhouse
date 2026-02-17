@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- with .registry.proxyEndpoints }}
+
 mkdir -p /etc/kubernetes/registry-proxy
 # Read previously discovered IP
 
@@ -32,7 +34,6 @@ events {
   worker_connections 16384;
 }
 
-{{- with .registry.proxyEndpoints }}
 stream {
   upstream registry {
     least_conn;
@@ -49,7 +50,6 @@ stream {
     proxy_connect_timeout 1s;
   }
 }
-{{- end }}
 EOF
 
 if [[ ! -f /etc/kubernetes/registry-proxy/nginx.conf ]]; then
@@ -60,3 +60,5 @@ chown -R 0:64535 /etc/kubernetes/registry-proxy
 chmod g+s /etc/kubernetes/registry-proxy
 chmod 750 /etc/kubernetes/registry-proxy
 chmod 640 /etc/kubernetes/registry-proxy/*
+
+{{- end }}
