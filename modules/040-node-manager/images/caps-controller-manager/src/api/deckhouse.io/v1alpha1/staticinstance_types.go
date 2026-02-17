@@ -24,24 +24,30 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StaticInstanceSpec defines the desired state of StaticInstance
+// StaticInstanceSpec defines the desired state of StaticInstance.
 type StaticInstanceSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// The IP address of the host.
+	//+kubebuilder:validation:Pattern=`^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$`
 	Address        string                  `json:"address"`
+
+	// The reference to the `SSHCredentials` object.
 	CredentialsRef *corev1.ObjectReference `json:"credentialsRef"`
 }
 
-// StaticInstanceStatus defines the observed state of StaticInstance
+// StaticInstanceStatus defines the observed state of StaticInstance.
 type StaticInstanceStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
 	// +optional
+	// The reference to the `StaticMachine` object.
 	MachineRef *corev1.ObjectReference `json:"machineRef,omitempty"`
 
 	// +optional
+	// The reference to the `Node` object.
 	NodeRef *corev1.ObjectReference `json:"nodeRef,omitempty"`
 
 	// +optional
@@ -80,7 +86,7 @@ const (
 //+kubebuilder:printcolumn:name="Node",type="string",JSONPath=".status.nodeRef.name",description="Node associated with this static instance"
 //+kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".status.machineRef.name",description="Static machine associated with this static instance"
 
-// StaticInstance is the Schema for the staticinstances API
+// StaticInstance describes a machine for the Cluster API Provider Static.
 type StaticInstance struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

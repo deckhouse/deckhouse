@@ -46,11 +46,6 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) crd paths="./..." output:crd:artifacts:config=config/crd/bases
-	mv config/crd/bases/deckhouse.io_sshcredentials.yaml ../../../crds/sshcredentials.yaml
-	mv config/crd/bases/deckhouse.io_staticinstances.yaml ../../../crds/staticinstance.yaml
-	mv config/crd/bases/infrastructure.cluster.x-k8s.io_staticclusters.yaml ../../../crds/staticcluster.yaml
-	mv config/crd/bases/infrastructure.cluster.x-k8s.io_staticmachines.yaml ../../../crds/staticmachine.yaml
-	mv config/crd/bases/infrastructure.cluster.x-k8s.io_staticmachinetemplates.yaml ../../../crds/staticmachinetemplate.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.

@@ -24,7 +24,7 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// StaticMachineTemplateSpec defines the desired state of StaticMachineTemplate
+// StaticMachineTemplate is the Schema for the Cluster API Provider Static.
 type StaticMachineTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -50,7 +50,7 @@ type StaticMachineTemplateSpecTemplateSpec struct {
 //+kubebuilder:metadata:labels="cluster.x-k8s.io/provider=infrastructure-static"
 //+kubebuilder:metadata:labels="cluster.x-k8s.io/v1beta1=v1alpha1"
 
-// StaticMachineTemplate is the Schema for the staticmachinetemplates API
+// StaticMachineTemplate is the Schema for the Cluster API Provider Static.
 type StaticMachineTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -60,7 +60,7 @@ type StaticMachineTemplate struct {
 
 //+kubebuilder:object:root=true
 
-// StaticMachineTemplateList contains a list of StaticMachineTemplate
+// StaticMachineTemplateList contains a list of StaticMachineTemplate.
 type StaticMachineTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
