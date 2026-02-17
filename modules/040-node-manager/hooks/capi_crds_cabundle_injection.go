@@ -50,7 +50,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 		ExecutionMinInterval: 5 * time.Second,
 		ExecutionBurst:       3,
 	},
-	OnAfterAll: &go_hook.OrderedConfig{Order: 20},
+	OnAfterAll: &go_hook.OrderedConfig{Order: 1},
 	Queue:      "/modules/node-manager/capi-crds-conversions",
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
