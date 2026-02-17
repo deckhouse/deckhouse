@@ -4,7 +4,7 @@ kubernetes:
   namespace: hashicorp
   cloudName: DVP
   type: kubernetes
-  version: 2.35.1
+  version: 2.38.0
   artifact: terraform-provider-kubernetes
   artifactBinary: terraform-provider-kubernetes
   destinationBinary: terraform-provider-kubernetes
