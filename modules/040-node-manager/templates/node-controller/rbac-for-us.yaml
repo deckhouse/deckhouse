@@ -82,6 +82,31 @@ rules:
   - get
   - list
   - watch
+# Machine read
+- apiGroups:
+  - machine.sapcloud.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - cluster.x-k8s.io
+  resources:
+  - machines/status
+  verbs:
+  - get
+  - list
+  - watch
+# Instance full access
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - instances
+  - instances/status
+  verbs:
+  - "*"
 # ModuleConfig - read for validation (customTolerationKeys)
 - apiGroups:
   - deckhouse.io
