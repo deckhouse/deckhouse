@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nodegroupstatus
+package controller
 
 import (
 	"context"
@@ -42,11 +42,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/controller"
 )
 
 func init() {
-	controller.Register("NodeGroupStatus", Setup)
+	Register("NodeGroupStatus", SetupNodeGroupStatus)
 }
 
 const (
@@ -55,7 +54,7 @@ const (
 	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
 	CloudProviderSecretName          = "d8-node-manager-cloud-provider"
-	DisruptiveApprovalAnnotation     = "update.node.deckhouse.io/disruption-required"
+	DisruptionRequiredAnnotation     = "update.node.deckhouse.io/disruption-required"
 	ApprovedAnnotation               = "update.node.deckhouse.io/approved"
 )
 
@@ -91,8 +90,8 @@ type NodeGroupStatusReconciler struct {
 	lastEventMessages sync.Map
 }
 
-// Setup registers the controller with the manager.
-func Setup(mgr ctrl.Manager) error {
+// SetupNodeGroupStatus registers the controller with the manager.
+func SetupNodeGroupStatus(mgr ctrl.Manager) error {
 	return (&NodeGroupStatusReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
@@ -188,7 +187,7 @@ func (r *NodeGroupStatusReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			if nodeChecksum == configChecksum {
 				upToDateCount++
 			} else {
-				if node.Annotations[DisruptiveApprovalAnnotation] != "" && node.Annotations[ApprovedAnnotation] == "" {
+				if node.Annotations[DisruptionRequiredAnnotation] != "" && node.Annotations[ApprovedAnnotation] == "" {
 					waitingForApprovalNodes = append(waitingForApprovalNodes, node.Name)
 				} else {
 					updatingNodes = append(updatingNodes, node.Name)

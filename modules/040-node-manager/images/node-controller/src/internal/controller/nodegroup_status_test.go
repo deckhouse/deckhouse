@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nodegroupstatus
+package controller
 
 import (
 	"context"
@@ -379,7 +379,7 @@ func TestReconcile_WaitingForDisruptiveApproval(t *testing.T) {
 			Labels: map[string]string{NodeGroupLabel: "ng1"},
 			Annotations: map[string]string{
 				ConfigurationChecksumAnnotation: "old-checksum",
-				DisruptiveApprovalAnnotation:    "true",
+				DisruptionRequiredAnnotation:    "true",
 			},
 		},
 		Status: corev1.NodeStatus{
