@@ -16,6 +16,8 @@ metadata:
   labels:
     component: etcd
     tier: control-plane
+  annotations:
+    control-plane-manager.deckhouse.io/etcd.advertise-client-urls: {{ $advertiseClient }}
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
