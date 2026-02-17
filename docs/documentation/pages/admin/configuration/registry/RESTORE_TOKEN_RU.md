@@ -1,15 +1,15 @@
 ---
-title: Восстановление подключения к registry при истекшем и неверном лицензионном токене
+title: Восстановление подключения к хранилищу образов контейнеров при истекшем и неверном лицензионном токене
 permalink: ru/admin/configuration/registry/restore-token.html
-description: "Восстановление подключения к registry в Deckhouse Kubernetes Platform при проблемах с лицензионным токеном. Восстановление доступа к registry."
+description: "Восстановление подключения к хранилищу образов контейнеров в Deckhouse Kubernetes Platform при проблемах с лицензионным токеном. Восстановление доступа к хранилище образов."
 lang: ru
 ---
 
 {% alert level="warning" %}
-Используйте эту инструкцию только если недоступна штатная [процедура смены registry](./third-party.html).
+Используйте эту инструкцию только если недоступна штатная [процедура смены хранилища образов контейнеров](./third-party.html).
 {% endalert %}
 
-Если после истечения лицензионного токена поды Deckhouse Kubernetes Platform (DKP) были перезапущены, в их логах появится ошибка подключения к registry при загрузке образов DKP. Чтобы переключить кластер на новый токен, на любом master-узле выполните следующие шаги:
+Если после истечения лицензионного токена поды Deckhouse Kubernetes Platform (DKP) были перезапущены, в их логах появится ошибка подключения к хранилищу образов контейнеров при загрузке образов DKP. Чтобы переключить кластер на новый токен, на любом master-узле выполните следующие шаги:
 
 1. Загрузите текущую конфигурацию секрета `deckhouse-registry` во временный файл:
 
@@ -17,7 +17,7 @@ lang: ru
    d8 k -n d8-system get secret deckhouse-registry -o yaml > /tmp/deckhouse-registry.yaml
    ```
 
-1. Во временном файле `/tmp/deckhouse-registry.yaml` замените значение поля `.dockerconfigjson` на Base64-кодированную строку с параметрами подключения к registry. Получить нужную строку можно командами ниже, подставив свои значения `MYPASSWORD` и `MYREGISTRY`:
+1. Во временном файле `/tmp/deckhouse-registry.yaml` замените значение поля `.dockerconfigjson` на Base64-кодированную строку с параметрами подключения к хранилищу образов. Получить нужную строку можно командами ниже, подставив свои значения `MYPASSWORD` и `MYREGISTRY`:
 
    ```shell
    declare MYUSER='license-token'
@@ -55,7 +55,7 @@ lang: ru
 
 1. При необходимости удалите остальные поды `deckhouse`, находящиеся в некорректном статусе.
 
-1. Повторите [штатную процедуру](./third-party.html) смены registry, подставив ваш токен и нужный адрес registry и редакцию вместо `example`:
+1. Повторите [штатную процедуру](./third-party.html) смены хранилища образов контейнеров, подставив ваш токен и нужный адрес хранилища образов и редакцию вместо `example`:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user licence-token --password MY-PASSWORD registry-example.deckhouse.ru/deckhouse/example
