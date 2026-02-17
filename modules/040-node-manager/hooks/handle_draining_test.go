@@ -326,3 +326,34 @@ func testMoveNodesToStaticClient(f *HookExecutionConfig) {
 		_, _ = k8sClient.CoreV1().Nodes().Create(context.Background(), &n, v1.CreateOptions{})
 	}
 }
+
+func generateStateToTestDrainingNodes(nodeNames []string, draining, unschedulable bool) string {
+	state := ``
+
+	for _, nodeName := range nodeNames {
+		state += fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Node
+metadata:
+  name: %s
+  labels:
+    node.deckhouse.io/group: worker
+  annotations:
+    update.node.deckhouse.io/approved: ""
+`, nodeName)
+
+		if draining {
+			state += `
+    update.node.deckhouse.io/draining: "bashible"
+`
+		}
+		if unschedulable {
+			state += `
+spec:
+  unschedulable: true`
+		}
+	}
+
+	return state
+}
