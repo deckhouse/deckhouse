@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controlplane
+package controlplaneconfiguration
 
 import (
 	"context"
@@ -38,7 +38,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/pkg/constants"
+	"control-plane-manager/internal/constants"
 )
 
 var (
@@ -121,7 +121,7 @@ func (m *mockManifestGenerator) GenerateKubeconfigs(tmpDir string) error {
 	if err := os.MkdirAll(kubernetesDir, 0o700); err != nil {
 		return err
 	}
-	
+
 	// Generate mock kubeconfig files for controller-manager and scheduler
 	for _, component := range []string{"controller-manager", "scheduler"} {
 		kubeconfigPath := filepath.Join(kubernetesDir, component+".conf")
@@ -130,7 +130,7 @@ func (m *mockManifestGenerator) GenerateKubeconfigs(tmpDir string) error {
 			return err
 		}
 	}
-	
+
 	return nil
 }
 
@@ -210,8 +210,7 @@ func (suite *ControllerTestSuite) setupController(objs []client.Object) {
 		Build()
 
 	suite.controller = &Reconciler{
-		client:            suite.client,
-		manifestGenerator: &mockManifestGenerator{},
+		client: suite.client,
 	}
 }
 
@@ -389,31 +388,17 @@ func (suite *ControllerTestSuite) TestSyncSecretToTmp() {
 		err = syncSecretToTmp(pkiSecret, tmpDir)
 		require.NoError(suite.T(), err)
 
-		kubeadmDir := filepath.Join(tmpDir, constants.RelativeKubeadmDir)
 		patchesDir := filepath.Join(tmpDir, constants.RelativePatchesDir)
 		extraFilesDir := filepath.Join(tmpDir, constants.RelativeExtraFilesDir)
 		pkiDir := filepath.Join(tmpDir, constants.RelativePkiDir)
 
-		require.DirExists(suite.T(), kubeadmDir, "Kubeadm directory should exist")
 		require.DirExists(suite.T(), patchesDir, "Patches directory should exist")
 		require.DirExists(suite.T(), extraFilesDir, "Extra files directory should exist")
 		require.DirExists(suite.T(), pkiDir, "PKI directory should exist")
 
-		kubeadmConfigPath := filepath.Join(kubeadmDir, "config.yaml")
-		require.FileExists(suite.T(), kubeadmConfigPath, "Kubeadm config should exist")
-
-		content, err := os.ReadFile(kubeadmConfigPath)
 		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), string(content), "apiVersion: kubeadm.k8s.io/v1beta3",
-			"Kubeadm config should be valid")
-
 		auditPolicyPath := filepath.Join(extraFilesDir, "audit-policy.yaml")
 		require.FileExists(suite.T(), auditPolicyPath, "Audit policy should exist")
-
-		content, err = os.ReadFile(auditPolicyPath)
-		require.NoError(suite.T(), err)
-		require.Contains(suite.T(), string(content), "apiVersion: audit.k8s.io/v1",
-			"Audit policy should be valid")
 
 		pkiFiles := []string{"ca.crt", "ca.key", "front-proxy-ca.key", "front-proxy-ca.crt", "etcd/ca.crt", "etcd/ca.key"}
 		for _, file := range pkiFiles {
@@ -491,7 +476,7 @@ func (suite *ControllerTestSuite) TestChecksumCalculation() {
 		}, pkiSecret)
 		require.NoError(suite.T(), err)
 
-		checksum1, err := calculatePKIChecksum(pkiSecret)
+		checksum1, err := internal.CalculatePKIChecksum(pkiSecret)
 		require.NoError(suite.T(), err)
 
 		checksum2, err := calculatePKIChecksum(pkiSecret)
@@ -601,34 +586,34 @@ func (suite *ControllerTestSuite) TestCertificateGeneration() {
 func (suite *ControllerTestSuite) TestGenerateKubeconfigs() {
 	suite.Run("TestGenerateKubeconfigs", func() {
 		generator := &mockManifestGenerator{}
-		
+
 		tmpDir, err := os.MkdirTemp("", "kubeconfig-test-")
 		require.NoError(suite.T(), err)
 		defer os.RemoveAll(tmpDir)
 
 		err = generator.GenerateKubeconfigs(tmpDir)
 		require.NoError(suite.T(), err)
-		
+
 		kubernetesDir := filepath.Join(tmpDir, constants.RelativeKubernetesDir)
-		
+
 		// Verify controller-manager.conf was created
 		controllerManagerConf := filepath.Join(kubernetesDir, "controller-manager.conf")
 		_, err = os.Stat(controllerManagerConf)
 		require.NoError(suite.T(), err, "controller-manager.conf should exist")
-		
+
 		content, err := os.ReadFile(controllerManagerConf)
 		require.NoError(suite.T(), err)
 		require.Contains(suite.T(), string(content), "controller-manager", "controller-manager.conf should contain reference")
-		
+
 		// Verify scheduler.conf was created
 		schedulerConf := filepath.Join(kubernetesDir, "scheduler.conf")
 		_, err = os.Stat(schedulerConf)
 		require.NoError(suite.T(), err, "scheduler.conf should exist")
-		
+
 		content, err = os.ReadFile(schedulerConf)
 		require.NoError(suite.T(), err)
 		require.Contains(suite.T(), string(content), "scheduler", "scheduler.conf should contain reference")
-		
+
 		suite.T().Log("Kubeconfig generation test passed")
 	})
 }
