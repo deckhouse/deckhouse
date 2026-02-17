@@ -20,11 +20,16 @@ kind: Pod
 metadata:
   name: kube-scheduler
   namespace: kube-system
+  labels:
+    component: kube-scheduler
+    tier: control-plane
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ .clusterConfiguration.kubernetesVersion | quote }}
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
+  priority: 2000001000
+  priorityClassName: system-node-critical
   volumes:
   - name: kubeconfig
     hostPath:
@@ -46,7 +51,6 @@ spec:
 {{- end }}
     command:
     - kube-scheduler
-    args:
     - --bind-address=127.0.0.1
     - --leader-elect=true
     - --kubeconfig=/etc/kubernetes/scheduler.conf
@@ -82,14 +86,31 @@ spec:
     - name: GOGC
       value: "50"
     readinessProbe:
+      failureThreshold: 3
       httpGet:
         host: 127.0.0.1
         path: /healthz
         port: 10259
         scheme: HTTPS
+      periodSeconds: 1
+      timeoutSeconds: 15
     livenessProbe:
+      failureThreshold: 8
       httpGet:
         host: 127.0.0.1
-        path: /healthz
+        path: /livez
         port: 10259
         scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
+    startupProbe:
+      failureThreshold: 24
+      httpGet:
+        host: 127.0.0.1
+        path: /livez
+        port: probe-port
+        scheme: HTTPS
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 15
