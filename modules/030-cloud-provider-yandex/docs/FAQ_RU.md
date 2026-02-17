@@ -86,7 +86,7 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    --zone ru-central1-a \
    --public-address 178.154.226.159
    ```
-   
+
    > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
 
 3. Продолжите установку кластера, указав данные bastion-хоста. На вопрос про кеш Terraform ответьте `y`:
@@ -95,5 +95,5 @@ d8 k -n kube-system get secret d8-provider-cluster-configuration -o json | jq --
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
    --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
-   
+
    > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa`, а для ключа с ED25519-шифрованием `id_ed25519`.

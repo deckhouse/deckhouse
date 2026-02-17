@@ -504,9 +504,9 @@ spec:
    dhctl bootstrap --ssh-bastion-host=178.154.226.159 --ssh-bastion-user=yc-user \
      --ssh-user=ubuntu --ssh-agent-private-keys=/tmp/.ssh/<SSH_PRIVATE_KEY_FILE> --config=/config.yml
    ```
-   
+
    > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего приватного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa`, а для ключа с ED25519-шифрованием `id_ed25519`.
-   
+
    Здесь:
 
    - `--ssh-bastion-user` — пользователь для подключения к bastion-хосту;

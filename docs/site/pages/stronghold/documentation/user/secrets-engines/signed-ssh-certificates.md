@@ -153,7 +153,7 @@ the client's local workstation.
     serial_number   c73f26d2340276aa
     signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1...
     ```
-   
+
     > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
     The result will include the serial and the signed key. This signed key is
@@ -181,7 +181,7 @@ the client's local workstation.
     $ d8 stronghold write -field=signed_key ssh-client-signer/sign/my-role \
         public_key=@$HOME/.ssh/<SSH_PUBLIC_KEY_FILE> > signed-cert.pub
     ```
-    
+
     > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
     If you are saving the certificate directly beside your SSH keypair, suffix
