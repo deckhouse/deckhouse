@@ -16,32 +16,19 @@
 export LANG=C LC_NUMERIC=C
 set -Eeo pipefail
 
-{{- $bbnn := .Files.Get "deckhouse/candi/bashible/bb_node_name.sh.tpl" -}}
-{{- tpl $bbnn . }}
+{{- $candi := "candi/bashible/lib.sh.tpl" -}}
+{{- $deckhouse := "/deckhouse/candi/bashible/lib.sh.tpl" -}}
+{{- $lib := .Files.Get $deckhouse | default (.Files.Get $candi) -}}
+{{- $ctx := . -}}
+{{- tpl (printf `
+%s
 
-bb-d8-node-name() {
-  echo $(</var/lib/bashible/discovered-node-name)
-}
-
-bb-discover-node-name() {
-  local discovered_name_file="/var/lib/bashible/discovered-node-name"
-  local kubelet_crt="/var/lib/kubelet/pki/kubelet-server-current.pem"
-
-  if [ ! -s "$discovered_name_file" ]; then
-    if [[ -s "$kubelet_crt" ]]; then
-      openssl x509 -in "$kubelet_crt" \
-        -noout -subject -nameopt multiline |
-      awk '/^ *commonName/{print $NF}' | cut -d':' -f3- > "$discovered_name_file"
-    else
-    {{- if and (ne .nodeGroup.nodeType "Static") (ne .nodeGroup.nodeType "CloudStatic") }}
-      if [[ "$(hostname)" != "$(hostname -s)" ]]; then
-        hostnamectl set-hostname "$(hostname -s)"
-      fi
-    {{- end }}
-      hostname > "$discovered_name_file"
-    fi
-  fi
-}
+{{ template "bb-d8-node-name" $ }}
+{{ template "bb-d8-machine-name" $ }}
+{{ template "bb-d8-node-ip" $ }}
+{{ template "bb-discover-node-name" $ }}
+{{ template "bb-status" $ }}
+` $lib) $ctx }}
 
 bb-kube-apiserver-healthy() {
   local kubeconfig="$1"
@@ -89,6 +76,7 @@ bb-label-node-bashible-first-run-finished() {
   done
 
   echo "ERROR: Timed out after $max_attempts attempts. Could not set label node.deckhouse.io/bashible-first-run-finished on node $(bb-d8-node-name)." >&2
+  bb-bashible-ready-error "Failed to set node.deckhouse.io/bashible-first-run-finished label"
   exit 1
 }
 
@@ -127,76 +115,6 @@ bb-indent-text() {
     done
 }
 
-function bb-event-error-create() {
-    # This function is used for creating event in the default namespace with reference of
-    # bashible step and used events.k8s.io/v1 apiVersion.
-    # eventName aggregates hostname with bashible step - sed keep only name and replace
-    # underscore with dash due to regexp.
-    # nodeName is used for both .name and .uid fields intentionally as putting a real node uid
-    # has proven to have some side effects like missing events when describing objects
-    # using kubectl versions 1.23.x (https://github.com/deckhouse/deckhouse/issues/4609).
-    # All of stderr outputs are stored in the eventLog file.
-    # step is used as argument for function call.
-    # If event creation failed, error from kubectl suppressed.
-    step="$1"
-    eventName="$(echo -n $(bb-d8-node-name))-$(echo $step | sed 's#.*/##; s/_/-/g')"
-    nodeName=$(bb-d8-node-name)
-    eventLog="/var/lib/bashible/step.log"
-    if [[ -f "${eventLog}" ]]; then
-      eventNote="$(tail -c 500 "${eventLog}")"
-    else
-      eventNote="bashible step log is not available."
-    fi
-    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      indent="            " # 12 spaces
-      logs="$(bb-indent-text "$indent" <<<"${eventNote}")"
-      bb-kubectl-exec create -f - <<EOF || true
-          apiVersion: events.k8s.io/v1
-          kind: Event
-          metadata:
-            generateName: bashible-error-${eventName}-
-          regarding:
-            apiVersion: v1
-            kind: Node
-            name: ${nodeName}
-            uid: ${nodeName}
-          note: |
-${logs}
-          reason: BashibleStepFailed
-          type: Warning
-          reportingController: bashible
-          reportingInstance: "$(bb-d8-node-name)"
-          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-          action: "BashibleStepExecution"
-EOF
-    fi
-}
-
-function bb-event-info-create() {
-    eventName="$(echo -n "$(bb-d8-node-name)")-$(echo $1 | sed 's#.*/##; s/_/-/g')"
-    nodeName="$(bb-d8-node-name)"
-    if type kubectl >/dev/null 2>&1 && test -f /etc/kubernetes/kubelet.conf ; then
-      bb-kubectl-exec create -f - <<EOF || true
-          apiVersion: events.k8s.io/v1
-          kind: Event
-          metadata:
-            generateName: bashible-info-${eventName}-update-
-          regarding:
-            apiVersion: v1
-            kind: Node
-            name: ${nodeName}
-            uid: ${nodeName}
-          reason: BashibleNodeUpdate
-          type: Normal
-          note: "$1 steps update on ${nodeName}"
-          reportingController: bashible
-          reportingInstance: "$(bb-d8-node-name)"
-          eventTime: '$(date -u +"%Y-%m-%dT%H:%M:%S.%6NZ")'
-          action: "BashibleStepExecution"
-EOF
-    fi
-}
-
 function annotate_node() {
   echo "Annotate node $(bb-d8-node-name) with annotation ${@}"
   attempt=0
@@ -204,6 +122,7 @@ function annotate_node() {
     attempt=$(( attempt + 1 ))
     if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
       >&2 echo "ERROR: Failed to annotate node $(bb-d8-node-name) with annotation ${@} after ${MAX_RETRIES} retries. Last error from kubectl: ${error}"
+      bb-bashible-ready-error "Failed to annotate node after retry limit"
       exit 1
     fi
     if [ "$attempt" -gt "2" ]; then
@@ -225,6 +144,7 @@ function get_secret() {
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        bb-bashible-ready-error "Failed to get secret ${secret} after retry limit"
         exit 1
       fi
       >&2 echo "failed to get secret $secret with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -248,6 +168,7 @@ function get_secret() {
 {{ end }}
   else
     >&2 echo "failed to get secret $secret: can't find kubelet.conf or bootstrap-token"
+    bb-bashible-ready-error "Failed to get secret ${secret}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
 }
@@ -262,6 +183,7 @@ function get_bundle() {
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
         >&2 echo "ERROR: Failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
+        bb-bashible-ready-error "Failed to get ${resource} ${name} after retry limit"
         exit 1
       fi
       >&2 echo "failed to get $resource $name with kubectl --kubeconfig=/etc/kubernetes/kubelet.conf"
@@ -285,17 +207,16 @@ function get_bundle() {
 {{ end }}
   else
     >&2 echo "failed to get $resource $name: can't find kubelet.conf or bootstrap-token"
+    bb-bashible-ready-error "Failed to get ${resource} ${name}: kubelet.conf and bootstrap-token are unavailable"
     exit 1
   fi
 }
 
-log_configuration_checksum() {
-  local kind="$1"
-  local objName="$2"
-  local payload="$3"
+get_configuration_checksum() {
+  local payload="$1"
   local checksum
   checksum=$(jq -r '.metadata.annotations["bashible.deckhouse.io/configuration-checksum"] // empty' <<<"$payload")
-  echo "Got $kind/$objName configuration checksum: $checksum" >&2
+  echo "${checksum:0:8}"
 }
 
 function current_uptime() {
@@ -391,20 +312,33 @@ function main() {
     FIRST_BASHIBLE_RUN="yes"
   fi
 
+  if [ "$FIRST_BASHIBLE_RUN" == "yes" ]; then
+    bb-bashible-ready-initial-run "Initial run is in progress"
+  fi
+  bb-waiting-approval-not-required
+  bb-disruption-approval-not-required
+  local configuration_checksum="${CONFIGURATION_CHECKSUM:0:8}"
+
   mkdir -p "$BUNDLE_STEPS_DIR" "$TMPDIR"
 
   # update bashible.sh itself
   if [ -z "${BASHIBLE_SKIP_UPDATE-}" ] && [ -z "${is_local-}" ]; then
+
     bashible_bundle="$(get_bundle bashible "${NODE_GROUP}")"
-    log_configuration_checksum "bashible" "${NODE_GROUP}" "$bashible_bundle"
+    local bashible_configuration_checksum
+    bashible_configuration_checksum="$(get_configuration_checksum "$bashible_bundle")"
+    echo "Got bashible/${NODE_GROUP} configuration checksum: ${bashible_configuration_checksum}" >&2
+
     printf '%s\n' "$bashible_bundle" | jq -r '.data."bashible.sh"' > $BOOTSTRAP_DIR/bashible-new.sh
     if [ ! -s $BOOTSTRAP_DIR/bashible-new.sh ] ; then
       >&2 echo "ERROR: Got empty $BOOTSTRAP_DIR/bashible-new.sh."
+      bb-bashible-ready-error "Got empty bashible-new.sh"
       exit 1
     fi
     read -r first_line < $BOOTSTRAP_DIR/bashible-new.sh
     if [[ "$first_line" != '#!/usr/bin/env bash' ]] ; then
       >&2 echo "ERROR: $BOOTSTRAP_DIR/bashible-new.sh is not a bash script."
+      bb-bashible-ready-error "bashible-new.sh is not a bash script"
       exit 1
     fi
     chmod +x $BOOTSTRAP_DIR/bashible-new.sh
@@ -434,9 +368,12 @@ function main() {
     fi
   fi
   if [[ -f $CONFIGURATION_CHECKSUM_FILE ]] && [[ "$(<$CONFIGURATION_CHECKSUM_FILE)" == "$CONFIGURATION_CHECKSUM" ]] && [[ "$REBOOT_ANNOTATION" == "null" ]] && [[ -f $UPTIME_FILE ]] && [[ "$(<$UPTIME_FILE)" < "$(current_uptime)" ]] 2>/dev/null; then
-    echo "Configuration is in sync, nothing to do."
     annotate_node node.deckhouse.io/configuration-checksum=${CONFIGURATION_CHECKSUM}
     current_uptime > $UPTIME_FILE
+
+    local converge_completion_message="converge cycle finished. Last applied configuration checksum: ${configuration_checksum}."
+    bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
+
     exit 0
   fi
   rm -f "$CONFIGURATION_CHECKSUM_FILE"
@@ -451,7 +388,12 @@ function main() {
     rm -rf "$BUNDLE_STEPS_DIR"/*
 
     nodegroupbundle_bundle="$(get_bundle nodegroupbundle "${NODE_GROUP}")"
-    log_configuration_checksum "nodegroupbundle" "${NODE_GROUP}" "$nodegroupbundle_bundle"
+    local nodegroupbundle_configuration_checksum
+    nodegroupbundle_configuration_checksum="$(get_configuration_checksum "$nodegroupbundle_bundle")"
+    echo "Got nodegroupbundle/${NODE_GROUP} configuration checksum: ${nodegroupbundle_configuration_checksum}" >&2
+    if [ -n "$nodegroupbundle_configuration_checksum" ]; then
+      configuration_checksum="$nodegroupbundle_configuration_checksum"
+    fi
     ng_steps_collection="$(printf '%s\n' "$nodegroupbundle_bundle" | jq -rc '.data')"
 
     for step in $(jq -r 'to_entries[] | .key' <<< "$ng_steps_collection"); do
@@ -471,10 +413,14 @@ function main() {
     echo ===
     attempt=0
     sx=""
-    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee /var/lib/bashible/step.log >&2)
+    until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "/var/lib/bashible/step${sx:+.debug}.log" >&2)
     do
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
+        {{- if ne .runType "ClusterBootstrap" }}
+        bb-event-error-create "$step"
+        {{- end }}
+        bb-bashible-ready-steps-failed "${step##*/}"
         >&2 echo "ERROR: Failed to execute step $step. Retry limit is over."
         exit 1
       fi
@@ -489,8 +435,16 @@ function main() {
       {{- if ne .runType "ClusterBootstrap" }}
       bb-event-error-create "$step"
       {{- end }}
+      bb-bashible-ready-steps-failed "${step##*/}"
     done
+
+    local last_successful_step="${step##*/}"
+    local steps_completed_message="Last successful step: ${last_successful_step}"
+    bb-bashible-ready-steps-completed "$last_successful_step" "${steps_completed_message}"
   done
+
+  local converge_completion_message="Bashible converge cycle finished. Last applied configuration checksum: ${configuration_checksum}."
+  bb-bashible-ready-steps-completed "noop" "${converge_completion_message}"
 
   {{- if ne .runType "ClusterBootstrap" }}
       bb-event-info-create "finish"
