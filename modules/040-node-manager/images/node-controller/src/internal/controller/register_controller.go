@@ -23,6 +23,20 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
+const (
+	NodeGroupLabel                   = "node.deckhouse.io/group"
+	ConfigurationChecksumAnnotation  = "node.deckhouse.io/configuration-checksum"
+	MachineNamespace                 = "d8-cloud-instance-manager"
+	ConfigurationChecksumsSecretName = "configuration-checksums"
+	ApprovedAnnotation               = "update.node.deckhouse.io/approved"
+	WaitingForApprovalAnnotation     = "update.node.deckhouse.io/waiting-for-approval"
+	DisruptionRequiredAnnotation     = "update.node.deckhouse.io/disruption-required"
+	DisruptionApprovedAnnotation     = "update.node.deckhouse.io/disruption-approved"
+	RollingUpdateAnnotation          = "update.node.deckhouse.io/rolling-update"
+	DrainingAnnotation               = "update.node.deckhouse.io/draining"
+	DrainedAnnotation                = "update.node.deckhouse.io/drained"
+)
+
 // SetupFunc is a function that sets up a controller with the manager.
 type SetupFunc func(mgr ctrl.Manager) error
 

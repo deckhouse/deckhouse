@@ -67,29 +67,6 @@ func init() {
 	Register("UpdateApproval", Setup)
 }
 
-const (
-	// NodeGroupLabel is the label on Node that indicates which NodeGroup it belongs to
-	NodeGroupLabel = "node.deckhouse.io/group"
-
-	// ConfigurationChecksumAnnotation is the annotation on Node with configuration checksum
-	ConfigurationChecksumAnnotation = "node.deckhouse.io/configuration-checksum"
-
-	// MachineNamespace is the namespace where configuration checksums secret is stored
-	MachineNamespace = "d8-cloud-instance-manager"
-
-	// ConfigurationChecksumsSecretName is the name of the secret with configuration checksums
-	ConfigurationChecksumsSecretName = "configuration-checksums"
-
-	// Update approval annotations
-	ApprovedAnnotation           = "update.node.deckhouse.io/approved"
-	WaitingForApprovalAnnotation = "update.node.deckhouse.io/waiting-for-approval"
-	DisruptionRequiredAnnotation = "update.node.deckhouse.io/disruption-required"
-	DisruptionApprovedAnnotation = "update.node.deckhouse.io/disruption-approved"
-	RollingUpdateAnnotation      = "update.node.deckhouse.io/rolling-update"
-	DrainingAnnotation           = "update.node.deckhouse.io/draining"
-	DrainedAnnotation            = "update.node.deckhouse.io/drained"
-)
-
 // Reconciler handles node update approvals.
 //
 // It watches NodeGroup and Node resources and manages the update approval workflow:
