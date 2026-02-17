@@ -4,8 +4,7 @@
 
 
  - #16795 unknown section "metrics-storage"
- - #17702 unknown section "cloud-instance-manager"
- - #17801 unknown section "docs-builder"
+ - #17702 unknown section "registry-packages"
 
 ## Know before update
 
@@ -110,6 +109,8 @@
  - **[cloud-provider-vsphere]** fix cve [#17106](https://github.com/deckhouse/deckhouse/pull/17106)
  - **[cloud-provider-yandex]** fix cve [#17469](https://github.com/deckhouse/deckhouse/pull/17469)
  - **[cloud-provider-zvirt]** fix cve [#17093](https://github.com/deckhouse/deckhouse/pull/17093)
+ - **[cni-cilium]** Fix issue in generating CiliumEgressGatewayPolicy CR. [#17949](https://github.com/deckhouse/deckhouse/pull/17949)
+    All current connections powered by EgressGateways will be terminated.
  - **[cni-cilium]** Fix hook discovery_cni_exclusive.go [#17719](https://github.com/deckhouse/deckhouse/pull/17719)
     If the SDN module is used in the cluster, the Cilium agent pods will be restarted.
  - **[cni-cilium]** Fixed egress-gateway-agent controller logic for deleted resources and disable dev logging. [#17378](https://github.com/deckhouse/deckhouse/pull/17378)
@@ -141,6 +142,7 @@
  - **[dhctl]** Isolated temporary directory for singleshot RPC and dhctl to avoid cleanup race. [#15794](https://github.com/deckhouse/deckhouse/pull/15794)
  - **[dhctl]** Fixed a memory leak in Terraform exporter. [#15350](https://github.com/deckhouse/deckhouse/pull/15350)
  - **[extended-monitoring]** Add namespace-scoped overrides [#17213](https://github.com/deckhouse/deckhouse/pull/17213)
+ - **[ingress-nginx]** A false-positive trigger of alert GeoIPDownloadErrorDetectedFromMaxMind is fixed. [#17741](https://github.com/deckhouse/deckhouse/pull/17741)
  - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs fixes are backported. [#17823](https://github.com/deckhouse/deckhouse/pull/17823)
     The ingress nginx controllers' pods will be restated.
  - **[ingress-nginx]** The CVE-2026-1580, CVE-2026-24512, CVE-2026-24513, CVE-2026-24514 CVEs are fixed. [#17795](https://github.com/deckhouse/deckhouse/pull/17795)
@@ -157,6 +159,7 @@
  - **[multitenancy-manager]** Add validation to restrict Project name length to 53 characters. [#16926](https://github.com/deckhouse/deckhouse/pull/16926)
     Prevents creation of Projects with too-long names that would lead to invalid generated Kubernetes resource names.
  - **[multitenancy-manager]** Fixed indentation in the manifest of `multitenancy-manager`. [#16471](https://github.com/deckhouse/deckhouse/pull/16471)
+ - **[node-manager]** Fix panic in cluster-autoscaler caused by nil pointer dereference during node removal simulation. [#17924](https://github.com/deckhouse/deckhouse/pull/17924)
  - **[node-manager]** remove excessive netcat calls from d8-shutdown-inhibitor [#17153](https://github.com/deckhouse/deckhouse/pull/17153)
  - **[node-manager]** It fixes issues in the DaemonSet manifest for fencing module. [#17087](https://github.com/deckhouse/deckhouse/pull/17087)
  - **[node-manager]** Fixed `mig-manager` reconfigure script to correctly handle auto-approved disruptive node group changes. [#16655](https://github.com/deckhouse/deckhouse/pull/16655)

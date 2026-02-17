@@ -131,6 +131,18 @@ spec:
         memory: 23
         pods: 3
 `
+
+	// Simulates a Descheduler CR that was converted from v1alpha1
+	// with only deprecated strategies (e.g. removePodsViolatingNodeTaints).
+	// After conversion, all deprecated strategies are stripped and spec.strategies is empty.
+	deschedulerCRNoStrategies = `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Descheduler
+metadata:
+  name: test-no-strategies
+spec: {}
+`
 )
 
 var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
@@ -265,6 +277,47 @@ var _ = Describe("Modules :: descheduler :: hooks :: get_crds ::", func() {
         cpu: 14
         memory: 23
         pods: 3
+`))
+		})
+	})
+
+	Context("Cluster with Descheduler CR with no valid strategies (converted from v1alpha1 with deprecated-only strategies)", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCRNoStrategies)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and skip the CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`[]`))
+		})
+	})
+
+	Context("Cluster with one valid CR and one CR with no valid strategies", func() {
+		BeforeEach(func() {
+			f.KubeStateSet(deschedulerCR1 + deschedulerCRNoStrategies)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Should run without errors and include only the valid CR", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("descheduler.internal.deschedulers").String()).To(MatchYAML(`
+- name: test
+  evictLocalStoragePods: false
+  strategies:
+    lowNodeUtilization:
+      enabled: true
+      targetThresholds:
+        cpu: 40
+        gpu: gpuNode
+        memory: 50
+        pods: 50
+      thresholds:
+        cpu: 10
+        memory: 20
+        pods: 30
 `))
 		})
 	})
