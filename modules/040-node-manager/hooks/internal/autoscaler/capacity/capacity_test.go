@@ -192,6 +192,25 @@ func TestCapacityExtractor(t *testing.T) {
 		assert.Equal(t, "16Gi", capac.Memory.String())
 		assert.Equal(t, "8", capac.CPU.String())
 	})
+
+	t.Run("DVPSpecWorker", func(t *testing.T) {
+		t.Parallel()
+		var instanceClass map[string]interface{}
+		err := yaml.Unmarshal([]byte(dvpSpecWorker), &instanceClass)
+		require.NoError(t, err)
+		//catalog := NewInstanceTypesCatalog([]v1alpha1.InstanceType{
+		//	{
+		//		Name:   "amd-epyc-gen-3",
+		//		CPU:    resource.MustParse("8"),
+		//		Memory: resource.MustParse(strconv.FormatInt(16384, 10) + "Mi"),
+		//	},
+		//})
+		catalog := NewInstanceTypesCatalog(make([]v1alpha1.InstanceType, 0))
+		capac, err := CalculateNodeTemplateCapacity(instanceClass["kind"].(string), instanceClass["spec"], catalog)
+		require.NoError(t, err)
+		assert.Equal(t, "8Gi", capac.Memory.String())
+		assert.Equal(t, "4", capac.CPU.String())
+	})
 }
 
 const (
@@ -318,5 +337,33 @@ spec:
   flavorName: m1.large
   imageName: ubuntu-18-04-cloud-amd64
   mainNetwork: ndev
+`
+
+	dvpSpecWorker = `
+apiVersion: deckhouse.io/v1alpha1
+kind: DVPInstanceClass
+metadata:
+  creationTimestamp: "2025-12-30T06:47:54Z"
+  generation: 1
+  name: worker
+  resourceVersion: "9580100"
+  uid: 878e51e6-a6e6-4f00-a408-d78a17ff0763
+spec:
+  rootDisk:
+    image:
+      kind: ClusterVirtualImage
+      name: ubuntu-24-04-lts
+    size: 30Gi
+    storageClass: replicated
+  virtualMachine:
+    bootloader: EFI
+    cpu:
+      coreFraction: 20%
+      cores: 4
+    liveMigrationPolicy: PreferForced
+    memory:
+      size: 8Gi
+    runPolicy: AlwaysOnUnlessStoppedManually
+    virtualMachineClassName: amd-epyc-gen-3
 `
 )
