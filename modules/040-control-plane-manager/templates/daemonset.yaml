@@ -31,7 +31,6 @@ memory: 10Mi
 {{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
 
-{{- $_ := set $imageHolders "kubeApiserverHealthcheck" "image-holder-kube-apiserver-healthcheck" }}
 {{- $_ := set $imageHolders "etcd" "image-holder-etcd" }}
 
 {{- $registry := dict }}

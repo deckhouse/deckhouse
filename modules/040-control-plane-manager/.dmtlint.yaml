@@ -13,9 +13,6 @@ linters-settings:
           container: image-holder-kube-controller-manager
         - kind: DaemonSet
           name: d8-control-plane-manager
-          container: image-holder-kube-apiserver-healthcheck
-        - kind: DaemonSet
-          name: d8-control-plane-manager
           container: image-holder-kube-apiserver
       security-context:
         - kind: DaemonSet
@@ -24,9 +21,6 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
-        - kind: DaemonSet
-          name: d8-control-plane-manager
-          container: image-holder-kube-apiserver-healthcheck
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-controller-manager
@@ -43,9 +37,6 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
-        - kind: DaemonSet
-          name: d8-control-plane-manager
-          container: image-holder-kube-apiserver-healthcheck
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-controller-manager
@@ -70,9 +61,6 @@ linters-settings:
           container: image-holder-kube-controller-manager
         - kind: DaemonSet
           name: d8-control-plane-manager
-          container: image-holder-kube-apiserver-healthcheck
-        - kind: DaemonSet
-          name: d8-control-plane-manager
           container: image-holder-kube-apiserver
         - kind: DaemonSet
           name: d8-control-plane-manager
@@ -90,9 +78,6 @@ linters-settings:
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-controller-manager
-        - kind: DaemonSet
-          name: d8-control-plane-manager
-          container: image-holder-kube-apiserver-healthcheck
         - kind: DaemonSet
           name: d8-control-plane-manager
           container: image-holder-kube-apiserver
