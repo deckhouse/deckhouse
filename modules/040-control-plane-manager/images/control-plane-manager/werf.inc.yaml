@@ -14,7 +14,7 @@ import:
   - kubeadm
   before: install
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
-  add: /src/control-plane-manager
+  add: /src/cmd/control-plane-manager/control-plane-manager
   to: /control-plane-manager
   before: install
 git:
