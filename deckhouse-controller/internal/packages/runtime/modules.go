@@ -172,6 +172,6 @@ func (r *Runtime) RemoveModule(name string) {
 		})
 
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, modulesNamespace, false, r.nelmService, r.queueService, r.status, r.logger))
-		r.queueService.Enqueue(ctx, name, taskuninstall.NewAppTask(name, r.installer, r.logger), cleanup)
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewModuleTask(name, r.installer, r.logger), cleanup)
 	})
 }
