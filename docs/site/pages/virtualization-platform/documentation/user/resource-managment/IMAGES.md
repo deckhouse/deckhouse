@@ -3,7 +3,7 @@ title: "Images"
 permalink: en/virtualization-platform/documentation/user/resource-management/images.html
 ---
 
-The [VirtualImage](/modules/virtualization/cr.html#virtualimage.html) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
+The [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource is designed for uploading virtual machine images and subsequently using them to create virtual machine disks.
 
 {% alert level="warning" %}
 Please note that [VirtualImage](/modules/virtualization/cr.html#virtualimage) is a project resource, which means it is only available within the project or namespace where it was created. To use images at the cluster level, a separate resource is provided — [ClusterVirtualImage](/modules/virtualization/cr.html#clustervirtualimage).
@@ -13,7 +13,7 @@ When connected to a virtual machine, the image is accessed in read-only mode.
 
 The image creation process includes the following steps:
 
-- The user creates a `VirtualImage` resource.
+- The user creates a [VirtualImage](/modules/virtualization/cr.html#virtualimage) resource.
 - After creation, the image is automatically downloaded from the source specified in the specification to DVCR or PVC storage, depending on the type.
 - Once the download is complete, the resource becomes available for disk creation.
 
@@ -26,14 +26,14 @@ Examples of resources for obtaining virtual machine images:
 
 <a id="image-resources-table"></a>
 
-| Distribution                                                   | Default user. |
-|----------------------------------------------------------------|---------------|
-| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images) | `almalinux`   |
-| [AlpineLinux](https://alpinelinux.org/cloud/)                  | `alpine`      |
-| [CentOS](https://cloud.centos.org/centos/)                     | `cloud-user`  |
-| [Debian](https://cdimage.debian.org/images/cloud/)             | `debian`      |
-| [Rocky](https://rockylinux.org/download/)                      | `rocky`       |
-| [Ubuntu](https://cloud-images.ubuntu.com/)                     | `ubuntu`      |
+| Distribution                                                                      | Default user.             |
+| --------------------------------------------------------------------------------- | ------------------------- |
+| [AlmaLinux](https://almalinux.org/get-almalinux/#Cloud_Images)                    | `almalinux`               |
+| [AlpineLinux](https://alpinelinux.org/cloud/)                                     | `alpine`                  |
+| [CentOS](https://cloud.centos.org/centos/)                                        | `cloud-user`              |
+| [Debian](https://cdimage.debian.org/images/cloud/)                                | `debian`                  |
+| [Rocky](https://rockylinux.org/download/)                                         | `rocky`                   |
+| [Ubuntu](https://cloud-images.ubuntu.com/)                                        | `ubuntu`                  |
 
 The following preinstalled image formats are supported:
 
@@ -44,22 +44,30 @@ The following preinstalled image formats are supported:
 
 Image files can also be compressed with one of the following compression algorithms: gz, xz.
 
-Once a share is created, the image type and size are automatically determined. This information is reflected in the resource status.
+Once a share is created, the image type and size are automatically determined, and this information is reflected in the share status.
+
+The image status shows two sizes:
+
+- `STOREDSIZE` (storage size) — the amount of space the image actually occupies in storage (DVCR or PVC). For images uploaded in a compressed format (for example, `.gz` or `.xz`), this value is smaller than the unpacked size.
+- `UNPACKEDSIZE` (unpacked size) — the image size after unpacking. It is used when creating a disk from the image and defines the minimum disk size that can be created.
+
+{% alert level="info" %}
+When creating a disk from an image, set the disk size to `UNPACKEDSIZE` or larger .  
+If the size is not specified, the disk will be created with a size equal to `UNPACKEDSIZE`.
+{% endalert %}
 
 Images can be downloaded from various sources, such as HTTP servers where image files are located or container registries. It is also possible to download images directly from the command line using the curl utility.
 
 Images can be created from other images and virtual machine disks.
 
-Project image two storage types are supported:
+Project image two storage options are supported:
 
-- `ContainerRegistry`: The default type in which the image is stored in `DVCR`.
-- `PersistentVolumeClaim`: The type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
+- `ContainerRegistry` - the default type in which the image is stored in `DVCR`.
+- `PersistentVolumeClaim` - the type that uses `PVC` as the storage for the image. This option is preferred if you are using storage that supports `PVC` fast cloning, which allows you to create disks from images faster.
 
 {% alert level="warning" %}
 Using an image with the `storage: PersistentVolumeClaim` parameter is only supported for creating disks in the same storage class (StorageClass).
 {% endalert %}
-
-A full description of the `VirtualImage` resource configuration settings can be found at [link](/modules/virtualization/cr.html#virtualimage.html).
 
 ## Creating image from HTTP server
 
@@ -159,7 +167,7 @@ spec:
   storage: PersistentVolumeClaim
   persistentVolumeClaim:
     # Substitute your StorageClass name.
-    storageClassName: i-sds-replicated-thin-r2
+    storageClassName: rv-thin-r2
   # Source for image creation.
   dataSource:
     type: HTTP
