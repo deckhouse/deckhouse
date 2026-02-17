@@ -42,8 +42,8 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
-    - cd /src
-    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o control-plane-manager .
+    - cd /src/cmd/control-plane-manager
+    - GOPROXY=$(cat /run/secrets/GOPROXY) GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o /control-plane-manager main.go
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 fromCacheVersion: "2025-07-25-3"
