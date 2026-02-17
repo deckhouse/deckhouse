@@ -291,8 +291,8 @@
           "rel": ""
         },
         {
-          "id": 8451,
-          "parent_id": 8398,
+          "id": 8398,
+          "parent_id": 5349,
           "title": "Сценарии использования",
           "url": "/products/kubernetes-platform/solutions/",
           "target": "",
