@@ -45,10 +45,12 @@ func SyncSecretToTmp(secret *corev1.Secret, tmpDir string) error {
 	for key, content := range secret.Data {
 		switch {
 		case strings.HasSuffix(key, ".yaml.tpl"):
+			// Expand env in manifest templates (e.g., $MY_IP, $NODE_NAME)
+			expandedContent := []byte(os.ExpandEnv(string(content)))
 			name := strings.TrimSuffix(key, ".tpl")
 			if err := os.WriteFile(
 				filepath.Join(patchesDir, name),
-				content,
+				expandedContent,
 				0o600,
 			); err != nil {
 				return err
