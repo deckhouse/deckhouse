@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"github.com/prometheus/alertmanager/types"
-	"github.com/prometheus/common/model"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -103,9 +102,6 @@ func reconcile(ctx context.Context, s *storeStruct) {
 	}
 
 	for fingerprint, alert := range alerts {
-		if shouldSkipClusterAlert(alert) {
-			continue
-		}
 		// is alerts CR does not exist in cluster, insert CR
 		if _, ok := crSet[fingerprint]; !ok {
 			err := s.clusterStore.createCR(ctx, fingerprint, alert)
@@ -131,21 +127,6 @@ func reconcile(ctx context.Context, s *storeStruct) {
 		}
 	}
 	log.Info("finishing reconcile")
-}
-
-// shouldSkipClusterAlert returns true if the alert must not be synced to ClusterAlert CRs.
-// Filters out D8IstioDesiredVersionIsNotInstalled and D8IstioActualDataPlaneVersionNotEqualDesired when istio.io/rev=default (label "revision" or "label_istio_io_rev").
-func shouldSkipClusterAlert(alert *types.Alert) bool {
-	switch alert.Name() {
-	case "D8IstioDesiredVersionIsNotInstalled", "D8IstioActualDataPlaneVersionNotEqualDesired":
-	default:
-		return false
-	}
-	rev := string(alert.Labels[model.LabelName("revision")])
-	if rev == "" {
-		rev = string(alert.Labels[model.LabelName("label_istio_io_rev")])
-	}
-	return rev == "default"
 }
 
 // generate queue fullness alert

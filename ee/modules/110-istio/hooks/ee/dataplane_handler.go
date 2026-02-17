@@ -537,6 +537,11 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 			desiredRevision = istioPod.SpecificRevision
 		}
 
+		// skip pods with istio.io/rev=default: do not emit metrics, so Prometheus alerts won't fire for them
+		if desiredRevision == "default" {
+			continue
+		}
+
 		// we don't need metrics for pod without desired revision and without istio sidecar
 		if desiredRevision == istioRevsionAbsent && istioPod.Revision == istioRevsionAbsent {
 			continue
