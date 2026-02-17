@@ -1,0 +1,328 @@
+Subject: [PATCH] add resourceKubernetesOwnerReferencesV1
+---
+Index: kubernetes/provider.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/provider.go b/kubernetes/provider.go
+--- a/kubernetes/provider.go	(revision be88f44271050f69d52f410bca388834afedfe71)
++++ b/kubernetes/provider.go	(date 1770200290721)
+@@ -352,13 +351,14 @@
+ 			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
+
+ 			// provider helper resources
+-			"kubernetes_labels":      resourceKubernetesLabels(),
+-			"kubernetes_annotations": resourceKubernetesAnnotations(),
++			"kubernetes_labels":              resourceKubernetesLabels(),
++			"kubernetes_annotations":         resourceKubernetesAnnotations(),
++			"kubernetes_owner_references_v1": resourceKubernetesOwnerReferencesV1(),
+
+ 			// authentication
+ 			"kubernetes_token_request_v1": resourceKubernetesTokenRequestV1(),
+
+-			//node
++			// node
+ 			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
+ 		},
+ 	}
+@@ -464,7 +464,7 @@
+ 		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
+ 		// IMPORTANT: this will NOT enable a workaround of issue: https://github.com/hashicorp/terraform/issues/4149
+ 		// IMPORTANT: if the supplied configuration is incomplete or invalid
+-		///IMPORTANT: provider operations will fail or attempt to connect to localhost endpoints
++		// /IMPORTANT: provider operations will fail or attempt to connect to localhost endpoints
+ 		cfg = &restclient.Config{}
+ 	}
+
+Index: kubernetes/resource_kubernetes_owner_references_v1.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/kubernetes/resource_kubernetes_owner_references_v1.go b/kubernetes/resource_kubernetes_owner_references_v1.go
+new file mode 100644
+--- /dev/null	(date 1770280833604)
++++ b/kubernetes/resource_kubernetes_owner_references_v1.go	(date 1770280833604)
+@@ -0,0 +1,281 @@
++package kubernetes
++
++import (
++	"context"
++	"encoding/json"
++	"fmt"
++
++	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
++	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
++	"k8s.io/apimachinery/pkg/api/errors"
++	"k8s.io/apimachinery/pkg/api/meta"
++	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
++	k8sschema "k8s.io/apimachinery/pkg/runtime/schema"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/client-go/dynamic"
++	"k8s.io/client-go/restmapper"
++
++	"github.com/hashicorp/terraform-provider-kubernetes/util"
++)
++
++func resourceKubernetesOwnerReferencesV1() *schema.Resource {
++	return &schema.Resource{
++		Description:   "This resource allows Terraform to manage the owner references for a resource that already exists. Existing ownerReferences not specified in the configuration will be overridden.",
++		CreateContext: resourceKubernetesOwnerReferencesCreate,
++		ReadContext:   resourceKubernetesOwnerReferencesRead,
++		UpdateContext: resourceKubernetesOwnerReferencesUpdate,
++		DeleteContext: resourceKubernetesOwnerReferencesDelete,
++		Schema: map[string]*schema.Schema{
++			"api_version": {
++				Type:        schema.TypeString,
++				Description: "The apiVersion of the resource.",
++				Required:    true,
++				ForceNew:    true,
++			},
++			"kind": {
++				Type:        schema.TypeString,
++				Description: "The kind of the resource.",
++				Required:    true,
++				ForceNew:    true,
++			},
++			"metadata": {
++				Type:     schema.TypeList,
++				Required: true,
++				MaxItems: 1,
++				Elem: &schema.Resource{
++					Schema: map[string]*schema.Schema{
++						"name": {
++							Type:        schema.TypeString,
++							Description: "The name of the resource.",
++							Required:    true,
++							ForceNew:    true,
++						},
++						"namespace": {
++							Type:        schema.TypeString,
++							Description: "The namespace of the resource.",
++							Optional:    true,
++							ForceNew:    true,
++						},
++					},
++				},
++			},
++			"owner_references": {
++				Type:        schema.TypeList,
++				Description: "A list of ownerReferences to apply to the resource.",
++				Optional:    true,
++				Elem: &schema.Resource{
++					Schema: map[string]*schema.Schema{
++						"api_version": {
++							Type:        schema.TypeString,
++							Description: "The apiVersion of the referenced resource.",
++							Required:    true,
++							ForceNew:    true,
++						},
++						"kind": {
++							Type:        schema.TypeString,
++							Description: "The kind of the referenced resource.",
++							Required:    true,
++							ForceNew:    true,
++						},
++						"name": {
++							Type:        schema.TypeString,
++							Description: "The name of the referenced resource.",
++							Required:    true,
++							ForceNew:    true,
++						},
++						"uid": {
++							Type:        schema.TypeString,
++							Description: "The uid of the referenced resource.",
++							Required:    true,
++							ForceNew:    true,
++						},
++					},
++				},
++			},
++		},
++	}
++}
++
++func resourceKubernetesOwnerReferencesCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
++	metadata := expandMetadata(d.Get("metadata").([]interface{}))
++	d.SetId(buildIdWithVersionKind(metadata,
++		d.Get("api_version").(string),
++		d.Get("kind").(string)))
++	diag := resourceKubernetesOwnerReferencesUpdate(ctx, d, m)
++	if diag.HasError() {
++		d.SetId("")
++	}
++	return diag
++}
++
++func resourceKubernetesOwnerReferencesRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
++	conn, err := m.(KubeClientsets).DynamicClient()
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	gvk, name, namespace, err := util.ParseResourceID(d.Id())
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	// figure out which resource client to use
++	dc, err := m.(KubeClientsets).DiscoveryClient()
++	if err != nil {
++		return diag.FromErr(err)
++	}
++	agr, err := restmapper.GetAPIGroupResources(dc)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++	restMapper := restmapper.NewDiscoveryRESTMapper(agr)
++	mapping, err := restMapper.RESTMapping(gvk.GroupKind(), gvk.Version)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	// determine if the resource is namespaced or not
++	var r dynamic.ResourceInterface
++	if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
++		if namespace == "" {
++			namespace = "default"
++		}
++		r = conn.Resource(mapping.Resource).Namespace(namespace)
++	} else {
++		r = conn.Resource(mapping.Resource)
++	}
++
++	// get the resource
++	res, err := r.Get(ctx, name, v1.GetOptions{})
++	if err != nil {
++		if errors.IsNotFound(err) {
++			return diag.Diagnostics{{
++				Severity: diag.Warning,
++				Summary:  "Resource deleted",
++				Detail:   fmt.Sprintf("The underlying resource %q has been deleted. You should recreate the underlying resource, or remove it from your configuration.", name),
++			}}
++		}
++		return diag.FromErr(err)
++	}
++
++	resGetOwnerReferences := res.GetOwnerReferences()
++	ownerReferences := make([]interface{}, 0, len(resGetOwnerReferences))
++	for _, ownerReference := range resGetOwnerReferences {
++		ownerReferences = append(ownerReferences, map[string]interface{}{
++			"api_version": ownerReference.APIVersion,
++			"kind":        ownerReference.Kind,
++			"name":        ownerReference.Name,
++			"uid":         string(ownerReference.UID),
++		})
++	}
++	d.Set("owner_references", ownerReferences)
++	return nil
++}
++
++func resourceKubernetesOwnerReferencesUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
++	conn, err := m.(KubeClientsets).DynamicClient()
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	apiVersion := d.Get("api_version").(string)
++	kind := d.Get("kind").(string)
++	metadata := expandMetadata(d.Get("metadata").([]interface{}))
++	name := metadata.GetName()
++	namespace := metadata.GetNamespace()
++
++	// figure out which resource client to use
++	dc, err := m.(KubeClientsets).DiscoveryClient()
++	if err != nil {
++		return diag.FromErr(err)
++	}
++	agr, err := restmapper.GetAPIGroupResources(dc)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++	restMapper := restmapper.NewDiscoveryRESTMapper(agr)
++	gv, err := k8sschema.ParseGroupVersion(apiVersion)
++	if err != nil {
++		return diag.FromErr(err)
++
++	}
++	mapping, err := restMapper.RESTMapping(gv.WithKind(kind).GroupKind(), gv.Version)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	// determine if the resource is namespaced or not
++	var r dynamic.ResourceInterface
++	namespacedResource := mapping.Scope.Name() == meta.RESTScopeNameNamespace
++	if namespacedResource {
++		if namespace == "" {
++			namespace = "default"
++		}
++		r = conn.Resource(mapping.Resource).Namespace(namespace)
++	} else {
++		r = conn.Resource(mapping.Resource)
++	}
++
++	// check the resource exists before we try and patch it
++	_, err = r.Get(ctx, name, v1.GetOptions{})
++	if err != nil {
++		if d.Id() == "" {
++			// if we are deleting then there is nothing to do
++			// if the resource is gone
++			return nil
++		}
++		return diag.Errorf("The resource %q does not exist", name)
++	}
++
++	// craft the patch to update the ownerReferences
++	ownerReferences := []v1.OwnerReference{}
++	if d.Id() == "" {
++		// if we're deleting then just we just patch
++		// with an empty ownerReferences
++		ownerReferences = []v1.OwnerReference{}
++	} else if ownerReferencesInterface, ok := d.GetOk("owner_references"); ok {
++		ownerReferencesInterfaceList := ownerReferencesInterface.([]interface{})
++		for i := range ownerReferencesInterfaceList {
++			ownerReferences = append(ownerReferences, v1.OwnerReference{
++				APIVersion: ownerReferencesInterfaceList[i].(map[string]interface{})["api_version"].(string),
++				Kind:       ownerReferencesInterfaceList[i].(map[string]interface{})["kind"].(string),
++				Name:       ownerReferencesInterfaceList[i].(map[string]interface{})["name"].(string),
++				UID:        types.UID(ownerReferencesInterfaceList[i].(map[string]interface{})["uid"].(string)),
++			})
++		}
++	}
++
++	patch := map[string]any{
++		"metadata": map[string]any{
++			"ownerReferences": ownerReferences,
++		},
++	}
++
++	patchBytes, err := json.Marshal(patch)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	// apply the patch
++	_, err = r.Patch(
++		ctx,
++		name,
++		types.MergePatchType,
++		patchBytes,
++		v1.PatchOptions{},
++	)
++	if err != nil {
++		return diag.FromErr(err)
++	}
++
++	if d.Id() == "" {
++		// don't try to read if we're deleting
++		return nil
++	}
++	return resourceKubernetesOwnerReferencesRead(ctx, d, m)
++}
++
++func resourceKubernetesOwnerReferencesDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
++	d.SetId("")
++	return resourceKubernetesOwnerReferencesUpdate(ctx, d, m)
++}
