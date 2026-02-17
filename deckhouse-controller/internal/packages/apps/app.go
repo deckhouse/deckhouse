@@ -205,7 +205,7 @@ func (a *Application) GetExtraNelmValues() string {
 	globalValues := a.globalValuesGetter(false)
 	globalJSON, _ := json.Marshal(globalValues)
 
-	return fmt.Sprintf("Instance=%s,Package=%s,Global=%s", instanceJSON, packageJSON, globalJSON)
+	return fmt.Sprintf("Instance=%s,Package=%s,Deckhouse=%s", instanceJSON, packageJSON, globalJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".

@@ -186,7 +186,7 @@ func (m *Module) GetExtraNelmValues() string {
 	globalValues := m.globalValuesGetter(false)
 	globalJSON, _ := json.Marshal(globalValues)
 
-	return fmt.Sprintf("Package=%s,Global=%s", packageJSON, globalJSON)
+	return fmt.Sprintf("Package=%s,Deckhouse=%s", packageJSON, globalJSON)
 }
 
 // GetName returns the full module identifier.
