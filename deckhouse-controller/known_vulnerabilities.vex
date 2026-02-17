@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 10,
+  "version": 11,
   "statements": [
     {
       "vulnerability": {
@@ -129,8 +129,22 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Функционал извлечения tar-архивов с использованием уязвимого fallback-кода pip версии 25.3 не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все используемые версии Python соответствуют требованиям PEP 706, что исключает возможность эксплуатации данной уязвимости.",
       "timestamp": "2026-02-11T10:38:09.437468469Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-26007"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Функционал, связанный с шифрованием и криптографическими операциями pypi/cryptography версии 44.0.1, не используется в рамках текущих функциональных спецификаций и эксплуатационных процессов системы. Все криптографические операции выполняются через промежуточные компоненты, не предоставляющие доступа к уязвимому коду.",
+      "timestamp": "2026-02-17T12:00:00Z"
     }
   ],
-  "timestamp": "2026-02-11T12:00:00Z",
-  "last_updated": "2026-02-11T12:00:00Z"
+  "timestamp": "2026-02-17T12:00:00Z",
+  "last_updated": "2026-02-17T12:00:00Z"
 }
