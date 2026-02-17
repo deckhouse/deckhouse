@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -112,7 +113,7 @@ func (r *Runtime) initEmbedded() error {
 
 		def, err := loadModuleDefinition(path)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if errors.Is(err, os.ErrNotExist) {
 				return nil
 			}
 
