@@ -25,6 +25,8 @@ import (
 
 	"github.com/siderolabs/tcpproxy"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"kubernetes-api-proxy/internal/upstream"
 )
 
@@ -34,7 +36,7 @@ type lbTarget struct {
 	list         *upstream.List
 	fallbackList *upstream.FallbackList
 
-	logger          *slog.Logger
+	logger          *log.Logger
 	route           string
 	dialTimeout     time.Duration
 	keepAlivePeriod time.Duration

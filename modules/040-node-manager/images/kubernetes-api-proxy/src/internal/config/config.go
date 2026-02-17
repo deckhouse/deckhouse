@@ -18,6 +18,7 @@ package config
 
 import (
 	"flag"
+	"log/slog"
 	"os"
 	"strconv"
 	"strings"
@@ -52,6 +53,23 @@ type Config struct {
 
 	//
 	AsStaticPod bool
+}
+
+func (c Config) SLogLevel() slog.Level {
+	var lvl slog.Level
+
+	switch strings.ToLower(c.LogLevel) {
+	case "debug":
+		lvl = slog.LevelDebug
+	case "warn":
+		lvl = slog.LevelWarn
+	case "error":
+		lvl = slog.LevelError
+	default:
+		lvl = slog.LevelInfo
+	}
+
+	return lvl
 }
 
 // Parse reads command-line flags & environment variables and returns the

@@ -23,6 +23,8 @@ import (
 
 	"github.com/siderolabs/tcpproxy"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"kubernetes-api-proxy/internal/upstream"
 )
 
@@ -34,7 +36,7 @@ import (
 type Balancer struct {
 	tcpproxy.Proxy
 
-	Logger *slog.Logger
+	Logger *log.Logger
 
 	MainUpstreamList     *upstream.List
 	FallbackUpstreamList *upstream.FallbackList

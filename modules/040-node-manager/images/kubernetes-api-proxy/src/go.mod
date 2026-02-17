@@ -3,6 +3,7 @@ module kubernetes-api-proxy
 go 1.25.0
 
 require (
+	github.com/deckhouse/deckhouse/pkg/log v0.1.1
 	github.com/siderolabs/tcpproxy v0.1.0
 	k8s.io/api v0.35.0
 	k8s.io/apimachinery v0.35.0
@@ -10,6 +11,7 @@ require (
 )
 
 require (
+	github.com/DataDog/gostackparse v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.0 // indirect

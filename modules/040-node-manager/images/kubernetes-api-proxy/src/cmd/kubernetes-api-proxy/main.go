@@ -28,6 +28,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/util/json"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	apilb "kubernetes-api-proxy/internal/apiserver"
 	"kubernetes-api-proxy/internal/app"
 	"kubernetes-api-proxy/internal/config"
@@ -37,7 +39,12 @@ import (
 
 func main() {
 	cfg := config.Parse()
-	logger := app.NewLogger(cfg.LogLevel)
+
+	logger := log.NewLogger(
+		log.WithOutput(os.Stdout),
+		log.WithLevel(cfg.SLogLevel()),
+		log.WithHandlerType(log.JSONHandlerType),
+	)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -122,7 +129,7 @@ func main() {
 
 func configureMainUpstreamList(
 	cfg config.Config,
-	logger *slog.Logger,
+	logger *log.Logger,
 	kubernetesConfigGetter kubernetes.ClusterConfigGetter,
 ) (*uopts.List, error) {
 	listOptions := []uopts.ListOption{
@@ -145,7 +152,7 @@ func configureMainUpstreamList(
 
 func configureFallbackList(
 	cfg config.Config,
-	logger *slog.Logger,
+	logger *log.Logger,
 ) (*uopts.FallbackList, error) {
 	opts := []uopts.FallbackListOption{
 		uopts.WithFallbackLogger(logger),

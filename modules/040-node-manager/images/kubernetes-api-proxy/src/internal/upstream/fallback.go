@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type FallbackListOption func(l *FallbackList) error
@@ -56,7 +58,7 @@ func WithFileWatcher(filePath string) FallbackListOption {
 	}
 }
 
-func WithFallbackLogger(logger *slog.Logger) FallbackListOption {
+func WithFallbackLogger(logger *log.Logger) FallbackListOption {
 	return func(l *FallbackList) error {
 		l.logger = logger
 

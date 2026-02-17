@@ -19,11 +19,12 @@ package upstream
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"math/rand/v2"
 	"slices"
 	"sync"
 	"time"
+
+	"github.com/deckhouse/deckhouse/pkg/log"
 
 	"kubernetes-api-proxy/pkg/kubernetes"
 	"kubernetes-api-proxy/pkg/utils"
@@ -75,7 +76,7 @@ func WithKubernetesConfigGetter(getter kubernetes.ClusterConfigGetter) ListOptio
 	}
 }
 
-func WithLogger(logger *slog.Logger) ListOption {
+func WithLogger(logger *log.Logger) ListOption {
 	return func(l *ListConfig) error {
 		l.logger = logger
 
@@ -113,7 +114,7 @@ type List struct { //nolint:govet
 // ListConfig is a configuration for List. It is separated from List to allow
 // usage of functional options without exposing type in their API.
 type ListConfig struct {
-	logger *slog.Logger
+	logger *log.Logger
 
 	kubernetesConfigGetter kubernetes.ClusterConfigGetter
 

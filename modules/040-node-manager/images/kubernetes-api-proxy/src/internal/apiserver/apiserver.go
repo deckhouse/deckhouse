@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"kubernetes-api-proxy/internal/loadbalancer"
 	"kubernetes-api-proxy/internal/upstream"
 )
@@ -84,7 +86,7 @@ func WithFallbackUpstreamList(list *upstream.FallbackList) LoadBalancerOption {
 func NewLoadBalancer(
 	bindAddress string,
 	bindPort int,
-	logger *slog.Logger,
+	logger *log.Logger,
 	options ...LoadBalancerOption,
 ) (*LoadBalancer, error) {
 	if bindPort == 0 {

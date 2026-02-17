@@ -31,6 +31,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
+	"github.com/deckhouse/deckhouse/pkg/log"
+
 	"kubernetes-api-proxy/internal/config"
 	"kubernetes-api-proxy/internal/upstream"
 	kutils "kubernetes-api-proxy/pkg/kubernetes"
@@ -50,7 +52,7 @@ const (
 func StartDiscovery(
 	ctx context.Context,
 	cfg config.Config,
-	logger *slog.Logger,
+	logger *log.Logger,
 	mainList *upstream.List,
 	fallbackList *upstream.FallbackList,
 ) {
@@ -89,7 +91,7 @@ func StartDiscovery(
 
 func discovery(
 	ctx context.Context,
-	logger *slog.Logger,
+	logger *log.Logger,
 	clusterConfigGetter func() (*rest.Config, error),
 	mainList *upstream.List,
 ) error {
