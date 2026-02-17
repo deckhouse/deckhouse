@@ -13,9 +13,13 @@ kind: Pod
 metadata:
   name: etcd
   namespace: kube-system
+  labels:
+    component: etcd
+    tier: control-plane
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
+  priority: 2000001000
   priorityClassName: system-node-critical
   volumes:
   - name: etcd-data
@@ -32,12 +36,12 @@ spec:
 {{- if hasKey .images "controlPlaneManager" }}
 {{- if hasKey .images.controlPlaneManager "etcd" }}
     image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager "etcd") }}
+    imagePullPolicy: IfNotPresent
 {{- end }}
 {{- end }}
 {{- end }}
     command:
     - etcd
-    args:
     - --advertise-client-urls={{ $advertiseClient }}
     - --cert-file=/etc/kubernetes/pki/etcd/server.crt
     - --client-cert-auth=true
@@ -48,9 +52,8 @@ spec:
 {{- if hasKey .etcd "existingCluster" }}
 {{- if .etcd.existingCluster }}
     - --initial-cluster-state=existing
-{{- if semverCompare "< 1.34" .clusterConfiguration.kubernetesVersion }}
-    - --experimental-initial-corrupt-check=true
-{{- end }}
+    - --feature-gates=InitialCorruptCheck=true
+    - --watch-progress-notify-interval=5s
 {{- if hasKey .etcd "quotaBackendBytes" }}
     - --quota-backend-bytes={{ .etcd.quotaBackendBytes | quote }}
     - --metrics=extensive
@@ -95,18 +98,25 @@ spec:
       readOnlyRootFilesystem: true
       seccompProfile:
         type: RuntimeDefault
+    ports:
+    - containerPort: 2381
+      name: probe-port
+      protocol: TCP
     readinessProbe:
+      failureThreshold: 3
       httpGet:
         host: 127.0.0.1
         path: /health
         port: 2381
         scheme: HTTP
+      periodSeconds: 1
+      timeoutSeconds: 15
     livenessProbe:
       failureThreshold: 8
       httpGet:
         host: 127.0.0.1
-        path: /health
-        port: 2381
+        path: /livez
+        port: probe-port
         scheme: HTTP
       initialDelaySeconds: 10
       periodSeconds: 10
