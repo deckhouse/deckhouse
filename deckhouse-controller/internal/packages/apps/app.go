@@ -71,8 +71,6 @@ type Application struct {
 	scheduleManager   schedulemanager.ScheduleManager
 	kubeEventsManager kubeeventsmanager.KubeEventsManager
 
-	globalValuesGetter GlobalValuesGetter
-
 	logger *log.Logger
 }
 
@@ -96,11 +94,7 @@ type Config struct {
 	Patcher           *objectpatch.ObjectPatcher
 	ScheduleManager   schedulemanager.ScheduleManager
 	KubeEventsManager kubeeventsmanager.KubeEventsManager
-
-	GlobalValuesGetter GlobalValuesGetter
 }
-
-type GlobalValuesGetter func(prefix bool) addonutils.Values
 
 // NewAppByConfig creates a new Application instance with the specified configuration.
 // It initializes hook storage, adds all discovered hooks, and creates values storage.
@@ -127,7 +121,6 @@ func NewAppByConfig(name string, cfg *Config, logger *log.Logger) (*Application,
 	a.patcher = cfg.Patcher
 	a.scheduleManager = cfg.ScheduleManager
 	a.kubeEventsManager = cfg.KubeEventsManager
-	a.globalValuesGetter = cfg.GlobalValuesGetter
 	a.logger = logger
 
 	a.hooks = hooks.NewStorage()
@@ -202,10 +195,7 @@ func (a *Application) GetExtraNelmValues() string {
 	instanceJSON, _ := json.Marshal(runtimeValues.Instance)
 	packageJSON, _ := json.Marshal(runtimeValues.Package)
 
-	globalValues := a.globalValuesGetter(false)
-	globalJSON, _ := json.Marshal(globalValues)
-
-	return fmt.Sprintf("Instance=%s,Package=%s,Deckhouse=%s", instanceJSON, packageJSON, globalJSON)
+	return fmt.Sprintf("Instance=%s,Package=%s", instanceJSON, packageJSON)
 }
 
 // GetName returns the full application identifier in format "namespace.name".
@@ -291,9 +281,7 @@ func (a *Application) ValidateSettings(ctx context.Context, settings addonutils.
 
 // GetNelmValues returns values for rendering
 func (a *Application) GetNelmValues() addonutils.Values {
-	return addonutils.MergeValues(
-		addonutils.Values{"global": a.globalValuesGetter(false)},
-		a.values.GetValues())
+	return a.values.GetValues()
 }
 
 // ApplySettings apply setting values to application
