@@ -47,13 +47,13 @@ func StatFS(path string) (int64, int64, int64, int64, int64, int64, error) {
 	}
 
 	// Available is blocks available * fragment size
-	available = int64(statfs.Bavail) * int64(statfs.Bsize)
+	available = int64(statfs.Bavail) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Capacity is total block count * fragment size
-	capacity = int64(statfs.Blocks) * int64(statfs.Bsize)
+	capacity = int64(statfs.Blocks) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Usage is block being used * fragment size (aka block size).
-	used = (int64(statfs.Blocks) - int64(statfs.Bfree)) * int64(statfs.Bsize)
+	used = (int64(statfs.Blocks) - int64(statfs.Bfree)) * int64(statfs.Bsize) // nolint:unconvert
 
 	// Get inode usage
 	inodes = int64(statfs.Files)
