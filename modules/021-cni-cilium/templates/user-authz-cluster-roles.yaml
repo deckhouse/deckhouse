@@ -10,7 +10,6 @@ rules:
 - apiGroups:
   - cilium.io
   resources:
-  - ciliumnetworkpolicies
   - ciliumclusterwidenetworkpolicies
   verbs:
   - get
@@ -86,6 +85,16 @@ rules:
   - networking.k8s.io
   resources:
   - networkpolicies
+  verbs:
+  - create
+  - delete
+  - deletecollection
+  - patch
+  - update
+- apiGroups:
+  - cilium.io
+  resources:
+  - ciliumnetworkpolicies
   verbs:
   - create
   - delete
