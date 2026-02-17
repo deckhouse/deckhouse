@@ -1,21 +1,22 @@
 ---
-title: Работа с container registries и редакциями
+title: Хранилище образов контейнеров в DKP
 permalink: ru/admin/configuration/registry/
-description: "Настройка и управление container registry в Deckhouse Kubernetes Platform. Внутренний registry, интеграция с внешними registry и переключение редакций."
+description: "Хранилище образов контейнеров в DKP: настройка взаимодействия и использование."
 lang: ru
-search: container registry, registry configuration, edition management, registry management, container images, управление редакциями
+search: container registry, registry configuration, edition management, registry management, container images, хранилище образов контейнеров
 ---
 
-В этом разделе описывается работа с container registries (registry) и редакциями в Deckhouse Kubernetes Platform.
+В этом разделе описываются:
 
-## Работа с registry
+- Настройки Deckhouse Kubernetes Platform для взаимодействия с хранилищем образов компонентов DKP.
+- Работа с пользовательским хранилищем (хранилищем образов пользовательских приложений).
 
-В разделе рассматривается работа с registry в функционирующем кластере. Если вас интересует информация про работу с registry при установке кластера, перейдите в раздел [«Установка платформы»](../../../installing/).
+В разделе описаны процессы настройки DKP в уже работающем кластере. Информация о настройках при установке кластера приведена в разделе [«Установка платформы»](../../../installing/).
 
-В разделе [«Сторонний registry»](../registry/third-party.html) описан процесс переключения работающего кластера DKP на использование стороннего registry.
-В разделе [«Внутренний registry»](../registry/internal.html) рассматривается подготовка к переключению между режимами работы кластера: с использованием внутреннего container registry или без использования, а также процессы переключения.
-В разделе [«Восстановление подключения к registry»](../registry/restore-token.html) описан процесс восстановления загрузки образов Deckhouse Kubernetes Platform при истекшем лицензионном токене.
+## Настройки взаимодействия с хранилищем образов компонентов DKP
 
-## Работа с редакциями
+Возможности и процессы настройки взаимодействия с хранилищем образов компонентов DKP зависят от способа управления кластером. В кластерах, полностью управляемых DKP, управление настройками реализуется с помощью модуля [`registry`](/modules/registry/) (подробнее — в разделе [«Настройки в кластере, управляемом DKP»](managing-interaction.html)). В Managed Kubernetes кластерах применяется `helper change-registry`, модуль `registry` не используется (подробнее — в разделе [Настройки в Managed Kubernetes кластере»](managing-interaction.html)).
 
-В разделе [«Переключение редакций»](../registry/switching-editions.html) описаны возможные варианты переключения редакций в работающем кластере Deckhouse Kubernetes Platform.
+## Работа с пользовательским хранилищем
+
+В DKP поддерживается возможность использования пользовательского хранилища образов. Одни из способов реализации пользовательского хранилища — использование модуля [`payload-registry`](/modules/payload-registry). 
