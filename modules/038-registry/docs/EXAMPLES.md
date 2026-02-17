@@ -3,6 +3,10 @@ title: "Module registry: usage example"
 description: "Examples for switching between Direct and Unmanaged registry modes in Deckhouse Kubernets Platform, including configuration examples and status monitoring."
 ---
 
+{% alert level="warning" %}
+If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](/products/kubernetes-platform/documentation/v1/faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+{% endalert %}
+
 ## Switching to the `Direct` Mode
 
 To switch an already running cluster to `Direct` mode, follow these steps:

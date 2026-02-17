@@ -48,6 +48,10 @@ Mode switching restrictions are as follows:
 
 ## Examples of switching
 
+{% alert level="warning" %}
+If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+{% endalert %}
+
 ### Switching to Direct Mode
 
 To switch an already running cluster to `Direct` mode, follow these steps:
