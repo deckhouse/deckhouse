@@ -290,7 +290,7 @@ func (ar *updateApprover) approveDisruptions(_ context.Context, input *go_hook.H
 	now := time.Now()
 
 	if os.Getenv("D8_IS_TESTS_ENVIRONMENT") != "" {
-		now = time.Date(2021, 01, 01, 13, 30, 00, 00, time.UTC)
+		now = time.Date(2021, 0o1, 0o1, 13, 30, 0o0, 0o0, time.UTC)
 	}
 
 	for _, node := range ar.nodes {
@@ -392,8 +392,9 @@ func (ar *updateApprover) nodeUpToDate(input *go_hook.HookInput, node *updateApp
 }
 
 func (ar *updateApprover) nodeDeleteRollingUpdate(input *go_hook.HookInput, node *updateApprovalNode) {
+	// TODO
 	input.Logger.Info("Delete instances due to RollingUpdate strategy", slog.String("node", node.Name), slog.String("ng", node.NodeGroup))
-	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha1", "Instance", "", node.Name)
+	input.PatchCollector.DeleteInBackground("deckhouse.io/v1alpha2", "Instance", "", node.Name)
 	ar.finished = true
 }
 

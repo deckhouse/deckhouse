@@ -1,0 +1,116 @@
+/*
+Copyright 2025 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package controller
+
+import (
+	"context"
+	"fmt"
+
+	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+type CAPIMachineReconciler struct {
+	client.Client
+	machineFactory MachineFactory
+}
+
+func SetupCAPIMachineController(mgr ctrl.Manager) error {
+	if err := (&CAPIMachineReconciler{
+		Client:         mgr.GetClient(),
+		machineFactory: NewMachineFactory(),
+	}).
+		SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to setup capi machine reconciler: %w", err)
+	}
+
+	return nil
+}
+
+func (r *CAPIMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		Named("capi-machine-controller").
+		For(&capiv1beta2.Machine{}).
+		Complete(r)
+}
+
+func (r *CAPIMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := ctrl.LoggerFrom(ctx).WithValues("capiMachine", req.NamespacedName.String())
+	key := req.NamespacedName
+
+	capiMachine := &capiv1beta2.Machine{}
+	if err := r.Get(ctx, key, capiMachine); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	factory := r.machineFactory
+	if factory == nil {
+		factory = NewMachineFactory()
+	}
+
+	machine, err := factory.NewMachine(capiMachine)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	status := machine.GetStatus()
+	nodeGroup := machine.GetNodeGroup()
+
+	instanceName := machine.GetNodeName()
+	if instanceName == "" {
+		instanceName = machine.GetName()
+	}
+
+	instance, err := ensureInstanceExists(ctx, r.Client, instanceName)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	updated, err := r.updateInstanceMachineStatus(ctx, instance, status)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	log.V(1).Info("linked instance reconciled", "instance", instance.Name, "updated", updated)
+
+	log.Info("CAPIMachineReconciler", "status", status, "nodeGroup", nodeGroup)
+
+	return ctrl.Result{}, nil
+}
+
+func (r *CAPIMachineReconciler) updateInstanceMachineStatus(
+	ctx context.Context,
+	instance *deckhousev1alpha2.Instance,
+	machineStatus MachineStatus,
+) (bool, error) {
+	updated := instance.DeepCopy()
+	updated.Status.Phase = machineStatus.Phase
+	updated.Status.MachineStatus = machineStatus.MachineStatus
+	updated.Status.Message = machineStatus.Message
+	updated.Status.Conditions = machineStatus.Conditions
+
+	if apiequality.Semantic.DeepEqual(instance.Status, updated.Status) {
+		return false, nil
+	}
+
+	if err := r.Status().Patch(ctx, updated, client.MergeFrom(instance)); err != nil {
+		return false, fmt.Errorf("patch instance %q status: %w", instance.Name, err)
+	}
+
+	return true, nil
+}
