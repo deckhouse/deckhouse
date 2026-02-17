@@ -18,17 +18,18 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"time"
-
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
-	"control-plane-manager/controllers/controlplane"
+	"control-plane-manager/internal/constants"
+	controlplaneconfiguration "control-plane-manager/internal/controllers/control-plane-configuration"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-
-	"control-plane-manager/pkg/constants"
 	"k8s.io/klog/v2"
 	"k8s.io/klog/v2/textlogger"
 	"k8s.io/utils/ptr"
@@ -67,9 +68,9 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 	}
 
 	runtimeManager, err := controllerruntime.NewManager(cfg, controllerruntime.Options{
-		Scheme:         scheme,
-		LeaderElection: true,
-		LeaderElectionID: constants.ControllerName,
+		Scheme:           scheme,
+		LeaderElection:   true,
+		LeaderElectionID: constants.CpcControllerName,
 		BaseContext: func() context.Context {
 			return ctx
 		},
@@ -92,7 +93,7 @@ func NewManager(ctx context.Context, pprof bool) (*Manager, error) {
 		return nil, fmt.Errorf("add ready check: %w", err)
 	}
 
-	if err = controlplane.Register(runtimeManager); err != nil {
+	if err = controlplaneconfiguration.Register(runtimeManager); err != nil {
 		return nil, fmt.Errorf("register controlplane controller: %w", err)
 	}
 
@@ -115,4 +116,27 @@ func (c *Manager) Start(ctx context.Context) error {
 	klog.Info("Cache synced")
 
 	return nil
+}
+
+func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	manager, err := NewManager(ctx, false) // TODO pprof flag
+	if err != nil {
+		klog.Fatalf("Failed to create a manager: %v", err)
+	}
+
+	if err = manager.Start(ctx); err != nil {
+		klog.Fatalf("Failed to start the manager: %v", err)
+	}
+
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	for range sigs {
+		klog.Info("Shutdown signal received")
+		cancel()
+		klog.Infof("Bye from %s", constants.CpcControllerName)
+		break
+	}
 }

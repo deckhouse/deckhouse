@@ -17,24 +17,24 @@ limitations under the License.
 package constants
 
 const (
-	ControllerName                      = "control-plane-manager"
+	CpcControllerName                   = "control-plane-configuration-controller"
+	CpnControllerName                   = "control-plane-node-controller"
+	CpoControllerName                   = "control-plane-operator-controller"
 	ControlPlaneManagerConfigSecretName = "d8-control-plane-manager-config"
 	PkiSecretName                       = "d8-pki"
 	ControlPlaneConfigurationName       = "control-plane"
+	ControlPlaneNodeLabelKey            = "node-role.kubernetes.io/control-plane"
 	KubernetesConfigPath                = "/etc/kubernetes"
 	ManifestsPath                       = KubernetesConfigPath + "/manifests"
 	DeckhousePath                       = KubernetesConfigPath + "/deckhouse"
 	ConfigPath                          = "/config"
 	PkiPath                             = "/pki"
 	KubernetesPkiPath                   = KubernetesConfigPath + "/pki"
-	KubeadmPath                         = "/kubeadm"
-	TmpPath                             = "/tmp/control-plane-manager-manifests"
 	KubeSystemNamespace                 = "kube-system"
 
-	RelativeKubernetesDir  = "etc/kubernetes"
-	RelativePkiDir         = RelativeKubernetesDir + "/pki"
-	RelativeDeckhouseDir   = RelativeKubernetesDir + "/deckhouse"
-	RelativeKubeadmDir     = RelativeDeckhouseDir + "/kubeadm"
-	RelativePatchesDir     = RelativeKubeadmDir + "/patches"
-	RelativeExtraFilesDir  = RelativeDeckhouseDir + "/extra-files"
+	RelativeKubernetesDir = "etc/kubernetes"
+	RelativePkiDir        = RelativeKubernetesDir + "/pki"
+	RelativeDeckhouseDir  = RelativeKubernetesDir + "/deckhouse"
+	RelativePatchesDir    = RelativeDeckhouseDir + "/patches"
+	RelativeExtraFilesDir = RelativeDeckhouseDir + "/extra-files"
 )
