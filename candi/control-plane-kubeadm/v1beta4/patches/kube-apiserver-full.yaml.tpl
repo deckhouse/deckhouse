@@ -65,11 +65,17 @@ kind: Pod
 metadata:
   name: kube-apiserver
   namespace: kube-system
+  labels:
+    component: kube-apiserver
+    tier: control-plane
   annotations:
     control-plane-manager.deckhouse.io/kubernetes-version: {{ .clusterConfiguration.kubernetesVersion | quote }}
+    control-plane-manager.deckhouse.io/kube-apiserver.advertise-address.endpoint: {{ .nodeIP | quote }}
 spec:
   hostNetwork: true
   dnsPolicy: ClusterFirstWithHostNet
+  priority: 2000001000
+  priorityClassName: system-node-critical
 {{- if .apiserver.oidcIssuerAddress }}
 {{- if .apiserver.oidcIssuerURL }}
   hostAliases:
@@ -79,20 +85,28 @@ spec:
 {{- end }}
 {{- end }}
   volumes:
-  - name: deckhouse-extra-files
-    hostPath:
+  - hostPath:
       path: /etc/kubernetes/deckhouse/extra-files
       type: DirectoryOrCreate
-  - name: etc-pki
-    hostPath:
+    name: deckhouse-extra-files
+  - hostPath:
       path: /etc/pki
       type: DirectoryOrCreate
+    name: etc-pki
+  - hostPath:
+      path: /etc/kubernetes/pki
+      type: DirectoryOrCreate
+    name: k8s-certs
+  - hostPath:
+      path: /usr/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-share-ca-certificates
 {{- if .apiserver.auditPolicy }}
 {{- if eq .apiserver.auditLog.output "File" }}
-  - name: kube-audit-log
-    hostPath:
+  - hostPath:
       path: "{{ .apiserver.auditLog.path }}"
       type: DirectoryOrCreate
+    name: kube-audit-log
 {{- end }}
 {{- end }}
 {{- if hasKey . "images" }}
@@ -125,17 +139,36 @@ spec:
 {{- end }}
     command:
     - kube-apiserver
-    args:
     - --anonymous-auth=false
     - --api-audiences={{ $audiences | join "," }}
     - --service-account-issuer={{ $serviceAccountIssuer }}
     - --service-account-jwks-uri={{ $serviceAccountJWKSURI }}
     - --service-account-key-file=/etc/kubernetes/pki/sa.pub
     - --service-account-signing-key-file=/etc/kubernetes/pki/sa.key
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --secure-port=6443
+    - --etcd-cafile=/etc/kubernetes/pki/etcd/ca.crt
+    - --etcd-certfile=/etc/kubernetes/pki/apiserver-etcd-client.crt
+    - --etcd-keyfile=/etc/kubernetes/pki/apiserver-etcd-client.key
+    - --authorization-mode=Node,RBAC
+    - --proxy-client-cert-file=/etc/kubernetes/pki/front-proxy-client.crt
+    - --proxy-client-key-file=/etc/kubernetes/pki/front-proxy-client.key
+    - --requestheader-allowed-names=front-proxy-client
+    - --requestheader-client-ca-file=/etc/kubernetes/pki/front-proxy-ca.crt
+    - --requestheader-extra-headers-prefix=X-Remote-Extra-
+    - --requestheader-group-headers=X-Remote-Group
+    - --requestheader-username-headers=X-Remote-User
+    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR | quote }}
+    - --advertise-address={{ .nodeIP | quote }}
 {{- if ne .runType "ClusterBootstrap" }}
     - --enable-admission-plugins={{ $admissionPlugins | sortAlpha | join "," }}
     - --admission-control-config-file=/etc/kubernetes/deckhouse/extra-files/admission-control-config.yaml
     - --kubelet-certificate-authority=/etc/kubernetes/pki/ca.crt
+    - --kubelet-client-certificate=/etc/kubernetes/pki/apiserver-kubelet-client.crt
+    - --kubelet-client-key=/etc/kubernetes/pki/apiserver-kubelet-client.key
+    - --kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname
 {{- end }}
 {{- if .apiserver.auditPolicy }}
     - --audit-policy-file=/etc/kubernetes/deckhouse/extra-files/audit-policy.yaml
@@ -198,16 +231,25 @@ spec:
 {{- end }}
 {{- end }}
     volumeMounts:
-    - name: deckhouse-extra-files
-      mountPath: /etc/kubernetes/deckhouse/extra-files
+    - mountPath: /etc/kubernetes/deckhouse/extra-files
+      name: deckhouse-extra-files
       readOnly: true
-    - name: etc-pki
-      mountPath: /etc/pki
+    - mountPath: /etc/pki
+      name: etc-pki
+      readOnly: true
+    - mountPath: /usr/share/ca-certificates
+      name: usr-share-ca-certificates
+      readOnly: true
+    - mountPath: /etc/ssl/certs
+      name: ca-certs
+      readOnly: true
+    - mountPath: /etc/kubernetes/pki
+      name: k8s-certs
       readOnly: true
 {{- if .apiserver.auditPolicy }}
 {{- if eq .apiserver.auditLog.output "File" }}
-    - name: kube-audit-log
-      mountPath: /var/log/kube-audit
+    - mountPath: /var/log/kube-audit
+      name: kube-audit-log
       readOnly: false
 {{- end }}
 {{- end }}
@@ -299,14 +341,14 @@ spec:
     - --listen-port=3990
     - --api-server-port=6443
     volumeMounts:
-    - name: healthcheck-secrets-ca
-      mountPath: /secrets/ca.crt
+    - mountPath: /secrets/ca.crt
+      name: healthcheck-secrets-ca
       readOnly: true
-    - name: healthcheck-secrets-client-crt
-      mountPath: /secrets/client.crt
+    - mountPath: /secrets/client.crt
+      name: healthcheck-secrets-client-crt
       readOnly: true
-    - name: healthcheck-secrets-client-key
-      mountPath: /secrets/client.key
+    - mountPath: /secrets/client.key
+      name: healthcheck-secrets-client-key
       readOnly: true
 {{- end }}
 {{- end }}
