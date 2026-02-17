@@ -19,7 +19,10 @@ package agent
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"os"
+	"reflect"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -194,6 +197,10 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			}
 
 			logger.Info("Starting pod restart on node")
+
+			// Add jitter to avoid thundering herd when restarting pods
+			time.Sleep(time.Duration(rand.Intn(5000)) * time.Millisecond)
+
 			podList := &corev1.PodList{}
 			if err := r.List(ctx, podList, client.MatchingFields{"spec.nodeName": nodeName}); err != nil {
 				return ctrl.Result{}, err
@@ -205,6 +212,10 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 					if pod.DeletionTimestamp != nil {
 						continue
 					}
+
+					// Add small delay to throttle requests
+					time.Sleep(20 * time.Millisecond)
+
 					if err := r.Delete(ctx, &pod); err != nil {
 						if !errors.IsNotFound(err) {
 							logger.Error(err, "Failed to delete pod", "pod", pod.Name, "namespace", pod.Namespace)
@@ -249,6 +260,10 @@ func (r *CNIAgentReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 func (r *CNIAgentReconciler) ensurePodsAnnotated(ctx context.Context, nodeName, currentCNI string) error {
 	logger := log.FromContext(ctx)
+
+	// Add jitter to avoid thundering herd when all agents start listing/patching simultaneously
+	time.Sleep(time.Duration(rand.Intn(3000)) * time.Millisecond)
+
 	podList := &corev1.PodList{}
 	if err := r.List(ctx, podList, client.MatchingFields{"spec.nodeName": nodeName}); err != nil {
 		return err
@@ -272,6 +287,9 @@ func (r *CNIAgentReconciler) ensurePodsAnnotated(ctx context.Context, nodeName, 
 			patchedPod.Annotations = make(map[string]string)
 		}
 		patchedPod.Annotations[effectiveCNIAnnotation] = currentCNI
+
+		// Add small delay to throttle requests
+		time.Sleep(20 * time.Millisecond)
 
 		if err := r.Patch(ctx, patchedPod, client.MergeFrom(&pod)); err != nil {
 			if errors.IsNotFound(err) {
@@ -409,11 +427,46 @@ func (r *CNIAgentReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 
+	// Predicate to filter CNIMigration events
+	migrationPredicate := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldM, ok1 := e.ObjectOld.(*cnimigrationv1alpha1.CNIMigration)
+			newM, ok2 := e.ObjectNew.(*cnimigrationv1alpha1.CNIMigration)
+			if !ok1 || !ok2 {
+				return false
+			}
+
+			// Reconcile if Phase changed
+			if oldM.Status.Phase != newM.Status.Phase {
+				return true
+			}
+
+			// Reconcile if CurrentCNI changed
+			if oldM.Status.CurrentCNI != newM.Status.CurrentCNI {
+				return true
+			}
+
+			// Reconcile if Conditions changed
+			if !reflect.DeepEqual(oldM.Status.Conditions, newM.Status.Conditions) {
+				return true
+			}
+
+			// Reconcile if Spec changed
+			if !reflect.DeepEqual(oldM.Spec, newM.Spec) {
+				return true
+			}
+
+			// Ignore updates to Node statistics (NodesSucceeded, NodesFailed, etc.)
+			return false
+		},
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&cnimigrationv1alpha1.CNINodeMigration{}).
 		Watches(
 			&cnimigrationv1alpha1.CNIMigration{},
 			handler.EnqueueRequestsFromMapFunc(mapMigrationToRequest),
+			builder.WithPredicates(migrationPredicate),
 		).
 		Watches(
 			&corev1.Pod{},

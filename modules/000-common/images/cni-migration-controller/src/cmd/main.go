@@ -83,6 +83,8 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	config := ctrl.GetConfigOrDie()
+	config.QPS = 20.0
+	config.Burst = 100
 	setupLog.Info("Kubernetes connection details", "Host", config.Host)
 
 	if mode == "manager" {
