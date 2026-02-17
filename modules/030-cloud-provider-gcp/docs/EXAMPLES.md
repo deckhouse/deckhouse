@@ -2,7 +2,7 @@
 title: "Cloud provider — GCP: examples"
 ---
 
-## An example of the `GCPInstanceClass`custom resource
+## An example of the `GCPInstanceClass` custom resource
 
 Below is a simple example of custom resource `GCPInstanceClass` configuration:
 
@@ -13,6 +13,41 @@ metadata:
   name: test
 spec:
   machineType: n1-standard-1
+```
+
+## Enabling nested virtualization
+
+To run virtual machine workloads (e.g., KVM-based VMs) inside GCP instances, enable nested virtualization.
+
+> **Note.** Only supported on specific machine types. See the [GCP documentation](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types) for the list of compatible types.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: GCPInstanceClass
+metadata:
+  name: vm-nodes
+spec:
+  machineType: n2-standard-8
+  nestedVirtualization: true
+```
+
+## Adding additional disks
+
+To attach extra disks to instances (e.g., for LinStor, Ceph, NFS storage nodes):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: GCPInstanceClass
+metadata:
+  name: storage-nodes
+spec:
+  machineType: n1-standard-8
+  additionalDisks:
+  - sizeGb: 200
+    type: pd-ssd
+  - sizeGb: 500
+    type: pd-standard
+    autoDelete: true
 ```
 
 ## Configuring security policies on nodes
