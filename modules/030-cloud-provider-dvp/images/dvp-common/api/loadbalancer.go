@@ -105,13 +105,16 @@ func (lb *LoadBalancerService) CreateOrUpdateLoadBalancer(
 	ctx context.Context,
 	loadBalancer LoadBalancer,
 ) (*corev1.Service, error) {
-	var svc *corev1.Service
-	svc, err := lb.GetLoadBalancerByName(ctx, loadBalancer.Name)
-	if svc != nil && err == nil {
-		return lb.updateLoadBalancerService(ctx, svc, loadBalancer)
+	swhc, err := lb.getServiceWithHealthchecksByName(ctx, loadBalancer.Name)
+	if err != nil {
+		return nil, err
 	}
 
-	return lb.createLoadBalancerService(ctx, loadBalancer)
+	if swhc != nil {
+		return lb.updateLoadBalancerServiceWithHealthchecks(ctx, loadBalancer)
+	}
+
+	return lb.createLoadBalancerServiceWithHealthchecks(ctx, loadBalancer)
 }
 
 func (lb *LoadBalancerService) updateLoadBalancerService(
@@ -400,4 +403,142 @@ func (lb *LoadBalancerService) filterHealthyNodes(ctx context.Context, svc *core
 		}
 	}
 	return healthy, nil
+}
+
+func (lb *LoadBalancerService) getServiceWithHealthchecksByName(ctx context.Context, name string) (client.Object, error) {
+	u := newServiceWithHealthchecksUnstructured(lb.namespace, name)
+	if err := lb.client.Get(ctx, types.NamespacedName{Name: name, Namespace: lb.namespace}, u); err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return u, nil
+}
+
+func (lb *LoadBalancerService) createLoadBalancerServiceWithHealthchecks(
+	ctx context.Context,
+	loadBalancer LoadBalancer,
+) (*corev1.Service, error) {
+
+	name := loadBalancer.Name
+	desiredSvc := loadBalancer.Service
+	serviceLabels := loadBalancer.ServiceLabels
+	lbKey := lbLabelKey(name)
+
+	if err := lb.ensureNodeLabels(ctx, loadBalancer.Nodes, lbKey); err != nil {
+		return nil, err
+	}
+
+	ports := lb.CreateLoadBalancerPorts(desiredSvc)
+
+	u := newServiceWithHealthchecksUnstructured(lb.namespace, name)
+	u.SetAnnotations(desiredSvc.Annotations)
+	u.SetLabels(serviceLabels)
+
+	setServiceWithHealthchecksSpec(
+		u,
+		ports,
+		desiredSvc.Spec.ExternalTrafficPolicy,
+		map[string]string{lbKey: "loadbalancer"},
+		desiredSvc.Spec.ExternalIPs,
+		desiredSvc.Spec.LoadBalancerClass,
+		desiredSvc.Spec.LoadBalancerIP,
+	)
+
+	if err := lb.client.Create(ctx, u); err != nil {
+		return nil, err
+	}
+
+	// ждём child Service
+	var child *corev1.Service
+	err := wait.PollUntilContextTimeout(ctx, 2*time.Second, LBCreationPollTimeout, true,
+		func(ctx context.Context) (bool, error) {
+			s, err := lb.GetLoadBalancerByName(ctx, name)
+			if err != nil {
+				return false, err
+			}
+			if s == nil {
+				return false, nil
+			}
+			child = s
+			return len(s.Status.LoadBalancer.Ingress) > 0, nil
+		})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return child, nil
+}
+
+func (lb *LoadBalancerService) updateLoadBalancerServiceWithHealthchecks(
+	ctx context.Context,
+	loadBalancer LoadBalancer,
+) (*corev1.Service, error) {
+
+	name := loadBalancer.Name
+	desiredSvc := loadBalancer.Service
+	serviceLabels := loadBalancer.ServiceLabels
+	lbKey := lbLabelKey(name)
+
+	childSvc, err := lb.GetLoadBalancerByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if childSvc == nil {
+		return lb.createLoadBalancerServiceWithHealthchecks(ctx, loadBalancer)
+	}
+
+	nodes := loadBalancer.Nodes
+	if filtered, err := lb.filterHealthyNodes(ctx, childSvc, loadBalancer.Nodes); err == nil {
+		nodes = filtered
+	}
+
+	if err := lb.ensureNodeLabels(ctx, nodes, lbKey); err != nil {
+		return nil, err
+	}
+
+	ports := lb.CreateLoadBalancerPorts(desiredSvc)
+
+	u := newServiceWithHealthchecksUnstructured(lb.namespace, name)
+	if err := lb.client.Get(ctx, types.NamespacedName{Name: name, Namespace: lb.namespace}, u); err != nil {
+		return nil, err
+	}
+
+	u.SetAnnotations(desiredSvc.Annotations)
+	u.SetLabels(serviceLabels)
+
+	setServiceWithHealthchecksSpec(
+		u,
+		ports,
+		desiredSvc.Spec.ExternalTrafficPolicy,
+		map[string]string{lbKey: "loadbalancer"},
+		desiredSvc.Spec.ExternalIPs,
+		desiredSvc.Spec.LoadBalancerClass,
+		desiredSvc.Spec.LoadBalancerIP,
+	)
+
+	if err := lb.client.Update(ctx, u); err != nil {
+		return nil, err
+	}
+
+	return lb.GetLoadBalancerByName(ctx, name)
+}
+
+func (lb *LoadBalancerService) DeleteLoadBalancer(ctx context.Context, name string) error {
+
+	// удалить child Service
+	svc, err := lb.GetLoadBalancerByName(ctx, name)
+	if err == nil && svc != nil {
+		_ = lb.client.Delete(ctx, svc)
+	}
+
+	// удалить ServiceWithHealthchecks
+	u := newServiceWithHealthchecksUnstructured(lb.namespace, name)
+	if err := lb.client.Get(ctx, types.NamespacedName{Name: name, Namespace: lb.namespace}, u); err == nil {
+		_ = lb.client.Delete(ctx, u)
+	}
+
+	return nil
 }
