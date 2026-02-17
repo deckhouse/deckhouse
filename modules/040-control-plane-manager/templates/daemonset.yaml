@@ -28,7 +28,6 @@ memory: 10Mi
   {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.digests.controlPlaneManager $componentWithSuffix) }}
   {{- $_ := set $imageHolders $componentWithSuffix (printf "image-holder-%s" ($component | kebabcase)) }}
 {{- end }}
-{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
 
 {{- $_ := set $imageHolders "etcd" "image-holder-etcd" }}
