@@ -1,27 +1,13 @@
-Subject: [PATCH] dd initialization_dns option
+Subject: [PATCH] initialization_dns
 ---
-Index: go.mod
-IDEA additional info:
-Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
-<+>UTF-8
-===================================================================
-diff --git a/go.mod b/go.mod
---- a/go.mod	(revision 8140a46b6fde4ff8ce98f2fde4117ba0cdff4872)
-+++ b/go.mod	(revision 9f4f7beed7f41a46ceacf68563bb9698ca73951f)
-@@ -84,3 +84,5 @@
- 	gopkg.in/yaml.v2 v2.3.0 // indirect
- 	gopkg.in/yaml.v3 v3.0.1 // indirect
- )
-+
-+replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-2
 Index: internal/ovirt/resource_ovirt_vm.go
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
---- a/internal/ovirt/resource_ovirt_vm.go	(revision 8140a46b6fde4ff8ce98f2fde4117ba0cdff4872)
-+++ b/internal/ovirt/resource_ovirt_vm.go	(revision 9f4f7beed7f41a46ceacf68563bb9698ca73951f)
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
++++ b/internal/ovirt/resource_ovirt_vm.go	(revision 84c10269ffa891ab540cb64c711baf07a6ff5cfb)
 @@ -166,6 +166,12 @@
  		ForceNew:    true,
  		Description: "Custom script that passed to VM during initialization.",
@@ -43,7 +29,7 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
  	useInit := false
  	var nicConfiguration *ovirtclient.BuildableNicConfiguration
 
-@@ -761,8 +768,13 @@
+@@ -761,12 +768,21 @@
  		useInit = true
  	}
 
@@ -53,8 +39,15 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 +	}
 +
  	if useInit {
--		initialization := ovirtclient.NewInitialization(vmInitScript, vmHostname)
-+		initialization := ovirtclient.NewInitialization(vmInitScript, vmHostname, vmDNS)
+ 		initialization := ovirtclient.NewInitialization(vmInitScript, vmHostname)
  		if nicConfiguration != nil {
  			initialization = initialization.WithNicConfiguration(*nicConfiguration)
  		}
+
++		if vmDNS != "" {
++			initialization = initialization.WithDNS(vmDNS)
++		}
++
+ 		_, err := params.WithInitialization(initialization)
+
+ 		if err != nil {

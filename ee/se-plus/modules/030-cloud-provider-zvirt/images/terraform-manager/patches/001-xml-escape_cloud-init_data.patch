@@ -6,19 +6,19 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
---- a/internal/ovirt/resource_ovirt_vm.go	(revision 44ad70de472ee44476fc9c515a638e00a36ca724)
-+++ b/internal/ovirt/resource_ovirt_vm.go	(date 1710344245301)
+--- a/internal/ovirt/resource_ovirt_vm.go	(revision d5006279e05bffe26e78265cd090dba29e371e7c)
++++ b/internal/ovirt/resource_ovirt_vm.go	(revision 25e9ad78ad389d52dfefc7a95a83ca592fef8593)
 @@ -1,7 +1,9 @@
  package ovirt
- 
+
  import (
 +	"bytes"
  	"context"
 +	"encoding/xml"
  	"fmt"
  	"strings"
- 
-@@ -668,7 +670,12 @@
+
+@@ -745,7 +747,12 @@
  		useInit = true
  	}
  	if hInitScript, ok := data.GetOk("initialization_custom_script"); ok {
@@ -30,4 +30,3 @@ diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt
 +		vmInitScript = buf.String()
  		useInit = true
  	}
- 

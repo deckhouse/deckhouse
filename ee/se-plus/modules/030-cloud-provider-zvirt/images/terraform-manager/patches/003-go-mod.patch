@@ -6,8 +6,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/go.mod b/go.mod
---- a/go.mod	(revision ab3c4e403fce2c0f781e560923a36407a0469d36)
-+++ b/go.mod	(revision 8140a46b6fde4ff8ce98f2fde4117ba0cdff4872)
+--- a/go.mod	(revision df9c6c5545dad05a9e24212dc4472f5f0d5cd2b7)
++++ b/go.mod	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
 @@ -69,14 +69,14 @@
  	github.com/yuin/goldmark-meta v1.1.0 // indirect
  	github.com/zclconf/go-cty v1.16.3 // indirect
@@ -30,14 +30,38 @@ diff --git a/go.mod b/go.mod
  	google.golang.org/appengine v1.6.8 // indirect
  	google.golang.org/genproto v0.0.0-20220505152158-f39f71e6c8f3 // indirect
  	google.golang.org/grpc v1.72.1 // indirect
+@@ -84,3 +84,5 @@
+ 	gopkg.in/yaml.v2 v2.3.0 // indirect
+ 	gopkg.in/yaml.v3 v3.0.1 // indirect
+ )
++
++replace github.com/ovirt/go-ovirt-client/v3 v3.2.0 => github.com/flant/go-ovirt-client/v3 v3.2.0-flant-2
 Index: go.sum
 IDEA additional info:
 Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 <+>UTF-8
 ===================================================================
 diff --git a/go.sum b/go.sum
---- a/go.sum	(revision ab3c4e403fce2c0f781e560923a36407a0469d36)
-+++ b/go.sum	(revision 8140a46b6fde4ff8ce98f2fde4117ba0cdff4872)
+--- a/go.sum	(revision df9c6c5545dad05a9e24212dc4472f5f0d5cd2b7)
++++ b/go.sum	(revision 2f73e2de4019043764a9abfcb74ce53d97a5036e)
+@@ -58,6 +58,8 @@
+ github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
+ github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
+ github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
++github.com/flant/go-ovirt-client/v3 v3.2.0-flant-2 h1:wxPLSwslUM8qpoqkkjk5JR78RLp+e5QsWI2RWrUzouY=
++github.com/flant/go-ovirt-client/v3 v3.2.0-flant-2/go.mod h1:EhTzJm+T2zvQTwtK3IT5v77d70/I6A9zAG1OOlQqTUI=
+ github.com/frankban/quicktest v1.14.3 h1:FJKSZTDHjyhriyC81FLQ0LY93eSai0ZyR/ZIkd3ZUKE=
+ github.com/frankban/quicktest v1.14.3/go.mod h1:mgiwOwqx65TmIk1wJ6Q7wvnVMocbUorkibMOrVTHZps=
+ github.com/ghodss/yaml v1.0.0/go.mod h1:4dBDuWmgqj2HViK6kFavaiC9ZROes6MMH2rRYeMEF04=
+@@ -204,8 +206,6 @@
+ github.com/ovirt/go-ovirt v0.0.0-20220427092237-114c47f2835c/go.mod h1:Zkdj9/rW6eyuw0uOeEns6O3pP5G2ak+bI/tgkQ/tEZI=
+ github.com/ovirt/go-ovirt-client-log/v3 v3.0.0 h1:uvACVHYhYPMkNJrrgWiABcfELB6qoFfsDDUTbpb4Jv4=
+ github.com/ovirt/go-ovirt-client-log/v3 v3.0.0/go.mod h1:chKKxCv4lRjxezrTG+EIhkWXGhDAWByglPVXh/iYdnQ=
+-github.com/ovirt/go-ovirt-client/v3 v3.2.0 h1:gDQhxtubwzdlDIm2lh4XiOwkte2nR3JX1Q0O8iLGY84=
+-github.com/ovirt/go-ovirt-client/v3 v3.2.0/go.mod h1:2QkYFK7OTrtM/kOQCmX5V/RRBGVt4Ro4tsxoU68my+0=
+ github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
+ github.com/pjbgf/sha1cd v0.3.2/go.mod h1:zQWigSxVmsHEZow5qaLtPYxpcKMMQpa09ixqBxuCS6A=
+ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 @@ -272,8 +272,8 @@
  golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9/go.mod h1:LzIPMQfyMNhhGPhUkYOs5KpL4U8rLKemX1yGLhDgUto=
  golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
