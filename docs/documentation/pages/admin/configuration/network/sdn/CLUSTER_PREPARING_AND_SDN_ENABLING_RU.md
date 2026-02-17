@@ -489,7 +489,7 @@ d8 k label nni worker-02-nic-0000:17:00.1 nic-group=dpdk
 d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```
 
-Ищите `status.nic.pci.pf.sriov.supported` для проверки поддержки SR-IOV.
+В секции `status.nic.pci.pf.sriov.supported` можно найти информацию и поддержке SR-IOV.
 {% endalert %}
 
 #### Создание Underlay-сети в режиме Dedicated

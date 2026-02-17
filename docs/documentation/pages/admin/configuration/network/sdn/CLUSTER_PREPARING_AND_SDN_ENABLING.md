@@ -486,7 +486,7 @@ You can check the PCI information and SR-IOV support status for each interface:
 d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
 ```
 
-Look for `status.nic.pci.pf.sriov.supported` to verify SR-IOV support.
+The `status.nic.pci.pf.sriov.supported` section contains information about SR-IOV support.
 {% endalert %}
 
 #### Creating UnderlayNetwork in Dedicated mode
