@@ -1,6 +1,6 @@
 ---
 title: "Switching editions"
-permalink: en/admin/configuration/registry/switching-editions.html
+permalink: en/admin/configuration/switching-editions.html
 ---
 
 ## Switching DKP to CE/BE/SE/SE+/EE
@@ -14,10 +14,10 @@ Switching DKP to CE/BE/SE/SE+/EE can be done in one of the following ways:
 
 - The functionality of this guide is validated for Deckhouse versions starting from `v1.70`. If your version is older, use the corresponding documentation.
 - For commercial editions, you need a valid license key that supports the desired edition. If necessary, you can [request a temporary key](/products/enterprise_edition.html).
-- The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](./third-party.html).
+- The guide assumes the use of the public container registry address: `registry.deckhouse.io`. If you are using a different container registry address, modify the commands accordingly or refer to the [guide on switching Deckhouse to use a different registry](./registry/third-party.html).
 - The Deckhouse CE/BE/SE/SE+ editions do not support the cloud providers `dynamix`, `openstack`, `VCD`, and `vSphere` (vSphere is supported in SE+) and a number of modules.
 - All commands are executed on the master node of the existing cluster with `root` user.
-- If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
+- If, during the switching process, the image of a module did not reload and the module did not reinstall, use the [instructions](../../faq.html#what-should-i-do-if-the-module-image-did-not-download-and-the-mo) to resolve the issue.
 {% endalert %}
 
 ### Switching using the registry module

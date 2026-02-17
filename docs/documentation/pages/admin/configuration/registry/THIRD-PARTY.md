@@ -1,10 +1,12 @@
 ---
-title: Switching a running DKP cluster to use an external registry
+title: Switching a running Managed Kubernetes cluster to use third-party registry
 permalink: en/admin/configuration/registry/third-party.html
 ---
 
 {% alert level="warning" %}
-When using the [registry](/modules/registry/) module, change the address and parameters of the registry in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [`registry`](/modules/registry/examples.html) module documentation.
+The information on this page is relevant for Managed Kubernetes clusters: registry managing via the `registry` module is not available in these clusters.
+
+When using the [registry](/modules/registry/) module (in clusters fully managed by DKP), change the address and parameters of the registry in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. An example of configuration is provided in the [`registry`](/modules/registry/examples.html) module documentation.
 {% endalert %}
 
 {% alert level="warning" %}
