@@ -403,7 +403,7 @@ right-worker-b23d3a26-5fb4b-h2bkv-vlan-900-60f3dc    Deckhouse   right-worker-b2
 
 ##### Настройка hugepages
 
-DPDK-приложения требуют hugepages для эффективного управления памятью. Настройте hugepages на всех рабочих узлах с помощью NodeGroupConfiguration:
+DPDK-приложения требуют hugepages для эффективного управления памятью. Настройте hugepages на всех рабочих узлах с помощью [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration):
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -566,7 +566,7 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
      memberNodeNetworkInterfaces:
        - labelSelector:
            matchLabels:
-             nic-group: dpdk # Лейбл, которым помечены интерфесы на этапе проверки и настройка сетевых интерфейсов.
+             nic-group: dpdk # Лейбл, которым помечены интерфейсы на этапе проверки и настройки сетевых интерфейсов.
      shared:
        sriov:
          enabled: true
@@ -576,7 +576,7 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
    В этом примере:
 
    * `mode: Shared` включает SR-IOV и создание VF;
-   * `autoBonding: true` группирует одну VF от каждого совпавшего PF в одно DRA устройство;
+   * `autoBonding: true` группирует одну VF от каждого совпавшего PF в одно DRA-устройство;
    * `shared.sriov.enabled: true` включает SR-IOV на выбранных PF;
    * `shared.sriov.numVFs: 8` создает 8 Virtual Functions на каждый Physical Function.
 
@@ -616,7 +616,7 @@ d8 k get nni worker-01-nic-0000:17:00.0 -o json | jq '.status.nic.pci.pf'
        type: InterfacesAvailable
    ```
 
-1. Убедитесь, что VF были созданы, проверив ресурсы NodeNetworkInterface:
+1. Убедитесь, что VF были созданы, проверив ресурс [NodeNetworkInterface](/modules/sdn/stable/cr.html#nodenetworkinterface):
 
    ```shell
    d8 k get nni -l network.deckhouse.io/nic-pci-type=VF

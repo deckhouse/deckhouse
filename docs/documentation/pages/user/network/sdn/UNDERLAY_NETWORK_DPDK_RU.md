@@ -10,7 +10,7 @@ lang: ru
 
 Для подключения физических сетевых интерфейсов (PF/VF) напрямую в поды для DPDK-приложений необходимо:
 
-1. Убедиться, что администратор добавил на ваш неймспейс [лейбл](../../../admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html#подготовка-неймспейса-для-использования-underlaynetwork) для использования Underlay-сетей.
+1. Убедиться, что администратор добавил на ваш неймспейс [лейбл для использования Underlay-сетей](../../../admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html#подготовка-неймспейса-для-использования-underlaynetwork).
 1. Создать под c аннотацией, запрашивающей устройство из Underlay-сети.
 
 ### Создание пода c устройством из Underlay-сети
