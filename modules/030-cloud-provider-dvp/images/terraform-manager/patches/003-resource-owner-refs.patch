@@ -7,8 +7,8 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/provider.go b/kubernetes/provider.go
 --- a/kubernetes/provider.go	(revision be88f44271050f69d52f410bca388834afedfe71)
-+++ b/kubernetes/provider.go	(date 1768787659361)
-@@ -352,13 +352,14 @@
++++ b/kubernetes/provider.go	(date 1770200290721)
+@@ -352,13 +351,14 @@
  			"kubernetes_csi_driver_v1":    resourceKubernetesCSIDriverV1(),
 
  			// provider helper resources
@@ -26,7 +26,7 @@ diff --git a/kubernetes/provider.go b/kubernetes/provider.go
  			"kubernetes_runtime_class_v1": resourceKubernetesRuntimeClassV1(),
  		},
  	}
-@@ -464,7 +465,7 @@
+@@ -464,7 +464,7 @@
  		// This is a TEMPORARY measure to work around https://github.com/hashicorp/terraform/issues/24055
  		// IMPORTANT: this will NOT enable a workaround of issue: https://github.com/hashicorp/terraform/issues/4149
  		// IMPORTANT: if the supplied configuration is incomplete or invalid
@@ -42,37 +42,32 @@ Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
 ===================================================================
 diff --git a/kubernetes/resource_kubernetes_owner_references_v1.go b/kubernetes/resource_kubernetes_owner_references_v1.go
 new file mode 100644
---- /dev/null	(date 1770028896055)
-+++ b/kubernetes/resource_kubernetes_owner_references_v1.go	(date 1770028896055)
-@@ -0,0 +1,315 @@
-+// Copyright (c) HashiCorp, Inc.
-+// SPDX-License-Identifier: MPL-2.0
-+
+--- /dev/null	(date 1770280833604)
++++ b/kubernetes/resource_kubernetes_owner_references_v1.go	(date 1770280833604)
+@@ -0,0 +1,281 @@
 +package kubernetes
 +
 +import (
 +	"context"
++	"encoding/json"
 +	"fmt"
 +
 +	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 +	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
-+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 +	"k8s.io/apimachinery/pkg/api/errors"
 +	"k8s.io/apimachinery/pkg/api/meta"
 +	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 +	k8sschema "k8s.io/apimachinery/pkg/runtime/schema"
 +	"k8s.io/apimachinery/pkg/types"
 +	"k8s.io/client-go/dynamic"
 +	"k8s.io/client-go/restmapper"
-+	"k8s.io/utils/ptr"
 +
 +	"github.com/hashicorp/terraform-provider-kubernetes/util"
 +)
 +
 +func resourceKubernetesOwnerReferencesV1() *schema.Resource {
 +	return &schema.Resource{
-+		Description:   "This resource allows Terraform to manage the owner references for a resource that already exists. This resource uses [field management](https://kubernetes.io/docs/reference/using-api/server-side-apply/#field-management) and [server-side apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/) to manage only the ownerReferences that are defined in the Terraform configuration. Existing ownerReferences not specified in the configuration will be ignored. If an ownerReference specified in the config and is already managed by another client it will cause a conflict which can be overridden by setting `force` to true.",
++		Description:   "This resource allows Terraform to manage the owner references for a resource that already exists. Existing ownerReferences not specified in the configuration will be overridden.",
 +		CreateContext: resourceKubernetesOwnerReferencesCreate,
 +		ReadContext:   resourceKubernetesOwnerReferencesRead,
 +		UpdateContext: resourceKubernetesOwnerReferencesUpdate,
@@ -144,18 +139,6 @@ new file mode 100644
 +					},
 +				},
 +			},
-+			"force": {
-+				Type:        schema.TypeBool,
-+				Description: "Force overwriting labels that were created or edited outside of Terraform.",
-+				Optional:    true,
-+			},
-+			"field_manager": {
-+				Type:         schema.TypeString,
-+				Description:  "Set the name of the field manager for the specified labels.",
-+				Optional:     true,
-+				Default:      defaultFieldManagerName,
-+				ValidateFunc: validation.StringIsNotWhiteSpace,
-+			},
 +		},
 +	}
 +}
@@ -222,18 +205,17 @@ new file mode 100644
 +		return diag.FromErr(err)
 +	}
 +
-+	ownerReferences := res.GetOwnerReferences()
-+	ownerReferencesList := make([]interface{}, len(ownerReferences))
-+	for _, ownerReference := range ownerReferences {
-+		ownerReferencesList = append(ownerReferencesList, map[string]interface{}{
++	resGetOwnerReferences := res.GetOwnerReferences()
++	ownerReferences := make([]interface{}, 0, len(resGetOwnerReferences))
++	for _, ownerReference := range resGetOwnerReferences {
++		ownerReferences = append(ownerReferences, map[string]interface{}{
 +			"api_version": ownerReference.APIVersion,
 +			"kind":        ownerReference.Kind,
 +			"name":        ownerReference.Name,
 +			"uid":         string(ownerReference.UID),
 +		})
 +	}
-+	d.Set("owner_references", ownerReferencesList)
-+
++	d.Set("owner_references", ownerReferences)
 +	return nil
 +}
 +
@@ -294,58 +276,42 @@ new file mode 100644
 +
 +	// craft the patch to update the ownerReferences
 +	ownerReferences := []v1.OwnerReference{}
-+	if ownerReferencesList, ok := d.GetOk("owner_references"); ok {
-+		for i := range ownerReferencesList.([]interface{}) {
++	if d.Id() == "" {
++		// if we're deleting then just we just patch
++		// with an empty ownerReferences
++		ownerReferences = []v1.OwnerReference{}
++	} else if ownerReferencesInterface, ok := d.GetOk("owner_references"); ok {
++		ownerReferencesInterfaceList := ownerReferencesInterface.([]interface{})
++		for i := range ownerReferencesInterfaceList {
 +			ownerReferences = append(ownerReferences, v1.OwnerReference{
-+				APIVersion: ownerReferencesList.([]interface{})[i].(map[string]interface{})["api_version"].(string),
-+				Kind:       ownerReferencesList.([]interface{})[i].(map[string]interface{})["kind"].(string),
-+				Name:       ownerReferencesList.([]interface{})[i].(map[string]interface{})["name"].(string),
-+				UID:        types.UID(ownerReferencesList.([]interface{})[i].(map[string]interface{})["uid"].(string)),
++				APIVersion: ownerReferencesInterfaceList[i].(map[string]interface{})["api_version"].(string),
++				Kind:       ownerReferencesInterfaceList[i].(map[string]interface{})["kind"].(string),
++				Name:       ownerReferencesInterfaceList[i].(map[string]interface{})["name"].(string),
++				UID:        types.UID(ownerReferencesInterfaceList[i].(map[string]interface{})["uid"].(string)),
 +			})
 +		}
 +	}
-+	if d.Id() == "" {
-+		// if we're deleting then just we just patch
-+		// with an empty ownerReferences map
-+		ownerReferences = []v1.OwnerReference{}
-+	}
-+	patchmeta := map[string]interface{}{
-+		"name":            name,
-+		"ownerReferences": ownerReferences,
-+	}
-+	if namespacedResource {
-+		patchmeta["namespace"] = namespace
-+	}
-+	patchobj := map[string]interface{}{
-+		"apiVersion": apiVersion,
-+		"kind":       kind,
-+		"metadata":   patchmeta,
++
++	patch := map[string]any{
++		"metadata": map[string]any{
++			"ownerReferences": ownerReferences,
++		},
 +	}
 +
-+	patch := unstructured.Unstructured{}
-+	patch.Object = patchobj
-+	patchbytes, err := patch.MarshalJSON()
++	patchBytes, err := json.Marshal(patch)
 +	if err != nil {
-+		return diag.FromErr(fmt.Errorf("%s %v", patchbytes, err))
++		return diag.FromErr(err)
 +	}
++
 +	// apply the patch
-+	_, err = r.Patch(ctx,
++	_, err = r.Patch(
++		ctx,
 +		name,
-+		types.ApplyPatchType,
-+		patchbytes,
-+		v1.PatchOptions{
-+			FieldManager: d.Get("field_manager").(string),
-+			Force:        ptr.To(d.Get("force").(bool)),
-+		},
++		types.MergePatchType,
++		patchBytes,
++		v1.PatchOptions{},
 +	)
 +	if err != nil {
-+		if errors.IsConflict(err) {
-+			return diag.Diagnostics{{
-+				Severity: diag.Error,
-+				Summary:  "Field manager conflict",
-+				Detail:   fmt.Sprintf(`Another client is managing a field Terraform tried to update. Set "force" to true to override: %v`, err),
-+			}}
-+		}
 +		return diag.FromErr(err)
 +	}
 +
