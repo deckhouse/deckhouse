@@ -40,8 +40,8 @@
 402-ingress-nginx/                       @miklezzzz @apolovov
 450-keepalived/                          @AndreyPavlovFlant @apolovov
 450-network-gateway/                     @AndreyPavlovFlant @apolovov
-460-log-shipper/                         @nabokihms @vladimirGuryanov @lazovskiy
-462-loki/                                @nabokihms @vladimirGuryanov @lazovskiy
+460-log-shipper/                         @vladimirGuryanov @lazovskiy
+462-loki/                                @vladimirGuryanov @lazovskiy
 470-chrony/                              @name212 @090809
 491-containerized-data-importer          @fl64
 500-basic-auth/                          @nabokihms
@@ -50,9 +50,8 @@
 500-dashboard/                           @shvgn
 500-upmeter/                             @vladimirGuryanov @lazovskiy
 500-okmeter/                             @vladimirGuryanov @lazovskiy
-500-operator-trivy/                      @nabokihms
 600-secret-copier/                       @nabokihms
-600-namespace-configurator/              @yalosev @ldmonster
+600-namespace-configurator/              @nabokihms
 610-service-with-healthchecks            @AndreyPavlovFlant @apolovov
 800-deckhouse-tools/                     @RomanenkoDenys @name212 @090809
 810-documentation/                       @z9r5
@@ -67,11 +66,11 @@ deckhouse-controller/                    @ldmonster
 dhctl/                                   @name212 @090809
 docs/                                    @z9r5
 helm_lib/                                @name212 @090809 @sprait
-crds/                                    @nabokihms @z9r5
-openapi/                                 @nabokihms @z9r5
+crds/                                    @z9r5
+openapi/                                 @z9r5
 /pkg/                                    @ldmonster
 testing/cloud_layouts/                   @Nikolay1224 @KraMorK @Taior @himax1991
 /monitoring/prometheus-rules/            @sudoroot-null
-/release.yaml                            @yalosev @nabokihms
+/release.yaml                            @yalosev @ldmonster
 go_lib/cloud-data/                       @aleksey-su
 go_lib/registry/                         @RaveNoX
