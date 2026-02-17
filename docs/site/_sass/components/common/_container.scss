@@ -20,14 +20,24 @@
   max-width: 100%;
   box-sizing: border-box;
 
-  @include breakpoints.min-w(s) {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
-
   @include breakpoints.min-w(xl) {
     max-width: var(--wp--style--global--content-size);
     padding-left: 48px;
     padding-right: 48px;
+  }
+
+  @include breakpoints.max-w(xl) {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  @include breakpoints.max-w(s) {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+
+  @include breakpoints.max-w(xs) {
+    padding-left: 16px;
+    padding-right: 16px;
   }
 }

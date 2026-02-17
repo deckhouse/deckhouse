@@ -30,13 +30,15 @@
     });
 
     $toc.on('click', 'a', function () {
-        const target = decodeURI($(this).attr('href'));
-        const targetElement = $(target);
-        const scrollOffset = targetElement.offset().top - headerHeight;
+        if (window.innerWidth < 1024) {
+            const target = decodeURI($(this).attr('href'));
+            const targetElement = $(target);
+            const scrollOffset = targetElement.offset().top - headerHeight;
 
-        $('html, body').animate({
-            scrollTop: scrollOffset - 10
-        }, 300);
+            $('html, body').animate({
+                scrollTop: scrollOffset - 10
+            }, 300);
+        }
     });
 
     if (!$.trim($toc.html())) {
