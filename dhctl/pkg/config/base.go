@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config/digests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/log"
@@ -40,7 +41,6 @@ var (
 	modulesDir        = deckhouseDir + "/modules"
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap        = candiDir + "/version_map.yml"
-	imagesDigestsJSON = candiDir + "/images_digests.json"
 
 	// This value is set on the dhctl build in the dhctl/Makefile script.
 	// Do not touch it !!!
@@ -63,7 +63,12 @@ func LoadConfigFromFile(ctx context.Context, paths []string, preparatorProvider 
 		return nil, err
 	}
 
-	err = metaConfig.LoadImagesDigests(imagesDigestsJSON)
+	imagesDigestsJSONFIle, err := digests.ImagesDigestsBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	err = metaConfig.LoadImagesDigests(imagesDigestsJSONFIle)
 	if err != nil {
 		return nil, err
 	}
@@ -376,5 +381,4 @@ func InitGlobalVars(pwd string) {
 	modulesDir = deckhouseDir + "/modules"
 	globalHooksModule = deckhouseDir + "/global-hooks"
 	versionMap = candiDir + "/version_map.yml"
-	imagesDigestsJSON = candiDir + "/images_digests.json"
 }
