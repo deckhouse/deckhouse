@@ -61,6 +61,45 @@ spec:
                     Список дополнительных лейблов.
 
                     Подробно про лейблы можно прочитать [в официальной документации](https://cloud.google.com/resource-manager/docs/creating-managing-labels).
+                nestedVirtualization:
+                  description: |
+                    Включает [вложенную виртуализацию](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview) на инстансе.
+
+                    Необходимо для запуска виртуальных машин (например, KVM) внутри GCP-инстансов.
+
+                    > **Внимание.** Поддерживается только на определённых типах машин. Список совместимых типов приведён в [документации GCP](https://cloud.google.com/compute/docs/instances/nested-virtualization/overview#supported_machine_types).
+                additionalDisks:
+                  description: |
+                    Список дополнительных дисков, которые будут подключены к инстансу.
+
+                    Полезно для нагрузок, связанных с хранением данных: LinStor, Ceph, NFS и аналогичных.
+                  items:
+                    properties:
+                      sizeGb:
+                        description: Размер диска в гибибайтах.
+                      type:
+                        description: |
+                          Тип диска.
+
+                          - `pd-standard` — стандартный Persistent Disk (HDD).
+                          - `pd-balanced` — сбалансированный Persistent Disk (SSD).
+                          - `pd-ssd` — SSD Persistent Disk.
+                          - `pd-extreme` — экстремальный Persistent Disk; требует указания `provisionedIops`.
+                          - `hyperdisk-balanced` — Hyperdisk со сбалансированной производительностью.
+                          - `hyperdisk-throughput` — Hyperdisk, оптимизированный для пропускной способности.
+                          - `hyperdisk-extreme` — Hyperdisk с максимальной производительностью; требует указания `provisionedIops`.
+                      autoDelete:
+                        description: Автоматически удалять диск при удалении инстанса.
+                      provisionedIops:
+                        description: |
+                          Запрошенное количество IOPS для диска.
+
+                          Обязательно для типов `pd-extreme` и `hyperdisk-extreme`.
+                      provisionedThroughput:
+                        description: |
+                          Запрошенная пропускная способность диска в МиБ/с.
+
+                          Применимо для типов `hyperdisk-balanced` и `hyperdisk-throughput`.
     - name: v1
       schema: *schema
 
