@@ -1,6 +1,9 @@
 ---
 title: "Подключение физических сетевых интерфейсов к подам DPDK-приложений"
 permalink: ru/user/network/sdn/underlay-network-dpdk.html
+description: |
+  Подключение физических сетевых интерфейсов к подам через DRA для DPDK-приложений: режимы Shared и Dedicated.
+search: DPDK приложения, UnderlayNetwork, физические интерфейсы, SR-IOV, VF PF
 lang: ru
 ---
 

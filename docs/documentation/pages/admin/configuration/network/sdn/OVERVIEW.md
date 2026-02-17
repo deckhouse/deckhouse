@@ -1,8 +1,9 @@
 ---
-title: "Software-defined networking in DKP: overview"
+title: "Software-defined networking (SDN)"
 permalink: en/admin/configuration/network/sdn/
 description: |
-  Software-defined networking (SDN) in Deckhouse Kubernetes Platform: overview of capabilities and implementation methods
+  Software-defined networking (SDN) in Deckhouse Kubernetes Platform: overview of capabilities and implementation methods.
+search: additional networks, DPDK
 ---
 
 The Deckhouse Kubernetes Platform supports adding additional software-defined networks (SDN) to the cluster. The functions of additional software-defined networking (hereinafter referred to as additional networks) within DKP are implemented using the [`sdn`](/modules/sdn/) module.

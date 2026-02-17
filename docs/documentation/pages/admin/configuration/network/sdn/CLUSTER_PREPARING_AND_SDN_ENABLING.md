@@ -3,6 +3,7 @@ title: "Configuring SDN in a cluster"
 permalink: en/admin/configuration/network/sdn/cluster-preparing-and-sdn-enabling.html
 description: |
   Preparing the cluster for use with software defined networking.
+search: software-defined networks, VLAN interfaces, additional networks, underlay networks
 ---
 
 To use SDN in a DKP cluster, you need to prepare the infrastructure for enabling the [`sdn`](/modules/sdn/) module, as well as perform some preparatory actions after enabling it.
@@ -40,13 +41,14 @@ virtlab-ap-2-nic-fc34970e7ddb   Deckhouse   virtlab-ap-2   NIC      eth0        
 ```
 
 {% alert level="info" %}
-When discovering node interfaces, the controller affixes the following labels, which are service labels:
+When discovering node interfaces, the controller affixes the following labels, which are service labels (example):
 
 ```yaml
 labels:
   network.deckhouse.io/interface-mac-address: fa163eebea7b
-  network.deckhouse.io/interface-type: VLAN
-  network.deckhouse.io/vlan-id: 900
+  network.deckhouse.io/interface-type: NIC
+  network.deckhouse.io/nic-pci-bus-info: 0000-17-00.0
+  network.deckhouse.io/nic-pci-type: PF
   network.deckhouse.io/node-name: worker-01
 annotations:
   network.deckhouse.io/heritage: NetworkController
@@ -66,17 +68,19 @@ d8 k label nodenetworkinterface virtlab-ap-1-nic-1c61b4a6a0e7 nic-group=extra
 d8 k label nodenetworkinterface virtlab-ap-2-nic-1c61b4a6800c nic-group=extra
 ```
 
-### Combining multiple physical interfaces into a channel aggregation interface (Bond)
+### Combining multiple physical interfaces into a channel aggregation interface (bond interface)
 
-To increase bandwidth or redundancy, it is possible to combine several physical interfaces into a Bond.
+To increase bandwidth or redundancy, it is possible to combine several physical interfaces into a bond interface (channel aggregation interface).
 
 {% alert level="info" %}
-A Bond interface can only be created between NIC interfaces that are located on the same physical or virtual host.
+Only network interfaces located on the same physical or virtual host can be combined.
 {% endalert %}
 
-Example configuring Bond interface:
+Example configuring a bond interface:
 
-1. Set custom labels for interfaces that can be combined to create a Bond interface:
+1. Set custom labels on the interfaces intended for aggregation.
+
+   Example of setting the `nni.example.com/bond-group=bond0` label on interfaces:
 
    ```shell
    d8 k label nni node-0-nic-fa163efbde48 nni.example.com/bond-group=bond0
@@ -101,8 +105,10 @@ Example configuring Bond interface:
        memberNetworkInterfaces:
          - labelSelector:
              matchLabels:
-               network.deckhouse.io/node-name: worker-01 # This is a service label that needs to be combined with the Bond interface on a specific node.
-               nni.example.com/bond-group: bond0 # Custom label (was added to the interfaces in the previous step).
+               # This is a service label that needs to be combined with the Bond interface on a specific node.
+               network.deckhouse.io/node-name: worker-01
+               # Custom label (was added to the interfaces in the previous step).
+               nni.example.com/bond-group: bond0
    ```
 
 1. Check the status of the created Bond interface:
@@ -167,11 +173,11 @@ The Deckhouse Kubernetes Platform provides the ability to declaratively manage a
 * Each additional network implies a single L2 data exchange domain.
 * Within the Pod’s network namespace, an additional network is represented as a tap interface.
 * The following modes are currently available for L2 network implementation:
-  * Tagged VLAN: Communication between Pods on different Nodes uses VLAN-tagged packets and the infrastructure’s network equipment for switching. This method allows to create up to 4096 additional networks within a single cluster.
-  * Direct access to a Node’s network interface: Communication between Pods on different Nodes uses the local network interfaces of the Nodes.
+  * **Tagged VLAN**: Communication between Pods on different Nodes uses VLAN-tagged packets and the infrastructure’s network equipment for switching. This method allows to create up to 4096 additional networks within a single cluster.
+  * **Direct access to a Node’s network interface**: Communication between Pods on different Nodes uses the local network interfaces of the Nodes.
 * From a network management perspective, there are two types of networks:
-  * [Cluster network](#creating-a-publicly-accessible-network-cluster): A network available in all projects, under administrator management. Example: a public WAN network or a shared network for cross-project traffic.
-  * [Project network](#creating-a-project-network-user-network): A network available within a Namespace, under user management.
+  * **[Cluster network](#creating-a-publicly-accessible-network-cluster)**: A network available in all projects, under administrator management. Example: a public WAN network or a shared network for cross-project traffic.
+  * **[Project network](#creating-a-project-network-user-network)**: A network available within a Namespace, under user management.
 
 Custom resources [ClusterNetwork](/modules/sdn/cr.html#clusternetwork), [Network](/modules/sdn/cr.html#network), and [NetworkClass](/modules/sdn/cr.html#networkclass) are used to configure and connect additional networks for application pods.
 
@@ -209,7 +215,8 @@ To create a network based on tagged traffic, follow these steps:
      parentNodeNetworkInterfaces:
        labelSelector:
          matchLabels:
-           nic-group: extra # Manually applied label on NodeNetworkInterface resources.
+           # Manually applied label on NodeNetworkInterface resources.
+           nic-group: extra
    ```
 
 1. Check the status of the created resource with the command:
@@ -262,7 +269,8 @@ spec:
   parentNodeNetworkInterfaces:
     labelSelector:
       matchLabels:
-        nic-group: extra # Manually applied label on NodeNetworkInterface resources.
+        # Manually applied label on NodeNetworkInterface resources.
+        nic-group: extra
 ```
 
 After creating the network, check [the connection of the additional network to the interfaces on the nodes](#checking-the-connection-of-an-additional-network-to-interfaces-on-nodes).

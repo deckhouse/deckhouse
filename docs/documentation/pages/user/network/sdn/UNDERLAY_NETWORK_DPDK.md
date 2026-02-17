@@ -1,6 +1,9 @@
 ---
 title: "Connecting physical network interfaces to DPDK application pods"
 permalink: en/user/network/sdn/underlay-network-dpdk.html
+description: |
+  Connecting physical network interfaces to pods via DRA for DPDK applications: Shared and Dedicated modes.
+search: DPDK applications, UnderlayNetwork, physical interfaces, SR-IOV, VF PF
 ---
 
 If your namespace (project) hosts high-performance workloads that require direct access to hardware (e.g., DPDK applications), you can use direct connection of physical network interfaces (Physical Functions and Virtual Functions) to pods via Kubernetes Dynamic Resource Allocation (DRA).

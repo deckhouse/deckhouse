@@ -1,8 +1,9 @@
 ---
-title: "Программно-определяемые сети в DKP: обзор"
+title: "Программно-определяемые сети (SDN)"
 permalink: ru/admin/configuration/network/sdn/
 description: |
-  Программно-определяемые сети (SDN) в Deckhouse Kubernetes Platform: обзор возможностей и способов реализации
+  Программно-определяемые сети (SDN) в Deckhouse Kubernetes Platform: обзор возможностей и способов реализации.
+search: дополнительные сети, DPDK
 lang: ru
 ---
 
