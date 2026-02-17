@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -34,8 +34,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/manager/apps"
-	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/operator"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
+	packageoperator "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -71,8 +71,8 @@ type moduleManager interface {
 }
 
 type packageOperator interface {
-	Update(repo registry.Remote, inst packageoperator.Instance)
-	Remove(namespace, name string)
+	UpdateApp(repo registry.Remote, inst packageoperator.App)
+	RemoveApp(namespace, name string)
 	Status() *packagestatus.Service
 }
 
@@ -143,7 +143,6 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := r.client.Get(ctx, req.NamespacedName, app); err != nil {
 		if apierrors.IsNotFound(err) {
 			logger.Debug("application not found")
-
 			return ctrl.Result{}, nil
 		}
 
@@ -186,16 +185,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: app.Spec.PackageName}, ap); err != nil {
 		logger.Debug("application package not found", slog.String("package", app.Spec.PackageName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonApplicationPackageNotFound,
-			fmt.Sprintf("ApplicationPackage '%s' not found", app.Spec.PackageName),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status application %s: %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("get application package '%s': %w", app.Spec.PackageName, err)
 	}
@@ -208,16 +198,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if err := r.client.Get(ctx, client.ObjectKey{Name: apvName}, apv); err != nil {
 		logger.Debug("application package version not found", slog.String("apv", apvName), log.Err(err))
 
-		r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonVersionNotFound,
-			fmt.Sprintf("ApplicationPackageVersion '%s' not found", apv.Name),
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("get application package version '%s': %w", apv.Name, err)
 	}
@@ -226,16 +207,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 	if apv.IsDraft() {
 		logger.Debug("application package version is in draft", slog.String("apv", apvName))
 
-		app = r.setConditionFalse(
-			app,
-			v1alpha1.ApplicationConditionTypeProcessed,
-			v1alpha1.ApplicationConditionReasonVersionIsDraft,
-			"ApplicationPackageVersion "+apvName+" is in draft",
-		)
-
-		if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-		}
+		// TODO: Processed = "false"
 
 		return fmt.Errorf("application package version '%s' is draft", apvName)
 	}
@@ -324,10 +296,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return err
 	}
 
-	app = r.setConditionTrue(app, v1alpha1.ApplicationConditionTypeProcessed)
-	if err := r.client.Status().Patch(ctx, app, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch application status '%s': %w", app.Name, err)
-	}
+	// TODO: Processed = "true"
 
 	// set finalizer if it is not set
 	if !controllerutil.ContainsFinalizer(app, v1alpha1.ApplicationFinalizerStatisticRegistered) {
@@ -392,7 +361,7 @@ func (r *reconciler) updateOperatorPackage(ctx context.Context, app *v1alpha1.Ap
 		}
 	}
 
-	r.operator.Update(registry.BuildRemote(repo), packageoperator.Instance{
+	r.operator.UpdateApp(registry.BuildRemote(repo), packageoperator.App{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -454,7 +423,7 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	logger.Debug("delete application")
 
 	// call PackageOperator method (PackageRemover interface)
-	r.operator.Remove(app.Namespace, app.Name)
+	r.operator.RemoveApp(app.Namespace, app.Name)
 
 	patch := client.MergeFrom(app.DeepCopy())
 
@@ -471,70 +440,12 @@ func (r *reconciler) handleDelete(ctx context.Context, app *v1alpha1.Application
 	return nil
 }
 
-func (r *reconciler) setConditionTrue(app *v1alpha1.Application, condType string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.ResourceConditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionTrue {
-				app.Status.ResourceConditions[idx].LastTransitionTime = now
-				app.Status.ResourceConditions[idx].Status = corev1.ConditionTrue
-			}
-
-			app.Status.ResourceConditions[idx].Reason = ""
-			app.Status.ResourceConditions[idx].Message = ""
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
-		Type:               condType,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
-	})
-
-	return app
-}
-
-func (r *reconciler) setConditionFalse(app *v1alpha1.Application, condType string, reason string, message string) *v1alpha1.Application {
-	now := metav1.NewTime(r.dc.GetClock().Now())
-
-	for idx, cond := range app.Status.ResourceConditions {
-		if cond.Type == condType {
-			app.Status.ResourceConditions[idx].LastProbeTime = now
-			if cond.Status != corev1.ConditionFalse {
-				app.Status.ResourceConditions[idx].LastTransitionTime = now
-				app.Status.ResourceConditions[idx].Status = corev1.ConditionFalse
-			}
-
-			app.Status.ResourceConditions[idx].Reason = reason
-			app.Status.ResourceConditions[idx].Message = message
-
-			return app
-		}
-	}
-
-	app.Status.ResourceConditions = append(app.Status.ResourceConditions, v1alpha1.ApplicationStatusResourceCondition{
-		Type:               condType,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      now,
-		LastTransitionTime: now,
-	})
-
-	return app
-}
-
 func (r *reconciler) addOwnerReferences(app *v1alpha1.Application, apv *v1alpha1.ApplicationPackageVersion, ap *v1alpha1.ApplicationPackage) *v1alpha1.Application {
 	logger := r.logger.With(slog.String("name", app.Name), slog.String("namespace", app.Namespace))
 
 	ownerRefs := app.GetOwnerReferences()
-	trueLink := &[]bool{true}[0]
-	falseLink := &[]bool{false}[0]
+	trueLink := ptr.To(true)
+	falseLink := ptr.To(false)
 
 	isAPVRefSet := false
 	isAPRefSet := false

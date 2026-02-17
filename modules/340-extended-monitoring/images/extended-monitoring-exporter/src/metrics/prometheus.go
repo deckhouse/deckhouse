@@ -184,7 +184,7 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 	mux.HandleFunc("/startup", func(w http.ResponseWriter, _ *http.Request) {
 		if !GetIsPopulated() {
@@ -192,7 +192,7 @@ func StartPrometheusServer(ctx context.Context, reg *prometheus.Registry, addr s
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("ok"))
+		_, _ = w.Write([]byte("ok"))
 	})
 
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))

@@ -1,5 +1,6 @@
 ---
 title: "Настройка ресурсов для istio-proxy сайдкаров"
+description: "Управление ресурсами istio-proxy сайдкаров в Deckhouse Kubernetes Platform. Настройка CPU и memory limits через аннотации sidecar.istio.io для отдельных рабочих нагрузок."
 permalink: ru/user/network/istio-sidecar-resource-management.html
 lang: ru
 ---

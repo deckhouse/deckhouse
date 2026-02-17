@@ -838,25 +838,13 @@ internal:
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(string(kubeadmConfigData)).ToNot(BeEmpty())
 
-				if expectedApiVersion == "v1beta3" {
-					var config ClusterConfigurationV3
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta3"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				} else {
-					var config ClusterConfigurationV4
-					err = yaml.Unmarshal(kubeadmConfigData, &config)
-					Expect(err).ShouldNot(HaveOccurred())
-					Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
-					Expect(config.Kind).To(Equal("ClusterConfiguration"))
-				}
+				var config ClusterConfigurationV4
+				err = yaml.Unmarshal(kubeadmConfigData, &config)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(config.APIVersion).To(Equal("kubeadm.k8s.io/v1beta4"))
+				Expect(config.Kind).To(Equal("ClusterConfiguration"))
 			})
 		}
-
-		Context("Kubernetes 1.30", func() {
-			testKubeadmVersion("1.30", "v1beta3")
-		})
 
 		Context("Kubernetes 1.31", func() {
 			testKubeadmVersion("1.31", "v1beta4")
@@ -904,9 +892,9 @@ apiserver:
     webhookURL: "https://authz.example.com"
 `
 
-		const v1beta3TestValues = `
+		const webhookTestValuesV1Beta4 = `
 internal:
-  effectiveKubernetesVersion: "1.30"
+  effectiveKubernetesVersion: "1.31"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -987,13 +975,13 @@ apiserver:
 			})
 		})
 
-		Context("v1beta3 uses map syntax for webhook parameters", func() {
+		Context("v1beta4 uses array syntax for webhook parameters", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("controlPlaneManager", v1beta3TestValues)
+				f.ValuesSetFromYaml("controlPlaneManager", webhookTestValuesV1Beta4)
 				f.HelmRender()
 			})
 
-			It("should include webhook parameters using map syntax in v1beta3", func() {
+			It("should include webhook parameters in v1beta4", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
@@ -1015,20 +1003,21 @@ apiserver:
 				Expect(err).ShouldNot(HaveOccurred())
 
 				configYaml := string(kubeadmConfigData)
-				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta3"))
+				Expect(configYaml).To(ContainSubstring("apiVersion: kubeadm.k8s.io/v1beta4"))
 
-				// v1beta3 uses map syntax (key: value) instead of array syntax
-				// Kubernetes >= 1.30 uses structured authorization config.
-				Expect(configYaml).To(ContainSubstring("authorization-config: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
-				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
-				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml"))
-				Expect(configYaml).To(ContainSubstring("authentication-token-webhook-cache-ttl: \"5m\""))
-				Expect(configYaml).To(ContainSubstring("audit-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml"))
-
-				// v1beta3 should NOT have the array syntax with name/value pairs
+				// v1beta4 uses array syntax (name: value) instead of map syntax
+				Expect(configYaml).To(ContainSubstring("- name: authorization-config"))
+				Expect(configYaml).To(ContainSubstring("value: /etc/kubernetes/deckhouse/extra-files/authorization-config.yaml"))
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-mode"))
 				Expect(configYaml).ToNot(ContainSubstring("- name: authorization-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-config-file"))
+				Expect(configYaml).To(ContainSubstring("- name: authentication-token-webhook-cache-ttl"))
+				Expect(configYaml).To(ContainSubstring("value: \"5m\""))
+				Expect(configYaml).To(ContainSubstring("- name: audit-webhook-config-file"))
+
+				// v1beta4 should NOT have the map syntax
+				Expect(configYaml).ToNot(ContainSubstring("authorization-mode: Node,Webhook,RBAC"))
+				Expect(configYaml).ToNot(ContainSubstring("authorization-webhook-config-file: /etc/kubernetes/deckhouse/extra-files/webhook-config.yaml"))
 			})
 		})
 

@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: Deckhouse Kubernetes Platform documentation
 permalink: en/
 description: Deckhouse Kubernetes Platform Documentation.
 ---

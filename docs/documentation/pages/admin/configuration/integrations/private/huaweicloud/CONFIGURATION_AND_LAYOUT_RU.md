@@ -1,5 +1,5 @@
 ---
-title: Схемы размещения и настройка
+title: Схемы размещения и настройка Huawei Cloud
 permalink: ru/admin/integrations/private/huaweicloud/layout.html
 lang: ru
 ---

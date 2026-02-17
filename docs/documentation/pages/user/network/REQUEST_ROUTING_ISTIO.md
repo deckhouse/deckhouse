@@ -1,5 +1,6 @@
 ---
-title: "Request routing with Istio"
+title: "Configuring request routing with Istio"
+description: "Configuring HTTP and TCP request routing in Deckhouse Kubernetes Platform using Istio. Working with VirtualService to manage traffic based on host, uri, weight."
 permalink: en/user/network/request_routing_istio.html
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: Layouts and configuration
+title: Layouts and configuration in Google Cloud Platform
 permalink: en/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 ---
 

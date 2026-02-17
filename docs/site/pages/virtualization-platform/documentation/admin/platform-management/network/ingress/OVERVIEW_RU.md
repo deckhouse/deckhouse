@@ -1,5 +1,5 @@
 ---
-title: "Обзор"
+title: "Балансировка входящего трафика"
 permalink: ru/virtualization-platform/documentation/admin/platform-management/network/ingress/
 lang: ru
 ---

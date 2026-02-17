@@ -1,5 +1,6 @@
 ---
-title: "Canary deployment"
+title: "Настройка Canary deployment"
+description: "Настройка стратегии Canary deployment в Deckhouse Kubernetes Platform с использованием ingress-nginx и istio. Постепенное внедрение новых версий приложений с контролем трафика и возможностью отката."
 permalink: ru/user/network/canary-deployment.html
 lang: ru
 ---

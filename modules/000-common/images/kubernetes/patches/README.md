@@ -51,3 +51,11 @@ The kube-apiserver authorization filter bypasses the initial 403 for these reque
 The storage queries the aggregated extension API `authorization.deckhouse.io/v1alpha1` resource `accessiblenamespaces` served by the `permission-browser-apiserver` APIService (`v1alpha1.authorization.deckhouse.io`) and returns only accessible namespaces.
 
 If `permission-browser-apiserver` is not present/unavailable (APIService is not `Available=True` or request fails), the behavior falls back to vanilla Kubernetes (403 for users without permissions). `watch namespaces` is not changed.
+
+### kubelet-inappropriate-manifest-name.patch
+
+This patch ensures that files like `kube-apiserver.backup`, `kube-apiserver.yaml.bak`, or any other non-YAML files are not processed as static pod manifests,
+this prevents kubelet from accidentally processing backup files or other non-manifest files in the `/etc/kubernetes/manifests directory`.
+See issues:
+- https://github.com/kubernetes/kubernetes/issues/55596
+- https://github.com/kubernetes/kubernetes/issues/129364 -> https://github.com/kubernetes/kubernetes/pull/105695

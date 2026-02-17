@@ -1,5 +1,5 @@
 ---
-title: Подключение и авторизация
+title: Подключение и авторизация в VMware Cloud Director
 permalink: ru/admin/integrations/virtualization/vcd/connection-and-authorization.html
 lang: ru
 ---
@@ -187,6 +187,10 @@ Network (внутренняя сеть) может быть настроена �
 
 {% alert level="warning" %}
 Работоспособность провайдера подтверждена только для шаблонов виртуальных машин на базе Ubuntu 22.04.
+{% endalert %}
+
+{% alert level="warning" %}
+Отключите vApp/Guest OS Customization (Guest Customization, vApp Customization и аналогичные механизмы) для шаблона и виртуальных машин кластера в VMware Cloud Director. DKP выполняет первичную настройку узлов через `cloud-init` (datasource OVF/VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}

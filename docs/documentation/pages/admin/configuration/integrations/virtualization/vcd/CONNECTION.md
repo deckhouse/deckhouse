@@ -1,5 +1,5 @@
 ---
-title: Connection and authorization
+title: Connection and authorization in VMware Cloud Director
 permalink: en/admin/integrations/virtualization/vcd/connection-and-authorization.html
 ---
 
@@ -185,6 +185,10 @@ After configuring DNAT, configure the firewall. Start by setting up IP sets.
 
 {% alert level="warning" %}
 The provider has been tested only with virtual machine templates based on "Ubuntu 22.04".
+{% endalert %}
+
+{% alert level="warning" %}
+Disable vApp/Guest OS Customization (Guest Customization, vApp Customization, and similar mechanisms) for the cluster template and virtual machines in VMware Cloud Director. DKP performs the initial node provisioning via `cloud-init` (OVF/VMware GuestInfo datasource). If customization is enabled, it may conflict with `cloud-init` and result in incorrect node initialization.
 {% endalert %}
 
 {% include notice_envinronment.liquid %}

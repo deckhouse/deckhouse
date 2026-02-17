@@ -1878,7 +1878,7 @@ alerts:
       description: |-
         The current Kubernetes version `{{ $labels.k8s_version }}` has been deprecated, and support for it will be removed in upcoming releases.
 
-        Please migrate to the next kubernetes version (at least 1.31)
+        Please migrate to the next kubernetes version (at least 1.32)
 
         Read [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/control-plane/updating-and-versioning.html) about how to update the Kubernetes version in the cluster.
       summary: |
@@ -2365,6 +2365,32 @@ alerts:
            ```
       summary: |
         Too many Kruise controller restarts detected.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeCgroupV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support cgroup v2.
+        Starting from Kubernetes 1.35, cgroup v1 is [deprecated](https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.35.md#no-really-you-must-read-this-before-you-upgrade-1).
+        To migrate to cgroup v2, please upgrade the kernel to version 5.8 or newer. For more information, please refer to the [documentation](https://kubernetes.io/docs/concepts/architecture/cgroups/#migrating-cgroupv2).
+      summary: |
+        Node {{ $labels.node }} is using deprecated cgroup v1 – migration to v2 required.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8NodeContainerdV2NotSupported
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/node-group.tpl
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Node {{ $labels.node }} in NodeGroup {{ $labels.node_group }} does not support containerd v2.
+        Starting from Kubernetes 1.36, containerd v1.y [will no longer be supported](https://kubernetes.io/blog/2025/09/12/kubernetes-v1-34-cri-cgroup-driver-lookup-now-ga/#announcement-kubernetes-is-deprecating-containerd-v1-y-support).
+        Please check the requirements for containerd v2 and schedule your migration plan.
+      summary: |
+        Node {{ $labels.node }} is using deprecated containerd v1 – migration to v2 required.
       severity: "8"
       markupFormat: markdown
     - name: D8NodeGroupIsNotUpdating

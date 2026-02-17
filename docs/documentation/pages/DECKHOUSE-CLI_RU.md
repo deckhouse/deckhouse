@@ -2,6 +2,7 @@
 title: "Описание и установка Deckhouse CLI"
 permalink: ru/cli/d8/
 description: Deckhouse CLI — интерфейс командной строки для работы с кластерами от разработчиков Deckhouse.
+search: d8, deckhouse cli, утилита d8, интерфейс командной строки
 lang: ru
 ---
 

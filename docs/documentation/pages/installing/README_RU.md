@@ -4,7 +4,7 @@ permalink: ru/installing/
 description: |
  Установка Deckhouse Kubernetes Platform (DKP), подготовка инфраструктуры установки, запуск установщика.
 lang: ru
-search: deckhouse installation, kubernetes installation, platform setup, infrastructure preparation, installer configuration, установка Deckhouse, установка Kubernetes, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
+search: требования, системные требования, installation, platform setup, infrastructure preparation, installer configuration, настройка платформы, подготовка инфраструктуры, конфигурация инсталлятора, конфигурация установщика, dhctl, dhctl bootstrap
 extractedLinksMax: 2
 relatedLinks:
   - title: "Быстрый старт"

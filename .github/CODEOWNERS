@@ -17,6 +17,7 @@
 040-node-manager/                        @name212 @090809
 040-node-manager/templates/fencing-agent @yalosev
 040-node-manager/images/fencing-agent    @yalosev
+040-node-manager/templates/cluster-autoscaler/   @yalosev
 040-node-manager/images/cluster-autoscaler/   @yalosev
 040-terraform-manager/                   @name212 @090809 @aleksey-su
 042-kube-dns/                            @AndreyPavlovFlant @apolovov

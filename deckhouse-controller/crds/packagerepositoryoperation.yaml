@@ -136,12 +136,12 @@ spec:
                               error:
                                 description: Error message.
                                 type: string
-                              name:
-                                description: Name of the error.
+                              version:
+                                description: Version of the package that failed.
                                 type: string
                             required:
                             - error
-                            - name
+                            - version
                             type: object
                           type: array
                         name:

@@ -1,5 +1,5 @@
 ---
-title: Конфигурация и схема размещения
+title: Схемы размещения и настройка Google Cloud Platform
 permalink: ru/admin/integrations/public/gcp/configuration-and-layout-scheme.html
 lang: ru
 ---
