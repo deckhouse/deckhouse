@@ -120,12 +120,12 @@ spec:
 
               build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                   exception_allowed != ""
-                  msg := sprintf("The sysctl is not allowed, pod: %v.\n%v\n%v\n%v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
+                  msg := sprintf("The sysctl is not allowed, pod: %v. | %v | %v | %v", [pod_name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_sysctl_message(pod_name, actual_value, allowed_by_policy, exception_allowed) := msg if {
                   exception_allowed == ""
-                  msg := sprintf("The sysctl is not allowed, pod: %v.\n%v\n%v", [pod_name, actual_value, allowed_by_policy])
+                  msg := sprintf("The sysctl is not allowed, pod: %v. | %v | %v", [pod_name, actual_value, allowed_by_policy])
               }
 
               # Check whether sysctl is allowed through any policy
