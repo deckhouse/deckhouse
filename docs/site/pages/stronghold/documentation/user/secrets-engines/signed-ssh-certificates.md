@@ -134,7 +134,7 @@ The following steps are performed by the client (user) that wants to
 authenticate to machines managed by Stronghold. These commands are usually run from
 the client's local workstation.
 
-1. Locate or generate the SSH public key. Usually this is `~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub`.
+1. Locate or generate the SSH public key. Usually this is `~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
     If you do not have an SSH keypair, generate one:
 
     ```text
@@ -146,7 +146,7 @@ the client's local workstation.
 
     ```text
     $ d8 stronghold write ssh-client-signer/sign/my-role \
-        public_key=@$HOME/.ssh/<SSH_PRIVATE_KEY_FILE>.pub
+        public_key=@$HOME/.ssh/<SSH_PUBLIC_KEY_FILE>
 
     Key             Value
     ---             -----
@@ -154,7 +154,7 @@ the client's local workstation.
     signed_key      ssh-ed25519-cert-v01@openssh.com AAAAHHNzaC1...
     ```
    
-    > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+    > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
     The result will include the serial and the signed key. This signed key is
     another public key.
@@ -179,10 +179,10 @@ the client's local workstation.
 
     ```text
     $ d8 stronghold write -field=signed_key ssh-client-signer/sign/my-role \
-        public_key=@$HOME/.ssh/<SSH_PRIVATE_KEY_FILE>.pub > signed-cert.pub
+        public_key=@$HOME/.ssh/<SSH_PUBLIC_KEY_FILE> > signed-cert.pub
     ```
     
-    > Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+    > Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
     If you are saving the certificate directly beside your SSH keypair, suffix
     the name with `-cert.pub` (`~/.ssh/id_ed25519-cert.pub`). With this naming
@@ -488,7 +488,7 @@ parameters as per the Stronghold CLI and API steps demonstrated below.
 # Using CLI:
 d8 stronghold secrets enable -path=hosts-ca ssh
 KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PUBLIC_KEY_FILE> | sed -z 's/\n/\\n/g')
 # Create / update keypair in Stronghold
 d8 stronghold write ssh-client-signer/config/ca \
   generate_signing_key=false \
@@ -496,13 +496,13 @@ d8 stronghold write ssh-client-signer/config/ca \
   public_key="${KEY_PUB}"
 ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+> Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
 ```shell-extension
 # Using API:
 curl -X POST -H "X-Vault-Token: ..." -d '{"type":"ssh"}' http://127.0.0.1:8200/v1/sys/mounts/hosts-ca
 KEY_PRI=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE> | sed -z 's/\n/\\n/g')
-KEY_PUB=$(cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub | sed -z 's/\n/\\n/g')
+KEY_PUB=$(cat ~/.ssh/<SSH_PUBLIC_KEY_FILE> | sed -z 's/\n/\\n/g')
 tee payload.json <<EOF
 {
   "generate_signing_key" : false,
@@ -514,7 +514,7 @@ EOF
 curl -X POST -H "X-Vault-Token: ..." -d @payload.json http://127.0.0.1:8200/v1/hosts-ca/config/ca
 ```
 
-> Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+> Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 
 :::warning
 

@@ -489,12 +489,12 @@ spec:
      --memory 2 \
      --cores 2 \
      --core-fraction 100 \
-     --ssh-key ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub \
+     --ssh-key ~/.ssh/<SSH_PUBLIC_KEY_FILE> \
      --zone ru-central1-a \
      --public-address 178.154.226.159
    ```
 
-   > Замените здесь `<SSH_PRIVATE_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
+   > Замените здесь `<SSH_PUBLIC_KEY_FILE>` на имя вашего публичного ключа. Например, для ключа с RSA-шифрованием это будет `id_rsa.pub`, а для ключа с ED25519-шифрованием `id_ed25519.pub`.
 
    Убедитесь, что IP-адрес из параметра `--public-address` доступен из вашей сети и указан корректно.
 

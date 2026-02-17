@@ -942,9 +942,9 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 ```
 
 {% offtopic title="How to obtain the public part of the key..." %}
-You can get the public part of the key by running `cat ~/.ssh/<SSH_PRIVATE_KEY_FILE>.pub`.
+You can get the public part of the key by running `cat ~/.ssh/<SSH_PUBLIC_KEY_FILE>`.
 
-Replace `<SSH_PRIVATE_KEY_FILE>` here with the name of your private key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
+Replace `<SSH_PUBLIC_KEY_FILE>` here with the name of your public key. For example, for a key with RSA encryption, it will be `id_rsa.pub`, and for a key with ED25519 encryption, it will be with `id_ed25519.pub`.
 {% endofftopic %}
 
 As a result of these commands:
