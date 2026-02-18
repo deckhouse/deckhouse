@@ -142,6 +142,7 @@ spec:
 {{- $imageWithVersion := printf "kubeApiserver%s" (.clusterConfiguration.kubernetesVersion | replace "." "") }}
 {{- if hasKey .images.controlPlaneManager $imageWithVersion }}
     image: {{ printf "%s%s@%s" .registry.address .registry.path (index .images.controlPlaneManager $imageWithVersion) }}
+    imagePullPolicy: IfNotPresent
 {{- end }}
 {{- end }}
 {{- end }}
