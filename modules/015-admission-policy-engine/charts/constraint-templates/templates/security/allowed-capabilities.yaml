@@ -140,12 +140,12 @@ spec:
 
               build_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("container <%v> has a disallowed capability.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("container <%v> has a disallowed capability. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("container <%v> has a disallowed capability.\n%v\n%v", [name, actual_value, allowed_by_policy])
+                msg := sprintf("container <%v> has a disallowed capability. | %v | %v", [name, actual_value, allowed_by_policy])
               }
 
               has_field(object, field) if {
@@ -292,12 +292,12 @@ spec:
 
               build_drop_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed != ""
-                msg := sprintf("container <%v> is not dropping all required capabilities.\n%v\n%v\n%v", [name, actual_value, allowed_by_policy, exception_allowed])
+                msg := sprintf("container <%v> is not dropping all required capabilities. | %v | %v | %v", [name, actual_value, allowed_by_policy, exception_allowed])
               }
 
               build_drop_capabilities_message(name, allowed_by_policy, actual_value, exception_allowed) := msg if {
                 exception_allowed == ""
-                msg := sprintf("container <%v> is not dropping all required capabilities.\n%v\n%v", [name, actual_value, allowed_by_policy])
+                msg := sprintf("container <%v> is not dropping all required capabilities. | %v | %v", [name, actual_value, allowed_by_policy])
               }
 
               drops_required_capabilities_by_any(container) if {
