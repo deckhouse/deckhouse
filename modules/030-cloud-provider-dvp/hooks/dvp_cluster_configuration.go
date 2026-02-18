@@ -62,11 +62,11 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 
 	if discoveryData.Kind == "" {
-		discoveryData.Kind = "DVPCloudDiscoveryData"
+		discoveryData.Kind = "DVPCloudProviderDiscoveryData"
 	}
 
 	if len(discoveryData.Zones) == 0 {
-		discoveryData.Zones = nil
+		discoveryData.Zones = []string{"default"}
 	}
 
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)

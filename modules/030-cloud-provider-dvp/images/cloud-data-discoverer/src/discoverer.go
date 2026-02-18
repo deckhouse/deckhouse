@@ -82,10 +82,20 @@ func (d *Discoverer) DiscoveryData(
 ) ([]byte, error) {
 	discoveryData := &cloudDataV1.DVPCloudProviderDiscoveryData{}
 	if len(cloudProviderDiscoveryData) > 0 {
-		err := json.Unmarshal(cloudProviderDiscoveryData, &discoveryData)
+		err := json.Unmarshal(cloudProviderDiscoveryData, discoveryData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal cloud provider discovery data: %v", err)
 		}
+	}
+
+	if discoveryData.APIVersion == "" {
+		discoveryData.APIVersion = "deckhouse.io/v1"
+	}
+	if discoveryData.Kind == "" {
+		discoveryData.Kind = "DVPCloudDiscoveryData"
+	}
+	if len(discoveryData.Zones) == 0 {
+		discoveryData.Zones = []string{"default"}
 	}
 
 	dvpClient, err := d.config.client()
