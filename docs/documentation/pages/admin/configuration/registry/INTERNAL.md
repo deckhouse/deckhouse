@@ -12,7 +12,7 @@ The internal registry allows for optimizing the downloading and storage of image
 
 The [`registry`](/modules/registry/) module, which implements internal storage, operates in the following modes:
 
-- `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents Deckhouse images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Direct mode Architecture](../../../architecture/registry-modes.html#direct-mode-architecture).
+- `Direct`: Provides direct access to an external registry via the fixed address `registry.d8-system.svc:5001/system/deckhouse`. This fixed address prevents DKP images from being re-downloaded and components from being restarted when registry parameters are changed. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section ["Direct mode Architecture"](../../../architecture/registry-modes.html#direct-mode-architecture).
 
 - `Proxy`: Using an internal caching proxy registry that accesses an external registry, with the caching proxy registry running on control-plane (master) nodes. This mode reduces the number of requests to the external registry by caching images. Cached data is stored on the control-plane (master) nodes. Access to the internal registry is via the fixed address `registry.d8-system.svc:5001/system/deckhouse`, similar to the `Direct` mode. Switching between modes and registries is done through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry). The switching process is automatic (for more details, see the switching examples below) for more information. The architecture of the mode is described in the section [Proxy mode Architecture](../../../architecture/registry-modes.html#proxy-mode-architecture).
 
@@ -266,7 +266,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
    target_mode: Proxy
    ```
 
-### Switching to the `Local` Mode
+### Switching to the `Local` mode
 
 To switch an already running cluster to `Local` mode, follow these steps:
 
