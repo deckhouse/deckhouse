@@ -26,8 +26,6 @@ import (
 	"github.com/flant/shell-operator/pkg/kube/object_patch"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	ngv1 "github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/v1"
 )
 
 // decodeDataFromSecret returns data section from Secret. If possible, top level keys are converted from JSON.
@@ -100,20 +98,3 @@ func setNodeGroupStatus(patcher go_hook.PatchCollector, nodeGroupName string, st
 	}
 	patchNodeGroupStatus(patcher, nodeGroupName, statusPatch)
 }
-func conditionsToPatch(conditions []ngv1.NodeGroupCondition) []map[string]interface{} {
-	res := make([]map[string]interface{}, 0, len(conditions))
-
-	for _, cc := range conditions {
-		res = append(res, cc.ToMap())
-	}
-
-	return res
-}
-
-const (
-	minStatusField                 = "min"
-	maxStatusField                 = "max"
-	desiredStatusField             = "desired"
-	instancesStatusField           = "instances"
-	lastMachineFailuresStatusField = "lastMachineFailures"
-)
