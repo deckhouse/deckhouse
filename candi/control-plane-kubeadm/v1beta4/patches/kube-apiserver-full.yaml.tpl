@@ -94,6 +94,10 @@ spec:
       type: DirectoryOrCreate
     name: etc-pki
   - hostPath:
+      path: /etc/ssl/certs
+      type: DirectoryOrCreate
+    name: ca-certs
+  - hostPath:
       path: /etc/kubernetes/pki
       type: DirectoryOrCreate
     name: k8s-certs
@@ -101,9 +105,6 @@ spec:
       path: /usr/share/ca-certificates
       type: DirectoryOrCreate
     name: usr-share-ca-certificates
-  - hostPath:
-      path: /usr/local/share/ca-certificates
-      type: DirectoryOrCreate
 {{- if .apiserver.auditPolicy }}
 {{- if eq .apiserver.auditLog.output "File" }}
   - hostPath:
@@ -163,8 +164,8 @@ spec:
     - --requestheader-extra-headers-prefix=X-Remote-Extra-
     - --requestheader-group-headers=X-Remote-Group
     - --requestheader-username-headers=X-Remote-User
-    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR | quote }}
-    - --advertise-address={{ .nodeIP | quote }}
+    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }}
+    - --advertise-address={{ .nodeIP }}
     - --enable-bootstrap-token-auth=true
     - --allow-privileged=true
 {{- if ne .runType "ClusterBootstrap" }}
@@ -188,17 +189,17 @@ spec:
     - --audit-log-path=-
 {{- end }}
 {{- end }}
-    - --bind-address={{ $bindAddress | quote }}
+    - --bind-address={{ $bindAddress }}
 {{- if hasKey . "arguments" }}
 {{- if hasKey .arguments "defaultUnreachableTolerationSeconds" }}
-    - --default-unreachable-toleration-seconds={{ .arguments.defaultUnreachableTolerationSeconds | quote }}
+    - --default-unreachable-toleration-seconds={{ .arguments.defaultUnreachableTolerationSeconds }}
 {{- end }}
 {{- if hasKey .arguments "podEvictionTimeout" }}
-    - --default-not-ready-toleration-seconds={{ .arguments.podEvictionTimeout | quote }}
+    - --default-not-ready-toleration-seconds={{ .arguments.podEvictionTimeout }}
 {{- end }}
 {{- end }}
     - --etcd-servers={{ $etcdServers }}
-    - --feature-gates={{ $apiserverFeatureGatesStr | quote }}
+    - --feature-gates={{ $apiserverFeatureGatesStr }}
     - --runtime-config={{ $runtimeConfig }}
 {{- if .apiserver.webhookURL }}
     - --authorization-config=/etc/kubernetes/deckhouse/extra-files/authorization-config.yaml
@@ -207,7 +208,7 @@ spec:
     - --authentication-token-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/authn-webhook-config.yaml
 {{- end }}
 {{- if .apiserver.authnWebhookCacheTTL }}
-    - --authentication-token-webhook-cache-ttl={{ .apiserver.authnWebhookCacheTTL | quote }}
+    - --authentication-token-webhook-cache-ttl={{ .apiserver.authnWebhookCacheTTL }}
 {{- end }}
 {{- if .apiserver.auditWebhookURL }}
     - --audit-webhook-config-file=/etc/kubernetes/deckhouse/extra-files/audit-webhook-config.yaml
@@ -250,9 +251,6 @@ spec:
       readOnly: true
     - mountPath: /etc/kubernetes/pki
       name: k8s-certs
-      readOnly: true
-    - mountPath: /usr/local/share/ca-certificates
-      name: usr-local-share-ca-certificates
       readOnly: true
 {{- if .apiserver.auditPolicy }}
 {{- if eq .apiserver.auditLog.output "File" }}
