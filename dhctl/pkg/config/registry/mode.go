@@ -20,7 +20,7 @@ import (
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	module_config "github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
-	"github.com/deckhouse/deckhouse/go_lib/registry/pki"
+	registry_pki "github.com/deckhouse/deckhouse/go_lib/registry/pki"
 )
 
 type ModeSettings struct {
@@ -126,13 +126,13 @@ type ModeModel struct {
 	RemoteData          Data
 }
 
-func (m ModeModel) InClusterData(pkiProvider PKIProvider) (Data, error) {
+func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 	switch m.Mode {
 	case constant.ModeDirect:
-		return m.toDirectInClusterData(pkiProvider)
+		return m.toDirectInClusterData(pki), nil
 
 	case constant.ModeProxy:
-		return m.toProxyInClusterData(pkiProvider)
+		return m.toProxyInClusterData(pki), nil
 
 	case constant.ModeUnmanaged:
 		return m.RemoteData, nil
@@ -142,7 +142,7 @@ func (m ModeModel) InClusterData(pkiProvider PKIProvider) (Data, error) {
 	}
 }
 
-func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
+func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 	var mirrors map[string]bashible.ConfigHosts
 
 	switch m.Mode {
@@ -153,7 +153,7 @@ func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
 		mirrors = m.toUnmanagedBashibleHosts()
 
 	case constant.ModeProxy:
-		mirrors = m.toProxyBashibleHosts()
+		mirrors = m.toProxyBashibleHosts(pki)
 
 	default:
 		return BashibleConfig{}, ErrUnknownMode
@@ -165,7 +165,7 @@ func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
 		Hosts:      mirrors,
 	}
 
-	version, err := pki.ComputeHash(&cfg)
+	version, err := registry_pki.ComputeHash(&cfg)
 	if err != nil {
 		return BashibleConfig{}, fmt.Errorf("compute version: %w", err)
 	}
@@ -174,34 +174,24 @@ func (m ModeModel) BashibleConfig() (BashibleConfig, error) {
 	return cfg, cfg.Validate()
 }
 
-func (m ModeModel) toDirectInClusterData(pkiProvider PKIProvider) (Data, error) {
-	pki, err := pkiProvider()
-	if err != nil {
-		return Data{}, fmt.Errorf("get PKI: %w", err)
-	}
-
+func (m ModeModel) toDirectInClusterData(pki PKI) Data {
 	return Data{
 		ImagesRepo: constant.HostWithPath,
 		Scheme:     constant.SchemeHTTPS,
 		Username:   m.RemoteData.Username,
 		Password:   m.RemoteData.Password,
 		CA:         pki.CA.Cert,
-	}, nil
+	}
 }
 
-func (m ModeModel) toProxyInClusterData(pkiProvider PKIProvider) (Data, error) {
-	pki, err := pkiProvider()
-	if err != nil {
-		return Data{}, fmt.Errorf("get PKI: %w", err)
-	}
-
+func (m ModeModel) toProxyInClusterData(pki PKI) Data {
 	return Data{
 		ImagesRepo: constant.HostWithPath,
 		Scheme:     constant.SchemeHTTPS,
 		Username:   pki.ROUser.Name,
 		Password:   pki.ROUser.Password,
 		CA:         pki.CA.Cert,
-	}, nil
+	}
 }
 
 func (m ModeModel) toDirectBashibleHosts() map[string]bashible.ConfigHosts {
@@ -258,31 +248,17 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 	return ret
 }
 
-func (m ModeModel) toProxyBashibleHosts() map[string]bashible.ConfigHosts {
-	// TODO:
-	// Need to implement logic for Proxy mode.
-	// Now implement logic as in Direct mode
-	host, path := m.RemoteData.AddressAndPath()
-	scheme := strings.ToLower(string(m.RemoteData.Scheme))
-	from := constant.PathRegexp
-	to := strings.TrimLeft(path, "/")
-
+func (m ModeModel) toProxyBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
 	ret := map[string]bashible.ConfigHosts{
 		constant.Host: {
 			Mirrors: []bashible.ConfigMirrorHost{
 				{
-					Host:   host,
-					Scheme: scheme,
-					CA:     m.RemoteData.CA,
+					Host:   constant.ProxyHost,
+					Scheme: constant.Scheme,
+					CA:     pki.CA.Cert,
 					Auth: bashible.ConfigAuth{
-						Username: m.RemoteData.Username,
-						Password: m.RemoteData.Password,
-					},
-					Rewrites: []bashible.ConfigRewrite{
-						{
-							From: from,
-							To:   to,
-						},
+						Username: pki.ROUser.Name,
+						Password: pki.ROUser.Password,
 					},
 				},
 			},

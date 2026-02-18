@@ -24,6 +24,9 @@ import (
 )
 
 func TestModeNoError(t *testing.T) {
+	pki, err := GeneratePKI()
+	require.NoError(t, err)
+
 	tests := []struct {
 		name  string
 		input module_config.DeckhouseSettings
@@ -63,7 +66,7 @@ func TestModeNoError(t *testing.T) {
 			t.Run("InClusterData", func(t *testing.T) {
 				_, err := settings.
 					ToModel().
-					InClusterData(GeneratePKI)
+					InClusterData(pki)
 
 				require.NoError(t, err)
 			})
@@ -71,7 +74,7 @@ func TestModeNoError(t *testing.T) {
 			t.Run("BashibleConfig", func(t *testing.T) {
 				_, err := settings.
 					ToModel().
-					BashibleConfig()
+					BashibleConfig(pki)
 
 				require.NoError(t, err)
 			})
@@ -82,10 +85,6 @@ func TestModeNoError(t *testing.T) {
 func TestModeDirect(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
-
-	getPKI := func() (PKI, error) {
-		return pki, nil
-	}
 
 	t.Run("Direct mode", func(t *testing.T) {
 		config := ConfigBuilder(
@@ -136,7 +135,7 @@ func TestModeDirect(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				InClusterData(getPKI)
+				InClusterData(pki)
 
 			require.NoError(t, err)
 
@@ -155,7 +154,7 @@ func TestModeDirect(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				BashibleConfig()
+				BashibleConfig(pki)
 
 			require.NoError(t, err)
 
@@ -196,10 +195,6 @@ func TestModeDirect(t *testing.T) {
 func TestModeProxy(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
-
-	getPKI := func() (PKI, error) {
-		return pki, nil
-	}
 
 	t.Run("Proxy mode", func(t *testing.T) {
 		config := ConfigBuilder(
@@ -251,7 +246,7 @@ func TestModeProxy(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				InClusterData(getPKI)
+				InClusterData(pki)
 
 			require.NoError(t, err)
 
@@ -270,7 +265,7 @@ func TestModeProxy(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				BashibleConfig()
+				BashibleConfig(pki)
 
 			require.NoError(t, err)
 
@@ -283,18 +278,12 @@ func TestModeProxy(t *testing.T) {
 					constant.Host: {
 						Mirrors: []bashible.ConfigMirrorHost{
 							{
-								Host:   "r.example.com",
-								Scheme: "https",
-								CA:     "-----BEGIN CERTIFICATE-----",
+								Host:   constant.ProxyHost,
+								Scheme: constant.Scheme,
+								CA:     pki.CA.Cert,
 								Auth: bashible.ConfigAuth{
-									Username: "test-user",
-									Password: "test-password",
-								},
-								Rewrites: []bashible.ConfigRewrite{
-									{
-										From: constant.PathRegexp,
-										To:   "test",
-									},
+									Username: pki.ROUser.Name,
+									Password: pki.ROUser.Password,
 								},
 							},
 						},
@@ -311,10 +300,6 @@ func TestModeProxy(t *testing.T) {
 func TestModeUnmanaged(t *testing.T) {
 	pki, err := GeneratePKI()
 	require.NoError(t, err)
-
-	getPKI := func() (PKI, error) {
-		return pki, nil
-	}
 
 	t.Run("Unmanaged mode", func(t *testing.T) {
 		config := ConfigBuilder(
@@ -361,7 +346,7 @@ func TestModeUnmanaged(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				InClusterData(getPKI)
+				InClusterData(pki)
 
 			require.NoError(t, err)
 
@@ -380,7 +365,7 @@ func TestModeUnmanaged(t *testing.T) {
 			actual, err := config.
 				Settings.
 				ToModel().
-				BashibleConfig()
+				BashibleConfig(pki)
 
 			require.NoError(t, err)
 

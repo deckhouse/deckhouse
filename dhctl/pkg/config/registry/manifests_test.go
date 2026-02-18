@@ -64,7 +64,7 @@ func TestManifestsNoError(t *testing.T) {
 			t.Run("RegistryBashibleConfigSecretData", func(t *testing.T) {
 				_, _, err := tt.input.
 					Manifest().
-					RegistryBashibleConfigSecretData()
+					RegistryBashibleConfigSecretData(GeneratePKI)
 
 				require.NoError(t, err)
 			})
@@ -139,7 +139,7 @@ func TestManifestsLegacyMode(t *testing.T) {
 			t.Run("RegistryBashibleConfigSecretData -> exists when not in legacy mode", func(t *testing.T) {
 				exists, _, err := tt.input.
 					Manifest().
-					RegistryBashibleConfigSecretData()
+					RegistryBashibleConfigSecretData(GeneratePKI)
 
 				require.NoError(t, err)
 
