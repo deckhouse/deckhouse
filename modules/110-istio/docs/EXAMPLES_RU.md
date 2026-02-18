@@ -222,7 +222,7 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: app-tls-secert
+  name: app-tls-secret
   namespace: d8-ingress-istio # Обратите внимание, пространство имён не является app-ns.
 type: kubernetes.io/tls
 data:
@@ -259,7 +259,7 @@ spec:
         mode: SIMPLE
         # Ресурс Secret с сертификатом и ключом, который должен быть создан в пространстве имён d8-ingress-istio.
         # Поддерживаемые форматы ресурсов Secret можно посмотреть по ссылке https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```
