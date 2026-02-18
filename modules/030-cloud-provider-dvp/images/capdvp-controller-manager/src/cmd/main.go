@@ -44,6 +44,7 @@ import (
 
 	infrastructurev1alpha1 "cluster-api-provider-dvp/api/v1alpha1"
 	"cluster-api-provider-dvp/internal/controller"
+	"cluster-api-provider-dvp/internal/runtimeextension"
 )
 
 var (
@@ -237,6 +238,10 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "DeckhouseMachine")
 		os.Exit(1)
 	}
+	// Setup CAPI Runtime Extension for in-place updates (disk hot-plug)
+	runtimeExt := runtimeextension.NewExtension(cloudAPI, mgr.GetClient(), cloudConfig.ClusterUUID)
+	runtimeExt.SetupWithWebhookServer(webhookServer)
+
 	// +kubebuilder:scaffold:builder
 
 	if metricsCertWatcher != nil {
