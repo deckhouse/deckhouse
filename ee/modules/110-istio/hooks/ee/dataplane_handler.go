@@ -266,7 +266,11 @@ func applyIstioDrivenNamespaceFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}
 
 	if revision, ok := obj.GetLabels()["istio.io/rev"]; ok {
-		namespaceInfo.RevisionRaw = revision
+		if revision == "default" {
+			namespaceInfo.RevisionRaw = "global"
+		} else {
+			namespaceInfo.RevisionRaw = revision
+		}
 	} else {
 		namespaceInfo.RevisionRaw = "global"
 	}
@@ -535,11 +539,6 @@ func dataplaneHandler(_ context.Context, input *go_hook.HookInput) error {
 		// override if label istio.io/rev with specific revision exists
 		if istioPod.SpecificRevision != "" {
 			desiredRevision = istioPod.SpecificRevision
-		}
-
-		// skip pods with istio.io/rev=default: do not emit metrics, so Prometheus alerts won't fire for them
-		if desiredRevision == "default" {
-			continue
 		}
 
 		// we don't need metrics for pod without desired revision and without istio sidecar
