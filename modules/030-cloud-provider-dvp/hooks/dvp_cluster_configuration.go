@@ -62,7 +62,7 @@ var _ = cluster_configuration.RegisterHook(func(input *go_hook.HookInput, metaCf
 	}
 
 	if discoveryData.Kind == "" {
-		discoveryData.Kind = "DVPCloudProviderDiscoveryData"
+		discoveryData.Kind = "DVPCloudDiscoveryData"
 	}
 
 	if len(discoveryData.Zones) == 0 {
