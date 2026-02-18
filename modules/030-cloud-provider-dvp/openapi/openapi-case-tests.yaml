@@ -1,8 +1,6 @@
 positive:
   configValues:
-  - provider:
-      kubeconfigDataBase64: "ZHVtbXk="
-      namespace: "default"
+  - {}
   values:
   - { internal: {} }
 negative:
