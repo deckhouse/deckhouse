@@ -296,7 +296,9 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 		}, nil
 	}
 
-	img, err := s.svc.Package(packageName).GetImage(ctx, "v"+foundTags[0].String())
+	// Sort tags to pick the latest version for label check (older versions may have outdated/missing labels)
+	slices.SortFunc(foundTags, func(a, b *semver.Version) int { return a.Compare(b) })
+	img, err := s.svc.Package(packageName).Versions().GetImage(ctx, "v"+foundTags[len(foundTags)-1].String())
 	if err != nil {
 		return nil, fmt.Errorf("get package image: %w", err)
 	}
