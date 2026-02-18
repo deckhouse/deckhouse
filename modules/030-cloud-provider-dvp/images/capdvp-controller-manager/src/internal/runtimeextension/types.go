@@ -112,8 +112,8 @@ type CommonRequest struct {
 
 // MachineRef references a CAPI Machine and its infrastructure object.
 type MachineRef struct {
-	Name      string    `json:"name"`
-	Namespace string    `json:"namespace"`
+	Name      string      `json:"name"`
+	Namespace string      `json:"namespace"`
 	Spec      MachineSpec `json:"spec"`
 }
 
