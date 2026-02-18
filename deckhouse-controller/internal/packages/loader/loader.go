@@ -325,22 +325,37 @@ func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
 		return nil, fmt.Errorf("load module definition: %w", err)
 	}
 
-	return &dto.Definition{
-		Name:  def.Name,
-		Type:  "Module",
-		Stage: def.Stage,
-		Descriptions: dto.Descriptions{
-			Ru: def.Descriptions.Ru,
-			En: def.Descriptions.En,
-		},
-		Requirements: dto.Requirements{
+	var requirements dto.Requirements
+	if def.Requirements != nil {
+		requirements = dto.Requirements{
 			Kubernetes: def.Requirements.Kubernetes,
 			Deckhouse:  def.Requirements.Deckhouse,
-		},
-		DisableOptions: dto.DisableOptions{
+		}
+	}
+
+	var disableOpts dto.DisableOptions
+	if def.DisableOptions != nil {
+		disableOpts = dto.DisableOptions{
 			Confirmation: def.DisableOptions.Confirmation,
 			Message:      def.DisableOptions.Message,
-		},
+		}
+	}
+
+	var descriptions dto.Descriptions
+	if def.Descriptions != nil {
+		descriptions = dto.Descriptions{
+			Ru: def.Descriptions.Ru,
+			En: def.Descriptions.En,
+		}
+	}
+
+	return &dto.Definition{
+		Name:           def.Name,
+		Type:           "Module",
+		Stage:          def.Stage,
+		Descriptions:   descriptions,
+		Requirements:   requirements,
+		DisableOptions: disableOpts,
 		Module: dto.DefinitionModule{
 			Weight:   int(def.Weight),
 			Critical: def.Critical,
