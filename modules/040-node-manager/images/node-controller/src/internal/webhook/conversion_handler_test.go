@@ -109,11 +109,61 @@ func makeV1Alpha1InstanceJSON(name string, phase v1alpha1.InstancePhase) []byte 
 	return raw
 }
 
+func makeV1Alpha1InstanceJSONWithoutClassReference(name string, phase v1alpha1.InstancePhase) []byte {
+	instance := v1alpha1.Instance{
+		TypeMeta: metav1.TypeMeta{APIVersion: "deckhouse.io/v1alpha1", Kind: "Instance"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha1.InstanceStatus{
+			NodeRef: v1alpha1.NodeRef{Name: name},
+			MachineRef: v1alpha1.MachineRef{
+				APIVersion: "machine.sapcloud.io/v1alpha1",
+				Kind:       "Machine",
+				Name:       name,
+				Namespace:  "d8-cloud-instance-manager",
+			},
+			CurrentStatus: v1alpha1.CurrentStatus{Phase: phase},
+		},
+	}
+	raw, _ := json.Marshal(instance)
+	return raw
+}
+
+func makeV1Alpha1InstanceJSONWithoutMachineRef(name string, phase v1alpha1.InstancePhase) []byte {
+	instance := v1alpha1.Instance{
+		TypeMeta: metav1.TypeMeta{APIVersion: "deckhouse.io/v1alpha1", Kind: "Instance"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha1.InstanceStatus{
+			NodeRef:        v1alpha1.NodeRef{Name: name},
+			CurrentStatus:  v1alpha1.CurrentStatus{Phase: phase},
+			ClassReference: v1alpha1.ClassReference{Kind: "DVPInstanceClass", Name: "worker"},
+		},
+	}
+	raw, _ := json.Marshal(instance)
+	return raw
+}
+
 func makeV1Alpha2InstanceJSON(name string, phase v1alpha2.InstancePhase) []byte {
 	instance := v1alpha2.Instance{
 		TypeMeta: metav1.TypeMeta{APIVersion: "deckhouse.io/v1alpha2", Kind: "Instance"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
+		},
+		Spec: v1alpha2.InstanceSpec{
+			NodeRef: v1alpha2.NodeRef{Name: name},
+			MachineRef: &v1alpha2.MachineRef{
+				APIVersion: "machine.sapcloud.io/v1alpha1",
+				Kind:       "Machine",
+				Name:       name,
+				Namespace:  "d8-cloud-instance-manager",
+			},
+			ClassReference: &v1alpha2.ClassReference{
+				Kind: "DVPInstanceClass",
+				Name: "worker",
+			},
 		},
 		Status: v1alpha2.InstanceStatus{
 			Phase: phase,
@@ -195,6 +245,15 @@ func extractV1Alpha2Instance(t *testing.T, raw []byte) *v1alpha2.Instance {
 	instance := &v1alpha2.Instance{}
 	if err := json.Unmarshal(raw, instance); err != nil {
 		t.Fatalf("failed to unmarshal v1alpha2 Instance: %v", err)
+	}
+	return instance
+}
+
+func extractV1Alpha1Instance(t *testing.T, raw []byte) *v1alpha1.Instance {
+	t.Helper()
+	instance := &v1alpha1.Instance{}
+	if err := json.Unmarshal(raw, instance); err != nil {
+		t.Fatalf("failed to unmarshal v1alpha1 Instance: %v", err)
 	}
 	return instance
 }
@@ -895,21 +954,70 @@ func TestConvertInstance_V1Alpha1ToV1Alpha2(t *testing.T) {
 	if instance.Spec.NodeRef.Name != "worker-1" {
 		t.Fatalf("expected spec.nodeRef.name worker-1, got %s", instance.Spec.NodeRef.Name)
 	}
-	if instance.Spec.MachineRef.Name != "worker-1" {
-		t.Fatalf("expected spec.machineRef.name worker-1, got %s", instance.Spec.MachineRef.Name)
+	if instance.Spec.MachineRef == nil || instance.Spec.MachineRef.Name != "worker-1" {
+		t.Fatalf("expected spec.machineRef.name worker-1, got %#v", instance.Spec.MachineRef)
 	}
-	if instance.Spec.ClassReference.Kind != "DVPInstanceClass" || instance.Spec.ClassReference.Name != "worker" {
+	if instance.Spec.ClassReference == nil || instance.Spec.ClassReference.Kind != "DVPInstanceClass" || instance.Spec.ClassReference.Name != "worker" {
 		t.Fatalf("unexpected spec.classReference: %#v", instance.Spec.ClassReference)
 	}
 }
 
-func TestConvertInstance_V1Alpha2ToV1Alpha1_NotSupported(t *testing.T) {
+func TestConvertInstance_V1Alpha1ToV1Alpha2_WithoutClassReference(t *testing.T) {
+	h := &ConversionHandler{}
+	cfg := &ProviderClusterConfiguration{}
+
+	raw := makeV1Alpha1InstanceJSONWithoutClassReference("worker-3", v1alpha1.InstanceRunning)
+	result, err := h.convertObject(raw, "deckhouse.io/v1alpha2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	instance := extractV1Alpha2Instance(t, result)
+	if instance.Spec.ClassReference != nil {
+		t.Fatalf("expected spec.classReference to be nil, got %#v", instance.Spec.ClassReference)
+	}
+}
+
+func TestConvertInstance_V1Alpha1ToV1Alpha2_WithoutMachineRef(t *testing.T) {
+	h := &ConversionHandler{}
+	cfg := &ProviderClusterConfiguration{}
+
+	raw := makeV1Alpha1InstanceJSONWithoutMachineRef("worker-4", v1alpha1.InstanceRunning)
+	result, err := h.convertObject(raw, "deckhouse.io/v1alpha2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	instance := extractV1Alpha2Instance(t, result)
+	if instance.Spec.MachineRef != nil {
+		t.Fatalf("expected spec.machineRef to be nil, got %#v", instance.Spec.MachineRef)
+	}
+}
+
+func TestConvertInstance_V1Alpha2ToV1Alpha1(t *testing.T) {
 	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{}
 
 	raw := makeV1Alpha2InstanceJSON("worker-2", v1alpha2.InstancePhaseTerminating)
-	_, err := h.convertObject(raw, "deckhouse.io/v1alpha1", cfg)
-	if err == nil {
-		t.Fatal("expected error for reverse conversion, got nil")
+	result, err := h.convertObject(raw, "deckhouse.io/v1alpha1", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	instance := extractV1Alpha1Instance(t, result)
+	if instance.APIVersion != "deckhouse.io/v1alpha1" {
+		t.Fatalf("expected apiVersion deckhouse.io/v1alpha1, got %s", instance.APIVersion)
+	}
+	if instance.Status.CurrentStatus.Phase != v1alpha1.InstanceTerminating {
+		t.Fatalf("expected phase Terminating, got %s", instance.Status.CurrentStatus.Phase)
+	}
+	if instance.Status.NodeRef.Name != "worker-2" {
+		t.Fatalf("expected status.nodeRef.name worker-2, got %s", instance.Status.NodeRef.Name)
+	}
+	if instance.Status.MachineRef.Name != "worker-2" {
+		t.Fatalf("expected status.machineRef.name worker-2, got %s", instance.Status.MachineRef.Name)
+	}
+	if instance.Status.ClassReference.Kind != "DVPInstanceClass" || instance.Status.ClassReference.Name != "worker" {
+		t.Fatalf("unexpected status.classReference: %#v", instance.Status.ClassReference)
 	}
 }

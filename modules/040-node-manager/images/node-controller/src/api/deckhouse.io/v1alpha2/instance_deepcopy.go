@@ -25,6 +25,7 @@ func (in *Instance) DeepCopyInto(out *Instance) {
 	*out = *in
 	out.TypeMeta = in.TypeMeta
 	in.ObjectMeta.DeepCopyInto(&out.ObjectMeta)
+	in.Spec.DeepCopyInto(&out.Spec)
 	in.Status.DeepCopyInto(&out.Status)
 }
 
@@ -85,5 +86,20 @@ func (in *InstanceStatus) DeepCopyInto(out *InstanceStatus) {
 		inConditions, outConditions := &in.Conditions, &out.Conditions
 		*outConditions = make([]InstanceCondition, len(*inConditions))
 		copy(*outConditions, *inConditions)
+	}
+}
+
+// DeepCopyInto copies receiver into out.
+func (in *InstanceSpec) DeepCopyInto(out *InstanceSpec) {
+	*out = *in
+	if in.MachineRef != nil {
+		inMachineRef, outMachineRef := &in.MachineRef, &out.MachineRef
+		*outMachineRef = new(MachineRef)
+		**outMachineRef = **inMachineRef
+	}
+	if in.ClassReference != nil {
+		inClassReference, outClassReference := &in.ClassReference, &out.ClassReference
+		*outClassReference = new(ClassReference)
+		**outClassReference = **inClassReference
 	}
 }

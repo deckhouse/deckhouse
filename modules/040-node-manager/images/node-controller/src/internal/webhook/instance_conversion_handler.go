@@ -24,27 +24,55 @@ import (
 	"github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 )
 
-// convertInstance supports only forward conversion: v1alpha1 -> v1alpha2.
-func (h *ConversionHandler) convertInstance(raw []byte, srcVersion, desiredVersion string) ([]byte, error) {
-	if srcVersion != "deckhouse.io/v1alpha1" {
+// convertInstanceToHub converts Instance from any supported version to the hub (v1alpha2).
+func (h *ConversionHandler) convertInstanceToHub(raw []byte, srcVersion string) (*v1alpha2.Instance, error) {
+	switch srcVersion {
+	case "deckhouse.io/v1alpha2":
+		obj := &v1alpha2.Instance{}
+		if err := json.Unmarshal(raw, obj); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal Instance v1alpha2: %w", err)
+		}
+		return obj, nil
+
+	case "deckhouse.io/v1alpha1":
+		srcObj := &v1alpha1.Instance{}
+		if err := json.Unmarshal(raw, srcObj); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal Instance v1alpha1: %w", err)
+		}
+
+		dstObj := &v1alpha2.Instance{}
+		if err := srcObj.ConvertTo(dstObj); err != nil {
+			return nil, fmt.Errorf("failed to convert Instance v1alpha1 to v1alpha2: %w", err)
+		}
+		return dstObj, nil
+
+	default:
 		return nil, fmt.Errorf("unsupported source version for Instance: %s", srcVersion)
 	}
+}
 
-	if desiredVersion != "deckhouse.io/v1alpha2" {
+// convertInstanceFromHub converts Instance from hub (v1alpha2) to any supported version.
+func (h *ConversionHandler) convertInstanceFromHub(hub *v1alpha2.Instance, desiredVersion string) ([]byte, error) {
+	var result interface{}
+
+	switch desiredVersion {
+	case "deckhouse.io/v1alpha2":
+		hub.APIVersion = "deckhouse.io/v1alpha2"
+		hub.Kind = "Instance"
+		result = hub
+
+	case "deckhouse.io/v1alpha1":
+		dstObj := &v1alpha1.Instance{}
+		if err := dstObj.ConvertFrom(hub); err != nil {
+			return nil, fmt.Errorf("failed to convert Instance v1alpha2 to v1alpha1: %w", err)
+		}
+		dstObj.APIVersion = "deckhouse.io/v1alpha1"
+		dstObj.Kind = "Instance"
+		result = dstObj
+
+	default:
 		return nil, fmt.Errorf("unsupported desired version for Instance: %s", desiredVersion)
 	}
 
-	srcObj := &v1alpha1.Instance{}
-	if err := json.Unmarshal(raw, srcObj); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal Instance v1alpha1: %w", err)
-	}
-
-	dstObj := &v1alpha2.Instance{}
-	if err := srcObj.ConvertTo(dstObj); err != nil {
-		return nil, fmt.Errorf("failed to convert Instance v1alpha1 to v1alpha2: %w", err)
-	}
-	dstObj.APIVersion = "deckhouse.io/v1alpha2"
-	dstObj.Kind = "Instance"
-
-	return json.Marshal(dstObj)
+	return json.Marshal(result)
 }

@@ -41,9 +41,9 @@ type Instance struct {
 
 // InstanceSpec holds references to related resources.
 type InstanceSpec struct {
-	NodeRef        NodeRef        `json:"nodeRef,omitempty"`
-	MachineRef     MachineRef     `json:"machineRef,omitempty"`
-	ClassReference ClassReference `json:"classReference,omitempty"`
+	NodeRef        NodeRef         `json:"nodeRef,omitempty"`
+	MachineRef     *MachineRef     `json:"machineRef,omitempty"`
+	ClassReference *ClassReference `json:"classReference,omitempty"`
 }
 
 // InstanceStatus is the observed state of Instance.

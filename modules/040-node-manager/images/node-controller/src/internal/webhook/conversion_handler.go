@@ -203,7 +203,11 @@ func (h *ConversionHandler) convertObject(raw []byte, desiredVersion string, pro
 	}
 
 	if meta.Kind == "Instance" {
-		return h.convertInstance(raw, srcVersion, desiredVersion)
+		hubObj, err := h.convertInstanceToHub(raw, srcVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert to hub: %w", err)
+		}
+		return h.convertInstanceFromHub(hubObj, desiredVersion)
 	}
 
 	if meta.Kind != "NodeGroup" {
