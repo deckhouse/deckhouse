@@ -26,14 +26,14 @@ mkdir -p ${REGISTRY_MODULE_IGNITER_DIR}/{pki,logs} \
 
 # Prepare certs
 bb-sync-file "${registry_pki_path}/ca.crt" - << EOF
-{{ registry.bootstrap.init.ca.cert }}
+{{ .registry.bootstrap.init.ca.cert }}
 EOF
 
 bb-sync-file "${registry_pki_path}/ca.key" - << EOF
-{{ registry.bootstrap.init.ca.key }}
+{{ .registry.bootstrap.init.ca.key }}
 EOF
 
-{{- with ((registry.bootstrap).proxy).ca }}
+{{- with ((.registry.bootstrap).proxy).ca }}
 bb-sync-file "${registry_pki_path}/upstream-registry-ca.crt" - << EOF
 {{ . }}
 EOF
@@ -137,20 +137,20 @@ token:
   key: "${registry_pki_path}/token.key"
 
 users:
-  {{ .registry.init.ro_user.name | quote }}:
-    password: {{ .registry.init.ro_user.passwordHash | quote | replace "$" "\\$" }}
+  {{ .registry.bootstrap.init.ro_user.name | quote }}:
+    password: {{ .registry.bootstrap.init.ro_user.password_hash | quote | replace "$" "\\$" }}
   
-  {{- if eq registry.mode "Local" }}
-  {{ .registry.init.rw_user.name | quote }}:
-    password: {{ .registry.init.rw_user.passwordHash | quote | replace "$" "\\$" }}
+  {{- if eq .registry.mode "Local" }}
+  {{ .registry.bootstrap.init.rw_user.name | quote }}:
+    password: {{ .registry.bootstrap.init.rw_user.password_hash | quote | replace "$" "\\$" }}
   {{- end }}
 
 acl:
-  - match: { account: {{ .registry.init.ro_user.name | quote }} }
+  - match: { account: {{ .registry.bootstrap.init.ro_user.name | quote }} }
     actions: ["pull"]
     comment: "has readonly access"
-  {{- if eq registry.mode "Local" }}
-  - match: { account: {{ .registry.init.rw_user.name | quote }} }
+  {{- if eq .registry.mode "Local" }}
+  - match: { account: {{ .registry.bootstrap.init.rw_user.name | quote }} }
     actions: [ "*" ]
     comment: "has full access"
   {{- end }}
