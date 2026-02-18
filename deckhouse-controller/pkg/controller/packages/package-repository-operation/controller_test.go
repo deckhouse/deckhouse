@@ -345,6 +345,26 @@ func (suite *ControllerTestSuite) fetchResults() []byte {
 		result.Write(got)
 	}
 
+	var mpvList v1alpha1.ModulePackageVersionList
+	err = suite.kubeClient.List(context.TODO(), &mpvList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mpvList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
+	var mpList v1alpha1.ModulePackageList
+	err = suite.kubeClient.List(context.TODO(), &mpList)
+	require.NoError(suite.T(), err)
+
+	for _, item := range mpList.Items {
+		got, _ := yaml.Marshal(item)
+		result.WriteString("---\n")
+		result.Write(got)
+	}
+
 	var repoList v1alpha1.PackageRepositoryList
 	err = suite.kubeClient.List(context.TODO(), &repoList)
 	require.NoError(suite.T(), err)
@@ -387,6 +407,8 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 		WithStatusSubresource(&v1alpha1.PackageRepositoryOperation{}).
 		WithStatusSubresource(&v1alpha1.ApplicationPackage{}).
 		WithStatusSubresource(&v1alpha1.ApplicationPackageVersion{}).
+		WithStatusSubresource(&v1alpha1.ModulePackage{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}).
 		WithStatusSubresource(&v1alpha1.PackageRepository{}).
 		Build()
 
@@ -434,6 +456,16 @@ func setupFakeController(t *testing.T, filename string) (*reconciler, client.Cli
 				err := yaml.Unmarshal([]byte(manifest), &repo)
 				require.NoError(t, err)
 				require.NoError(t, kubeClient.Create(context.TODO(), &repo))
+			case "ModulePackageVersion":
+				var mpv v1alpha1.ModulePackageVersion
+				err := yaml.Unmarshal([]byte(manifest), &mpv)
+				require.NoError(t, err)
+				require.NoError(t, kubeClient.Create(context.TODO(), &mpv))
+			case "ModulePackage":
+				var mp v1alpha1.ModulePackage
+				err := yaml.Unmarshal([]byte(manifest), &mp)
+				require.NoError(t, err)
+				require.NoError(t, kubeClient.Create(context.TODO(), &mp))
 			}
 		}
 	}
@@ -560,6 +592,38 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createMockPSM(mockClient)
 
 		suite.setupController("successful-completion.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("successful module completion", func() {
+		// Create a mock PSM with a mock client that returns module packages
+		mockClient := &mockRegistryClient{
+			listTagsFunc: func(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
+				return []string{"v1.0.0"}, nil
+			},
+			getImageConfigFunc: func(ctx context.Context, tag string) (*crv1.ConfigFile, error) {
+				return &crv1.ConfigFile{
+					Config: crv1.Config{
+						Labels: map[string]string{
+							"io.deckhouse.package.type": "Module",
+						},
+					},
+				}, nil
+			},
+		}
+		psm := createMockPSM(mockClient)
+
+		suite.setupController("successful-module-completion.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

@@ -114,9 +114,13 @@ func (s *OperationService) UpdateRepositoryStatus(ctx context.Context, packages 
 	s.repo.Status.Packages = make([]v1alpha1.PackageRepositoryStatusPackage, 0, len(packages))
 
 	for _, pkg := range packages {
+		pkgType := pkg.Type
+		if pkgType == "" {
+			pkgType = packageTypeApplication
+		}
 		s.repo.Status.Packages = append(s.repo.Status.Packages, v1alpha1.PackageRepositoryStatusPackage{
 			Name: pkg.Name,
-			Type: packageTypeApplication, // Default to Application type
+			Type: pkgType,
 		})
 	}
 
@@ -226,62 +230,52 @@ func (s *OperationService) listTagsFromVersion(ctx context.Context, packageName 
 }
 
 func (s *OperationService) getLastProcessedVersion(ctx context.Context, packageName string) string {
-	// Find the latest PackageVersion for this package from this repository
-	var versionList client.ObjectList = &v1alpha1.ApplicationPackageVersionList{}
-
-	err := s.client.List(ctx, versionList, client.MatchingLabels{
+	// Query both ApplicationPackageVersion and ModulePackageVersion lists since
+	// the package type is not known yet at this point.
+	matchLabels := client.MatchingLabels{
 		"repository": s.repo.Name,
 		"package":    packageName,
-	})
-	if err != nil {
-		s.logger.Warn("failed to list package versions",
-			slog.String("package", packageName),
-			log.Err(err))
-
-		return ""
 	}
 
-	// Extract versions and find the latest one
 	var versions []*semver.Version
-	var versionTags []string
 
-	switch list := versionList.(type) {
-	case *v1alpha1.ApplicationPackageVersionList:
-		for _, item := range list.Items {
-			if item.Status.PackageMetadata != nil {
-				versionTags = append(versionTags, item.Spec.PackageVersion)
-			}
-		}
-	default:
-		{
-			s.logger.Warn("unsupported package version list type",
-				slog.String("package", packageName))
-
-			return ""
-		}
+	appList := &v1alpha1.ApplicationPackageVersionList{}
+	if err := s.client.List(ctx, appList, matchLabels); err != nil {
+		s.logger.Warn("failed to list application package versions", slog.String("package", packageName), log.Err(err))
 	}
-
-	// Parse all versions
-	for _, vTag := range versionTags {
-		v, err := semver.NewVersion(vTag)
-		if err == nil {
+	for _, item := range appList.Items {
+		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
 			versions = append(versions, v)
 		}
 	}
 
-	// Find the latest version
-	if len(versions) == 0 {
-		return ""
+	modList := &v1alpha1.ModulePackageVersionList{}
+	if err := s.client.List(ctx, modList, matchLabels); err != nil {
+		s.logger.Warn("failed to list module package versions", slog.String("package", packageName), log.Err(err))
 	}
-
-	latest := versions[0]
-	for _, v := range versions[1:] {
-		if v.GreaterThan(latest) {
-			latest = v
+	for _, item := range modList.Items {
+		if v := parseProcessedVersion(item.Spec.PackageVersion, item.Status.PackageMetadata != nil); v != nil {
+			versions = append(versions, v)
 		}
 	}
 
-	return "v" + latest.String()
+	return latestVersionString(versions)
+}
+
+func parseProcessedVersion(tag string, hasMetadata bool) *semver.Version {
+	if !hasMetadata {
+		return nil
+	}
+	v, _ := semver.NewVersion(tag)
+	return v
+}
+
+func latestVersionString(versions []*semver.Version) string {
+	if len(versions) == 0 {
+		return ""
+	}
+	slices.SortFunc(versions, func(a, b *semver.Version) int { return a.Compare(b) })
+	return "v" + versions[len(versions)-1].String()
 }
 
 func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageName string, operation *v1alpha1.PackageRepositoryOperation) (*PackageProcessResult, error) {
@@ -319,18 +313,27 @@ func (s *OperationService) ProcessPackageVersions(ctx context.Context, packageNa
 
 	var failedVersions = make([]failedVersion, 0)
 	for _, versionTag := range foundTags {
-		// TODO: make ensureModulePackageVersion if it's module
-		err := s.ensureApplicationPackageVersion(ctx, packageName, "v"+versionTag.String())
-		if err != nil {
+		version := "v" + versionTag.String()
+
+		var ensureErr error
+		switch packageType {
+		case packageTypeModule:
+			ensureErr = s.ensureModulePackageVersion(ctx, packageName, version)
+		default:
+			ensureErr = s.ensureApplicationPackageVersion(ctx, packageName, version)
+		}
+
+		if ensureErr != nil {
 			s.logger.Warn("failed to create package version",
 				slog.String("package", packageName),
-				slog.String("version", "v"+versionTag.String()),
-				log.Err(err),
+				slog.String("version", version),
+				slog.String("type", packageType),
+				log.Err(ensureErr),
 			)
 
 			failedVersions = append(failedVersions, failedVersion{
-				Name:  "v" + versionTag.String(),
-				Error: "ensure application package version: " + err.Error(),
+				Name:  version,
+				Error: "ensure package version: " + ensureErr.Error(),
 			})
 
 			continue
@@ -447,6 +450,103 @@ func (s *OperationService) EnsureApplicationPackage(ctx context.Context, package
 	err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
 	if err != nil {
 		return fmt.Errorf("update application package status: %w", err)
+	}
+
+	return nil
+}
+
+func (s *OperationService) ensureModulePackageVersion(ctx context.Context, packageName, version string) error {
+	mpvName := v1alpha1.MakeModulePackageVersionName(s.repo.Name, packageName, version)
+
+	pkgVersion := &v1alpha1.ModulePackageVersion{}
+	err := s.client.Get(ctx, types.NamespacedName{Name: mpvName}, pkgVersion)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package version: %w", err)
+	}
+
+	// Version already exists
+	if err == nil {
+		return nil
+	}
+
+	// Create new ModulePackageVersion with draft label
+	pkgVersion = &v1alpha1.ModulePackageVersion{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: v1alpha1.ModulePackageVersionGVK.GroupVersion().String(),
+			Kind:       v1alpha1.ModulePackageVersionKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: mpvName,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				v1alpha1.ModulePackageVersionLabelRepository: s.repo.Name,
+				v1alpha1.ModulePackageVersionLabelPackage:    packageName,
+				v1alpha1.ModulePackageVersionLabelDraft:      "true",
+			},
+		},
+		Spec: v1alpha1.ModulePackageVersionSpec{
+			PackageName:           packageName,
+			PackageVersion:        version,
+			PackageRepositoryName: s.repo.Name,
+		},
+	}
+
+	// Add owner reference to PackageRepository
+	s.setOwnerReference(pkgVersion)
+
+	err = s.client.Create(ctx, pkgVersion)
+	if err != nil {
+		return fmt.Errorf("create module package version: %w", err)
+	}
+
+	return nil
+}
+
+func (s *OperationService) EnsureModulePackage(ctx context.Context, packageName string) error {
+	pkg := &v1alpha1.ModulePackage{}
+	err := s.client.Get(ctx, types.NamespacedName{Name: packageName}, pkg)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package: %w", err)
+	}
+
+	// err - apierrors.IsNotFound
+	if err != nil {
+		// Create new ModulePackage
+		pkg = &v1alpha1.ModulePackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ModulePackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ModulePackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+				},
+			},
+		}
+
+		// Add owner reference to PackageRepository
+		s.setOwnerReference(pkg)
+
+		err = s.client.Create(ctx, pkg)
+		if err != nil {
+			return fmt.Errorf("create module package: %w", err)
+		}
+	}
+
+	// Check if repository is already listed
+	if slices.Contains(pkg.Status.AvailableRepositories, s.repo.Name) {
+		return nil
+	}
+
+	// Update existing package to add repository to available repositories
+	original := pkg.DeepCopy()
+
+	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, s.repo.Name)
+
+	err = s.client.Status().Patch(ctx, pkg, client.MergeFrom(original))
+	if err != nil {
+		return fmt.Errorf("update module package status: %w", err)
 	}
 
 	return nil

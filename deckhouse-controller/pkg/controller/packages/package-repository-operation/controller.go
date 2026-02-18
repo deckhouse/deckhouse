@@ -50,6 +50,7 @@ const (
 
 	// TODO: unify constant
 	packageTypeApplication = "Application"
+	packageTypeModule      = "Module"
 
 	// cleanupOldOperationsCount is the number of operations to keep for the same repository, older operations will be deleted
 	cleanupOldOperationsCount = 10
@@ -473,30 +474,29 @@ func (r *reconciler) processNextPackage(ctx context.Context, operation *v1alpha1
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	// TODO: check type and legacy mode
-	// 1) found tags
-	// 2) fetch [0] tag image config
-	// 3) check label is application or module
-	// 4) if not found labels - is legacy (and log info about legacy module)
-	// if it's legacy module you must make var legacyModule = true
-
-	// TODO: if application - EnsureApplicationPackage
-	// if module - EnsureModulePackage
-
-	// Create or update ApplicationPackage or ClusterApplicationPackage
-	err := svc.EnsureApplicationPackage(ctx, currentPackage.Name)
-	if err != nil {
-		r.logger.Error("failed to ensure package resource",
-			slog.String("package", currentPackage.Name),
-			log.Err(err))
-	}
-
 	processResult, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, operation)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
 			log.Err(err))
 		// Continue with next package even if this one fails
+	}
+
+	// Ensure the appropriate package resource based on detected type
+	switch processResult.PackageType {
+	case packageTypeModule:
+		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure module package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
+	default:
+		// Default to Application for unknown or Application types
+		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
+			r.logger.Error("failed to ensure application package resource",
+				slog.String("package", currentPackage.Name),
+				log.Err(ensureErr))
+		}
 	}
 
 	// Remove processed package from queue
