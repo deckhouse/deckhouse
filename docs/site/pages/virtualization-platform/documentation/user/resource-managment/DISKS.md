@@ -346,17 +346,17 @@ Limitations of disk migration between storage:
 
 - Migration is only available for virtual machines in the `Running` state.
 - Migration is only supported between disks of the same type: `Block` ↔ `Block`, `FileSystem` ↔ `FileSystem`; conversion between different types is not possible.
-- Migration is only supported for disks attached statically via the `.spec.blockDeviceRefs` parameter in the virtual machine specification.
-- If a disk was attached via the VirtualMachineBlockDeviceAttachments resource, it must be temporarily reattached directly for migration by specifying the disk name in `.spec.blockDeviceRefs`.
 {% endalert %}
 
 Example of migrating a disk to the `new-storage-class-name` StorageClass:
 
 ```bash
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+```
 
-# Alternatively, apply the changes by editing the resource.
+Alternatively, apply the changes by editing the resource:
 
+```bash
 d8 k edit vd disk
 ```
 
