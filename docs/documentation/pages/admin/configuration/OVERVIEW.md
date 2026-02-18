@@ -302,6 +302,11 @@ user-authn   false     1         12h
 
 Depending on the [bundle used](/modules/deckhouse/configuration.html#parameters-bundle), modules may be enabled or disabled by default.
 
+{% alert level="warning" %}
+The table below describes module bundles only for built-in modules of Deckhouse Kubernetes Platform.  
+External modules are not included in this table.
+{% endalert %}
+
 <table>
 <thead>
 <tr><th>Bundle name</th><th>List of modules, enabled by default</th></tr></thead>
