@@ -75,7 +75,7 @@ type DeckhouseMachineReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, reterr error) { // nolint:nonamedreturns
 	logger := log.FromContext(ctx)
 
 	dvpMachine := &infrastructurev1a1.DeckhouseMachine{}
@@ -129,27 +129,21 @@ func (r *DeckhouseMachineReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
+	defer func() {
+		if err := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); err != nil {
+			result = ctrl.Result{}
+			reterr = err
+		}
+	}()
+
 	// Handle deleted machines
 	if !dvpMachine.DeletionTimestamp.IsZero() {
-		result, err := r.reconcileDeleteOperation(ctx, logger, dvpMachine)
-
-		// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
-		if patchErr := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); patchErr != nil {
-			return ctrl.Result{}, patchErr
-		}
-
-		return result, err
+		return r.reconcileDeleteOperation(ctx, logger, dvpMachine)
 	}
 
 	// Handle other kinds of changes
-	result, err := r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
-
-	// Always patch the dvpMachine when exiting this function, so we can persist any DeckhouseMachine changes.
-	if patchErr := patchDeckhouseMachine(ctx, patchHelper, dvpMachine); patchErr != nil {
-		return ctrl.Result{}, patchErr
-	}
-
-	return result, err
+	return r.reconcileUpdates(ctx, logger, cluster, machine, dvpMachine)
 }
 
 func patchDeckhouseMachine(
