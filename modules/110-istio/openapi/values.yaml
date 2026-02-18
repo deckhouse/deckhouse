@@ -33,7 +33,6 @@ properties:
       istioToK8sCompatibilityMap:
         type: object
         default:
-          "1.19": ["1.31"]
           "1.21": ["1.31", "1.32", "1.33", "1.34", "1.35"]
           "1.25": ["1.31", "1.32", "1.33", "1.34", "1.35"]
         additionalProperties:
@@ -136,7 +135,7 @@ properties:
               minimum: 1
               maximum: 9
         default:
-          - version: "1.19"
+          - version: "1.21"
             alertSeverity: 4
       globalVersion:
         type: string

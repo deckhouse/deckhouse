@@ -28,10 +28,8 @@ memory: 10Mi
   {{- $_ := set $images $componentWithSuffix (get $.Values.global.modulesImages.digests.controlPlaneManager $componentWithSuffix) }}
   {{- $_ := set $imageHolders $componentWithSuffix (printf "image-holder-%s" ($component | kebabcase)) }}
 {{- end }}
-{{- $_ := set $images "kubeApiserverHealthcheck" $.Values.global.modulesImages.digests.controlPlaneManager.kubeApiserverHealthcheck }}
 {{- $_ := set $images "etcd" $.Values.global.modulesImages.digests.controlPlaneManager.etcd }}
 
-{{- $_ := set $imageHolders "kubeApiserverHealthcheck" "image-holder-kube-apiserver-healthcheck" }}
 {{- $_ := set $imageHolders "etcd" "image-holder-etcd" }}
 
 {{- $registry := dict }}
@@ -163,9 +161,7 @@ extra-file-audit-policy.yaml: {{ $tpl_context.apiserver.auditPolicy }}
   {{- if $tpl_context.apiserver.secretEncryptionKey }}
 extra-file-secret-encryption-config.yaml: {{ include "encryptionConfigTemplate" (dict "secretEncryptionKey" $tpl_context.apiserver.secretEncryptionKey) | b64enc }}
   {{- end }}
-{{- if $tpl_context.apiserver.oidcIssuerURL }}
 extra-file-authentication-config.yaml: {{ include "authenticationConfiguration" $tpl_context | b64enc }}
-{{- end }}
 extra-file-scheduler-config.yaml: {{ include "schedulerConfig" $tpl_context | b64enc }}
 extra-file-admission-control-config.yaml: {{ include "admissionControlConfig" $tpl_context | b64enc }}
 extra-file-event-rate-limit-config.yaml: {{ include "eventRateLimitAdmissionConfig" $tpl_context | b64enc }}
