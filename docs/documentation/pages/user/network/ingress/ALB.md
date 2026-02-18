@@ -144,7 +144,7 @@ spec:
         mode: SIMPLE
         # Secret resource with the certificate and key, which must be created in the d8-ingress-istio namespace.
         # Supported Secret formats can be found at https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats.
-        credentialName: app-tls-secrets
+        credentialName: app-tls-secret
       hosts:
         - app.example.com
 ```
