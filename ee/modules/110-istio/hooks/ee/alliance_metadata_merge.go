@@ -69,8 +69,8 @@ type Kubeconfig struct {
 // TokenValidationResult represents the result of token validation
 type TokenValidationResult struct {
 	NeedReissue bool      `json:"needReissue"`
-	ExpiresAt         time.Time `json:"expiresAt"`
-	Error             string    `json:"error,omitempty"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	Error       string    `json:"error,omitempty"`
 }
 
 // expiresSoonThreshold defines the minimum time until token expiration to consider it valid.
@@ -160,7 +160,7 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 	if tokenString == "" {
 		return TokenValidationResult{
 			NeedReissue: true,
-			Error:             "token is empty",
+			Error:       "token is empty",
 		}
 	}
 
@@ -169,7 +169,7 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 	if err != nil {
 		return TokenValidationResult{
 			NeedReissue: true,
-			Error:             fmt.Sprintf("failed to parse token: %v", err),
+			Error:       fmt.Sprintf("failed to parse token: %v", err),
 		}
 	}
 
@@ -181,7 +181,7 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return TokenValidationResult{
 			NeedReissue: true,
-			Error:             fmt.Sprintf("failed to unmarshal claims: %v", err),
+			Error:       fmt.Sprintf("failed to unmarshal claims: %v", err),
 		}
 	}
 
@@ -200,8 +200,8 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 
 	return TokenValidationResult{
 		NeedReissue: needReissue,
-		ExpiresAt:         expiresAt,
-		Error:             errMsg,
+		ExpiresAt:   expiresAt,
+		Error:       errMsg,
 	}
 }
 
