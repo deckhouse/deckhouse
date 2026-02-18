@@ -216,6 +216,7 @@ func TestModeProxy(t *testing.T) {
 					Username:   "test-user",
 					Password:   "test-password",
 				},
+				TTL: "5m",
 			}
 
 			require.EqualValues(t, expect, config.Settings)
@@ -237,6 +238,7 @@ func TestModeProxy(t *testing.T) {
 					Username:   "test-user",
 					Password:   "test-password",
 				},
+				TTL: "5m",
 			}
 
 			require.EqualValues(t, expect, actual)
