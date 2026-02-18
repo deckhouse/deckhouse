@@ -143,7 +143,10 @@ func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 }
 
 func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
-	var mirrors map[string]bashible.ConfigHosts
+	var (
+		mirrors   map[string]bashible.ConfigHosts
+		endpoints []string
+	)
 
 	switch m.Mode {
 	case constant.ModeDirect:
@@ -153,16 +156,18 @@ func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 		mirrors = m.toUnmanagedBashibleHosts()
 
 	case constant.ModeProxy:
-		mirrors = m.toProxyBashibleHosts(pki)
+		mirrors = m.toProxyLocalBashibleHosts(pki)
+		endpoints = m.toProxyLocalEndpoints()
 
 	default:
 		return BashibleConfig{}, ErrUnknownMode
 	}
 
 	cfg := BashibleConfig{
-		Mode:       string(m.Mode),
-		ImagesBase: m.InClusterImagesRepo,
-		Hosts:      mirrors,
+		Mode:           string(m.Mode),
+		ImagesBase:     m.InClusterImagesRepo,
+		ProxyEndpoints: endpoints,
+		Hosts:          mirrors,
 	}
 
 	version, err := registry_pki.ComputeHash(&cfg)
@@ -248,7 +253,7 @@ func (m ModeModel) toUnmanagedBashibleHosts() map[string]bashible.ConfigHosts {
 	return ret
 }
 
-func (m ModeModel) toProxyBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
+func (m ModeModel) toProxyLocalBashibleHosts(pki PKI) map[string]bashible.ConfigHosts {
 	ret := map[string]bashible.ConfigHosts{
 		constant.Host: {
 			Mirrors: []bashible.ConfigMirrorHost{
@@ -266,4 +271,8 @@ func (m ModeModel) toProxyBashibleHosts(pki PKI) map[string]bashible.ConfigHosts
 	}
 
 	return ret
+}
+
+func (m ModeModel) toProxyLocalEndpoints() []string {
+	return constant.GenerateProxyEndpoints([]string{"${discovered_node_ip}"})
 }

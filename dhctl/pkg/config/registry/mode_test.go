@@ -273,7 +273,7 @@ func TestModeProxy(t *testing.T) {
 				Mode:           string(constant.ModeProxy),
 				Version:        actual.Version,
 				ImagesBase:     constant.HostWithPath,
-				ProxyEndpoints: nil,
+				ProxyEndpoints: []string{"${discovered_node_ip}:5001"},
 				Hosts: map[string]bashible.ConfigHosts{
 					constant.Host: {
 						Mirrors: []bashible.ConfigMirrorHost{
