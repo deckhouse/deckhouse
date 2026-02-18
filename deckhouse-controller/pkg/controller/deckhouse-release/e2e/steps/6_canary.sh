@@ -52,5 +52,5 @@ spec:
 EOF
 
 kubectl wait --for=jsonpath='{.status.phase}'=Pending deckhouserelease/v1.66.0
-kubectl wait --timeout=120s --for=jsonpath='{.status.message'}='Release is postponed until 10 Jan 88 05:05 UTC' deckhouserelease/v1.66.0
+kubectl wait --timeout=120s --for=jsonpath='{.status.message'}='Release is postponed until 10 Jan 2088 05:05 UTC' deckhouserelease/v1.66.0
 
