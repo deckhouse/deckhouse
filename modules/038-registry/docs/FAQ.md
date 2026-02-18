@@ -104,7 +104,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
        EOF
    ```
 
-1. Apply the `NodeGroupConfiguration`. Wait until the configuration files appear in the `/etc/containerd/registry.d` directory on all nodes.
+1. Apply the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Wait until the configuration files appear in the `/etc/containerd/registry.d` directory on all nodes.
 
 1. Verify that the configurations are working correctly. To do this, use the following command:
 
@@ -163,13 +163,13 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
    This message means that there are old registry configurations on the nodes located in the `/etc/containerd/conf.d` directory. The switch to the new containerd configuration is currently blocked. To allow the switch, you need to remove the old configuration files.
 
-1. Remove the old configuration files to allow switching to the `registry` module. To do this, create a `NodeGroupConfiguration`, for example:
+1. Remove the old configuration files to allow switching to the `registry` module. To do this, create a [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration). Example of a NodeGroupConfiguration manifest:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
    kind: NodeGroupConfiguration
    metadata:
-     name: containerd-additional-config-auth.sh
+     name: containerd-additional-config-auth-delete.sh
    spec:
      # To add a file before the '032_configure_containerd.sh' step
      weight: 0
@@ -223,6 +223,20 @@ Containerd v2 uses the new format by default. For more details, see the section 
    mode: Unmanaged
    target_mode: Unmanaged
    ```
+
+1. Delete the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) created in the step for deleting old configuration files:
+
+   ```shell
+   d8 k delete nodegroupconfiguration containerd-additional-config-auth-delete.sh
+   ```
+
+   To verify that NodeGroupConfiguration has been deleted, use the command:
+
+   ```shell
+   d8 k get nodegroupconfiguration
+   ```
+
+   The list should not contain the NodeGroupConfiguration to be deleted (for this example, `containerd-additional-config-auth-delete.sh`).
 
 ## How to Migrate Back from the Registry Module?
 
