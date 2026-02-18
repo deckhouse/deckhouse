@@ -436,14 +436,26 @@ Available in DVP Enterprise Edition only.
 {% endalert %}
 
 DVP supports container image signature verification using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/).
-Verification ensures image integrity and authenticity.
+Verification ensures the integrity and authenticity of images.  
 
+Images are signed by creating a special tag in the container registry that contains the image signature.  
+The signature is generated for the digest (hash) of your image.  
+If your image is `my-repo/app:latest` with the hash `sha256:abc123EXAMPLE`, the tag `my-repo/app:sha256-abc123EXAMPLE.sig` will appear in the image store.
+
+Therefore, the image signing process consists of calculating and publishing an additional tag to the container registry, without modifying the existing image.  
+After signing the image, there is no need to push it to the image store again. You only need to log in to the container registry with write access.
+
+{% alert level="warning" %}
+**Warning!** Cosign version 2 or later is currently supported.
+
+Cosign version 3 or later is not supported.
+{% endalert %}
 To sign an image with Cosign, do the following:
 
-1. Generate a key pair:
+1. Make sure the cosign version is among the supported ones:
 
    ```shell
-   cosign generate-key-pair
+   cosign version
    ```
 
 1. Sign the image:
