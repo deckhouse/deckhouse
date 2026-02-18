@@ -482,7 +482,7 @@ status:
 
 			// Verify the token is valid
 			validationResult := ValidateJWTToken(apiJWT)
-			Expect(validationResult.IsExpired).To(BeFalse())
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 
 		It("Checking the reuse of an existing valid secret token.", func() {
@@ -659,7 +659,7 @@ status:
 
 			// Verify the new token is valid
 			validationResult := ValidateJWTToken(apiJWT)
-			Expect(validationResult.IsExpired).To(BeFalse())
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 
 		It("Check whether a new token is created when existing token expires in less than 30 days (proactive refresh).", func() {
@@ -749,8 +749,7 @@ status:
 
 			// Verify the new token is valid and has sufficient TTL
 			validationResult := ValidateJWTToken(apiJWT)
-			Expect(validationResult.IsExpired).To(BeFalse())
-			Expect(validationResult.ExpiresSoon).To(BeFalse())
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 	})
 })
