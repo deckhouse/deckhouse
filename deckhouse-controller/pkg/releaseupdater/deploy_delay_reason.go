@@ -110,7 +110,7 @@ func (r DeployDelayReason) Message(release v1alpha1.Release, applyTime time.Time
 		}
 
 		b.WriteString(" until ")
-		b.WriteString(applyTime.Format(time.RFC822))
+		b.WriteString(applyTime.Format(time.RFC3339))
 
 		return b.String()
 	}
