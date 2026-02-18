@@ -240,7 +240,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr ${REGIS
 check_and_run "registry" "/opt/deckhouse/bin/registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
+    response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://${discovered_node_ip}:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break
