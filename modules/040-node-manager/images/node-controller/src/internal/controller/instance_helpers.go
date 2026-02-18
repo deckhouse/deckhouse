@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -32,14 +32,14 @@ var MachineNamespace = "d8-cloud-instance-manager"
 // ensureInstanceExists creates a cluster-scoped Instance with the same name
 // if it does not exist yet.
 func ensureInstanceExists(ctx context.Context, c client.Client, name string) error {
-	instance := &deckhousev1alpha1.Instance{}
+	instance := &deckhousev1alpha2.Instance{}
 	if err := c.Get(ctx, types.NamespacedName{Name: name}, instance); err == nil {
 		return nil
 	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("get instance %q: %w", name, err)
 	}
 
-	newInstance := &deckhousev1alpha1.Instance{
+	newInstance := &deckhousev1alpha2.Instance{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},

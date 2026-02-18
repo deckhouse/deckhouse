@@ -14,9 +14,153 @@ spec:
     kind: Instance
   preserveUnknownFields: false
   versions:
-    - name: v1alpha1
+    - name: v1alpha2
       served: true
       storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: MachineStatus
+          type: string
+          description: "Status of the infrastructure machine"
+          jsonPath: .status.machineStatus
+        - name: BashibleStatus
+          type: string
+          description: "Status of the bashible configuration management"
+          jsonPath: .status.bashibleStatus
+        - name: Phase
+          type: string
+          description: "Lifecycle phase of the instance"
+          jsonPath: .status.phase
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+        - name: Message
+          type: string
+          description: "Error message or detailed status description"
+          jsonPath: .status.message
+          priority: 1
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Instance describes the full lifecycle of a server in the Deckhouse platform, aggregating status from Machine (infrastructure) and Bashible (configuration).
+          properties:
+            spec:
+              type: object
+              description: Specification of the Instance, including references to related resources.
+              properties:
+                nodeRef:
+                  type: object
+                  description: Reference to the Kubernetes Node object.
+                  properties:
+                    name:
+                      type: string
+                      description: Name of the Node.
+                machineRef:
+                  type: object
+                  description: Reference to the infrastructure machine (CAPI or MCM).
+                  properties:
+                    apiVersion:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                classReference:
+                  description: Reference to the InstanceClass object (e.g., AWSInstanceClass, YandexInstanceClass).
+                  type: object
+                  properties:
+                    kind:
+                      type: string
+                      description: The kind of the InstanceClass (e.g., OpenStackInstanceClass, AWSInstanceClass).
+                    name:
+                      type: string
+                      description: The name of the InstanceClass.
+            status:
+              type: object
+              description: Most recently observed status of the Instance.
+              properties:
+                phase:
+                  type: string
+                  description: |
+                    The high-level lifecycle phase of the Instance.
+                    Mapping: Pending -> Provisioning -> Provisioned -> Running -> Terminating.
+                  enum:
+                    - Pending
+                    - Provisioning
+                    - Provisioned
+                    - Running
+                    - Terminating
+                    - Unknown
+                machineStatus:
+                  type: string
+                  description: |
+                    Aggregated status of the infrastructure machine.
+                    Derived from MachineReady condition.
+                  enum:
+                    - Progressing
+                    - Error
+                    - Ready
+                    - Blocked
+                    - Rebooting
+                bashibleStatus:
+                  type: string
+                  description: |
+                    Aggregated status of the bashible configuration process.
+                    Derived from BashibleReady condition.
+                  enum:
+                    - Error
+                    - Unknown
+                    - Ready
+                    - WaitingApproval
+                message:
+                  type: string
+                  description: |
+                    A human-readable message indicating details about the current status or error.
+                    Displayed in CLI only when using -o wide.
+                conditions:
+                  description: Detailed conditions of the instance (MachineReady, BashibleReady, etc.).
+                  type: array
+                  x-kubernetes-list-map-keys:
+                    - type
+                  x-kubernetes-list-type: map
+                  items:
+                    type: object
+                    properties:
+                      type:
+                        description: Type of the condition (e.g., MachineReady, BashibleReady).
+                        type: string
+                      status:
+                        description: Status of the condition (True, False, Unknown).
+                        type: string
+                      severity:
+                        type: string
+                      lastTransitionTime:
+                        description: Last time the condition transitioned from one status to another.
+                        type: string
+                        format: date-time
+                      reason:
+                        description: The reason for the condition's last transition.
+                        type: string
+                      message:
+                        description: A human-readable message indicating details about the transition.
+                        type: string
+                      observedGeneration:
+                        description: The generation observed by the controller.
+                        type: integer
+                        format: int64
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+    - name: v1alpha1
+      served: false
+      storage: false
       subresources:
         status: {}
       schema:

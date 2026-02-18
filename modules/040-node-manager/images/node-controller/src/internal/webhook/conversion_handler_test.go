@@ -84,6 +84,45 @@ func makeV1Alpha1NodeGroupJSON(name string, nodeType string) []byte {
 	return raw
 }
 
+func makeV1Alpha1InstanceJSON(name string, phase v1alpha1.InstancePhase) []byte {
+	instance := v1alpha1.Instance{
+		TypeMeta: metav1.TypeMeta{APIVersion: "deckhouse.io/v1alpha1", Kind: "Instance"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha1.InstanceStatus{
+			NodeRef: v1alpha1.NodeRef{Name: name},
+			MachineRef: v1alpha1.MachineRef{
+				APIVersion: "machine.sapcloud.io/v1alpha1",
+				Kind:       "Machine",
+				Name:       name,
+				Namespace:  "d8-cloud-instance-manager",
+			},
+			ClassReference: v1alpha1.ClassReference{
+				Kind: "DVPInstanceClass",
+				Name: "worker",
+			},
+			CurrentStatus: v1alpha1.CurrentStatus{Phase: phase},
+		},
+	}
+	raw, _ := json.Marshal(instance)
+	return raw
+}
+
+func makeV1Alpha2InstanceJSON(name string, phase v1alpha2.InstancePhase) []byte {
+	instance := v1alpha2.Instance{
+		TypeMeta: metav1.TypeMeta{APIVersion: "deckhouse.io/v1alpha2", Kind: "Instance"},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Status: v1alpha2.InstanceStatus{
+			Phase: phase,
+		},
+	}
+	raw, _ := json.Marshal(instance)
+	return raw
+}
+
 func buildConversionReview(uid types.UID, desiredVersion string, objects ...[]byte) *apix.ConversionReview {
 	rawObjects := make([]runtime.RawExtension, len(objects))
 	for i, o := range objects {
@@ -151,8 +190,17 @@ func extractV1Alpha1NodeGroup(t *testing.T, raw []byte) *v1alpha1.NodeGroup {
 	return ng
 }
 
+func extractV1Alpha2Instance(t *testing.T, raw []byte) *v1alpha2.Instance {
+	t.Helper()
+	instance := &v1alpha2.Instance{}
+	if err := json.Unmarshal(raw, instance); err != nil {
+		t.Fatalf("failed to unmarshal v1alpha2 Instance: %v", err)
+	}
+	return instance
+}
+
 func TestIsCloudPermanent_Master(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{}
 	if !h.isCloudPermanent("master", cfg) {
 		t.Fatal("master should always be CloudPermanent")
@@ -160,7 +208,7 @@ func TestIsCloudPermanent_Master(t *testing.T) {
 }
 
 func TestIsCloudPermanent_InProviderConfig(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "front-nm"}, {Name: "backend"}},
 	}
@@ -170,7 +218,7 @@ func TestIsCloudPermanent_InProviderConfig(t *testing.T) {
 }
 
 func TestIsCloudPermanent_NotInProviderConfig(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "frontend"}},
 	}
@@ -181,7 +229,7 @@ func TestIsCloudPermanent_NotInProviderConfig(t *testing.T) {
 
 func TestAlpha2ToV1_CloudToCloudEphemeral(t *testing.T) {
 	// Python: test_change_node_type_from_cloud_to_cloud_ephemeral
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha2NodeGroupJSON("worker-static", v1alpha2.NodeTypeCloud)
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "front-nm"}},
@@ -203,7 +251,7 @@ func TestAlpha2ToV1_CloudToCloudEphemeral(t *testing.T) {
 
 func TestAlpha2ToV1_HybridMasterToCloudPermanent(t *testing.T) {
 	// Python: test_change_node_type_from_hybrid_to_cloud_permanent_for_master_ng
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha2NodeGroupJSON("master", v1alpha2.NodeTypeHybrid)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -220,7 +268,7 @@ func TestAlpha2ToV1_HybridMasterToCloudPermanent(t *testing.T) {
 
 func TestAlpha2ToV1_HybridInProviderConfigToCloudPermanent(t *testing.T) {
 	// Python: test_change_node_type_from_hybrid_to_cloud_permanent_for_ng_in_provider_cluster_config
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha2NodeGroupJSON("front-nm", v1alpha2.NodeTypeHybrid)
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "front-nm"}},
@@ -239,7 +287,7 @@ func TestAlpha2ToV1_HybridInProviderConfigToCloudPermanent(t *testing.T) {
 
 func TestAlpha2ToV1_HybridNotInProviderConfigToCloudStatic(t *testing.T) {
 	// Python: test_change_node_type_from_hybrid_to_cloud_static_for_ng_not_in_provider_cluster_config
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha2NodeGroupJSON("another", v1alpha2.NodeTypeHybrid)
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "front-nm"}},
@@ -257,7 +305,7 @@ func TestAlpha2ToV1_HybridNotInProviderConfigToCloudStatic(t *testing.T) {
 }
 
 func TestAlpha2ToV1_StaticToStatic(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha2NodeGroupJSON("worker", v1alpha2.NodeTypeStatic)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -274,7 +322,7 @@ func TestAlpha2ToV1_StaticToStatic(t *testing.T) {
 
 func TestV1ToAlpha2_CloudEphemeralToCloud(t *testing.T) {
 	// Python: test_change_node_type_from_cloud_ephemeral_to_cloud
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("worker-static", v1.NodeTypeCloudEphemeral)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -294,7 +342,7 @@ func TestV1ToAlpha2_CloudEphemeralToCloud(t *testing.T) {
 
 func TestV1ToAlpha2_CloudPermanentToHybrid(t *testing.T) {
 	// Python: test_change_node_type_from_cloud_permanent_to_hybrid
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("master", v1.NodeTypeCloudPermanent)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -311,7 +359,7 @@ func TestV1ToAlpha2_CloudPermanentToHybrid(t *testing.T) {
 
 func TestV1ToAlpha2_CloudStaticToHybrid(t *testing.T) {
 	// Python: test_change_node_type_from_cloud_static_to_hybrid
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("another", v1.NodeTypeCloudStatic)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -327,7 +375,7 @@ func TestV1ToAlpha2_CloudStaticToHybrid(t *testing.T) {
 }
 
 func TestV1ToAlpha2_StaticToStatic(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("worker", v1.NodeTypeStatic)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -343,7 +391,7 @@ func TestV1ToAlpha2_StaticToStatic(t *testing.T) {
 }
 
 func TestAlpha1ToV1_CloudToCloudEphemeral(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha1NodeGroupJSON("worker", "Cloud")
 	cfg := &ProviderClusterConfiguration{}
 
@@ -359,7 +407,7 @@ func TestAlpha1ToV1_CloudToCloudEphemeral(t *testing.T) {
 }
 
 func TestAlpha1ToV1_StaticToStatic(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha1NodeGroupJSON("worker", "Static")
 	cfg := &ProviderClusterConfiguration{}
 
@@ -375,7 +423,7 @@ func TestAlpha1ToV1_StaticToStatic(t *testing.T) {
 }
 
 func TestAlpha1ToV1_HybridMasterToCloudPermanent(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1Alpha1NodeGroupJSON("master", "Hybrid")
 	cfg := &ProviderClusterConfiguration{}
 
@@ -391,7 +439,7 @@ func TestAlpha1ToV1_HybridMasterToCloudPermanent(t *testing.T) {
 }
 
 func TestV1ToAlpha1_CloudEphemeralToCloud(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("worker", v1.NodeTypeCloudEphemeral)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -410,7 +458,7 @@ func TestV1ToAlpha1_CloudEphemeralToCloud(t *testing.T) {
 }
 
 func TestV1ToAlpha1_CloudPermanentToHybrid(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("master", v1.NodeTypeCloudPermanent)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -426,7 +474,7 @@ func TestV1ToAlpha1_CloudPermanentToHybrid(t *testing.T) {
 }
 
 func TestV1ToAlpha1_CloudStaticToHybrid(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("worker", v1.NodeTypeCloudStatic)
 	cfg := &ProviderClusterConfiguration{}
 
@@ -442,7 +490,7 @@ func TestV1ToAlpha1_CloudStaticToHybrid(t *testing.T) {
 }
 
 func TestConvertObject_SameVersion(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("test", v1.NodeTypeStatic)
 
 	result, err := h.convertObject(raw, "deckhouse.io/v1", &ProviderClusterConfiguration{})
@@ -455,7 +503,7 @@ func TestConvertObject_SameVersion(t *testing.T) {
 }
 
 func TestConvertObject_UnsupportedSourceVersion(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := []byte(`{"apiVersion":"deckhouse.io/v999","kind":"NodeGroup","metadata":{"name":"x"},"spec":{"nodeType":"Static"}}`)
 
 	_, err := h.convertObject(raw, "deckhouse.io/v1", &ProviderClusterConfiguration{})
@@ -465,7 +513,7 @@ func TestConvertObject_UnsupportedSourceVersion(t *testing.T) {
 }
 
 func TestConvertObject_UnsupportedDesiredVersion(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	raw := makeV1NodeGroupJSON("test", v1.NodeTypeStatic)
 
 	_, err := h.convertObject(raw, "deckhouse.io/v999", &ProviderClusterConfiguration{})
@@ -477,7 +525,7 @@ func TestConvertObject_UnsupportedDesiredVersion(t *testing.T) {
 func TestHandleConversion_MultipleObjects_V1ToAlpha2(t *testing.T) {
 	// Python: test_should_convert_from_v1_to_alpha2
 	// Tests that multiple objects are converted correctly with nodeType mapping
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{}
 
 	req := &apix.ConversionRequest{
@@ -528,7 +576,7 @@ func TestHandleConversion_MultipleObjects_V1ToAlpha2(t *testing.T) {
 }
 
 func TestHandleConversion_MultipleObjects_Alpha2ToV1(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "frontend"}},
 	}
@@ -589,7 +637,7 @@ func TestServeHTTP_FullRoundTrip(t *testing.T) {
 	sec := providerSecretWithNodeGroups("frontend")
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
 
-	handler := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	handler := &ConversionHandler{Client: c, Scheme: s}
 	review := buildConversionReview(
 		"uid-123",
 		"deckhouse.io/v1",
@@ -623,7 +671,7 @@ func TestServeHTTP_FullRoundTrip(t *testing.T) {
 func TestServeHTTP_NilRequest(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	handler := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	handler := &ConversionHandler{Client: c, Scheme: s}
 
 	review := &apix.ConversionReview{
 		TypeMeta: metav1.TypeMeta{Kind: "ConversionReview", APIVersion: "apiextensions.k8s.io/v1"},
@@ -650,7 +698,7 @@ func TestServeHTTP_NilRequest(t *testing.T) {
 func TestServeHTTP_InvalidBody(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	handler := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	handler := &ConversionHandler{Client: c, Scheme: s}
 
 	req := httptest.NewRequest(http.MethodPost, "/convert", bytes.NewReader([]byte("not json")))
 	rec := httptest.NewRecorder()
@@ -673,7 +721,7 @@ func TestServeHTTP_NoProviderSecret_StaticCluster(t *testing.T) {
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build() // no secret
 
-	handler := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	handler := &ConversionHandler{Client: c, Scheme: s}
 	review := buildConversionReview(
 		"uid-456",
 		"deckhouse.io/v1",
@@ -704,7 +752,7 @@ func TestLoadProviderConfig_Success(t *testing.T) {
 	s := newScheme()
 	sec := providerSecretWithNodeGroups("ng1", "ng2")
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	h := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	h := &ConversionHandler{Client: c, Scheme: s}
 
 	cfg, err := h.loadProviderConfig(context.Background())
 	if err != nil {
@@ -722,7 +770,7 @@ func TestLoadProviderConfig_SecretNotFound(t *testing.T) {
 	// Secret not found should return empty config, not error (Static cluster case)
 	s := newScheme()
 	c := fake.NewClientBuilder().WithScheme(s).Build()
-	h := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	h := &ConversionHandler{Client: c, Scheme: s}
 
 	cfg, err := h.loadProviderConfig(context.Background())
 	if err != nil {
@@ -740,7 +788,7 @@ func TestLoadProviderConfig_MissingKey(t *testing.T) {
 		Data:       map[string][]byte{"wrong-key.yaml": []byte("nodeGroups:\n  - name: x\n")},
 	}
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	h := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	h := &ConversionHandler{Client: c, Scheme: s}
 
 	cfg, err := h.loadProviderConfig(context.Background())
 	if err != nil {
@@ -758,7 +806,7 @@ func TestLoadProviderConfig_InvalidYAML(t *testing.T) {
 		Data:       map[string][]byte{"cloud-provider-cluster-configuration.yaml": []byte("not: valid: yaml: {{{{")},
 	}
 	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec).Build()
-	h := &NodeGroupConversionHandler{Client: c, Scheme: s}
+	h := &ConversionHandler{Client: c, Scheme: s}
 
 	_, err := h.loadProviderConfig(context.Background())
 	if err == nil {
@@ -767,7 +815,7 @@ func TestLoadProviderConfig_InvalidYAML(t *testing.T) {
 }
 
 func TestRoundTrip_V1Alpha2_V1_V1Alpha2(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{
 		NodeGroups: []ProviderNodeGroup{{Name: "frontend"}},
 	}
@@ -800,7 +848,7 @@ func TestRoundTrip_V1Alpha2_V1_V1Alpha2(t *testing.T) {
 }
 
 func TestRoundTrip_V1_V1Alpha2_V1(t *testing.T) {
-	h := &NodeGroupConversionHandler{}
+	h := &ConversionHandler{}
 	cfg := &ProviderClusterConfiguration{}
 
 	// Start with v1 CloudEphemeral
@@ -824,5 +872,44 @@ func TestRoundTrip_V1_V1Alpha2_V1(t *testing.T) {
 	ngV1 := extractV1NodeGroup(t, v1Result)
 	if ngV1.Spec.NodeType != v1.NodeTypeCloudEphemeral {
 		t.Fatalf("expected CloudEphemeral after round-trip, got %s", ngV1.Spec.NodeType)
+	}
+}
+
+func TestConvertInstance_V1Alpha1ToV1Alpha2(t *testing.T) {
+	h := &ConversionHandler{}
+	cfg := &ProviderClusterConfiguration{}
+
+	raw := makeV1Alpha1InstanceJSON("worker-1", v1alpha1.InstanceRunning)
+	result, err := h.convertObject(raw, "deckhouse.io/v1alpha2", cfg)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	instance := extractV1Alpha2Instance(t, result)
+	if instance.APIVersion != "deckhouse.io/v1alpha2" {
+		t.Fatalf("expected apiVersion deckhouse.io/v1alpha2, got %s", instance.APIVersion)
+	}
+	if instance.Status.Phase != v1alpha2.InstancePhaseRunning {
+		t.Fatalf("expected phase Running, got %s", instance.Status.Phase)
+	}
+	if instance.Spec.NodeRef.Name != "worker-1" {
+		t.Fatalf("expected spec.nodeRef.name worker-1, got %s", instance.Spec.NodeRef.Name)
+	}
+	if instance.Spec.MachineRef.Name != "worker-1" {
+		t.Fatalf("expected spec.machineRef.name worker-1, got %s", instance.Spec.MachineRef.Name)
+	}
+	if instance.Spec.ClassReference.Kind != "DVPInstanceClass" || instance.Spec.ClassReference.Name != "worker" {
+		t.Fatalf("unexpected spec.classReference: %#v", instance.Spec.ClassReference)
+	}
+}
+
+func TestConvertInstance_V1Alpha2ToV1Alpha1_NotSupported(t *testing.T) {
+	h := &ConversionHandler{}
+	cfg := &ProviderClusterConfiguration{}
+
+	raw := makeV1Alpha2InstanceJSON("worker-2", v1alpha2.InstancePhaseTerminating)
+	_, err := h.convertObject(raw, "deckhouse.io/v1alpha1", cfg)
+	if err == nil {
+		t.Fatal("expected error for reverse conversion, got nil")
 	}
 }

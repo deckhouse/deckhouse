@@ -88,6 +88,8 @@ func main() {
 		Cache: cache.Options{
 			DefaultNamespaces: map[string]cache.Config{
 				controller.MachineNamespace: {},
+				"kube-system":               {},
+				"default":                   {},
 			},
 		},
 		Metrics: metricsserver.Options{

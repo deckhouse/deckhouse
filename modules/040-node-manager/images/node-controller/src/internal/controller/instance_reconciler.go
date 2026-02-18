@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,14 +46,14 @@ func SetupInstanceController(mgr ctrl.Manager) error {
 func (r *InstanceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("instance").
-		For(&deckhousev1alpha1.Instance{}).
+		For(&deckhousev1alpha2.Instance{}).
 		Complete(r)
 }
 
 func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := ctrl.LoggerFrom(ctx).WithValues("instance", req.Name)
 
-	instance := &deckhousev1alpha1.Instance{}
+	instance := &deckhousev1alpha2.Instance{}
 	if err := r.Get(ctx, req.NamespacedName, instance); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -69,7 +69,7 @@ func (r *InstanceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{}, nil
 }
 
-func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha1.Instance) error {
+func (r *InstanceReconciler) reconcileInstance(ctx context.Context, instance *deckhousev1alpha2.Instance) error {
 	_ = ctx
 	_ = instance
 
