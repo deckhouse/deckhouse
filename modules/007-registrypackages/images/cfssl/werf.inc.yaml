@@ -43,13 +43,20 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/cfssl
-    - make install
+    - make
     - chmod +x ./bin/*
     - mv ./bin/* /
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_version }}"
 fromImage: common/distroless
 import:
+  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
+    add: /src/scripts
+    to: /
+    includePaths:
+    - install
+    - uninstall
+    before: setup
   - image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}"
     add: /
     to: /
@@ -60,13 +67,6 @@ import:
     - cfssl-newkey
     - cfssl-scan
     - cfssljson
-    before: setup
-  - image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact-{{ $image_version }}"
-    add: /src/scripts
-    to: /
-    includePaths:
-    - install
-    - uninstall
     before: setup
 imageSpec:
   config:
