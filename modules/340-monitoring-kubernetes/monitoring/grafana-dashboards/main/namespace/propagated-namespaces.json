@@ -565,7 +565,7 @@
         "showHeader": true
       },
       "pageSize": 50,
-      "pluginVersion": "10.4.5",
+      "pluginVersion": "10.4.19",
       "scroll": true,
       "showHeader": true,
       "sort": {
@@ -1132,7 +1132,7 @@
       },
       "gridPos": {
         "h": 4,
-        "w": 12,
+        "w": 6,
         "x": 0,
         "y": 8
       },
@@ -1156,14 +1156,151 @@
             "type": "prometheus",
             "uid": "$ds_prometheus"
           },
-          "expr": "count by (namespace) (max_over_time(kube_pod_info{node=~\"$node\", namespace=~\"$namespace\"}[$__rate_interval]))",
+          "editorMode": "code",
+          "expr": "count by (namespace) (max_over_time(kube_pod_info{node=~\"$node\", namespace=~\"$namespace\",created_by_kind!=\"VirtualMachine\"}[$__rate_interval]))",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "{{ namespace }}",
+          "range": true,
           "refId": "B"
         }
       ],
       "title": "Pods count",
+      "transformations": [
+        {
+          "id": "calculateField",
+          "options": {}
+        }
+      ],
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "$ds_prometheus"
+      },
+      "description": "The number of VM Pods in each namespace",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 30,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 0,
+          "links": [],
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total"
+            },
+            "properties": [
+              {
+                "id": "custom.stacking",
+                "value": {
+                  "group": false,
+                  "mode": "none"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 8
+      },
+      "id": 565,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "8.5.13",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "$ds_prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count by (namespace) (\n  max_over_time(kube_pod_info{node=~\"$node\", namespace=~\"$namespace\", created_by_kind=\"VirtualMachine\"}[$__rate_interval])\n  unless on (pod, namespace)\n  (kube_pod_status_phase{phase=~\"Succeeded|Failed\"} == 1)\n)",
+          "format": "time_series",
+          "intervalFactor": 1,
+          "legendFormat": "{{ namespace }}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "VM pods count",
       "transformations": [
         {
           "id": "calculateField",
