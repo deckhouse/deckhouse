@@ -1,0 +1,469 @@
+{
+	"Images": {
+		"builder/alpine": {
+			"WerfImageName": "builder/alpine",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "f4a71e18e44116e1cbb1fd5ae5fb20eff8ab5096aa782f5c8dcaf72f-1770204343160",
+			"DockerImageID": "sha256:36708ea56d157a617dbb6d88b201e0961ddbe231422815fbecfc92fd5a8ba702",
+			"DockerImageDigest": "sha256:2494beb1fbd5e6b95d86a559f1c084bc2b3db9fdcfe8f94a5592b9395ae2802d",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:f4a71e18e44116e1cbb1fd5ae5fb20eff8ab5096aa782f5c8dcaf72f-1770204343160",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 153583812,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:f4a71e18e44116e1cbb1fd5ae5fb20eff8ab5096aa782f5c8dcaf72f-1770204343160",
+					"DockerTag": "f4a71e18e44116e1cbb1fd5ae5fb20eff8ab5096aa782f5c8dcaf72f-1770204343160",
+					"DockerImageID": "sha256:36708ea56d157a617dbb6d88b201e0961ddbe231422815fbecfc92fd5a8ba702",
+					"DockerImageDigest": "sha256:2494beb1fbd5e6b95d86a559f1c084bc2b3db9fdcfe8f94a5592b9395ae2802d",
+					"CreatedAt": 1770204343000000000,
+					"Size": 153583812,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"builder/alt": {
+			"WerfImageName": "builder/alt",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "8020e3482cb494e4e9a49069ac168ff0301911efa720d3ce7206049a-1770204280133",
+			"DockerImageID": "sha256:ae892301380f30364ea0afe49d79b0813a3750492587d319729118e28afb35e0",
+			"DockerImageDigest": "sha256:78c11cba8568f9697c1f53b99425728bd6efb50c349d52875fcf91ed30589c9c",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:8020e3482cb494e4e9a49069ac168ff0301911efa720d3ce7206049a-1770204280133",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 467029775,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:8020e3482cb494e4e9a49069ac168ff0301911efa720d3ce7206049a-1770204280133",
+					"DockerTag": "8020e3482cb494e4e9a49069ac168ff0301911efa720d3ce7206049a-1770204280133",
+					"DockerImageID": "sha256:ae892301380f30364ea0afe49d79b0813a3750492587d319729118e28afb35e0",
+					"DockerImageDigest": "sha256:78c11cba8568f9697c1f53b99425728bd6efb50c349d52875fcf91ed30589c9c",
+					"CreatedAt": 1770204279000000000,
+					"Size": 467029775,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"builder/golang-alpine": {
+			"WerfImageName": "builder/golang-alpine",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "9c94142bbece3baddab04ad694f4d6ed27eac640a21a3224265573f2-1770990453377",
+			"DockerImageID": "sha256:584c7985cef587c4539ba0531cbee6a995713804778d393b53e7e0cff06c1cef",
+			"DockerImageDigest": "sha256:6274bb24d975710556b61f42a770d8388cbb35ca934bba6ee93ed07328252a01",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:9c94142bbece3baddab04ad694f4d6ed27eac640a21a3224265573f2-1770990453377",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 213576529,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:9c94142bbece3baddab04ad694f4d6ed27eac640a21a3224265573f2-1770990453377",
+					"DockerTag": "9c94142bbece3baddab04ad694f4d6ed27eac640a21a3224265573f2-1770990453377",
+					"DockerImageID": "sha256:584c7985cef587c4539ba0531cbee6a995713804778d393b53e7e0cff06c1cef",
+					"DockerImageDigest": "sha256:6274bb24d975710556b61f42a770d8388cbb35ca934bba6ee93ed07328252a01",
+					"CreatedAt": 1770990453000000000,
+					"Size": 213576529,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"builder/scratch": {
+			"WerfImageName": "builder/scratch",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "108c52b5e7db6b2da6c15503011fc9909b9b643bd51e9639af01260c-1770204368054",
+			"DockerImageID": "sha256:3b3bfb813a9a6ed2d4ef0250441ab230c4deff84b64c53425cada0ae041ec588",
+			"DockerImageDigest": "sha256:898b6e3d006eb4956e9eb5c2b9cace19552da94268b3f630ccb8284d8f2d09b1",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:108c52b5e7db6b2da6c15503011fc9909b9b643bd51e9639af01260c-1770204368054",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 179,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:108c52b5e7db6b2da6c15503011fc9909b9b643bd51e9639af01260c-1770204368054",
+					"DockerTag": "108c52b5e7db6b2da6c15503011fc9909b9b643bd51e9639af01260c-1770204368054",
+					"DockerImageID": "sha256:3b3bfb813a9a6ed2d4ef0250441ab230c4deff84b64c53425cada0ae041ec588",
+					"DockerImageDigest": "sha256:898b6e3d006eb4956e9eb5c2b9cace19552da94268b3f630ccb8284d8f2d09b1",
+					"CreatedAt": 1770204368000000000,
+					"Size": 179,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"cloud-provider-dvp/capdvp-controller-manager": {
+			"WerfImageName": "cloud-provider-dvp/capdvp-controller-manager",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "dab58aca5c8231551bd29018804132c6c6166c0f0b298888c9ef09b0-1771424772020",
+			"DockerImageID": "sha256:e00d741c90a88a34a2ffee589c6c8dfebfcaced895ff49278890a8af0a830ac0",
+			"DockerImageDigest": "sha256:6c70d786c6701de6c64861d557c87847621f423238d00119e05ba2b03bc78ba6",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:dab58aca5c8231551bd29018804132c6c6166c0f0b298888c9ef09b0-1771424772020",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": true,
+			"Final": true,
+			"Size": 19913494,
+			"BuildTime": "7.54",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:f5e46010efa393af3078fd103a790186b200129e8498d15a3a3f7c4f-1770204579319",
+					"DockerTag": "f5e46010efa393af3078fd103a790186b200129e8498d15a3a3f7c4f-1770204579319",
+					"DockerImageID": "sha256:5757a03426feb1165be0f99efb25b9600e8eb36f346dcf8872548137a32a6a55",
+					"DockerImageDigest": "sha256:9f761d633f9cde717dc33936dab58e1f583f9fe5f2bfd214af9e2f70e5562c57",
+					"CreatedAt": 1770204579000000000,
+					"Size": 503352,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "dependenciesBeforeSetup",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:04e22190a3c706d62216bb4756fca60d5892772a9e0d511c8dca0d0a-1771424768796",
+					"DockerTag": "04e22190a3c706d62216bb4756fca60d5892772a9e0d511c8dca0d0a-1771424768796",
+					"DockerImageID": "sha256:feb9b9f1c839e47f3d7662f56cafd10ce762066074bb022ead04ce9dc5456d1f",
+					"DockerImageDigest": "sha256:99b6e4c0b63dbf265086675bbb0c95e5a2b0ad52d29108ac7564b7475278ad38",
+					"CreatedAt": 1771424768000000000,
+					"Size": 19913494,
+					"SourceType": "repo",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "6.57"
+				},
+				{
+					"Name": "imageSpec",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:dab58aca5c8231551bd29018804132c6c6166c0f0b298888c9ef09b0-1771424772020",
+					"DockerTag": "dab58aca5c8231551bd29018804132c6c6166c0f0b298888c9ef09b0-1771424772020",
+					"DockerImageID": "sha256:e00d741c90a88a34a2ffee589c6c8dfebfcaced895ff49278890a8af0a830ac0",
+					"DockerImageDigest": "sha256:6c70d786c6701de6c64861d557c87847621f423238d00119e05ba2b03bc78ba6",
+					"CreatedAt": 1771424768000000000,
+					"Size": 19913494,
+					"SourceType": "repo",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "0.20"
+				}
+			]
+		},
+		"cloud-provider-dvp/capdvp-controller-manager-artifact": {
+			"WerfImageName": "cloud-provider-dvp/capdvp-controller-manager-artifact",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "4ba766534c681e9902fb0d886421e749fad5ab74f4e87e72ecbf5740-1771424715371",
+			"DockerImageID": "sha256:8d84108a6d2eccaafffea54191d1aa1d43c2bb12b7516088eeb148f8a9b1a931",
+			"DockerImageDigest": "sha256:cd66b9d3f32a913cdc908818a5498fb7a5384f7578d52e13a07ed2d96c34a604",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:4ba766534c681e9902fb0d886421e749fad5ab74f4e87e72ecbf5740-1771424715371",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": true,
+			"Final": false,
+			"Size": 536259139,
+			"BuildTime": "225.11",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:e1b627561349a034c00f3cdd63f68de552570a7653a978679e4cbbf2-1771424574762",
+					"DockerTag": "e1b627561349a034c00f3cdd63f68de552570a7653a978679e4cbbf2-1771424574762",
+					"DockerImageID": "sha256:436a8c20479ad25b55aa385449056562398579b7987366b40094af825d0daccc",
+					"DockerImageDigest": "sha256:1143bd4995c64eefbeb5837f0ed90931ebf74202d82960f54e1ade4fe488c1e8",
+					"CreatedAt": 1771424574000000000,
+					"Size": 213576529,
+					"SourceType": "repo",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "35.38"
+				},
+				{
+					"Name": "dependenciesBeforeInstall",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:9f96af2522f2e176cea5574b38fc8efa900cbb430fe92f3633f0011a-1771424577668",
+					"DockerTag": "9f96af2522f2e176cea5574b38fc8efa900cbb430fe92f3633f0011a-1771424577668",
+					"DockerImageID": "sha256:77f92878709063a949182939d13410a45cee1eab0494a840ddd7ee243906356a",
+					"DockerImageDigest": "sha256:cf72e678db572c50f2159dd217613c5feebc65456eb89f3b6f4952dbacc1f1e1",
+					"CreatedAt": 1771424577000000000,
+					"Size": 213654780,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "2.38"
+				},
+				{
+					"Name": "install",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:4ba766534c681e9902fb0d886421e749fad5ab74f4e87e72ecbf5740-1771424715371",
+					"DockerTag": "4ba766534c681e9902fb0d886421e749fad5ab74f4e87e72ecbf5740-1771424715371",
+					"DockerImageID": "sha256:8d84108a6d2eccaafffea54191d1aa1d43c2bb12b7516088eeb148f8a9b1a931",
+					"DockerImageDigest": "sha256:cd66b9d3f32a913cdc908818a5498fb7a5384f7578d52e13a07ed2d96c34a604",
+					"CreatedAt": 1771424713000000000,
+					"Size": 536259139,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "186.64"
+				}
+			]
+		},
+		"cloud-provider-dvp/capdvp-controller-manager-src-artifact": {
+			"WerfImageName": "cloud-provider-dvp/capdvp-controller-manager-src-artifact",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "8c66e81febba5c926f07f14611d3efcf4ec8bf8cb71a11a0169363ae-1771424539306",
+			"DockerImageID": "sha256:be11c2930e0fc44ae989f6c51a782e2856f5d2aaaea541b52547d6dccca437b6",
+			"DockerImageDigest": "sha256:92fb4a2c1841ad5daa8f4742c7e636ef77f7948bc70ff9abbb9c10b1aaab6b28",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:8c66e81febba5c926f07f14611d3efcf4ec8bf8cb71a11a0169363ae-1771424539306",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": true,
+			"Final": false,
+			"Size": 547756638,
+			"BuildTime": "70.05",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:03a4c22c4986446240d504309064c49f11391374fa547c046d0060eb-1770204487428",
+					"DockerTag": "03a4c22c4986446240d504309064c49f11391374fa547c046d0060eb-1770204487428",
+					"DockerImageID": "sha256:9efd601eb3aee97150ba121177166aac75189557ae86a1a279bea07d12afe1a4",
+					"DockerImageDigest": "sha256:1499a802eddf73c1f953ec28da3987bb11c6f5ca2b2d47f5f2a85501e6b0dc1a",
+					"CreatedAt": 1770204487000000000,
+					"Size": 547676460,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "gitArchive",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:062325ce1b819c897c96ae70333abea55e7b1afb95fe2cf447434a90-1771424538435",
+					"DockerTag": "062325ce1b819c897c96ae70333abea55e7b1afb95fe2cf447434a90-1771424538435",
+					"DockerImageID": "sha256:db0ee58977f324b686801203081c64731a540f1661532903432eeaa27cf00088",
+					"DockerImageDigest": "sha256:104e411cc1c92271ec2d3fa54cfc1dc4e2339bbd098c4fda3185f06106d298f6",
+					"CreatedAt": 1771424538000000000,
+					"Size": 547754934,
+					"SourceType": "repo",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "69.16"
+				},
+				{
+					"Name": "install",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:8c66e81febba5c926f07f14611d3efcf4ec8bf8cb71a11a0169363ae-1771424539306",
+					"DockerTag": "8c66e81febba5c926f07f14611d3efcf4ec8bf8cb71a11a0169363ae-1771424539306",
+					"DockerImageID": "sha256:be11c2930e0fc44ae989f6c51a782e2856f5d2aaaea541b52547d6dccca437b6",
+					"DockerImageDigest": "sha256:92fb4a2c1841ad5daa8f4742c7e636ef77f7948bc70ff9abbb9c10b1aaab6b28",
+					"CreatedAt": 1771424539000000000,
+					"Size": 547756638,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": true,
+					"BuildTime": "0.83"
+				}
+			]
+		},
+		"common/alt-p11-artifact": {
+			"WerfImageName": "common/alt-p11-artifact",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "aea414523278ec8fca0620915bf001ab491171e5a0be6d936d08b759-1770204464822",
+			"DockerImageID": "sha256:c730c95bd72e2c1871d50845b1143f7a34b06a26a34d03d8f35dbae6cee88c64",
+			"DockerImageDigest": "sha256:1145019cc8b236a537a2ed2b435795833a3cb27866af43c281577d11ed8d5e3d",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:aea414523278ec8fca0620915bf001ab491171e5a0be6d936d08b759-1770204464822",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 544957490,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:af022510456a09c6d9e14b6e48f920f60f1c2ddcde5ff4afcfd4a994-1770204401816",
+					"DockerTag": "af022510456a09c6d9e14b6e48f920f60f1c2ddcde5ff4afcfd4a994-1770204401816",
+					"DockerImageID": "sha256:69fb7062f2f3bccc077746360aa8e15dc45f787470e380273e421ac1af8bea12",
+					"DockerImageDigest": "sha256:ec8e467e3dc5f3cdbc3a8cb319cfac47f8893623fa687816d4ea5acc92b542c3",
+					"CreatedAt": 1770204401000000000,
+					"Size": 467029775,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "beforeInstall",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:aea414523278ec8fca0620915bf001ab491171e5a0be6d936d08b759-1770204464822",
+					"DockerTag": "aea414523278ec8fca0620915bf001ab491171e5a0be6d936d08b759-1770204464822",
+					"DockerImageID": "sha256:c730c95bd72e2c1871d50845b1143f7a34b06a26a34d03d8f35dbae6cee88c64",
+					"DockerImageDigest": "sha256:1145019cc8b236a537a2ed2b435795833a3cb27866af43c281577d11ed8d5e3d",
+					"CreatedAt": 1770204464000000000,
+					"Size": 544957490,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"common/distroless": {
+			"WerfImageName": "common/distroless",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "8062b020b2392869dc4efc2278a3cdf4b20a4aa00f7759f9cff720c2-1770204478205",
+			"DockerImageID": "sha256:1f1d4653a4d2a73a824373d31cdc15fce5c0973005e61197d6270071b2360a7d",
+			"DockerImageDigest": "sha256:6b89ac064523f72da83c3519bd6c8b4019a9293bbfd971d4333604da33582f9f",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:8062b020b2392869dc4efc2278a3cdf4b20a4aa00f7759f9cff720c2-1770204478205",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": true,
+			"Size": 503352,
+			"BuildTime": "0.04",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:0bfeb9a859ed615473fc97ea0d4494757d1b835b69345cea66b9ab9f-1770204473138",
+					"DockerTag": "0bfeb9a859ed615473fc97ea0d4494757d1b835b69345cea66b9ab9f-1770204473138",
+					"DockerImageID": "sha256:a02d0b15ee1fd17cf819204c1c092319053a4e4cc36735c44b824372b6bddb2f",
+					"DockerImageDigest": "sha256:dbd2328d290c67671e783168249e0defca4ecdd3f2314d82c5c5125928d3b525",
+					"CreatedAt": 1770204473000000000,
+					"Size": 179,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "dependenciesBeforeSetup",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:46db0059247a3fbc3dd3731a6dd9e79049661c0b5526117914221dc1-1770204477925",
+					"DockerTag": "46db0059247a3fbc3dd3731a6dd9e79049661c0b5526117914221dc1-1770204477925",
+					"DockerImageID": "sha256:b2cb3e99acd4e00b7746349553cb062341148df99a09dea45d2a5531ab4c28bd",
+					"DockerImageDigest": "sha256:9a50424e7c072b1996524d1c2e56059f614ec4d8cc661aa28f04de3a4c416330",
+					"CreatedAt": 1770204477000000000,
+					"Size": 503352,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "imageSpec",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:8062b020b2392869dc4efc2278a3cdf4b20a4aa00f7759f9cff720c2-1770204478205",
+					"DockerTag": "8062b020b2392869dc4efc2278a3cdf4b20a4aa00f7759f9cff720c2-1770204478205",
+					"DockerImageID": "sha256:1f1d4653a4d2a73a824373d31cdc15fce5c0973005e61197d6270071b2360a7d",
+					"DockerImageDigest": "sha256:6b89ac064523f72da83c3519bd6c8b4019a9293bbfd971d4333604da33582f9f",
+					"CreatedAt": 1770204477000000000,
+					"Size": 503352,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"common/distroless-artifact": {
+			"WerfImageName": "common/distroless-artifact",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "e78f39cd57e3651b28367cad517662a34b9f5a2a54af28c5de004ab1-1770204400970",
+			"DockerImageID": "sha256:32ba9b23741f0c2300c5b3bd289ee95c25579478dbde6355af6fba6b0efbcf25",
+			"DockerImageDigest": "sha256:a8dcb42ff484333dbfc35beaf13ba84d5840a9a097c025e77167d3e2394f96f0",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:e78f39cd57e3651b28367cad517662a34b9f5a2a54af28c5de004ab1-1770204400970",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 157404732,
+			"BuildTime": "0.01",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:edaa294c53a056f35708420463a6bd2342b56f0bd73034cde5ba3a63-1770204395251",
+					"DockerTag": "edaa294c53a056f35708420463a6bd2342b56f0bd73034cde5ba3a63-1770204395251",
+					"DockerImageID": "sha256:fdae764be99aca8ebf43298ec3d166543f26e06682c48c661ac2be56d1d41b4b",
+					"DockerImageDigest": "sha256:490e448432134c78b1ddbc013197f049b7cd96e7f7c8c2b99b35b67637ff7787",
+					"CreatedAt": 1770204395000000000,
+					"Size": 153583812,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "beforeInstall",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:63fcd55e3e7e8f7255a1e90d2d9e41042ea2e5d985b4086a6db76a56-1770204399604",
+					"DockerTag": "63fcd55e3e7e8f7255a1e90d2d9e41042ea2e5d985b4086a6db76a56-1770204399604",
+					"DockerImageID": "sha256:c21af3ea7eb7be8d9d8a7d6158494ae1f6180dbc742b93b2734f0bb20c6decc2",
+					"DockerImageDigest": "sha256:a4029d7ec5a173d98f3f4a4d8648ef293aa1893db0ebdabc1a45c4a0a02131da",
+					"CreatedAt": 1770204399000000000,
+					"Size": 156975468,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "install",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:e78f39cd57e3651b28367cad517662a34b9f5a2a54af28c5de004ab1-1770204400970",
+					"DockerTag": "e78f39cd57e3651b28367cad517662a34b9f5a2a54af28c5de004ab1-1770204400970",
+					"DockerImageID": "sha256:32ba9b23741f0c2300c5b3bd289ee95c25579478dbde6355af6fba6b0efbcf25",
+					"DockerImageDigest": "sha256:a8dcb42ff484333dbfc35beaf13ba84d5840a9a097c025e77167d3e2394f96f0",
+					"CreatedAt": 1770204400000000000,
+					"Size": 157404732,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		},
+		"common/src-artifact": {
+			"WerfImageName": "common/src-artifact",
+			"DockerRepo": "62.213.14.246:44445/deckhouse",
+			"DockerTag": "91ce92e7fd53eeb48310b99657ddb39594adb5d0fbec0f42e448b280-1770204486352",
+			"DockerImageID": "sha256:64e67c11a0312b75d0d77b4d6ad3e216dc2ffff7c75376b3471261c976ed1ac7",
+			"DockerImageDigest": "sha256:ff9ee1bf78efae82eba6effddfb2449e0bd30aed462e31283c9bcac8d816962d",
+			"DockerImageName": "62.213.14.246:44445/deckhouse:91ce92e7fd53eeb48310b99657ddb39594adb5d0fbec0f42e448b280-1770204486352",
+			"TargetPlatform": "linux/amd64",
+			"Rebuilt": false,
+			"Final": false,
+			"Size": 547676460,
+			"BuildTime": "0.00",
+			"Stages": [
+				{
+					"Name": "from",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:86976beb9773edb475fa2cbe57905c15482a4c8c717deec9ae639b53-1770204478885",
+					"DockerTag": "86976beb9773edb475fa2cbe57905c15482a4c8c717deec9ae639b53-1770204478885",
+					"DockerImageID": "sha256:1aa2c131252aa269af9a09ab200cfef88925629183ebeff6f82d4ad3e6d18268",
+					"DockerImageDigest": "sha256:c9d15896ffe3589310ca2e9f5342076855eb277bd7abcafc9e38b7b501a1ac53",
+					"CreatedAt": 1770204478000000000,
+					"Size": 544957490,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				},
+				{
+					"Name": "beforeInstall",
+					"DockerImageName": "62.213.14.246:44445/deckhouse:91ce92e7fd53eeb48310b99657ddb39594adb5d0fbec0f42e448b280-1770204486352",
+					"DockerTag": "91ce92e7fd53eeb48310b99657ddb39594adb5d0fbec0f42e448b280-1770204486352",
+					"DockerImageID": "sha256:64e67c11a0312b75d0d77b4d6ad3e216dc2ffff7c75376b3471261c976ed1ac7",
+					"DockerImageDigest": "sha256:ff9ee1bf78efae82eba6effddfb2449e0bd30aed462e31283c9bcac8d816962d",
+					"CreatedAt": 1770204486000000000,
+					"Size": 547676460,
+					"SourceType": "",
+					"BaseImagePulled": false,
+					"Rebuilt": false,
+					"BuildTime": "0.00"
+				}
+			]
+		}
+	},
+	"ImagesByPlatform": {}
+}
