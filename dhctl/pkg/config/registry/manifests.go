@@ -52,8 +52,7 @@ func (b *ManifestBuilder) DeckhouseRegistrySecretData(pkiProvider PKIProvider) (
 	// For managed clusters in unmanaged mode, pkiProvider cannot get PKI
 	// because the PKI secret doesn't exist in the cluster.
 	// In this case, we use remote data directly.
-	if b.legacyMode &&
-		b.modeModel.Mode == constant.ModeUnmanaged {
+	if b.modeModel.Mode == constant.ModeUnmanaged {
 		inClusterData = b.modeModel.RemoteData
 
 	} else {
