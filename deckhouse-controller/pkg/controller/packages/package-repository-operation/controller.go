@@ -32,8 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
-
 	registryService "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/service"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -649,43 +647,6 @@ func (r *reconciler) SetConditionFalse(operation *v1alpha1.PackageRepositoryOper
 	})
 
 	return operation
-}
-
-func (r *reconciler) setOperationFailed(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, condType, reason, message string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionFalse(
-		operation,
-		condType,
-		reason,
-		message,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (r *reconciler) setOperationTruePhase(ctx context.Context, operation *v1alpha1.PackageRepositoryOperation, phase string) error {
-	original := operation.DeepCopy()
-
-	operation.Status.Phase = phase
-	operation.Status.CompletionTime = ptr.To(metav1.Now())
-
-	r.SetConditionTrue(
-		operation,
-		v1alpha1.PackageRepositoryOperationConditionCompleted,
-	)
-
-	if err := r.client.Status().Patch(ctx, operation, client.MergeFrom(original)); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (r *reconciler) updatePackageRepositoryCondition(ctx context.Context, repoName string, success bool, reason, message string) error {
