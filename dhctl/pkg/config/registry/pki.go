@@ -67,9 +67,9 @@ func GeneratePKI() (PKI, error) {
 	}
 
 	return PKI{
-		CA:     &ca,
-		ROUser: &ro,
-		RWUser: &rw,
+		CA:     ca,
+		ROUser: ro,
+		RWUser: rw,
 	}, nil
 }
 

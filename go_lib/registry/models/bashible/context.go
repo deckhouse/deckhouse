@@ -20,8 +20,6 @@ import (
 	"fmt"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-
-	init_secret "github.com/deckhouse/deckhouse/go_lib/registry/models/initsecret"
 )
 
 var (
@@ -31,7 +29,7 @@ var (
 )
 
 type Context struct {
-	Init                 init_secret.Config      `json:"init,omitempty" yaml:"init,omitempty"`
+	Bootstrap            *ContextBootstrap       `json:"bootstrap,omitempty" yaml:"bootstrap,omitempty"`
 	RegistryModuleEnable bool                    `json:"registryModuleEnable" yaml:"registryModuleEnable"`
 	Mode                 string                  `json:"mode" yaml:"mode"`
 	Version              string                  `json:"version" yaml:"version"`
@@ -65,6 +63,7 @@ type ContextRewrite struct {
 
 func (c Context) Validate() error {
 	return validation.ValidateStruct(&c,
+		validation.Field(&c.Bootstrap),
 		validation.Field(&c.Mode, validation.Required),
 		validation.Field(&c.Version, validation.Required),
 		validation.Field(&c.ImagesBase, validation.Required),
@@ -154,9 +153,8 @@ func (c Context) ToMap() map[string]any {
 		"hosts":                hosts,
 	}
 
-	init := c.Init.ToMap()
-	if len(init) > 0 {
-		ret["init"] = init
+	if c.Bootstrap != nil {
+		ret["bootstrap"] = c.Bootstrap.ToMap()
 	}
 	return ret
 }

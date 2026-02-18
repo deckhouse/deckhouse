@@ -22,6 +22,7 @@ import (
 
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
+	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 	deckhouse_registry "github.com/deckhouse/deckhouse/go_lib/registry/models/deckhouseregistry"
 )
 
@@ -149,11 +150,9 @@ func (b *ManifestBuilder) BashibleContext(pkiProvider PKIProvider) (BashibleCont
 		ctx.RegistryModuleEnable = false
 	}
 
-	init, err := pkiProvider()
-	if err != nil {
-		return BashibleContext{}, fmt.Errorf("get PKI: %w", err)
+	ctx.Bootstrap = &bashible.ContextBootstrap{
+		Init: pki,
 	}
-	ctx.Init = init
 
 	return ctx, nil
 }

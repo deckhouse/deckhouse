@@ -16,6 +16,10 @@ limitations under the License.
 
 package initsecret
 
+import (
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+)
+
 type CertKey struct {
 	Cert string `json:"cert" yaml:"cert"`
 	Key  string `json:"key" yaml:"key"`
@@ -24,70 +28,60 @@ type CertKey struct {
 func (c CertKey) ToMap() map[string]any {
 	m := make(map[string]any)
 
-	if c.Cert != "" {
-		m["cert"] = c.Cert
-	}
-	if c.Key != "" {
-		m["key"] = c.Key
-	}
-
-	if len(m) == 0 {
-		return nil
-	}
+	m["cert"] = c.Cert
+	m["key"] = c.Key
 	return m
 }
 
+func (c CertKey) Validate() error {
+	return validation.ValidateStruct(&c,
+		validation.Field(&c.Cert, validation.Required),
+		validation.Field(&c.Key, validation.Required),
+	)
+}
+
 type User struct {
-	Name         string `json:"name"`
-	Password     string `json:"password"`
-	PasswordHash string `json:"password_hash"`
+	Name         string `json:"name" yaml:"name"`
+	Password     string `json:"password" yaml:"password"`
+	PasswordHash string `json:"password_hash" yaml:"password_hash"`
 }
 
 func (u User) ToMap() map[string]any {
 	m := make(map[string]any)
 
-	if u.Name != "" {
-		m["name"] = u.Name
-	}
-	if u.Password != "" {
-		m["password"] = u.Password
-	}
-	if u.PasswordHash != "" {
-		m["password_hash"] = u.PasswordHash
-	}
-
-	if len(m) == 0 {
-		return nil
-	}
+	m["name"] = u.Name
+	m["password"] = u.Password
+	m["password_hash"] = u.PasswordHash
 	return m
 }
 
+func (u User) Validate() error {
+	return validation.ValidateStruct(&u,
+		validation.Field(&u.Name, validation.Required),
+		validation.Field(&u.Password, validation.Required),
+		validation.Field(&u.PasswordHash, validation.Required),
+	)
+}
+
 type Config struct {
-	CA     *CertKey `json:"ca,omitempty" yaml:"ca,omitempty"`
-	ROUser *User    `json:"ro_user,omitempty" yaml:"ro_user,omitempty"`
-	RWUser *User    `json:"rw_user,omitempty" yaml:"rw_user,omitempty"`
+	CA     CertKey `json:"ca" yaml:"ca"`
+	ROUser User    `json:"ro_user" yaml:"ro_user"`
+	RWUser User    `json:"rw_user" yaml:"rw_user"`
 }
 
 func (c Config) ToMap() map[string]any {
-	result := make(map[string]any)
+	m := make(map[string]any)
 
-	if c.CA != nil {
-		if ca := c.CA.ToMap(); ca != nil {
-			result["ca"] = ca
-		}
-	}
+	m["ca"] = c.CA.ToMap()
+	m["ro_user"] = c.ROUser.ToMap()
+	m["rw_user"] = c.RWUser.ToMap()
+	return m
+}
 
-	if c.ROUser != nil {
-		if ro := c.ROUser.ToMap(); ro != nil {
-			result["ro_user"] = ro
-		}
-	}
-
-	if c.RWUser != nil {
-		if rw := c.RWUser.ToMap(); rw != nil {
-			result["rw_user"] = rw
-		}
-	}
-
-	return result
+func (c Config) Validate() error {
+	return validation.ValidateStruct(&c,
+		validation.Field(&c.CA, validation.Required),
+		validation.Field(&c.ROUser, validation.Required),
+		validation.Field(&c.RWUser, validation.Required),
+	)
 }
