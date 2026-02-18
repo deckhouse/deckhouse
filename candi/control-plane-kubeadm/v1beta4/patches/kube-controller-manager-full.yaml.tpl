@@ -91,13 +91,13 @@ spec:
     - --use-service-account-credentials=true
     - --controllers=*,bootstrapsigner,tokencleaner
     - --allocate-node-cidrs=true
-    - --cluster-cidr={{ .clusterConfiguration.podSubnetCIDR | quote }}
+    - --cluster-cidr={{ .clusterConfiguration.podSubnetCIDR }}
     - --cluster-name=kubernetes
-    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR | quote }}
+    - --service-cluster-ip-range={{ .clusterConfiguration.serviceSubnetCIDR }}
     - --profiling=false
-    - --terminated-pod-gc-threshold={{ $gcThresholdCount | quote }}
-    - --feature-gates={{ $controllerManagerFeatureGatesStr | quote }}
-    - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix | quote }}
+    - --terminated-pod-gc-threshold={{ $gcThresholdCount }}
+    - --feature-gates={{ $controllerManagerFeatureGatesStr }}
+    - --node-cidr-mask-size={{ .clusterConfiguration.podSubnetNodeCIDRPrefix }}
 {{- if eq .clusterConfiguration.clusterType "Cloud" }}
     - --cloud-provider=external
 {{- end }}
