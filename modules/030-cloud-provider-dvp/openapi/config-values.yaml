@@ -1,6 +1,4 @@
 type: object
-required:
-  - provider
 properties:
   provider:
     type: object
@@ -10,20 +8,15 @@ properties:
     properties:
       kubeconfigDataBase64:
         type: string
-        description: |
-          Base64-encoded kubeconfig used by DVP to access the target Kubernetes cluster.
         x-examples:
-          - LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCg==
+          - ZXhhbXBsZQo=
       namespace:
         type: string
-        description: |
-          Kubernetes namespace where cloud provider resources will be created.
         x-examples:
-          - team-d8-cloud-providers
+          - default
+
   zones:
     type: array
-    description: |
-      List of availability zones used by the cloud provider.
     items:
       type: string
     x-examples:
