@@ -73,7 +73,7 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 	}
 
 	// Load package definition (package.yaml)
-	def, err := loadPackageDefinition(ctx, appDir)
+	def, err := loadPackageDefinition(appDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", appDir, err)
@@ -129,16 +129,9 @@ func LoadAppConf(ctx context.Context, appDir string, logger *log.Logger) (*apps.
 	}, nil
 }
 
-// LoadModuleConf loads a module package from the filesystem based on the instance specification.
-// It performs the following steps:
-//  1. Validates package directory exists
-//  2. Loads package definition (module.yaml)
-//  3. Loads values (static values.yaml and OpenAPI schemas)
-//  4. Discovers and loads hooks
-//  5. Creates and returns a Module config
-//
-// Returns ErrPackageNotFound if package directory doesn't exist.
-func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+// LoadEmbeddedConf loads a module config from an embedded (built-in) module directory.
+// Unlike LoadModuleConf, it does not resolve version by symlinks.
+func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
 	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
 	defer span.End()
 
@@ -146,15 +139,22 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 
 	logger = logger.With(slog.String("path", moduleDir))
 
-	logger.Debug("load module from directory", slog.String("path", moduleDir))
+	logger.Debug("load embedded module from directory", slog.String("path", moduleDir))
 
-	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
+	// Embedded modules have contract on fs like this <weight>-<name>
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	if _, err = os.Stat(moduleDir); os.IsNotExist(err) {
 		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
 		return nil, ErrPackageNotFound
 	}
 
 	// Load package definition (package.yaml/module.yaml)
-	def, err := loadPackageDefinition(ctx, moduleDir)
+	def, err := loadPackageDefinition(moduleDir)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
@@ -204,11 +204,106 @@ func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (
 	}, nil
 }
 
-// loadPackageDefinition reads and parses the package.yaml file from the package directory.
-// It validates YAML structure but doesn't validate content.
-//
-// Returns the parsed Definition or an error if reading or parsing fails.
-func loadPackageDefinition(ctx context.Context, packageDir string) (*dto.Definition, error) {
+// resolveEmbeddedPath finds the actual directory for an embedded module whose
+// path on disk includes a weight prefix (e.g., "modules/002-deckhouse" for "modules/deckhouse").
+// It globs for directories matching "<parent>/*-<name>" and returns the first match.
+func resolveEmbeddedPath(packagePath string) (string, error) {
+	// If the path exists as-is (no weight prefix), use it directly.
+	if _, err := os.Stat(packagePath); err == nil {
+		return packagePath, nil
+	}
+
+	parent := filepath.Dir(packagePath)
+	name := filepath.Base(packagePath)
+
+	matches, err := filepath.Glob(filepath.Join(parent, "*-"+name))
+	if err != nil {
+		return "", fmt.Errorf("glob for embedded module %q: %w", name, err)
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("embedded module directory not found for %q in %q", name, parent)
+	}
+
+	return matches[0], nil
+}
+
+// LoadModuleConf loads a module config from an installed (downloaded) module directory.
+// Returns ErrPackageNotFound if the directory doesn't exist.
+func LoadModuleConf(ctx context.Context, moduleDir string, logger *log.Logger) (*modules.Config, error) {
+	ctx, span := otel.Tracer(loaderTracer).Start(ctx, "LoadModuleConf")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", moduleDir))
+
+	logger = logger.With(slog.String("path", moduleDir))
+
+	logger.Debug("load module from directory", slog.String("path", moduleDir))
+
+	if _, err := os.Stat(moduleDir); os.IsNotExist(err) {
+		span.SetStatus(codes.Error, ErrPackageNotFound.Error())
+		return nil, ErrPackageNotFound
+	}
+
+	// Load package definition (package.yaml/module.yaml)
+	def, err := loadPackageDefinition(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load package from '%s': %w", moduleDir, err)
+	}
+
+	// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
+	def.Version, err = getModuleVersion(ctx, moduleDir)
+	if err != nil {
+		return nil, fmt.Errorf("load module version: %w", err)
+	}
+
+	// Load values from values.yaml and openapi schemas
+	static, config, values, err := loadValues(def.Name, moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load values: %w", err)
+	}
+
+	packageName := filepath.Base(moduleDir)
+
+	// Discover and load hooks (shell and batch)
+	hooks, err := loadModuleHooks(ctx, packageName, moduleDir, logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load hooks: %w", err)
+	}
+
+	moduleDef, err := def.ToModule()
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("convert module definition: %w", err)
+	}
+
+	digests, err := loadDigests(moduleDir)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return nil, fmt.Errorf("load digests: %w", err)
+	}
+
+	return &modules.Config{
+		Path:       moduleDir,
+		Definition: moduleDef,
+
+		Digests: digests,
+
+		StaticValues: static,
+		ConfigSchema: config,
+		ValuesSchema: values,
+
+		Hooks: hooks.hooks,
+
+		SettingsCheck: hooks.settingsCheck,
+	}, nil
+}
+
+// loadPackageDefinition parses package.yaml from the directory, falling back to module.yaml.
+func loadPackageDefinition(packageDir string) (*dto.Definition, error) {
 	definitionPath := filepath.Join(packageDir, dto.DefinitionFile)
 
 	content, err := os.ReadFile(definitionPath)
@@ -230,17 +325,10 @@ func loadPackageDefinition(ctx context.Context, packageDir string) (*dto.Definit
 		return nil, fmt.Errorf("load module definition: %w", err)
 	}
 
-	// TODO(ipaqsa): its better to have version injected into package.yaml, but we can retrieve by fs
-	version, err := getModuleVersion(ctx, packageDir)
-	if err != nil {
-		return nil, fmt.Errorf("load module version: %w", err)
-	}
-
 	return &dto.Definition{
-		Name:    def.Name,
-		Type:    "Module",
-		Version: version,
-		Stage:   def.Stage,
+		Name:  def.Name,
+		Type:  "Module",
+		Stage: def.Stage,
 		Descriptions: dto.Descriptions{
 			Ru: def.Descriptions.Ru,
 			En: def.Descriptions.En,

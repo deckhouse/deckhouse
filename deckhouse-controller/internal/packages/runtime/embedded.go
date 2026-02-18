@@ -95,24 +95,13 @@ func (r *Runtime) UpdateEmbedded(module *Module) {
 // loadEmbeddedModule builds a Module from its package files, validates settings, and registers it
 // with the lifecycle store and scheduler. Called by the Load task after filesystem mount.
 func (r *Runtime) loadEmbeddedModule(ctx context.Context, repo registry.Remote, settings addonutils.Values, packagePath string) (string, error) {
-	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadModule")
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbeddedModule")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("path", packagePath))
 	span.SetAttributes(attribute.String("repository", repo.Name))
 
-	// Embedded module directories have a weight prefix (e.g., "modules/002-deckhouse")
-	// but the task only knows the clean name (e.g., "modules/deckhouse").
-	// Resolve the real path by matching the weight-prefixed directory on disk.
-	realPath, err := resolveEmbeddedPath(packagePath)
-	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", newLoadFailedErr(err)
-	}
-
-	moduleName := filepath.Base(packagePath)
-
-	conf, err := loader.LoadModuleConf(ctx, realPath, r.logger)
+	conf, err := loader.LoadEmbeddedConf(ctx, packagePath, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
@@ -123,7 +112,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, repo registry.Remote, 
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
 
-	module, err := modules.NewModuleByConfig(moduleName, conf, r.logger)
+	module, err := modules.NewModuleByConfig(filepath.Base(packagePath), conf, r.logger)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
 		return "", newLoadFailedErr(err)
@@ -195,30 +184,6 @@ func (r *Runtime) initEmbedded() error {
 		// Don't recurse into module subdirectories — we only need top-level entries.
 		return filepath.SkipDir
 	})
-}
-
-// resolveEmbeddedPath finds the actual directory for an embedded module whose
-// path on disk includes a weight prefix (e.g., "modules/002-deckhouse" for "modules/deckhouse").
-// It globs for directories matching "<parent>/*-<name>" and returns the first match.
-func resolveEmbeddedPath(packagePath string) (string, error) {
-	// If the path exists as-is (no weight prefix), use it directly.
-	if _, err := os.Stat(packagePath); err == nil {
-		return packagePath, nil
-	}
-
-	parent := filepath.Dir(packagePath)
-	name := filepath.Base(packagePath)
-
-	matches, err := filepath.Glob(filepath.Join(parent, "*-"+name))
-	if err != nil {
-		return "", fmt.Errorf("glob for embedded module %q: %w", name, err)
-	}
-
-	if len(matches) == 0 {
-		return "", fmt.Errorf("embedded module directory not found for %q in %q", name, parent)
-	}
-
-	return matches[0], nil
 }
 
 // loadModuleDefinition reads and parses the module.yaml file from the package directory.
