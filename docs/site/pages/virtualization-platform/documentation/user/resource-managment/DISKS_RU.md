@@ -347,17 +347,17 @@ linux-vm-root   Ready   11Gi       12m
 
 - Миграция доступна только для виртуальных машин в состоянии `Running`.
 - Миграция поддерживается только между дисками одного типа: `Block` ↔ `Block`, `FileSystem` ↔ `FileSystem`; перевод между разными типами невозможен.
-- Миграция поддерживается только для дисков, подключённых статически через параметр `.spec.blockDeviceRefs` в спецификации виртуальной машины.
-- Если диск был подключён посредством ресурса VirtualMachineBlockDeviceAttachments, для выполнения миграции его необходимо временно переподключить напрямую, указав имя диска в `.spec.blockDeviceRefs`.
 {% endalert %}
 
 Пример миграции диска на класс хранения `new-storage-class-name`:
 
 ```bash
 d8 k patch vd disk --type=merge --patch '{"spec":{"persistentVolumeClaim":{"storageClassName":"new-storage-class-name"}}}'
+```
 
-# Или внесите аналогичные изменения, отредактировав ресурс.
+Или внесите аналогичные изменения, отредактировав ресурс:
 
+```bash
 d8 k edit vd disk
 ```
 
