@@ -10,6 +10,7 @@ rules:
 - apiGroups:
   - cilium.io
   resources:
+  - ciliumnetworkpolicies
   - ciliumclusterwidenetworkpolicies
   verbs:
   - get
