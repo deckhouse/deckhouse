@@ -1,16 +1,18 @@
 ---
-title: Обзор
+title: Подсистема Kubernetes & Scheduling
 permalink: ru/architecture/kubernetes-and-scheduling/ 
 lang: ru
 search: control plane, scheduling
+search: подсистема Kubernetes, scheduling, control-plane-manager, descheduler, VPA, kubelet
+description: description: Архитектура подсистемы Kubernetes & Scheduling в Deckhouse Kubernetes Platform.
 ---
 
-В данном подразделе описывается архитектура модулей, входящих в подсистему **Kubernetes & Scheduling** DKP.
+В данном подразделе описывается архитектура модулей, входящих в подсистему Kubernetes & Scheduling платформы Deckhouse Kubernetes Platform (DKP).
 
-В подсистему **Kubernetes & Scheduling** входят следующие модули:
+В подсистему Kubernetes & Scheduling входят следующие модули:
 
-* [control-plane-manager](/modules/control-plane-manager/) - основной модуль подсистемы,с его помощью осуществляется [управление компонентами control plane кластера](control-plane-management/),
-* [descheduler](/modules/descheduler/) -  анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных [стратегиях](/modules/descheduler/#%D1%81%D1%82%D1%80%D0%B0%D1%82%D0%B5%D0%B3%D0%B8%D0%B8).
-* [vertical-pod-autoscaler](/modules/vertical-pod-autoscaler/) - автоматически регулирует запросы на ресурсы и лимиты для контейнеров в подах на основе фактического потребления ресурсов. Архитектура **vertical-pod-autoscaler** описана на соответствующей [странице](../vpa.html).
+* [`control-plane-manager`](/modules/control-plane-manager/) — основной модуль подсистемы, с помощью которого осуществляется [управление компонентами control plane кластера](control-plane-management/);
+* [`descheduler`](/modules/descheduler/) — анализирует состояние кластера и выполняет вытеснение подов в соответствии с [активными стратегиями](/modules/descheduler/#стратегии);
+* [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) — автоматически корректирует запросы и лимиты ресурсов контейнеров в подах на основе фактического потребления. Архитектура модуля описана на [соответствующей странице](../vpa.html).
 
-В подразделе описывается также [архитектура control plane Kubernetes-кластера](control-plane/) и важная "деталь" любого Kubernetes-кластера — агент [kubelet](kubelet/).
+В подразделе также описывается архитектура [control plane](control-plane/) и [агента kubelet](kubelet/).

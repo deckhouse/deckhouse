@@ -1,19 +1,22 @@
 ---
-title: Control plane Kubernetes-кластера
+title: Control plane кластера
 permalink: ru/architecture/kubernetes-and-scheduling/control-plane/
 lang: ru
-search: control plane
+search: архитектура control plane
+description: Архитектура control plane кластера в Deckhouse Kubernetes Platform.
 ---
 
-В платформе Deckhouse Kubernetes Platform используется *ванильный* Kubernetes кластер. Control plane Kubernetes-кластера включает в себя следующие стандартные компоненты:
+В Deckhouse Kubernetes Platform (DKP) используется стандартный («vanilla») кластер Kubernetes. Control plane кластера включает в себя следующие базовые компоненты:
 
-1. **kube-apiserver** - сервер API Kubernetes, обслуживает операции REST API, предоставляет интерфейс для общего состояния кластера, через который взаимодействуют все остальные компоненты кластера, валидирует ресурсы Kubernetes API и сохраняет их в хранилище **etcd**. Включает следующие контейнеры:
+1. **kube-apiserver** — API-сервер Kubernetes. Обрабатывает REST-запросы, предоставляет интерфейс доступа к общему состоянию кластера, через который взаимодействуют все остальные компоненты, валидирует ресурсы Kubernetes API и сохраняет их в хранилище **etcd**. Включает следующие контейнеры:
 
-   * **kube-apiserver** - основной контейнер.  
-   * **kube-apiserver-healthcheck** - sidecar-контейнер, который позволяет проверять работоспособность **kube-apiserver**, не включая анонимную аутентификацию и не включая порт, не прошедший проверку подлинности. Использует сертификат клиента для аутентификации на api-сервере. [Open-source разработка](https://github.com/kubernetes/kops/blob/master/cmd/kube-apiserver-healthcheck).
+   * **kube-apiserver** — основной контейнер;
+   * **kube-apiserver-healthcheck** - сайдкар-контейнер, который позволяет проверять работоспособность **kube-apiserver** без включения анонимной аутентификации и без открытия порта, не прошедшего проверку подлинности. Использует клиентский сертификат для аутентификации на API-сервере. Является [Open Source-продуктом](https://github.com/kubernetes/kops/blob/master/cmd/kube-apiserver-healthcheck).
 
-2. **etcd** - распределённое хранилище ключ-значение, где хранятся вся конфигурация и ресурсы Kubernetes-кластера.
-3. **kube-scheduler** - планировщик Kubernetes, анализирует ресурсы узлов и размещает поды оптимально, учитывая affinity и taints.
-4. **kube-controller-manager** - диспетчер контроллеров Kubernetes, запускает циклы контроллеров,  которые мониторят и корректируют состояние стандартных ресурсов Kubernetes, пытаясь приблизить их текущее состояние к желаемому. Примерами контроллеров, которые поставляются с Kubernetes, являются *replication controller*, *endpoints controller*, *namespace controller* и *serviceaccounts controller*.
+2. **etcd** — распределённое хранилище типа «ключ-значение», где хранится вся конфигурация и ресурсы Kubernetes-кластера.
 
-Взаимодействие компонентов Kubernetes control plane изображено [на схеме архитектуры модуля control-plane-manager](control-plane-management/).
+3. **kube-scheduler** — планировщик Kubernetes. Анализирует ресурсы узлов и размещает поды с учетом ограничений и правил, таких как affinity и taints.
+
+4. **kube-controller-manager** — диспетчер контроллеров Kubernetes. Запускает циклы контроллеров, которые отслеживают и корректируют состояние стандартных ресурсов Kubernetes, приводя их к желаемому состоянию. Примеры контроллеров, которые поставляются с Kubernetes: replication controller, endpoints controller, namespace controller и ServiceAccount controller.
+
+Взаимодействие компонентов control plane Kubernetes изображено на [схеме архитектуры модуля `control-plane-manager`](../control-plane-management/).

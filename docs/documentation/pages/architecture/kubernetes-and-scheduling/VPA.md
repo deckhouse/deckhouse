@@ -1,6 +1,11 @@
 ---
 title: "VPA"
 permalink: en/architecture/vpa.html
+search: autoscaler architecture, vertical scaling, resource optimization, pod scaling
+description: VPA operating modes and limitations in Deckhouse Kubernetes Platform.
+relatedLinks:
+  - title: "Enabling vertical scaling"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/vpa.html
 ---
 
 ## VPA operating modes
@@ -13,7 +18,7 @@ VPA can operate in two modes:
 
     > To use the **InPlaceOrRecreate** mode in Kubernetes versions earlier than 1.33, enable the `InPlacePodVerticalScaling` feature gate in the [`control-plane-manager` configuration](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
   
-  - **Auto** (the default in Kubernetes versions earlier than 1.33): VPA changes resource requests without recreating Pods but behaves the same as **Recreate** and restarts the Pod when necessary. This is a deprecated operating mode that will no longer be supported in future DKP versions.
+  - **Auto** (the default in Kubernetes versions earlier than 1.33): VPA changes resource requests without recreating Pods but behaves the same as **Recreate** and restarts the Pod when necessary. This is a deprecated operating mode that will no longer be supported in future Deckhouse Kubernetes Platform (DKP) versions.
 
   - **Recreate**: VPA adjusts the resources of running Pods by restarting them. For a single Pod (`replicas: 1`), this will result in service unavailability during the restart. VPA does not restart Pods that were created without a controller.
 

@@ -1167,8 +1167,8 @@ entries:
                 ru: Обзор
               url: /architecture/deckhouse/
             - title:
-                en: Registry Direct mode
-                ru: Режим Direct container registry
+                en: Direct mode of registry module
+                ru: Режим Direct модуля registry
               url: /architecture/registry-direct-mode.html
         - title:
             en: Kubernetes & Scheduling subsystem

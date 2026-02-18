@@ -1,18 +1,19 @@
 ---
-title: Обзор
+title: Подсистема Deckhouse
 permalink: ru/architecture/deckhouse/
 lang: ru
-search: подсистема deckhouse, deckhouse subsystem, deckhouse controller, контроллер deckhouse, container registry, registry
+search: подсистема Deckhouse, контроллер Deckhouse
+description: Общие сведения о подсистеме Deckhouse платформы Deckhouse Kubernetes Platform.
 ---
 
-В данном подразделе будет описана архитектура **Deckhouse Controller** и сопутствующих модулей, входящих в подсистему **Deckhouse** платформы DKP.
+В данном подразделе описана архитектура контроллера Deckhouse и сопутствующих модулей, входящих в подсистему Deckhouse платформы Deckhouse Kubernetes Platform (DKP).
 
-В подсистему **Deckhouse** входят следующие модули:
+В подсистему Deckhouse входят следующие модули:
 
-* [deckhouse](/modules/deckhouse/) - это, собственно, сам контроллер Deckhouse,
-* [console](/modules/console/stable/) - веб-интерфейс платформы Deckhouse Kubernetes,
-* [deckhouse-tools](/modules/deckhouse-tools/) - создает веб-интерфейс для скачивания из кластера утилиты [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/)  под различные операционные системы,
-* [documentation](/modules/documentation/) - создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform,
-* [registry](/modules/registry/) - отвечает за управление конфигурацией registry компонентов Deckhouse и предоставляет внутреннее хранилище образов контейнеров (container registry, registry).
+* [`deckhouse`](/modules/deckhouse/) — контроллер Deckhouse;
+* [`console`](/modules/console/stable/) — веб-интерфейс Deckhouse;
+* [`deckhouse-tools`](/modules/deckhouse-tools/) — создает веб-интерфейс для скачивания CLI-утилиты [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/);
+* [`documentation`](/modules/documentation/) — создает веб-интерфейс с документацией, соответствующей запущенной версии DKP;
+* [`registry`](/modules/registry/) — управляет конфигурацией компонентов DKP, отвечающих за работу с хранилищем образов контейнеров, и предоставляет внутреннее хранилище образов.
 
-В подразделе на данный момент описана [архитектура режима Direct](../registry-direct-mode.html) registry.
+В данный момент в подразделе описана [архитектура режима Direct](../registry-direct-mode.html) модуля `registry`.

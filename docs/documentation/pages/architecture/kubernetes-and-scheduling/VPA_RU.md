@@ -2,7 +2,11 @@
 title: "Вертикальное масштабирование"
 permalink: ru/architecture/vpa.html
 lang: ru
-search: autoscaler architecture, архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов
+search: архитектура автомасштабирования, вертикальное масштабирование, оптимизация ресурсов, масштабирование подов
+description: Режимы работы и ограничения VPA в Deckhouse Kubernetes Platform.
+relatedLinks:
+  - title: "Включение вертикального масштабирования"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/vpa.html
 ---
 
 ## Режимы работы VPA
@@ -15,7 +19,7 @@ VPA может работать в двух режимах:
 
     > Чтобы использовать режим **InPlaceOrRecreate** в Kubernetes до версии 1.33, включите экспериментальную функцию (feature gate) `InPlacePodVerticalScaling` в [настройках модуля `control-plane-manager`](/modules/control-plane-manager/configuration.html#parameters-enabledfeaturegates).
 
-  - **Auto** (по умолчанию в Kubernetes до версии 1.33) — VPA изменяет ресурсы без пересоздания подов, но при необходимости действует аналогично режиму **Recreate** и перезапускает под. Это устаревший режим, и его поддержка будет прекращена в будущих версиях DKP.
+  - **Auto** (по умолчанию в Kubernetes до версии 1.33) — VPA изменяет ресурсы без пересоздания подов, но при необходимости действует аналогично режиму **Recreate** и перезапускает под. Это устаревший режим, и его поддержка будет прекращена в будущих версиях Deckhouse Kubernetes Platform (DKP).
 
   - **Recreate** — VPA может изменять ресурсы у работающих подов, перезапуская их. В случае одного пода (`replicas: 1`) это приведет к недоступности сервиса на время перезапуска. VPA не пересоздает поды, если они были созданы без контроллера.
 
