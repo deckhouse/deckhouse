@@ -15,5 +15,4 @@ tests:
         object: disallowed.yaml
         assertions:
           - violations: yes
-            message: >-
-              Ingress <disallowed> has invalid ingress class: bar
+            message: "Ingress <disallowed> has invalid ingress class: bar"
