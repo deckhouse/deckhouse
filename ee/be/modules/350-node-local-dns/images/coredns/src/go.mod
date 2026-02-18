@@ -1,6 +1,6 @@
 module coredns-helper
 
-go 1.25.7
+go 1.25
 
 require (
 	github.com/coreos/go-iptables v0.8.0

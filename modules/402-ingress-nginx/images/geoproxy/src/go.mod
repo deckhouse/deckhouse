@@ -1,6 +1,6 @@
 module geodownloader
 
-go 1.25.7
+go 1.25
 
 require (
 	github.com/deckhouse/deckhouse/pkg/log v0.0.0-20250901224252-da8129a54a2c

@@ -1,6 +1,6 @@
 module sts-pods-hosts-appender-webhook
 
-go 1.25.7
+go 1.25
 
 require (
 	github.com/sirupsen/logrus v1.8.3

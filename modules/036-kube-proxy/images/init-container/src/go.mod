@@ -1,6 +1,6 @@
 module init-container
 
-go 1.25.7
+go 1.25
 
 require (
 	github.com/Masterminds/semver v1.5.0
