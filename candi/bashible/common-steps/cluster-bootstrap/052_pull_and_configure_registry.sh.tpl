@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- if (.registry).mode }}
 {{- if has .registry.mode (list "Proxy" "Local") }}
 
 {{ $imgDockerDistribution := printf "%s@%s" .registry.imagesBase (index $.images.registry "dockerDistribution") }}
@@ -19,28 +20,28 @@
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
-registry_pki_path="/etc/kubernetes/registry/pki"
+pki_path="/etc/kubernetes/registry/pki"
 
 # Create a directories
 mkdir -p /etc/kubernetes/registry/{auth,distribution,pki} \
         /opt/deckhouse/registry/local_data
 
 # Prepare certs
-bb-sync-file "${registry_pki_path}/ca.crt" - << EOF
+bb-sync-file "${pki_path}/ca.crt" - << EOF
 {{ .registry.bootstrap.init.ca.cert }}
 EOF
 
-bb-sync-file "${registry_pki_path}/ca.key" - << EOF
+bb-sync-file "${pki_path}/ca.key" - << EOF
 {{ .registry.bootstrap.init.ca.key }}
 EOF
 
 {{- with ((.registry.bootstrap).proxy).ca }}
-bb-sync-file "${registry_pki_path}/upstream-registry-ca.crt" - << EOF
+bb-sync-file "${pki_path}/upstream-registry-ca.crt" - << EOF
 {{ . }}
 EOF
 {{- end }}
 
-bb-sync-file "${registry_pki_path}/profiles.json" - << EOF
+bb-sync-file "${pki_path}/profiles.json" - << EOF
 {
     "signing": {
         "default": {
@@ -90,38 +91,38 @@ EOF
 # Auth certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/auth"
-mv "${registry_pki_path}/auth.pem" "${registry_pki_path}/auth.crt"
-mv "${registry_pki_path}/auth-key.pem" "${registry_pki_path}/auth.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/auth"
+mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
+mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
 
 # Distribution certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-distribution" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/distribution"
-mv "${registry_pki_path}/distribution.pem" "${registry_pki_path}/distribution.crt"
-mv "${registry_pki_path}/distribution-key.pem" "${registry_pki_path}/distribution.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/distribution"
+mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
+mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
 
 # Auth token certs
 echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth-token" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/token"
-mv "${registry_pki_path}/token.pem" "${registry_pki_path}/token.crt"
-mv "${registry_pki_path}/token-key.pem" "${registry_pki_path}/token.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/token"
+mv "${pki_path}/token.pem" "${pki_path}/token.crt"
+mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
 
 # Cleanup
-rm "${registry_pki_path}/auth.csr"\
-    "${registry_pki_path}/distribution.csr" \
-    "${registry_pki_path}/token.csr" \
-    "${registry_pki_path}/profiles.json"
+rm "${pki_path}/auth.csr"\
+    "${pki_path}/distribution.csr" \
+    "${pki_path}/token.csr" \
+    "${pki_path}/profiles.json"
 
 
 # Prepare manifests
@@ -354,4 +355,5 @@ bb-unset-proxy
 
 bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 
+{{- end }}
 {{- end }}

@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+{{- if (.registry).mode }}
 {{- if has .registry.mode (list "Proxy" "Local") }}
 
 bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "module-registry-distribution:{{ .images.registry.dockerDistribution }}" "cfssl:{{ .images.registrypackages.cfssl165 }}"
@@ -290,4 +291,5 @@ bash "${REGISTRY_MODULE_IGNITER_DIR}/stop_registry_igniter.sh"
 bash "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh"
 bb-unset-proxy
 
+{{- end }}
 {{- end }}
