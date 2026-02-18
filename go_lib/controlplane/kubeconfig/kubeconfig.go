@@ -33,9 +33,9 @@ type controlPlaneOptions struct {
 type kubeletOptions struct {
 	options
 
-	KubeletKubeconfigPath string
-	KubeletClientCertPath string
-	KubeletClientKeyPath  string
+	KubeConfigPath string
+	ClientCertPath string
+	ClientKeyPath  string
 }
 
 func CreateControlPlaneKubeConfigFiles(opts controlPlaneOptions) error {
