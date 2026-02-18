@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -96,6 +97,8 @@ func (r *Runtime) initEmbedded() error {
 			return err
 		}
 
+		r.logger.Debug("checking embedded module", path)
+
 		// Skip files — only directories represent modules.
 		if !info.IsDir() {
 			return nil
@@ -119,6 +122,8 @@ func (r *Runtime) initEmbedded() error {
 
 			return fmt.Errorf("read definition for %s: %w", info.Name(), err)
 		}
+
+		r.logger.Debug("load embedded module", slog.String("name", info.Name()))
 
 		r.UpdateEmbedded(&Module{
 			Name: def.Name,
