@@ -19,28 +19,28 @@ bb-package-install "module-registry-auth:{{ .images.registry.dockerAuth }}" "mod
 
 # Prepare vars
 discovered_node_ip="$(bb-d8-node-ip)"
-registry_pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
+pki_path="${REGISTRY_MODULE_IGNITER_DIR}/pki"
 
 # Create a directories
 mkdir -p ${REGISTRY_MODULE_IGNITER_DIR}/{pki,logs} \
         /opt/deckhouse/registry/local_data
 
 # Prepare certs
-bb-sync-file "${registry_pki_path}/ca.crt" - << EOF
+bb-sync-file "${pki_path}/ca.crt" - << EOF
 {{ .registry.bootstrap.init.ca.cert }}
 EOF
 
-bb-sync-file "${registry_pki_path}/ca.key" - << EOF
+bb-sync-file "${pki_path}/ca.key" - << EOF
 {{ .registry.bootstrap.init.ca.key }}
 EOF
 
 {{- with ((.registry.bootstrap).proxy).ca }}
-bb-sync-file "${registry_pki_path}/upstream-registry-ca.crt" - << EOF
+bb-sync-file "${pki_path}/upstream-registry-ca.crt" - << EOF
 {{ . }}
 EOF
 {{- end }}
 
-bb-sync-file "${registry_pki_path}/profiles.json" - << EOF
+bb-sync-file "${pki_path}/profiles.json" - << EOF
 {
     "signing": {
         "default": {
@@ -90,38 +90,38 @@ EOF
 # Auth certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/auth"
-mv "${registry_pki_path}/auth.pem" "${registry_pki_path}/auth.crt"
-mv "${registry_pki_path}/auth-key.pem" "${registry_pki_path}/auth.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/auth"
+mv "${pki_path}/auth.pem" "${pki_path}/auth.crt"
+mv "${pki_path}/auth-key.pem" "${pki_path}/auth.key"
 
 # Distribution certs
 echo $client_server_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-distribution" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/distribution"
-mv "${registry_pki_path}/distribution.pem" "${registry_pki_path}/distribution.crt"
-mv "${registry_pki_path}/distribution-key.pem" "${registry_pki_path}/distribution.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="client-server" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/distribution"
+mv "${pki_path}/distribution.pem" "${pki_path}/distribution.crt"
+mv "${pki_path}/distribution-key.pem" "${pki_path}/distribution.key"
 
 # Auth token certs
 echo $auth_token_csr_json | /opt/deckhouse/bin/cfssl gencert \
   -cn="registry-auth-token" \
-  -ca="${registry_pki_path}/ca.crt" \
-  -ca-key="${registry_pki_path}/ca.key" \
-  -config="${registry_pki_path}/profiles.json" \
-  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${registry_pki_path}/token"
-mv "${registry_pki_path}/token.pem" "${registry_pki_path}/token.crt"
-mv "${registry_pki_path}/token-key.pem" "${registry_pki_path}/token.key"
+  -ca="${pki_path}/ca.crt" \
+  -ca-key="${pki_path}/ca.key" \
+  -config="${pki_path}/profiles.json" \
+  -profile="auth-token" - | /opt/deckhouse/bin/cfssljson -bare "${pki_path}/token"
+mv "${pki_path}/token.pem" "${pki_path}/token.crt"
+mv "${pki_path}/token-key.pem" "${pki_path}/token.key"
 
 # Cleanup
-rm "${registry_pki_path}/auth.csr"\
-    "${registry_pki_path}/distribution.csr" \
-    "${registry_pki_path}/token.csr" \
-    "${registry_pki_path}/profiles.json"
+rm "${pki_path}/auth.csr"\
+    "${pki_path}/distribution.csr" \
+    "${pki_path}/token.csr" \
+    "${pki_path}/profiles.json"
 
 
 # Prepare manifests
@@ -129,13 +129,13 @@ bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/auth_config.yaml" - << EOF
 server:
   addr: "127.0.0.1:5051"
   real_ip_header: "X-Forwarded-For"
-  certificate: "${registry_pki_path}/auth.crt"
-  key: "${registry_pki_path}/auth.key"
+  certificate: "${pki_path}/auth.crt"
+  key: "${pki_path}/auth.key"
 token:
   issuer: "Registry server"
   expiration: 900
-  certificate: "${registry_pki_path}/token.crt"
-  key: "${registry_pki_path}/token.key"
+  certificate: "${pki_path}/token.crt"
+  key: "${pki_path}/token.key"
 
 users:
   {{ .registry.bootstrap.init.ro_user.name | quote }}:
@@ -180,8 +180,8 @@ http:
       enabled: true
       path: /metrics
   tls:
-    certificate: ${registry_pki_path}/distribution.crt
-    key: ${registry_pki_path}/distribution.key
+    certificate: ${pki_path}/distribution.crt
+    key: ${pki_path}/distribution.key
 
 {{- with .registry.bootstrap.proxy }}
 proxy:
@@ -193,7 +193,7 @@ proxy:
   remotepathonly: {{ .path | quote }}
   localpathalias: "/system/deckhouse"
   {{- with .ca }}
-  ca: ${registry_pki_path}/upstream-registry-ca.crt
+  ca: ${pki_path}/upstream-registry-ca.crt
   {{- end }}
   {{- with .ttl }}
   ttl: {{ . | quote }}
@@ -205,11 +205,11 @@ auth:
     realm: https://${discovered_node_ip}:5051/auth
     service: Deckhouse registry
     issuer: Registry server
-    rootcertbundle: ${registry_pki_path}/token.crt
+    rootcertbundle: ${pki_path}/token.crt
     autoredirect: true
     proxy:
       url: https://127.0.0.1:5051/auth
-      ca: ${registry_pki_path}/ca.crt
+      ca: ${pki_path}/ca.crt
 EOF
 
 bb-sync-file "${REGISTRY_MODULE_IGNITER_DIR}/start_registry_igniter.sh" - << EOF
@@ -240,7 +240,7 @@ check_and_run "auth_server" "/opt/deckhouse/bin/auth_server -logtostderr ${REGIS
 check_and_run "registry" "/opt/deckhouse/bin/registry serve ${REGISTRY_MODULE_IGNITER_DIR}/distribution_config.yaml" "${REGISTRY_MODULE_IGNITER_DIR}/logs/distribution.log"
 
 for (( attempt=1; attempt <= \$max_attempts; attempt++ )); do
-    response=\$(d8-curl --cacert "${registry_pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
+    response=\$(d8-curl --cacert "${pki_path}/ca.crt" -s -o /dev/null -w "%{http_code}" https://127.0.0.1:5001)
     if [[ "\$response" == "200" ]]; then
         docker_registry_started=true
         break
