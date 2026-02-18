@@ -57,7 +57,7 @@ spec:
     - --feature-gates=InitialCorruptCheck=true
     - --watch-progress-notify-interval=5s
 {{- if hasKey .etcd "quotaBackendBytes" }}
-    - --quota-backend-bytes={{ .etcd.quotaBackendBytes | quote }}
+    - --quota-backend-bytes={{ .etcd.quotaBackendBytes }}
     - --metrics=extensive
 {{- end }}
 {{- else }}
