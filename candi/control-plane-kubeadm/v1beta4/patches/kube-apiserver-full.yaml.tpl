@@ -105,6 +105,10 @@ spec:
       path: /usr/share/ca-certificates
       type: DirectoryOrCreate
     name: usr-share-ca-certificates
+  - hostPath:
+      path: /usr/local/share/ca-certificates
+      type: DirectoryOrCreate
+    name: usr-local-share-ca-certificates
 {{- if .apiserver.auditPolicy }}
 {{- if eq .apiserver.auditLog.output "File" }}
   - hostPath:
@@ -245,6 +249,9 @@ spec:
       readOnly: true
     - mountPath: /usr/share/ca-certificates
       name: usr-share-ca-certificates
+      readOnly: true
+    - mountPath: /usr/local/share/ca-certificates
+      name: usr-local-share-ca-certificates
       readOnly: true
     - mountPath: /etc/ssl/certs
       name: ca-certs
