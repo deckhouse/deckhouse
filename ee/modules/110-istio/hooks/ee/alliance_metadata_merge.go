@@ -68,10 +68,14 @@ type Kubeconfig struct {
 
 // TokenValidationResult represents the result of token validation
 type TokenValidationResult struct {
-	IsExpired bool      `json:"isExpired"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	Error     string    `json:"error,omitempty"`
+	NeedReissue bool      `json:"needReissue"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	Error       string    `json:"error,omitempty"`
 }
+
+// expiresSoonThreshold defines the minimum time until token expiration to consider it valid.
+// If token expires sooner, it will be proactively regenerated (hook runs once a month).
+const expiresSoonThreshold = 30 * 24 * time.Hour
 
 func applyFederationMergeFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var federation eeCrd.IstioFederation
@@ -155,8 +159,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 func ValidateJWTToken(tokenString string) TokenValidationResult {
 	if tokenString == "" {
 		return TokenValidationResult{
-			IsExpired: true,
-			Error:     "token is empty",
+			NeedReissue: true,
+			Error:       "token is empty",
 		}
 	}
 
@@ -164,8 +168,8 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 	token, err := jose.ParseSigned(tokenString)
 	if err != nil {
 		return TokenValidationResult{
-			IsExpired: true,
-			Error:     fmt.Sprintf("failed to parse token: %v", err),
+			NeedReissue: true,
+			Error:       fmt.Sprintf("failed to parse token: %v", err),
 		}
 	}
 
@@ -176,24 +180,28 @@ func ValidateJWTToken(tokenString string) TokenValidationResult {
 	var claims map[string]interface{}
 	if err := json.Unmarshal(payload, &claims); err != nil {
 		return TokenValidationResult{
-			IsExpired: true,
-			Error:     fmt.Sprintf("failed to unmarshal claims: %v", err),
+			NeedReissue: true,
+			Error:       fmt.Sprintf("failed to unmarshal claims: %v", err),
 		}
 	}
-
+	// TODO: fix in newer version deckhouse
 	expTime := int64(claims["exp"].(float64))
+	expiresAt := time.Unix(expTime, 0)
 
-	if expTime < time.Now().UTC().Unix() {
-		return TokenValidationResult{
-			IsExpired: true,
-			Error:     "JWT token expired",
-			ExpiresAt: time.Unix(expTime, 0),
-		}
+	// Regenerate if expired OR expires in less than expiresSoonThreshold.
+	// Hook runs once a month, so we need at least ~30 days buffer to avoid gaps.
+	now := time.Now().UTC().Unix()
+	needReissue := expTime < now || time.Until(expiresAt) < expiresSoonThreshold
+
+	var errMsg string
+	if expTime < now {
+		errMsg = "JWT token expired"
 	}
 
 	return TokenValidationResult{
-		IsExpired: false,
-		ExpiresAt: time.Unix(expTime, 0),
+		NeedReissue: needReissue,
+		ExpiresAt:   expiresAt,
+		Error:       errMsg,
 	}
 }
 
@@ -387,21 +395,23 @@ multiclustersLoop:
 		validationResult := ValidateJWTToken(existingToken)
 		input.Logger.Info("token validation result",
 			slog.String("name", multiclusterInfo.Name),
-			slog.Bool("isExpired", validationResult.IsExpired),
+			slog.Bool("needReissue", validationResult.NeedReissue),
 			slog.String("error", validationResult.Error),
 			slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 
-		if !validationResult.IsExpired {
-			// Token is still valid, reuse it
+		if !validationResult.NeedReissue {
 			multiclusterInfo.APIJWT = existingToken
 			input.Logger.Info("reusing existing valid token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
 				slog.String("expiresAt", validationResult.ExpiresAt.Format(time.RFC3339)))
 		} else {
-			input.Logger.Info("existing token is invalid or expired, generating new token",
+			reason := validationResult.Error
+			if reason == "" {
+				reason = "existing token is invalid, expired or expires in less than 30 days, generating new token"
+			}
+			input.Logger.Info("regenerating token for multicluster",
 				slog.String("name", multiclusterInfo.Name),
-				slog.String("error", validationResult.Error),
-				slog.Bool("isExpired", validationResult.IsExpired))
+				slog.String("reason", reason))
 
 			privKey := []byte(input.Values.Get("istio.internal.remoteAuthnKeypair.priv").String())
 			claims := map[string]string{

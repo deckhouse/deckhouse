@@ -482,15 +482,15 @@ status:
 
 			// Verify the token is valid
 			validationResult := ValidateJWTToken(apiJWT)
-			Expect(validationResult.IsExpired).To(BeFalse())
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 
 		It("Checking the reuse of an existing valid secret token.", func() {
-			// Create a valid JWT token
+			// Create a valid JWT token (expires in 35 days, i.e. more than minTokenValidity)
 			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
 			Expect(err).ShouldNot(HaveOccurred())
 
-			futureTime := time.Now().Add(1 * time.Hour).Unix()
+			futureTime := time.Now().Add(35 * 24 * time.Hour).Unix()
 			claims := map[string]interface{}{
 				"exp":   futureTime,
 				"iat":   time.Now().Unix(),
@@ -659,7 +659,97 @@ status:
 
 			// Verify the new token is valid
 			validationResult := ValidateJWTToken(apiJWT)
-			Expect(validationResult.IsExpired).To(BeFalse())
+			Expect(validationResult.NeedReissue).To(BeFalse())
+		})
+
+		It("Check whether a new token is created when existing token expires in less than 30 days (proactive refresh).", func() {
+			// Create a valid JWT token that expires in 20 days (less than minTokenValidity)
+			signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.HS256, Key: []byte("secret")}, nil)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			futureTime := time.Now().Add(20 * 24 * time.Hour).Unix()
+			claims := map[string]interface{}{
+				"exp":   futureTime,
+				"iat":   time.Now().Unix(),
+				"sub":   "test-user",
+				"iss":   "d8-istio",
+				"aud":   "test-cluster-uuid",
+				"scope": "api",
+			}
+			payload, err := json.Marshal(claims)
+			Expect(err).ShouldNot(HaveOccurred())
+
+			token, err := signer.Sign(payload)
+			Expect(err).ShouldNot(HaveOccurred())
+			expiringSoonToken, err := token.CompactSerialize()
+			Expect(err).ShouldNot(HaveOccurred())
+
+			validKubeconfig := fmt.Sprintf(`apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://test-cluster.example.com
+  name: test-cluster
+contexts:
+- context:
+    cluster: test-cluster
+    user: test-user
+  name: test-context
+current-context: test-context
+users:
+- name: test-user
+  user:
+    token: %s
+`, expiringSoonToken)
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: istio-remote-secret-test-cluster
+  namespace: d8-istio
+  annotations:
+    networking.istio.io/cluster: test-cluster
+  labels:
+    istio/multiCluster: "true"
+data:
+  test-cluster: ` + base64.StdEncoding.EncodeToString([]byte(validKubeconfig)) + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: test-cluster
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://test-cluster.example.com"
+status:
+  metadataCache:
+    private:
+      ingressGateways:
+      - {"address": "test-gateway", "port": 443}
+      apiHost: test-cluster.example.com
+      networkName: test-network
+    public:
+      clusterUUID: test-cluster-uuid
+      rootCA: test-ca
+      authnKeyPub: test-key
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			// Verify that a new token was generated (proactive refresh before expiration)
+			multiclusters := f.ValuesGet("istio.internal.multiclusters").Array()
+			Expect(multiclusters).To(HaveLen(1))
+
+			apiJWT := f.ValuesGet("istio.internal.multiclusters.0.apiJWT").String()
+			Expect(apiJWT).ToNot(Equal(expiringSoonToken))
+			Expect(apiJWT).ToNot(BeEmpty())
+
+			// Verify the new token is valid and has sufficient TTL
+			validationResult := ValidateJWTToken(apiJWT)
+			Expect(validationResult.NeedReissue).To(BeFalse())
 		})
 	})
 })
